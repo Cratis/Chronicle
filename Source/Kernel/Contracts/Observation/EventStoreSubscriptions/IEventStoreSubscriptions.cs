@@ -31,7 +31,8 @@ public interface IEventStoreSubscriptions
     /// Gets all event store subscriptions for a target event store.
     /// </summary>
     /// <param name="request"><see cref="GetEventStoreSubscriptionsRequest"/>.</param>
+    /// <param name="context">The optional <see cref="CallContext"/> for the gRPC call.</param>
     /// <returns><see cref="IEnumerable{T}"/> of <see cref="EventStoreSubscriptionDefinition"/>.</returns>
     [Operation]
-    Task<IEnumerable<EventStoreSubscriptionDefinition>> GetSubscriptions(GetEventStoreSubscriptionsRequest request);
+    Task<IEnumerable<EventStoreSubscriptionDefinition>> GetSubscriptions(GetEventStoreSubscriptionsRequest request, CallContext context = default);
 }

@@ -9,6 +9,7 @@ using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Observation.EventStoreSubscriptions;
+using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Storage;
 using Grpc.Core;
 using Microsoft.Extensions.Options;
@@ -37,7 +38,10 @@ internal sealed class EventStoreSubscriptions(
         foreach (var subscription in request.Subscriptions)
         {
             EnsureNotReserved(subscription.SourceEventStore);
+            await SystemStoreGuard.Ensure(context, new(subscription.SourceEventStore), StoreAccess.Read, namespaceAddressed: false);
         }
+
+        await SystemStoreGuard.Ensure(context, new(request.TargetEventStore), StoreAccess.Append | StoreAccess.Manage, namespaceAddressed: false);
 
         // Validate every pinned registration before reserving or appending any definition in this request.
         foreach (var subscription in request.Subscriptions.Where(_ => _.GenerationDelivery == Contracts.Observation.EventGenerationDelivery.Pinned))
@@ -111,14 +115,15 @@ internal sealed class EventStoreSubscriptions(
     public async Task Remove(RemoveEventStoreSubscriptions request, CallContext context = default)
     {
         EnsureNotReserved(request.TargetEventStore);
+        await SystemStoreGuard.Ensure(context, new(request.TargetEventStore), StoreAccess.Append | StoreAccess.Manage, namespaceAddressed: false);
         var eventSequence = grainFactory.GetSystemEventSequence(request.TargetEventStore);
         await Task.WhenAll(request.SubscriptionIds.Select(subscriptionId => eventSequence.Append(subscriptionId, new EventStoreSubscriptionRemoved())));
     }
 
     /// <inheritdoc/>
-    public async Task<IEnumerable<ContractEventStoreSubscriptionDefinition>> GetSubscriptions(GetEventStoreSubscriptionsRequest request)
+    public async Task<IEnumerable<ContractEventStoreSubscriptionDefinition>> GetSubscriptions(GetEventStoreSubscriptionsRequest request, CallContext context = default)
     {
-        SystemStoreGuard.EnsureNotSystem(new(request.TargetEventStore));
+        await SystemStoreGuard.EnsureNotSystem(context, new(request.TargetEventStore), StoreAccess.Read);
         var definitions = await storage.GetEventStore(request.TargetEventStore).EventStoreSubscriptions.GetAll();
         return definitions.Select(definition => new ContractEventStoreSubscriptionDefinition
         {

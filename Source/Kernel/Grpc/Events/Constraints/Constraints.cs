@@ -4,6 +4,9 @@
 using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Contracts.Events.Constraints;
 
+using Cratis.Chronicle.Security;
+using ProtoBuf.Grpc;
+
 namespace Cratis.Chronicle.Services.Events.Constraints;
 
 /// <summary>
@@ -13,9 +16,9 @@ namespace Cratis.Chronicle.Services.Events.Constraints;
 internal sealed class Constraints(IGrainFactory grainFactory) : IConstraints
 {
     /// <inheritdoc/>
-    public async Task Register(RegisterConstraintsRequest request)
+    public async Task Register(RegisterConstraintsRequest request, CallContext context = default)
     {
-        SystemStoreGuard.EnsureNotSystem(new(request.EventStore));
+        await SystemStoreGuard.EnsureNotSystem(context, new(request.EventStore), StoreAccess.Manage);
         var key = new ConstraintsKey(request.EventStore);
         var grain = grainFactory.GetGrain<Chronicle.Events.Constraints.IConstraints>(key);
 

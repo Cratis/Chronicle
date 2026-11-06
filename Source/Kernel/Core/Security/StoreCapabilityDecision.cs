@@ -35,6 +35,26 @@ public static class StoreCapabilityDecision
     }
 
     /// <summary>
+    /// Decides whether a caller holds every kind of access a call needs at the event store (and namespace) it addresses.
+    /// </summary>
+    /// <param name="services">The services of the call.</param>
+    /// <param name="user">The caller, or null when there is none.</param>
+    /// <param name="access">The access the call needs.</param>
+    /// <param name="eventStore">The addressed event store.</param>
+    /// <param name="namespace">The addressed namespace, if any.</param>
+    /// <returns>True if the call may run.</returns>
+    public static async Task<bool> PermitsAccess(IServiceProvider services, ClaimsPrincipal? user, StoreAccess access, string eventStore, string? @namespace)
+    {
+        foreach (var single in new[] { StoreAccess.Read, StoreAccess.Append, StoreAccess.Manage })
+        {
+            if (!access.HasFlag(single)) continue;
+            if (!await Permits(services, user, StoreAccessMap.CapabilityFor(single).Value, eventStore, @namespace)) return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>
     /// Decides whether a caller may exercise a capability at the event store (and namespace) a query addresses.
     /// </summary>
     /// <param name="services">The services of the call.</param>

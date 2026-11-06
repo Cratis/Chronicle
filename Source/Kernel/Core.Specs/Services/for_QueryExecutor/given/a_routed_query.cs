@@ -3,8 +3,10 @@
 
 using System.Reactive.Linq;
 using System.Security.Claims;
+using Cratis.Chronicle.Security;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using ProtoBuf.Grpc;
 
 namespace Cratis.Chronicle.Services.for_QueryExecutor.given;
@@ -12,7 +14,7 @@ namespace Cratis.Chronicle.Services.for_QueryExecutor.given;
 /// <summary>
 /// Base context for a query whose routing values are checked before the query runs.
 /// </summary>
-public class a_routed_query : global::Cratis.Chronicle.Security.given.a_system_store_caller
+public class a_routed_query : Chronicle.Security.given.a_system_store_caller
 {
     /// <summary>
     /// Counts what happened while a query was routed.
@@ -50,11 +52,13 @@ public class a_routed_query : global::Cratis.Chronicle.Security.given.a_system_s
         _caller = principal;
         var services = CreateServices();
         var counted = new ServiceCollection()
-            .AddSingleton<global::Cratis.Chronicle.Security.ISystemStoreAccess>(_ =>
+            .AddSingleton(_ =>
             {
                 probe.Resolved();
-                return services.GetRequiredService<global::Cratis.Chronicle.Security.ISystemStoreAccess>();
+                return services.GetRequiredService<ISystemStoreAccess>();
             })
+            .AddSingleton(services.GetRequiredService<ILoggerFactory>())
+            .AddSingleton(services.GetRequiredService<IAuthorizationDecisions>())
             .BuildServiceProvider();
         var http = new DefaultHttpContext { User = principal ?? new ClaimsPrincipal(), RequestServices = counted };
         return new CallContext(new object(), new FakeServerCallContext(served ? http : null));

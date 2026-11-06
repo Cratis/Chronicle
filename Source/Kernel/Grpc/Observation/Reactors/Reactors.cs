@@ -14,6 +14,7 @@ using Cratis.Chronicle.Contracts.Observation.Reactors;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Observation.Reactors.Clients;
+using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Services.Events;
 using Cratis.Chronicle.Storage;
 using Cratis.Traces;
@@ -87,7 +88,7 @@ internal sealed class Reactors(
                         register.Reactor.EventSequenceId,
                         register.ConnectionId);
 
-                    registrationTcs.SetResult(register);
+                    _ = SystemStoreGuard.CompleteRegistration(context, register.EventStore, register.Namespace, StoreAccess.Manage, registrationTcs, register);
                     break;
 
                 case ReactorResult result:
@@ -248,7 +249,7 @@ internal sealed class Reactors(
     /// <inheritdoc/>
     public async Task<HasReactorResponse> HasReactor(HasReactorRequest request, CallContext context = default)
     {
-        await SystemStoreGuard.Ensure(context, new(request.EventStore, request.ReactorId));
+        await SystemStoreGuard.Ensure(context, new(request.EventStore, request.ReactorId), StoreAccess.Read, namespaceAddressed: false);
         var eventStore = storage.GetEventStore(request.EventStore);
         var exists = await eventStore.Reactors.Has(new(request.ReactorId));
 

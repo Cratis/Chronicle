@@ -13,7 +13,8 @@ public interface IConstraints
     /// Register a collection of constraints.
     /// </summary>
     /// <param name="request">The <see cref="RegisterConstraintsRequest"/> payload.</param>
+    /// <param name="context">The optional <see cref="CallContext"/> for the gRPC call.</param>
     /// <returns>Awaitable task.</returns>
     [Operation]
-    Task Register(RegisterConstraintsRequest request);
+    Task Register(RegisterConstraintsRequest request, CallContext context = default);
 }

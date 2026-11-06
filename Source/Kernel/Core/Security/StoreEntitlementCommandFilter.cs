@@ -71,17 +71,6 @@ public class StoreEntitlementCommandFilter : IAuthorizationCommandFilter
     static bool IsTrustedInProcess(IServiceProvider services, ClaimsPrincipal? caller, HttpContext? httpContext) =>
         caller is null && httpContext is null && services.GetService<InProcessKernelHost>() is not null;
 
-    static async Task<bool> Permits(IServiceProvider services, ClaimsPrincipal? caller, StoreAccess access, string store, string? @namespace)
-    {
-        foreach (var single in new[] { StoreAccess.Read, StoreAccess.Append, StoreAccess.Manage })
-        {
-            if (!access.HasFlag(single)) continue;
-            if (!await StoreCapabilityDecision.Permits(services, caller, StoreAccessMap.CapabilityFor(single).Value, store, @namespace)) return false;
-        }
-
-        return true;
-    }
-
     async Task<CommandResult> Authorize(CommandContext context, string? store, string? @namespace, string? target)
     {
         if (context.ServiceProvider is not { } services) return CommandResult.Unauthorized(context.CorrelationId, Refused);
@@ -92,9 +81,9 @@ public class StoreEntitlementCommandFilter : IAuthorizationCommandFilter
         if (caller is null && httpContext is null) return CommandResult.Unauthorized(context.CorrelationId, Refused);
 
         var permitted = string.IsNullOrEmpty(target)
-            ? await Permits(services, caller, _access(context.Type), store!, @namespace)
-            : (string.IsNullOrEmpty(store) || await Permits(services, caller, StoreAccess.Read, store, @namespace))
-                && await Permits(services, caller, StoreAccess.Append | StoreAccess.Manage, target, null);
+            ? await StoreCapabilityDecision.PermitsAccess(services, caller, _access(context.Type), store!, @namespace)
+            : (string.IsNullOrEmpty(store) || await StoreCapabilityDecision.PermitsAccess(services, caller, StoreAccess.Read, store, @namespace))
+                && await StoreCapabilityDecision.PermitsAccess(services, caller, StoreAccess.Append | StoreAccess.Manage, target, null);
 
         return permitted ? null! : CommandResult.Unauthorized(context.CorrelationId, Refused);
     }

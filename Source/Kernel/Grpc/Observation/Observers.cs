@@ -6,6 +6,7 @@ using Cratis.Chronicle.Clients;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Contracts.Observation;
+using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Services.Events;
 using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Options;
@@ -43,7 +44,7 @@ internal sealed class Observers(
     /// <inheritdoc/>
     public async Task<RetryPartitionResponse> RetryPartition(RetryPartition command, CallContext context = default)
     {
-        await SystemStoreGuard.Ensure(context, new(command.EventStore, command.Namespace, command.ObserverId, command.EventSequenceId));
+        await SystemStoreGuard.Ensure(context, new(command.EventStore, command.Namespace, command.ObserverId, command.EventSequenceId), StoreAccess.Manage);
         var outcome = await (await grainFactory.GetObserver(command, storage)).TryStartRecoverJobForFailedPartition(command.Partition);
         return new RetryPartitionResponse { Outcome = (PartitionRecoveryOutcome)(int)outcome };
     }
@@ -51,7 +52,7 @@ internal sealed class Observers(
     /// <inheritdoc/>
     public async Task<ClearPartitionQuarantineResponse> ClearPartitionQuarantine(ClearPartitionQuarantine command, CallContext context = default)
     {
-        await SystemStoreGuard.Ensure(context, new(command.EventStore, command.Namespace, command.ObserverId, command.EventSequenceId));
+        await SystemStoreGuard.Ensure(context, new(command.EventStore, command.Namespace, command.ObserverId, command.EventSequenceId), StoreAccess.Manage);
         var result = await (await grainFactory.GetObserver(command, storage)).ClearPartitionQuarantine(command.Partition, command.RetryImmediately);
         return new ClearPartitionQuarantineResponse
         {
@@ -63,7 +64,7 @@ internal sealed class Observers(
     /// <inheritdoc/>
     public async Task<FastForwardResponse> FastForward(FastForward command, CallContext context = default)
     {
-        await SystemStoreGuard.Ensure(context, new(command.EventStore, command.Namespace, command.ObserverId, command.EventSequenceId));
+        await SystemStoreGuard.Ensure(context, new(command.EventStore, command.Namespace, command.ObserverId, command.EventSequenceId), StoreAccess.Manage);
         var result = await (await grainFactory.GetObserver(command, storage)).FastForward();
         return new FastForwardResponse
         {
@@ -76,7 +77,7 @@ internal sealed class Observers(
     /// <inheritdoc/>
     public async Task<ReplayResponse> Replay(Replay command, CallContext context = default)
     {
-        await SystemStoreGuard.Ensure(context, new(command.EventStore, command.Namespace, command.ObserverId, command.EventSequenceId));
+        await SystemStoreGuard.Ensure(context, new(command.EventStore, command.Namespace, command.ObserverId, command.EventSequenceId), StoreAccess.Manage);
 
         // Clients read an empty job id as JobId.NotSet (not replayable, disconnected or quarantined), so keep reporting it rather than throwing.
         var jobId = await (await grainFactory.GetObserver(command, storage)).Replay();
@@ -86,14 +87,14 @@ internal sealed class Observers(
     /// <inheritdoc/>
     public async Task ReplayPartition(ReplayPartition command, CallContext context = default)
     {
-        await SystemStoreGuard.Ensure(context, new(command.EventStore, command.Namespace, command.ObserverId, command.EventSequenceId));
+        await SystemStoreGuard.Ensure(context, new(command.EventStore, command.Namespace, command.ObserverId, command.EventSequenceId), StoreAccess.Manage);
         await (await grainFactory.GetObserver(command, storage)).ReplayPartition(command.Partition);
     }
 
     /// <inheritdoc/>
     public async Task<WaitForObserverCompletionResponse> WaitForCompletion(WaitForObserverCompletionRequest request, CallContext context = default)
     {
-        await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.EventSequenceId));
+        await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.EventSequenceId), StoreAccess.Read);
         var eventTypeTails = request.EventTypeTails
             .GroupBy(_ => _.EventType.Id, StringComparer.Ordinal)
             .ToDictionary(_ => _.Key, _ => _.Max(tail => tail.SequenceNumber), StringComparer.Ordinal);
@@ -239,21 +240,21 @@ internal sealed class Observers(
     /// <inheritdoc/>
     public async Task ClearObserverQuarantine(ClearObserverQuarantine command, CallContext context = default)
     {
-        await SystemStoreGuard.Ensure(context, new(command.EventStore, command.Namespace, command.ObserverId, command.EventSequenceId));
+        await SystemStoreGuard.Ensure(context, new(command.EventStore, command.Namespace, command.ObserverId, command.EventSequenceId), StoreAccess.Manage);
         await (await grainFactory.GetObserver(command, storage)).ClearObserverQuarantine();
     }
 
     /// <inheritdoc/>
     public async Task ClearFailedPartitions(ClearFailedPartitions command, CallContext context = default)
     {
-        await SystemStoreGuard.Ensure(context, new(command.EventStore, command.Namespace, command.ObserverId, command.EventSequenceId));
+        await SystemStoreGuard.Ensure(context, new(command.EventStore, command.Namespace, command.ObserverId, command.EventSequenceId), StoreAccess.Manage);
         await (await grainFactory.GetObserver(command, storage)).ClearFailedPartitions();
     }
 
     /// <inheritdoc/>
     public async Task<RetryFailedPartitionsResponse> RetryFailedPartitions(RetryFailedPartitions command, CallContext context = default)
     {
-        await SystemStoreGuard.Ensure(context, new(command.EventStore, command.Namespace, command.ObserverId, command.EventSequenceId));
+        await SystemStoreGuard.Ensure(context, new(command.EventStore, command.Namespace, command.ObserverId, command.EventSequenceId), StoreAccess.Manage);
         var observer = await grainFactory.GetObserver(command, storage);
         var failedPartitions = (await observer.GetFailedPartitionKeys()).Count();
         await observer.TryRecoverAllFailedPartitions();
@@ -263,7 +264,7 @@ internal sealed class Observers(
     /// <inheritdoc/>
     public async Task<RemoveObserverResponse> RemoveObserver(RemoveObserver command, CallContext context = default)
     {
-        SystemStoreGuard.EnsureNotSystem(new(command.EventStore, command.Namespace, command.ObserverId, command.EventSequenceId));
+        await SystemStoreGuard.EnsureNotSystem(context, new(command.EventStore, command.Namespace, command.ObserverId, command.EventSequenceId), StoreAccess.Manage);
         var eventSequenceId = await Chronicle.Observation.ObserverEventSequenceResolver.Resolve(
             storage, command.EventStore, command.ObserverId, command.EventSequenceId);
 
@@ -284,7 +285,7 @@ internal sealed class Observers(
     /// <inheritdoc/>
     public async Task<ObserverInformation> GetObserverInformation(GetObserverInformationRequest request, CallContext context = default)
     {
-        await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.ObserverId, request.EventSequenceId));
+        await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.ObserverId, request.EventSequenceId), StoreAccess.Read);
         var observer = await grainFactory.GetObserver(request, storage);
         var definition = await observer.GetDefinition();
         var state = await observer.GetState();
@@ -311,7 +312,7 @@ internal sealed class Observers(
     /// <inheritdoc/>
     public async Task<IEnumerable<Contracts.Clients.ConnectedClient>> GetConnectedClientsForObserver(GetConnectedClientsForObserverRequest request, CallContext context = default)
     {
-        await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.ObserverId, request.EventSequenceId));
+        await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.ObserverId, request.EventSequenceId), StoreAccess.Read);
         var caller = ConnectionCallers.From(context, options.Value);
         var subscription = await (await grainFactory.GetObserver(request, storage)).GetSubscription();
         var clients = new List<Contracts.Clients.ConnectedClient>();
@@ -347,7 +348,7 @@ internal sealed class Observers(
     /// <inheritdoc/>
     public async Task<IEnumerable<ObserverInformation>> GetObservers(AllObserversRequest request, CallContext context = default)
     {
-        await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace));
+        await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace), StoreAccess.Read);
         var observerDefinitions = await storage.GetEventStore(request.EventStore).Observers.GetAll();
         var observerStateStorage = storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).Observers;
         var observerStates = await observerStateStorage.GetAll();
@@ -363,12 +364,12 @@ internal sealed class Observers(
 
     /// <inheritdoc/>
     public IObservable<IEnumerable<ObserverInformation>> ObserveObservers(AllObserversRequest request, CallContext context = default) =>
-        SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace), () => ObserveGuardedObservers(request, context));
+        SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace), StoreAccess.Read, () => ObserveGuardedObservers(request, context));
 
     /// <inheritdoc/>
     public async Task<IEnumerable<ObserverInformation>> GetReplayableObserversForEventTypes(GetReplayableObserversForEventTypesRequest request, CallContext context = default)
     {
-        await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace));
+        await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace), StoreAccess.Read);
         var eventTypes = request.EventTypes.ToChronicle();
         var observerDefinitions = await storage.GetEventStore(request.EventStore).Observers.GetReplayableObserversForEventTypes(eventTypes);
         var observerStateStorage = storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).Observers;

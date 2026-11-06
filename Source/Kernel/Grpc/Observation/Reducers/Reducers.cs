@@ -21,6 +21,7 @@ using Cratis.Chronicle.Observation.Reducers.Clients;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Services.Events;
 using Cratis.Traces;
 using Grpc.Core;
@@ -106,7 +107,7 @@ internal sealed class Reducers(
                         register.Reducer.EventSequenceId,
                         register.ConnectionId);
 
-                    registrationTcs.TrySetResult(register);
+                    _ = SystemStoreGuard.CompleteRegistration(context, register.EventStore, register.Namespace, StoreAccess.Manage, registrationTcs, register);
                     break;
 
                 case ReducerResult result:

@@ -71,7 +71,7 @@ internal static class QueryExecutor
     internal static IObservable<QueryResult<TData>> Execute<TData>(CallContext callContext, QueryRouting routing, Func<IObservable<TData>> query, Action<Exception>? onError = null)
     {
         if (routing.HasSeparator) return Observable.Return(SeparatorRefused<TData>());
-        if (!routing.TargetsSystem) return routing.Capability is null ? Execute(query, onError) : ExecuteObservableForStore(callContext, routing, query, onError);
+        if (!routing.TargetsSystem) return routing.Store is null ? Execute(query, onError) : ExecuteObservableForStore(callContext, routing, query, onError);
 
         return ExecuteObservableForSystem(callContext, query, onError);
     }
@@ -89,7 +89,7 @@ internal static class QueryExecutor
     internal static Task<QueryResult<TData>> Execute<TData>(CallContext callContext, QueryRouting routing, Func<Task<TData>> query, Action<Exception>? onError = null)
     {
         if (routing.HasSeparator) return Task.FromResult(SeparatorRefused<TData>());
-        if (!routing.TargetsSystem) return routing.Capability is null ? Execute(query, onError) : ExecuteForStore(callContext, routing, query, onError);
+        if (!routing.TargetsSystem) return routing.Store is null ? Execute(query, onError) : ExecuteForStore(callContext, routing, query, onError);
 
         return ExecuteForSystem(callContext, query, onError);
     }
