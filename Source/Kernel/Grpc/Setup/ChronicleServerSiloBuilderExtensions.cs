@@ -170,6 +170,7 @@ public static class ChronicleServerSiloBuilderExtensions
             builder.Services.AddCratisArcCore();
         }
 
+        builder.Services.TryAddSingleton(new InProcessKernelHost());
         builder.Services.AddSingleton<IServices>(sp =>
         {
             Cratis.Chronicle.Services.SystemStoreGuard.InProcessServices = sp;

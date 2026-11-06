@@ -49,9 +49,9 @@ public class SystemStoreQueryFilter : IAuthorizationQueryFilter
 
         if (targetsSystem) return AuthorizeSystem(context);
 
-        return StoreCapabilityDecision.CapabilityOf(context.Name.Value) is { } capability
-            ? AuthorizeStore(context, capability, store, @namespace)
-            : _noVerdict;
+        // A query that declares no capability reads the store it addresses.
+        var capability = StoreCapabilityDecision.CapabilityOf(context.Name.Value) ?? (store is not null ? WellKnownCapabilities.ReadEventStore.Value : null);
+        return capability is not null ? AuthorizeStore(context, capability, store, @namespace) : _noVerdict;
     }
 
     static string? RoutingName(string key)

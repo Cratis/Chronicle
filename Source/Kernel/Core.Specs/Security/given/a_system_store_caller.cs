@@ -6,6 +6,7 @@ using Cratis.Chronicle.Concepts.Security;
 using Cratis.Chronicle.Configuration;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
@@ -33,9 +34,21 @@ public class a_system_store_caller : Specification
         var authorization = new AdministratorAuthorization(
             Options.Create(new ChronicleOptions { Authentication = _authentication }), _privileges, NullLogger<AdministratorAuthorization>.Instance);
         return new ServiceCollection()
-            .AddSingleton<IHttpContextAccessor>(new HttpContextAccessor { HttpContext = new DefaultHttpContext { User = _caller! } })
+            .AddSingleton<IHttpContextAccessor>(new HttpContextAccessor { HttpContext = new DefaultHttpContext { User = _caller } })
             .AddSingleton<ISystemStoreAccess>(new SystemStoreAccessVerdict(new AuthorizationDecisions(authorization, Options.Create(new ChronicleOptions { Authentication = _authentication }), NullLogger<AuthorizationDecisions>.Instance)))
+            .AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance)
+            .AddSingleton(StoreDecisions())
             .BuildServiceProvider();
+    }
+
+    /// <summary>Entitles every caller to the stores they address, as a store-scoped decision is not what these specs are about.</summary>
+    /// <returns>The decisions.</returns>
+    static IAuthorizationDecisions StoreDecisions()
+    {
+        var decisions = Substitute.For<IAuthorizationDecisions>();
+        decisions.Decide(Arg.Any<ClaimsPrincipal?>(), Arg.Any<Capability>(), Arg.Any<AuthorizationScope>()).Returns(call =>
+            AuthorizationDecision.Allow(AuthorizationReason.Granted, call.ArgAt<Capability>(1), call.ArgAt<AuthorizationScope>(2)));
+        return decisions;
     }
 
     protected ClaimsPrincipal CallerNamed(string name) => name switch
