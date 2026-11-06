@@ -8,14 +8,13 @@ using Cratis.Chronicle.Security;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using NSubstitute;
-using Orleans;
 
 namespace Cratis.Chronicle.Benchmarks.SystemStoreGuard;
 
 /// <summary>Measures ordinary application reads against a per-silo snapshot.</summary>
 [MemoryDiagnoser]
 [InProcess]
-public class StoreEntitlementsBenchmark
+public class StoreEntitlementsBenchmark : IDisposable
 {
     readonly PrincipalKey _holder = new(PrincipalKey.LocalIssuer, "app");
     readonly ClaimsPrincipal _caller = new(new ClaimsIdentity([new Claim("sub", "app")], "Bearer"));
@@ -55,7 +54,22 @@ public class StoreEntitlementsBenchmark
     [GlobalCleanup]
     public void Verify()
     {
-        _cache.Dispose();
+        Dispose();
         if (_administrator.Calls != 0 || _grains.ReceivedCalls().Any()) throw new InvalidOperationException("An ordinary application read consulted an authoritative dependency.");
+    }
+
+    /// <inheritdoc/>
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    /// <summary>Releases the published snapshot.</summary>
+    /// <param name="disposing">Whether managed resources should be released.</param>
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!disposing) return;
+        _cache?.Dispose();
     }
 }
