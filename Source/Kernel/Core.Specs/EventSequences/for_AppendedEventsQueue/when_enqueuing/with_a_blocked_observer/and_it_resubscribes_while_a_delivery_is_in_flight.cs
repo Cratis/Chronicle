@@ -9,8 +9,6 @@ namespace Cratis.Chronicle.EventSequences.for_AppendedEventsQueue.when_enqueuing
 /// </summary>
 public class and_it_resubscribes_while_a_delivery_is_in_flight : given.a_blocked_observer_and_a_free_observer
 {
-    int _deliveriesWhileTheFirstWasInFlight;
-
     async Task Because()
     {
         await _queue.Enqueue([EventFor("partition")]);
@@ -20,14 +18,12 @@ public class and_it_resubscribes_while_a_delivery_is_in_flight : given.a_blocked
         await _queue.Subscribe(_blockedObserverKey, [_eventType]);
         await _queue.Enqueue([EventFor("partition")]);
         await WaitTill(() => FreeObserverEventCount == 2);
-        await Task.Delay(200);
-        _deliveriesWhileTheFirstWasInFlight = _blockedObserverHandled.Count;
 
         _release.SetResult();
         await WaitTill(() => _blockedObserverHandled.Count == 2);
         await _queue.AwaitQueueDepletion();
     }
 
-    [Fact] void should_not_deliver_again_while_the_first_delivery_is_in_flight() => _deliveriesWhileTheFirstWasInFlight.ShouldEqual(1);
+    [Fact] void should_never_deliver_to_the_observer_from_two_lanes_at_once() => _blockedObserverMostConcurrentDeliveries.ShouldEqual(1);
     [Fact] void should_deliver_to_the_new_lane_once_the_first_delivery_has_settled() => _blockedObserverHandled.Count.ShouldEqual(2);
 }
