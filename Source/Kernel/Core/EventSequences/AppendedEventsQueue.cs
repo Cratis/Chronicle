@@ -66,8 +66,10 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     readonly CancellationToken _catchupCancellationToken;
     readonly int _laneCapacity;
     readonly int _laneEventCapacity;
+    readonly Dictionary<ObserverKey, Task> _retiredLanes = [];
     readonly SuspectedSkipWarningLimiter _suspectedUndeliveredLimiter = new();
     int _pendingItems;
+    int _channelEvents;
     Task _queueTask = Task.CompletedTask;
     bool _isDisposed;
     bool _isDraining;
@@ -184,18 +186,25 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
 
         Interlocked.Increment(ref _pendingItems);
         _queueEmptyEvent.Reset();
-        if (_channel.Writer.TryWrite(batch))
+
+        // The channel is bounded in batches, and a batch can hold any number of events, so it is bounded in events too.
+        // A batch that arrives while nothing else waits is always taken: it can only be spilled by the lanes.
+        var queuedEvents = Interlocked.Add(ref _channelEvents, batch.Length);
+        var withinEventCapacity = _laneEventCapacity <= 0 || queuedEvents == batch.Length || queuedEvents <= _laneEventCapacity;
+        if (withinEventCapacity && _channel.Writer.TryWrite(batch))
         {
             _metrics?.EventsEnqueued(batch.Length);
             return Task.CompletedTask;
         }
 
+        Interlocked.Add(ref _channelEvents, -batch.Length);
         if (Interlocked.Decrement(ref _pendingItems) == 0)
         {
             _queueEmptyEvent.Set();
         }
 
-        SpillSubscribersToCatchup();
+        // Only the observers this batch was meant for lose their place; the others never needed it, so they stay live.
+        SpillSubscribersMatchingToCatchup(batch);
         _metrics?.EventsSpilledToCatchup(batch.Length);
         return Task.CompletedTask;
     }
@@ -280,6 +289,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         {
             _subscriptions.RemoveAll(subscription => subscription.ObserverKey == observerKey);
             CloseLane(observerKey);
+            _pageObservers.TryRemove(observerKey, out _);
         }
 
         return Task.CompletedTask;
@@ -354,6 +364,47 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         });
     }
 
+    /// <summary>
+    /// Moves the observers a batch was meant for to catch-up, because the batch cannot be queued.
+    /// </summary>
+    /// <remarks>
+    /// Observers the batch does not match never needed it, so they stay subscribed and live: a full queue does not
+    /// cost an observer that was keeping up its place.
+    /// </remarks>
+    /// <param name="batch">The batch that could not be queued.</param>
+    internal void SpillSubscribersMatchingToCatchup(AppendedEvent[] batch)
+    {
+        var batchEventTypes = DistinctEventTypes(batch, out var hasRedaction);
+        List<ObserverKey> observerKeys;
+        lock (_subscriptionsLock)
+        {
+            observerKeys = [];
+            foreach (var subscription in _subscriptions.ToArray())
+            {
+                if (!MayMatch(subscription, batchEventTypes, hasRedaction) || GetFilteredEvents(batch, subscription).Count == 0)
+                {
+                    continue;
+                }
+
+                _subscriptions.Remove(subscription);
+                CloseLane(subscription.ObserverKey);
+                observerKeys.Add(subscription.ObserverKey);
+            }
+        }
+
+        if (observerKeys.Count == 0)
+        {
+            return;
+        }
+
+        _logger.SpillingToCatchup(observerKeys.Count);
+        foreach (var observerKey in observerKeys)
+        {
+            StartCatchupTrigger(observerKey);
+            ReportSpill(observerKey, AppendedEventsQueueSpillReasons.QueueFull);
+        }
+    }
+
     static bool MatchesFilters(AppendedEventsQueueObserverSubscription subscription, AppendedEvent @event)
     {
         return subscription.Filters?.Matches(@event) ?? true;
@@ -391,25 +442,83 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     }
 
     /// <summary>
+    /// Orders events by sequence number, keeping the order of events that share one.
+    /// </summary>
+    /// <param name="events">The events to order.</param>
+    /// <returns>The events themselves when they are already in order; otherwise a sorted copy.</returns>
+    static List<AppendedEvent> SortBySequenceNumber(List<AppendedEvent> events)
+    {
+        // Appends arrive in sequence order, so the batch is usually sorted already. When it is not, the sort is stable:
+        // events sharing a sequence number keep the order they were enqueued in.
+        var inOrder = true;
+        for (var index = 1; index < events.Count && inOrder; index++)
+        {
+            inOrder = events[index].Context.SequenceNumber >= events[index - 1].Context.SequenceNumber;
+        }
+
+        return inOrder ? events : events.OrderBy(@event => @event.Context.SequenceNumber).ToList();
+    }
+
+    /// <summary>
+    /// Gets the distinct event types in a batch.
+    /// </summary>
+    /// <param name="events">The events of the batch.</param>
+    /// <param name="hasRedaction">Whether the batch holds a redaction, which stands in for the event type it redacted.</param>
+    /// <returns>The distinct event type identifiers.</returns>
+    static HashSet<EventTypeId> DistinctEventTypes(IReadOnlyList<AppendedEvent> events, out bool hasRedaction)
+    {
+        var eventTypes = new HashSet<EventTypeId>();
+        foreach (var @event in events)
+        {
+            eventTypes.Add(@event.Context.EventType.Id);
+        }
+
+        hasRedaction = eventTypes.Contains(GlobalEventTypes.Redaction);
+        return eventTypes;
+    }
+
+    /// <summary>
+    /// Cheaply rules out a subscription that cannot match any event of a batch.
+    /// </summary>
+    /// <param name="subscription">The subscription to test.</param>
+    /// <param name="batchEventTypes">The distinct event types of the batch.</param>
+    /// <param name="hasRedaction">Whether the batch holds a redaction.</param>
+    /// <returns>False when no event of the batch can match; otherwise true.</returns>
+    static bool MayMatch(AppendedEventsQueueObserverSubscription subscription, HashSet<EventTypeId> batchEventTypes, bool hasRedaction)
+    {
+        if (subscription.AllEventTypes || hasRedaction)
+        {
+            return true;
+        }
+
+        foreach (var eventTypeId in subscription.EventTypeIds)
+        {
+            if (batchEventTypes.Contains(eventTypeId))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
     /// Gets the filtered events for a subscription.
     /// </summary>
     /// <param name="events">The events to filter.</param>
     /// <param name="subscription">The subscription to match events against.</param>
-    /// <returns>An array of matching events.</returns>
-    static AppendedEvent[] GetFilteredEvents(
-        List<AppendedEvent> events,
+    /// <returns>The matching events; the batch itself when every event matches.</returns>
+    static IReadOnlyList<AppendedEvent> GetFilteredEvents(
+        IReadOnlyList<AppendedEvent> events,
         AppendedEventsQueueObserverSubscription subscription)
     {
-        var matchingEvents = new AppendedEvent[events.Count];
         var numberOfMatchingEvents = 0;
         foreach (var @event in events)
         {
-            if (!MatchesSubscription(subscription, @event))
+            if (MatchesSubscription(subscription, @event))
             {
-                continue;
+                numberOfMatchingEvents++;
             }
-
-            matchingEvents[numberOfMatchingEvents++] = @event;
         }
 
         if (numberOfMatchingEvents == 0)
@@ -417,9 +526,23 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
             return [];
         }
 
-        return numberOfMatchingEvents == matchingEvents.Length
-            ? matchingEvents
-            : matchingEvents[..numberOfMatchingEvents];
+        // Observers that want every event share the batch itself: it is never modified once routed.
+        if (numberOfMatchingEvents == events.Count)
+        {
+            return events;
+        }
+
+        var matchingEvents = new AppendedEvent[numberOfMatchingEvents];
+        var next = 0;
+        foreach (var @event in events)
+        {
+            if (MatchesSubscription(subscription, @event))
+            {
+                matchingEvents[next++] = @event;
+            }
+        }
+
+        return matchingEvents;
     }
 
 #pragma warning disable RCS1075 // Telemetry failures are deliberately swallowed: they must never replace the spill or delivery they observe
@@ -436,9 +559,23 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     }
 #pragma warning restore RCS1075
 
-    static List<(EventSourceId Partition, List<AppendedEvent> Events)> SplitIntoPartitionRuns(List<AppendedEvent> sorted)
+    static int CountPartitionRuns(IReadOnlyList<AppendedEvent> sorted)
     {
-        var runs = new List<(EventSourceId Partition, List<AppendedEvent> Events)>();
+        var runs = sorted.Count > 0 ? 1 : 0;
+        for (var index = 1; index < sorted.Count; index++)
+        {
+            if (sorted[index].Context.EventSourceId != sorted[index - 1].Context.EventSourceId)
+            {
+                runs++;
+            }
+        }
+
+        return runs;
+    }
+
+    static List<(EventSourceId Partition, AppendedEvent[] Events)> SplitIntoPartitionRuns(IReadOnlyList<AppendedEvent> sorted)
+    {
+        var runs = new List<(EventSourceId Partition, AppendedEvent[] Events)>();
         var index = 0;
         while (index < sorted.Count)
         {
@@ -449,7 +586,13 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
                 index++;
             }
 
-            runs.Add((partition, sorted.GetRange(start, index - start)));
+            var run = new AppendedEvent[index - start];
+            for (var offset = 0; offset < run.Length; offset++)
+            {
+                run[offset] = sorted[start + offset];
+            }
+
+            runs.Add((partition, run));
         }
 
         return runs;
@@ -457,7 +600,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
 
     static int CountRunsUpTo(
         AppendedEventsQueueObserverSubscription subscription,
-        List<(EventSourceId Partition, List<AppendedEvent> Events)> runs,
+        List<(EventSourceId Partition, AppendedEvent[] Events)> runs,
         int limit)
     {
         var count = 0;
@@ -528,6 +671,8 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
                     continue;
                 }
 
+                Interlocked.Add(ref _channelEvents, -coalesced.Count);
+
                 try
                 {
                     if (!_isResetting)
@@ -563,28 +708,28 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     /// <param name="batches">The number of queued batches the events came from.</param>
     void Route(List<AppendedEvent> events, int batches)
     {
-        // A stable sort: events sharing a sequence number keep the order they were enqueued in.
-        var sorted = events.OrderBy(@event => @event.Context.SequenceNumber).ToList();
+        var sorted = SortBySequenceNumber(events);
 
         // An observer whose share of this batch alone would cost too many sequential Handle calls is moved to catch-up
         // before anything is routed to it, so its cursor can never pass an event it skipped.
-        var spilled = SpillFragmentedSubscriptions(SplitIntoPartitionRuns(sorted));
+        var spilled = SpillFragmentedSubscriptions(sorted);
+        var batchEventTypes = DistinctEventTypes(sorted, out var hasRedaction);
         foreach (var subscription in GetSubscriptionsSnapshot())
         {
-            if (spilled.Contains(subscription.ObserverKey))
+            if (spilled.Contains(subscription.ObserverKey) || !MayMatch(subscription, batchEventTypes, hasRedaction))
             {
                 continue;
             }
 
             var matching = GetFilteredEvents(sorted, subscription);
-            if (matching.Length > 0)
+            if (matching.Count > 0)
             {
                 RouteToLane(subscription, matching, batches);
             }
         }
     }
 
-    void RouteToLane(AppendedEventsQueueObserverSubscription subscription, AppendedEvent[] events, int batches)
+    void RouteToLane(AppendedEventsQueueObserverSubscription subscription, IReadOnlyList<AppendedEvent> events, int batches)
     {
         var observerKey = subscription.ObserverKey;
         lock (_subscriptionsLock)
@@ -599,7 +744,8 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
             {
                 // Resolved once, under the lock, rather than for every partition run.
                 var observer = _grainFactory.GetGrain<IObserver>(observerKey);
-                lane = new AppendedEventsQueueObserverLane(subscription, observer, DeliverToObserver, LaneSettled, LaneFailed, work => _taskFactory.Run(work));
+                _retiredLanes.TryGetValue(observerKey, out var retired);
+                lane = new AppendedEventsQueueObserverLane(subscription, observer, DeliverToObserver, LaneSettled, LaneFailed, work => _taskFactory.Run(work), retired);
                 _lanes[observerKey] = lane;
             }
 
@@ -607,10 +753,10 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
             lane.Subscription = subscription;
 
             if ((_laneCapacity > 0 && lane.PendingBatches + batches > _laneCapacity) ||
-                (_laneEventCapacity > 0 && lane.PendingEvents + events.Length > _laneEventCapacity))
+                (_laneEventCapacity > 0 && lane.PendingEvents + events.Count > _laneEventCapacity))
             {
                 SpillLaggingSubscriptionToCatchup(subscription);
-                Observe(() => _metrics?.EventsSpilledToCatchup(events.Length));
+                Observe(() => _metrics?.EventsSpilledToCatchup(events.Count));
                 return;
             }
 
@@ -633,7 +779,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     /// <returns>Awaitable task.</returns>
     async Task DeliverToObserver(AppendedEventsQueueObserverLane lane, IReadOnlyList<AppendedEvent> events)
     {
-        var runs = SplitIntoPartitionRuns(events as List<AppendedEvent> ?? [.. events]);
+        var runs = SplitIntoPartitionRuns(events);
         var deliversPages = await DeliversPages(lane);
         if (!deliversPages && runs.Count > MaxPartitionRunsPerLiveDispatch && SpillFragmentedSubscriptionToCatchup(CurrentSubscriptionOf(lane)))
         {
@@ -670,7 +816,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
 
             try
             {
-                await Dispatch(lane.Observer, partition, [.. partitionEvents], CurrentSubscriptionOf(lane));
+                await Dispatch(lane.Observer, partition, partitionEvents, CurrentSubscriptionOf(lane));
             }
             catch (Exception ex)
             {
@@ -705,7 +851,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         }
     }
 
-    async Task DispatchPage(IObserver observer, List<(EventSourceId Partition, List<AppendedEvent> Events)> runs, AppendedEventsQueueObserverSubscription subscription)
+    async Task DispatchPage(IObserver observer, List<(EventSourceId Partition, AppendedEvent[] Events)> runs, AppendedEventsQueueObserverSubscription subscription)
     {
         try
         {
@@ -715,7 +861,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         {
             foreach (var (partition, events) in runs)
             {
-                ReportSuspectedUndeliveredEvents(partition, [.. events], subscription.ObserverKey);
+                ReportSuspectedUndeliveredEvents(partition, events, subscription.ObserverKey);
             }
 
             SpillFailedSubscriptionToCatchup(subscription, [.. runs.SelectMany(_ => _.Events)]);
@@ -754,7 +900,39 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         if (_lanes.Remove(observerKey, out var lane))
         {
             lane.Close();
+            RememberRetiredLane(observerKey, lane.Completion);
         }
+    }
+
+    /// <summary>
+    /// Remembers a closed lane until it has settled, so a lane created for the same observer waits for it.
+    /// </summary>
+    /// <param name="observerKey">The <see cref="ObserverKey"/> of the observer.</param>
+    /// <param name="completion">The task that completes when the closed lane has settled.</param>
+    void RememberRetiredLane(ObserverKey observerKey, Task completion)
+    {
+        if (completion.IsCompleted)
+        {
+            return;
+        }
+
+        // A lane created for the same observer meanwhile waits for this one, so the observer is never delivered to by
+        // two lanes at once; the entry goes once the retired lane has settled.
+        _retiredLanes[observerKey] = completion;
+        _ = completion.ContinueWith(
+            _ =>
+            {
+                lock (_subscriptionsLock)
+                {
+                    if (_retiredLanes.TryGetValue(observerKey, out var current) && ReferenceEquals(current, completion))
+                    {
+                        _retiredLanes.Remove(observerKey);
+                    }
+                }
+            },
+            CancellationToken.None,
+            TaskContinuationOptions.ExecuteSynchronously,
+            TaskScheduler.Default);
     }
 
     /// <summary>
@@ -842,16 +1020,17 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         }
     }
 
-    HashSet<ObserverKey> SpillFragmentedSubscriptions(List<(EventSourceId Partition, List<AppendedEvent> Events)> runs)
+    HashSet<ObserverKey> SpillFragmentedSubscriptions(IReadOnlyList<AppendedEvent> sorted)
     {
         var spilled = new HashSet<ObserverKey>();
 
         // A subscription cannot have more runs than the batch has, so most dispatches skip the scan entirely.
-        if (runs.Count <= MaxPartitionRunsPerLiveDispatch)
+        if (CountPartitionRuns(sorted) <= MaxPartitionRunsPerLiveDispatch)
         {
             return spilled;
         }
 
+        var runs = SplitIntoPartitionRuns(sorted);
         foreach (var subscription in GetSubscriptionsSnapshot())
         {
             // An observer that takes pages is not slowed down by many partitions in one dispatch.
