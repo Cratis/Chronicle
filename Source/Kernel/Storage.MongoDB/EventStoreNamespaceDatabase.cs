@@ -66,7 +66,7 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
         // TODO: Performance optimization - separate reads from writes in a clustered setup. Read from secondary.
         // settings.ReadPreference = ReadPreference.SecondaryPreferred;
         Client = clientManager.GetClientFor(settings);
-        _database = Client.GetDatabase(databaseName);
+        _database = Client.GetDatabaseByExistingCasing(databaseName);
     }
 
     /// <inheritdoc/>
