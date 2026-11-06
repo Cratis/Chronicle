@@ -2,12 +2,14 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
+using Orleans.CodeGeneration;
 
 namespace Cratis.Chronicle.Namespaces;
 
 /// <summary>
 /// Defines a system that manages namespaces.
 /// </summary>
+[Version(1)]
 public interface INamespaces : IGrainWithStringKey
 {
     /// <summary>
@@ -22,6 +24,20 @@ public interface INamespaces : IGrainWithStringKey
     /// <param name="namespace">The namespace to ensure.</param>
     /// <returns>Awaitable task.</returns>
     Task Ensure(EventStoreNamespaceName @namespace);
+
+    /// <summary>
+    /// Ensures a namespace exists and returns its stored casing.
+    /// </summary>
+    /// <param name="namespace">The requested name.</param>
+    /// <returns>The canonical namespace name.</returns>
+    Task<EventStoreNamespaceName> EnsureCanonical(EventStoreNamespaceName @namespace);
+
+    /// <summary>
+    /// Gets a namespace's stored casing without creating it.
+    /// </summary>
+    /// <param name="namespace">The requested name.</param>
+    /// <returns>The canonical name, or null when unknown.</returns>
+    Task<EventStoreNamespaceName?> GetCanonical(EventStoreNamespaceName @namespace);
 
     /// <summary>
     /// Get all namespaces.
