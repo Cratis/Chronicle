@@ -3,7 +3,7 @@
 
 namespace Cratis.Chronicle.Services.Observation.for_ClientSubscriptionKeeper.when_keeping_a_subscription;
 
-class and_the_check_fails : Specification
+public class and_the_check_fails : Specification
 {
     int _sent;
 
