@@ -25,6 +25,7 @@ Put these settings at the root of `chronicle.json`, not inside a `Cratis` or `Ch
 | --- | --- |
 | `queues` | Number of appended-event queues per event sequence. Each queue routes appended events to the observers assigned to it. See [How observers use the queues](#how-observers-use-the-queues). |
 | `queueBoundedCapacity` | Capacity in **batches**, not individual events, of each queue and of each observer's backlog within it. `0` makes both unbounded. |
+| `queueBoundedEvents` | Most **events** a queue, or one observer's backlog within it, may hold before spilling to catch-up. Bounds memory when batches are large. `0` makes it unbounded. Defaults to 5000. |
 | `statePersistenceInterval` | Appends between warm-start state snapshots. State is also persisted on the first append after activation and on deactivation. |
 | `constraintsVersionCheckInterval` | Maximum frequency of constraint-version polling during appends. A zero interval checks on every append. |
 | `queueDepletionWaitTimeoutMilliseconds` | Bounds the final queue-empty wait when awaiting depletion outside a debugger. |
@@ -41,7 +42,7 @@ Appends never wait for observers:
 
 - When one observer's backlog exceeds `queueBoundedCapacity` batches, that observer alone stops receiving live events and spills to catch-up. Catch-up rereads what it missed from its persisted cursor, and the observer subscribes again once it has caught up. The other observers on the queue are not affected.
 - When a single pass of an observer's backlog would need more than 256 sequential per-partition deliveries, the observer spills to catch-up the same way. Bulk appends that interleave many event sources are then processed in parallel per partition instead of one event at a time.
-- When a queue itself fills, all its observers spill to catch-up the same way.
+- When a queue itself fills, in batches or in events (`queueBoundedEvents`), only the observers the rejected batch was meant for spill to catch-up the same way. Observers subscribed to other event types stay live.
 
 Increase `queueBoundedCapacity` to absorb longer bursts. A smaller value moves a lagging observer to catch-up sooner.
 
