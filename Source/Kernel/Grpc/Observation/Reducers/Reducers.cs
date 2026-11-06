@@ -258,7 +258,9 @@ internal sealed class Reducers(
                     }
 
                     await ClientSubscriptionKeeper.KeepWhileConnected(
-                        () => clientObserver!.KeepSubscription(reducerDefinition),
+                        () => reducerDefinition.IsActive
+                            ? ClientSubscriptionKeeper.KeepSubscription(clientObserver!.IsSubscriptionIntact, () => clientObserver.KeepSubscription(reducerDefinition))
+                            : clientObserver!.KeepSubscription(reducerDefinition),
                         TimeSpan.FromSeconds(options.Value.ConnectedClients.ReviseIntervalSeconds),
                         registration.ConnectionId,
                         logger,

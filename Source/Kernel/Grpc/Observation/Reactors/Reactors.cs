@@ -221,7 +221,7 @@ internal sealed class Reactors(
                 }
 
                 await ClientSubscriptionKeeper.KeepWhileConnected(
-                    () => clientObserver.KeepSubscription(definition),
+                    () => ClientSubscriptionKeeper.KeepSubscription(clientObserver.IsSubscriptionIntact, () => clientObserver.KeepSubscription(definition)),
                     TimeSpan.FromSeconds(options.Value.ConnectedClients.ReviseIntervalSeconds),
                     registration.ConnectionId,
                     logger,
