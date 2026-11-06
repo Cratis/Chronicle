@@ -164,7 +164,7 @@ class NightlyFeedHandoff(unittest.TestCase):
         for step in self.publish['steps']:
             self.assertNotIn('PAT_WORKFLOWS', str(step.get('env', {})))
         self.assertIn('python3 -B .github/scripts/test-nightly-coverage-feed.py', str(self.build))
-        self.assertEqual('[wire-compatibility, grain-compatibility, release]', str(self.publish['needs']).replace("'", ''))
+        self.assertEqual('[release]', str(self.publish['needs']).replace("'", ''))
 
     def test_report_time_is_captured_immediately_after_reportgenerator(self):
         steps = self.build['coverage-merge-and-cache']['steps']
