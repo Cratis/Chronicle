@@ -32,6 +32,13 @@ public class ArcFilterBenchmark
     readonly SystemStoreAuthorizationProbe _probe = new(false);
     readonly SystemStoreQueryFilter _queryFilter = new();
     readonly SystemStoreCommandFilter _commandFilter = new();
+    readonly StoreEntitlementCommandFilter _entitlementFilter = new();
+    EntitledCaller _entitled = null!;
+    EntitledCaller _unentitledAudited = null!;
+    EntitledCaller _unentitledEnforced = null!;
+    CommandContext _entitledCommand = null!;
+    CommandContext _auditedCommand = null!;
+    CommandContext _refusedCommand = null!;
     QueryContext _query = null!;
     CommandContext _command = null!;
 
@@ -62,7 +69,34 @@ public class ArcFilterBenchmark
             "Cratis.Chronicle.Observation.ObserverInformation.AllObservers", Cratis.Execution.CorrelationId.New(), Paging.NotPaged, Sorting.None, arguments, ServiceProvider: services);
         var retry = new RetryPartition("bench", "Default", "observer", "event-log", "partition");
         _command = new CommandContext(Cratis.Execution.CorrelationId.New(), retry.GetType(), retry, [], new CommandContextValues(), ServiceProvider: services);
+        _entitled = new(true, true);
+        _unentitledAudited = new(false, false);
+        _unentitledEnforced = new(false, true);
+        _entitledCommand = CommandFor(_entitled, retry);
+        _auditedCommand = CommandFor(_unentitledAudited, retry);
+        _refusedCommand = CommandFor(_unentitledEnforced, retry);
     }
+
+    /// <summary>
+    /// An application-store command by a caller whose grant is in the snapshot, with enforcement on.
+    /// </summary>
+    /// <returns>The filter task.</returns>
+    [Benchmark]
+    public Task<CommandResult> EntitledAppend() => _entitlementFilter.OnExecution(_entitledCommand);
+
+    /// <summary>
+    /// An application-store command by a caller without a grant, with enforcement off (audited).
+    /// </summary>
+    /// <returns>The filter task.</returns>
+    [Benchmark]
+    public Task<CommandResult> AuditedUnentitledAppend() => _entitlementFilter.OnExecution(_auditedCommand);
+
+    /// <summary>
+    /// An application-store command by a caller without a grant, with enforcement on (refused).
+    /// </summary>
+    /// <returns>The filter task.</returns>
+    [Benchmark]
+    public Task<CommandResult> RefusedUnentitledAppend() => _entitlementFilter.OnExecution(_refusedCommand);
 
     /// <summary>
     /// A query through the filter chain.
@@ -78,6 +112,9 @@ public class ArcFilterBenchmark
     [Benchmark]
     public Task<CommandResult> Command() => Guarded ? _commandFilter.OnExecution(_command) : _noCommandVerdict;
 
+    static CommandContext CommandFor(EntitledCaller caller, RetryPartition command) =>
+        new(Cratis.Execution.CorrelationId.New(), command.GetType(), command, [], new CommandContextValues(), ServiceProvider: caller.Services);
+
     /// <summary>
     /// Fails the run when a non-System call asked for the roster.
     /// </summary>
@@ -85,6 +122,9 @@ public class ArcFilterBenchmark
     [GlobalCleanup]
     public void Verify()
     {
+        _entitled.Dispose();
+        _unentitledAudited.Dispose();
+        _unentitledEnforced.Dispose();
         if (_probe.Calls != 0) throw new InvalidOperationException($"Non-System calls made {_probe.Calls} roster calls.");
     }
 }
