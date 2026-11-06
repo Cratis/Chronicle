@@ -25,7 +25,21 @@ public class when_reading_tables_of_a_sql_server_database(SqlServerFixture fixtu
         await using var command = connection.CreateCommand();
         command.CommandText = "SELECT COUNT(*) FROM sys.dm_exec_sessions WHERE database_id = DB_ID(@name) AND session_id <> @@SPID";
         command.Parameters.AddWithValue("name", database);
-        _sessions = Convert.ToInt32(await command.ExecuteScalarAsync());
+
+        // Closing a connection returns before the server has ended its session, so a session that is going away is not
+        // one that was left behind: only one that is still there after a few seconds is.
+        var deadline = DateTime.UtcNow.AddSeconds(10);
+        do
+        {
+            _sessions = Convert.ToInt32(await command.ExecuteScalarAsync());
+            if (_sessions == 0)
+            {
+                break;
+            }
+
+            await Task.Delay(100);
+        }
+        while (DateTime.UtcNow < deadline);
     }
 
     async Task Destroy() => await fixture.DropDatabase(_connectionString);

@@ -22,7 +22,12 @@ public class and_its_backlog_holds_more_events_than_the_event_capacity : given.a
 
     async Task Because()
     {
-        for (var batch = 0; batch < Batches; batch++)
+        // The blocked observer takes the first batch and holds it. Waiting for that delivery before the backlog builds is
+        // what makes "handled one batch" deterministic: a spill that lands before the first delivery discards that batch too.
+        await _queue.Enqueue([EventFor("partition")]);
+        await WaitTill(() => FreeObserverEventCount == 1 && !_blockedObserverHandled.IsEmpty);
+
+        for (var batch = 1; batch < Batches; batch++)
         {
             await _queue.Enqueue([EventFor("partition")]);
             await WaitTill(() => FreeObserverEventCount == batch + 1);
