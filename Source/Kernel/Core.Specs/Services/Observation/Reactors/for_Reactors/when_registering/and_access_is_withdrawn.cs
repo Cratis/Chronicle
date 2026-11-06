@@ -30,13 +30,21 @@ public class and_access_is_withdrawn : given.a_registration
     }
 
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task should_end_and_release_the_real_stream(bool expireLease)
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task should_end_and_release_the_real_stream(bool expireLease, bool confirmLease)
     {
         using var caller = new an_entitled_caller();
         Connect(callContext: caller.Context);
         await _subscribed.Task.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
+        if (confirmLease)
+        {
+            caller.Clock.Advance(TimeSpan.FromMinutes(3));
+            await caller.ConfirmLease();
+            caller.Clock.Advance(TimeSpan.FromMinutes(3));
+            _error.Task.IsCompleted.ShouldBeFalse();
+        }
         if (expireLease) caller.Clock.Advance(TimeSpan.FromMinutes(6));
         else caller.Revoke();
         var error = await _error.Task.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);

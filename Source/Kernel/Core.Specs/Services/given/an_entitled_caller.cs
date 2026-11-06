@@ -22,7 +22,11 @@ public sealed class an_entitled_caller : IDisposable
     public an_entitled_caller(bool enforce = true, string? ns = null, CancellationToken cancellationToken = default)
     {
         Clock = new EntitlementClock();
-        _cache = new(Substitute.For<IGrainFactory>(), NullLogger<StoreEntitlementsCache>.Instance, Clock);
+        var grain = Substitute.For<IStoreEntitlements>();
+        grain.GetVersion().Returns(1L);
+        var grains = Substitute.For<IGrainFactory>();
+        grains.GetGrain<IStoreEntitlements>(IStoreEntitlements.Key).Returns(grain);
+        _cache = new(grains, NullLogger<StoreEntitlementsCache>.Instance, Clock);
         _cache.Publish(new(1, [new(new(PrincipalKey.LocalIssuer, "app"), "store", ns is null ? null : new Concepts.EventStoreNamespaceName(ns), StoreAccess.Read | StoreAccess.Append | StoreAccess.Manage, EventStoreAccessGrantSource.Command)]));
         var options = Options.Create(new ChronicleOptions { Authentication = new Authentication { Enabled = true, EnforceStoreEntitlements = enforce } });
         var accessor = new HttpContextAccessor();
@@ -43,6 +47,7 @@ public sealed class an_entitled_caller : IDisposable
     public HttpContext Http { get; }
     public EntitlementClock Clock { get; }
     public void Revoke() => _cache.Publish(new(2, []));
+    public Task ConfirmLease() => _cache.Poll();
 
     public void Dispose()
     {

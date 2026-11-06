@@ -14,9 +14,10 @@ namespace Cratis.Chronicle.Services.Occurrences.for_Occurrences;
 public class when_an_observable_query_loses_access
 {
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task should_end_the_real_query_with_permission_denied(bool expireLease)
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task should_end_the_real_query_with_permission_denied(bool expireLease, bool confirmLease)
     {
         using var caller = new an_entitled_caller();
         var storage = Substitute.For<IStorage>();
@@ -33,6 +34,13 @@ public class when_an_observable_query_loses_access
             },
             error => failed.TrySetResult(error));
         await initial.Task.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
+        if (confirmLease)
+        {
+            caller.Clock.Advance(TimeSpan.FromMinutes(3));
+            await caller.ConfirmLease();
+            caller.Clock.Advance(TimeSpan.FromMinutes(3));
+            failed.Task.IsCompleted.ShouldBeFalse();
+        }
         if (expireLease) caller.Clock.Advance(TimeSpan.FromMinutes(6));
         else caller.Revoke();
         var error = await failed.Task.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);

@@ -62,7 +62,7 @@ internal static class StoreCapabilityGuard
         if (services.GetService<IStoreEntitlementsCache>() is not { } cache) return stream;
 
         var time = services.GetService<TimeProvider>() ?? TimeProvider.System;
-        var expiry = cache.Changes.StartWith(Unit.Default).Select(_ => LeaseExpiry(cache, time)).Switch();
+        var expiry = cache.Changes.StartWith(Unit.Default).Select(_ => LeaseExpiry(cache, time).Repeat()).Switch();
         var revoked = cache.Changes.Merge(expiry)
             .SelectMany(_ => Observable.FromAsync(() => Permits(callContext, store, @namespace, access)))
             .Where(permitted => !permitted)
@@ -88,7 +88,15 @@ internal static class StoreCapabilityGuard
     static IObservable<Unit> LeaseExpiry(IStoreEntitlementsCache cache, TimeProvider time) => Observable.Create<Unit>(observer =>
     {
         var due = cache.LoadedAt is { } loaded ? loaded + TimeSpan.FromMinutes(5) + TimeSpan.FromMilliseconds(1) - time.GetUtcNow() : TimeSpan.Zero;
-        return time.CreateTimer(_ => observer.OnNext(Unit.Default), null, due > TimeSpan.Zero ? due : TimeSpan.Zero, Timeout.InfiniteTimeSpan);
+        return time.CreateTimer(
+            _ =>
+            {
+                if (cache.IsFresh) observer.OnCompleted();
+                else observer.OnNext(Unit.Default);
+            },
+            null,
+            due > TimeSpan.Zero ? due : TimeSpan.Zero,
+            Timeout.InfiniteTimeSpan);
     });
 
     static Task<bool> Decide(CallContext callContext, string store, string? @namespace, string? capability, StoreAccess access)
