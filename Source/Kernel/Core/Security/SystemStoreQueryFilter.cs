@@ -3,6 +3,7 @@
 
 using Cratis.Arc.Queries;
 using Cratis.Arc.Validation;
+using Cratis.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Cratis.Chronicle.Security;
@@ -16,6 +17,7 @@ namespace Cratis.Chronicle.Security;
 /// so the refusal does not depend on the order filters are discovered in. Queries from other namespaces are ignored.
 /// This filter never grants anything: it only refuses.
 /// </remarks>
+[Singleton]
 public class SystemStoreQueryFilter : IAuthorizationQueryFilter
 {
     const string KernelQueryPrefix = "Cratis.Chronicle.";

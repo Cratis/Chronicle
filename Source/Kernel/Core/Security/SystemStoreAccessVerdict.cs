@@ -3,6 +3,7 @@
 
 using System.Security.Claims;
 using Cratis.Chronicle.Concepts;
+using Cratis.DependencyInjection;
 
 namespace Cratis.Chronicle.Security;
 
@@ -10,6 +11,7 @@ namespace Cratis.Chronicle.Security;
 /// Allows access to the System event store only to those the authorization decision point permits.
 /// </summary>
 /// <param name="decisions">The authorization decision point.</param>
+[Singleton]
 public class SystemStoreAccessVerdict(IAuthorizationDecisions decisions) : ISystemStoreAccess
 {
     /// <inheritdoc/>

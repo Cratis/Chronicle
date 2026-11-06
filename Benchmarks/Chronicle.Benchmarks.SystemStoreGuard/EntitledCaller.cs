@@ -25,6 +25,7 @@ sealed class EntitledCaller : IDisposable
 
     readonly StoreEntitlementsCache _cache;
     readonly HttpContextAccessor _accessor;
+    readonly IAdministratorPrivileges _privileges = Substitute.For<IAdministratorPrivileges>();
     HttpContext[] _requests = [];
     CallContext[] _calls = [];
     int _next;
@@ -43,11 +44,16 @@ sealed class EntitledCaller : IDisposable
         var accessor = _accessor = new HttpContextAccessor();
         Services = new ServiceCollection()
             .AddSingleton<IHttpContextAccessor>(accessor)
-            .AddSingleton<IAuthorizationDecisions>(new AuthorizationDecisions(new SystemStoreAuthorizationProbe(false), options, NullLogger<AuthorizationDecisions>.Instance, _cache))
+            .AddSingleton(_privileges)
             .AddSingleton<IStoreEntitlementsCache>(_cache)
             .AddSingleton(options)
             .AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance)
-            .BuildServiceProvider();
+            .AddLogging()
+            .AddChronicleAdministratorAuthorization()
+            .AddSingleton<StoreEntitlementCommandFilter>()
+            .AddSingleton<SystemStoreQueryFilter>()
+            .AddSingleton<SystemStoreCommandFilter>()
+            .BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true });
         User = new ClaimsPrincipal(new ClaimsIdentity([new Claim("sub", "app")], "Bearer"));
         Http = new DefaultHttpContext { User = User, RequestServices = Services };
         accessor.HttpContext = Http;
@@ -55,7 +61,10 @@ sealed class EntitledCaller : IDisposable
     }
 
     /// <summary>Gets the request services.</summary>
-    public IServiceProvider Services { get; }
+    public ServiceProvider Services { get; }
+
+    /// <summary>Gets administrator roster lookups made during measurement.</summary>
+    public int RosterCalls => _privileges.ReceivedCalls().Count();
 
     /// <summary>Gets the current caller.</summary>
     public ClaimsPrincipal User { get; private set; }
@@ -84,10 +93,12 @@ sealed class EntitledCaller : IDisposable
     }
 
     /// <summary>Selects the next prepared request.</summary>
+    /// <param name="services">The newly created request scope.</param>
     /// <returns>The fresh RPC context.</returns>
-    public CallContext NextRequest()
+    public CallContext NextRequest(IServiceProvider services)
     {
         Http = _requests[_next];
+        Http.RequestServices = services;
         User = Http.User;
         _accessor.HttpContext = Http;
         Call = _calls[_next++];
@@ -95,7 +106,12 @@ sealed class EntitledCaller : IDisposable
     }
 
     /// <inheritdoc/>
-    public void Dispose() => _cache.Dispose();
+    public void Dispose()
+    {
+        Services.Dispose();
+        _cache.Dispose();
+        if (_privileges.ReceivedCalls().Any()) throw new InvalidOperationException("An ordinary store call consulted the administrator roster.");
+    }
 
     sealed class BenchmarkServerCallContext(HttpContext http) : ServerCallContext
     {

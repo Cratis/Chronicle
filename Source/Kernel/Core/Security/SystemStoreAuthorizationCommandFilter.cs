@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.Commands;
+using Cratis.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Cratis.Chronicle.Security;
@@ -14,6 +15,7 @@ namespace Cratis.Chronicle.Security;
 /// so the refusal does not depend on the order filters are discovered in. Commands from other assemblies are ignored.
 /// This filter never grants anything: it only refuses.
 /// </remarks>
+[Singleton]
 public class SystemStoreAuthorizationCommandFilter : IAuthorizationCommandFilter
 {
     static readonly Task<CommandResult> _noVerdict = Task.FromResult<CommandResult>(null!);

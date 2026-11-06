@@ -5,6 +5,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Security.Claims;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Configuration;
+using Cratis.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -17,16 +18,17 @@ namespace Cratis.Chronicle.Security;
 /// <param name="options">The server configuration.</param>
 /// <param name="logger">The logger.</param>
 /// <param name="cache">The local silo's explicit grant snapshot.</param>
+[Singleton]
 public class AuthorizationDecisions(
     IAdministratorAuthorization administrators,
     IOptions<ChronicleOptions> options,
     ILogger<AuthorizationDecisions> logger,
     IStoreEntitlementsCache? cache = null) : IAuthorizationDecisions
 {
-    readonly StoreDecisionInputs _inputs = new();
+    static StoreDecisionInputs? _fallbackInputs;
 
     /// <summary>Gets immutable inputs for the current snapshot.</summary>
-    internal StoreDecisionInputs Inputs => cache?.Snapshot.Inputs ?? _inputs;
+    internal StoreDecisionInputs Inputs => cache?.Snapshot.Inputs ?? LazyInitializer.EnsureInitialized(ref _fallbackInputs);
 
     /// <inheritdoc/>
     [SuppressMessage("Roslynator", "RCS1229:Use async/await when necessary", Justification = "Ordinary store decisions must complete synchronously; the cold administrator branch handles its asynchronous failures.")]

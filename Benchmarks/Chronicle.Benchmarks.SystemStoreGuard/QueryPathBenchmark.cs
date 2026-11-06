@@ -6,6 +6,7 @@ using BenchmarkDotNet.Attributes;
 using Cratis.Chronicle.Contracts.Queries;
 using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Services;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Cratis.Chronicle.Benchmarks.SystemStoreGuard;
 
@@ -64,14 +65,14 @@ public class QueryPathBenchmark : IDisposable
     /// </summary>
     /// <returns>The query result.</returns>
     [Benchmark]
-    public Task<QueryResult<IEnumerable<int>>> EntitledRead() => QueryExecutor.Execute(_entitled.NextRequest(), _applicationRouting, Read);
+    public Task<QueryResult<IEnumerable<int>>> EntitledRead() => ReadFor(_entitled);
 
     /// <summary>
     /// Executes a query for a caller without a grant, with enforcement off (audited).
     /// </summary>
     /// <returns>The query result.</returns>
     [Benchmark]
-    public Task<QueryResult<IEnumerable<int>>> AuditedUnentitledRead() => QueryExecutor.Execute(_unentitledAudited.NextRequest(), _applicationRouting, Read);
+    public Task<QueryResult<IEnumerable<int>>> AuditedUnentitledRead() => ReadFor(_unentitledAudited);
 
     /// <summary>
     /// Creates a hand-written application-store stream for an entitled caller, with enforcement on.
@@ -79,7 +80,9 @@ public class QueryPathBenchmark : IDisposable
     [Benchmark]
     public void EntitledObservableGuard()
     {
-        using var subscription = Services.SystemStoreGuard.Ensure(_entitled.NextRequest(), _applicationRouting, StoreAccess.Read, _observe).Subscribe();
+        using var scope = _entitled.Services.CreateScope();
+        var call = _entitled.NextRequest(scope.ServiceProvider);
+        using var subscription = (Guarded ? Services.SystemStoreGuard.Ensure(call, _applicationRouting, StoreAccess.Read, _observe) : _observe()).Subscribe();
     }
 
     /// <summary>Creates fresh request identities outside the measured operation.</summary>
@@ -113,6 +116,13 @@ public class QueryPathBenchmark : IDisposable
     [Benchmark]
     public IObservable<IEnumerable<int>> ObservableGuard() =>
         Guarded ? Services.SystemStoreGuard.Ensure(default, _routing, StoreAccess.Read, _observe) : _observe();
+
+    async Task<QueryResult<IEnumerable<int>>> ReadFor(EntitledCaller caller)
+    {
+        await using var scope = caller.Services.CreateAsyncScope();
+        var call = caller.NextRequest(scope.ServiceProvider);
+        return Guarded ? await QueryExecutor.Execute(call, _applicationRouting, Read) : await QueryExecutor.Execute(Read);
+    }
 
     IObservable<IEnumerable<int>> Observe() => Observable.Return(_items);
 

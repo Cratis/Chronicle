@@ -5,6 +5,7 @@ using System.Security.Claims;
 using Cratis.Arc.Commands;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Configuration;
+using Cratis.DependencyInjection;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -17,6 +18,7 @@ namespace Cratis.Chronicle.Security;
 /// <param name="decisions">The authorization decision point.</param>
 /// <param name="options">The server configuration.</param>
 /// <param name="logger">The logger.</param>
+[Singleton]
 public class SystemStoreOperationAuthorizationHandler(
     IAuthorizationDecisions decisions,
     IOptions<ChronicleOptions> options,

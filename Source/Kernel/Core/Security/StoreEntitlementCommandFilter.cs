@@ -3,6 +3,7 @@
 
 using System.Security.Claims;
 using Cratis.Arc.Commands;
+using Cratis.DependencyInjection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -17,6 +18,7 @@ namespace Cratis.Chronicle.Security;
 /// EnforceStoreEntitlements is set. A command that arrives without a caller is trusted only in a host that calls the
 /// kernel directly.
 /// </remarks>
+[Singleton]
 public class StoreEntitlementCommandFilter : IAuthorizationCommandFilter
 {
     /// <summary>
