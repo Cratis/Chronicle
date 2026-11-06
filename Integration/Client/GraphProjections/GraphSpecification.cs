@@ -15,11 +15,6 @@ namespace Cratis.Chronicle.Integration.GraphProjections;
 public class GraphSpecification(GraphChronicleFixture fixture) : Specification<GraphChronicleFixture>(fixture)
 {
     /// <summary>
-    /// The longest a specification waits for the graph to show what the events left.
-    /// </summary>
-    protected static readonly TimeSpan GraphTimeout = TimeSpanFactory.FromSeconds(60);
-
-    /// <summary>
     /// Gets the graph, as read after the last event was appended and observed.
     /// </summary>
     public GraphSnapshot Graph { get; private set; } = new([], []);
@@ -66,32 +61,17 @@ public class GraphSpecification(GraphChronicleFixture fixture) : Specification<G
     }
 
     /// <summary>
-    /// Read the graph from Neo4j into <see cref="Graph"/>, waiting until a condition on it holds or the timeout passes.
+    /// Read the graph from Neo4j into <see cref="Graph"/>. Appending waits for the observers, and a replay for its job, so the graph is complete by now.
     /// </summary>
-    /// <param name="condition">Optional condition the graph must meet. Without one the graph is read once.</param>
     /// <returns>Awaitable task.</returns>
-    protected async Task ReadGraph(Func<GraphSnapshot, bool>? condition = null) => await ReadGraph(ChronicleFixture.Database, condition);
+    protected async Task ReadGraph() => await ReadGraph(ChronicleFixture.Database);
 
     /// <summary>
-    /// Read a database of the Neo4j server into <see cref="Graph"/>, waiting until a condition on it holds or the timeout passes.
+    /// Read a database of the Neo4j server into <see cref="Graph"/>.
     /// </summary>
     /// <param name="database">The name of the database.</param>
-    /// <param name="condition">Optional condition the graph must meet. Without one the graph is read once.</param>
     /// <returns>Awaitable task.</returns>
-    protected async Task ReadGraph(string database, Func<GraphSnapshot, bool>? condition)
-    {
-        var deadline = DateTime.UtcNow.Add(GraphTimeout);
-        while (true)
-        {
-            Graph = await GraphSnapshot.Read(Server.Driver, database);
-            if (condition is null || condition(Graph) || DateTime.UtcNow >= deadline)
-            {
-                return;
-            }
-
-            await Task.Delay(100);
-        }
-    }
+    protected async Task ReadGraph(string database) => Graph = await GraphSnapshot.Read(Server.Driver, database);
 
     async Task Establish() => await Server.Clear();
 }

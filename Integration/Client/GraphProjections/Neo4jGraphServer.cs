@@ -19,9 +19,9 @@ namespace Cratis.Chronicle.Integration.GraphProjections;
 public sealed class Neo4jGraphServer : IAsyncDisposable
 {
     /// <summary>
-    /// The image of the server. The Community edition needs no license agreement.
+    /// The image of the server unless <c language="text">CHRONICLE_NEO4J_IMAGE</c> names another. The Community edition needs no license agreement.
     /// </summary>
-    public const string Image = "neo4j:5-community";
+    public const string DefaultImage = "neo4j:5-community";
 
     /// <summary>
     /// The host name of the server on the docker network, which is how the kernel container reaches it.
@@ -77,8 +77,9 @@ public sealed class Neo4jGraphServer : IAsyncDisposable
     public static Neo4jGraphServer Start(INetwork network)
     {
         var password = Convert.ToHexString(RandomNumberGenerator.GetBytes(16)).ToLowerInvariant();
-        var container = new ContainerBuilder(Image)
-            .WithImage(Image)
+        var image = Environment.GetEnvironmentVariable("CHRONICLE_NEO4J_IMAGE") is { Length: > 0 } named ? named : DefaultImage;
+        var container = new ContainerBuilder(image)
+            .WithImage(image)
             .WithHostname(HostName)
             .WithNetwork(network)
             .WithPortBinding(BoltPort, assignRandomHostPort: true)
