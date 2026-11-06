@@ -184,6 +184,7 @@ public class an_event_sequence : Specification
             });
 
         _namespaces = Substitute.For<INamespaces>();
+        _namespaces.EnsureCanonical(Arg.Any<EventStoreNamespaceName>()).Returns(_ => _.Arg<EventStoreNamespaceName>());
         _appendedEventsQueues = Substitute.For<IAppendedEventsQueues>();
 
         _registeredConstraints = [];

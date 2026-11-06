@@ -1,6 +1,6 @@
 ---
 title: "Running Integration Tests"
-description: "Run Chronicle's client integration tests in-process or out-of-process against each supported database."
+description: "Cratis Chronicle client integration tests run in-process or against a container, with selectable databases and reusable xUnit fixtures."
 ---
 
 Integration tests run from the `Integration/Client` project and can execute in either in-process or out-of-process mode. They require Docker to be running on your machine.

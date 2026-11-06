@@ -8,7 +8,7 @@ on:
         value: ${{ jobs.discover.outputs.all-providers }}
     inputs:
       build-output-artifact:
-        description: "Name of the DEVELOPMENT-symbol build output artifact"
+        description: "Name of the DEVELOPMENT-symbol build output artifact. The Client, Kernel and Clustering lanes download <name>-client, <name>-kernel and <name>-clustering (see .github/actions/pack-integration-output); the SQL clustering lane downloads <name>."
         required: true
         type: string
       chronicle-image:
@@ -61,35 +61,15 @@ jobs:
           ALL_PROVIDERS: ${{ inputs.all-providers && 'true' || '' }}
           INPUT_ALL_PROVIDERS: ${{ inputs.all-providers }}
 
+      # Short Kernel and Clustering namespaces share a job (see BATCHES), and the filters end with a
+      # dot so a namespace is not also a prefix of its neighbours (Events must not rerun EventSequences).
       - name: Discover Kernel integration namespaces
         id: kernel
-        run: |
-          namespaces=$(find Integration/Kernel -mindepth 1 -maxdepth 1 -type d \
-            ! -name 'bin' ! -name 'obj' \
-            -exec basename {} \; | sort)
-
-          matrix='{"include":['
-          for ns in $namespaces; do
-            [ -z "$ns" ] && continue
-            matrix+="{\"namespace\":\"Cratis.Chronicle.Kernel.Integration.${ns}\"},"
-          done
-          matrix="${matrix%,}]}"
-          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+        run: echo "matrix=$(python3 .github/scripts/generate-integration-matrix.py --suite kernel)" >> "$GITHUB_OUTPUT"
 
       - name: Discover Clustering integration namespaces
         id: clustering
-        run: |
-          namespaces=$(find Integration/Clustering -mindepth 1 -maxdepth 1 -type d \
-            ! -name 'bin' ! -name 'obj' \
-            -exec basename {} \; | sort)
-
-          matrix='{"include":['
-          for ns in $namespaces; do
-            [ -z "$ns" ] && continue
-            matrix+="{\"namespace\":\"Cratis.Chronicle.Integration.Clustering.${ns}\"},"
-          done
-          matrix="${matrix%,}]}"
-          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+        run: echo "matrix=$(python3 .github/scripts/generate-integration-matrix.py --suite clustering)" >> "$GITHUB_OUTPUT"
 
   client-integration-specs:
     needs: [discover]
@@ -115,12 +95,12 @@ jobs:
       - name: Download build output
         uses: actions/download-artifact@v4
         with:
-          name: ${{ inputs.build-output-artifact }}
+          name: ${{ inputs.build-output-artifact }}-client
 
       - name: Extract build output
         env:
           BUILD_OUTPUT_ARTIFACT: ${{ inputs.build-output-artifact }}
-        run: tar -I zstd -xf "${BUILD_OUTPUT_ARTIFACT}.tar.zst"
+        run: tar -I zstd -xf "${BUILD_OUTPUT_ARTIFACT}-client.tar.zst"
 
       - name: Login to GitHub Docker Registry
         if: matrix.needs-docker == true
@@ -199,6 +179,7 @@ jobs:
         with:
           path: ./coverage-results
           name: This Client integration shard
+          prefixes: ${{ matrix.members }}
 
       - name: Upload coverage results
         if: always()
@@ -232,12 +213,12 @@ jobs:
       - name: Download build output
         uses: actions/download-artifact@v4
         with:
-          name: ${{ inputs.build-output-artifact }}
+          name: ${{ inputs.build-output-artifact }}-kernel
 
       - name: Extract build output
         env:
           BUILD_OUTPUT_ARTIFACT: ${{ inputs.build-output-artifact }}
-        run: tar -I zstd -xf "${BUILD_OUTPUT_ARTIFACT}.tar.zst"
+        run: tar -I zstd -xf "${BUILD_OUTPUT_ARTIFACT}-kernel.tar.zst"
 
       - name: Restore Kernel project
         run: dotnet restore Integration/Kernel/Kernel.csproj
@@ -266,7 +247,7 @@ jobs:
         run: |
           .github/scripts/run-tests-with-retry.sh \
             Integration/Kernel/Kernel.csproj \
-            "FullyQualifiedName~${{ matrix.namespace }}" \
+            "${{ matrix.filter }}" \
             --coverage
 
       # run-tests-with-retry.sh already writes a TRX per attempt into TEST_RESULTS_DIR.
@@ -275,6 +256,7 @@ jobs:
         with:
           path: ./coverage-results
           name: This Kernel integration shard
+          prefixes: ${{ matrix.members }}
 
       - name: Upload coverage results
         if: always()
@@ -305,12 +287,12 @@ jobs:
       - name: Download build output
         uses: actions/download-artifact@v4
         with:
-          name: ${{ inputs.build-output-artifact }}
+          name: ${{ inputs.build-output-artifact }}-clustering
 
       - name: Extract build output
         env:
           BUILD_OUTPUT_ARTIFACT: ${{ inputs.build-output-artifact }}
-        run: tar -I zstd -xf "${BUILD_OUTPUT_ARTIFACT}.tar.zst"
+        run: tar -I zstd -xf "${BUILD_OUTPUT_ARTIFACT}-clustering.tar.zst"
 
       - name: Restore Clustering project
         run: dotnet restore Integration/Clustering/Clustering.csproj
@@ -329,7 +311,7 @@ jobs:
         run: |
           .github/scripts/run-tests-with-retry.sh \
             Integration/Clustering/Clustering.csproj \
-            "FullyQualifiedName~${{ matrix.namespace }}" \
+            "${{ matrix.filter }}" \
             --coverage
 
       # run-tests-with-retry.sh already writes a TRX per attempt into TEST_RESULTS_DIR.
@@ -338,6 +320,7 @@ jobs:
         with:
           path: ./coverage-results
           name: This Clustering integration shard
+          prefixes: ${{ matrix.members }}
 
       - name: Upload coverage results
         if: always()

@@ -1,21 +1,22 @@
 ---
-title: "Structural Dependencies"
-description: "Supply custom resolvers and providers to the .NET client, and how they differ from options bound from configuration."
+title: "Chronicle .NET client structural dependencies"
+description: "Supply custom Chronicle .NET client providers, resolvers, and naming policies through constructor arguments or the host registration callback."
 ---
 
-`ChronicleOptions` is designed to hold **runtime configuration** that can be bound from `appsettings.json` or environment variables — connection strings, timeouts, TLS settings, naming policies, and so on.
+Supply structural dependencies when the Chronicle .NET client needs your application's identity provider, namespace resolver, or artifact discovery. These dependencies are objects that define client behavior, so you pass them to `ChronicleClient` or set them during host registration rather than bind them from `appsettings.json`.
 
-Services and providers that must be resolved at registration time (before the DI container is built) are called **structural dependencies**. These are not configuration values and cannot be meaningfully bound from `appsettings.json`. They are passed directly as constructor arguments to `ChronicleClient` or set on `IChronicleBuilder` when using the DI-hosted setup (`IHostApplicationBuilder`, `WebApplicationBuilder`).
+Keep connection strings, timeouts, and TLS settings in `ChronicleOptions`. For a hosted application, the separate `configure` callback receives an `IChronicleBuilder` before the dependency injection (DI) container is built. Use it to select the providers the client will use.
 
 ## Structural dependencies
 
 | Dependency | Purpose | Default |
 |---|---|---|
-| `IClientArtifactsProvider` | Discovers event types, projections, reactors, reducers, and other artifacts at startup | `DefaultClientArtifactsProvider` (auto-discovers from loaded assemblies) |
-| `IIdentityProvider` | Supplies the current user's identity for event metadata | `BaseIdentityProvider` (empty identity) |
-| `ICorrelationIdAccessor` | Provides the current correlation ID for event metadata | `CorrelationIdAccessor` (generates a new ID per call) |
-| `IEventStoreNamespaceResolver` | Resolves the event store namespace for each operation | `DefaultEventStoreNamespaceResolver` (always returns the default namespace) |
-| `ILoggerFactory` | Creates loggers for the Chronicle client internals | `LoggerFactory` (no-op) |
+| `IClientArtifactsProvider` | Supplies event types, projections, reactors, and other client artifacts | `DefaultClientArtifactsProvider.Default`, using project- and package-referenced assemblies |
+| `IIdentityProvider` | Supplies identity for event metadata | `BaseIdentityProvider`, returning the current identity or `Identity.System` when none is set |
+| `ICorrelationIdAccessor` | Provides the current correlation ID for event metadata | `CorrelationIdAccessor`, returning the current async-local value or `Guid.Empty` |
+| `IEventStoreNamespaceResolver` | Selects the event store namespace | `DefaultEventStoreNamespaceResolver`, returning the default namespace |
+| `INamingPolicy` | Names serialized properties, projection mappings, and read model containers | `DefaultNamingPolicy`, preserving property names and pluralizing container names |
+| `ILoggerFactory` | Creates loggers for the Chronicle client internals | A `LoggerFactory` without logging providers for direct construction; the host's factory for hosted registration |
 
 ## Passing to ChronicleClient directly
 
@@ -23,11 +24,11 @@ For console applications or other non-DI scenarios, pass structural dependencies
 
 <ChronicleClientTabs snippet="configuration/structural-dependencies/direct-client" />
 
-All parameters are optional. Any parameter you omit uses the default shown in the table above.
+The `myProvider` argument is an `IClientArtifactsProvider` supplied by your application; `artifactsProvider: myProvider` makes the client use it for artifact discovery. `LoggerFactory.Create(b => b.AddConsole())` sends the client's logs to the console. Omitted dependencies use the direct-construction defaults above.
 
 ## Configuring with IChronicleBuilder
 
-In DI-hosted applications (ASP.NET Core, worker services, or any `IHostApplicationBuilder`-based host), use the `configure` callback on `AddCratisChronicle` to set structural dependencies via the `IChronicleBuilder` fluent API. This callback runs at registration time, before the DI container is built.
+For ASP.NET Core or a worker host, pass provider instances through the `configure` callback on `AddCratisChronicle`. It runs during registration, so it is not a place to resolve services from the finished DI container.
 
 <ChronicleClientTabs snippet="configuration/structural-dependencies/chronicle-builder" />
 
@@ -35,9 +36,9 @@ The same pattern works with `WebApplicationBuilder` in ASP.NET Core:
 
 <ChronicleClientTabs snippet="configuration/structural-dependencies/aspnetcore-builder" />
 
-The two callbacks are intentionally separate:
-- `configureOptions` feeds the options pipeline. It runs after `appsettings.json` and `IConfiguration` are bound, so a value it sets overrides the configured one.
-- `configure` sets structural dependencies at registration time and is not overridable by configuration.
+Use `configureOptions` for bound settings: it runs after configuration binding and can override those values. Use `configure` for provider instances: configuration values cannot replace those objects.
+
+When no custom provider is set on the builder, hosted registration can use a provider already registered in DI. For ASP.NET Core's defaults, see [Client Configuration](index.mdx) and the host setup it links to.
 
 ## IChronicleBuilder fluent methods
 
@@ -47,21 +48,28 @@ The two callbacks are intentionally separate:
 | `WithIdentityProvider(IIdentityProvider)` | Custom identity resolution |
 | `WithCorrelationIdAccessor(ICorrelationIdAccessor)` | Custom correlation ID accessor |
 | `WithNamespaceResolver(IEventStoreNamespaceResolver)` | Custom namespace resolution |
+| `WithCamelCaseNamingPolicy()` | Camel case property and container naming |
+
+For another naming policy, assign `IChronicleBuilder.NamingPolicy` directly. Hosted clients use the host's `ILoggerFactory`; the builder has no logging-factory setter.
 
 ## Custom artifact discovery
 
-Implement `IClientArtifactsProvider` when you need to control exactly which types Chronicle discovers. This is useful in modular applications or when using assembly scanning that differs from the default:
+Implement `IClientArtifactsProvider` when you need to supply the type lists Chronicle uses, such as when a modular application controls which modules participate. The example shows explicit lists for the provider's artifact categories:
 
 <ChronicleClientTabs snippet="configuration/structural-dependencies/custom-artifacts-provider" />
 
+Pass that provider to the client during construction:
+
 <ChronicleClientTabs snippet="configuration/structural-dependencies/custom-artifacts-provider-usage" />
+
+If you only need to declare particular event types or observers in code, start with [Explicit artifacts](../clients/dotnet/explicit-artifacts). Those declarations merge with discovered artifacts without requiring a replacement discovery provider.
 
 ## DefaultClientArtifactsProvider
 
-`DefaultClientArtifactsProvider` scans loaded assemblies for artifacts at first access (lazy initialization). You can construct it with a custom assembly provider:
+Keep `DefaultClientArtifactsProvider` when Chronicle's discovery rules fit and only the assembly set needs to change. It discovers artifacts on first property access. Supply a custom assembly provider to control which assemblies it searches:
 
 <ChronicleClientTabs snippet="configuration/structural-dependencies/default-artifacts-provider" />
 
-The static `DefaultClientArtifactsProvider.Default` instance is used when no provider is supplied.
+The static `DefaultClientArtifactsProvider.Default` instance uses project- and package-referenced assemblies. No explicit initialization call is required.
 
-> **Note:** `DefaultClientArtifactsProvider` initializes lazily on first property access; no explicit initialization is required.
+Continue to [Namespaces](../namespaces/index.md) to implement request-specific namespace selection, or [Camel Casing](camel-casing) to configure the naming policy.

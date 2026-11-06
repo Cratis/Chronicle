@@ -16,7 +16,7 @@ namespace Cratis.Chronicle.Observation.Jobs;
 /// </summary>
 /// <remarks>
 /// A grain call that outlives its response timeout says the callee was too busy to answer, not that handling the
-/// events went wrong. Escalating it to <see cref="IObserver.PartitionFailed"/> sends one more call to the very grain
+/// events went wrong. Escalating it to <see cref="IObserver.PartitionFailed(Concepts.Keys.Key, Concepts.Events.EventSequenceNumber, IEnumerable{string}, string, Concepts.Observation.FailureKind, Concepts.Observation.FailedPartitionId, System.Guid?, WebhookDeliveryFailurePolicy)"/> sends one more call to the very grain
 /// that is already behind, which times out too, and turns a slow grain into a cascade of failed partitions.
 /// </remarks>
 internal static class TransientTimeouts
@@ -106,12 +106,13 @@ internal static class TransientTimeouts
     /// <param name="observer">The <see cref="IObserver"/> that owns the partition.</param>
     /// <param name="result">The final <see cref="JobStepResult"/> of the step.</param>
     /// <param name="jsonSerializerOptions">The serializer options to read the partial result with.</param>
+    /// <param name="replayEpoch">The replay operation the step belongs to, or null, so the failed partition keeps it.</param>
     /// <returns>Awaitable task.</returns>
-    internal static async Task ReportPartitionFailedWhenAttemptsAreExhausted(IObserver observer, JobStepResult result, JsonSerializerOptions jsonSerializerOptions)
+    internal static async Task ReportPartitionFailedWhenAttemptsAreExhausted(IObserver observer, JobStepResult result, JsonSerializerOptions jsonSerializerOptions, ReplayEpoch? replayEpoch = null)
     {
         if (TryGetTransientFailure(result, jsonSerializerOptions, out var failure))
         {
-            await observer.PartitionFailedWithDeliveryFence(failure.Partition, failure.FailedAt, failure.Messages, string.Empty, FailureKind.Timeout, context: new(DeliveryFence: failure.DeliveryFence));
+            await observer.PartitionFailedWithDeliveryFence(failure.Partition, failure.FailedAt, failure.Messages, string.Empty, FailureKind.Timeout, context: new(DeliveryFence: failure.DeliveryFence, ReplayEpoch: replayEpoch));
         }
     }
 

@@ -1,8 +1,8 @@
 ---
 uid: Chronicle.Testing.Events.Assertions
+title: Append assertions
 description: Assert on Chronicle Append and AppendMany results in tests with the built-in Should* extension methods from Cratis.Chronicle.Testing.
 ---
-# Append Assertions
 
 Every `Append` and `AppendMany` call returns an `IAppendResult`. The `Cratis.Chronicle.Testing` package provides built-in `Should*` extension methods for asserting on these results.
 
@@ -10,18 +10,25 @@ Every `Append` and `AppendMany` call returns an `IAppendResult`. The `Cratis.Chr
 
 | Method | Asserts |
 |--------|---------|
-| `result.ShouldBeSuccessful()` | Operation succeeded with no violations or errors |
-| `result.ShouldBeFailed()` | Operation failed (any violation or error) |
-| `result.ShouldHaveConstraintViolations()` | At least one constraint violation is present |
-| `result.ShouldNotHaveConstraintViolations()` | No constraint violations are present |
+| `result.ShouldBeSuccessful()` | `IsSuccess` is `true` |
+| `result.ShouldBeFailed()` | `IsSuccess` is `false` |
+| `result.ShouldHaveConstraintViolations()` | `HasConstraintViolations` is `true` |
+| `result.ShouldNotHaveConstraintViolations()` | `HasConstraintViolations` is `false` |
 | `result.ShouldHaveConstraintViolationFor(name)` | A violation for the named constraint is present |
 | `result.ShouldHaveConstraintViolation(name)` | Singular alias for `ShouldHaveConstraintViolationFor(name)` |
-| `result.ShouldHaveConcurrencyViolations()` | At least one concurrency violation is present |
-| `result.ShouldNotHaveConcurrencyViolations()` | No concurrency violations are present |
-| `result.ShouldHaveErrors()` | At least one error is present |
-| `result.ShouldNotHaveErrors()` | No errors are present |
+| `result.ShouldHaveConcurrencyViolations()` | `HasConcurrencyViolations` is `true` |
+| `result.ShouldNotHaveConcurrencyViolations()` | `HasConcurrencyViolations` is `false` |
+| `result.ShouldHaveErrors()` | `HasErrors` is `true` |
+| `result.ShouldNotHaveErrors()` | `HasErrors` is `false` |
 
-All `Should*` methods throw `AppendResultAssertionException` on failure. The exception message describes all violations and errors found, making it easy to diagnose failures.
+The success, violation, and error assertions check result flags, not collection counts. The named-constraint methods search `ConstraintViolations` for the supplied name.
+
+All `Should*` methods throw `AppendResultAssertionException` on failure. Diagnostics depend on the method:
+
+- `ShouldBeSuccessful()` lists constraint violations and errors when their flags are set, and notes concurrency violations when flagged.
+- `ShouldNotHaveConstraintViolations()` lists constraint violations; `ShouldNotHaveErrors()` lists errors.
+- The named-constraint methods list actual constraint violations when `HasConstraintViolations` is set.
+- The remaining methods report the expected and actual flag state without listing individual violations or errors.
 
 ## Happy path assertion
 

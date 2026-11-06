@@ -24,6 +24,7 @@ public class and_chronicle_meters_are_registered : Specification
     {
         var services = new ServiceCollection();
         services.AddLogging();
+        services.AddSingleton(NamespaceCasingContext.Create());
         services.AddChronicleMeters();
         services.AddSingleton(Substitute.For<IGrainFactory>());
         services.AddSingleton(Substitute.For<IReactorMediator>());

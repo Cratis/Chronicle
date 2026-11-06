@@ -5,8 +5,10 @@ using System.Security.Claims;
 using Cratis.Arc.Authorization;
 using Cratis.Arc.Testing.Commands;
 using Cratis.Arc.Validation;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Security;
 using Cratis.Chronicle.Configuration;
+using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Storage;
 using Microsoft.AspNetCore.Authorization;
@@ -54,6 +56,9 @@ public static class ChronicleCommandScenario
         // server actually runs. The substitute answers "nothing registered", which is the right starting point;
         // a spec that needs stored state registers its own on its scenario.
         scenario.Services.AddSingleton(Substitute.For<IStorage>());
+        var casing = Substitute.For<INamespaceCasing>();
+        casing.Canonicalize(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>()).Returns(_ => _.Arg<EventStoreNamespaceName>());
+        scenario.Services.AddSingleton(casing);
         ConfigureAuthorization(scenario.Services, isAdministrator);
 
         return scenario;

@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Namespaces;
+using Microsoft.Extensions.Logging;
 using Orleans.Storage;
 
 namespace Cratis.Chronicle.Namespaces;
@@ -12,7 +13,8 @@ namespace Cratis.Chronicle.Namespaces;
 /// Represents an implementation of <see cref="IGrainStorage"/> for handling namespace state.
 /// </summary>
 /// <param name="storage"><see cref="IStorage"/> for accessing storage for the cluster.</param>
-public class NamespacesStateStorageProvider(IStorage storage) : IGrainStorage
+/// <param name="logger">Logger for namespace list repairs.</param>
+public class NamespacesStateStorageProvider(IStorage storage, ILogger<NamespacesStateStorageProvider> logger) : IGrainStorage
 {
     /// <inheritdoc/>
     public Task ClearStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState) => Task.CompletedTask;
@@ -24,8 +26,33 @@ public class NamespacesStateStorageProvider(IStorage storage) : IGrainStorage
         var eventStoreName = grainId.Key.ToString()!;
         var eventStore = storage.GetEventStore(eventStoreName);
 
-        var namespaces = (await eventStore.Namespaces.GetAll()).Select(_ => new NamespaceState(_.Name, _.Created)).ToList();
-        if (namespaces.Find(_ => _.Name == EventStoreNamespaceName.Default) == default)
+        var stored = (await eventStore.Namespaces.GetAll()).ToList();
+        var withOwnData = new HashSet<EventStoreNamespaceName>();
+        foreach (var group in stored.GroupBy(_ => _.Name.Value, StringComparer.OrdinalIgnoreCase).Where(_ => _.Count() > 1))
+        {
+            foreach (var member in group)
+            {
+                if (await eventStore.HasOwnNamespaceData(member.Name)) withOwnData.Add(member.Name);
+            }
+        }
+        var (namespaces, merged) = NamespaceCasingMerge.Merge(stored, withOwnData);
+        foreach (var (variant, canonical) in merged)
+        {
+            logger.MergedNamespace(eventStoreName, variant, canonical);
+            if (withOwnData.Contains(variant) && withOwnData.Count(_ => _.Value.Equals(canonical.Value, StringComparison.OrdinalIgnoreCase)) > 1)
+            {
+                logger.VariantDataLeftInPlace(eventStoreName, variant, canonical);
+            }
+            try
+            {
+                await eventStore.Namespaces.Delete(variant);
+            }
+            catch (Exception exception)
+            {
+                logger.CouldNotDeleteVariant(exception, eventStoreName, variant);
+            }
+        }
+        if (!namespaces.Any(_ => _.Name.Value.Equals(EventStoreNamespaceName.Default.Value, StringComparison.OrdinalIgnoreCase)))
         {
             var @namespace = new NamespaceState(EventStoreNamespaceName.Default, DateTimeOffset.UtcNow);
             namespaces.Add(@namespace);

@@ -325,7 +325,8 @@ class SparseIntegrationWorkflows(unittest.TestCase):
     def test_sql_specs_run_in_parallel_without_reducing_coverage(self):
         jobs = self.build["jobs"]
         sql = jobs["specs-sql"]
-        self.assertEqual(["postgresql", "sqlserver", "remaining"], sql["strategy"]["matrix"]["shard"])
+        self.assertEqual(["postgresql", "sqlserver-1", "sqlserver-2", "sqlserver-3", "remaining"],
+                         sql["strategy"]["matrix"]["shard"])
         self.assertEqual("false", sql["strategy"]["fail-fast"])
         steps = sql["steps"]
         run = next(step["run"] for step in steps if step["name"] == "Run SQL specs with coverage")
@@ -403,7 +404,8 @@ class SparseIntegrationWorkflows(unittest.TestCase):
     def test_stable_specs_check_requires_every_shard_to_succeed(self):
         aggregate = self.build["jobs"]["specs"]
         self.assertEqual("${{ needs.already-ran.outputs.skip != 'true' && (always()) }}", aggregate["if"])
-        self.assertEqual(["specs-other", "specs-sql"], prerequisites_of(aggregate))
+        self.assertEqual(["wire-compatibility", "grain-compatibility", "workbench-proxies", "specs-other", "specs-sql"],
+                         prerequisites_of(aggregate))
         self.assertEqual({"contents": "read", "actions": "read"}, aggregate["permissions"])
         self.assertEqual("Checkout shard contract", aggregate["steps"][1]["name"])
         self.assertEqual("false", aggregate["steps"][1]["with"]["persist-credentials"])
@@ -423,11 +425,16 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         step = aggregate["steps"][0]
         self.assertEqual("${{ needs.specs-other.result }}", step["env"]["OTHER_RESULT"])
         self.assertEqual("${{ needs.specs-sql.result }}", step["env"]["SQL_RESULT"])
-        for ordinary, sql in product(("success", "failure", "cancelled", "skipped"), repeat=2):
-            with self.subTest(ordinary=ordinary, sql=sql):
+        self.assertEqual("${{ needs.wire-compatibility.result }}", step["env"]["WIRE_RESULT"])
+        self.assertEqual("${{ needs.grain-compatibility.result }}", step["env"]["GRAIN_RESULT"])
+        self.assertEqual("${{ needs.workbench-proxies.result }}", step["env"]["PROXIES_RESULT"])
+        results = ("success", "failure", "cancelled", "skipped")
+        for wire, grain, proxies, ordinary, sql in product(results, repeat=5):
+            with self.subTest(wire=wire, grain=grain, proxies=proxies, ordinary=ordinary, sql=sql):
                 result = subprocess.run(["bash", "-c", step["run"]],
-                                        env={"OTHER_RESULT": ordinary, "SQL_RESULT": sql}, check=False)
-                self.assertEqual(ordinary == sql == "success", result.returncode == 0)
+                                        env={"WIRE_RESULT": wire, "GRAIN_RESULT": grain, "PROXIES_RESULT": proxies,
+                                             "OTHER_RESULT": ordinary, "SQL_RESULT": sql}, check=False)
+                self.assertEqual(wire == grain == proxies == ordinary == sql == "success", result.returncode == 0)
 
     def test_development_paths_preserve_steps_permissions_and_artifact(self):
         jobs = self.build["jobs"]
@@ -438,17 +445,20 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         self.assertEqual("needs.already-ran.outputs.skip != 'true' && "
                          "(github.event_name == 'pull_request' && inputs.integration_requested)",
                          requested["if"])
-        self.assertEqual(["wire-compatibility", "grain-compatibility"], prerequisites_of(parallel))
+        # The compatibility gates run beside the builds, not in front of them; the `specs` aggregate, which the
+        # integration job waits for, is what requires them to be green.
+        self.assertEqual([], prerequisites_of(parallel))
         # The requested PR build runs in parallel with the specs; the integration job keeps the specs gate.
-        self.assertEqual(["wire-compatibility", "grain-compatibility"], prerequisites_of(requested))
-        self.assertEqual(["specs-other", "specs-sql"], prerequisites_of(jobs["specs"]))
+        self.assertEqual([], prerequisites_of(requested))
+        self.assertEqual(["wire-compatibility", "grain-compatibility", "workbench-proxies", "specs-other", "specs-sql"],
+                         prerequisites_of(jobs["specs"]))
         for job_id in ("specs-other", "specs-sql"):
             self.assertEqual(["dotnet-build"], prerequisites_of(jobs[job_id]))
-        self.assertEqual(["wire-compatibility", "grain-compatibility"], prerequisites_of(jobs["dotnet-build"]))
+        self.assertEqual([], prerequisites_of(jobs["dotnet-build"]))
         for key in ("steps", "permissions", "runs-on", "timeout-minutes"):
             self.assertEqual(parallel[key], requested[key], key)
         steps = requested["steps"]
-        self.assertEqual(9, len(steps))
+        self.assertEqual(10, len(steps))
         build = next(step for step in steps if step.get("name") == "Build with DEVELOPMENT symbol")
         self.assertEqual("dotnet build --configuration Release -p:EnableDevelopmentSymbol=true "
                          "-p:DisableProxyGenerator=true -p:DisableDockerBuild=true", build["run"])
@@ -486,10 +496,10 @@ class SparseIntegrationWorkflows(unittest.TestCase):
             results = {"wire-compatibility": wire, "grain-compatibility": grain, "specs": specs}
             context = ConditionContext(event, requested, results)
             with self.subTest(event=event, requested=requested, specs=specs, wire=wire, grain=grain):
-                gates = wire == "success" and grain == "success"
-                self.assertEqual(event != "pull_request" and gates,
+                # The builds do not wait for the compatibility gates; `specs` requires them before integration runs.
+                self.assertEqual(event != "pull_request",
                                  condition_allows(jobs["dotnet-build-development"], context))
-                self.assertEqual(event == "pull_request" and requested and gates,
+                self.assertEqual(event == "pull_request" and requested,
                                  condition_allows(jobs["dotnet-build-development-requested"], context))
 
     def test_integration_requires_selected_output_but_allows_skipped_sibling(self):
@@ -574,9 +584,12 @@ class IntegrationSingleBuildContracts(unittest.TestCase):
             with self.subTest(lane=lane):
                 steps = jobs[f"{lane}-integration-specs"]["steps"]
                 download = next(step for step in steps if step.get("uses") == "actions/download-artifact@v4")
-                self.assertEqual({"name": "${{ inputs.build-output-artifact }}"}, download["with"])
+                # Lanes that run a single project's output download only that project's artifact; SQL clustering
+                # also reads the client output, so it keeps the full one.
+                suffix = "" if lane == "sql-clustering" else f"-{lane}"
+                self.assertEqual({"name": "${{ inputs.build-output-artifact }}" + suffix}, download["with"])
                 extract = next(step for step in steps if step["name"] == "Extract build output")
-                self.assertEqual('tar -I zstd -xf "${BUILD_OUTPUT_ARTIFACT}.tar.zst"', extract["run"])
+                self.assertEqual('tar -I zstd -xf "${BUILD_OUTPUT_ARTIFACT}' + suffix + '.tar.zst"', extract["run"])
                 self.assertLess(steps.index(download), steps.index(extract))
                 self.assertFalse(any("cache" in step.get("uses", "") for step in steps))
                 for step in steps:
@@ -621,9 +634,42 @@ class IntegrationSingleBuildContracts(unittest.TestCase):
             self.assertIn('test -d "$project/bin/Release/net10.0"', pack)
             self.assertIn("exit 1", pack)
             self.assertEqual("error", steps[-1]["with"]["if-no-files-found"])
+            per_project = next(step for step in steps if step["name"] == "Pack per-project integration build output")
+            self.assertEqual("./.github/actions/pack-integration-output", per_project["uses"])
+            self.assertEqual({"prefix": "build-output-development"}, per_project["with"])
+        hot_core = workflow("hot-core-gate.yml")["jobs"]["build"]["steps"]
+        per_project = next(step for step in hot_core if step["name"] == "Pack per-project integration build output")
+        self.assertEqual({"prefix": "hot-core-build-output"}, per_project["with"])
+
+    def test_per_project_artifacts_are_packed_for_exactly_the_lanes_that_download_them(self):
+        action = (WORKFLOWS.parents[0] / "actions/pack-integration-output/action.yml").read_text(encoding="utf-8")
+        self.assertIn("for project in Client Kernel Clustering; do", action)
+        self.assertIn('test -d "Integration/$project/bin/Release/net10.0"', action)
+        self.assertIn('tar -I \'zstd -T0\' -cf "${PREFIX}-${project,,}.tar.zst" "Integration/$project/bin"', action)
+        for lane in ("client", "kernel", "clustering"):
+            self.assertIn("name: ${{ inputs.prefix }}-" + lane, action)
+        self.assertEqual(3, action.count("if-no-files-found: error"))
+
+    def test_every_batched_lane_keeps_a_per_member_zero_test_guard(self):
+        jobs = workflow("integration.yml")["jobs"]
+        for lane in ("client", "kernel", "clustering"):
+            with self.subTest(lane=lane):
+                steps = jobs[f"{lane}-integration-specs"]["steps"]
+                guard = next(step for step in steps if step.get("uses") == "./.github/actions/assert-tests-ran")
+                self.assertEqual("${{ matrix.members }}", guard["with"]["prefixes"])
+
+    def test_hot_core_producer_prefix_matches_the_artifact_the_integration_call_consumes(self):
+        hot_core = workflow("hot-core-gate.yml")["jobs"]
+        steps = hot_core["build"]["steps"]
+        per_project = next(step for step in steps if step.get("name") == "Pack per-project integration build output")
+        self.assertEqual("./.github/actions/pack-integration-output", per_project["uses"])
+        consumer = next(job for job in hot_core.values() if job.get("uses", "").endswith("integration.yml"))
+        self.assertEqual(consumer["with"]["build-output-artifact"], per_project["with"]["prefix"])
 
     def test_rolling_upgrade_reads_and_checks_the_stamped_build_version(self):
-        steps = workflow("integration.yml")["jobs"]["sql-clustering-integration-specs"]["steps"]
+        jobs = workflow("integration.yml")["jobs"]
+        steps = jobs["sql-clustering-integration-specs"]["steps"]
+        self.assertEqual(steps, jobs["sql-clustering-rolling-upgrade"]["steps"])
         extract = next(step for step in steps if step["name"] == "Extract build output")
         stamp = next(step for step in steps if step["name"] == "Read the stamped build version")
         self.assertEqual(steps.index(extract) + 1, steps.index(stamp))
@@ -650,9 +696,8 @@ class IntegrationSingleBuildContracts(unittest.TestCase):
             command = next(step["run"] for step in steps
                            if step["name"].startswith(("Run Client", "Run Kernel", "Run Clustering", "Run SQL clustering")))
             command = re.sub(r"\$\{\{ (.*?) \}\}", lambda match: bindings[match[1]], command)
-            expected_filter = (union if lane == "client" else
-                               "FullyQualifiedName~Cratis.Chronicle.Integration.SqlClustering.PostgreSql"
-                               if lane == "sql-clustering" else "FullyQualifiedName~Example.Namespace")
+            expected_filter = ("FullyQualifiedName~Cratis.Chronicle.Integration.SqlClustering.PostgreSql"
+                               if lane == "sql-clustering" else union)
             for missing in (False, True):
                 with self.subTest(lane=lane, missing=missing), tempfile.TemporaryDirectory() as directory:
                     path = Path(directory)
@@ -699,6 +744,7 @@ sys.exit(1 if 'Failed' in outcomes.values() else 0)
         for index, args in enumerate(calls):
             self.assertEqual([".github/scripts/run-spec-project.mjs", "--project", f"Integration/{project}/{project}.csproj"], args[:3])
             self.assertEqual(lane != "sql-clustering", "--coverage" in args)
+            self.assertNotIn("--selection", args)
             self.assertIn("--results-directory", args)
             retry_filters = ["FullyQualifiedName=Example.A.should_work|FullyQualifiedName=Example.B.should_work",
                              "FullyQualifiedName=Example.A.should_work"]

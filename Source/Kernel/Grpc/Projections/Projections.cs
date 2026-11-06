@@ -12,6 +12,7 @@ using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Contracts.Primitives;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Json;
+using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Projections.Engine.DeclarationLanguage;
 using Cratis.Chronicle.ReadModels;
@@ -39,6 +40,7 @@ namespace Cratis.Chronicle.Services.Projections;
 /// <param name="readModelsCompliance"><see cref="IReadModelsCompliance"/> for decrypting PII fields in previewed read model instances.</param>
 /// <param name="localSiloDetails">The local silo details for locating client connections.</param>
 /// <param name="logger">The logger.</param>
+/// <param name="namespaceCasing">The namespace casing resolver.</param>
 internal sealed class Projections(
     IGrainFactory grainFactory,
     IExpandoObjectConverter expandoObjectConverter,
@@ -46,7 +48,8 @@ internal sealed class Projections(
     IServiceProvider serviceProvider,
     IReadModelsCompliance readModelsCompliance,
     ILocalSiloDetails localSiloDetails,
-    ILogger<Projections> logger) : IProjections
+    ILogger<Projections> logger,
+    INamespaceCasing namespaceCasing) : IProjections
 {
     /// <summary>
     /// The property a materialized read model carries its key in, which is what the read side looks it up by.
@@ -131,6 +134,7 @@ internal sealed class Projections(
     public async Task<OneOf<ContractProjectionPreview, ContractProjectionDefinitionParsingErrors>> Preview(PreviewProjectionRequest request, CallContext context = default)
     {
         await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.EventSequenceId, request.DraftReadModel?.Identifier));
+        request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
         if (languageService.IsGraphDeclaration(request.Declaration ?? string.Empty))
         {
             return new OneOf<ContractProjectionPreview, ContractProjectionDefinitionParsingErrors>(new ContractProjectionDefinitionParsingErrors
@@ -264,6 +268,7 @@ internal sealed class Projections(
     public async Task<SaveProjectionResult> Save(SaveProjectionRequest request, CallContext context = default)
     {
         SystemStoreGuard.EnsureNotSystem(new(request.EventStore, request.Namespace, request.EventSequenceId, request.DraftReadModel?.Identifier));
+        request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
         var storage = serviceProvider.GetRequiredService<IStorage>();
         if (languageService.IsGraphDeclaration(request.Declaration ?? string.Empty))
         {

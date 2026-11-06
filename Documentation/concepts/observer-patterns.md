@@ -1,14 +1,11 @@
 ---
-title: "Projections, reducers, and reactors"
-description: All three watch your events — but they do very different things. Here's how to tell them apart and choose the right one.
+title: "Cratis Chronicle: choosing projections, reducers, or reactors"
+description: Use a projection or reducer to build read-model state in Cratis Chronicle. Choose a reactor for external actions, and make its effects safe to retry.
 ---
 
-Projections, reducers, and reactors are all **observers**: they watch an [event sequence](./event-sequence.md) and run as events arrive. The confusion is that they look similar and are often explained on separate pages. This page puts them side by side so you can pick the right one without second-guessing.
+Use a projection or reducer in Cratis Chronicle when events need to become queryable state. Use a reactor when an event should cause an action, such as sending a notification or calling another system. The choice determines whether replay should rebuild a value or repeat an effect.
 
-The one-line distinction:
-
-- **Projection** and **reducer** *build state* (a read model) — declaratively or imperatively.
-- **Reactor** *causes effects* (notify, integrate, trigger a command) — it builds nothing.
+All three are [observers](./observers): they subscribe to event types in an [event sequence](./event-sequence.md). A projection declares how to build a read model; a reducer computes it in code from previous state and an event. A reactor handles the action outside that state-building process.
 
 ```mermaid
 flowchart TD
@@ -23,30 +20,32 @@ flowchart TD
 | | Projection | Reducer | Reactor |
 |---|---|---|---|
 | **Purpose** | Build a read model | Build a read model | Do a side effect |
-| **How** | Declarative (`[ReadModel]` + model-bound attributes, AutoMap) | Imperative fold you write | A method per event type |
-| **Produces** | A read model instance you query | A value you query | Nothing (acts on the outside world) |
-| **Reach for it when** | The read side is shaped like data | A projection can't express the logic cleanly | You must notify, integrate, or trigger a command |
-| **Must be idempotent** | Handled for you | Handled for you | **Yes — you own this** |
+| **How** | Model-bound attributes or a declarative builder, including AutoMap | Code combining previous state with an event | Handler code for subscribed event types |
+| **Produces** | A read model instance you query | A read model instance you query | An action; it can also produce follow-up events |
+| **Reach for it when** | Mappings and projection operations express the view | Custom state-transition logic is clearer in code | You must notify, integrate, or trigger a command |
+| **Retry responsibility** | Keep state derivation free of external effects | Keep state derivation free of external effects | Make repeated delivery safe |
 
-Idempotency for projections and reducers is handled by Chronicle, but it is worth knowing what "handled" means: a rebuild always starts from a clean read model, and for a read model keyed by event source id Chronicle also refuses any write that does not move that instance's last-handled sequence number forward, so an event redelivered after a crash changes nothing. A projection whose key deliberately collapses several event sources onto one instance — a join, a constant key, a parent hierarchy — is written out of order by design and cannot use that guard; for those Chronicle instead keeps its recovery window down to a single batch.
+Idempotent handling means that processing the same delivery again does not duplicate its effect. Chronicle manages state persistence and replay for projections and reducers, but that does not make an email or API call inside state-building code safe. Keep those effects in a reactor and use a stable delivery identity or the destination's deduplication support. [Reactor delivery identity](../reactors/delivery-identity.mdx) explains how to identify repeated deliveries.
 
-Building state doesn't have to mean *materializing* it. Mark a read model passive and its projection or reducer computes state **on demand** instead — Chronicle replays the relevant events through it when you ask, which is how [reading a single instance](../read-models/getting-single-instance) of a passive read model serves strongly consistent results. That makes them useful beyond query views: validation rules, [aggregate roots in Arc](/arc/backend/csharp/chronicle/aggregates/defining-an-aggregate-root/), or anything else that needs current state it can trust.
+For a model keyed by event source, Chronicle uses the instance's last-handled event sequence number to guard state updates against redelivery. A projection that combines several event sources into one instance cannot use that guard because its writes can arrive out of order. Chronicle checkpoints those projections after every batch, limiting the recovery window to one batch; a repeated batch can still be applied twice.
+
+Building state does not require storing an asynchronously updated view. A passive read model uses its projection or reducer on demand when you [read an instance](../read-models/getting-single-instance). This avoids waiting for a materialized view to catch up, but adds replay work to the read. A fresh result does not guard a later write against concurrent changes; use a [decision read](../read-models/decision-reads.mdx) when that protection is needed. [Aggregate roots in Arc](/arc/backend/csharp/chronicle/aggregates/defining-an-aggregate-root/) provide another way to organize state and behavior for a write-side decision.
 
 ## Choosing
 
-1. **Do you want state you can query, or an effect in the outside world?**
-   - State → projection or reducer.
-   - Effect → reactor.
-2. **If state: can you express it as "map these event properties onto this model"?**
-   - Yes → [Projection](./projection.md). Start here — it's the least code and AutoMap does most of the work.
-   - No, it needs real logic (running totals, conditional accumulation) → [Reducer](../reducers/).
-3. **If effect:** use a [Reactor](../reactors/) — and design it to be safe to run more than once, because it will be (replay, recovery, redeploy).
+Start with a [projection](./projection.md) when mapping, joining, or aggregating event data expresses the view. Projection operations include more than property copying, so a running total alone is not a reason to switch approaches.
+
+Choose a [reducer](../reducers/) when custom calculations or conditional state transitions are easier to understand as code. You gain control over the fold, the function that combines previous state with each event, and take responsibility for that logic.
+
+Choose a [reactor](../reactors/) for external work or follow-up actions. Recovery can deliver an event again; a deliberate replay can do so too. Decide how repeated delivery is handled before enabling the effect, and do not assume that every redeploy replays the reactor's history.
 
 ## The rules that keep them honest
 
-- A **projection/reducer never causes side effects** — no emails, no API calls. They only build state.
-- A **reactor never builds state and never writes to the event log directly** — if it must produce new events, it executes a command through the command pipeline.
-- All of them are **rebuildable**: because events are the source of truth, you can replay to rebuild a read model at any time.
+A projection or reducer should only derive state. Replaying it must not send emails, call external APIs, or issue commands.
+
+A reactor can invoke a command when the action needs command-side validation, or produce [follow-up events](../reactors/side-effects.mdx) through its client's supported mechanism. It is not the place to maintain the query model that a projection or reducer should build.
+
+Replay rebuilds derived state; it cannot undo an external action. Treat reactor replay as an operational decision about effects, not as a read-model rebuild.
 
 ## Go deeper
 

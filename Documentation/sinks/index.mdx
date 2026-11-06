@@ -1,34 +1,39 @@
 ---
 uid: Chronicle.Sinks
-description: A Chronicle sink is the storage backend where read model instances from projections and reducers are written; two sink types are built in.
+title: "Cratis Chronicle sinks: choose an output target"
+description: Cratis Chronicle sinks store projection and reducer output as read models or publish it as events. Choose a target and understand its limits.
 ---
-# Sinks
+A Cratis Chronicle sink receives the state produced by a projection or reducer and either stores it as a read model or publishes it as a new event. Use a read-model sink when queries need current state. Use an event-sequence sink when downstream consumers need events derived from that state.
 
-A sink is the storage backend where Chronicle writes read model instances produced by projections and reducers. Chronicle ships with two built-in sink types for document and relational read models, and has graph sink types for [graph projections](../projections/graph-projections.mdx).
+MongoDB is the default read-model sink; SQL is another storage option. [Graph projections](../projections/graph-projections.mdx) write to graph sinks, described [below](#graph-sinks). Publishing events is a separate target choice, with its own destination rules and replay behavior.
 
-:::note[Client coverage]
-Enabling/registering the SQL sink below is a .NET-hosting-specific DI registration step (`IServiceCollection`), matching the same client-startup pattern already noted elsewhere in this section (namespaces, migrations, connection-strings, event-store subscriptions). Which sink a read model uses is a server-side/kernel concern, not something the other client SDKs configure differently — see each client's own connection/startup options for the equivalent of "which event store/namespace to connect to."
-:::
+The SQL registration examples are specific to .NET hosting. The Kernel host registers the storage implementation; the client host selects the default read-model sink. These examples do not establish equivalent configuration APIs in other clients.
 
 ## Target schemas and event publication
 
-The kernel's `IHaveTargetSchema` contract separates target shape from storage selection. A `ReadModelDefinition` resolves its latest registered read-model schema; an `EventTypeSchema` resolves the schema for its explicitly registered event type and generation. Schema resolution does not register a new generation or choose an event sequence.
+The target schema describes the output's shape; the sink determines what happens to it. A read-model target can keep the same schema when you switch its storage from MongoDB to SQL. An event target instead names the event type and generation that consumers will receive.
 
-Event-target metadata names an exact registered event type and generation. An omitted destination means the outbox, never the event log. It does not allocate event generations. The `EventSequence` sink type lets older kernels reject the unsupported sink instead of ignoring new metadata and creating a read model. The legacy sink configuration and type fields retain their wire numbers. A definition whose type and metadata disagree is refused rather than falling back to a read model or the event log.
+The Kernel represents target shape through `IHaveTargetSchema`. A `ReadModelDefinition` resolves its latest registered read-model schema; an `EventTypeSchema` resolves the schema for its explicitly registered event type and generation. Resolving a schema does not register a generation, select a sink, or authorize publication.
+
+An event-sequence sink definition adds the exact registered event type and generation, the destination sequence, and whether the event type is public. Omitting the destination selects the outbox, never the event log. A definition whose sink type and event-target metadata disagree is rejected rather than falling back to a read model or the event log. Older kernels that do not recognize the `EventSequence` sink type reject it as an unknown sink.
 
 ### What the event-sequence sink does
 
-The kernel's event-sequence sink keeps the `ISink` fold semantics: the engine reads current state with `FindOrDefault`, folds the event or batch, and hands the changeset to `ApplyChanges`. The sink then publishes the resulting state as a **new event** of the target type on the destination sequence, with the target key as the event source id. The source event's subject, correlation, causation and identity travel with it, and a causation link records the observer, replay occurrence and input position.
+The event-sequence sink turns accumulated state into a new event. This accumulation is called a fold: the engine reads current state with `FindOrDefault`, applies the source event or batch, and hands the changeset to `ApplyChanges`. The sink publishes the result as the target event type, with the target key as the event source id. The source event's subject, correlation, causation and identity travel with it, and a causation link identifies the producing observer and processing step.
 
-The published event is also the durable state. The current state of a key is the content of the last event published for it in the current occurrence, so state and publication are one atomic append and there is no window between a state write and an append. Every step has a deterministic publication identity built from store, namespace, destination, observer, replay occurrence, target key and input position. The append is idempotent on that identity, on every storage provider (in-memory, MongoDB and SQL), so a retried or redelivered step returns the event that was already committed. The same identity with different content is a conflict and fails the step; it never produces a second instance.
+The published event is also the durable state for its key. The sink reads back its own last publication as the next fold's input, excluding events written by another observer or an ordinary append. State and publication commit in the same append, avoiding a separate state write that could succeed while publication fails.
 
-Append rejections (constraint, concurrency or validation) come back as failed partitions with the key, input position and reason. Nothing is caught and continued. A removal cannot be expressed as a public fact and also fails explicitly.
+Each processing step has a deterministic publication identity scoped to store, namespace, destination, observer, replay occurrence, target key and input position. In-memory, MongoDB and SQL storage use that identity to make the append idempotent: an identical retry returns the committed event instead of appending another instance. Reusing the identity with different content fails with `EventPublicationConflict`.
+
+A rejected append reports a failed partition with the key, input position and reason. State removal also fails explicitly because deleting a read model cannot retract a published fact. A step that produces no change publishes nothing; its progress remains in the observer's offset.
 
 ### Replay and public history
 
-Public events remain events: marking an event public does not change its schema-migration requirements. A change to the projection mapping triggers replay, which starts a new occurrence with empty state and appends **new public event instances** to the destination. Replay never overwrites, removes or replaces older public history.
+Changing a projection mapping triggers replay: Chronicle runs through the source history again, starting with empty state and appending new event instances to the destination. This run is a new replay occurrence. Consumers receive new publications; replay does not overwrite, remove or replace older public history. Marking an event public does not change its schema-migration requirements.
 
-Retrying or redelivering the same processing step is not another publication. The replay occurrence is part of the publication identity, so a replay publishes a new instance for the same source event, while a retry inside that occurrence reuses the existing one. A restarted replay resumes the same occurrence.
+The occurrence is part of the publication identity, so a replay can publish a new instance for the same source event while an identical retry inside that occurrence reuses the committed one. A restarted replay resumes the same occurrence, identified by its persisted replay context rather than its start time.
+
+For reducers, changing batch boundaries on resume can give the same input position different output content. That step fails with a publication conflict instead of appending a duplicate; replay identity does not resolve that batching difference.
 
 ### Publishing from a .NET client
 
@@ -36,42 +41,39 @@ Point `IProjectionFor<T>` or `IReducerFor<T>` at an `[EventType]` record instead
 
 For example, a `[Public]` `OrderShipped` event record can be the generic argument of an `IProjectionFor<OrderShipped>` whose definition builds it `From<OrderPacked>`; the projection's output is appended to the outbox.
 
-- The target is an event type when the type carries `[EventType]`. No read model is registered for it; registration sends the event type, its schema and an `EventSequence` sink.
-- The destination is the **outbox** unless the event type carries `[PublishTo("sequence")]`. The attribute is on the target event type, not on the projection or reducer, because `[EventSequence]` already selects the sequence an observer reads from. The event log is refused.
-- The outbox accepts only **public** event types: `[Public]`, or an `[EventStore]` that names the event store the client is connected to. Declaring one that is not public fails at registration on the client (`PrivateEventTypeCannotBePublishedToOutbox`) and again in the kernel (`PrivateEventCannotBePublishedToOutbox`); the client sends the declaration with the sink configuration. The kernel also enforces visibility on every append, see [Public events](../events/public-events.md). The event log as a destination fails with `EventLogIsNotAPublicationTarget`.
-- A kernel that does not know the `EventSequence` sink type refuses the registration instead of creating a read model.
-- Reactors are unchanged: they can still append to the outbox through `IEventStore.GetEventSequence(EventSequenceId.Outbox)`.
+Registration sends the event type, its schema and an `EventSequence` sink instead of registering a read-model collection. The destination is the outbox unless the target event type carries `[PublishTo("sequence")]`. Put that attribute on the target, not the projection or reducer: `[EventSequence]` selects the sequence an observer reads from, which is a separate choice.
 
-The same declaration language works for the target name: `projection OrderShippedPublisher => OrderShipped` compiles when the registered target is an event target. The `event ... to outbox` keywords from the design are **not** implemented, because the grammar lives in the external Screenplay parser package.
+An outbox target must be public through `[Public]` or an `[EventStore]` declaration naming the connected event store. A private outbox target fails registration in the client with `PrivateEventTypeCannotBePublishedToOutbox`; the Kernel independently checks the declaration with `PrivateEventCannotBePublishedToOutbox`. The Kernel also enforces visibility on every append; see [Public events](../events/public-events.md). Selecting the event log as the destination fails with `EventLogIsNotAPublicationTarget`.
+
+Reactors can still append to the outbox through `IEventStore.GetEventSequence(EventSequenceId.Outbox)`; they do not need an event target to do so.
+
+The projection declaration `projection OrderShippedPublisher => OrderShipped` can name a registered event target. The separate `event ... to outbox` syntax is not implemented. Use the registered target's sink configuration to select its destination.
 
 ### Compliance decision
 
-An event target whose schema carries compliance metadata (`[PII]`) is **refused** with `EventSequenceTargetCarriesCompliance`. A sink fold reads the previous published event back as state, and a public event must not carry unprotected personal data, so the two requirements cannot be met together until protection of re-read state and of the appended event are specified as one design. Pipelines also keep bookkeeping on state (initialization flags, watermarks, subject tracking); the sink strips it before publishing, so none of it reaches a public event.
+An event target whose schema carries compliance metadata (`[PII]`) is rejected at sink creation with `EventSequenceTargetCarriesCompliance`. The published event becomes the next fold's input, so protection and release must account for both publication and reuse. This sink does not support that combination.
+
+Pipeline bookkeeping is separate from event content. The sink strips initialization flags, watermarks and subject tracking before publishing.
 
 ### Current limits
 
-- Exactly one target may publish a given event type to a given event sequence. Registering a second publisher is refused with `EventPublisherConflict`, because the published event is the state of its key and two publishers would fold each other's output. As a second line of defense, a sink reads back only the events its own observer published, so state of the same type written by another observer or by an ordinary append is never folded.
-- A publication identity reused for different content is reported as the typed append error `EventPublicationConflict`. A retry that finds its publication already durable finishes the append bookkeeping it may have missed (sequence number, per-event-type tail, observer delivery and constraint index) instead of only reporting success.
-- The replay occurrence comes from the persisted replay context's unique revert container name, not its start time, so it stays the same when a replay resumes after a restart.
-- The Workbench shows no event type visibility.
-- The own-event-store case is not fixed on the client: an event type whose `[EventStore]` equals the connected store is public for publishing, but an observer of it may still route to an inbox.
-- Preview, code generators emitting `IProjectionFor<TEvent>` and the Workbench for event targets are not implemented.
-- A reducer batch that is re-cut differently on resume can reach the same first position with different content; the sink fails that step with a conflict instead of publishing a duplicate. Closing that gap needs the per-document applied-range design noted in the reducer pipeline.
-- A step that produces no change does not publish; its progress is the observer's own offset.
-- The sink exposes no read-model instances, so the Workbench has nothing to list for an event target.
-- No running-kernel (Orleans) end-to-end run has been made from a connected client.
+Only one projection or reducer may publish a given event type to a given destination sequence, across generations. Registration rejects a second publisher with `EventPublisherConflict`. Use distinct target event types or destinations for independent folds.
+
+Event targets do not provide read-model enumeration, observation, or revert-container browsing. The sink also has no child-key reverse lookup, so child lookups that depend on it cannot find a root key. To consume the output, read or observe the destination event sequence instead of treating the target as a read-model collection.
+
+Event-target preview, code generators emitting `IProjectionFor<TEvent>`, and Workbench authoring for event targets are not implemented. The sink exposes no read-model instances for the Workbench to list. A schema contract or a compiled target name does not provide those authoring surfaces.
 
 ## MongoDB Sink
 
 The default sink. Read model instances are stored as MongoDB documents, one document per instance. The container name defaults to the read model type name (camelCase), controlled by the `INamingPolicy` in use.
 
-This requires no additional setup — MongoDB is the default when you configure Chronicle.
+No separate sink selection is needed when your Kernel is configured with MongoDB storage.
 
 ## What a MongoDB convention pack reaches
 
-Because read model instances land in MongoDB as documents, it's natural to assume that configuring the MongoDB driver configures how Chronicle hands read models back. It doesn't, and the gap is worth knowing before you spend an afternoon on it.
+A MongoDB convention pack configures how the MongoDB driver maps documents to your types. It does not configure how Chronicle returns a read model. This distinction matters if a custom serializer or property rename works in a direct database query but not in a command receiving a Chronicle read model.
 
-A convention pack — whether you provide one through Arc's [ICanProvideMongoDBConventionPacks](/arc/backend/csharp/mongodb/convention-packs/) or call `ConventionRegistry.Register` yourself — is registered in the MongoDB driver's global convention registry. That registry configures the driver's class maps. So a convention pack reaches exactly as far as the driver does, and no further:
+Whether you provide a pack through Arc's [ICanProvideMongoDBConventionPacks](/arc/backend/csharp/mongodb/convention-packs/) or call `ConventionRegistry.Register` yourself, it enters the driver's global convention registry and configures its class maps:
 
 | Path a read model takes | Does the convention pack apply |
 | --- | --- |
@@ -80,9 +82,9 @@ A convention pack — whether you provide one through Arc's [ICanProvideMongoDBC
 | A read model injected into a command's validator, `Provide()`, or `Handle()` | No |
 | The document the sink writes | No |
 
-Chronicle returns a read model as JSON and materializes it with `System.Text.Json`, so no `BsonClassMap` is consulted anywhere on that path. Command-side read model injection is the one that surprises people: it resolves through the same read model API, so a rename, a custom serializer, or an `IgnoreExtraElements` convention that is visibly working in your query code has no effect at all on the instance your command receives. And the sink writes the document from the projected state rather than from a class map of your type, so a convention pack doesn't change what gets stored either.
+Chronicle returns read models as JSON and materializes them with `System.Text.Json`, without consulting `BsonClassMap`. Arc's Chronicle command-parameter resolver uses the same read-model API, so MongoDB conventions such as `IgnoreExtraElements` do not affect that instance. The sink writes projected state rather than using a class map of your type; a convention pack does not change its stored document either.
 
-That is what the convention registration in [Get started](/chronicle/get-started/) is for. It isn't configuring Chronicle — it's telling *your* driver how to map your type onto element names Chronicle has already chosen.
+Use the convention registration in [Get started](/chronicle/get-started/) when your own driver queries need to map a type onto Chronicle's stored element names.
 
 ## SQL Sink
 
@@ -91,7 +93,7 @@ The SQL sink gives each read model type its own table, with columns derived from
 - Each scalar property becomes a typed column, and the read model key becomes the table's primary key.
 - Each collection and nested object becomes a single JSON column — `jsonb` on PostgreSQL, `nvarchar(max)` on SQL Server, and `TEXT` on SQLite.
 
-A composite key is stored as one value, its parts joined with `_`, and reads return the key object. When a key part contains `_`, is empty, or cannot be read back as its declared type, the instance is returned without its key and the kernel logs a warning. Such keys can also collide; that is tracked in [#5335](https://github.com/Cratis/Chronicle/issues/5335).
+A composite key uses a legacy primary-key value with its parts joined by `_`. When enumerating instances, the sink reconstructs the key object only when that value is unambiguous and matches the declared types; otherwise the instance is returned without its key and the Kernel logs a warning. The sink also attempts to store an encoded key in an internal shadow column for exact composite-key lookups. That encoding does not replace the primary-key format, which can still collide as tracked in [#5335](https://github.com/Cratis/Chronicle/issues/5335).
 
 A read model whose identifier is spelled `ID` (or any casing other than `Id` or `id`) gets a key column spelled exactly like the property. Tables created by earlier releases keep the synthesized `Id` key they were created with, and the sink reads their layout once, when it first uses the table.
 
@@ -119,7 +121,7 @@ Join lookups and child removals select candidate rows in SQL before materializin
 JSON predicates deliberately admit a superset of matches; Chronicle's existing path walker and
 value comparison still determine which rows and children are actually updated.
 
-This allows teams using SQL databases (SQL Server, PostgreSQL, SQLite) to take advantage of Chronicle projections without maintaining a MongoDB instance.
+With SQL configured as the Kernel storage provider, you can store both events and read models without a MongoDB instance.
 
 ### Null nested objects
 
@@ -172,7 +174,7 @@ see [Exact decimal values](../events/schema-representation#exact-decimal-values)
 
 ### Enabling the SQL Sink
 
-Set `DefaultSinkTypeId` in `ChronicleOptions`:
+After registering SQL storage in the Kernel host as described under [Prerequisites](#prerequisites), set `DefaultSinkTypeId` in the .NET client host's `ChronicleOptions`:
 
 <ChronicleClientTabs snippet="sinks/index/enable-sql-sink" />
 
@@ -194,7 +196,7 @@ The SQL sink is provided by the `Cratis.Chronicle.Storage.Sql` NuGet package. Ad
 
 <ChronicleClientTabs snippet="sinks/index/register-sql-storage" />
 
-Refer to the hosting documentation for full server setup details.
+Continue with the [hosting configuration](../hosting/configuration/index.md) for the full Kernel setup.
 
 ## Graph sinks
 
@@ -207,11 +209,14 @@ A [graph projection](../projections/graph-projections.mdx) writes nodes and edge
 
 ## Choosing a Sink
 
-| | MongoDB | SQL |
-|---|---|---|
-| Setup complexity | Requires MongoDB | Requires SQL database |
-| Schema management | Schemaless | Tables auto-created on first use |
-| Query flexibility | Rich aggregation pipeline | Standard SQL queries |
-| Best for | Event-driven microservices, flexible schemas | Existing SQL infrastructure, relational tooling |
+First decide whether consumers need current state or new events. For current state, choose a storage sink to match the database your application will query. For events, choose an event target and account for its publication and replay rules.
 
-The sink type applies globally to all projections and reducers registered by the client. It cannot be set per-read-model from client configuration today — all read models share the same sink backend.
+| Output you need | Sink | What to plan for |
+|---|---|---|
+| Read-model documents queried with MongoDB tooling | MongoDB | MongoDB storage and driver mapping for direct queries |
+| Read-model rows queried with SQL tooling | SQL | PostgreSQL, SQL Server or SQLite storage and the column mappings above |
+| New events derived from accumulated state | EventSequence | A registered event target, an allowed destination and consumers that account for replay publications |
+
+`DefaultSinkTypeId` applies to all materialized read models registered by the client; client configuration does not select a different storage sink per read model. Event targets use their explicit `EventSequence` sink instead of that default.
+
+Once you have chosen read-model storage, follow the [querying guide](../read-models/querying.md) to retrieve state. For event output, use [Public events](../events/public-events.md) to understand visibility before selecting an outbox target.
