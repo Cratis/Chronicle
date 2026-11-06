@@ -9,6 +9,8 @@ namespace Cratis.Chronicle.Storage.Sql.Cluster.for_SqlDatabaseCatalog;
 [Collection(SqlServerCollection.Name)]
 public class when_reading_tables_of_a_sql_server_database(SqlServerFixture fixture) : Specification
 {
+    const int MaximumReads = 2000;
+
     string _connectionString;
     int _sessions;
 
@@ -27,19 +29,16 @@ public class when_reading_tables_of_a_sql_server_database(SqlServerFixture fixtu
         command.Parameters.AddWithValue("name", database);
 
         // Closing a connection returns before the server has ended its session, so a session that is going away is not
-        // one that was left behind: only one that is still there after a few seconds is.
-        var deadline = DateTime.UtcNow.AddSeconds(10);
-        do
+        // one that was left behind: only one that is still there after many reads of the session list is. Each read is a
+        // round trip to the server, so the bound is a number of reads, not a duration.
+        for (var read = 0; read < MaximumReads; read++)
         {
             _sessions = Convert.ToInt32(await command.ExecuteScalarAsync());
             if (_sessions == 0)
             {
                 break;
             }
-
-            await Task.Delay(100);
         }
-        while (DateTime.UtcNow < deadline);
     }
 
     async Task Destroy() => await fixture.DropDatabase(_connectionString);
