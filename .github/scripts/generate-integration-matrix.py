@@ -69,7 +69,7 @@ BATCHES = {
 # Namespaces that run in a restricted set of configurations, or not at all in this matrix.
 CONFIG_RESTRICTED = (
     "SqlServerAlertIncidents", "for_KernelTlsLifecycle", "for_PerProcessActivation",
-    "for_OccurrenceProcessRecovery", "for_ContainerStartup",
+    "for_OccurrenceProcessRecovery", "for_ContainerStartup", "GraphProjections",
 )
 
 # Number of parallel shards per namespace. Any namespace not listed here runs as
@@ -335,6 +335,11 @@ def build_include(suite, databases, batches, namespaces=None):
         # PerProcess activation specs need its gRPC listener and cover client identity once.
         if name in {"for_KernelTlsLifecycle", "for_PerProcessActivation"}:
             namespace_configs = [config for config in configs if config[0] == "outofprocess" and config[1] == "mongodb"]
+        # Graph projections run on the silo of the client and write to a Neo4j server the fixture starts, so the storage backend of the kernel
+        # is not what they exercise. In-process covers MongoDB without building the kernel image; every other backend is covered out of process,
+        # which also proves a graph is projected the same way whatever stores the event log.
+        if name == "GraphProjections":
+            namespace_configs = [config for config in configs if config[0] == "inprocess" or config[1] != "mongodb"]
         # Process recovery owns a PostgreSQL database and an external kernel regardless of lane settings.
         # Schedule it only once, in the lane matching the infrastructure it actually exercises.
         if name == "for_OccurrenceProcessRecovery":
