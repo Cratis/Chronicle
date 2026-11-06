@@ -1,62 +1,60 @@
 ---
-description: Map event data to read model properties in a model-bound Chronicle projection by setting, adding or subtracting values and reading event context.
+title: "Cratis Chronicle model-bound projections: Map properties"
+description: Map event payloads and context to read model properties in Cratis Chronicle with SetFrom, AddFrom, SubtractFrom, and SetFromContext.
 ---
-# Basic Property Mapping
+Use model-bound mapping in Cratis Chronicle when a read model property needs a value from an event or its metadata. Declare the mapping on the read model: you can replace a value, add or subtract an amount, or record when a particular event occurred.
 
-Model-bound projections map event data to read model properties close to the read model definition. Use them when each event property maps directly to a read model property, when a property should accumulate numeric values, or when event metadata belongs in the read model.
-
-The exact syntax belongs to each client. The projection definition sent to Chronicle still has the same shape: event type, read model key, and property mappings.
+Client syntax differs. The examples below show each client's way to declare the event type, the key that selects a read model instance, and the property mappings.
 
 ## Set A Property From An Event
 
-Set mappings copy a value from an event into the read model. This is the most common model-bound operation.
+A set mapping replaces the current read model value with a property from the event. Use an explicit source name when the event and read model name the value differently.
 
 <ChronicleClientTabs snippet="projections/model-bound/basic-mapping/set-from" />
 
-When the event property and read model property have the same name, the client can use its convention-based form instead of repeating the property name.
+When the names match, you can omit the source property name. For a whole event whose properties match the read model, consider [convention-based mapping](convention-based).
 
 <ChronicleClientTabs snippet="projections/model-bound/basic-mapping/set-from-convention" />
 
-Use multiple set mappings when different events can update the same read model property.
+Put multiple set mappings on a property when different event types supply its value. Each mapping replaces the current value when its event is processed.
 
 <ChronicleClientTabs snippet="projections/model-bound/basic-mapping/set-from-multiple-events" />
 
 ## Add And Subtract Values
 
-Add mappings increase a numeric read model property by a value from an event. They are useful for balances, totals, counters, and other accumulated values.
+Use an add mapping when an event carries an amount to add, rather than a replacement value. A deposit, for example, increases the balance by the amount in the event.
 
 <ChronicleClientTabs snippet="projections/model-bound/basic-mapping/add-from" />
 
-Subtract mappings decrease a numeric read model property by a value from an event. Combine add and subtract mappings when the read model should track a net value.
+A subtract mapping deducts the event's amount from the current value. Combine the two operations to track a net balance:
 
 <ChronicleClientTabs snippet="projections/model-bound/basic-mapping/subtract-from" />
 
-The event flow for a balance-style read model is:
-
-1. The opening event sets the initial balance.
-2. Deposit events add to the balance.
-3. Withdrawal events subtract from the balance.
-4. Rename or profile events update descriptive properties without changing the balance.
+In this account read model, opening the account sets its name and initial balance. Deposits and withdrawals adjust the balance; renaming replaces the name without changing the balance.
 
 <ChronicleClientTabs snippet="projections/model-bound/basic-mapping/complete" />
 
 ## Set A Property From Event Context
 
-Event context contains metadata such as when the event occurred, which event source it belongs to, sequence information, and correlation metadata. Map context fields when the read model needs audit or lifecycle information.
+Event context is metadata stored alongside the event payload. It includes occurrence time, event source identity, sequence information, and correlation metadata. Use a context mapping when the read model needs one of these values rather than a field from the payload.
 
 <ChronicleClientTabs snippet="projections/model-bound/basic-mapping/set-from-context" />
 
-Use an every-event mapping when a read model property should reflect the latest event that affected the projection, rather than one specific event type.
+Choose [`FromEvery`](from-every) when a property should update for every event the projection subscribes to. In the next example, placement and shipment timestamps belong to specific events, while `LastModified` records the latest subscribed event.
 
 <ChronicleClientTabs snippet="projections/model-bound/basic-mapping/context-vs-from-every" />
 
 ### Derived Context Values
 
-Context paths can end in a registered derived function. `Occurred.Week` and `Occurred.Week()` both select the ISO week number from the event's occurrence time. `Occurred.WeekYear` selects the ISO week-numbering year, which can differ from the calendar year near New Year. This works on properties and record parameters with `[SetFromContext<T>]`, and with `[FromEvery(contextProperty: ...)]`.
+To group events by week, derive the week number from their occurrence time. `Occurred.Week` and `Occurred.Week()` both select the ISO week number. Pair it with `Occurred.WeekYear`, the ISO week-numbering year, which can differ from the calendar year near New Year.
+
+These paths work on properties and record parameters with `[SetFromContext<T>]`, and with `[FromEvery(contextProperty: ...)]`.
 
 <ChronicleClientTabs snippet="projections/model-bound/basic-mapping/derived-context" />
 
-The function must be the final segment, take no arguments, and support the receiver's CLR type. Calendar functions support `DateTimeOffset`, `DateTime`, and `DateOnly`, including nullable receivers. Unknown functions and incompatible receivers are rejected when building the projection. Real CLR properties take precedence over bare function names. Naming policies apply to property segments, not function names: under camel casing, `Occurred.Week` becomes `$eventContext(occurred.Week())`.
+In .NET, the function must be the final path segment, take no arguments, and support the type of the value it reads. `Week` and `WeekYear` support `DateTimeOffset`, `DateTime`, and `DateOnly`, including nullable values. Unknown functions and incompatible value types are rejected when building the projection.
+
+An actual .NET property takes precedence over a bare function name. Naming policies apply to property segments, not function names: under camel casing, `Occurred.Week` becomes `$eventContext(occurred.Week())`.
 
 ## Choosing The Mapping
 
@@ -68,4 +66,4 @@ The function must be the final segment, take no arguments, and support the recei
 | Context | A read model property should come from event metadata. |
 | Every event | A property should update for any event that affects the projection. |
 
-Prefer the most direct mapping that expresses the read model. If the read model needs branching, state-dependent logic, or calculations that are clearer as code, use a [reducer](../../reducers/) instead.
+For changes of exactly one, use [counters](counters); for a value that should become `null`, use [clearing](clearing). If the mapping needs branching, state-dependent logic, or calculations that are clearer as code, use a [reducer](../../reducers/) instead.

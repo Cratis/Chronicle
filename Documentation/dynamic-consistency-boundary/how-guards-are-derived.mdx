@@ -1,9 +1,11 @@
 ---
-title: How guards are derived
-description: How decision reads, explicit scopes and event source definitions produce append guards, including separate predicates and legacy widening.
+title: How Chronicle derives append guards
+description: Chronicle derives append guards from decision reads, explicit scopes and declared routing to reject writes when the watched events change.
 ---
 
-Use this page when you want to know exactly which events make an append fail. A guard is the append condition Chronicle sends to the kernel with the events: a position in the log, plus a filter. The kernel rejects the append if an event that matches the filter was appended after the position. Everything else on this page is about where the position and the filter come from.
+An append guard tells Cratis Chronicle which changes invalidate a write: it combines a position in the event log with a filter for the events that matter. The kernel rejects the append if a matching event arrived after that position. Trace the guard from your reads and scopes to understand a conflict or check that a rule watches the right facts.
+
+The API names and read-protection merge rules below describe the .NET client. The inspection example also shows the Elixir client's way to examine enrolled reads.
 
 ## The parts of a guard
 
@@ -14,7 +16,9 @@ Use this page when you want to know exactly which events make an append fail. A 
 | Source type, stream type, stream ID | Which part of the source counts | Only for a stream-scoped read, with the values you pass | The builder | The dimensions the definition declares |
 | Position | What the writer is assumed to have seen | The log's tail, captured before the read folds | The sequence number you captured | The tail, read when you append |
 
-A decision read is the only form that captures the position before it reads the facts. That is why it can guard a decision. The other two guard only what you wire up yourself. See [Choosing how a rule holds](./choosing.mdx).
+A decision read captures the position before it folds the events into state, so the guard covers changes during and after the read. With an explicit scope, capture the position before loading the facts yourself. A definition's default scope starts at append time and cannot protect an earlier decision. See [Choosing how a rule holds](./choosing.mdx).
+
+A .NET decision read also captures a mutation epoch, the event sequence's counter for revisions and redactions. The kernel rejects its guard if that counter changes or the read captured a mutation in progress. This check covers the sequence, not just the events selected by the filter.
 
 The guard is written with a `guard:` line in the examples below. It is a notation for this page. `IUnitOfWork.GetAppendConditions()` returns the real conditions, and their `ToString()` prints the same parts with event type IDs.
 
@@ -53,7 +57,9 @@ Under a read-protection frame, a second read in another month keeps a separate g
 
 ## Several reads on one source
 
-Under a [read-protection frame](../read-models/read-protection.mdx), reads with different predicates keep separate guards on the same source label. Repeated reads of the same predicate retain the earliest position, including an absent model's negative-read expectation. The kernel checks every guard atomically; unrelated streams need not conflict. Repeated labels require the `concurrency-scope-conjunctions` capability.
+A [read-protection frame](../read-models/read-protection.mdx) tracks reads for one unit of work under the host's read policy. Within it, reads with different predicates keep separate guards on the same source label when the kernel supports `concurrency-scope-conjunctions`. A predicate is the filter: source, event types and stream dimensions. Repeated reads of the same predicate retain the earliest position, including an absent model's expectation that no matching event exists. The kernel checks the guards atomically with the append, without making unrelated streams conflict.
+
+Without that capability, protected reads fall back to a conservative merged guard. Each source or stream dimension survives only when its values agree across the contributions being merged; differing values widen the filter. The separate-guard examples below assume the capability is present.
 
 Outside a frame, reads of the same source still merge into one guard. That legacy guard can only get wider, never narrower:
 
@@ -71,7 +77,7 @@ Where the reads are merged decides what happens to the stream values.
 | Where | Stream type and stream ID | Event types |
 |---|---|---|
 | `AppendMany(guardedBy: reads)`, or a unit of work without a [read-protection frame](../read-models/read-protection.mdx) | Kept only when both are equal. If either differs, both are dropped | The union |
-| A unit of work under a read-protection frame | Each predicate retains its stream type and ID in a separate guard | Each predicate retains its own event-type filter |
+| A unit of work under a read-protection frame, with kernel conjunction support | Each predicate retains its stream type and ID in a separate guard | Each predicate retains its own event-type filter |
 
 ```text
 // Two reads on BankAccount-7: Transactions/2026-10 and Transactions/2026-11
@@ -88,7 +94,7 @@ Outside a frame, a withdrawal in any month conflicts. Under a frame, only the tw
 
 ## Adding an explicit scope
 
-Chronicle does not guess whether your own scope is enough. It checks.
+An explicit scope can replace a read's guard only if it watches at least the same events from the same or an earlier position. A narrower scope would leave part of the decision unprotected.
 
 | You combine | Result |
 |---|---|
@@ -115,7 +121,7 @@ An [event source definition](../event-sources/defining.mdx) can declare which di
 
 A definition without a declared dimension, or with `None`, adds nothing. A declared set without `EventSourceId` becomes a separate guard that is not tied to the read, so it does not protect the state you read. [CHR0062](../code-analysis/CHR0062.mdx) reports it.
 
-An example under a frame. The account declares the event source ID and the `Transactions` stream dimensions, and you read `MonthlyWithdrawals` for `2026-10`.
+For example, an account declares the event source ID and the `Transactions` stream dimensions, and you read `MonthlyWithdrawals` for `2026-10`. Under a frame with kernel conjunction support, the read and the declared route contribute separate guards:
 
 ```text
 // without the definition's dimensions
@@ -138,7 +144,9 @@ flowchart LR
 
 ## See what a commit guarded
 
-Under a read-protection frame, `GetAppendConditions()` returns one `AppendCondition` per guarded source after the commit. Use it in a test to assert that a rule is guarded by what you think. Each condition lists its `Origins`, such as `ProtectedRead` or `DeclaredRouting`, and the `Reads` behind it.
+In .NET, `GetAppendConditions()` exposes the conditions resolved for a commit under a read-protection frame. One source can have several `AppendCondition` entries when its predicates differ. Assert the filters and positions in a test, rather than checking only that a source has a guard. Each condition lists its `Origins`, such as `ProtectedRead` or `DeclaredRouting`, and the `Reads` behind it.
+
+The Elixir example inspects the unit of work's enrolled decision reads before rolling it back; it does not return the .NET commit report.
 
 <ChronicleClientTabs snippet="dynamic-consistency-boundary/how-guards-are-derived/see-the-guard" variants="csharp,elixir" />
 
@@ -146,8 +154,4 @@ For a test that races two writers without a frame, see [Test the race](./scenari
 
 ## Next steps
 
-- [Choosing how a rule holds](./choosing.mdx)
-- [Decision reads](../read-models/decision-reads.mdx): admission rules and limits.
-- [Read protection](../read-models/read-protection.mdx): refuse unguarded reads and immediate appends.
-- [Concurrency](../events/concurrency.mdx): the scope API.
-- [Event sources](../concepts/event-source.md): the four routing values.
+To change what a rule watches, start with [Choosing how a rule holds](./choosing.mdx), then use [Decision reads](../read-models/decision-reads.mdx) for model admission or [Concurrency](../events/concurrency.mdx) for the scope API. [Read protection](../read-models/read-protection.mdx) explains how a host refuses unguarded reads and immediate appends. For the meaning of the routing dimensions, see [Event sources](../concepts/event-source.md).

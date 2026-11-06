@@ -1,8 +1,7 @@
 ---
+title: Generating TypeScript gRPC bindings for Cratis Chronicle
 description: How Chronicle generates .proto files and publishes the @cratis/chronicle.contracts npm package of TypeScript bindings for its gRPC services.
 ---
-# TypeScript gRPC Package Generation
-
 This document explains the TypeScript gRPC package generation and publishing setup for Chronicle.
 
 ## Overview
@@ -44,7 +43,7 @@ Validates the TypeScript package.
 - Non-draft pull requests (opened, synchronized, reopened or marked ready for review) that change the TypeScript client, Contracts, Protobuf, or ProtoGenerator paths. It does not run on push to main.
 
 **Steps:**
-1. Setup .NET 10 and Node.js 23
+1. Setup .NET 10 and Node.js 24.x
 2. Install protoc (Protocol Buffer Compiler)
 3. Build the Contracts assembly
 4. Run ProtoGenerator to generate .proto files
@@ -63,7 +62,7 @@ Publishes the TypeScript package to NPM alongside the .NET packages.
 **Delegation:** after the release and compatibility jobs, `publish.yml` calls the reusable workflow `.github/workflows/publish-typescript-client.yml` with the release version and the generated proto files artifact.
 
 **Steps in the reusable workflow:**
-1. Setup Node.js 23 and upgrade npm for trusted publishing
+1. Setup Node.js 24.x and upgrade npm for trusted publishing
 2. Install protoc
 3. Use the proto files artifact, or generate them when none is given
 4. Install TypeScript dependencies

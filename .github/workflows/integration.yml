@@ -61,35 +61,15 @@ jobs:
           ALL_PROVIDERS: ${{ inputs.all-providers && 'true' || '' }}
           INPUT_ALL_PROVIDERS: ${{ inputs.all-providers }}
 
+      # Short Kernel and Clustering namespaces share a job (see BATCHES), and the filters end with a
+      # dot so a namespace is not also a prefix of its neighbours (Events must not rerun EventSequences).
       - name: Discover Kernel integration namespaces
         id: kernel
-        run: |
-          namespaces=$(find Integration/Kernel -mindepth 1 -maxdepth 1 -type d \
-            ! -name 'bin' ! -name 'obj' \
-            -exec basename {} \; | sort)
-
-          matrix='{"include":['
-          for ns in $namespaces; do
-            [ -z "$ns" ] && continue
-            matrix+="{\"namespace\":\"Cratis.Chronicle.Kernel.Integration.${ns}\"},"
-          done
-          matrix="${matrix%,}]}"
-          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+        run: echo "matrix=$(python3 .github/scripts/generate-integration-matrix.py --suite kernel)" >> "$GITHUB_OUTPUT"
 
       - name: Discover Clustering integration namespaces
         id: clustering
-        run: |
-          namespaces=$(find Integration/Clustering -mindepth 1 -maxdepth 1 -type d \
-            ! -name 'bin' ! -name 'obj' \
-            -exec basename {} \; | sort)
-
-          matrix='{"include":['
-          for ns in $namespaces; do
-            [ -z "$ns" ] && continue
-            matrix+="{\"namespace\":\"Cratis.Chronicle.Integration.Clustering.${ns}\"},"
-          done
-          matrix="${matrix%,}]}"
-          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+        run: echo "matrix=$(python3 .github/scripts/generate-integration-matrix.py --suite clustering)" >> "$GITHUB_OUTPUT"
 
   client-integration-specs:
     needs: [discover]
@@ -196,6 +176,7 @@ jobs:
         with:
           path: ./coverage-results
           name: This Client integration shard
+          prefixes: ${{ matrix.members }}
 
       - name: Upload coverage results
         if: always()
@@ -263,7 +244,7 @@ jobs:
         run: |
           .github/scripts/run-tests-with-retry.sh \
             Integration/Kernel/Kernel.csproj \
-            "FullyQualifiedName~${{ matrix.namespace }}" \
+            "${{ matrix.filter }}" \
             --coverage
 
       # run-tests-with-retry.sh already writes a TRX per attempt into TEST_RESULTS_DIR.
@@ -272,6 +253,7 @@ jobs:
         with:
           path: ./coverage-results
           name: This Kernel integration shard
+          prefixes: ${{ matrix.members }}
 
       - name: Upload coverage results
         if: always()
@@ -326,7 +308,7 @@ jobs:
         run: |
           .github/scripts/run-tests-with-retry.sh \
             Integration/Clustering/Clustering.csproj \
-            "FullyQualifiedName~${{ matrix.namespace }}" \
+            "${{ matrix.filter }}" \
             --coverage
 
       # run-tests-with-retry.sh already writes a TRX per attempt into TEST_RESULTS_DIR.
@@ -335,6 +317,7 @@ jobs:
         with:
           path: ./coverage-results
           name: This Clustering integration shard
+          prefixes: ${{ matrix.members }}
 
       - name: Upload coverage results
         if: always()

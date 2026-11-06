@@ -5,6 +5,7 @@ using System.Collections.Immutable;
 using System.Text.Json;
 using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage;
 using Cratis.Monads;
 using Microsoft.Extensions.Logging;
@@ -127,7 +128,7 @@ public class ReplayObserverPartition(
     /// <inheritdoc/>
     protected override async Task OnStepCompletedOrStopped(JobStepId jobStepId, JobStepResult result)
     {
-        await TransientTimeouts.ReportPartitionFailedWhenAttemptsAreExhausted(GrainFactory.GetGrain<IObserver>(Request.ObserverKey), result, jsonSerializerOptions);
+        await TransientTimeouts.ReportPartitionFailedWhenAttemptsAreExhausted(GrainFactory.GetGrain<IObserver>(Request.ObserverKey), result, jsonSerializerOptions, new ReplayEpoch(JobId.Value));
         State.HandleResult(result, jsonSerializerOptions);
     }
 
@@ -147,7 +148,8 @@ public class ReplayObserverPartition(
                     EventObservationState.Replay,
                     request.EventTypes)
                 {
-                    ReaderScope = request.ReaderScope
+                    ReaderScope = request.ReaderScope,
+                    ReplayEpoch = new ReplayEpoch(JobId.Value)
                 })
         }.ToImmutableList();
     }

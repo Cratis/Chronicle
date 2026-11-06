@@ -1,8 +1,7 @@
 ---
+title: "CHR0014: Reducer cannot combine EventStore with explicit event sequence"
 description: Chronicle analyzer rule CHR0014 reports reducers that combine an [EventStore] attribute with an explicit event sequence, which is not allowed.
 ---
-# CHR0014: Reducer cannot combine EventStore with explicit event sequence
-
 ## Rule Description
 
 A reducer that declares `[EventStore("...")]` must use implicit inbox routing. It cannot also define an explicit event sequence.

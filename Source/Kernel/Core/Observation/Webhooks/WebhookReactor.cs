@@ -6,6 +6,7 @@ using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation.Webhooks;
 using Cratis.Chronicle.Concepts.Security;
 using Cratis.Chronicle.Observation.Reactors.Kernel;
+using Cratis.Chronicle.Observation.Webhooks.Signing;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Observation.Webhooks;
@@ -197,6 +198,7 @@ public class WebhookReactor(IGrainFactory grainFactory, ILogger<WebhookReactor> 
         var webhookId = new WebhookId(eventContext.EventSourceId.Value);
         var webhooksManager = grainFactory.GetGrain<IWebhooks>(eventContext.EventStore.Value);
         await webhooksManager.Remove(webhookId);
+        await grainFactory.GetGrain<IWebhookSigningKeyRing>(eventContext.EventStore.Value).RetireWebhookSecrets(webhookId);
 
         logger.WebhookRemoved(eventContext.EventSourceId);
     }

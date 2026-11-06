@@ -1,18 +1,28 @@
 ---
-title: Register migrations explicitly
-description: Nominate migration recipes when event generations are registered at the composition root.
+title: Chronicle migrations with explicit registration
+description: Register Chronicle event generations and migration recipes at the composition root, keeping contracts free of client attributes and migration base classes.
 ---
 
-Explicit registration lets you keep event contracts free of client markers while declaring their generation relationship in the application. Register both endpoint event types with one stable id and adjacent generations, then nominate the migration recipe.
+Explicit migration registration in Cratis Chronicle lets you keep event contracts free of client attributes and declare their generation relationship in application setup. Use it when the composition root, where you configure the application, owns event identities instead of the event records themselves.
+
+## Register the generations and recipe
+
+Start with a Chronicle-enabled .NET application and the record types for both generations. Follow the [kernel rollout and backfill guidance](./#migrations-happen-in-place) before registering a new generation in an existing event store.
+
+Register both records with the same stable event type id and adjacent generation numbers, then nominate one migration recipe. In this example, `Previous.OldName` becomes `Current.NewName` without adding attributes to either record:
 
 <ChronicleClientTabs snippet="migrations/explicit-registration/recipes" />
 
-The example nominates the plain recipe. The typed alternative uses the same builder methods and receives the owning store's finalized event registry through its base constructor. Choose one recipe for that bridge, not both: duplicate migration bridges are rejected.
+`RegisterMigration<PlainRename>()` selects the plain recipe: a class whose `Upcast` and `Downcast` methods declare the transformation in each direction. Registering the recipe does not register `Previous` or `Current` for you; the two `RegisterEventType` calls supply those identities.
 
-Registration still produces the declarative migration definitions evaluated by the kernel. It does not change multi-version storage, append-time migration or backfill behavior described in [Migrations](./).
+The example also shows `TypedRename` as an alternative. It uses the same builders but derives from `EventTypeMigration<Current, Previous>` and passes `IEventTypes` to the base constructor. Chronicle supplies the owning store's finalized event registry so the base class can resolve the explicitly registered identities. Register `TypedRename` instead of `PlainRename` if you prefer this form. Registering both would give two recipes for the same transition and is rejected.
+
+Both forms produce declarative definitions for the kernel. Explicit registration changes how the client selects the recipe, not [multi-version storage or backfill](./).
 
 ## Preparation and validation
 
-Every explicitly nominated recipe is validated before registration effects, including recipes that discovery would otherwise never reach. Nomination does not implicitly register missing endpoints. Plain roles must be synchronous instance methods with the exact typed builders; static, async void, overloaded or ambiguous roles are rejected.
+Chronicle validates every explicitly nominated recipe before applying registration effects, even if discovery would not otherwise select it. A plain recipe needs public, synchronous instance methods with the exact typed builders shown above. Static methods, `async void` methods, overloads and ambiguous roles are rejected.
 
-Legacy typed migrations using the parameterless base constructor keep declaration-based endpoint validation. For explicit identities, use the registry-taking constructor or the plain recipe form. The [.NET API reference](../clients/dotnet/explicit-artifacts#typed-and-plain-migrations) documents the precise signatures, custom-provider compatibility and runtime activation limits.
+An existing typed migration that uses the parameterless base constructor still resolves its endpoints from the types' declarations. Nominating that class does not switch its constructor behavior. For identities supplied by explicit registration, use the registry-taking constructor or the plain recipe form.
+
+Before deployment, check that both endpoints are registered, their ids match, their generations are adjacent, and only one recipe owns the transition. For exact method signatures, custom-provider compatibility and activation limits, continue with the [.NET API reference](../clients/dotnet/explicit-artifacts#typed-and-plain-migrations).

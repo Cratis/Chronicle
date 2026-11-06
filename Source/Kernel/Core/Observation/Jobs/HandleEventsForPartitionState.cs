@@ -24,6 +24,11 @@ public class HandleEventsForPartitionState : JobStepState
     public Guid? DeferralId { get; set; }
 
     /// <summary>
+    /// Gets or sets the replay operation that scheduled the step, or null when it was not scheduled by a replay.
+    /// </summary>
+    public ReplayEpoch? ReplayEpoch { get; set; }
+
+    /// <summary>
     /// The <see cref="ObserverKey"/> for the observer.
     /// </summary>
     public ObserverKey ObserverKey { get; set; } = ObserverKey.NotSet;

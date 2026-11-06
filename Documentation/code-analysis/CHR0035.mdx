@@ -1,8 +1,7 @@
 ---
+title: "CHR0035: Read model declares a reserved compliance subject property"
 description: Chronicle analyzer rule CHR0035 reports read models that declare properties reserved for internal compliance subject tracking, and how to rename them.
 ---
-# CHR0035: Read model declares a reserved compliance subject property
-
 ## Rule Description
 
 A read model — a record or class marked with `[ReadModel]` — declares a property or record parameter named `_subject`, `__subject`, or `__subjects`. Chronicle reserves these fields in stored read model documents for internal compliance-subject tracking, so a same-named property silently collides with them.
@@ -28,4 +27,4 @@ Rename the property to anything else (for example `Subject`, without the leading
 ## Related Rules
 
 - [Subject](/chronicle/concepts/subject/) — how the compliance subject is resolved and tracked.
-- [CHR0034: [PII] cannot be applied to an EventSourceId&lt;T&gt;](CHR0034) — the id is the compliance subject.
+- [CHR0034: [PII] cannot be applied to an EventSourceId&lt;T&gt;](CHR0034) — event source identifiers cannot be encrypted.

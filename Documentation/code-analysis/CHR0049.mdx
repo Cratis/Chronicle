@@ -1,8 +1,7 @@
 ---
+title: "CHR0049: [EventTypeGenerationFor<T>] must reference a type marked with [EventType]"
 description: Chronicle analyzer rule CHR0049 reports [EventTypeGenerationFor<T>] pointing at a type that is not marked [EventType], and how to fix the reference.
 ---
-# CHR0049: `[EventTypeGenerationFor<T>]` must reference a type marked with `[EventType]`
-
 ## Rule Description
 
 `[EventTypeGenerationFor<T>]` marks a record as a previous generation of the event type `T` represents. Chronicle resolves the shared event type id directly from `T`'s own `[EventType]` attribute — so `T` must carry `[EventType]` directly.

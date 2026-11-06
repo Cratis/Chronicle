@@ -1,8 +1,7 @@
 ---
+title: Authentication in Cratis Chronicle Server
 description: Configure Chronicle Server authentication, using its built-in OpenIdDict authority or an external OAuth provider, behind a proxy or turned off.
 ---
-# Authentication
-
 Authentication is enabled by default. When `authority` is not configured, Chronicle uses its built-in OpenIdDict OAuth authority. When `authority` is set to an external OAuth provider URL, Chronicle will use that instead of the internal authority.
 
 The legacy `identityProvider.certificate` option is ignored; see [Identity Provider Certificate](identity-provider-certificate.md) for migration.

@@ -1,23 +1,26 @@
 ---
-description: Configure the maximum gRPC send and receive message sizes of the Chronicle client, 100 MB by default, for large event batches and queries.
+title: Chronicle gRPC message size configuration
+description: Set Chronicle .NET client gRPC send and receive limits for large messages, and check the matching kernel limits before increasing them.
 ---
-# gRPC Message Size
+<a id="grpc-message-size" />
 
-Large event batches or queries that return many events can exceed gRPC message limits. Chronicle provides configuration options to adjust the maximum send and receive message sizes.
+Increase a Chronicle .NET client's gRPC message limit when a request or response exceeds its configured size. Client send and receive limits default to 100 MiB each; the kernel has separate limits, so changing the client alone may not let a large message through.
 
 ## Default Settings
 
-By default, Chronicle sets both `MaxReceiveMessageSize` and `MaxSendMessageSize` to 100 MB (104,857,600 bytes). This is higher than the gRPC default of 4 MB and is suitable for most scenarios involving large event collections.
+The .NET client's `MaxReceiveMessageSize` and `MaxSendMessageSize` each default to 104,857,600 bytes (100 MiB). They limit individual messages, not the total data transferred over a connection.
+
+A request must fit both the client's send limit and the kernel's receive limit. A response must fit the kernel's send limit, if set, and the client's receive limit.
 
 ## Configuring Message Sizes
 
-You can configure the message sizes when creating a `ChronicleClient` or through options:
+Set the limits in `ChronicleOptions` before creating the client. This example raises both client limits to 200 MiB:
 
 <ChronicleClientTabs snippet="configuration/grpc-message-size/configure" />
 
 ## Configuration via appsettings.json
 
-For ASP.NET Core applications, configure message sizes under the `Cratis:Chronicle` section of `appsettings.json`:
+For a hosted .NET application, set the same properties under `Cratis:Chronicle` in `appsettings.json`. These settings are bound when you register Chronicle with `AddCratisChronicle`:
 
 ```json
 {
@@ -33,7 +36,7 @@ For ASP.NET Core applications, configure message sizes under the `Cratis:Chronic
 
 ## Configuration via Environment Variables
 
-Message sizes can also be set using environment variables. .NET maps the `__` separator onto nested configuration keys:
+To change the client's limits through its environment, use the following keys. .NET maps `__` to nested configuration sections:
 
 ```bash
 Cratis__Chronicle__MaxReceiveMessageSize=209715200
@@ -42,7 +45,9 @@ Cratis__Chronicle__MaxSendMessageSize=209715200
 
 ## Server limits
 
-The kernel enforces a receive limit of its own, and it defaults to the same 100 MB the clients allow themselves to send. Before this default existed the kernel accepted 4 MB, so a client on default options could be refused by the server it was configured to talk to. Set it through the kernel's configuration:
+The kernel's receive limit defaults to 100 MiB. If you increase the client's send limit to 200 MiB, also increase the kernel's receive limit before sending messages that large.
+
+Set these values in the kernel's configuration, not the application's client configuration:
 
 ```json
 {
@@ -56,27 +61,28 @@ Cratis__Chronicle__MaxReceiveMessageSize=209715200
 Cratis__Chronicle__MaxSendMessageSize=209715200
 ```
 
-The server's send size is unlimited unless you set it. See [Root Properties](../hosting/configuration/root-properties.md).
+The kernel's send size is unlimited unless you set it. The environment-variable names match the client's names, but must be applied to the kernel process to change its limits. See [Root Properties](../hosting/configuration/root-properties.md).
 
 ## Understanding the Error
 
-If you encounter an error like:
+A size-limit failure can appear as:
 
 ```env
 Status(StatusCode="ResourceExhausted", Detail="Received message exceeds the maximum configured message size.")
 ```
 
-This indicates that the response from the server exceeds the client's `MaxReceiveMessageSize`. Increase this value to accommodate larger responses. A call that fails with status `ResourceExhausted` while sending, for instance when appending a large event, points at the kernel's `maxReceiveMessageSize` instead.
+Identify which process is receiving the message before changing a setting. For a response arriving at your application, check the client's `MaxReceiveMessageSize`. For an append request arriving at the kernel, check the kernel's `maxReceiveMessageSize`. Reduce the message size or raise that receiver's limit, then check the sender's limit too.
 
 ## Recommendations
 
-- **Default (100 MB)**: Suitable for most applications with moderate event batch sizes
-- **200+ MB**: Consider for applications that frequently query large event ranges or work with many events
-- **Performance considerations**: Larger message sizes consume more memory. Balance your needs with available resources
-- **Server configuration**: The kernel has its own limits, see [Server limits](#server-limits). A message is only as large as the smaller of the two sides allows
+Choose an explicit bound that fits the payloads you expect and the memory available to both processes. Raising a limit allows larger messages to be held in memory; it does not make them cheaper to send or process. Splitting a large event batch can avoid increasing the limit.
+
+Once you choose a size, check both ends of the transfer using [Server limits](#server-limits). See [Client Configuration](index.mdx) if you need to change how the application supplies its options.
 
 ## Null Values
 
-Setting either property to `null` will use the gRPC default (4 MB), which is generally not recommended for Chronicle applications:
+Setting either property to `null` removes that client-side limit. It does not restore gRPC's default receive limit. Keep an explicit bound unless you intend to allow messages without a client-side size limit.
+
+The .NET snippet below has stale comments saying `null` uses a 4 MB default. Those comments are incorrect: each assignment removes its corresponding client-side limit.
 
 <ChronicleClientTabs snippet="configuration/grpc-message-size/null-values" />

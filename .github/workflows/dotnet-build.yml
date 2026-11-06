@@ -177,6 +177,9 @@ jobs:
       - name: Spec bounded nightly coverage admission without network
         run: python3 -B .github/scripts/test-nightly-coverage-feed.py
 
+      - name: Spec the zero-test guard
+        run: python3 .github/scripts/test-assert-tests-ran.py
+
       # Runs the real entrypoint against a fake server: no image is needed to prove that a container stop
       # reaches the server and that the container reports the server's own exit status (#5361).
       - name: Spec container entrypoint signal forwarding

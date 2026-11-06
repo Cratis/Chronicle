@@ -159,7 +159,8 @@ public class ReplayObserver(
                     EventObservationState.Replay,
                     request.EventTypes)
                 {
-                    ReaderScope = request.ReaderScope
+                    ReaderScope = request.ReaderScope,
+                    ReplayEpoch = new ReplayEpoch(JobId.Value)
                 });
             steps.Add(step);
             if (failedKeys.Contains(key))
@@ -257,7 +258,7 @@ public class ReplayObserver(
     /// <inheritdoc/>
     protected override async Task OnStepCompletedOrStopped(JobStepId jobStepId, JobStepResult result)
     {
-        await TransientTimeouts.ReportPartitionFailedWhenAttemptsAreExhausted(GrainFactory.GetGrain<IObserver>(Request.ObserverKey), result, jsonSerializerOptions);
+        await TransientTimeouts.ReportPartitionFailedWhenAttemptsAreExhausted(GrainFactory.GetGrain<IObserver>(Request.ObserverKey), result, jsonSerializerOptions, new ReplayEpoch(JobId.Value));
         State.HandleResult(result, jsonSerializerOptions);
         var handled = result.TryGetError(out _) ? null : HandleEventsStepResults.ReadProgress(result, jsonSerializerOptions);
         if (handled?.LastHandledEventSequenceNumber.IsActualValue == true)

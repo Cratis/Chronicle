@@ -1,13 +1,16 @@
 ---
-description: Configure how the Chronicle .NET client uses TLS to reach the server, including certificate validation and the self-signed development default.
+title: Chronicle .NET client TLS configuration
+description: Enable server certificate validation in the Chronicle .NET client, configure certificate trust or pinning, and understand the development defaults.
 ---
-# TLS Configuration (Client)
+<a id="tls-configuration-client" />
 
-Chronicle .NET clients communicate with Chronicle Server over TLS. The server always serves its single port over TLS — in development it generates a self-signed certificate automatically — so the client connects over TLS by default.
+The Chronicle .NET client uses TLS by default but skips server certificate validation. Enable validation before connecting beyond a trusted development environment so the client checks which server it is talking to, not just whether the traffic is encrypted.
 
-For server-side TLS configuration, see [TLS Configuration (Server)](../hosting/configuration/tls.md).
+TLS on the kernel listener is configured separately. Development builds can generate a self-signed certificate when none is supplied; production deployments need a configured server certificate. See [TLS Configuration (Server)](../hosting/configuration/tls.md).
 
 ## appsettings.json
+
+In a hosted .NET application, put certificate file settings under `Cratis:Chronicle:Tls`. A configured certificate can supply a pin for validating the server, but setting its path alone does not enable validation. Set `SkipCertificateValidation` to `false` as described below.
 
 ```json
 {
@@ -25,49 +28,53 @@ For server-side TLS configuration, see [TLS Configuration (Server)](../hosting/c
 
 ## Client options
 
+For direct `ChronicleClient` construction, supply the same values through `ChronicleOptions.Tls` before creating the client:
+
 <ChronicleClientTabs snippet="configuration/tls/client-options" />
 
 ## Properties
 
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
-| CertificatePath | string | null | Path to the client certificate (PFX format) if mutual TLS is used |
+| CertificatePath | string | null | Path to a certificate file, such as a PFX; its certificate hash can pin the server certificate |
 | CertificatePassword | string | null | Password for the certificate file |
-| SkipCertificateValidation | boolean | true | When `true`, the client connects over TLS but does not validate the server's certificate |
+| SkipCertificateValidation | boolean | true | Allows any server certificate when the connection string also permits skipping validation |
 
 ## Certificate validation
 
-The client always connects over TLS, but by default it does **not** validate the server's certificate — any certificate, including a self-signed one, is accepted. That default is deliberate: the development images (`latest-development` and `latest-development-slim`) generate a self-signed certificate on every start when none is configured, and it is never written to disk or added to a trust store, so there is nothing a client could validate it against. Skipping validation is what lets a development server and client talk to each other with no certificate setup on either side. The production image generates no certificate: without `Tls:CertificatePath` it stops at startup with "No TLS certificate is configured" — see [Production deployment](../hosting/production.md) and [TLS Configuration (Server)](../hosting/configuration/tls.md).
+With the defaults, the client accepts any server certificate, including a self-signed one. Traffic is encrypted, but the client does not establish the server's identity. An attacker able to intercept the connection could present a different certificate and still be accepted.
 
-Once you run against a server whose certificate is verifiable, turn validation on with `skipTlsValidation=false` in the connection string:
+Prepare certificate trust or a matching pin using [Enabling validation](#enabling-validation), then turn validation on with `skipTlsValidation=false` in the connection string:
 
 <ChronicleClientTabs snippet="configuration/tls/validation-enabled" />
 
-You can also set it on the client's TLS options as `SkipCertificateValidation = false`. **Either setting alone is enough** — the two combine so that whichever one asks for validation wins, and an omitted second setting can never silently turn validation back off.
+Alternatively, set `Tls:SkipCertificateValidation=false` in configuration or `SkipCertificateValidation = false` on the TLS options. Either `false` setting enables validation: the client skips it only when both the connection string and TLS options permit skipping. An omitted setting uses `true` and cannot override an explicit request to validate.
 
-To go the other way and skip explicitly:
+Keep validation enabled outside a trusted development environment. The following connection-string setting explicitly permits skipping validation, but takes effect only if the TLS options also permit it:
 
 <ChronicleClientTabs snippet="configuration/tls/connection-string-skip-validation" />
 
-> [!WARNING]
-> The default accepts **any** server certificate, which removes protection against man-in-the-middle attacks. Set `skipTlsValidation=false` for anything reachable beyond a trusted network — and always over the public internet.
+Skipping validation is not the same as disabling TLS. The separate `disableTls=true` connection-string option uses cleartext HTTP/2 and must match a kernel listener configured for cleartext. It is not a fix for certificate validation failures; see [TLS Configuration (Server)](../hosting/configuration/tls.md).
 
 ## Enabling validation
 
-Trust the server's certificate authority on each client machine, or mount its CA certificate into application containers and add it to their trust stores. Alternatively, configure `certificatePath` with the matching certificate to pin it. Then set `skipTlsValidation=false` in the connection string or `Tls:SkipCertificateValidation=false` in the client configuration. A pin still requires the server certificate to match the host name.
+Trust the server's certificate authority (CA) on each client machine. In an application container, mount the CA certificate and add it to the container's trust store. With validation enabled, a certificate that passes standard TLS checks needs no client-side pin.
 
-The .NET client logs one warning when a connection is constructed with validation disabled for any non-loopback target or a DNS SRV lookup. The warning lists only server hosts and ports, not credentials. Localhost, IPv4 loopback addresses in 127.0.0.0/8, and ::1 are exempt. A future major version validates by default.
+Alternatively, configure `certificatePath` with the matching server certificate to pin it. With validation enabled, a matching pin can allow a certificate whose chain is not trusted, including a self-signed certificate. The pin does not override a host-name mismatch or a missing server certificate.
+
+After preparing trust or pinning, set `skipTlsValidation=false` or `Tls:SkipCertificateValidation=false`. The client logs a warning when validation is disabled for a non-loopback target or a DNS SRV lookup. Loopback targets are exempt from that warning, not from the configured validation behavior.
 
 ## Development setup
 
-The development image generates a self-signed certificate, so a client using `localhost` connects without certificate setup. Aspire deployments and other non-localhost development hosts can keep `skipTlsValidation=true` until their certificates are trusted; these connections log the warning. To exercise validation in development, trust the development CA or configure a matching certificate pin and set `skipTlsValidation=false`.
+The development images (`latest-development` and `latest-development-slim`) generate a self-signed certificate when none is configured. The default client accepts it without trust-store setup. This is useful for local development, but it does not exercise certificate validation.
+
+To test the validation path, configure a server certificate issued by a CA the client trusts, or supply a matching certificate pin, and enable validation. A pin for an automatically generated certificate must match the certificate from the current server run.
 
 ## Development vs production
 
-- **Development**: the server serves TLS with an auto-generated self-signed certificate and the client skips validation by default, so a development client connects out of the box — no certificate setup is needed on either side.
-- **Production**: give the server a real certificate and set `skipTlsValidation=false` so the client validates it with the standard TLS rules.
+For a local development kernel, generated certificates and skipped validation let you connect without certificate setup. For production, configure the kernel's server certificate and enable validation on every client. Use the host name covered by that certificate in the connection string.
 
-With validation enabled, the standard TLS rules apply: valid certificates are accepted without extra configuration. If the server presents the same certificate configured for the client, a matching certificate pin can allow an untrusted chain, including a self-signed certificate. The server certificate must still match the host name; a pin does not override a name mismatch or a missing certificate.
+Certificate validation does not supply application credentials or grant access to an event store. Configure those separately through [Connection Strings](../connection-strings/index.md), and follow [Production deployment](../hosting/production.md) for the kernel-side setup.
 
 ## Troubleshooting
 
@@ -75,11 +82,10 @@ With validation enabled, the standard TLS rules apply: valid certificates are ac
 
 **Error**: "The remote certificate is invalid"
 
-You only see this once you have opted into validation with `skipTlsValidation=false`.
+Validation is enabled through the connection string or TLS options. Check the certificate rather than disabling validation:
 
-**Solutions**:
-1. Ensure the server certificate is valid, not expired, and trusted by the client.
-2. If the server uses a self-signed certificate on a trusted network, drop `skipTlsValidation=false` from the connection string to fall back to the default of accepting it.
-3. In development no configuration is needed — the client skips validation by default, so the server's auto-generated certificate is accepted as-is.
+1. Confirm that the connection-string host name matches the server certificate.
+2. Check the certificate's validity dates and that the client trusts its issuing CA.
+3. If using a pin, confirm that it matches the current server certificate. A pin still cannot allow a host-name mismatch.
 
-
+For containers, check trust inside the application container, not only on the host. Return to [Enabling validation](#enabling-validation) to choose trust-store configuration or pinning.

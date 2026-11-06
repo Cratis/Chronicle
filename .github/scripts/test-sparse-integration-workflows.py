@@ -650,8 +650,26 @@ class IntegrationSingleBuildContracts(unittest.TestCase):
             self.assertIn("name: ${{ inputs.prefix }}-" + lane, action)
         self.assertEqual(3, action.count("if-no-files-found: error"))
 
+    def test_every_batched_lane_keeps_a_per_member_zero_test_guard(self):
+        jobs = workflow("integration.yml")["jobs"]
+        for lane in ("client", "kernel", "clustering"):
+            with self.subTest(lane=lane):
+                steps = jobs[f"{lane}-integration-specs"]["steps"]
+                guard = next(step for step in steps if step.get("uses") == "./.github/actions/assert-tests-ran")
+                self.assertEqual("${{ matrix.members }}", guard["with"]["prefixes"])
+
+    def test_hot_core_producer_prefix_matches_the_artifact_the_integration_call_consumes(self):
+        hot_core = workflow("hot-core-gate.yml")["jobs"]
+        steps = hot_core["build"]["steps"]
+        per_project = next(step for step in steps if step.get("name") == "Pack per-project integration build output")
+        self.assertEqual("./.github/actions/pack-integration-output", per_project["uses"])
+        consumer = next(job for job in hot_core.values() if job.get("uses", "").endswith("integration.yml"))
+        self.assertEqual(consumer["with"]["build-output-artifact"], per_project["with"]["prefix"])
+
     def test_rolling_upgrade_reads_and_checks_the_stamped_build_version(self):
-        steps = workflow("integration.yml")["jobs"]["sql-clustering-integration-specs"]["steps"]
+        jobs = workflow("integration.yml")["jobs"]
+        steps = jobs["sql-clustering-integration-specs"]["steps"]
+        self.assertEqual(steps, jobs["sql-clustering-rolling-upgrade"]["steps"])
         extract = next(step for step in steps if step["name"] == "Extract build output")
         stamp = next(step for step in steps if step["name"] == "Read the stamped build version")
         self.assertEqual(steps.index(extract) + 1, steps.index(stamp))
@@ -678,9 +696,8 @@ class IntegrationSingleBuildContracts(unittest.TestCase):
             command = next(step["run"] for step in steps
                            if step["name"].startswith(("Run Client", "Run Kernel", "Run Clustering", "Run SQL clustering")))
             command = re.sub(r"\$\{\{ (.*?) \}\}", lambda match: bindings[match[1]], command)
-            expected_filter = (union if lane == "client" else
-                               "FullyQualifiedName~Cratis.Chronicle.Integration.SqlClustering.PostgreSql"
-                               if lane == "sql-clustering" else "FullyQualifiedName~Example.Namespace")
+            expected_filter = ("FullyQualifiedName~Cratis.Chronicle.Integration.SqlClustering.PostgreSql"
+                               if lane == "sql-clustering" else union)
             for missing in (False, True):
                 with self.subTest(lane=lane, missing=missing), tempfile.TemporaryDirectory() as directory:
                     path = Path(directory)
@@ -727,6 +744,7 @@ sys.exit(1 if 'Failed' in outcomes.values() else 0)
         for index, args in enumerate(calls):
             self.assertEqual([".github/scripts/run-spec-project.mjs", "--project", f"Integration/{project}/{project}.csproj"], args[:3])
             self.assertEqual(lane != "sql-clustering", "--coverage" in args)
+            self.assertNotIn("--selection", args)
             self.assertIn("--results-directory", args)
             retry_filters = ["FullyQualifiedName=Example.A.should_work|FullyQualifiedName=Example.B.should_work",
                              "FullyQualifiedName=Example.A.should_work"]
