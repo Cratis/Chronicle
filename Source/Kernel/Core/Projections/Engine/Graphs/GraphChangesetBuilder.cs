@@ -59,7 +59,7 @@ public class GraphChangesetBuilder(GraphProjectionPlan plan, IGraphSink sink, Pr
     /// </summary>
     /// <remarks>
     /// Each item's event carries the same content with the collection property replaced by that item, so an expression written
-    /// as <c>slots.series</c> resolves to the item's <c>series</c> and every resolver of the projection engine works unchanged.
+    /// as <c language="csharp">slots.series</c> resolves to the item's <c language="csharp">series</c> and every resolver of the projection engine works unchanged.
     /// An absent or empty collection yields nothing.
     /// </remarks>
     /// <param name="forEach">The collection property, if the mapping iterates one.</param>

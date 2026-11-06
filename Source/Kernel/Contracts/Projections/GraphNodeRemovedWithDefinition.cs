@@ -22,7 +22,7 @@ public class GraphNodeRemovedWithDefinition
     public bool Detach { get; set; }
 
     /// <summary>
-    /// Gets or sets the optional collection property of the event to run the mapping for, once per item. Expressions address the item's properties as <c>collection.property</c>.
+    /// Gets or sets the optional collection property of the event to run the mapping for, once per item. Expressions address the item's properties as <c language="csharp">collection.property</c>.
     /// </summary>
     [ProtoMember(3)]
     public string? ForEach { get; set; }
