@@ -22,7 +22,7 @@ namespace Cratis.Chronicle.Projections;
 /// silently dropped on slower backends. Registrations are in memory; each live watch re-registers periodically,
 /// which restores them after an activation is lost.
 /// </remarks>
-[Version(1)]
+[Version(2)]
 public interface IProjectionChangesetNotifier : IGrainWithStringKey
 {
     /// <summary>
