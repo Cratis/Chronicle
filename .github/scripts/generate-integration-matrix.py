@@ -191,6 +191,11 @@ def _databases(value):
     return selected
 
 
+def _names(value):
+    """Parse a comma-separated namespace list; an explicitly empty list is a valid selection of nothing."""
+    return tuple(item.strip() for item in value.split(",") if item.strip())
+
+
 def selected_databases(args):
     """Resolve which storage backends the matrix covers, widest selection first."""
     if args.all_providers:
@@ -215,13 +220,27 @@ def main():
         "Without it the backends in PULL_REQUEST_DATABASES are covered, which is "
         "what pull requests run.",
     )
+    parser.add_argument(
+        "--namespaces",
+        type=_names,
+        help="Comma-separated client namespaces (directory names under Integration/Client) to "
+        "restrict the matrix to. Without it every namespace runs. An unknown name is an error, "
+        "never an empty matrix: a selection that silently ran nothing would read as a pass.",
+    )
     args = parser.parse_args()
 
     databases = selected_databases(args)
     configs = [config for config in INFRA_CONFIGS if config[1] in databases]
 
     include = []
-    for namespace in _namespaces_with_facts():
+    available = _namespaces_with_facts()
+    if args.namespaces is not None:
+        unknown = [name for name in args.namespaces if name not in available]
+        if unknown:
+            raise SystemExit(f"unknown client namespace(s): {', '.join(unknown)}. Known: {', '.join(available)}")
+    for namespace in available:
+        if args.namespaces is not None and namespace not in args.namespaces:
+            continue
         # The injected startup specs need neither a runtime configuration nor Docker.
         if namespace == "for_ContainerStartup":
             continue

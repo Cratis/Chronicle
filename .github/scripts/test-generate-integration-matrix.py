@@ -189,5 +189,27 @@ class for_generating_the_matrix(unittest.TestCase):
         self.assertNotEqual(0, completed.returncode)
 
 
+    def _namespaces(self, *arguments):
+        completed = subprocess.run(
+            [sys.executable, SCRIPT, *arguments],
+            cwd=REPOSITORY_ROOT, capture_output=True, text=True, check=False)
+        return completed
+
+    def test_a_namespace_selection_restricts_the_matrix_to_those_namespaces_in_every_configuration(self):
+        selected = json.loads(self._namespaces("--namespaces", "for_Reducers,for_Webhooks").stdout)["include"]
+        full = json.loads(self._namespaces().stdout)["include"]
+        wanted = {"Cratis.Chronicle.Integration.for_Reducers", "Cratis.Chronicle.Integration.for_Webhooks"}
+        self.assertEqual({entry["namespace"] for entry in selected}, wanted)
+        # Selecting narrows which namespaces run, never what each runs: same shards, same configs.
+        self.assertEqual([entry for entry in full if entry["namespace"] in wanted], selected)
+
+    def test_an_empty_namespace_selection_is_an_empty_matrix_not_the_whole_one(self):
+        self.assertEqual([], json.loads(self._namespaces("--namespaces", "").stdout)["include"])
+
+    def test_an_unknown_namespace_fails_the_run_instead_of_quietly_running_nothing(self):
+        completed = self._namespaces("--namespaces", "for_Reducers,for_Typo")
+        self.assertNotEqual(0, completed.returncode)
+        self.assertIn("for_Typo", completed.stderr)
+
 if __name__ == "__main__":
     unittest.main()
