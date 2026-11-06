@@ -8,15 +8,12 @@ import { pathToFileURL } from 'node:url';
 import { evaluateProject, v3Projects } from './mixed-specs-selection.mjs';
 import { runProject, runProcess } from './run-mixed-specs.mjs';
 import { decode } from './mixed-specs-results.mjs';
-import { readSelection } from './pack-integration-bundles.mjs';
 
 export async function main(args = process.argv.slice(2), { root = process.cwd(), execute = runProcess, evaluate = evaluateProject } = {}) {
     const { values } = parseArgs({ args, options: {
         project: { type: 'string' }, filter: { type: 'string', default: '' },
         'results-directory': { type: 'string' }, settings: { type: 'string' },
-        coverage: { type: 'boolean', default: false },
-        // A producer-written selection record shipped in an integration bundle; it replaces msbuild evaluation, so no restore is needed.
-        selection: { type: 'string' }
+        coverage: { type: 'boolean', default: false }
     } });
     if (!v3Projects.includes(values.project) || !values['results-directory']) {
         throw new Error('Expected a known spec project and --results-directory');
@@ -30,7 +27,7 @@ export async function main(args = process.argv.slice(2), { root = process.cwd(),
         timeout = Number(deadlines[0][1]);
         filter = filter ? `(${filter})&(${decode(filters[0][1])})` : decode(filters[0][1]);
     }
-    const info = values.selection ? await readSelection(root, values.project, values.selection) : await evaluate(root, values.project, execute);
+    const info = await evaluate(root, values.project, execute);
     const directory = path.resolve(root, values['results-directory']);
     await mkdir(directory, { recursive: true });
     await runProject(info, { root, directory, filter, timeout, coverage: values.coverage }, execute);

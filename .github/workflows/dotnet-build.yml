@@ -177,9 +177,6 @@ jobs:
       - name: Spec bounded nightly coverage admission without network
         run: python3 -B .github/scripts/test-nightly-coverage-feed.py
 
-      - name: Spec integration bundles
-        run: node --test .github/scripts/test-integration-bundles.mjs
-
       - name: Spec the zero-test guard
         run: python3 .github/scripts/test-assert-tests-ran.py
 
@@ -427,10 +424,10 @@ jobs:
       - name: Build with DEVELOPMENT symbol
         run: dotnet build --configuration Release -p:EnableDevelopmentSymbol=true -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
 
-      # One small runtime bundle per integration project, so a Client, Kernel or Clustering shard downloads
-      # only its own project and needs no restore. The SQL clustering lanes keep the full archive below.
-      - name: Pack and upload integration bundles
-        uses: ./.github/actions/upload-integration-bundles
+      # Client, Kernel and Clustering shards download only their own project's output (a fraction of the full
+      # artifact below, which the SQL clustering shards still use).
+      - name: Pack per-project integration build output
+        uses: ./.github/actions/pack-integration-output
         with:
           prefix: build-output-development
 
@@ -498,8 +495,10 @@ jobs:
       - name: Build with DEVELOPMENT symbol
         run: dotnet build --configuration Release -p:EnableDevelopmentSymbol=true -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
 
-      - name: Pack and upload integration bundles
-        uses: ./.github/actions/upload-integration-bundles
+      # Client, Kernel and Clustering shards download only their own project's output (a fraction of the full
+      # artifact below, which the SQL clustering shards still use).
+      - name: Pack per-project integration build output
+        uses: ./.github/actions/pack-integration-output
         with:
           prefix: build-output-development
 
