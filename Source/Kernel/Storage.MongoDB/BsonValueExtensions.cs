@@ -49,7 +49,11 @@ public static class BsonValueExtensions
             return stringKeyedDocument;
         }
 
-        if (inputType.IsDictionary())
+        // Scalars are by far the most common values and none of them is a dictionary, a sequence or a concept.
+        // Asking the type those questions is reflection that allocates on every call, per value of a document.
+        var isScalar = input is string or bool or int or long or double or DateTime or Guid or decimal;
+
+        if (!isScalar && inputType.IsDictionary())
         {
             var dictionaryType = input.GetType();
             var keyType = dictionaryType.GetKeyType();
@@ -68,7 +72,7 @@ public static class BsonValueExtensions
             return dictionaryDocument;
         }
 
-        if (inputType.IsEnumerable())
+        if (!isScalar && inputType.IsEnumerable())
         {
             var array = new BsonArray();
             foreach (var item in (input as IEnumerable)!)
@@ -78,7 +82,7 @@ public static class BsonValueExtensions
             return array;
         }
 
-        if (input.IsConcept())
+        if (!isScalar && input.IsConcept())
         {
             input = input.GetConceptValue();
         }

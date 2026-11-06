@@ -5,7 +5,6 @@ using System.Diagnostics;
 using System.Dynamic;
 using System.Reactive.Linq;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Observation;
@@ -179,6 +178,9 @@ internal sealed class Reducers(
                             registration.ConnectionId);
 
                         var deliversPages = registration.PageDelivery?.Enabled == true;
+
+                        // The state of the next reduce is about as large as that of the last, which sizes its buffer in one go.
+                        var lastInitialStateSize = 0;
                         deliver = (reduceOperation, tcs) =>
                         {
                             var deliveryId = pendingDeliveries.Add(reduceOperation.Partition, tcs);
@@ -189,7 +191,8 @@ internal sealed class Reducers(
                             var initialStateUnchanged = IsInitialStateUnchanged(stateFingerprints, partition, reduceOperation.InitialState);
 
                             // Compact JSON: JsonNode.ToString() writes indented JSON, which inflates every reduce's state by the whitespace.
-                            var initialState = reduceOperation.InitialState is null || initialStateUnchanged ? null : expandoObjectConverter.ToJsonObject(reduceOperation.InitialState, model.GetSchemaForLatestGeneration()).ToJsonString(jsonSerializerOptions);
+                            var initialState = reduceOperation.InitialState is null || initialStateUnchanged ? null : LargeJson.Serialize(expandoObjectConverter.ToJsonObject(reduceOperation.InitialState, model.GetSchemaForLatestGeneration()), jsonSerializerOptions, lastInitialStateSize);
+                            lastInitialStateSize = initialState?.Length ?? lastInitialStateSize;
                             if (initialState?.Length > LargeStateWarningThreshold)
                             {
                                 logger.LargeInitialState(observerId, reduceOperation.Partition.ToString()!, initialState.Length);
@@ -450,5 +453,5 @@ internal sealed class Reducers(
     }
 
     ExpandoObject? ToReadModelState(string? readModelState, ReadModelDefinition model) =>
-        readModelState is null ? null : expandoObjectConverter.ToExpandoObject(JsonNode.Parse(readModelState)!.AsObject(), model.GetSchemaForLatestGeneration());
+        readModelState is null ? null : expandoObjectConverter.ToExpandoObject(LargeJson.Parse(readModelState)!.AsObject(), model.GetSchemaForLatestGeneration());
 }
