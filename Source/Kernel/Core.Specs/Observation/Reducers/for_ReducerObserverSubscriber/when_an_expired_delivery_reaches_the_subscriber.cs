@@ -21,6 +21,6 @@ public class when_an_expired_delivery_reaches_the_subscriber : given.a_subscribe
         _result = await _subscriber.OnNext("the-partition", [], context);
     }
 
-    [Fact] void should_not_dispatch_to_the_pipeline() => _ = _firstPipeline.DidNotReceive().Reduce(Arg.Any<ReducerContext>(), Arg.Any<ReducerDelegate>());
+    [Fact] void should_not_dispatch_to_the_pipeline() => _ = _firstPipeline.DidNotReceive().Reduce(Arg.Any<ReducerContext>(), Arg.Any<ReducerDelegate>(), Arg.Any<bool>());
     [Fact] void should_fail_the_expired_delivery() => _result.State.ShouldEqual(ObserverSubscriberState.Failed);
 }

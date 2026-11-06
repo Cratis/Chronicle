@@ -109,7 +109,7 @@ public class ReducerObserverSubscriber(
                 events,
                 partition);
 
-            var notification = _pipeline is null ? null : await _pipeline.Reduce(reducerContext, CreateReducerDelegate(reducerContext, connectedClient, context, tcs));
+            var notification = _pipeline is null ? null : await _pipeline.Reduce(reducerContext, CreateReducerDelegate(reducerContext, connectedClient, context, tcs), await IsWatched());
             return await NotifyChange(await tcs.Task, notification);
         }
         catch (AbandonedDeliveryDiscarded)
@@ -153,6 +153,19 @@ public class ReducerObserverSubscriber(
             }).ResumingDeferralWithin(events),
             _ => result
         };
+
+    async Task<bool> IsWatched()
+    {
+        try
+        {
+            return await _changesetNotifier.HasSubscribers();
+        }
+        catch (Exception)
+        {
+            // Not knowing is not a reason to drop a notification somebody may be waiting for.
+            return true;
+        }
+    }
 
     async Task<ObserverSubscriberResult> NotifyChange(ObserverSubscriberResult result, ReadModelChangeNotification? notification)
     {
