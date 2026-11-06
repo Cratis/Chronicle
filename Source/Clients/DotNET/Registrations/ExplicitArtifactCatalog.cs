@@ -44,6 +44,8 @@ internal sealed class ExplicitArtifactCatalog : IClientArtifactsProvider
         EventTypes = Union(discovered.EventTypes, snapshot.EventTypes.Select(_ => _.Type));
         Projections = Copy(discovered.Projections);
         ModelBoundProjections = Copy(discovered.ModelBoundProjections);
+        GraphElements = Copy(discovered.GraphElements);
+        GraphProjections = Copy(discovered.GraphProjections);
         Reactors = Union(discovered.Reactors, Nominated(ExplicitArtifactKind.Reactor));
         Reducers = Union(discovered.Reducers, Nominated(ExplicitArtifactKind.Reducer));
         ProjectionReadModelTypes = snapshot.Projections.Select(projection => projection.ReadModelType).ToImmutableArray();
@@ -84,6 +86,12 @@ internal sealed class ExplicitArtifactCatalog : IClientArtifactsProvider
 
     /// <inheritdoc/>
     public IEnumerable<Type> ModelBoundProjections { get; }
+
+    /// <inheritdoc/>
+    public IEnumerable<Type> GraphElements { get; }
+
+    /// <inheritdoc/>
+    public IEnumerable<Type> GraphProjections { get; }
 
     /// <inheritdoc/>
     public IEnumerable<Type> Reactors { get; }
