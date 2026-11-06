@@ -191,7 +191,7 @@ internal sealed class Reducers(
                             var initialStateUnchanged = IsInitialStateUnchanged(stateFingerprints, partition, reduceOperation.InitialState);
 
                             // Compact JSON: JsonNode.ToString() writes indented JSON, which inflates every reduce's state by the whitespace.
-                            var initialState = reduceOperation.InitialState is null || initialStateUnchanged ? null : LargeJson.Serialize(expandoObjectConverter.ToJsonObject(reduceOperation.InitialState, model.GetSchemaForLatestGeneration()), jsonSerializerOptions, lastInitialStateSize);
+                            var initialState = reduceOperation.InitialState is null || initialStateUnchanged ? null : LargeJson.Serialize(writer => expandoObjectConverter.WriteJson(writer, reduceOperation.InitialState, model.GetSchemaForLatestGeneration()), jsonSerializerOptions, lastInitialStateSize);
                             lastInitialStateSize = initialState?.Length ?? lastInitialStateSize;
                             if (initialState?.Length > LargeStateWarningThreshold)
                             {
@@ -455,5 +455,5 @@ internal sealed class Reducers(
     }
 
     ExpandoObject? ToReadModelState(string? readModelState, ReadModelDefinition model) =>
-        readModelState is null ? null : expandoObjectConverter.ToExpandoObject(LargeJson.Parse(readModelState)!.AsObject(), model.GetSchemaForLatestGeneration());
+        readModelState is null ? null : expandoObjectConverter.ToExpandoObject(LargeJson.ToUtf8(readModelState), model.GetSchemaForLatestGeneration());
 }

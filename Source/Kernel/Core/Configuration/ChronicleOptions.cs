@@ -117,6 +117,11 @@ public class ChronicleOptions : IValidatableObject
     public Telemetry Telemetry { get; init; } = new();
 
     /// <summary>
+    /// Gets the memory management configuration.
+    /// </summary>
+    public MemoryManagement Memory { get; init; } = new MemoryManagement();
+
+    /// <summary>
     /// Gets the observers configuration.
     /// </summary>
     public Observers Observers { get; init; } = new Observers();

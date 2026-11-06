@@ -50,6 +50,7 @@ public partial class JsonSchema
     volatile Cached<bool>? _hasSecurityMetadataCache;
     volatile Cached<JsonSchema?>? _referenceCache;
     volatile Cached<string?>? _formatCache;
+    volatile Cached<JsonObjectType>? _typeCache;
     volatile Dictionary<string, JsonSchemaProperty>? _flattenedPropertiesByExactNameCache;
     volatile Cached<JsonSchema?>? _itemCache;
 
@@ -78,8 +79,13 @@ public partial class JsonSchema
     /// </summary>
     public JsonObjectType Type
     {
-        get => ParseTypeFromNode(Node);
-        set => SetTypeOnNode(Node, value);
+        // Read for every value converted, and parsing it walks the node each time.
+        get => (_typeCache ??= new Cached<JsonObjectType>(ParseTypeFromNode(Node))).Value;
+        set
+        {
+            _typeCache = null;
+            SetTypeOnNode(Node, value);
+        }
     }
 
     /// <summary>

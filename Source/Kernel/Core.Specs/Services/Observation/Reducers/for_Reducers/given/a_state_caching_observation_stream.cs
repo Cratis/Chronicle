@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Contracts.Observation.Reducers;
@@ -41,6 +42,9 @@ public class a_state_caching_observation_stream : an_observation_stream
         var converter = Substitute.For<IExpandoObjectConverter>();
         converter.ToExpandoObject(Arg.Any<JsonObject>(), Arg.Any<JsonSchema>()).Returns(_ => _stateReturnedByClient);
         converter.ToJsonObject(Arg.Any<ExpandoObject>(), Arg.Any<JsonSchema>()).Returns(_ => new JsonObject { ["name"] = "serialized" });
+        converter.ToExpandoObject(Arg.Any<ReadOnlyMemory<byte>>(), Arg.Any<JsonSchema>()).Returns(_ => _stateReturnedByClient);
+        converter.When(_ => _.WriteJson(Arg.Any<Utf8JsonWriter>(), Arg.Any<ExpandoObject>(), Arg.Any<JsonSchema>()))
+            .Do(call => call.Arg<Utf8JsonWriter>().WriteStartObject());
         return converter;
     }
 

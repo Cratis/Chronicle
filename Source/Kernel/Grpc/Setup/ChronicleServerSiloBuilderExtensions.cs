@@ -112,6 +112,16 @@ public static class ChronicleServerSiloBuilderExtensions
         builder.Services.TryAddSingleton<ITypeFormats, TypeFormats>();
         builder.Services.TryAddSingleton<Cratis.Chronicle.Services.Clients.OpenConnections>();
         builder.Services.TryAddSingleton<IExpandoObjectConverter, ExpandoObjectConverter>();
+        builder.Services.TryAddSingleton<Cratis.Chronicle.Memory.IMemoryBudget>(sp =>
+        {
+            var memory = sp.GetRequiredService<IOptions<ChronicleOptions>>().Value.Memory;
+            var meter = sp.GetRequiredKeyedService<Cratis.Metrics.IMeter<Cratis.Chronicle.Memory.MemoryBudget>>(Cratis.Chronicle.Concepts.WellKnown.MeterName).ActualMeter;
+            Cratis.Chronicle.Memory.ProcessMemoryMetrics.Register(meter);
+            return new Cratis.Chronicle.Memory.MemoryBudget(
+                Cratis.Chronicle.Memory.MemoryBudgetCapacity.OfAvailableMemory(memory.BudgetPercentOfAvailableMemory, memory.BudgetPercentUnderPressure),
+                memory.MaximumWaitSeconds > 0 ? TimeSpan.FromSeconds(memory.MaximumWaitSeconds) : null,
+                meter);
+        });
         builder.Services.TryAddSingleton<IEventCompliance, EventCompliance>();
         builder.Services.TryAddSingleton<IReadModelsCompliance, ReadModelsCompliance>();
         builder.Services.TryAddSingleton<IReadModelReadBindings, ReadModelReadBindings>();
