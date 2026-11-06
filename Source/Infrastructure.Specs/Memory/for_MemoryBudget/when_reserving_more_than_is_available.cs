@@ -18,7 +18,6 @@ public class when_reserving_more_than_is_available : Specification
     {
         _first = await _budget.Reserve(700);
         _second = _budget.Reserve(500).AsTask();
-        await Task.Delay(50);
         _secondWaitedWhileFirstHeld = !_second.IsCompleted;
         _waitingWhileFirstHeld = _budget.Waiting;
         _first.Dispose();

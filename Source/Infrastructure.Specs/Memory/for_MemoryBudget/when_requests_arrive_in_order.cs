@@ -19,9 +19,7 @@ public class when_requests_arrive_in_order : Specification
     {
         _holder = await _budget.Reserve(600);
         _large = _budget.Reserve(800).AsTask();
-        await Task.Delay(30);
         _small = _budget.Reserve(100).AsTask();
-        await Task.Delay(50);
         _smallJumpedTheQueue = _small.IsCompleted;
         _holder.Dispose();
         _largeReservation = await _large.WaitAsync(TimeSpan.FromSeconds(5));

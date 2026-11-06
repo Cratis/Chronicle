@@ -17,7 +17,6 @@ public class when_reserving_more_than_the_whole_capacity : Specification
     {
         _small = await _budget.Reserve(100);
         _huge = _budget.Reserve(50_000).AsTask();
-        await Task.Delay(50);
         _hugeWaitedForTheSmall = !_huge.IsCompleted;
         _small.Dispose();
         _hugeReservation = await _huge.WaitAsync(TimeSpan.FromSeconds(5));

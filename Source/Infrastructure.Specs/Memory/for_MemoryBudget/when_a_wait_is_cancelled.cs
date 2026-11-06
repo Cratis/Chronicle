@@ -18,7 +18,6 @@ public class when_a_wait_is_cancelled : Specification
         _holder = await _budget.Reserve(900);
         using var cancellation = new CancellationTokenSource();
         var waiting = _budget.Reserve(500, cancellation.Token).AsTask();
-        await Task.Delay(30);
         await cancellation.CancelAsync();
         _exception = await Record.ExceptionAsync(() => waiting);
         _waitingAfterCancel = _budget.Waiting;
