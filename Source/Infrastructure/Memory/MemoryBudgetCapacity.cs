@@ -26,7 +26,7 @@ public static class MemoryBudgetCapacity
         var clock = timeProvider ?? TimeProvider.System;
         var share = Math.Clamp(percentOfAvailableMemory, 1, 100) / 100d;
         var pressureShare = Math.Clamp(percentWhenUnderPressure, 1, 100) / 100d;
-        var gate = new Lock();
+        var gate = new object();
         var lastRefresh = long.MinValue;
         var capacity = 0L;
 

@@ -14,7 +14,7 @@ namespace Cratis.Chronicle.Memory;
 [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "A reservation is handed to the caller, who disposes it to give the memory back.")]
 public sealed class MemoryBudget : IMemoryBudget
 {
-    readonly Lock _lock = new();
+    readonly object _lock = new();
     readonly LinkedList<Waiter> _waiters = new();
     readonly Func<long> _capacity;
     readonly TimeSpan? _maximumWait;
