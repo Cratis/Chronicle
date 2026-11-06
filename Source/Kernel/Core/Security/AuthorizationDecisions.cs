@@ -23,6 +23,11 @@ public class AuthorizationDecisions(
     ILogger<AuthorizationDecisions> logger,
     IStoreEntitlementsCache? cache = null) : IAuthorizationDecisions
 {
+    readonly StoreDecisionInputs _inputs = new();
+
+    /// <summary>Gets immutable inputs for the current snapshot.</summary>
+    internal StoreDecisionInputs Inputs => cache?.Snapshot.Inputs ?? _inputs;
+
     /// <inheritdoc/>
     [SuppressMessage("Roslynator", "RCS1229:Use async/await when necessary", Justification = "Ordinary store decisions must complete synchronously; the cold administrator branch handles its asynchronous failures.")]
     public Task<AuthorizationDecision> Decide(ClaimsPrincipal? principal, Capability capability, AuthorizationScope scope)
@@ -44,9 +49,6 @@ public class AuthorizationDecisions(
         }
     }
 
-    static Task<AuthorizationDecision> Allow(AuthorizationReason reason, Capability capability, AuthorizationScope scope) => Task.FromResult(AuthorizationDecision.Allow(reason, capability, scope));
-    static Task<AuthorizationDecision> Deny(AuthorizationReason reason, Capability capability, AuthorizationScope scope) => Task.FromResult(AuthorizationDecision.Deny(reason, capability, scope));
-
     static bool IsKnown(Capability capability) => capability is not null
         && (WellKnownCapabilities.Administrator.Contains(capability) || WellKnownCapabilities.StoreScoped.Contains(capability));
 
@@ -60,6 +62,9 @@ public class AuthorizationDecisions(
         capability == WellKnownCapabilities.OperateEventStore
         && scope.EventStore is not null
         && !string.Equals(scope.EventStore.Value, EventStoreName.System.Value, StringComparison.OrdinalIgnoreCase);
+
+    Task<AuthorizationDecision> Allow(AuthorizationReason reason, Capability capability, AuthorizationScope scope) => Inputs.Result(reason, capability, scope, true);
+    Task<AuthorizationDecision> Deny(AuthorizationReason reason, Capability capability, AuthorizationScope scope) => Inputs.Result(reason, capability, scope, false);
 
     Task<AuthorizationDecision> DecideStore(ClaimsPrincipal principal, Capability capability, AuthorizationScope scope)
     {
@@ -79,9 +84,17 @@ public class AuthorizationDecisions(
             : Deny(AuthorizationReason.NotGranted, capability, scope);
     }
 
+    bool HasCachedGrant(PrincipalKey holder, Capability capability, AuthorizationScope scope)
+    {
+        var snapshot = cache?.Snapshot;
+        if (snapshot is null || !cache!.IsFresh) return false;
+        if (!snapshot.Allows(holder, scope.EventStore!, scope.Namespace, WellKnownCapabilities.AccessOf(capability))) return false;
+        return ReferenceEquals(snapshot, cache.Snapshot) && cache.IsFresh;
+    }
+
     bool HasGrant(PrincipalKey holder, ClaimsPrincipal principal, Capability capability, AuthorizationScope scope)
     {
-        if (cache?.IsFresh is true && cache.Snapshot.Allows(holder, scope.EventStore!, scope.Namespace, WellKnownCapabilities.AccessOf(capability))) return true;
+        if (HasCachedGrant(holder, capability, scope)) return true;
         return holder.Issuer != PrincipalKey.LocalIssuer && ExternalAdministratorClaims.Grants(principal, options.Value.Authentication.ExternalAdministratorClaim);
     }
 

@@ -4,6 +4,7 @@
 using System.Security.Claims;
 using Cratis.Arc.Commands;
 using Cratis.Chronicle.Configuration;
+using Cratis.DependencyInjection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -31,11 +32,18 @@ public class a_command_filter : Specification
     protected bool _enforce;
     protected bool _inProcess;
     protected bool _hasHttpContext;
+    protected bool _bindByConvention;
 
     protected IServiceProvider Services()
     {
-        var services = new ServiceCollection()
-            .AddSingleton(_decisions)
+        var services = new ServiceCollection();
+        if (_bindByConvention)
+        {
+            services.AddTypeDiscovery();
+            services.AddBindingsByConvention();
+            services.AddSelfBindings();
+        }
+        services.AddSingleton(_decisions)
             .AddSingleton<ILoggerFactory>(_loggers)
             .AddSingleton(Options.Create(new ChronicleOptions { Authentication = new Authentication { EnforceStoreEntitlements = _enforce } }));
         if (_hasHttpContext)

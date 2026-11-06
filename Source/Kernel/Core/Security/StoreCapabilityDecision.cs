@@ -5,7 +5,6 @@ using System.Reflection;
 using System.Security.Claims;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Grpc;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -72,27 +71,14 @@ public static class StoreCapabilityDecision
     public static async Task<bool> Permits(IServiceProvider services, ClaimsPrincipal? user, string capability, string eventStore, string? @namespace)
     {
         AuthorizationDecision decision;
-        StoreRequestDecisions? memo = null;
         var authentication = services.GetService<IOptions<ChronicleOptions>>()?.Value.Authentication ?? new Authentication();
         try
         {
             var decisions = services.GetRequiredService<IAuthorizationDecisions>();
-            var cache = services.GetService<IStoreEntitlementsCache>();
-            var request = services.GetService<IHttpContextAccessor>()?.HttpContext;
-            if (decisions is AuthorizationDecisions && cache is not null && request is not null && IsOrdinary(capability, eventStore)) memo = StoreRequestDecisions.For(request);
-            var cached = cache is null ? null : memo?.Find((user, capability, eventStore, @namespace), cache, authentication);
-            if (cached is not null)
-            {
-                decision = cached;
-            }
-            else
-            {
-                var snapshot = cache?.Snapshot;
-                var fresh = cache?.IsFresh is true;
-                var scope = @namespace is null ? AuthorizationScope.ForEventStore(eventStore) : AuthorizationScope.ForNamespace(eventStore, @namespace);
-                decision = await decisions.Decide(user, new(capability), scope);
-                if (snapshot is not null) memo?.Remember((user, capability, eventStore, @namespace), (snapshot, fresh), authentication, decision);
-            }
+            AuthorizationScope scope;
+            if (decisions is AuthorizationDecisions local) scope = local.Inputs.Scope(eventStore, @namespace);
+            else scope = @namespace is null ? AuthorizationScope.ForEventStore(eventStore) : AuthorizationScope.ForNamespace(eventStore, @namespace);
+            decision = await decisions.Decide(user, CapabilityFor(capability), scope);
         }
         catch
         {
@@ -102,10 +88,15 @@ public static class StoreCapabilityDecision
         var permitted = StoreEntitlementEnforcement.Permits(decision, authentication.EnforceStoreEntitlements);
         var loggers = services.GetRequiredService<ILoggerFactory>();
         if (!decision.IsAllowed && !permitted) loggers.CreateLogger(typeof(StoreCapabilityDecision).FullName!).Decided(capability, decision.Reason.ToString(), permitted);
-        if (memo?.TakeAudit(decision) is not false) StoreEntitlementEnforcement.Audit(decision, user, authentication, loggers, services.GetService<IGrainFactory>());
+        StoreEntitlementEnforcement.Audit(decision, user, authentication, loggers, services.GetService<IGrainFactory>());
         return permitted;
     }
 
-    static bool IsOrdinary(string capability, string store) => !string.Equals(store, "System", StringComparison.OrdinalIgnoreCase)
-        && (capability == WellKnownCapabilities.ReadEventStore.Value || capability == WellKnownCapabilities.AppendEventStore.Value || capability == WellKnownCapabilities.ManageEventStore.Value);
+    static Capability CapabilityFor(string capability)
+    {
+        if (capability == WellKnownCapabilities.ReadEventStore.Value) return WellKnownCapabilities.ReadEventStore;
+        if (capability == WellKnownCapabilities.AppendEventStore.Value) return WellKnownCapabilities.AppendEventStore;
+        if (capability == WellKnownCapabilities.ManageEventStore.Value) return WellKnownCapabilities.ManageEventStore;
+        return new(capability);
+    }
 }

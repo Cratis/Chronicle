@@ -109,15 +109,16 @@ internal static class StoreCapabilityGuard
                 : StoreCapabilityDecision.Permits(httpContext.RequestServices, httpContext.User, capability, store, @namespace);
         }
 
+        if (callContext.ServerCallContext is not null) return Task.FromResult(false);
         return SystemStoreGuard.InProcessServices is { } services
-            ? DecideWithoutRequest(services, callContext.ServerCallContext is null, store, @namespace, capability, access)
+            ? DecideWithoutRequest(services, store, @namespace, capability, access)
             : Task.FromResult(true);
     }
 
-    static async Task<bool> DecideWithoutRequest(IServiceProvider services, bool inProcess, string store, string? @namespace, string? capability, StoreAccess access)
+    static async Task<bool> DecideWithoutRequest(IServiceProvider services, string store, string? @namespace, string? capability, StoreAccess access)
     {
         await using var scope = services.CreateAsyncScope();
-        if (inProcess && scope.ServiceProvider.GetService<InProcessKernelHost>() is not null) return true;
+        if (scope.ServiceProvider.GetService<InProcessKernelHost>() is not null) return true;
         return capability is null
             ? await StoreCapabilityDecision.PermitsAccess(scope.ServiceProvider, null, access, store, @namespace)
             : await StoreCapabilityDecision.Permits(scope.ServiceProvider, null, capability, store, @namespace);

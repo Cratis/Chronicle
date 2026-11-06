@@ -193,8 +193,11 @@ internal static class SystemStoreGuard
     }
 
     static IObservable<T> EnsureOrdinaryObservable<T>(CallContext callContext, QueryRouting routing, StoreAccess access, Func<IObservable<T>> source) =>
-        Observable.FromAsync(() => Ensure(callContext, routing, access))
-            .SelectMany(_ => StoreCapabilityGuard.EndWhenRevoked(source(), callContext, routing.Store!, routing.Namespace, access));
+        Observable.Create<T>(async observer =>
+        {
+            await Ensure(callContext, routing, access);
+            return StoreCapabilityGuard.EndWhenRevoked(source(), callContext, routing.Store!, routing.Namespace, access).Subscribe(observer);
+        });
 
     static IObservable<T> EnsureObservableForSystem<T>(CallContext callContext, QueryRouting routing, StoreAccess access, Func<IObservable<T>> source) =>
         Observable.FromAsync(() => Ensure(callContext, routing, access)).SelectMany(_ => source());

@@ -35,26 +35,9 @@ public static class StoreEntitlementEnforcement
         if (!NeedsAudit(decision, authentication)) return;
         var holder = PrincipalKey.From(principal, authentication);
         var store = decision.Scope.EventStore?.Value ?? string.Empty;
-        var key = (holder, store.ToUpperInvariant(), decision.Scope.Namespace?.Value, decision.Capability.Value);
-        var logger = loggers.CreateLogger(typeof(StoreCapabilityDecision).FullName!);
+        var key = (holder, store, decision.Scope.Namespace?.Value, decision.Capability.Value);
         if (!TakeSlot(loggers, key, DateTimeOffset.UtcNow)) return;
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(holder.Subject)))[..8];
-                logger.StoreEntitlementAudited(decision.Capability.Value, decision.Reason.ToString(), store, CallerKind(principal, authentication, holder), holder.Issuer, hash);
-                if (grains is not null && !holder.IsUnidentified && decision.Scope.EventStore is not null)
-                {
-                    await grains.GetGrain<IStoreEntitlementObservations>(IStoreEntitlementObservations.Key).Record(holder, decision.Scope.EventStore, decision.Scope.Namespace, WellKnownCapabilities.AccessOf(decision.Capability));
-                }
-            }
-            catch (Exception exception)
-            {
-                // Best-effort evidence must never affect a request or become authority.
-                logger.StoreEntitlementObservationFailed(exception);
-            }
-        });
+        Record(new(decision, holder, store, CallerKind(principal, authentication, holder)), loggers, grains);
     }
 
     /// <summary>Takes the slot of an audit key, unless it was recorded within the interval or the tracker is full of current entries.</summary>
@@ -72,7 +55,7 @@ public static class StoreEntitlementEnforcement
             if (!snapshot.ContainsKey(key) && snapshot.Count >= 10_000)
             {
                 // Entries older than the interval can be recorded again anyway, so they give up their slots before the tracker is called full.
-                var pruned = snapshot.RemoveRange(snapshot.Where(entry => now - entry.Value >= _interval).Select(entry => entry.Key));
+                var pruned = Prune(snapshot, now);
                 if (pruned.Count < snapshot.Count)
                 {
                     Interlocked.CompareExchange(ref tracker.LastSeen, pruned, snapshot);
@@ -86,6 +69,33 @@ public static class StoreEntitlementEnforcement
         }
     }
 
+    static ImmutableDictionary<(PrincipalKey Holder, string Store, string? Namespace, string Capability), DateTimeOffset> Prune(
+        ImmutableDictionary<(PrincipalKey Holder, string Store, string? Namespace, string Capability), DateTimeOffset> snapshot, DateTimeOffset now) =>
+        snapshot.RemoveRange(snapshot.Where(entry => now - entry.Value >= _interval).Select(entry => entry.Key));
+
+    static void Record(AuditEvidence evidence, ILoggerFactory loggers, IGrainFactory? grains)
+    {
+        var logger = loggers.CreateLogger(typeof(StoreCapabilityDecision).FullName!);
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var (decision, holder, store, callerKind) = evidence;
+                var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(holder.Subject)))[..8];
+                logger.StoreEntitlementAudited(decision.Capability.Value, decision.Reason.ToString(), store, callerKind, holder.Issuer, hash);
+                if (grains is not null && !holder.IsUnidentified && decision.Scope.EventStore is not null)
+                {
+                    await grains.GetGrain<IStoreEntitlementObservations>(IStoreEntitlementObservations.Key).Record(holder, decision.Scope.EventStore, decision.Scope.Namespace, WellKnownCapabilities.AccessOf(decision.Capability));
+                }
+            }
+            catch (Exception exception)
+            {
+                // Best-effort evidence must never affect a request or become authority.
+                logger.StoreEntitlementObservationFailed(exception);
+            }
+        });
+    }
+
     static bool NeedsAudit(AuthorizationDecision decision, Authentication authentication) => !authentication.EnforceStoreEntitlements
         && !decision.IsAllowed && decision.Reason is AuthorizationReason.NotGranted or AuthorizationReason.NoPrincipal;
 
@@ -95,9 +105,20 @@ public static class StoreEntitlementEnforcement
         return holder.IsUnidentified ? "anonymous" : "application";
     }
 
+    sealed record AuditEvidence(AuthorizationDecision Decision, PrincipalKey Holder, string Store, string CallerKind);
+
+    sealed class AuditComparer : IEqualityComparer<(PrincipalKey Holder, string Store, string? Namespace, string Capability)>
+    {
+        public bool Equals((PrincipalKey Holder, string Store, string? Namespace, string Capability) x, (PrincipalKey Holder, string Store, string? Namespace, string Capability) y) =>
+            x.Holder == y.Holder && StringComparer.OrdinalIgnoreCase.Equals(x.Store, y.Store) && x.Namespace == y.Namespace && x.Capability == y.Capability;
+
+        public int GetHashCode((PrincipalKey Holder, string Store, string? Namespace, string Capability) obj) =>
+            HashCode.Combine(obj.Holder, StringComparer.OrdinalIgnoreCase.GetHashCode(obj.Store), obj.Namespace, obj.Capability);
+    }
+
     sealed class AuditTracker
     {
-        public ImmutableDictionary<(PrincipalKey Holder, string Store, string? Namespace, string Capability), DateTimeOffset> LastSeen = [];
+        public ImmutableDictionary<(PrincipalKey Holder, string Store, string? Namespace, string Capability), DateTimeOffset> LastSeen = ImmutableDictionary.Create<(PrincipalKey Holder, string Store, string? Namespace, string Capability), DateTimeOffset>(new AuditComparer());
         public int FullReported;
     }
 }

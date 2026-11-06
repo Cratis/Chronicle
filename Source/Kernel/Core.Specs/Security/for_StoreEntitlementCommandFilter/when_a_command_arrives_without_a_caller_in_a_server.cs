@@ -9,6 +9,7 @@ public class when_a_command_arrives_without_a_caller_in_a_server : given.a_comma
     {
         _enforce = true;
         _hasHttpContext = false;
+        _bindByConvention = true;
     }
 
     async Task Because() => _result = await _filter.OnExecution(ContextFor(new AppendLike("shop", "tenant")));

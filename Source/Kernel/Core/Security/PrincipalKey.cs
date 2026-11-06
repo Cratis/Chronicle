@@ -43,6 +43,10 @@ public readonly record struct PrincipalKey([property: Id(0)] string Issuer, [pro
     /// <returns>The <see cref="PrincipalKey"/>, or <see cref="Unidentified"/> when the principal cannot be identified.</returns>
     public static PrincipalKey From(ClaimsPrincipal? principal, Authentication authentication)
     {
+        if (principal?.Identity?.IsAuthenticated is not true) return Unidentified;
+        var subject = principal.FindFirst("sub") ?? principal.FindFirst(ClaimTypes.NameIdentifier);
+        var claim = subject ?? principal.FindFirst("azp") ?? principal.FindFirst("client_id");
+        if (claim is not null && !string.IsNullOrEmpty(claim.Value)) return new(Normalize(claim.Issuer, authentication), claim.Value, subject is null);
         var owner = ConnectionOwner.From(principal);
         return owner.IsUnidentified ? Unidentified : new(Normalize(owner.Issuer, authentication), owner.Subject, owner.IsClient);
     }
@@ -58,6 +62,7 @@ public readonly record struct PrincipalKey([property: Id(0)] string Issuer, [pro
     /// </remarks>
     public static bool IsLocalUser(ClaimsPrincipal? principal, Authentication authentication) =>
         principal?.Identity?.IsAuthenticated is true &&
+        principal.FindFirst(static claim => claim.Type == ChronicleClaimTypes.Principal || claim.Type == ChronicleClaims.PrincipalKind) is not null &&
         principal.Claims.Any(_ =>
             ((_.Type == ChronicleClaimTypes.Principal && _.Value == ChronicleClaimTypes.User) ||
              (_.Type == ChronicleClaims.PrincipalKind && _.Value == ChronicleClaims.User)) &&

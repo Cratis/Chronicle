@@ -11,7 +11,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using NSubstitute;
-using Orleans;
 using ProtoBuf.Grpc;
 
 namespace Cratis.Chronicle.Benchmarks.SystemStoreGuard;
@@ -21,8 +20,18 @@ namespace Cratis.Chronicle.Benchmarks.SystemStoreGuard;
 /// </summary>
 sealed class EntitledCaller : IDisposable
 {
-    readonly StoreEntitlementsCache _cache;
+    /// <summary>The number of independent requests in each measured batch.</summary>
+    public const int RequestCount = 16_384;
 
+    readonly StoreEntitlementsCache _cache;
+    readonly HttpContextAccessor _accessor;
+    HttpContext[] _requests = [];
+    CallContext[] _calls = [];
+    int _next;
+
+    /// <summary>Initializes an isolated caller and entitlement snapshot.</summary>
+    /// <param name="entitled">Whether the caller has a grant.</param>
+    /// <param name="enforce">Whether to enforce grants.</param>
     public EntitledCaller(bool entitled, bool enforce)
     {
         var holder = new PrincipalKey(PrincipalKey.LocalIssuer, "app");
@@ -31,7 +40,7 @@ sealed class EntitledCaller : IDisposable
         _cache = new(Substitute.For<IGrainFactory>(), NullLogger<StoreEntitlementsCache>.Instance, TimeProvider.System);
         _cache.Publish(new(1, grants));
         var options = Options.Create(new ChronicleOptions { Authentication = new Authentication { Enabled = true, EnforceStoreEntitlements = enforce } });
-        var accessor = new HttpContextAccessor();
+        var accessor = _accessor = new HttpContextAccessor();
         Services = new ServiceCollection()
             .AddSingleton<IHttpContextAccessor>(accessor)
             .AddSingleton<IAuthorizationDecisions>(new AuthorizationDecisions(new SystemStoreAuthorizationProbe(false), options, NullLogger<AuthorizationDecisions>.Instance, _cache))
@@ -45,14 +54,47 @@ sealed class EntitledCaller : IDisposable
         Call = new CallContext(new object(), new BenchmarkServerCallContext(Http));
     }
 
+    /// <summary>Gets the request services.</summary>
     public IServiceProvider Services { get; }
 
-    public ClaimsPrincipal User { get; }
+    /// <summary>Gets the current caller.</summary>
+    public ClaimsPrincipal User { get; private set; }
 
-    public HttpContext Http { get; }
+    /// <summary>Gets the current request.</summary>
+    public HttpContext Http { get; private set; }
 
-    public CallContext Call { get; }
+    /// <summary>Gets the current RPC context.</summary>
+    public CallContext Call { get; private set; }
 
+    /// <summary>Prepares one fresh request per measured invocation.</summary>
+    public void PrepareRequests()
+    {
+        _next = 0;
+        _requests = new HttpContext[RequestCount];
+        _calls = new CallContext[RequestCount];
+        for (var index = 0; index < _requests.Length; index++)
+        {
+            _requests[index] = new DefaultHttpContext
+            {
+                User = new ClaimsPrincipal(new ClaimsIdentity([new Claim("sub", "app")], "Bearer")),
+                RequestServices = Services
+            };
+            _calls[index] = new CallContext(new object(), new BenchmarkServerCallContext(_requests[index]));
+        }
+    }
+
+    /// <summary>Selects the next prepared request.</summary>
+    /// <returns>The fresh RPC context.</returns>
+    public CallContext NextRequest()
+    {
+        Http = _requests[_next];
+        User = Http.User;
+        _accessor.HttpContext = Http;
+        Call = _calls[_next++];
+        return Call;
+    }
+
+    /// <inheritdoc/>
     public void Dispose() => _cache.Dispose();
 
     sealed class BenchmarkServerCallContext(HttpContext http) : ServerCallContext

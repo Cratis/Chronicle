@@ -16,14 +16,12 @@ namespace Cratis.Chronicle.Benchmarks.SystemStoreGuard;
 [MedianColumn]
 [MinColumn]
 [MaxColumn]
-[InProcess]
-[WarmupCount(3)]
-[IterationCount(10)]
-public class QueryPathBenchmark
+[Config(typeof(ColdPathConfig))]
+public class QueryPathBenchmark : IDisposable
 {
     readonly IEnumerable<int> _items = Enumerable.Range(0, 100).ToArray();
     readonly QueryRouting _routing = new("bench", "Default", "event-log");
-    readonly QueryRouting _applicationRouting = new("bench", "Default");
+    readonly QueryRouting _applicationRouting = new("bench", "Default", Capability: "chronicle.event-store.read");
     EntitledCaller _entitled = null!;
     EntitledCaller _unentitledAudited = null!;
     Task<IEnumerable<int>> _items100 = null!;
@@ -51,10 +49,14 @@ public class QueryPathBenchmark
     /// Releases the snapshots.
     /// </summary>
     [GlobalCleanup]
-    public void Cleanup()
+    public void Cleanup() => Dispose();
+
+    /// <inheritdoc/>
+    public void Dispose()
     {
         _entitled.Dispose();
         _unentitledAudited.Dispose();
+        GC.SuppressFinalize(this);
     }
 
     /// <summary>
@@ -62,22 +64,31 @@ public class QueryPathBenchmark
     /// </summary>
     /// <returns>The query result.</returns>
     [Benchmark]
-    public Task<QueryResult<IEnumerable<int>>> EntitledRead() => QueryExecutor.Execute(_entitled.Call, _applicationRouting, Read);
+    public Task<QueryResult<IEnumerable<int>>> EntitledRead() => QueryExecutor.Execute(_entitled.NextRequest(), _applicationRouting, Read);
 
     /// <summary>
     /// Executes a query for a caller without a grant, with enforcement off (audited).
     /// </summary>
     /// <returns>The query result.</returns>
     [Benchmark]
-    public Task<QueryResult<IEnumerable<int>>> AuditedUnentitledRead() => QueryExecutor.Execute(_unentitledAudited.Call, _applicationRouting, Read);
+    public Task<QueryResult<IEnumerable<int>>> AuditedUnentitledRead() => QueryExecutor.Execute(_unentitledAudited.NextRequest(), _applicationRouting, Read);
 
     /// <summary>
     /// Creates a hand-written application-store stream for an entitled caller, with enforcement on.
     /// </summary>
-    /// <returns>The stream.</returns>
     [Benchmark]
-    public IObservable<IEnumerable<int>> EntitledObservableGuard() =>
-        global::Cratis.Chronicle.Services.SystemStoreGuard.Ensure(_entitled.Call, _applicationRouting, StoreAccess.Read, _observe);
+    public void EntitledObservableGuard()
+    {
+        using var subscription = Services.SystemStoreGuard.Ensure(_entitled.NextRequest(), _applicationRouting, StoreAccess.Read, _observe).Subscribe();
+    }
+
+    /// <summary>Creates fresh request identities outside the measured operation.</summary>
+    [IterationSetup]
+    public void PrepareRequests()
+    {
+        _entitled.PrepareRequests();
+        _unentitledAudited.PrepareRequests();
+    }
 
     /// <summary>
     /// Executes a query that returns 100 items.
@@ -101,7 +112,7 @@ public class QueryPathBenchmark
     /// <returns>The stream.</returns>
     [Benchmark]
     public IObservable<IEnumerable<int>> ObservableGuard() =>
-        Guarded ? global::Cratis.Chronicle.Services.SystemStoreGuard.Ensure(default, _routing, StoreAccess.Read, _observe) : _observe();
+        Guarded ? Services.SystemStoreGuard.Ensure(default, _routing, StoreAccess.Read, _observe) : _observe();
 
     IObservable<IEnumerable<int>> Observe() => Observable.Return(_items);
 

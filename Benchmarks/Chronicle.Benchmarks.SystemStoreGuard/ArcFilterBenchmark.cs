@@ -22,9 +22,7 @@ namespace Cratis.Chronicle.Benchmarks.SystemStoreGuard;
 [MedianColumn]
 [MinColumn]
 [MaxColumn]
-[InProcess]
-[WarmupCount(3)]
-[IterationCount(10)]
+[Config(typeof(ColdPathConfig))]
 public class ArcFilterBenchmark : IDisposable
 {
     static readonly Task<QueryResult> _noQueryVerdict = Task.FromResult<QueryResult>(null!);
@@ -72,9 +70,10 @@ public class ArcFilterBenchmark : IDisposable
         _entitled = new(true, true);
         _unentitledAudited = new(false, false);
         _unentitledEnforced = new(false, true);
-        _entitledCommand = CommandFor(_entitled, retry);
-        _auditedCommand = CommandFor(_unentitledAudited, retry);
-        _refusedCommand = CommandFor(_unentitledEnforced, retry);
+        var append = new Sequences.AppendMany("bench", "Default", "event-log", "source", []);
+        _entitledCommand = CommandFor(_entitled, append);
+        _auditedCommand = CommandFor(_unentitledAudited, append);
+        _refusedCommand = CommandFor(_unentitledEnforced, append);
     }
 
     /// <summary>
@@ -82,21 +81,42 @@ public class ArcFilterBenchmark : IDisposable
     /// </summary>
     /// <returns>The filter task.</returns>
     [Benchmark]
-    public Task<CommandResult> EntitledAppend() => _entitlementFilter.OnExecution(_entitledCommand);
+    public Task<CommandResult> EntitledAppend()
+    {
+        _entitled.NextRequest();
+        return _entitlementFilter.OnExecution(_entitledCommand);
+    }
 
     /// <summary>
     /// An application-store command by a caller without a grant, with enforcement off (audited).
     /// </summary>
     /// <returns>The filter task.</returns>
     [Benchmark]
-    public Task<CommandResult> AuditedUnentitledAppend() => _entitlementFilter.OnExecution(_auditedCommand);
+    public Task<CommandResult> AuditedUnentitledAppend()
+    {
+        _unentitledAudited.NextRequest();
+        return _entitlementFilter.OnExecution(_auditedCommand);
+    }
 
     /// <summary>
     /// An application-store command by a caller without a grant, with enforcement on (refused).
     /// </summary>
     /// <returns>The filter task.</returns>
     [Benchmark]
-    public Task<CommandResult> RefusedUnentitledAppend() => _entitlementFilter.OnExecution(_refusedCommand);
+    public Task<CommandResult> RefusedUnentitledAppend()
+    {
+        _unentitledEnforced.NextRequest();
+        return _entitlementFilter.OnExecution(_refusedCommand);
+    }
+
+    /// <summary>Creates fresh request identities outside the measured operation.</summary>
+    [IterationSetup]
+    public void PrepareRequests()
+    {
+        _entitled.PrepareRequests();
+        _unentitledAudited.PrepareRequests();
+        _unentitledEnforced.PrepareRequests();
+    }
 
     /// <summary>
     /// A query through the filter chain.
@@ -140,6 +160,6 @@ public class ArcFilterBenchmark : IDisposable
         _unentitledEnforced?.Dispose();
     }
 
-    static CommandContext CommandFor(EntitledCaller caller, RetryPartition command) =>
+    static CommandContext CommandFor(EntitledCaller caller, object command) =>
         new(Execution.CorrelationId.New(), command.GetType(), command, [], new CommandContextValues(), ServiceProvider: caller.Services);
 }

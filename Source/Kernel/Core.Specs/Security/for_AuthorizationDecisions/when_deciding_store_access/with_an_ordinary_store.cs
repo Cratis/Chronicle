@@ -125,6 +125,34 @@ public class with_an_ordinary_store : Specification
         (await Decisions(authentication).Decide(principal, WellKnownCapabilities.ReadEventStore, AuthorizationScope.ForEventStore("shop"))).Reason.ShouldEqual(AuthorizationReason.Granted);
     }
 
+    [Fact]
+    public async Task should_recheck_authority_even_when_reusing_a_completed_result()
+    {
+        var decisions = Decisions();
+        var scope = decisions.Inputs.Scope("shop", null);
+        var first = decisions.Decide(_app, WellKnownCapabilities.ReadEventStore, scope);
+        var second = decisions.Decide(Principal("app", false), WellKnownCapabilities.ReadEventStore, scope);
+        ReferenceEquals(first, second).ShouldBeTrue();
+        (await decisions.Decide(Principal("other", false), WellKnownCapabilities.ReadEventStore, scope)).IsAllowed.ShouldBeFalse();
+        _cache.IsFresh.Returns(false);
+        (await decisions.Decide(_app, WellKnownCapabilities.ReadEventStore, scope)).IsAllowed.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task should_refuse_if_the_lease_expires_while_evaluating_a_grant()
+    {
+        _cache.IsFresh.Returns(true, false);
+        (await Decisions().Decide(_app, WellKnownCapabilities.ReadEventStore, AuthorizationScope.ForEventStore("shop"))).IsAllowed.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task should_refuse_if_the_snapshot_changes_while_evaluating_a_grant()
+    {
+        var previous = _cache.Snapshot;
+        _cache.Snapshot.Returns(previous, new StoreEntitlementsSnapshot(new(2, [])));
+        (await Decisions().Decide(_app, WellKnownCapabilities.ReadEventStore, AuthorizationScope.ForEventStore("shop"))).IsAllowed.ShouldBeFalse();
+    }
+
     AuthorizationDecisions Decisions(Authentication? authentication = null)
     {
         var options = Options.Create(new ChronicleOptions { Authentication = authentication ?? _authentication });
