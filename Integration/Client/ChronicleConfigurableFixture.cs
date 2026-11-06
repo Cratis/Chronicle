@@ -96,6 +96,14 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
     /// </summary>
     public ChronicleRuntimeOptions Options { get; } = ChronicleRuntimeOptions.Parse();
 
+    /// <summary>
+    /// Gets additional environment variables for the out-of-process kernel container, for a fixture that gives the kernel more than its backing store.
+    /// </summary>
+    /// <remarks>
+    /// The kernel container is built from the constructor of this class, so an override must not depend on state the derived constructor assigns.
+    /// </remarks>
+    protected virtual IReadOnlyDictionary<string, string> KernelEnvironment => new Dictionary<string, string>();
+
     /// <inheritdoc/>
     public override bool UsesPerContextMongoDBHost =>
         Options.Mode == ChronicleRuntimeMode.InProcess && Options.StorageProvider == ChronicleStorageProvider.MongoDB;
@@ -400,6 +408,11 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
             .WithEnvironment("Cratis__Chronicle__Storage__ConnectionDetails", connectionDetails)
             .WithEnvironment("Logging__LogLevel__Default", "Information")
             .WithEnvironment("Logging__LogLevel__Cratis", "Debug");
+
+        foreach (var (name, value) in KernelEnvironment)
+        {
+            builder = builder.WithEnvironment(name, value);
+        }
 
         builder = WithTimingOutput(builder);
 
