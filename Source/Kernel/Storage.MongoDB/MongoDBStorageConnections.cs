@@ -53,7 +53,7 @@ public class MongoDBStorageConnections(
         var configured = new MongoUrl(mongoDBOptions.Value.Server);
         if (!resolution.IsConfigured)
         {
-            return clientManager.GetClientFor(WithDirectConnection(MongoClientSettings.FromUrl(configured))).GetDatabaseByExistingCasing(derivedName, logger);
+            return Open(clientManager.GetClientFor(WithDirectConnection(MongoClientSettings.FromUrl(configured))), kind, derivedName);
         }
 
         var resolver = resolution.Resolver;
@@ -66,8 +66,16 @@ public class MongoDBStorageConnections(
         var settings = WithDirectConnection(resolved.ToMongoClientSettings(configured, hooks));
         settings.ClusterConfigurator = hooks.ConfigureCluster;
 
-        return clientManager.GetClientFor(settings).GetDatabaseByExistingCasing(resolved.Database ?? derivedName, logger);
+        return Open(clientManager.GetClientFor(settings), kind, resolved.Database ?? derivedName);
     }
+
+    IMongoDatabase Open(IMongoClient client, StorageConnectionKind kind, string name) =>
+        kind == StorageConnectionKind.Cluster
+
+            // The cluster database is named by configuration alone and opened while services are constructed, where
+            // nothing may wait on the server. Event store and namespace databases take the casing they already have.
+            ? client.GetDatabase(name)
+            : client.GetDatabaseByExistingCasing(name, logger);
 
     MongoClientSettings WithDirectConnection(MongoClientSettings settings)
     {
