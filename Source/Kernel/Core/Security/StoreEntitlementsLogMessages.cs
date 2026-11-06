@@ -21,4 +21,7 @@ internal static partial class StoreEntitlementsLogMessages
 
     [LoggerMessage(LogLevel.Information, "Event store entitlement audit tracking is full; further new entries are not tracked")]
     internal static partial void StoreEntitlementAuditFull(this ILogger logger);
+
+    [LoggerMessage(LogLevel.Warning, "Configured event store access for issuer {Issuer} never matches a caller because Chronicle uses its own authority; use the issuer chronicle:local or configure an external authority")]
+    internal static partial void ConfiguredIssuerNeverMatches(this ILogger logger, string issuer);
 }

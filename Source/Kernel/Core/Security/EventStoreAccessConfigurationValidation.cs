@@ -2,12 +2,14 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Configuration;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.Security;
 
 /// <summary>Validates explicitly configured principal and ordinary-store scopes at startup.</summary>
-public class EventStoreAccessConfigurationValidation : IValidateOptions<ChronicleOptions>
+/// <param name="logger">The optional logger that reports configuration that never takes effect.</param>
+public class EventStoreAccessConfigurationValidation(ILogger<EventStoreAccessConfigurationValidation>? logger = null) : IValidateOptions<ChronicleOptions>
 {
     /// <inheritdoc/>
     public ValidateOptionsResult Validate(string? name, ChronicleOptions options)
@@ -16,6 +18,14 @@ public class EventStoreAccessConfigurationValidation : IValidateOptions<Chronicl
         if (external.Any(entry => string.IsNullOrWhiteSpace(entry.Issuer) || string.IsNullOrWhiteSpace(entry.Subject)))
         {
             return ValidateOptionsResult.Fail("Event store access requires an exact issuer and subject.");
+        }
+
+        if (options.Authentication.UseInternalAuthority)
+        {
+            foreach (var entry in external.Where(entry => !string.Equals(entry.Issuer, PrincipalKey.LocalIssuer, StringComparison.Ordinal)))
+            {
+                logger?.ConfiguredIssuerNeverMatches(entry.Issuer);
+            }
         }
 
         return external.Cast<ConfiguredEventStoreAccess>().Concat(options.Clients.SelectMany(client => client.EventStores)).All(IsValid)

@@ -37,7 +37,7 @@ public static class StoreEntitlementEnforcement
         var store = decision.Scope.EventStore?.Value ?? string.Empty;
         var key = (holder, store.ToUpperInvariant(), decision.Scope.Namespace?.Value, decision.Capability.Value);
         var logger = loggers.CreateLogger(typeof(StoreCapabilityDecision).FullName!);
-        if (!TakeSlot(_trackers.GetValue(loggers, static _ => new()), key, logger)) return;
+        if (!TakeSlot(loggers, key, DateTimeOffset.UtcNow)) return;
         _ = Task.Run(async () =>
         {
             try
@@ -57,24 +57,37 @@ public static class StoreEntitlementEnforcement
         });
     }
 
-    static bool NeedsAudit(AuthorizationDecision decision, Authentication authentication) => !authentication.EnforceStoreEntitlements
-        && !decision.IsAllowed && decision.Reason is AuthorizationReason.NotGranted or AuthorizationReason.NoPrincipal;
-
-    static bool TakeSlot(AuditTracker tracker, (PrincipalKey Holder, string Store, string? Namespace, string Capability) key, ILogger logger)
+    /// <summary>Takes the slot of an audit key, unless it was recorded within the interval or the tracker is full of current entries.</summary>
+    /// <param name="loggers">The logger factory that owns the tracker.</param>
+    /// <param name="key">The audit key.</param>
+    /// <param name="now">The current time.</param>
+    /// <returns>Whether the caller should record the key.</returns>
+    internal static bool TakeSlot(ILoggerFactory loggers, (PrincipalKey Holder, string Store, string? Namespace, string Capability) key, DateTimeOffset now)
     {
-        var now = DateTimeOffset.UtcNow;
+        var tracker = _trackers.GetValue(loggers, static _ => new());
         while (true)
         {
             var snapshot = Volatile.Read(ref tracker.LastSeen);
             if (snapshot.TryGetValue(key, out var seen) && now - seen < _interval) return false;
             if (!snapshot.ContainsKey(key) && snapshot.Count >= 10_000)
             {
-                if (Interlocked.Exchange(ref tracker.FullReported, 1) == 0) _ = Task.Run(logger.StoreEntitlementAuditFull);
+                // Entries older than the interval can be recorded again anyway, so they give up their slots before the tracker is called full.
+                var pruned = snapshot.RemoveRange(snapshot.Where(entry => now - entry.Value >= _interval).Select(entry => entry.Key));
+                if (pruned.Count < snapshot.Count)
+                {
+                    Interlocked.CompareExchange(ref tracker.LastSeen, pruned, snapshot);
+                    continue;
+                }
+
+                if (Interlocked.Exchange(ref tracker.FullReported, 1) == 0) _ = Task.Run(loggers.CreateLogger(typeof(StoreCapabilityDecision).FullName!).StoreEntitlementAuditFull);
                 return false;
             }
             if (ReferenceEquals(Interlocked.CompareExchange(ref tracker.LastSeen, snapshot.SetItem(key, now), snapshot), snapshot)) return true;
         }
     }
+
+    static bool NeedsAudit(AuthorizationDecision decision, Authentication authentication) => !authentication.EnforceStoreEntitlements
+        && !decision.IsAllowed && decision.Reason is AuthorizationReason.NotGranted or AuthorizationReason.NoPrincipal;
 
     static string CallerKind(ClaimsPrincipal? principal, Authentication authentication, PrincipalKey holder)
     {

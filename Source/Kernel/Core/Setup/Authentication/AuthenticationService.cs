@@ -43,6 +43,9 @@ internal sealed class AuthenticationService(
     static readonly PasswordHasher<object> _passwordHasher = new();
     readonly Configuration.ChronicleOptions _options = options.Value;
     readonly InitialAdminSetupTokenLogging _setupTokenLogging = new(setupTokens, options, logger);
+#if DEVELOPMENT
+    Dictionary<string, string> _resolvedApplications = [];
+#endif
 
     /// <inheritdoc/>
     public async Task<User?> AuthenticateUser(Username username, Password password)
@@ -178,6 +181,9 @@ internal sealed class AuthenticationService(
 
             logger.BootstrapClientRegistered(client.ClientId);
         }
+#if DEVELOPMENT
+        _resolvedApplications = resolved;
+#endif
         await ReconcileConfiguredGrants(resolved);
     }
 
@@ -228,8 +234,12 @@ internal sealed class AuthenticationService(
         });
 
         logger.DefaultClientCredentialsCreated(defaultClientId);
-        var resolved = existingApplications.ToDictionary(application => application.ClientId.ToString(), application => application.Id.ToString());
+
+        // Applications registered through events are only visible in storage once the reactor has run, so they are carried over from the bootstrap step.
+        var resolved = new Dictionary<string, string>(_resolvedApplications);
+        foreach (var application in existingApplications) resolved.TryAdd(application.ClientId.ToString(), application.Id.ToString());
         resolved[defaultClientId] = applicationId.ToString();
+        _resolvedApplications = resolved;
         await ReconcileConfiguredGrants(resolved);
     }
 #endif
