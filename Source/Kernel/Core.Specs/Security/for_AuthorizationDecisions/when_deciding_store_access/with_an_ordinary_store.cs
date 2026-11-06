@@ -48,9 +48,9 @@ public class with_an_ordinary_store : Specification
         (await Decisions().Decide(Principal("user", true), new(capability), AuthorizationScope.ForEventStore("shop"))).Reason.ShouldEqual(AuthorizationReason.NotEnrolled);
 
     [Theory]
-    [InlineData(false, AuthorizationReason.Granted)]
+    [InlineData(false, AuthorizationReason.NotGranted)]
     [InlineData(true, AuthorizationReason.Failed)]
-    public async Task should_apply_the_lease_only_in_enforcement(bool enforce, AuthorizationReason expected)
+    public async Task should_never_honor_an_expired_snapshot(bool enforce, AuthorizationReason expected)
     {
         var authentication = new Authentication { Enabled = true, EnforceStoreEntitlements = enforce };
         _cache.IsFresh.Returns(false);
@@ -66,6 +66,21 @@ public class with_an_ordinary_store : Specification
         _cache.Snapshot.Returns(StoreEntitlementsSnapshot.Empty);
         _cache.IsFresh.Returns(false);
         (await Decisions(authentication).Decide(_app, WellKnownCapabilities.ReadEventStore, AuthorizationScope.ForEventStore("shop"))).Reason.ShouldEqual(expected);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task should_require_authoritative_administrator_authority_for_stale_cross_store_key_grants(bool administrator)
+    {
+        var id = Guid.NewGuid();
+        var principal = Principal(id.ToString(), true);
+        _cache.Snapshot.Returns(new StoreEntitlementsSnapshot(new(1, [new(PrincipalKey.From(principal, _authentication), "other", null, StoreAccess.Manage, EventStoreAccessGrantSource.Command)])));
+        _cache.IsFresh.Returns(false);
+        _privileges.IsActiveAdministrator(id).Returns(administrator);
+        var result = await Decisions().Decide(principal, WellKnownCapabilities.ManageComplianceKeys, AuthorizationScope.ForEventStore("other"));
+        result.IsAllowed.ShouldEqual(administrator);
+        await _privileges.Received(1).IsActiveAdministrator(id);
     }
 
     [Fact] async Task should_reject_an_unidentified_caller() => (await Decisions().Decide(new(new ClaimsIdentity([], "Bearer")), WellKnownCapabilities.ReadEventStore, AuthorizationScope.ForEventStore("shop"))).Reason.ShouldEqual(AuthorizationReason.NoPrincipal);

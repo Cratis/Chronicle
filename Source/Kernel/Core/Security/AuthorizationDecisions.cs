@@ -81,7 +81,7 @@ public class AuthorizationDecisions(
 
     bool HasGrant(PrincipalKey holder, ClaimsPrincipal principal, Capability capability, AuthorizationScope scope)
     {
-        if ((cache?.Snapshot ?? StoreEntitlementsSnapshot.Empty).Allows(holder, scope.EventStore!, scope.Namespace, WellKnownCapabilities.AccessOf(capability))) return true;
+        if (cache?.IsFresh is true && cache.Snapshot.Allows(holder, scope.EventStore!, scope.Namespace, WellKnownCapabilities.AccessOf(capability))) return true;
         return holder.Issuer != PrincipalKey.LocalIssuer && ExternalAdministratorClaims.Grants(principal, options.Value.Authentication.ExternalAdministratorClaim);
     }
 
