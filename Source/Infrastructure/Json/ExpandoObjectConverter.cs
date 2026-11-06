@@ -42,7 +42,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
     {
         var jsonObject = new JsonObject();
         var expandoObjectAsDictionary = expandoObject as IDictionary<string, object?>;
-        var schemaProperties = schema.GetFlattenedProperties().ToList();
+        var schemaProperties = schema.FlattenedProperties;
 
         // When schema has no properties (e.g. a placeholder empty schema), fall back to
         // unknown-type conversion so that all data in the expando object is preserved.
@@ -68,7 +68,15 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
             // may carry both casings of the same name (e.g. both `Id` and `id`).
             if (!expandoObjectAsDictionary.TryGetValue(name, out var sourceValue))
             {
-                sourceValue = expandoObjectAsDictionary.FirstOrDefault(_ => _.Key.Equals(name, StringComparison.OrdinalIgnoreCase)).Value;
+                sourceValue = null;
+                foreach (var candidate in expandoObjectAsDictionary)
+                {
+                    if (candidate.Key.Equals(name, StringComparison.OrdinalIgnoreCase))
+                    {
+                        sourceValue = candidate.Value;
+                        break;
+                    }
+                }
             }
 
             var value = ConvertToJsonNode(sourceValue, property);
@@ -97,7 +105,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
         var expandoObject = new ExpandoObject();
         var expandoObjectAsDictionary = expandoObject as IDictionary<string, object?>;
 
-        var schemaProperties = schema.GetFlattenedProperties().ToList();
+        var schemaProperties = schema.FlattenedProperties;
 
         // When schema has no properties (e.g. a placeholder empty schema), fall back to
         // unknown-type conversion so that all data in the document is preserved.
@@ -117,8 +125,18 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
         foreach (var property in schemaProperties)
         {
             var name = property.Name;
-            var sourceValue = document[name]
-                ?? document.FirstOrDefault(kv => kv.Key.Equals(name, StringComparison.OrdinalIgnoreCase)).Value;
+            var sourceValue = document[name];
+            if (sourceValue is null)
+            {
+                foreach (var candidate in document)
+                {
+                    if (candidate.Key.Equals(name, StringComparison.OrdinalIgnoreCase))
+                    {
+                        sourceValue = candidate.Value;
+                        break;
+                    }
+                }
+            }
 
             object? value = null;
             if (sourceValue is not null)
@@ -254,7 +272,13 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
             {
                 return array.Select(ConvertUnknownSchemaTypeToClrType).ToArray();
             }
-            return array.Select(_ => ConvertFromJsonNode(_, schemaProperty.Item!)).ToArray();
+            var items = new object?[array.Count];
+            for (var i = 0; i < items.Length; i++)
+            {
+                items[i] = ConvertFromJsonNode(array[i], schemaProperty.Item!);
+            }
+
+            return items;
         }
 
         if (typeFormats.IsKnown(schemaProperty.Format ?? schemaProperty.ActualTypeSchema.Format!))
@@ -317,17 +341,20 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
             type ^= JsonObjectType.Null;
         }
 
-        var genericArguments = value.GetType().GetGenericArguments();
-
         switch (type)
         {
             case JsonObjectType.String:
-                var genericArgs = value.GetType().GetGenericArguments();
-                if (genericArgs.Length == 1 && genericArgs[0] == typeof(Guid))
+                // A node created from a Guid holds the Guid itself; one parsed from JSON text holds a string.
+                if (!value.TryGetValue<string>(out var valueAsString))
                 {
-                    return value.GetValue<Guid>();
+                    if (value.TryGetValue<Guid>(out var guidValue))
+                    {
+                        return guidValue;
+                    }
+
+                    valueAsString = value.GetValue<string>();
                 }
-                var valueAsString = value.GetValue<string>();
+
                 return schemaProperty.Format == "guid" ?
                         Guid.Parse(valueAsString) :
                         valueAsString;
