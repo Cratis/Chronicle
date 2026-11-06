@@ -8,4 +8,5 @@ namespace Cratis.Chronicle.Concepts.Projections.Graphs;
 /// </summary>
 /// <param name="Key"><see cref="PropertyExpression"/> resolving the key of the node from the event.</param>
 /// <param name="Detach">Whether the edges attached to the node are deleted with it. A node that still has edges cannot be deleted without this.</param>
-public record GraphNodeRemovedWithDefinition(PropertyExpression Key, bool Detach);
+/// <param name="ForEach">Optional collection property of the event; the mapping runs once per item and expressions address the item as <c language="csharp">collection.property</c>.</param>
+public record GraphNodeRemovedWithDefinition(PropertyExpression Key, bool Detach, PropertyExpression? ForEach = null);

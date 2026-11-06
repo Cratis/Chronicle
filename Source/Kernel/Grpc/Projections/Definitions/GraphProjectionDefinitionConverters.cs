@@ -24,12 +24,14 @@ internal static class GraphProjectionDefinitionConverters
             {
                 Key = from.Value.Key,
                 Properties = new Dictionary<string, string>(from.Value.Properties),
-                UpdateOnly = from.Value.UpdateOnly
+                UpdateOnly = from.Value.UpdateOnly,
+                ForEach = from.Value.ForEach?.Value
             }),
             RemovedWith = _.Value.RemovedWith.ToDictionary(removal => removal.Key, removal => new Contracts.Projections.GraphNodeRemovedWithDefinition
             {
                 Key = removal.Value.Key,
-                Detach = removal.Value.Detach
+                Detach = removal.Value.Detach,
+                ForEach = removal.Value.ForEach?.Value
             })
         }),
         Edges = definition.Edges.ToDictionary(_ => _.Key, _ => new Contracts.Projections.GraphEdgeProjectionDefinition
@@ -39,13 +41,15 @@ internal static class GraphProjectionDefinitionConverters
                 SourceKey = from.Value.SourceKey,
                 TargetKey = from.Value.TargetKey,
                 Identity = from.Value.Identity?.Value,
-                Properties = new Dictionary<string, string>(from.Value.Properties)
+                Properties = new Dictionary<string, string>(from.Value.Properties),
+                ForEach = from.Value.ForEach?.Value
             }),
             RemovedWith = _.Value.RemovedWith.ToDictionary(removal => removal.Key, removal => new Contracts.Projections.GraphEdgeRemovedWithDefinition
             {
                 SourceKey = removal.Value.SourceKey,
                 TargetKey = removal.Value.TargetKey,
-                Identity = removal.Value.Identity?.Value
+                Identity = removal.Value.Identity?.Value,
+                ForEach = removal.Value.ForEach?.Value
             })
         })
     };
@@ -60,15 +64,17 @@ internal static class GraphProjectionDefinitionConverters
             _.Value.From.ToDictionary(from => from.Key, from => new GraphNodeFromDefinition(
                 from.Value.Key,
                 new Dictionary<string, string>(from.Value.Properties),
-                from.Value.UpdateOnly)),
-            _.Value.RemovedWith.ToDictionary(removal => removal.Key, removal => new GraphNodeRemovedWithDefinition(removal.Value.Key, removal.Value.Detach)))),
+                from.Value.UpdateOnly,
+                Expression(from.Value.ForEach))),
+            _.Value.RemovedWith.ToDictionary(removal => removal.Key, removal => new GraphNodeRemovedWithDefinition(removal.Value.Key, removal.Value.Detach, Expression(removal.Value.ForEach))))),
         contract.Edges.ToDictionary(_ => _.Key, _ => new GraphEdgeProjectionDefinition(
             _.Value.From.ToDictionary(from => from.Key, from => new GraphEdgeFromDefinition(
                 from.Value.SourceKey,
                 from.Value.TargetKey,
                 Expression(from.Value.Identity),
-                new Dictionary<string, string>(from.Value.Properties))),
-            _.Value.RemovedWith.ToDictionary(removal => removal.Key, removal => new GraphEdgeRemovedWithDefinition(removal.Value.SourceKey, removal.Value.TargetKey, Expression(removal.Value.Identity))))));
+                new Dictionary<string, string>(from.Value.Properties),
+                Expression(from.Value.ForEach))),
+            _.Value.RemovedWith.ToDictionary(removal => removal.Key, removal => new GraphEdgeRemovedWithDefinition(removal.Value.SourceKey, removal.Value.TargetKey, Expression(removal.Value.Identity), Expression(removal.Value.ForEach))))));
 
     static PropertyExpression? Expression(string? expression) => expression is null ? null : new PropertyExpression(expression);
 }

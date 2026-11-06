@@ -738,6 +738,7 @@ enum Cratis.Chronicle.Concepts.Projections.Generations.Enablement.GenerationInit
   None = 0
 concept Cratis.Chronicle.Concepts.Projections.Generations.Enablement.StoreIncarnation : System.Guid
 json Cratis.Chronicle.Concepts.Projections.Graphs.GraphEdgeFromDefinition
+  forEach: Cratis.Chronicle.Concepts.Projections.PropertyExpression
   identity: Cratis.Chronicle.Concepts.Projections.PropertyExpression
   properties: System.Collections.Generic.IDictionary<string,string>
   sourceKey: Cratis.Chronicle.Concepts.Projections.PropertyExpression
@@ -746,10 +747,12 @@ json Cratis.Chronicle.Concepts.Projections.Graphs.GraphEdgeProjectionDefinition
   from: System.Collections.Generic.IDictionary<string,Cratis.Chronicle.Concepts.Projections.Graphs.GraphEdgeFromDefinition>
   removedWith: System.Collections.Generic.IDictionary<string,Cratis.Chronicle.Concepts.Projections.Graphs.GraphEdgeRemovedWithDefinition>
 json Cratis.Chronicle.Concepts.Projections.Graphs.GraphEdgeRemovedWithDefinition
+  forEach: Cratis.Chronicle.Concepts.Projections.PropertyExpression
   identity: Cratis.Chronicle.Concepts.Projections.PropertyExpression
   sourceKey: Cratis.Chronicle.Concepts.Projections.PropertyExpression
   targetKey: Cratis.Chronicle.Concepts.Projections.PropertyExpression
 json Cratis.Chronicle.Concepts.Projections.Graphs.GraphNodeFromDefinition
+  forEach: Cratis.Chronicle.Concepts.Projections.PropertyExpression
   key: Cratis.Chronicle.Concepts.Projections.PropertyExpression
   properties: System.Collections.Generic.IDictionary<string,string>
   updateOnly: bool
@@ -758,6 +761,7 @@ json Cratis.Chronicle.Concepts.Projections.Graphs.GraphNodeProjectionDefinition
   removedWith: System.Collections.Generic.IDictionary<string,Cratis.Chronicle.Concepts.Projections.Graphs.GraphNodeRemovedWithDefinition>
 json Cratis.Chronicle.Concepts.Projections.Graphs.GraphNodeRemovedWithDefinition
   detach: bool
+  forEach: Cratis.Chronicle.Concepts.Projections.PropertyExpression
   key: Cratis.Chronicle.Concepts.Projections.PropertyExpression
 json Cratis.Chronicle.Concepts.Projections.Graphs.GraphProjectionDefinition
   edges: System.Collections.Generic.IDictionary<string,Cratis.Chronicle.Concepts.Projections.Graphs.GraphEdgeProjectionDefinition>
