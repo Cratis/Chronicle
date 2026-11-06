@@ -16,13 +16,13 @@ public class when_deleting_a_folder : Specification
     async Task Establish()
     {
         _storage = new();
-        await _storage.SaveFolder(new("first", SequenceQueryScope.User, _alice, "default", "Diagnostics"));
-        await _storage.SaveFolder(new("second", SequenceQueryScope.User, _alice, "default", "Reporting"));
+        await _storage.InsertFolder(new("first", SequenceQueryScope.User, _alice, "default", "Diagnostics"));
+        await _storage.InsertFolder(new("second", SequenceQueryScope.User, _alice, "default", "Reporting"));
     }
 
     async Task Because()
     {
-        await _storage.DeleteFolder(new SequenceQueryFolderId("first"));
+        await _storage.DeleteFolder(new SequenceQueryFolderId("first"), _alice);
         _remaining = await _storage.GetAllFoldersFor(_alice);
     }
 

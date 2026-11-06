@@ -11,5 +11,5 @@ public class and_a_non_owner_changes_an_everyone_scoped_one() : given.a_saved_qu
 
     [Fact] void should_be_refused() => _result.IsSuccess.ShouldBeFalse();
     [Fact] void should_explain_the_refusal() => _result.ValidationResults.Single().Message.ShouldEqual("The saved query belongs to another owner.");
-    [Fact] void should_not_apply_the_change() => _queries.DidNotReceive().Delete(Arg.Any<SequenceQueryId>());
+    [Fact] void should_not_apply_the_change() => _queries.DidNotReceive().Delete(Arg.Any<SequenceQueryId>(), Arg.Any<SequenceQueryOwner>());
 }

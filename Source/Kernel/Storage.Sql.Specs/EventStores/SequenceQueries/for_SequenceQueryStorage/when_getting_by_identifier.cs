@@ -30,7 +30,7 @@ public class when_getting_by_identifier(SqlServerFixture fixture) : Specificatio
         database.EventStore("store").Returns(_ => Task.FromResult(new DbContextScope<EventStoreDbContext>(new(options), () => { })));
         using var storage = new SequenceQueryStorage("store", database);
 
-        await storage.Save(new Concepts.SequenceQueries.SequenceQueryDefinition(
+        await storage.Insert(new Concepts.SequenceQueries.SequenceQueryDefinition(
             "query-1",
             "Stored",
             SequenceQueryScope.Everyone,
@@ -41,7 +41,7 @@ public class when_getting_by_identifier(SqlServerFixture fixture) : Specificatio
             Concepts.SequenceQueries.SequenceQueryFilter.Empty,
             SequenceQuerySortBy.Occurred,
             Descending: false));
-        await storage.SaveFolder(new SequenceQueryFolderDefinition("folder-1", SequenceQueryScope.User, "Alice", "default", "stored"));
+        await storage.InsertFolder(new SequenceQueryFolderDefinition("folder-1", SequenceQueryScope.User, "Alice", "default", "stored"));
 
         _query = await storage.Get("query-1");
         _missingQuery = await storage.Get("query-2");

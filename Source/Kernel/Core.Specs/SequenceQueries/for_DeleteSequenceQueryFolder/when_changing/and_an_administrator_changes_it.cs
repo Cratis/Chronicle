@@ -10,5 +10,5 @@ public class and_an_administrator_changes_it() : given.a_saved_query_store<Delet
     async Task Because() => _result = await _scenario.Execute(new DeleteSequenceQueryFolder("store", "folder-1"));
 
     [Fact] void should_succeed() => _result.IsSuccess.ShouldBeTrue();
-    [Fact] void should_apply_the_change() => _queries.Received(1).DeleteFolder(Arg.Any<SequenceQueryFolderId>());
+    [Fact] void should_apply_the_change() => _queries.Received(1).DeleteFolder(Arg.Any<SequenceQueryFolderId>(), Arg.Any<SequenceQueryOwner>());
 }

@@ -39,12 +39,12 @@ public abstract class two_owner_spellings(SqlServerFixture fixture, string first
         database.EventStore("store").Returns(_ => Task.FromResult(new DbContextScope<EventStoreDbContext>(new(options), () => { })));
         using var storage = new SequenceQueryStorage("store", database);
 
-        await storage.Save(Query("query-own", SequenceQueryScope.User, _first));
-        await storage.Save(Query("query-other", SequenceQueryScope.User, _second));
-        await storage.Save(Query("query-shared", SequenceQueryScope.Everyone, "someone-else"));
-        await storage.SaveFolder(Folder("folder-own", SequenceQueryScope.User, _first, "own"));
-        await storage.SaveFolder(Folder("folder-other", SequenceQueryScope.User, _second, "other"));
-        await storage.SaveFolder(Folder("folder-shared", SequenceQueryScope.Everyone, "someone-else", "shared"));
+        await storage.Insert(Query("query-own", SequenceQueryScope.User, _first));
+        await storage.Insert(Query("query-other", SequenceQueryScope.User, _second));
+        await storage.Insert(Query("query-shared", SequenceQueryScope.Everyone, "someone-else"));
+        await storage.InsertFolder(Folder("folder-own", SequenceQueryScope.User, _first, "own"));
+        await storage.InsertFolder(Folder("folder-other", SequenceQueryScope.User, _second, "other"));
+        await storage.InsertFolder(Folder("folder-shared", SequenceQueryScope.Everyone, "someone-else", "shared"));
 
         _queriesForFirst = (await storage.GetAllFor(_first)).Select(_ => _.Id.Value).Order().ToArray();
         _foldersForFirst = (await storage.GetAllFoldersFor(_first)).Select(_ => _.Id.Value).Order().ToArray();

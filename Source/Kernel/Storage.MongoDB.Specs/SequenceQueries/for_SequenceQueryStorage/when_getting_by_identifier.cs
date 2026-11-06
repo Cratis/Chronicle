@@ -20,7 +20,7 @@ public class when_getting_by_identifier(MongoDBFixture fixture) : Indexing.given
     async Task Because()
     {
         var storage = new SequenceQueryStorage(new NamespaceBackedDatabase(_database));
-        await storage.Save(new Concepts.SequenceQueries.SequenceQueryDefinition(
+        await storage.Insert(new Concepts.SequenceQueries.SequenceQueryDefinition(
             "query-1",
             "Stored",
             SequenceQueryScope.Everyone,
@@ -31,7 +31,7 @@ public class when_getting_by_identifier(MongoDBFixture fixture) : Indexing.given
             Concepts.SequenceQueries.SequenceQueryFilter.Empty,
             SequenceQuerySortBy.Occurred,
             Descending: false));
-        await storage.SaveFolder(new SequenceQueryFolderDefinition("folder-1", SequenceQueryScope.User, "alice", "default", "stored"));
+        await storage.InsertFolder(new SequenceQueryFolderDefinition("folder-1", SequenceQueryScope.User, "alice", "default", "stored"));
 
         _query = await storage.Get("query-1");
         _otherCaseQuery = await storage.Get("QUERY-1");
