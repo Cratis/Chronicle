@@ -22,6 +22,7 @@ public class a_manager_with_pinned_generations : Specification
     async Task Establish()
     {
         var silo = new TestKitSilo();
+        silo.AddNamespaceCasing();
         silo.AddService(Substitute.For<ILocalSiloDetails>());
         var namespaces = Substitute.For<INamespaces>();
         namespaces.GetAll().Returns([EventStoreNamespaceName.Default]);

@@ -163,6 +163,9 @@ public sealed class EventStoreStorage(
     }
 
     /// <inheritdoc/>
+    public Task<bool> HasOwnNamespaceData(EventStoreNamespaceName @namespace) => Task.FromResult(_namespaces.ContainsKey(@namespace));
+
+    /// <inheritdoc/>
     public IEventStoreNamespaceStorage GetNamespace(EventStoreNamespaceName @namespace)
     {
         if (_namespaces.TryGetValue(@namespace, out var existing))

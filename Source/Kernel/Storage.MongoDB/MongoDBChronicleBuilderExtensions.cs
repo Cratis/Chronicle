@@ -18,6 +18,7 @@ using Cratis.Chronicle.Storage.SingleWriter;
 using Cratis.Compliance.MongoDB;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 using Orleans.Providers.MongoDB.Configuration;
@@ -128,14 +129,23 @@ public static class MongoDBChronicleBuilderExtensions
             // the kernel has always kept its job state, resolved per event store and namespace. Registered
             // as IJobsStorage - that is the type the package's JobsManager grain and the kernel's storage
             // trees inject; a registration keyed only on the concrete type leaves IJobsStorage unresolved.
-            services.AddSingleton<Choreography.Storage.IJobsStorage>(sp => new MongoDBJobsStorage(
-                sp.GetRequiredService<IMongoDBClientManager>().GetClientFor(settings),
-                sp.GetRequiredService<IJobTypes>(),
-                sp.GetRequiredService<ICustomSerializers>(),
-                Options.Create(new MongoDBJobsStorageOptions
-                {
-                    DatabaseNameResolver = (scope, @namespace) => Storage.MongoDB.DatabaseNames.ForEventStoreNamespace(scope, @namespace, databaseNamePrefix, systemDatabaseName)
-                })));
+            // The names are matched to the casing a database already has on the server, as every other database is.
+            services.AddSingleton<Choreography.Storage.IJobsStorage>(sp =>
+            {
+                var jobsClient = sp.GetRequiredService<IMongoDBClientManager>().GetClientFor(settings);
+                var logger = sp.GetService<ILoggerFactory>()?.CreateLogger<MongoDBJobsStorage>();
+                return new MongoDBJobsStorage(
+                    jobsClient,
+                    sp.GetRequiredService<IJobTypes>(),
+                    sp.GetRequiredService<ICustomSerializers>(),
+                    Options.Create(new MongoDBJobsStorageOptions
+                    {
+                        DatabaseNameResolver = (scope, @namespace) => DatabaseNameCasing.Resolve(
+                            jobsClient,
+                            Storage.MongoDB.DatabaseNames.ForEventStoreNamespace(scope, @namespace, databaseNamePrefix, systemDatabaseName),
+                            logger)
+                    }));
+            });
             services.AddSingleton<ICustomSerializers, CustomSerializers>();
 
             // Auto-registration only considers the assemblies named here, and the package names its own. The

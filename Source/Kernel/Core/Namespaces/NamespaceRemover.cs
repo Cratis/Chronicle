@@ -29,7 +29,9 @@ public class NamespaceRemover(
     /// <inheritdoc/>
     public async Task Remove(EventStoreName eventStore, EventStoreNamespaceName @namespace)
     {
-        if (@namespace == EventStoreNamespaceName.Default)
+        // Storage may match names to an existing database regardless of case, so a case variant of the default
+        // namespace stands for it as well.
+        if (string.Equals(@namespace.Value, EventStoreNamespaceName.Default.Value, StringComparison.OrdinalIgnoreCase))
         {
             throw new NamespaceCannotBeRemoved(eventStore, @namespace);
         }

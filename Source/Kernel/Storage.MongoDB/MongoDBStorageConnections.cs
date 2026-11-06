@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using Cratis.Arc.Connections;
 using Cratis.Arc.MongoDB;
 using Cratis.Chronicle.Configuration;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 
@@ -23,10 +24,12 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// <param name="mongoDBOptions">The <see cref="IOptions{TOptions}"/> for <see cref="MongoDBOptions"/>.</param>
 /// <param name="resolution">The <see cref="IStorageConnectionResolution"/>.</param>
 /// <param name="clientManager">The <see cref="IMongoDBClientManager"/>.</param>
+/// <param name="logger">Optional <see cref="ILogger"/> for when a server's databases cannot be listed.</param>
 public class MongoDBStorageConnections(
     IOptions<MongoDBOptions> mongoDBOptions,
     IStorageConnectionResolution resolution,
-    IMongoDBClientManager clientManager) : IMongoDBStorageConnections
+    IMongoDBClientManager clientManager,
+    ILogger<MongoDBStorageConnections>? logger = null) : IMongoDBStorageConnections
 {
     readonly ConcurrentDictionary<string, MongoDBConnectionResolutionHooks> _hooks = new();
     readonly ConnectionPurpose _purpose = ConnectionPurpose.Runtime;
@@ -50,7 +53,7 @@ public class MongoDBStorageConnections(
         var configured = new MongoUrl(mongoDBOptions.Value.Server);
         if (!resolution.IsConfigured)
         {
-            return clientManager.GetClientFor(WithDirectConnection(MongoClientSettings.FromUrl(configured))).GetDatabase(derivedName);
+            return Open(clientManager.GetClientFor(WithDirectConnection(MongoClientSettings.FromUrl(configured))), kind, derivedName);
         }
 
         var resolver = resolution.Resolver;
@@ -63,8 +66,16 @@ public class MongoDBStorageConnections(
         var settings = WithDirectConnection(resolved.ToMongoClientSettings(configured, hooks));
         settings.ClusterConfigurator = hooks.ConfigureCluster;
 
-        return clientManager.GetClientFor(settings).GetDatabase(resolved.Database ?? derivedName);
+        return Open(clientManager.GetClientFor(settings), kind, resolved.Database ?? derivedName);
     }
+
+    IMongoDatabase Open(IMongoClient client, StorageConnectionKind kind, string name) =>
+        kind == StorageConnectionKind.Cluster
+
+            // The cluster database is named by configuration alone and opened while services are constructed, where
+            // nothing may wait on the server. Event store and namespace databases take the casing they already have.
+            ? client.GetDatabase(name)
+            : client.GetDatabaseByExistingCasing(name, logger);
 
     MongoClientSettings WithDirectConnection(MongoClientSettings settings)
     {
