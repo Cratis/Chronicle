@@ -66,6 +66,9 @@ public class Authentication
     /// </summary>
     public bool EnforceStoreEntitlements { get; init; } = DefaultEnforceStoreEntitlements;
 
+    /// <summary>Gets explicit grants for issuer-qualified external principals.</summary>
+    public IEnumerable<ExternalEventStoreAccess> EventStoreAccess { get; init; } = [];
+
     /// <summary>
     /// Gets the authentication authority URL. If not configured, uses the internal OAuth authority.
     /// </summary>

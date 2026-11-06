@@ -12,7 +12,11 @@ public class when_the_capability_is_not_granted_for_an_ordinary_store : given.a_
 
     void Establish() => Decide(AuthorizationReason.NotGranted, false);
 
-    async Task Because() => _permitted = await StoreCapabilityGuard.Permits(_context, new("shop", Capability: WellKnownCapabilities.ReadAlerts.Value));
+    async Task Because()
+    {
+        _permitted = await StoreCapabilityGuard.Permits(_context, new("shop", Capability: WellKnownCapabilities.ReadAlerts.Value));
+        await _loggers.Logged.Task.WaitAsync(TimeSpan.FromSeconds(10));
+    }
 
     [Fact] void should_keep_the_query_open_for_the_ordinary_store() => _permitted.ShouldBeTrue();
     [Fact] void should_decide_at_the_store_when_no_namespace_is_addressed() => _asked.Single().Scope.ShouldEqual(AuthorizationScope.ForEventStore("shop"));

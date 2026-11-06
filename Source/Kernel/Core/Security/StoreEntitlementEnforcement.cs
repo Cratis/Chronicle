@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
 using System.Security.Claims;
 using System.Security.Cryptography;
@@ -28,38 +29,50 @@ public static class StoreEntitlementEnforcement
     /// <param name="principal">The caller.</param>
     /// <param name="authentication">The authentication configuration.</param>
     /// <param name="loggers">The silo's logger factory.</param>
-    public static void Audit(AuthorizationDecision decision, ClaimsPrincipal? principal, Authentication authentication, ILoggerFactory loggers)
+    /// <param name="grains">The observation grain factory, when available.</param>
+    public static void Audit(AuthorizationDecision decision, ClaimsPrincipal? principal, Authentication authentication, ILoggerFactory loggers, IGrainFactory? grains = null)
     {
         if (!NeedsAudit(decision, authentication)) return;
         var holder = PrincipalKey.From(principal, authentication);
         var store = decision.Scope.EventStore?.Value ?? string.Empty;
-        var key = (holder, store.ToUpperInvariant(), decision.Capability.Value);
+        var key = (holder, store.ToUpperInvariant(), decision.Scope.Namespace?.Value, decision.Capability.Value);
         var logger = loggers.CreateLogger(typeof(StoreCapabilityDecision).FullName!);
         if (!TakeSlot(_trackers.GetValue(loggers, static _ => new()), key, logger)) return;
-        var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(holder.Subject)))[..8];
-        logger.StoreEntitlementAudited(decision.Capability.Value, decision.Reason.ToString(), store, CallerKind(principal, authentication, holder), holder.Issuer, hash);
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(holder.Subject)))[..8];
+                logger.StoreEntitlementAudited(decision.Capability.Value, decision.Reason.ToString(), store, CallerKind(principal, authentication, holder), holder.Issuer, hash);
+                if (grains is not null && !holder.IsUnidentified && decision.Scope.EventStore is not null)
+                {
+                    await grains.GetGrain<IStoreEntitlementObservations>(IStoreEntitlementObservations.Key).Record(holder, decision.Scope.EventStore, decision.Scope.Namespace, WellKnownCapabilities.AccessOf(decision.Capability));
+                }
+            }
+            catch (Exception exception)
+            {
+                // Best-effort evidence must never affect a request or become authority.
+                logger.StoreEntitlementObservationFailed(exception);
+            }
+        });
     }
 
     static bool NeedsAudit(AuthorizationDecision decision, Authentication authentication) => !authentication.EnforceStoreEntitlements
         && !decision.IsAllowed && decision.Reason is AuthorizationReason.NotGranted or AuthorizationReason.NoPrincipal;
 
-    static bool TakeSlot(AuditTracker tracker, (PrincipalKey Holder, string Store, string Capability) key, ILogger logger)
+    static bool TakeSlot(AuditTracker tracker, (PrincipalKey Holder, string Store, string? Namespace, string Capability) key, ILogger logger)
     {
         var now = DateTimeOffset.UtcNow;
-        lock (tracker.LastSeen)
+        while (true)
         {
-            if (tracker.LastSeen.TryGetValue(key, out var seen))
+            var snapshot = Volatile.Read(ref tracker.LastSeen);
+            if (snapshot.TryGetValue(key, out var seen) && now - seen < _interval) return false;
+            if (!snapshot.ContainsKey(key) && snapshot.Count >= 10_000)
             {
-                if (now - seen < _interval) return false;
-            }
-            else if (tracker.LastSeen.Count >= 10_000)
-            {
-                if (!tracker.FullReported) logger.StoreEntitlementAuditFull();
-                tracker.FullReported = true;
+                if (Interlocked.Exchange(ref tracker.FullReported, 1) == 0) _ = Task.Run(logger.StoreEntitlementAuditFull);
                 return false;
             }
-            tracker.LastSeen[key] = now;
-            return true;
+            if (ReferenceEquals(Interlocked.CompareExchange(ref tracker.LastSeen, snapshot.SetItem(key, now), snapshot), snapshot)) return true;
         }
     }
 
@@ -71,7 +84,7 @@ public static class StoreEntitlementEnforcement
 
     sealed class AuditTracker
     {
-        public Dictionary<(PrincipalKey Holder, string Store, string Capability), DateTimeOffset> LastSeen { get; } = [];
-        public bool FullReported { get; set; }
+        public ImmutableDictionary<(PrincipalKey Holder, string Store, string? Namespace, string Capability), DateTimeOffset> LastSeen = [];
+        public int FullReported;
     }
 }

@@ -50,17 +50,19 @@ public class a_store_capability_caller : Specification
 
         public List<LogLevel> Levels { get; } = [];
 
+        public TaskCompletionSource Logged { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
         public void AddProvider(ILoggerProvider provider)
         {
         }
 
-        public ILogger CreateLogger(string categoryName) => new Recorder(Messages, Levels);
+        public ILogger CreateLogger(string categoryName) => new Recorder(Messages, Levels, Logged);
 
         public void Dispose()
         {
         }
 
-        sealed class Recorder(List<string> messages, List<LogLevel> levels) : ILogger
+        sealed class Recorder(List<string> messages, List<LogLevel> levels, TaskCompletionSource logged) : ILogger
         {
             public IDisposable? BeginScope<TState>(TState state)
                 where TState : notnull => null;
@@ -71,6 +73,7 @@ public class a_store_capability_caller : Specification
             {
                 messages.Add(formatter(state, exception));
                 levels.Add(logLevel);
+                logged.TrySetResult();
             }
         }
     }

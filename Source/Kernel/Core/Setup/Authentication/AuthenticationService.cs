@@ -11,6 +11,12 @@ using Cratis.DependencyInjection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using ConfiguredGrant = Cratis.Chronicle.Security.ConfiguredGrant;
+using IStoreEntitlements = Cratis.Chronicle.Security.IStoreEntitlements;
+using PrincipalKey = Cratis.Chronicle.Security.PrincipalKey;
+#if DEVELOPMENT
+using StoreAccess = Cratis.Chronicle.Security.StoreAccess;
+#endif
 
 namespace Cratis.Chronicle.Setup.Authentication;
 
@@ -139,14 +145,10 @@ internal sealed class AuthenticationService(
         }
 
         var clients = _options.Clients;
-        if (!clients.Any())
-        {
-            return;
-        }
-
         logger.BootstrappingClients(clients.Count());
 
-        var existingApplications = await applicationStorage.GetAll();
+        var existingApplications = (await applicationStorage.GetAll()).ToArray();
+        var resolved = existingApplications.ToDictionary(application => application.ClientId.ToString(), application => application.Id.ToString());
 
         foreach (var client in clients)
         {
@@ -172,9 +174,11 @@ internal sealed class AuthenticationService(
 
             var eventSequence = grainFactory.GetEventLog();
             await eventSequence.Append(applicationId, @event);
+            resolved[client.ClientId] = applicationId;
 
             logger.BootstrapClientRegistered(client.ClientId);
         }
+        await ReconcileConfiguredGrants(resolved);
     }
 
 #if DEVELOPMENT
@@ -206,9 +210,10 @@ internal sealed class AuthenticationService(
         // Write directly to storage for immediate availability. The event-driven path
         // (ApplicationsReactor) is asynchronous, which causes token endpoint failures
         // during integration test resets before the reactor has processed the event.
+        var applicationId = Guid.NewGuid();
         await applicationStorage.Create(new Application
         {
-            Id = Guid.NewGuid(),
+            Id = applicationId,
             ClientId = (ClientId)defaultClientId,
             ClientSecret = (ClientSecret)hashedSecret,
             Type = (ApplicationType)"confidential",
@@ -223,8 +228,34 @@ internal sealed class AuthenticationService(
         });
 
         logger.DefaultClientCredentialsCreated(defaultClientId);
+        var resolved = existingApplications.ToDictionary(application => application.ClientId.ToString(), application => application.Id.ToString());
+        resolved[defaultClientId] = applicationId.ToString();
+        await ReconcileConfiguredGrants(resolved);
     }
 #endif
+
+    static ConfiguredGrant ToGrant(PrincipalKey holder, Configuration.ConfiguredEventStoreAccess entry) =>
+        new(holder, entry.EventStore is null ? null : new Concepts.EventStoreName(entry.EventStore), entry.Namespace is null ? null : new Concepts.EventStoreNamespaceName(entry.Namespace), entry.Access);
+
+    async Task ReconcileConfiguredGrants(Dictionary<string, string> applications)
+    {
+        var grants = _options.Authentication.EventStoreAccess
+            .Select(entry => ToGrant(new(entry.Issuer, entry.Subject, entry.IsClient), entry))
+            .ToList();
+        foreach (var client in _options.Clients)
+        {
+            if (!applications.TryGetValue(client.ClientId, out var subject)) continue;
+            grants.AddRange(client.EventStores.Select(entry => ToGrant(new(PrincipalKey.LocalIssuer, subject), entry)));
+        }
+#if DEVELOPMENT
+        // The development client has a normal, visible configuration grant, not an authorization bypass.
+        if (applications.TryGetValue("chronicle-dev-client", out var developmentSubject))
+        {
+            grants.Add(new(new(PrincipalKey.LocalIssuer, developmentSubject), null, null, StoreAccess.Read | StoreAccess.Append | StoreAccess.Manage));
+        }
+#endif
+        await grainFactory.GetGrain<IStoreEntitlements>(IStoreEntitlements.Key).Reconcile(grants);
+    }
 
     Task GrantBootstrapPrivilege(AppendResult initialResult, UserId userId) => initialResult.IsSuccess
         ? grainFactory.GetGrain<Security.IAdministratorRoster>(AdministratorRoster.Key)

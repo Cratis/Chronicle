@@ -7,6 +7,9 @@ namespace Cratis.Chronicle.Security;
 
 internal static partial class StoreEntitlementsLogMessages
 {
+    [LoggerMessage(LogLevel.Debug, "Event store entitlement observation could not be retained")]
+    internal static partial void StoreEntitlementObservationFailed(this ILogger logger, Exception exception);
+
     [LoggerMessage(LogLevel.Warning, "Event store entitlement snapshot refresh failed; retaining the last snapshot")]
     internal static partial void StoreEntitlementsRefreshFailed(this ILogger logger);
 

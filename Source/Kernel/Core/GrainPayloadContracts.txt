@@ -1232,6 +1232,14 @@ enum Cratis.Chronicle.Security.StoreAccess : int
   Manage = 4
   None = 0
   Read = 1
+orleans Cratis.Chronicle.Security.StoreEntitlementObservation
+  [Id(0)] Holder: Cratis.Chronicle.Security.PrincipalKey
+  [Id(1)] EventStore: Cratis.Chronicle.Concepts.EventStoreName
+  [Id(2)] Namespace: Cratis.Chronicle.Concepts.EventStoreNamespaceName
+  [Id(3)] Access: Cratis.Chronicle.Security.StoreAccess
+  [Id(4)] FirstSeen: System.DateTimeOffset
+  [Id(5)] LastSeen: System.DateTimeOffset
+  [Id(6)] Count: long
 orleans Cratis.Chronicle.Security.StoreEntitlementsState
   [Id(0)] Version: long
   [Id(1)] Grants: System.Collections.Generic.IReadOnlyList<Cratis.Chronicle.Security.EventStoreAccessGrant>

@@ -70,7 +70,7 @@ public static class StoreCapabilityDecision
         var authentication = services.GetService<IOptions<ChronicleOptions>>()?.Value.Authentication ?? new Authentication();
         var permitted = StoreEntitlementEnforcement.Permits(decision, authentication.EnforceStoreEntitlements);
         if (!decision.IsAllowed && !permitted) logger.Decided(capability, decision.Reason.ToString(), permitted);
-        StoreEntitlementEnforcement.Audit(decision, user, authentication, services.GetRequiredService<ILoggerFactory>());
+        StoreEntitlementEnforcement.Audit(decision, user, authentication, services.GetRequiredService<ILoggerFactory>(), services.GetService<IGrainFactory>());
         return permitted;
     }
 }
