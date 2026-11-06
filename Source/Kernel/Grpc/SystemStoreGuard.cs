@@ -128,10 +128,8 @@ internal static class SystemStoreGuard
         if (routing.Store is null && !routing.HasSeparator) return source();
         if (routing.HasSeparator || routing.TargetsSystem) return EnsureObservableForSystem(callContext, routing, access, source);
 
-        var store = routing.Store!;
-        var @namespace = routing.Namespace;
-        return Observable.FromAsync(() => Ensure(callContext, routing, access))
-            .SelectMany(_ => StoreCapabilityGuard.EndWhenRevoked(source(), callContext, store, @namespace, access));
+        if (callContext.ServerCallContext is null && InProcessServices is null) return source();
+        return EnsureOrdinaryObservable(callContext, routing, access, source);
     }
 
     /// <summary>
@@ -193,6 +191,10 @@ internal static class SystemStoreGuard
             completion.TrySetException(exception);
         }
     }
+
+    static IObservable<T> EnsureOrdinaryObservable<T>(CallContext callContext, QueryRouting routing, StoreAccess access, Func<IObservable<T>> source) =>
+        Observable.FromAsync(() => Ensure(callContext, routing, access))
+            .SelectMany(_ => StoreCapabilityGuard.EndWhenRevoked(source(), callContext, routing.Store!, routing.Namespace, access));
 
     static IObservable<T> EnsureObservableForSystem<T>(CallContext callContext, QueryRouting routing, StoreAccess access, Func<IObservable<T>> source) =>
         Observable.FromAsync(() => Ensure(callContext, routing, access)).SelectMany(_ => source());

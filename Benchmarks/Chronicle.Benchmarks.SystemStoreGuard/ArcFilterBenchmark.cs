@@ -25,7 +25,7 @@ namespace Cratis.Chronicle.Benchmarks.SystemStoreGuard;
 [InProcess]
 [WarmupCount(3)]
 [IterationCount(10)]
-public class ArcFilterBenchmark
+public class ArcFilterBenchmark : IDisposable
 {
     static readonly Task<QueryResult> _noQueryVerdict = Task.FromResult<QueryResult>(null!);
     static readonly Task<CommandResult> _noCommandVerdict = Task.FromResult<CommandResult>(null!);
@@ -66,9 +66,9 @@ public class ArcFilterBenchmark
 
         var arguments = new QueryArguments { ["eventStore"] = "bench", ["namespace"] = "Default" };
         _query = new QueryContext(
-            "Cratis.Chronicle.Observation.ObserverInformation.AllObservers", Cratis.Execution.CorrelationId.New(), Paging.NotPaged, Sorting.None, arguments, ServiceProvider: services);
+            "Cratis.Chronicle.Observation.ObserverInformation.AllObservers", Execution.CorrelationId.New(), Paging.NotPaged, Sorting.None, arguments, ServiceProvider: services);
         var retry = new RetryPartition("bench", "Default", "observer", "event-log", "partition");
-        _command = new CommandContext(Cratis.Execution.CorrelationId.New(), retry.GetType(), retry, [], new CommandContextValues(), ServiceProvider: services);
+        _command = new CommandContext(Execution.CorrelationId.New(), retry.GetType(), retry, [], new CommandContextValues(), ServiceProvider: services);
         _entitled = new(true, true);
         _unentitledAudited = new(false, false);
         _unentitledEnforced = new(false, true);
@@ -112,9 +112,6 @@ public class ArcFilterBenchmark
     [Benchmark]
     public Task<CommandResult> Command() => Guarded ? _commandFilter.OnExecution(_command) : _noCommandVerdict;
 
-    static CommandContext CommandFor(EntitledCaller caller, RetryPartition command) =>
-        new(Cratis.Execution.CorrelationId.New(), command.GetType(), command, [], new CommandContextValues(), ServiceProvider: caller.Services);
-
     /// <summary>
     /// Fails the run when a non-System call asked for the roster.
     /// </summary>
@@ -122,9 +119,27 @@ public class ArcFilterBenchmark
     [GlobalCleanup]
     public void Verify()
     {
-        _entitled.Dispose();
-        _unentitledAudited.Dispose();
-        _unentitledEnforced.Dispose();
+        Dispose();
         if (_probe.Calls != 0) throw new InvalidOperationException($"Non-System calls made {_probe.Calls} roster calls.");
     }
+
+    /// <inheritdoc/>
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    /// <summary>Releases the published caller snapshots.</summary>
+    /// <param name="disposing">Whether managed resources should be released.</param>
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!disposing) return;
+        _entitled?.Dispose();
+        _unentitledAudited?.Dispose();
+        _unentitledEnforced?.Dispose();
+    }
+
+    static CommandContext CommandFor(EntitledCaller caller, RetryPartition command) =>
+        new(Execution.CorrelationId.New(), command.GetType(), command, [], new CommandContextValues(), ServiceProvider: caller.Services);
 }
