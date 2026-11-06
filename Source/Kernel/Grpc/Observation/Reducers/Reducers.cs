@@ -415,10 +415,35 @@ internal sealed class Reducers(
 
     IEnumerable<(string Partition, ReducerSubscriberResult Result)> ToSubscriberResults(ReducerResult result, ReadModelDefinition model) =>
         result.Partitions.Count > 0
-            ? result.Partitions.Select(_ => (_.Partition, new ReducerSubscriberResult(_.ToObserverSubscriberResult(TimeProvider.System), ToReadModelState(_.ReadModelState, model))))
-            : [(result.Partition, new ReducerSubscriberResult(
+            ? result.Partitions.Select(_ => (_.Partition, ToSubscriberResult(result.DeliveryId, _.Partition, () => new ReducerSubscriberResult(_.ToObserverSubscriberResult(TimeProvider.System), ToReadModelState(_.ReadModelState, model)))))
+            : [(result.Partition, ToSubscriberResult(result.DeliveryId, result.Partition, () => new ReducerSubscriberResult(
                 ObservationResultConverters.ToObserverSubscriberResult(result.State, result.LastSuccessfulObservation, result.ExceptionMessages, result.ExceptionStackTrace, result.RetryAfterMilliseconds, TimeProvider.System),
-                ToReadModelState(result.ReadModelState, model)))];
+                ToReadModelState(result.ReadModelState, model))))];
+
+    /// <summary>
+    /// Converts a result of the client, failing the delivery when the state it returned cannot be read.
+    /// </summary>
+    /// <remarks>
+    /// Reading the state can fail - on a state too large to materialize it fails with an out of memory. That must
+    /// fail the delivery: an exception here would leave the observer waiting for an answer that has already
+    /// arrived, until the subscriber timeout, which is minutes.
+    /// </remarks>
+    /// <param name="deliveryId">The identifier of the delivery.</param>
+    /// <param name="partition">The partition the result is for.</param>
+    /// <param name="convert">Converts the result.</param>
+    /// <returns>The <see cref="ReducerSubscriberResult"/>.</returns>
+    ReducerSubscriberResult ToSubscriberResult(ulong deliveryId, string partition, Func<ReducerSubscriberResult> convert)
+    {
+        try
+        {
+            return convert();
+        }
+        catch (Exception exception)
+        {
+            logger.UnreadableDeliveryResult(deliveryId, partition, exception);
+            return new ReducerSubscriberResult(ObserverSubscriberResult.Failed(Concepts.Events.EventSequenceNumber.Unavailable, exception.Message), null);
+        }
+    }
 
     ExpandoObject? ToReadModelState(string? readModelState, ReadModelDefinition model) =>
         readModelState is null ? null : expandoObjectConverter.ToExpandoObject(JsonNode.Parse(readModelState)!.AsObject(), model.GetSchemaForLatestGeneration());

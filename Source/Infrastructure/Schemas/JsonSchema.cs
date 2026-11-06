@@ -593,9 +593,9 @@ public partial class JsonSchema
         var typeNode = node["type"];
         if (typeNode is null) return JsonObjectType.None;
 
-        if (typeNode is JsonValue strValue && strValue.TryGetValue<string>(out var typeStr))
+        if (typeNode is JsonValue strValue)
         {
-            return ParseTypeSingle(typeStr);
+            return ParseTypeFromValue(strValue);
         }
 
         if (typeNode is JsonArray arr)
@@ -603,15 +603,42 @@ public partial class JsonSchema
             var result = JsonObjectType.None;
             foreach (var item in arr)
             {
-                if (item is JsonValue val && val.TryGetValue<string>(out var s))
+                if (item is JsonValue val)
                 {
-                    result |= ParseTypeSingle(s);
+                    result |= ParseTypeFromValue(val);
                 }
             }
             return result;
         }
 
         return JsonObjectType.None;
+    }
+
+    /// <summary>
+    /// Parses a type name without allocating: the type is read for every value converted against a schema, and a
+    /// value backed by a JsonElement (anything parsed from JSON text) hands out a new string on every GetValue.
+    /// </summary>
+    /// <param name="value">The <see cref="JsonValue"/> holding the type name.</param>
+    /// <returns>The <see cref="JsonObjectType"/>.</returns>
+    static JsonObjectType ParseTypeFromValue(JsonValue value)
+    {
+        if (value.TryGetValue<JsonElement>(out var element))
+        {
+            return element.ValueKind == JsonValueKind.String ? ParseTypeSingle(element) : JsonObjectType.None;
+        }
+
+        return value.TryGetValue<string>(out var type) ? ParseTypeSingle(type) : JsonObjectType.None;
+    }
+
+    static JsonObjectType ParseTypeSingle(JsonElement type)
+    {
+        if (type.ValueEquals("string")) return JsonObjectType.String;
+        if (type.ValueEquals("object")) return JsonObjectType.Object;
+        if (type.ValueEquals("array")) return JsonObjectType.Array;
+        if (type.ValueEquals("integer")) return JsonObjectType.Integer;
+        if (type.ValueEquals("number")) return JsonObjectType.Number;
+        if (type.ValueEquals("boolean")) return JsonObjectType.Boolean;
+        return type.ValueEquals("null") ? JsonObjectType.Null : JsonObjectType.None;
     }
 
     static JsonObjectType ParseTypeSingle(string type) => type switch

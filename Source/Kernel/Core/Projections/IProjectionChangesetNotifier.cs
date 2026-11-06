@@ -50,6 +50,12 @@ public interface IProjectionChangesetNotifier : IGrainWithStringKey
     Task Notify(EventStoreNamespaceName namespaceName, ReadModelKey readModelKey, JsonObject readModel, ReadModelChangeContext change);
 
     /// <summary>
+    /// Gets whether anything is watching the read model, so a producer can skip building a notification nobody receives.
+    /// </summary>
+    /// <returns>True when at least one subscriber is registered.</returns>
+    Task<bool> HasSubscribers();
+
+    /// <summary>
     /// Notify all subscribed watch subscribers of changesets in order.
     /// </summary>
     /// <param name="namespaceName">The <see cref="EventStoreNamespaceName"/> the changesets belong to.</param>

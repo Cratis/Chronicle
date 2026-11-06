@@ -35,6 +35,8 @@ public class a_blocked_observer_and_a_free_observer : all_dependencies
 
     protected virtual int QueueBoundedCapacity => new Configuration.Events().QueueBoundedCapacity;
 
+    protected virtual int QueueBoundedEvents => new Configuration.Events().QueueBoundedEvents;
+
     protected int FreeObserverEventCount => _freeObserverHandled.Sum(handled => handled.Events.Count());
 
     async Task Establish()
@@ -74,7 +76,7 @@ public class a_blocked_observer_and_a_free_observer : all_dependencies
             Substitute.For<IMeter<AppendedEventsQueue>>(),
             Options.Create(new ChronicleOptions
             {
-                Events = new Configuration.Events { QueueBoundedCapacity = QueueBoundedCapacity }
+                Events = new Configuration.Events { QueueBoundedCapacity = QueueBoundedCapacity, QueueBoundedEvents = QueueBoundedEvents }
             }),
             Substitute.For<ILogger<AppendedEventsQueue>>());
 
