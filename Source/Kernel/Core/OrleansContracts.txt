@@ -610,6 +610,20 @@ interface [GrainInterfaceType("Cratis.Chronicle.Security.IDataProtectionKeys")] 
   3D4FDEB9: GetAllKeys() -> Task<System.Collections.Generic.IEnumerable<string>>
   B58CBF6C: StoreKey(string, string) -> Task
 
+interface [GrainInterfaceType("Cratis.Chronicle.Security.IStoreEntitlements")] Cratis.Chronicle.Security.IStoreEntitlements [Version(1)]
+  838B3BBE: GetSnapshot() -> Task<Cratis.Chronicle.Security.StoreEntitlementsState>
+  220D1D94: GetVersion() -> Task<long>
+  DD25DC07: Grant(Cratis.Chronicle.Security.EventStoreAccessGrant) -> Task
+  6CBC26A7: Reconcile(System.Collections.Generic.IEnumerable<Cratis.Chronicle.Security.ConfiguredGrant>) -> Task
+  87FC16D8: Revoke(Cratis.Chronicle.Security.EventStoreAccessGrant) -> Task<bool>
+
+interface [GrainInterfaceType("Cratis.Chronicle.Security.IStoreEntitlementsCacheGrainService")] Cratis.Chronicle.Security.IStoreEntitlementsCacheGrainService [Version(1)]
+  555B46A3: Refresh(Cratis.Chronicle.Security.StoreEntitlementsState) -> Task
+
+class [GrainType("storeentitlements")] Cratis.Chronicle.Security.StoreEntitlements
+
+class [GrainType("storeentitlementscachegrainservice")] Cratis.Chronicle.Security.StoreEntitlementsCacheGrainService
+
 class [GrainType("eventseeding")] Cratis.Chronicle.Seeding.EventSeeding
 
 interface [GrainInterfaceType("Cratis.Chronicle.Seeding.IEventSeeding")] Cratis.Chronicle.Seeding.IEventSeeding [Version(0)]

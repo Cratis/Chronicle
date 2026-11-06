@@ -63,7 +63,7 @@ public class a_compliance_boundary : Chronicle.Compliance.GDPR.for_PIIManager.gi
     {
         var authentication = useDefaults
             ? new Authentication()
-            : new Authentication { Enabled = authenticationEnabled, EnforceComplianceCapabilities = enforce, EnforceDestructiveOperations = enforceDestructive };
+            : new Authentication { Enabled = authenticationEnabled, EnforceStoreEntitlements = enforce, EnforceDestructiveOperations = enforceDestructive };
         var options = Options.Create(new ChronicleOptions { Authentication = authentication });
         var authorization = new ComplianceAuthorization(options, _storage, _services.GetRequiredService<IServiceScopeFactory>(), _audit);
         _service = new ComplianceService(_grainFactory, _schema, NullLogger<ComplianceService>.Instance, authorization);

@@ -8,6 +8,9 @@ namespace Cratis.Chronicle.Configuration;
 /// </summary>
 public class Authentication
 {
+    /// <summary>The default for enforcement of explicit event store entitlements.</summary>
+    public const bool DefaultEnforceStoreEntitlements = false;
+
     /// <summary>
     /// The default for <see cref="EnforceAdministratorPolicyForOperations"/>.
     /// </summary>
@@ -48,7 +51,7 @@ public class Authentication
     /// Gets whether to refuse non-administrators the destructive operations: compliance key deletion and key re-allowance
     /// that would reach event stores other than the requested one, and the destructive System-store operational
     /// recovery operations. It is independent of <see cref="EnforceAdministratorPolicyForOperations"/> and
-    /// <see cref="EnforceComplianceCapabilities"/>; either of those being on still enforces its broader scope.
+    /// <see cref="EnforceStoreEntitlements"/>; either of those being on still enforces its broader scope.
     /// The scope is deliberately narrow: destructive operations on the System store or at kernel scope, and compliance key
     /// fan-out beyond the requested event store. Operations on an ordinary event store, such as an application replaying its
     /// own observers, stay with the per-store rules and are not affected by this flag. Rotating an application secret is
@@ -59,9 +62,9 @@ public class Authentication
     public bool EnforceDestructiveOperations { get; init; } = DefaultEnforceDestructiveOperations;
 
     /// <summary>
-    /// Gets whether to enforce per-store compliance capabilities. Defaults to audit-only.
+    /// Gets whether to enforce explicit event store entitlements. Defaults to false for audit mode.
     /// </summary>
-    public bool EnforceComplianceCapabilities { get; init; }
+    public bool EnforceStoreEntitlements { get; init; } = DefaultEnforceStoreEntitlements;
 
     /// <summary>
     /// Gets the authentication authority URL. If not configured, uses the internal OAuth authority.

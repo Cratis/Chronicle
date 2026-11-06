@@ -130,6 +130,7 @@ public static class ChronicleServerSiloBuilderExtensions
             .AddReplayStateManagement()
             .AddEventTypesCacheInvalidation()
             .AddEncryptionKeyCacheInvalidation()
+            .AddStoreEntitlementsCache()
             .AddProjectionsService()
             .AddReminders()
             .AddMemoryGrainStorage("PubSubStore") // TODO: Store Grain state in Database

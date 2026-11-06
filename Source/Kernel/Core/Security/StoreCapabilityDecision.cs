@@ -3,9 +3,11 @@
 
 using System.Reflection;
 using System.Security.Claims;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Grpc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.Security;
 
@@ -65,16 +67,10 @@ public static class StoreCapabilityDecision
             return false;
         }
 
-        var permitted = Interim(decision);
-        if (!decision.IsAllowed) logger.Decided(capability, decision.Reason.ToString(), permitted);
+        var authentication = services.GetService<IOptions<ChronicleOptions>>()?.Value.Authentication ?? new Authentication();
+        var permitted = StoreEntitlementEnforcement.Permits(decision, authentication.EnforceStoreEntitlements);
+        if (!decision.IsAllowed && !permitted) logger.Decided(capability, decision.Reason.ToString(), permitted);
+        StoreEntitlementEnforcement.Audit(decision, user, authentication, services.GetRequiredService<ILoggerFactory>());
         return permitted;
     }
-
-    /// <summary>
-    /// The interim outcome for a decision: ordinary event stores stay open to authenticated callers until per-store entitlements exist.
-    /// </summary>
-    /// <param name="decision">The decision.</param>
-    /// <returns>True if the query may run.</returns>
-    static bool Interim(AuthorizationDecision decision) =>
-        decision.IsAllowed || decision.Reason is not (AuthorizationReason.Failed or AuthorizationReason.UnknownCapability);
 }

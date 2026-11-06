@@ -32,7 +32,7 @@ public class ComplianceAuthorization(
     IServiceScopeFactory scopes,
     ILogger<ComplianceAuthorization> logger)
 {
-    bool Enforced => options.Value.Authentication.EnforceComplianceCapabilities;
+    bool Enforced => options.Value.Authentication.EnforceStoreEntitlements;
 
     bool EnforcedAcrossStores => options.Value.Authentication.EnforceDestructiveOperations;
 

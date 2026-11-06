@@ -17,7 +17,8 @@ namespace Cratis.Chronicle.Security;
 /// A subject is only unique within its issuer. Two principals with the same subject but different issuers
 /// have different keys.
 /// </remarks>
-public readonly record struct PrincipalKey(string Issuer, string Subject, bool IsClient = false)
+[GenerateSerializer]
+public readonly record struct PrincipalKey([property: Id(0)] string Issuer, [property: Id(1)] string Subject, [property: Id(2)] bool IsClient = false)
 {
     /// <summary>
     /// The issuer shared by every principal of Chronicle's own authority.

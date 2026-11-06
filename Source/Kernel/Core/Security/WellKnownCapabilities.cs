@@ -38,6 +38,15 @@ public static class WellKnownCapabilities
     /// </summary>
     public static readonly Capability ReadAlerts = "chronicle.alerts.read";
 
+    /// <summary>Reading an ordinary event store.</summary>
+    public static readonly Capability ReadEventStore = "chronicle.event-store.read";
+
+    /// <summary>Appending to an ordinary event store.</summary>
+    public static readonly Capability AppendEventStore = "chronicle.event-store.append";
+
+    /// <summary>Managing an ordinary event store.</summary>
+    public static readonly Capability ManageEventStore = "chronicle.event-store.manage";
+
     /// <summary>
     /// Gets the capabilities decided for an event store namespace.
     /// </summary>
@@ -45,7 +54,10 @@ public static class WellKnownCapabilities
     {
         ReleaseCompliance,
         ManageComplianceKeys,
-        ReadAlerts
+        ReadAlerts,
+        ReadEventStore,
+        AppendEventStore,
+        ManageEventStore
     };
 
     /// <summary>
@@ -56,5 +68,16 @@ public static class WellKnownCapabilities
         AdministerSecurity,
         OperateEventStore,
         AccessSystemStore
+    };
+
+    /// <summary>Maps store-scoped capabilities to their required access.</summary>
+    /// <param name="capability">The capability.</param>
+    /// <returns>The required access.</returns>
+    internal static StoreAccess AccessOf(Capability capability) => capability.Value switch
+    {
+        "chronicle.event-store.read" or "chronicle.compliance.release" or "chronicle.alerts.read" => StoreAccess.Read,
+        "chronicle.event-store.append" => StoreAccess.Append,
+        "chronicle.event-store.manage" or "chronicle.compliance.key-lifecycle" => StoreAccess.Manage,
+        _ => StoreAccess.None
     };
 }
