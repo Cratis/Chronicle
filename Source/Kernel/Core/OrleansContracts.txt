@@ -368,7 +368,8 @@ class [GrainType("observerservice")] Cratis.Chronicle.Observation.ObserverServic
 
 class [GrainType("observerserviceclient")] Cratis.Chronicle.Observation.ObserverServiceClient
 
-interface [GrainInterfaceType("Cratis.Chronicle.Observation.Reactors.Clients.IReactor")] Cratis.Chronicle.Observation.Reactors.Clients.IReactor [Version(0)]
+interface [GrainInterfaceType("Cratis.Chronicle.Observation.Reactors.Clients.IReactor")] Cratis.Chronicle.Observation.Reactors.Clients.IReactor [Version(1)]
+  18C3FFB9: IsSubscriptionIntact() -> Task<bool>
   06514374: KeepSubscription(Cratis.Chronicle.Concepts.Observation.Reactors.ReactorDefinition) -> Task
   A72C3022: SetDefinitionAndSubscribe(Cratis.Chronicle.Concepts.Observation.Reactors.ReactorDefinition) -> Task
   E42078DB: Unsubscribe() -> Task
@@ -385,7 +386,8 @@ interface [GrainInterfaceType("Cratis.Chronicle.Observation.Reactors.Kernel.IRea
 
 class [GrainType("reactorobserversubscriber`1")] Cratis.Chronicle.Observation.Reactors.Kernel.ReactorObserverSubscriber<TReactor>
 
-interface [GrainInterfaceType("Cratis.Chronicle.Observation.Reducers.Clients.IReducer")] Cratis.Chronicle.Observation.Reducers.Clients.IReducer [Version(0)]
+interface [GrainInterfaceType("Cratis.Chronicle.Observation.Reducers.Clients.IReducer")] Cratis.Chronicle.Observation.Reducers.Clients.IReducer [Version(1)]
+  0055D247: IsSubscriptionIntact() -> Task<bool>
   232FCECE: KeepSubscription(Cratis.Chronicle.Concepts.Observation.Reducers.ReducerDefinition) -> Task
   F2880EF8: SetDefinitionAndSubscribe(Cratis.Chronicle.Concepts.Observation.Reducers.ReducerDefinition) -> Task
   762ECBBD: Unsubscribe() -> Task
