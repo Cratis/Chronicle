@@ -3,7 +3,6 @@
 
 using System.Reactive;
 using System.Reactive.Linq;
-using System.Security.Claims;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Security;
 using Microsoft.Extensions.DependencyInjection;
@@ -31,9 +30,7 @@ internal static class StoreCapabilityGuard
     {
         if (routing.Store is null) return Task.FromResult(true);
         var capability = routing.Capability ?? WellKnownCapabilities.ReadEventStore.Value;
-        var store = routing.Store;
-        var @namespace = routing.First;
-        return Decide(callContext, (services, user) => StoreCapabilityDecision.Permits(services, user, capability, store, @namespace));
+        return Decide(callContext, routing.Store, routing.Namespace, capability, StoreAccess.None);
     }
 
     /// <summary>
@@ -45,7 +42,7 @@ internal static class StoreCapabilityGuard
     /// <param name="access">The access the call needs.</param>
     /// <returns>True if the call may run.</returns>
     internal static Task<bool> Permits(CallContext callContext, string store, string? @namespace, StoreAccess access) =>
-        Decide(callContext, (services, user) => StoreCapabilityDecision.PermitsAccess(services, user, access, store, @namespace));
+        Decide(callContext, store, @namespace, null, access);
 
     /// <summary>
     /// Ends a stream with a refusal when entitlements are enforced and a change of the entitlements removes the access its caller needs.
@@ -64,32 +61,57 @@ internal static class StoreCapabilityGuard
         if (services?.GetService<IOptions<ChronicleOptions>>()?.Value.Authentication.EnforceStoreEntitlements is not true) return stream;
         if (services.GetService<IStoreEntitlementsCache>() is not { } cache) return stream;
 
-        var revoked = cache.Changes
+        var time = services.GetService<TimeProvider>() ?? TimeProvider.System;
+        var expiry = cache.Changes.StartWith(Unit.Default).Select(_ => LeaseExpiry(cache, time)).Switch();
+        var revoked = cache.Changes.Merge(expiry)
             .SelectMany(_ => Observable.FromAsync(() => Permits(callContext, store, @namespace, access)))
             .Where(permitted => !permitted)
             .SelectMany(_ => Observable.Throw<Unit>(SystemStoreGuard.RefusedException()));
         return stream.TakeUntil(revoked);
     }
 
-    static async Task<bool> Decide(CallContext callContext, Func<IServiceProvider, ClaimsPrincipal?, Task<bool>> decide)
+    /// <summary>Ends an observable query when its effective storage scope is refused.</summary>
+    /// <typeparam name="T">The query result type.</typeparam>
+    /// <param name="source">The query stream.</param>
+    /// <param name="context">The call context.</param>
+    /// <param name="routing">The storage routing.</param>
+    /// <returns>The guarded stream.</returns>
+    internal static IObservable<T> EndWhenRevoked<T>(IObservable<T> source, CallContext context, QueryRouting routing)
+    {
+        var capability = routing.Capability ?? WellKnownCapabilities.ReadEventStore.Value;
+        var access = WellKnownCapabilities.AccessOf(new(capability));
+        if (routing.Store is null || routing.TargetsSystem) return source;
+        if (access == StoreAccess.None) return source;
+        return EndWhenRevoked(source, context, routing.Store, routing.Namespace, access);
+    }
+
+    static IObservable<Unit> LeaseExpiry(IStoreEntitlementsCache cache, TimeProvider time) => Observable.Create<Unit>(observer =>
+    {
+        var due = cache.LoadedAt is { } loaded ? loaded + TimeSpan.FromMinutes(5) + TimeSpan.FromMilliseconds(1) - time.GetUtcNow() : TimeSpan.Zero;
+        return time.CreateTimer(_ => observer.OnNext(Unit.Default), null, due > TimeSpan.Zero ? due : TimeSpan.Zero, Timeout.InfiniteTimeSpan);
+    });
+
+    static Task<bool> Decide(CallContext callContext, string store, string? @namespace, string? capability, StoreAccess access)
     {
         var httpContext = SystemStoreGuard.HttpContextFor(callContext);
-        if (httpContext is null && callContext.ServerCallContext is null && SystemStoreGuard.InProcessServices is null) return true;
-
         if (httpContext is not null)
         {
-            return await decide(httpContext.RequestServices, httpContext.User);
+            return capability is null
+                ? StoreCapabilityDecision.PermitsAccess(httpContext.RequestServices, httpContext.User, access, store, @namespace)
+                : StoreCapabilityDecision.Permits(httpContext.RequestServices, httpContext.User, capability, store, @namespace);
         }
 
-        if (callContext.ServerCallContext is null && SystemStoreGuard.InProcessServices is { } services)
-        {
-            await using var serviceScope = services.CreateAsyncScope();
+        return SystemStoreGuard.InProcessServices is { } services
+            ? DecideWithoutRequest(services, callContext.ServerCallContext is null, store, @namespace, capability, access)
+            : Task.FromResult(true);
+    }
 
-            // A direct in-process call has no caller of its own; it comes from the host that marked itself as such.
-            if (serviceScope.ServiceProvider.GetService<InProcessKernelHost>() is not null) return true;
-            return await decide(serviceScope.ServiceProvider, null);
-        }
-
-        return false;
+    static async Task<bool> DecideWithoutRequest(IServiceProvider services, bool inProcess, string store, string? @namespace, string? capability, StoreAccess access)
+    {
+        await using var scope = services.CreateAsyncScope();
+        if (inProcess && scope.ServiceProvider.GetService<InProcessKernelHost>() is not null) return true;
+        return capability is null
+            ? await StoreCapabilityDecision.PermitsAccess(scope.ServiceProvider, null, access, store, @namespace)
+            : await StoreCapabilityDecision.Permits(scope.ServiceProvider, null, capability, store, @namespace);
     }
 }

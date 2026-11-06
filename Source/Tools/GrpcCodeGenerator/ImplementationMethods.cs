@@ -389,8 +389,13 @@ public static class ImplementationMethods
             values.Add($"Capability: {System.Text.Json.JsonSerializer.Serialize(capability)}");
         }
 
+        var applicationScope = parameters.FirstOrDefault(IsApplicationScope);
+        if (applicationScope is not null) values.Add($"ApplicationScope: {RequestField(applicationScope)}");
+
         return $"new global::Cratis.Chronicle.Services.QueryRouting({string.Join(", ", values)})";
     }
+
+    static bool IsApplicationScope(ParameterInfo parameter) => parameter.Name == "applicationScope" && parameter.ParameterType == typeof(bool);
 
     static string RequestField(ParameterInfo parameter) => $"request.{ImplementationValues.PropertyName(parameter.Name ?? "value")}";
 

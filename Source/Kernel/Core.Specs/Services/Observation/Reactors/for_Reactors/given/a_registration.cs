@@ -28,6 +28,7 @@ public class a_registration : Specification
     protected readonly TaskCompletionSource<Exception> _error = new(TaskCreationOptions.RunContinuationsAsynchronously);
     readonly List<IDisposable> _connections = [];
     Reactors _reactors;
+    protected Subject<ReactorMessage> _messages;
 
     void Establish()
     {
@@ -42,7 +43,7 @@ public class a_registration : Specification
 #pragma warning restore CA2012
         _reactors = new(
             _grainFactory,
-            Substitute.For<IReactorMediator>(),
+            CreateMediator(),
             Substitute.For<IStorage>(),
             new JsonSerializerOptions(),
             new ActivitySource<Reactors>(),
@@ -55,15 +56,17 @@ public class a_registration : Specification
         _gate.ClearReceivedCalls();
     }
 
+    protected virtual IReactorMediator CreateMediator() => Substitute.For<IReactorMediator>();
+
 #pragma warning disable CA2012 // Configuring the substitute; the ValueTask is the stubbed call, not an operation to await
     protected void ExhaustGate() => _gate.Enter(Arg.Any<CancellationToken>()).Returns(call => WaitForPermit(call.Arg<CancellationToken>()));
 #pragma warning restore CA2012
 
-    protected void Connect(string connectionId = "connection", CancellationToken cancellationToken = default)
+    protected void Connect(string connectionId = "connection", CallContext? callContext = null, CancellationToken cancellationToken = default)
     {
-        var messages = new Subject<ReactorMessage>();
+        var messages = _messages = new Subject<ReactorMessage>();
         _connections.Add(messages);
-        _connections.Add(_reactors.Observe(messages, new CallContext(new CallOptions(cancellationToken: cancellationToken))).Subscribe(_ => { }, error => _error.TrySetResult(error)));
+        _connections.Add(_reactors.Observe(messages, callContext ?? new CallContext(new CallOptions(cancellationToken: cancellationToken))).Subscribe(_ => { }, error => _error.TrySetResult(error)));
         messages.OnNext(new(new(new RegisterReactor
         {
             ConnectionId = connectionId,

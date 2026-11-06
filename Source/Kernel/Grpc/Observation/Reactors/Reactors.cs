@@ -243,7 +243,7 @@ internal sealed class Reactors(
             register?.Dispose();
         });
 
-        return observable;
+        return MonitorRegistration(observable, registrationTcs.Task, context, (messagesSubscription, register));
     }
 
     /// <inheritdoc/>
@@ -261,6 +261,16 @@ internal sealed class Reactors(
         var definition = await eventStore.Reactors.Get(new(request.ReactorId));
         return new HasReactorResponse { Exists = true, EventSequenceId = definition.EventSequenceId.Value };
     }
+
+    static IObservable<EventsToObserve> MonitorRegistration(IObservable<EventsToObserve> source, Task<RegisterReactor> registration, CallContext context, (IDisposable Messages, CancellationTokenRegistration? Registration) lifetime) =>
+        Observable.FromAsync(() => registration.WaitAsync(context.CancellationToken))
+            .Catch<RegisterReactor, OperationCanceledException>(_ => Observable.Empty<RegisterReactor>())
+            .SelectMany(arguments => StoreCapabilityGuard.EndWhenRevoked(source, context, arguments.EventStore, arguments.Namespace, StoreAccess.Manage))
+            .Finally(() =>
+            {
+                lifetime.Messages.Dispose();
+                lifetime.Registration?.Dispose();
+            });
 
     IEnumerable<(string Partition, ObserverSubscriberResult Result)> ToSubscriberResults(ReactorResult result) =>
         result.Partitions.Count > 0

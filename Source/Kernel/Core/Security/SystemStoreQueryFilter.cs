@@ -51,6 +51,7 @@ public class SystemStoreQueryFilter : IAuthorizationQueryFilter
 
         // A query that declares no capability reads the store it addresses.
         var capability = StoreCapabilityDecision.CapabilityOf(context.Name.Value) ?? (store is not null ? WellKnownCapabilities.ReadEventStore.Value : null);
+        if (arguments.Any(argument => string.Equals(argument.Key, "ApplicationScope", StringComparison.OrdinalIgnoreCase) && argument.Value is true)) @namespace = null;
         return capability is not null ? AuthorizeStore(context, capability, store, @namespace) : _noVerdict;
     }
 

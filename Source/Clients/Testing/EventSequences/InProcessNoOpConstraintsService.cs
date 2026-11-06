@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Contracts.Events.Constraints;
-using ProtoBuf.Grpc;
 
 namespace Cratis.Chronicle.Testing.EventSequences;
 
@@ -16,6 +15,6 @@ namespace Cratis.Chronicle.Testing.EventSequences;
 internal sealed class InProcessNoOpConstraintsService : IConstraints
 {
     /// <inheritdoc/>
-    public Task Register(RegisterConstraintsRequest request, CallContext context = default) =>
+    public Task Register(RegisterConstraintsRequest request) =>
         Task.CompletedTask;
 }

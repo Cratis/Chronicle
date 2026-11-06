@@ -46,6 +46,7 @@ internal static class InProcessCommandPipeline
         Action<IServiceCollection>? configure = default)
     {
         var services = new ServiceCollection();
+        services.AddSingleton(new KernelCore::Cratis.Chronicle.Security.InProcessKernelHost());
         services.AddOptions();
         services.AddLogging();
         services.Configure<ArcOptions>(_ => { });

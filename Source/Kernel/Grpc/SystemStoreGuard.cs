@@ -78,7 +78,25 @@ internal static class SystemStoreGuard
         }
 
         if (routing.Store is null) return;
-        if (!await StoreCapabilityGuard.Permits(callContext, routing.Store, namespaceAddressed ? routing.First : null, access)) throw Refused();
+        if (!await StoreCapabilityGuard.Permits(callContext, routing.Store, namespaceAddressed ? routing.Namespace : null, access)) throw Refused();
+    }
+
+    /// <summary>Authorizes a contract without a call-context parameter from the current server request.</summary>
+    /// <param name="request">The current HTTP request.</param>
+    /// <param name="routing">The storage routing.</param>
+    /// <param name="access">The required access.</param>
+    /// <returns>The authorization task.</returns>
+    /// <exception cref="RpcException">Thrown when the request is refused.</exception>
+    internal static async Task EnsureNotSystemFromRequest(HttpContext? request, QueryRouting routing, StoreAccess access)
+    {
+        EnsureNotSystem(routing);
+        if (request is null)
+        {
+            await EnsureNotSystem(default, routing, access);
+            return;
+        }
+
+        if (routing.Store is not null && !await StoreCapabilityDecision.PermitsAccess(request.RequestServices, request.User, access, routing.Store, null)) throw Refused();
     }
 
     /// <summary>
@@ -111,7 +129,7 @@ internal static class SystemStoreGuard
         if (routing.HasSeparator || routing.TargetsSystem) return EnsureObservableForSystem(callContext, routing, access, source);
 
         var store = routing.Store!;
-        var @namespace = routing.First;
+        var @namespace = routing.Namespace;
         return Observable.FromAsync(() => Ensure(callContext, routing, access))
             .SelectMany(_ => StoreCapabilityGuard.EndWhenRevoked(source(), callContext, store, @namespace, access));
     }

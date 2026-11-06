@@ -96,7 +96,7 @@ internal static class QueryExecutor
 
     static IObservable<QueryResult<TData>> ExecuteObservableForStore<TData>(CallContext callContext, QueryRouting routing, Func<IObservable<TData>> query, Action<Exception>? onError) =>
         Observable.FromAsync(() => StoreCapabilityGuard.Permits(callContext, routing))
-            .SelectMany(permitted => permitted ? Execute(query, onError) : Observable.Return(SystemRefused<TData>()));
+            .SelectMany(permitted => permitted ? StoreCapabilityGuard.EndWhenRevoked(Execute(query, onError), callContext, routing) : Observable.Return(SystemRefused<TData>()));
 
     static async Task<QueryResult<TData>> ExecuteForStore<TData>(CallContext callContext, QueryRouting routing, Func<Task<TData>> query, Action<Exception>? onError) =>
         await StoreCapabilityGuard.Permits(callContext, routing) ? await Execute(query, onError) : SystemRefused<TData>();

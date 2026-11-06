@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Security.Claims;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Grpc;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -45,9 +46,9 @@ public static class StoreCapabilityDecision
     /// <returns>True if the call may run.</returns>
     public static async Task<bool> PermitsAccess(IServiceProvider services, ClaimsPrincipal? user, StoreAccess access, string eventStore, string? @namespace)
     {
-        foreach (var single in new[] { StoreAccess.Read, StoreAccess.Append, StoreAccess.Manage })
+        for (var single = StoreAccess.Read; single <= StoreAccess.Manage; single = (StoreAccess)((int)single << 1))
         {
-            if (!access.HasFlag(single)) continue;
+            if ((access & single) == StoreAccess.None) continue;
             if (!await Permits(services, user, StoreAccessMap.CapabilityFor(single).Value, eventStore, @namespace)) return false;
         }
 
@@ -70,27 +71,41 @@ public static class StoreCapabilityDecision
     /// </remarks>
     public static async Task<bool> Permits(IServiceProvider services, ClaimsPrincipal? user, string capability, string eventStore, string? @namespace)
     {
-        var name = new Capability(capability);
-        var scope = @namespace is null
-            ? AuthorizationScope.ForEventStore(eventStore)
-            : AuthorizationScope.ForNamespace(eventStore, @namespace);
-
         AuthorizationDecision decision;
-        ILogger logger;
+        StoreRequestDecisions? memo = null;
+        var authentication = services.GetService<IOptions<ChronicleOptions>>()?.Value.Authentication ?? new Authentication();
         try
         {
-            logger = services.GetRequiredService<ILoggerFactory>().CreateLogger(typeof(StoreCapabilityDecision).FullName!);
-            decision = await services.GetRequiredService<IAuthorizationDecisions>().Decide(user, name, scope);
+            var decisions = services.GetRequiredService<IAuthorizationDecisions>();
+            var cache = services.GetService<IStoreEntitlementsCache>();
+            var request = services.GetService<IHttpContextAccessor>()?.HttpContext;
+            if (decisions is AuthorizationDecisions && cache is not null && request is not null && IsOrdinary(capability, eventStore)) memo = StoreRequestDecisions.For(request);
+            var cached = cache is null ? null : memo?.Find((user, capability, eventStore, @namespace), cache, authentication);
+            if (cached is not null)
+            {
+                decision = cached;
+            }
+            else
+            {
+                var snapshot = cache?.Snapshot;
+                var fresh = cache?.IsFresh is true;
+                var scope = @namespace is null ? AuthorizationScope.ForEventStore(eventStore) : AuthorizationScope.ForNamespace(eventStore, @namespace);
+                decision = await decisions.Decide(user, new(capability), scope);
+                if (snapshot is not null) memo?.Remember((user, capability, eventStore, @namespace), (snapshot, fresh), authentication, decision);
+            }
         }
         catch
         {
             return false;
         }
 
-        var authentication = services.GetService<IOptions<ChronicleOptions>>()?.Value.Authentication ?? new Authentication();
         var permitted = StoreEntitlementEnforcement.Permits(decision, authentication.EnforceStoreEntitlements);
-        if (!decision.IsAllowed && !permitted) logger.Decided(capability, decision.Reason.ToString(), permitted);
-        StoreEntitlementEnforcement.Audit(decision, user, authentication, services.GetRequiredService<ILoggerFactory>(), services.GetService<IGrainFactory>());
+        var loggers = services.GetRequiredService<ILoggerFactory>();
+        if (!decision.IsAllowed && !permitted) loggers.CreateLogger(typeof(StoreCapabilityDecision).FullName!).Decided(capability, decision.Reason.ToString(), permitted);
+        if (memo?.TakeAudit(decision) is not false) StoreEntitlementEnforcement.Audit(decision, user, authentication, loggers, services.GetService<IGrainFactory>());
         return permitted;
     }
+
+    static bool IsOrdinary(string capability, string store) => !string.Equals(store, "System", StringComparison.OrdinalIgnoreCase)
+        && (capability == WellKnownCapabilities.ReadEventStore.Value || capability == WellKnownCapabilities.AppendEventStore.Value || capability == WellKnownCapabilities.ManageEventStore.Value);
 }

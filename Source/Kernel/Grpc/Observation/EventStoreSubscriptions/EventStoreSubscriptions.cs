@@ -12,6 +12,7 @@ using Cratis.Chronicle.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Storage;
 using Grpc.Core;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 using ProtoBuf.Grpc;
 using ConceptsEventStoreSubscriptionDefinition = Cratis.Chronicle.Concepts.Observation.EventStoreSubscriptions.EventStoreSubscriptionDefinition;
@@ -26,10 +27,12 @@ namespace Cratis.Chronicle.Services.Observation.EventStoreSubscriptions;
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
 /// <param name="storage"><see cref="IStorage"/> for accessing subscription definitions.</param>
 /// <param name="options"><see cref="IOptions{ChronicleOptions}"/> for configuration.</param>
+/// <param name="httpContextAccessor">The current request accessor.</param>
 internal sealed class EventStoreSubscriptions(
     IGrainFactory grainFactory,
     IStorage storage,
-    IOptions<ChronicleOptions> options) : ContractIEventStoreSubscriptions
+    IOptions<ChronicleOptions> options,
+    IHttpContextAccessor? httpContextAccessor = null) : ContractIEventStoreSubscriptions
 {
     /// <inheritdoc/>
     public async Task Add(AddEventStoreSubscriptions request, CallContext context = default)
@@ -121,9 +124,9 @@ internal sealed class EventStoreSubscriptions(
     }
 
     /// <inheritdoc/>
-    public async Task<IEnumerable<ContractEventStoreSubscriptionDefinition>> GetSubscriptions(GetEventStoreSubscriptionsRequest request, CallContext context = default)
+    public async Task<IEnumerable<ContractEventStoreSubscriptionDefinition>> GetSubscriptions(GetEventStoreSubscriptionsRequest request)
     {
-        await SystemStoreGuard.EnsureNotSystem(context, new(request.TargetEventStore), StoreAccess.Read);
+        await SystemStoreGuard.EnsureNotSystemFromRequest(httpContextAccessor?.HttpContext, new(request.TargetEventStore), StoreAccess.Read);
         var definitions = await storage.GetEventStore(request.TargetEventStore).EventStoreSubscriptions.GetAll();
         return definitions.Select(definition => new ContractEventStoreSubscriptionDefinition
         {

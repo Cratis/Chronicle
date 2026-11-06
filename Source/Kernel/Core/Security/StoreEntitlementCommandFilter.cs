@@ -65,7 +65,7 @@ public class StoreEntitlementCommandFilter : IAuthorizationCommandFilter
         if (string.IsNullOrEmpty(store) && string.IsNullOrEmpty(target)) return _noVerdict;
         if (SystemStoreAccess.IsSystem(store) || SystemStoreAccess.IsSystem(target)) return _noVerdict;
 
-        return Authorize(context, store, @namespace, target);
+        return Authorize(context, store, StoreRequestScope.IsApplication(context.Command) ? null : @namespace, target);
     }
 
     static bool IsTrustedInProcess(IServiceProvider services, ClaimsPrincipal? caller, HttpContext? httpContext) =>
@@ -78,7 +78,6 @@ public class StoreEntitlementCommandFilter : IAuthorizationCommandFilter
         var httpContext = (services.GetService(typeof(IHttpContextAccessor)) as IHttpContextAccessor)?.HttpContext;
         var caller = context.AuthorizedPrincipal ?? httpContext?.User;
         if (IsTrustedInProcess(services, context.AuthorizedPrincipal, httpContext)) return null!;
-        if (caller is null && httpContext is null) return CommandResult.Unauthorized(context.CorrelationId, Refused);
 
         var permitted = string.IsNullOrEmpty(target)
             ? await StoreCapabilityDecision.PermitsAccess(services, caller, _access(context.Type), store!, @namespace)
