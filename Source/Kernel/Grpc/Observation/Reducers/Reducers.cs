@@ -15,6 +15,7 @@ using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Contracts.Observation.Reducers;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Cratis.Chronicle.Json;
+using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Observation.Reducers.Clients;
 using Cratis.Chronicle.Properties;
@@ -44,6 +45,7 @@ namespace Cratis.Chronicle.Services.Observation.Reducers;
 /// <param name="options"><see cref="IOptions{ChronicleOptions}"/> for how often to check the subscription of a connected client.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 /// <param name="registrationGate">The silo-wide gate for observer registrations.</param>
+/// <param name="namespaceCasing">The namespace casing resolver.</param>
 internal sealed class Reducers(
     IGrainFactory grainFactory,
     IReducerMediator reducerMediator,
@@ -52,7 +54,8 @@ internal sealed class Reducers(
     [FromKeyedServices(WellKnown.MeterName)] IActivitySource<Reducers> activitySource,
     IOptions<ChronicleOptions> options,
     ILogger<Reducers> logger,
-    IObserverRegistrationGate registrationGate) : IReducers
+    IObserverRegistrationGate registrationGate,
+    INamespaceCasing namespaceCasing) : IReducers
 {
     /// <summary>
     /// The size, in characters, of a reducer's serialized state from which each reduce is reported as expensive.
@@ -142,6 +145,7 @@ internal sealed class Reducers(
                 try
                 {
                     var registration = await registrationTcs.Task.WaitAsync(cancellation.Token);
+                    registration.Namespace = (await namespaceCasing.Canonicalize(registration.EventStore, registration.Namespace)).Value;
                     connectionId = registration.ConnectionId;
                     observerId = registration.Reducer.ReducerId;
                     eventStoreName = registration.EventStore;
