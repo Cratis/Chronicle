@@ -11,5 +11,5 @@ public class and_an_owner_in_another_case_changes_it() : given.a_saved_query_sto
 
     [Fact] void should_be_refused() => _result.IsSuccess.ShouldBeFalse();
     [Fact] void should_explain_the_refusal() => _result.ValidationResults.Single().Message.ShouldEqual("The saved query folder belongs to another owner.");
-    [Fact] void should_not_apply_the_change() => _queries.DidNotReceive().DeleteFolder(Arg.Any<SequenceQueryFolderId>());
+    [Fact] void should_not_apply_the_change() => _queries.DidNotReceive().DeleteFolder(Arg.Any<SequenceQueryFolderId>(), Arg.Any<SequenceQueryOwner>());
 }

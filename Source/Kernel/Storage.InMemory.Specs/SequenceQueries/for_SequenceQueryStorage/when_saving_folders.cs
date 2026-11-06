@@ -23,8 +23,8 @@ public class when_saving_folders : Specification
 
     async Task Because()
     {
-        await _storage.SaveFolder(new("private", SequenceQueryScope.User, _alice, "default", "Diagnostics"));
-        await _storage.SaveFolder(new("shared", SequenceQueryScope.Everyone, _alice, "default", "Reporting"));
+        await _storage.InsertFolder(new("private", SequenceQueryScope.User, _alice, "default", "Diagnostics"));
+        await _storage.InsertFolder(new("shared", SequenceQueryScope.Everyone, _alice, "default", "Reporting"));
 
         _visibleToAlice = await _storage.GetAllFoldersFor(_alice);
         _visibleToBob = await _storage.GetAllFoldersFor(_bob);

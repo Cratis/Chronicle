@@ -40,18 +40,27 @@ public interface ISequenceQueryStorage
     Task<SequenceQueryDefinition?> Get(SequenceQueryId id);
 
     /// <summary>
-    /// Save a query, replacing any existing query with the same identifier.
+    /// Save a query that is not stored yet. An existing query with the same identifier is never replaced.
     /// </summary>
     /// <param name="definition">The <see cref="SequenceQueryDefinition"/> to save.</param>
-    /// <returns>Awaitable task.</returns>
-    Task Save(SequenceQueryDefinition definition);
+    /// <returns><see cref="SequenceQueryWriteOutcome.Conflict"/> when a query with the identifier is already stored, otherwise <see cref="SequenceQueryWriteOutcome.Applied"/>.</returns>
+    Task<SequenceQueryWriteOutcome> Insert(SequenceQueryDefinition definition);
 
     /// <summary>
-    /// Delete a query.
+    /// Replace a stored query, but only while it is still stored under the expected owner.
+    /// </summary>
+    /// <param name="definition">The <see cref="SequenceQueryDefinition"/> to save. The owner it is stored under is kept.</param>
+    /// <param name="expectedOwner">The <see cref="SequenceQueryOwner"/> the query was checked to be stored under, compared exactly.</param>
+    /// <returns><see cref="SequenceQueryWriteOutcome.Conflict"/> when no query with the identifier is stored under the expected owner, otherwise <see cref="SequenceQueryWriteOutcome.Applied"/>.</returns>
+    Task<SequenceQueryWriteOutcome> Update(SequenceQueryDefinition definition, SequenceQueryOwner expectedOwner);
+
+    /// <summary>
+    /// Delete a query, but only while it is still stored under the expected owner.
     /// </summary>
     /// <param name="id">The <see cref="SequenceQueryId"/> of the query to delete.</param>
-    /// <returns>Awaitable task.</returns>
-    Task Delete(SequenceQueryId id);
+    /// <param name="expectedOwner">The <see cref="SequenceQueryOwner"/> the query was checked to be stored under, compared exactly.</param>
+    /// <returns><see cref="SequenceQueryWriteOutcome.Conflict"/> when the query is still stored under another owner, otherwise <see cref="SequenceQueryWriteOutcome.Applied"/> - including when it is already gone.</returns>
+    Task<SequenceQueryWriteOutcome> Delete(SequenceQueryId id, SequenceQueryOwner expectedOwner);
 
     /// <summary>
     /// Get every folder visible to an owner - the ones they created, plus the ones shared with everyone.
@@ -71,21 +80,30 @@ public interface ISequenceQueryStorage
     Task<SequenceQueryFolderDefinition?> GetFolder(SequenceQueryFolderId id);
 
     /// <summary>
-    /// Save a folder, replacing any existing folder with the same identifier.
+    /// Save a folder that is not stored yet. An existing folder with the same identifier is never replaced.
     /// </summary>
     /// <param name="definition">The <see cref="SequenceQueryFolderDefinition"/> to save.</param>
-    /// <returns>Awaitable task.</returns>
-    Task SaveFolder(SequenceQueryFolderDefinition definition);
+    /// <returns><see cref="SequenceQueryWriteOutcome.Conflict"/> when a folder with the identifier is already stored, otherwise <see cref="SequenceQueryWriteOutcome.Applied"/>.</returns>
+    Task<SequenceQueryWriteOutcome> InsertFolder(SequenceQueryFolderDefinition definition);
 
     /// <summary>
-    /// Delete a folder.
+    /// Replace a stored folder, but only while it is still stored under the expected owner.
+    /// </summary>
+    /// <param name="definition">The <see cref="SequenceQueryFolderDefinition"/> to save. The owner it is stored under is kept.</param>
+    /// <param name="expectedOwner">The <see cref="SequenceQueryOwner"/> the folder was checked to be stored under, compared exactly.</param>
+    /// <returns><see cref="SequenceQueryWriteOutcome.Conflict"/> when no folder with the identifier is stored under the expected owner, otherwise <see cref="SequenceQueryWriteOutcome.Applied"/>.</returns>
+    Task<SequenceQueryWriteOutcome> UpdateFolder(SequenceQueryFolderDefinition definition, SequenceQueryOwner expectedOwner);
+
+    /// <summary>
+    /// Delete a folder, but only while it is still stored under the expected owner.
     /// </summary>
     /// <param name="id">The <see cref="SequenceQueryFolderId"/> of the folder to delete.</param>
-    /// <returns>Awaitable task.</returns>
+    /// <param name="expectedOwner">The <see cref="SequenceQueryOwner"/> the folder was checked to be stored under, compared exactly.</param>
+    /// <returns><see cref="SequenceQueryWriteOutcome.Conflict"/> when the folder is still stored under another owner, otherwise <see cref="SequenceQueryWriteOutcome.Applied"/> - including when it is already gone.</returns>
     /// <remarks>
     /// Only the folder itself is removed. What is filed underneath it - queries and nested folders
     /// alike - is the caller's to deal with, because whether they move or go with it is a decision
     /// the storage has no business making.
     /// </remarks>
-    Task DeleteFolder(SequenceQueryFolderId id);
+    Task<SequenceQueryWriteOutcome> DeleteFolder(SequenceQueryFolderId id, SequenceQueryOwner expectedOwner);
 }

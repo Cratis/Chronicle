@@ -16,7 +16,7 @@ public class when_getting_by_identifier : Specification
     async Task Because()
     {
         using var storage = new SequenceQueryStorage();
-        await storage.Save(new SequenceQueryDefinition(
+        await storage.Insert(new SequenceQueryDefinition(
             "query-1",
             "Stored",
             SequenceQueryScope.Everyone,
@@ -27,7 +27,7 @@ public class when_getting_by_identifier : Specification
             SequenceQueryFilter.Empty,
             SequenceQuerySortBy.Occurred,
             Descending: false));
-        await storage.SaveFolder(new SequenceQueryFolderDefinition("folder-1", SequenceQueryScope.User, "alice", "default", "stored"));
+        await storage.InsertFolder(new SequenceQueryFolderDefinition("folder-1", SequenceQueryScope.User, "alice", "default", "stored"));
 
         _query = await storage.Get("query-1");
         _missingQuery = await storage.Get("query-2");
