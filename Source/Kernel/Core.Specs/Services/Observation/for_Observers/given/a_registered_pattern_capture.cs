@@ -65,7 +65,7 @@ public class a_registered_pattern_capture : Cratis.Chronicle.Observation.for_Obs
         _unsubscribedObserver = Substitute.For<IObserver>();
         _unsubscribedObserver.GetSubscription().Returns(ObserverSubscription.Unsubscribed);
         grainFactory.GetGrain<IObserver>(Arg.Any<string>(), Arg.Any<string>()).Returns(_unsubscribedObserver);
-        _completion = new Observers(grainFactory, _storage, Substitute.For<IObserverRemover>());
+        _completion = new Observers(grainFactory, _storage, Substitute.For<IObserverRemover>(), NamespaceCasingContext.Create());
         _request = new()
         {
             EventStore = _observerKey.EventStore,

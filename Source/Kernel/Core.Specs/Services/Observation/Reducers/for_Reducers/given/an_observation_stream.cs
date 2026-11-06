@@ -73,7 +73,8 @@ public class an_observation_stream : Specification
             CreateActivitySource(),
             Options.Create(new ChronicleOptions()),
             NullLogger<Reducers>.Instance,
-            Substitute.For<IObserverRegistrationGate>());
+            Substitute.For<IObserverRegistrationGate>(),
+            NamespaceCasingContext.Create());
         _subscription = reducers.Observe(_messages).Subscribe(_deliveries.Add);
         _messages.OnNext(new(new(new RegisterReducer
         {

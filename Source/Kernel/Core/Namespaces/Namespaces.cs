@@ -30,10 +30,19 @@ public class Namespaces(
 
     /// <inheritdoc/>
     /// <exception cref="NamespaceAddedCouldNotBeAppended">The durable namespace creation notification could not be appended.</exception>
-    public async Task Ensure(EventStoreNamespaceName @namespace)
-    {
-        if (State.Namespaces.Any(_ => _.Name.Value.Equals(@namespace.Value, StringComparison.InvariantCultureIgnoreCase))) return;
+    public async Task Ensure(EventStoreNamespaceName @namespace) => await EnsureCanonical(@namespace);
 
+    /// <inheritdoc/>
+    /// <exception cref="NamespaceAddedCouldNotBeAppended">The durable namespace creation notification could not be appended.</exception>
+    public async Task<EventStoreNamespaceName> EnsureCanonical(EventStoreNamespaceName @namespace)
+    {
+        var existing = await GetCanonical(@namespace);
+        if (existing is not null) return existing;
+
+        if (@namespace.Value.Equals(EventStoreNamespaceName.Default.Value, StringComparison.OrdinalIgnoreCase))
+        {
+            @namespace = EventStoreNamespaceName.Default;
+        }
         logger.AddingNamespace(@namespace);
         var eventStoreName = (EventStoreName)this.GetPrimaryKeyString();
         var added = new NamespaceAdded(eventStoreName, @namespace);
@@ -55,6 +64,18 @@ public class Namespaces(
 
         var channelWriter = _namespaceAddedChannel.GetChannelWriter<NamespaceAdded>(channelId);
         await channelWriter.Publish(added);
+        return @namespace;
+    }
+
+    /// <inheritdoc/>
+    public Task<EventStoreNamespaceName?> GetCanonical(EventStoreNamespaceName @namespace)
+    {
+        var existing = State.Namespaces.Concat(State.NewNamespaces)
+            .FirstOrDefault(_ => _.Name.Value.Equals(@namespace.Value, StringComparison.OrdinalIgnoreCase));
+        if (existing is null) return Task.FromResult<EventStoreNamespaceName?>(null);
+        var canonical = existing.Name.Value.Equals(EventStoreNamespaceName.Default.Value, StringComparison.OrdinalIgnoreCase)
+            ? EventStoreNamespaceName.Default : existing.Name;
+        return Task.FromResult<EventStoreNamespaceName?>(canonical);
     }
 
     /// <inheritdoc/>
@@ -64,7 +85,7 @@ public class Namespaces(
     /// <inheritdoc/>
     public async Task Forget(EventStoreNamespaceName @namespace)
     {
-        var existing = State.Namespaces.FirstOrDefault(_ => _.Name.Value.Equals(@namespace.Value, StringComparison.InvariantCultureIgnoreCase));
+        var existing = State.Namespaces.FirstOrDefault(_ => _.Name.Value.Equals(@namespace.Value, StringComparison.OrdinalIgnoreCase));
         if (existing is null) return;
 
         var eventStoreName = (EventStoreName)this.GetPrimaryKeyString();

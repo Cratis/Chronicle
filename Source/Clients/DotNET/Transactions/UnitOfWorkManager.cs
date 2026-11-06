@@ -85,6 +85,11 @@ public class UnitOfWorkManager : IUnitOfWorkManager
     /// <inheritdoc/>
     public bool HasCurrent => OpenFrame() is not null;
 
+    /// <summary>
+    /// Gets or sets the <see cref="EventTagResolver"/> units of work use to resolve the named tags of staged events.
+    /// </summary>
+    internal EventTagResolver? TagResolver { get; set; }
+
     /// <summary>Gets the span naming convention supplied by the event store.</summary>
     internal ClientSpanNames SpanNames { get; }
 
@@ -103,6 +108,7 @@ public class UnitOfWorkManager : IUnitOfWorkManager
             _lifecyclePolicy,
             _logger)
         {
+            TagResolver = TagResolver,
             SpanNames = SpanNames
         };
         ImmediateAppendGuard.RequireUnit(unitOfWork);

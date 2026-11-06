@@ -222,10 +222,10 @@ test('output outside tracked Features is irrelevant', context => {
 });
 
 function workflowSteps(text) {
-    const [, job] = text.split('\n  dotnet-build:\n');
-    assert.ok(job, 'exact dotnet-build job style required; actionlint validates YAML');
-    assert.ok(job.startsWith("    needs: [already-ran, wire-compatibility, grain-compatibility]\n    if: needs.already-ran.outputs.skip != 'true'\n    runs-on: ubuntu-latest\n"));
-    return job.split('\n      - name: ').slice(1).map(block => block.trimEnd());
+    const [, job] = text.split('\n  workbench-proxies:\n');
+    assert.ok(job, 'exact workbench-proxies job style required; actionlint validates YAML');
+    assert.ok(job.startsWith("    needs: [already-ran]\n    if: needs.already-ran.outputs.skip != 'true'\n    runs-on: ubuntu-latest\n"));
+    return job.split('\n  # ')[0].split('\n      - name: ').slice(1).map(block => block.trimEnd());
 }
 
 function exactStep(steps, name, body) {
@@ -235,7 +235,7 @@ function exactStep(steps, name, body) {
     return steps.indexOf(matches[0]);
 }
 
-test('ordinary PR exact steps run Node fixtures, isolated Debug generation and comparison before Release', () => {
+test('the proxy job exact steps run Node fixtures, then isolated Debug generation and comparison', () => {
     const text = readFileSync(path.join(root, '.github/workflows/dotnet-build.yml'), 'utf8');
     const steps = workflowSteps(text);
     const selected = [
@@ -247,17 +247,13 @@ test('ordinary PR exact steps run Node fixtures, isolated Debug generation and c
             '          -p:DisableProxyGenerator=false -p:DisableGrpcContractGeneration=true\n' +
             '          -p:DisableProtoGeneration=true -p:DisableDockerBuild=true\n' +
             '          -p:CratisProxiesIncremental=false "-p:CratisProxiesOutputPath=$WORKBENCH_PROXIES"'),
-        exactStep(steps, 'Check Workbench proxy freshness', '        run: node .github/scripts/check-workbench-proxies.mjs check --generated "$WORKBENCH_PROXIES"'),
-        exactStep(steps, 'Build', '        run: dotnet build --configuration Release -p:DisableProxyGenerator=true -p:DisableDockerBuild=true -p:ForceCodeGeneration=true')
+        exactStep(steps, 'Check Workbench proxy freshness', '        run: node .github/scripts/check-workbench-proxies.mjs check --generated "$WORKBENCH_PROXIES"')
     ];
     assert.deepEqual(selected, [...selected].sort((a, b) => a - b));
 });
 
-test('native existing path assertion and its specs remain CI-owned and precede fixtures', () => {
-    const steps = workflowSteps(readFileSync(path.join(root, '.github/workflows/dotnet-build.yml'), 'utf8'));
-    const assertion = steps.findIndex(step => step.startsWith('Assert the build-affecting path contract\n'));
-    assert.ok(assertion >= 0);
-    assert.ok(steps[assertion].includes('          python3 .github/scripts/assert-build-affecting-paths.py\n'));
-    assert.ok(steps[assertion].includes('          python3 -B .github/scripts/test-assert-build-affecting-paths.py'));
-    assert.ok(assertion < steps.findIndex(step => step.startsWith('Spec Workbench proxy freshness guard\n')));
+test('the proxy check is a required prerequisite of the specs aggregate and the Release build never generates proxies', () => {
+    const text = readFileSync(path.join(root, '.github/workflows/dotnet-build.yml'), 'utf8');
+    assert.ok(text.includes('needs: [already-ran, wire-compatibility, grain-compatibility, workbench-proxies, specs-other, specs-sql]'));
+    assert.ok(text.includes('run: dotnet build --configuration Release -p:DisableProxyGenerator=true -p:DisableDockerBuild=true -p:ForceCodeGeneration=true'));
 });

@@ -39,7 +39,8 @@ public class and_get_definition_fails : Specification
             new ActivitySource<Reducers>(),
             Options.Create(new ChronicleOptions()),
             NullLogger<Reducers>.Instance,
-            Substitute.For<IObserverRegistrationGate>());
+            Substitute.For<IObserverRegistrationGate>(),
+            NamespaceCasingContext.Create());
 
         _messages = new Subject<ReducerMessage>();
     }

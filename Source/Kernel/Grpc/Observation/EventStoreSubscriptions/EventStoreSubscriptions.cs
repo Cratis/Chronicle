@@ -61,7 +61,8 @@ internal sealed class EventStoreSubscriptions(
                 new EventStoreName(subscription.SourceEventStore),
                 subscription.EventTypes.Select(et => new EventType(et.Id, et.Generation)).ToArray())
             {
-                GenerationDelivery = (EventGenerationDelivery)subscription.GenerationDelivery
+                GenerationDelivery = (EventGenerationDelivery)subscription.GenerationDelivery,
+                NamedTags = (subscription.NamedTags ?? []).Select(_ => new NamedTag(new TagName(_.Name), _.Value)).ToArray()
             };
 
             var existingSubscriptions = await subscriptionsManager.GetSubscriptionDefinitions();
@@ -77,7 +78,8 @@ internal sealed class EventStoreSubscriptions(
                     definition.SourceEventStore,
                     definition.EventTypes)
                 {
-                    GenerationDelivery = definition.GenerationDelivery
+                    GenerationDelivery = definition.GenerationDelivery,
+                    NamedTags = definition.NamedTags.Select(_ => new EventStoreSubscriptionTag(_.Name.Value, _.Value)).ToArray()
                 });
             }
 
@@ -125,7 +127,8 @@ internal sealed class EventStoreSubscriptions(
             Identifier = definition.Identifier.Value,
             SourceEventStore = definition.SourceEventStore.Value,
             EventTypes = definition.EventTypes.Select(et => new Contracts.Events.EventType { Id = et.Id, Generation = et.Generation }).ToList(),
-            GenerationDelivery = (Contracts.Observation.EventGenerationDelivery)definition.GenerationDelivery
+            GenerationDelivery = (Contracts.Observation.EventGenerationDelivery)definition.GenerationDelivery,
+            NamedTags = definition.NamedTags.Select(tag => new Contracts.Events.NamedTag { Name = tag.Name.Value, Value = tag.Value }).ToList()
         });
     }
 
@@ -147,6 +150,6 @@ internal sealed class EventStoreSubscriptions(
 
         var existingEventTypes = existing.EventTypes.ToHashSet();
         var incomingEventTypes = incoming.EventTypes.ToHashSet();
-        return existingEventTypes.SetEquals(incomingEventTypes);
+        return existingEventTypes.SetEquals(incomingEventTypes) && existing.NamedTags.ToHashSet().SetEquals(incoming.NamedTags);
     }
 }

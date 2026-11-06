@@ -11,6 +11,7 @@ using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Contracts.Observation.Reactors;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
+using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Observation.Reactors.Clients;
 using Cratis.Chronicle.Services.Events;
@@ -38,6 +39,7 @@ namespace Cratis.Chronicle.Services.Observation.Reactors;
 /// <param name="options"><see cref="IOptions{ChronicleOptions}"/> for how often to check the subscription of a connected client.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 /// <param name="registrationGate">The silo-wide gate for observer registrations.</param>
+/// <param name="namespaceCasing">The namespace casing resolver.</param>
 internal sealed class Reactors(
     IGrainFactory grainFactory,
     IReactorMediator reactorMediator,
@@ -46,7 +48,8 @@ internal sealed class Reactors(
     [FromKeyedServices(WellKnown.MeterName)] IActivitySource<Reactors> activitySource,
     IOptions<ChronicleOptions> options,
     ILogger<Reactors> logger,
-    IObserverRegistrationGate registrationGate) : IReactors
+    IObserverRegistrationGate registrationGate,
+    INamespaceCasing namespaceCasing) : IReactors
 {
     /// <inheritdoc/>
     public IObservable<EventsToObserve> Observe(IObservable<ReactorMessage> messages, CallContext context = default)
@@ -106,6 +109,7 @@ internal sealed class Reactors(
             try
             {
                 var registration = await registrationTcs.Task.WaitAsync(cancellation.Token);
+                registration.Namespace = (await namespaceCasing.Canonicalize(registration.EventStore, registration.Namespace)).Value;
                 connectionId = registration.ConnectionId;
                 observerId = registration.Reactor.ReactorId;
                 eventStoreName = registration.EventStore;

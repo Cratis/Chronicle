@@ -13,6 +13,7 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Compliance;
 using Microsoft.Extensions.Logging;
@@ -28,13 +29,15 @@ namespace Cratis.Chronicle.Observation.EventStoreSubscriptions;
 /// <param name="logger">The logger.</param>
 /// <param name="storage">Storage for current subscriptions and exact event generations.</param>
 /// <param name="generationRelease">The pinned generation release boundary.</param>
+/// <param name="namespaceCasing">The namespace casing resolver.</param>
 public class EventStoreSubscriptionObserverSubscriber(
     IGrainFactory grainFactory,
     IEncryptionKeyStorage encryptionKeyStorage,
     JsonSerializerOptions jsonSerializerOptions,
     ILogger<EventStoreSubscriptionObserverSubscriber> logger,
     IStorage storage,
-    IEventGenerationRelease generationRelease) : Grain, IEventStoreSubscriptionObserverSubscriber
+    IEventGenerationRelease generationRelease,
+    INamespaceCasing namespaceCasing) : Grain, IEventStoreSubscriptionObserverSubscriber
 {
     ObserverKey _key = ObserverKey.NotSet;
 
@@ -59,8 +62,9 @@ public class EventStoreSubscriptionObserverSubscriber(
         }
 
         var targetEventStore = new EventStoreName(targetEventStoreValue);
+        var targetNamespace = await namespaceCasing.Canonicalize(targetEventStore, _key.Namespace);
         var inboxSequenceId = new EventSequenceId($"{EventSequenceId.InboxPrefix}{_key.EventStore}");
-        var inboxSequence = grainFactory.GetEventSequence(inboxSequenceId, targetEventStore, _key.Namespace);
+        var inboxSequence = grainFactory.GetEventSequence(inboxSequenceId, targetEventStore, targetNamespace);
 
         var lastSuccessfullyForwardedSequenceNumber = EventSequenceNumber.Unavailable;
         try
@@ -83,26 +87,50 @@ public class EventStoreSubscriptionObserverSubscriber(
             var copiedSubjects = new HashSet<Subject>();
             foreach (var incoming in events)
             {
+                if (definition is not null && !EventStoreSubscriptionTagFilter.Matches(definition.NamedTags, incoming.Context.NamedTags))
+                {
+                    // Filtered out before forwarding: never copied into the target inbox, but processed so the observer moves past it.
+                    lastSuccessfullyForwardedSequenceNumber = incoming.Context.SequenceNumber;
+                    continue;
+                }
+
                 var @event = await ReleaseForCurrentPin(incoming, pins, schemas, targetEventStore);
                 if (copiedSubjects.Add(@event.Context.Subject))
                 {
-                    await CopyEncryptionKeyIfMissingForTargetStore(@event.Context.Subject, targetEventStore);
+                    await CopyEncryptionKeyIfMissingForTargetStore(@event.Context.Subject, targetEventStore, targetNamespace);
                 }
                 var content = SerializeContent(@event.Content);
-                var appendResult = await inboxSequence.Append(
-                    @event.Context.EventSourceType,
-                    @event.Context.EventSourceId,
-                    @event.Context.EventStreamType,
-                    @event.Context.EventStreamId,
-                    @event.Context.EventType,
-                    content,
-                    @event.Context.CorrelationId,
-                    @event.Context.Causation,
-                    @event.Context.CausedBy,
-                    @event.Context.Tags,
-                    ConcurrencyScope.None,
-                    occurred: @event.Context.Occurred,
-                    subject: @event.Context.Subject);
+                var namedTags = @event.Context.NamedTags.ToArray();
+                var appendResult = namedTags.Length == 0
+                    ? await inboxSequence.Append(
+                        @event.Context.EventSourceType,
+                        @event.Context.EventSourceId,
+                        @event.Context.EventStreamType,
+                        @event.Context.EventStreamId,
+                        @event.Context.EventType,
+                        content,
+                        @event.Context.CorrelationId,
+                        @event.Context.Causation,
+                        @event.Context.CausedBy,
+                        @event.Context.Tags,
+                        ConcurrencyScope.None,
+                        occurred: @event.Context.Occurred,
+                        subject: @event.Context.Subject)
+                    : await inboxSequence.Append(
+                        @event.Context.EventSourceType,
+                        @event.Context.EventSourceId,
+                        @event.Context.EventStreamType,
+                        @event.Context.EventStreamId,
+                        @event.Context.EventType,
+                        content,
+                        @event.Context.CorrelationId,
+                        @event.Context.Causation,
+                        @event.Context.CausedBy,
+                        @event.Context.Tags,
+                        ConcurrencyScope.None,
+                        @event.Context.Occurred,
+                        @event.Context.Subject,
+                        namedTags);
 
                 if (!appendResult.IsSuccess)
                 {
@@ -184,10 +212,10 @@ public class EventStoreSubscriptionObserverSubscriber(
         return JsonNode.Parse(json) as JsonObject ?? new JsonObject();
     }
 
-    async Task CopyEncryptionKeyIfMissingForTargetStore(Subject subject, EventStoreName targetEventStore)
+    async Task CopyEncryptionKeyIfMissingForTargetStore(Subject subject, EventStoreName targetEventStore, EventStoreNamespaceName targetNamespace)
     {
         var identifier = new EncryptionKeyIdentifier(subject.Value);
-        var targetHasKey = await encryptionKeyStorage.HasFor(targetEventStore, _key.Namespace, identifier);
+        var targetHasKey = await encryptionKeyStorage.HasFor(targetEventStore, targetNamespace, identifier);
         if (targetHasKey)
         {
             return;
@@ -197,9 +225,9 @@ public class EventStoreSubscriptionObserverSubscriber(
         // back before the fence existed - the copy happens because the target holds no key, which is the state an
         // erasure creates. The store refuses the write regardless; asking first is what turns a thrown exception
         // into a logged refusal for the common case, so forwarding of the subject's non-PII events keeps flowing.
-        if (await encryptionKeyStorage.GetErasureFor(targetEventStore, _key.Namespace, identifier) is { NewKeyAllowed: false })
+        if (await encryptionKeyStorage.GetErasureFor(targetEventStore, targetNamespace, identifier) is { NewKeyAllowed: false })
         {
-            logger.SkippedCopyingEncryptionKeyToErasedEventStore(_key.EventStore, targetEventStore, _key.Namespace);
+            logger.SkippedCopyingEncryptionKeyToErasedEventStore(_key.EventStore, targetEventStore, targetNamespace);
             return;
         }
 
@@ -212,7 +240,7 @@ public class EventStoreSubscriptionObserverSubscriber(
         // Idempotently place the source key in the target store. GetOrAddFor keeps any key the target already
         // has and otherwise persists the source key as the initial revision, so concurrent forwarded events for
         // the same subject — or a replay — converge on a single revision instead of minting duplicate revisions.
-        await encryptionKeyStorage.GetOrAddFor(targetEventStore, _key.Namespace, identifier, sourceKey);
+        await encryptionKeyStorage.GetOrAddFor(targetEventStore, targetNamespace, identifier, sourceKey);
 
         // The propagation is otherwise invisible: nothing in the API tells an operator that a second event store
         // now holds this subject's key, and right-to-erasure reaches exactly the one event store it is asked for.
@@ -220,6 +248,6 @@ public class EventStoreSubscriptionObserverSubscriber(
         // source id and is a natural person in the common case, and a log line naming it is unencrypted personal
         // data that outlives the crypto-shred this whole feature exists to perform. The pair of event stores and
         // the namespace are what an operator needs to know a copy happened and where to look.
-        logger.CopiedEncryptionKeyToTargetEventStore(_key.EventStore, targetEventStore, _key.Namespace);
+        logger.CopiedEncryptionKeyToTargetEventStore(_key.EventStore, targetEventStore, targetNamespace);
     }
 }

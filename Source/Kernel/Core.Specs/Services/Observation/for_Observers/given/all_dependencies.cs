@@ -37,6 +37,6 @@ public class all_dependencies : Services.for_QueryExecutor.given.a_routed_query
         _namespaceStorage.Observers.Returns(_observerStateStorage);
         _namespaceStorage.FailedPartitions.Returns(_failedPartitionsStorage);
 
-        _observers = new Observers(_grainFactory, _storage, _observerRemover);
+        _observers = new Observers(_grainFactory, _storage, _observerRemover, NamespaceCasingContext.Create());
     }
 }
