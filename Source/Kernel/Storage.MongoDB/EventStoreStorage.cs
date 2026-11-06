@@ -181,6 +181,9 @@ public class EventStoreStorage(
     }
 
     /// <inheritdoc/>
+    public Task<bool> HasOwnNamespaceData(EventStoreNamespaceName @namespace) => eventStoreDatabase.GetNamespaceDatabase(@namespace).HasOwnDatabase();
+
+    /// <inheritdoc/>
     public async Task DropNamespace(EventStoreNamespaceName @namespace)
     {
         await eventStoreDatabase.GetNamespaceDatabase(@namespace).Drop();

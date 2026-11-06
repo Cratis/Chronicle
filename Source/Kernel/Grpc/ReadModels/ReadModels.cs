@@ -15,6 +15,7 @@ using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Contracts.ReadModels;
 using Cratis.Chronicle.Json;
+using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Observation.Reducers.Clients;
 using Cratis.Chronicle.Projections;
@@ -41,6 +42,7 @@ namespace Cratis.Chronicle.Services.ReadModels;
 /// <param name="complianceHelper">The <see cref="IReadModelsCompliance"/> for decrypting compliance and security fields.</param>
 /// <param name="materializedReadModels">The <see cref="IMaterializedReadModelStore"/> for reading instances that are already materialized.</param>
 /// <param name="jsonSerializerOptions">The JSON serializer options.</param>
+/// <param name="namespaceCasing">The namespace casing resolver.</param>
 internal sealed class ReadModels(
     IGrainFactory grainFactory,
     IStorage storage,
@@ -51,7 +53,8 @@ internal sealed class ReadModels(
     ILocalSiloDetails localSiloDetails,
     IReadModelsCompliance complianceHelper,
     IMaterializedReadModelStore materializedReadModels,
-    JsonSerializerOptions jsonSerializerOptions) : IReadModels
+    JsonSerializerOptions jsonSerializerOptions,
+    INamespaceCasing namespaceCasing) : IReadModels
 {
     /// <summary>
     /// Gets or sets the delay between attempts to resolve a read model definition.
@@ -145,6 +148,7 @@ internal sealed class ReadModels(
     public async Task<GetInstancesResponse> GetInstances(GetInstancesRequest request, CallContext context = default)
     {
         await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.ReadModel, request.Occurrence));
+        request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
         var readModel = grainFactory.GetReadModel(request.ReadModel, request.EventStore);
         var definition = await readModel.GetKnownDefinition(request.ReadModel);
         var occurrence = string.IsNullOrEmpty(request.Occurrence) ? null : (ReadModelContainerName)request.Occurrence;
@@ -174,6 +178,7 @@ internal sealed class ReadModels(
     public async Task<GetInstanceByKeyResponse> GetInstanceByKey(GetInstanceByKeyRequest request, CallContext context = default)
     {
         await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.ReadModelIdentifier, request.EventSequenceId, request.SessionId));
+        request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
         var readModel = grainFactory.GetReadModel(request.ReadModelIdentifier, request.EventStore);
         var definition = await readModel.GetKnownDefinition(request.ReadModelIdentifier);
 
@@ -303,6 +308,7 @@ internal sealed class ReadModels(
     public async Task<GetAllInstancesResponse> GetAllInstances(GetAllInstancesRequest request, CallContext context = default)
     {
         await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.ReadModelIdentifier, request.EventSequenceId));
+        request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
         var readModel = grainFactory.GetReadModel(request.ReadModelIdentifier, request.EventStore);
         var definition = await readModel.GetKnownDefinition(request.ReadModelIdentifier);
 
@@ -445,6 +451,7 @@ internal sealed class ReadModels(
     public async Task DehydrateSession(DehydrateSessionRequest request, CallContext context = default)
     {
         await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.ReadModelIdentifier, request.EventSequenceId, request.SessionId));
+        request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
         var readModel = grainFactory.GetReadModel(request.ReadModelIdentifier, request.EventStore);
         var definition = await readModel.GetKnownDefinition(request.ReadModelIdentifier);
 
@@ -481,6 +488,7 @@ internal sealed class ReadModels(
 
         return Observable.Create<ReadModelChangeset>(async observer =>
         {
+            request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
             var definition = await WaitForReadModelDefinition(readModel, request.ReadModelIdentifier, context.CancellationToken);
 
             var schema = definition.GetSchemaForLatestGeneration();

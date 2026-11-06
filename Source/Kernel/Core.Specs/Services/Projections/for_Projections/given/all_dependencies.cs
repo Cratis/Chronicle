@@ -151,7 +151,8 @@ public class all_dependencies : Specification
             services.BuildServiceProvider(),
             _readModelsCompliance,
             _localSiloDetails,
-            Microsoft.Extensions.Logging.Abstractions.NullLogger<Projections>.Instance);
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<Projections>.Instance,
+            NamespaceCasingContext.Create());
     }
 
     /// <summary>

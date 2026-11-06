@@ -16,6 +16,7 @@ public class and_subscription_does_not_exist : Specification
     async Task Establish()
     {
         var silo = new TestKitSilo();
+        silo.AddNamespaceCasing();
 
         var localSiloDetails = Substitute.For<ILocalSiloDetails>();
         silo.AddService(localSiloDetails);
