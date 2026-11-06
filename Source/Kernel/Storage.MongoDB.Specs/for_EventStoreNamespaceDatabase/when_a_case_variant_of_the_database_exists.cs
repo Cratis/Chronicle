@@ -28,6 +28,8 @@ public class when_a_case_variant_of_the_database_exists(MongoDBFixture fixture) 
     long _directEvents;
     long _connectionEvents;
     string[] _databases;
+    bool _variantHasOwnData;
+    bool _exactHasOwnData;
 
     async Task Establish()
     {
@@ -50,6 +52,13 @@ public class when_a_case_variant_of_the_database_exists(MongoDBFixture fixture) 
 
     async Task Because()
     {
+        _variantHasOwnData = await _direct.HasOwnDatabase();
+        _exactHasOwnData = await new EventStoreNamespaceDatabase(
+            "Studio",
+            "Cratis",
+            CreateClientManager(),
+            Options.Create(new MongoDBOptions { Server = fixture.ConnectionString }),
+            Options.Create(new MongoDBStorageOptions { DatabaseNamePrefix = _prefix })).HasOwnDatabase();
         await _direct.EnsureIndexesForEventSequence(EventSequenceId.Log);
         await _throughConnections.EnsureIndexesForEventSequence(EventSequenceId.Log);
         _directEvents = await _direct.GetEventSequenceCollectionAsBsonFor(EventSequenceId.Log).CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty);
@@ -60,6 +69,16 @@ public class when_a_case_variant_of_the_database_exists(MongoDBFixture fixture) 
     [Fact] void should_read_the_existing_events_without_connection_resolution() => _directEvents.ShouldEqual(2L);
     [Fact] void should_read_the_existing_events_through_connection_resolution() => _connectionEvents.ShouldEqual(2L);
     [Fact] void should_keep_only_the_existing_database() => _databases.ShouldContainOnly($"{_prefix}Studio+es+Cratis");
+
+    [Fact] void should_not_treat_the_variant_as_having_its_own_data() => _variantHasOwnData.ShouldBeFalse();
+    [Fact] void should_find_data_under_the_exact_name() => _exactHasOwnData.ShouldBeTrue();
+
+    IMongoDBClientManager CreateClientManager()
+    {
+        var manager = Substitute.For<IMongoDBClientManager>();
+        manager.GetClientFor(Arg.Any<MongoClientSettings>()).Returns(_client);
+        return manager;
+    }
 
     async Task Destroy()
     {

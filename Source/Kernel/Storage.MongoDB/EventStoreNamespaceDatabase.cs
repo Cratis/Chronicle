@@ -144,6 +144,13 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
         return names.Count > 0;
     }
 
+    /// <inheritdoc/>
+    public async Task<bool> HasOwnDatabase()
+    {
+        using var databases = await Client.ListDatabaseNamesAsync().ConfigureAwait(false);
+        return (await databases.ToListAsync().ConfigureAwait(false)).Contains(_requestedDatabaseName, StringComparer.Ordinal);
+    }
+
     /// <summary>
     /// Gets the event indexes shared by runtime and offline provisioning.
     /// </summary>

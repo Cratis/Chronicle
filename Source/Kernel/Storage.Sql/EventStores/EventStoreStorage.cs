@@ -141,6 +141,13 @@ public class EventStoreStorage(EventStoreName eventStore, IDatabase database, II
     }
 
     /// <inheritdoc/>
+    public async Task<bool> HasOwnNamespaceData(EventStoreNamespaceName @namespace)
+    {
+        await using var scope = await database.ExistingNamespace(eventStore, @namespace);
+        return scope is not null;
+    }
+
+    /// <inheritdoc/>
     public IEventStoreNamespaceStorage GetNamespace(EventStoreNamespaceName @namespace)
         => new Namespaces.EventStoreNamespaceStorage(eventStore, @namespace, database, sinkFactories, jobsStorage, jsonSerializerOptions, EventTypes, converter);
 }
