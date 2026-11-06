@@ -20,4 +20,10 @@ public class GraphNodeRemovedWithDefinition
     /// </summary>
     [ProtoMember(2)]
     public bool Detach { get; set; }
+
+    /// <summary>
+    /// Gets or sets the optional collection property of the event to run the mapping for, once per item. Expressions address the item's properties as <c>collection.property</c>.
+    /// </summary>
+    [ProtoMember(3)]
+    public string? ForEach { get; set; }
 }

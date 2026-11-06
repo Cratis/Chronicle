@@ -26,4 +26,10 @@ public class GraphEdgeRemovedWithDefinition
     /// </summary>
     [ProtoMember(3)]
     public string? Identity { get; set; }
+
+    /// <summary>
+    /// Gets or sets the optional collection property of the event to run the mapping for, once per item. Expressions address the item's properties as <c>collection.property</c>.
+    /// </summary>
+    [ProtoMember(4)]
+    public string? ForEach { get; set; }
 }

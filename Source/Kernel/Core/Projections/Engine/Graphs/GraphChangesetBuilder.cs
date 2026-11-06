@@ -32,11 +32,58 @@ public class GraphChangesetBuilder(GraphProjectionPlan plan, IGraphSink sink, Pr
         var mappings = plan.GetMappingsFor(@event.Context.EventType);
         if (mappings is null) return new(owner, operations);
 
-        foreach (var node in mappings.Nodes) await AddNode(node, @event, operations);
-        foreach (var edge in mappings.Edges) await AddEdge(edge, @event, operations);
-        foreach (var removal in mappings.EdgeRemovals) AddEdgeRemoval(removal, @event, operations);
-        foreach (var removal in mappings.NodeRemovals) AddNodeRemoval(removal, @event, operations);
+        foreach (var node in mappings.Nodes)
+        {
+            foreach (var occurrence in Occurrences(node.ForEach, @event)) await AddNode(node, occurrence, operations);
+        }
+
+        foreach (var edge in mappings.Edges)
+        {
+            foreach (var occurrence in Occurrences(edge.ForEach, @event)) await AddEdge(edge, occurrence, operations);
+        }
+
+        foreach (var removal in mappings.EdgeRemovals)
+        {
+            foreach (var occurrence in Occurrences(removal.ForEach, @event)) AddEdgeRemoval(removal, occurrence, operations);
+        }
+
+        foreach (var removal in mappings.NodeRemovals)
+        {
+            foreach (var occurrence in Occurrences(removal.ForEach, @event)) AddNodeRemoval(removal, occurrence, operations);
+        }
         return new(owner, operations);
+    }
+
+    /// <summary>
+    /// Gets the events a mapping runs for: the event itself, or one event per item of the collection the mapping iterates.
+    /// </summary>
+    /// <remarks>
+    /// Each item's event carries the same content with the collection property replaced by that item, so an expression written
+    /// as <c>slots.series</c> resolves to the item's <c>series</c> and every resolver of the projection engine works unchanged.
+    /// An absent or empty collection yields nothing.
+    /// </remarks>
+    /// <param name="forEach">The collection property, if the mapping iterates one.</param>
+    /// <param name="event">The <see cref="AppendedEvent"/>.</param>
+    /// <returns>The events to map.</returns>
+    static IEnumerable<AppendedEvent> Occurrences(string? forEach, AppendedEvent @event)
+    {
+        if (forEach is null)
+        {
+            yield return @event;
+            yield break;
+        }
+
+        var content = (IDictionary<string, object?>)@event.Content;
+        if (!content.TryGetValue(forEach, out var collection) || collection is null or string || collection is not System.Collections.IEnumerable items) yield break;
+
+        foreach (var item in items)
+        {
+            var itemContent = new ExpandoObject();
+            var values = (IDictionary<string, object?>)itemContent;
+            foreach (var (name, value) in content) values[name] = value;
+            values[forEach] = item;
+            yield return @event with { Content = itemContent };
+        }
     }
 
     static object? ResolveKey(ValueProvider<AppendedEvent>? provider, AppendedEvent @event)

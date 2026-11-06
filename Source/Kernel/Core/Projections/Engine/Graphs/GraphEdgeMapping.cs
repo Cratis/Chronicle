@@ -20,6 +20,7 @@ namespace Cratis.Chronicle.Projections.Engine.Graphs;
 /// <param name="PropertyNames">The names of the properties the mapping sets, in the order of <paramref name="Properties"/>.</param>
 /// <param name="Properties">The <see cref="PropertyMapper{TSource, TTarget}"/> for each property, including counters.</param>
 /// <param name="ReadsCurrentState">Whether a property is a counter, which needs the current value of the edge from the sink.</param>
+/// <param name="ForEach">The collection property of the event the mapping runs once per item of, if any.</param>
 public record GraphEdgeMapping(
     string Type,
     string SourceLabel,
@@ -30,4 +31,5 @@ public record GraphEdgeMapping(
     ValueProvider<AppendedEvent>? Identity,
     IReadOnlyList<string> PropertyNames,
     IReadOnlyList<PropertyMapper<AppendedEvent, ExpandoObject>> Properties,
-    bool ReadsCurrentState);
+    bool ReadsCurrentState,
+    string? ForEach = null);

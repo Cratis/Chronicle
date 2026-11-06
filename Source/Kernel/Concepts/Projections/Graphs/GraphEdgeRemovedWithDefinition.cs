@@ -9,4 +9,5 @@ namespace Cratis.Chronicle.Concepts.Projections.Graphs;
 /// <param name="SourceKey"><see cref="PropertyExpression"/> resolving the key of the source node.</param>
 /// <param name="TargetKey"><see cref="PropertyExpression"/> resolving the key of the target node.</param>
 /// <param name="Identity">Optional <see cref="PropertyExpression"/> resolving the value of the identifying property of the edge.</param>
-public record GraphEdgeRemovedWithDefinition(PropertyExpression SourceKey, PropertyExpression TargetKey, PropertyExpression? Identity);
+/// <param name="ForEach">Optional collection property of the event; the mapping runs once per item and expressions address the item as <c>collection.property</c>.</param>
+public record GraphEdgeRemovedWithDefinition(PropertyExpression SourceKey, PropertyExpression TargetKey, PropertyExpression? Identity, PropertyExpression? ForEach = null);
