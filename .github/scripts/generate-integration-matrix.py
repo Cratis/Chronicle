@@ -234,6 +234,11 @@ def main():
         # PerProcess activation specs need its gRPC listener and cover client identity once.
         if namespace in {"for_KernelTlsLifecycle", "for_PerProcessActivation"}:
             namespace_configs = [config for config in configs if config[0] == "outofprocess" and config[1] == "mongodb"]
+        # Graph projections run on the silo of the client and write to a Neo4j server the fixture starts, so the storage backend of the kernel
+        # is not what they exercise. In-process covers MongoDB without building the kernel image; every other backend is covered out of process,
+        # which also proves a graph is projected the same way whatever stores the event log.
+        if namespace == "GraphProjections":
+            namespace_configs = [config for config in configs if config[0] == "inprocess" or config[1] != "mongodb"]
         # Process recovery owns a PostgreSQL database and an external kernel regardless of lane settings.
         # Schedule it only once, in the lane matching the infrastructure it actually exercises.
         if namespace == "for_OccurrenceProcessRecovery":

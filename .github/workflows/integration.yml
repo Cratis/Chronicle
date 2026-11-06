@@ -149,6 +149,9 @@ jobs:
           retry_wait_seconds: 15
           command: |
             docker pull mongo:8.2
+            if [ "${{ matrix.namespace }}" = "Cratis.Chronicle.Integration.GraphProjections" ]; then
+              docker pull neo4j:5-community
+            fi
             if [ "${{ matrix.database }}" = "postgresql" ]; then
               docker pull postgres:16
             fi
