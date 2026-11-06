@@ -26,6 +26,11 @@ on:
         type: boolean
         required: false
         default: false
+      integration_selection:
+        description: "JSON naming the integration lanes a pull request needs (see .github/scripts/select-integration.py). Empty runs every lane."
+        type: string
+        required: false
+        default: ""
     outputs:
       all_providers:
         description: "Whether the integration matrix used all storage providers"
@@ -745,6 +750,8 @@ jobs:
       chronicle-image: ${{ needs.dotnet-build.outputs.chronicle-image }}
       # Every storage backend nightly and on dispatch; labeled hot-core PRs also use all providers.
       all-providers: ${{ github.event_name != 'pull_request' || inputs.all_providers }}
+      # Only a requested pull-request run narrows the lanes; every other event runs them all.
+      selection: ${{ github.event_name == 'pull_request' && inputs.integration_selection || '' }}
 
   integration-api:
     # Waits for the ordinary specs on pull requests, like the integration matrix (#5050).

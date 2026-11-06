@@ -142,24 +142,66 @@ class SparseIntegrationWorkflows(unittest.TestCase):
                 self.assertEqual(job_id + "-${{ " + EFFECTIVE_LABEL + " }}", job["name"])
 
     def test_effective_label_preserves_evidence_names_and_job_eligibility(self):
-        for (action, label), carries_label, same_repo, cancelled in product(
+        for (action, label), carries_label, same_repo, cancelled, mode in product(
                 (("labeled", "run-integration"), ("labeled", "patch"), ("synchronize", ""), ("reopened", "")),
-                (False, True), (False, True), (False, True)):
+                (False, True), (False, True), (False, True), ("full", "selected", "skip")):
             with self.subTest(action=action, label=label, carries_label=carries_label,
-                              same_repo=same_repo, cancelled=cancelled):
+                              same_repo=same_repo, cancelled=cancelled, mode=mode):
                 bindings = {"github.event.action": action, "github.event.label.name": label,
                             "contains(github.event.pull_request.labels.*.name, 'run-integration')": carries_label,
                             "github.event.pull_request.head.repo.full_name == github.repository": same_repo,
+                            "needs.requested-detect-hot-core.outputs.mode": mode,
                             "cancelled()": cancelled}
                 expected = label if action == "labeled" else "run-integration" if carries_label else "none"
                 self.assertEqual(expected, evaluate_boolean_condition(EFFECTIVE_LABEL, bindings))
                 for job_id, job in self.requested["jobs"].items():
                     expression = job["if"].removeprefix("${{").removesuffix("}}").strip()
+                    # A carried-forward push (selection mode `skip`) keeps the matrix job from running; the gate still reports.
                     eligible = expected == "run-integration" and (
-                        not cancelled if job_id == "hot-core-gate-requested" else same_repo)
+                        not cancelled if job_id == "hot-core-gate-requested"
+                        else same_repo and (mode != "skip" if job_id == "requested-integration" else True))
                     self.assertEqual(eligible, evaluate_boolean_condition(expression, bindings))
                     self.assertEqual(job_id + "-" + expected,
                                      job["name"].replace("${{ " + EFFECTIVE_LABEL + " }}", expected))
+
+    def test_every_integration_lane_runs_only_when_discovery_says_it_is_selected(self):
+        jobs = self.integration["jobs"]
+        for job_id, flag in (("client-integration-specs", "client-run"), ("kernel-integration-specs", "kernel-run"),
+                             ("clustering-integration-specs", "clustering-run"), ("sql-clustering-integration-specs", "sql-run")):
+            self.assertEqual(f"needs.discover.outputs.{flag} == 'true'", jobs[job_id]["if"], job_id)
+        lanes = next(step for step in jobs["discover"]["steps"] if step.get("id") == "lanes")
+        # No selection (nightly, manual, hot core) must run every lane, never none.
+        self.assertIn('if [ -z "$SELECTION" ]', lanes["run"])
+        self.assertIn('echo "client=true"; echo "kernel=true"; echo "clustering=true"; echo "sql=true"', lanes["run"])
+
+    def test_a_selection_narrows_only_requested_pull_request_runs(self):
+        integration = self.build["jobs"]["integration"]
+        self.assertEqual("${{ github.event_name == 'pull_request' && inputs.integration_selection || '' }}",
+                         integration["with"]["selection"])
+        requested = self.requested["jobs"]["requested-integration"]
+        self.assertEqual("${{ needs.requested-detect-hot-core.outputs.selection }}", requested["with"]["integration_selection"])
+        self.assertEqual("", self.build["on"]["workflow_call"]["inputs"]["integration_selection"]["default"])
+        self.assertEqual("", self.integration["on"]["workflow_call"]["inputs"]["selection"]["default"])
+
+    def test_selection_is_computed_after_hot_core_detection_and_fails_closed_to_the_whole_matrix(self):
+        detect = self.requested["jobs"]["requested-detect-hot-core"]
+        steps = [step.get("id") for step in detect["steps"]]
+        self.assertLess(steps.index("detect"), steps.index("select"))
+        select = next(step for step in detect["steps"] if step.get("id") == "select")
+        self.assertIn("test-select-integration.py", select["run"])
+        self.assertEqual("${{ steps.detect.outputs.touched }}", select["env"]["TOUCHED"])
+        self.assertEqual("read", detect["permissions"]["actions"])
+        self.assertEqual("${{ steps.select.outputs.mode }}", detect["outputs"]["mode"])
+
+    def test_the_gate_accepts_a_skipped_matrix_only_when_selection_chose_to_skip(self):
+        gate = next(step for step in self.requested["jobs"]["hot-core-gate-requested"]["steps"] if step["name"] == "Decide")
+        script = gate["run"]
+        self.assertEqual("${{ needs.requested-detect-hot-core.outputs.mode }}", gate["env"]["MODE"])
+        self.assertIn('[ "$MODE" = "skip" ] && [ "$INTEGRATION" = "skipped" ]', script)
+        # The skip allowance sits after the fork and detection checks, and before the matrix-ran check.
+        self.assertLess(script.index('"$FORK" = "true"'), script.index('"$MODE" = "skip"'))
+        self.assertLess(script.index('"$DETECT" != "success"'), script.index('"$MODE" = "skip"'))
+        self.assertLess(script.index('"$MODE" = "skip"'), script.index('-z "$ALL_PROVIDERS"'))
 
     def test_hot_core_detection_precedes_one_requested_matrix(self):
         jobs = self.requested["jobs"]
@@ -738,9 +780,10 @@ sys.exit(1 if 'Failed' in outcomes.values() else 0)
         ordinary = jobs["sql-clustering-integration-specs"]
         rolling = jobs["sql-clustering-rolling-upgrade"]
         self.assertEqual(["PostgreSql", "SqlServer"], ordinary["strategy"]["matrix"]["provider"])
-        self.assertNotIn("if", ordinary)
+        self.assertEqual("needs.discover.outputs.sql-run == 'true'", ordinary["if"])
         self.assertEqual(["RollingUpgrade"], rolling["strategy"]["matrix"]["provider"])
-        self.assertEqual("needs.discover.outputs.rolling-upgrade-enabled == 'true'", rolling["if"])
+        self.assertEqual("needs.discover.outputs.rolling-upgrade-enabled == 'true' && needs.discover.outputs.sql-run == 'true'",
+                         rolling["if"])
         self.assertEqual(["discover"], rolling["needs"])
         self.assertEqual(ordinary["steps"], rolling["steps"])
         self.assertEqual(ordinary["timeout-minutes"], rolling["timeout-minutes"])

@@ -20,6 +20,11 @@ on:
         required: false
         default: false
         type: boolean
+      selection:
+        description: "JSON from .github/scripts/select-integration.py naming the lanes a pull request needs ({client:[...],kernel,clustering,sql}). Empty runs every lane, which is what nightly and manual runs do."
+        required: false
+        default: ""
+        type: string
 
 jobs:
   discover:
@@ -30,6 +35,10 @@ jobs:
       all-providers: ${{ steps.client.outputs.all-providers }}
       kernel-matrix: ${{ steps.kernel.outputs.matrix }}
       clustering-matrix: ${{ steps.clustering.outputs.matrix }}
+      client-run: ${{ steps.lanes.outputs.client }}
+      kernel-run: ${{ steps.lanes.outputs.kernel }}
+      clustering-run: ${{ steps.lanes.outputs.clustering }}
+      sql-run: ${{ steps.lanes.outputs.sql }}
       rolling-upgrade-enabled: ${{ steps.exclusions.outputs.rolling-upgrade-enabled }}
 
     steps:
@@ -41,6 +50,32 @@ jobs:
       # second and run before anything is discovered.
       - name: Verify the integration matrix generator
         run: python3 .github/scripts/test-generate-integration-matrix.py
+
+      # An empty selection runs every lane. A pull request that selected lanes runs only those; a lane
+      # whose job is skipped here is reported in the job summary, never silently dropped.
+      - name: Resolve which lanes run
+        id: lanes
+        env:
+          SELECTION: ${{ inputs.selection }}
+        run: |
+          if [ -z "$SELECTION" ]; then
+            { echo "client=true"; echo "kernel=true"; echo "clustering=true"; echo "sql=true"; echo "client-namespaces="; echo "scoped=false"; } >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          jq -e 'type == "object" and (.client | type == "array")' <<<"$SELECTION" > /dev/null \
+            || { echo "::error::The integration selection is not the expected JSON: $SELECTION"; exit 1; }
+          {
+            echo "client=$(jq -r '(.client | length) > 0' <<<"$SELECTION")"
+            echo "kernel=$(jq -r '.kernel == true' <<<"$SELECTION")"
+            echo "clustering=$(jq -r '.clustering == true' <<<"$SELECTION")"
+            echo "sql=$(jq -r '.sql == true' <<<"$SELECTION")"
+            echo "client-namespaces=$(jq -r '.client | join(",")' <<<"$SELECTION")"
+            echo "scoped=true"
+          } >> "$GITHUB_OUTPUT"
+          {
+            echo "Selected integration lanes (the rest are skipped by selection):"
+            jq -r '"- client namespaces: " + (if (.client | length) == 0 then "none" else (.client | join(", ")) end) + "\n- kernel: \(.kernel == true)\n- clustering: \(.clustering == true)\n- sql clustering: \(.sql == true)"' <<<"$SELECTION"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Report explicitly skipped integration lanes
         id: exclusions
@@ -55,11 +90,17 @@ jobs:
       - name: Discover Client integration namespaces
         id: client
         run: |
-          echo "matrix=$(python3 .github/scripts/generate-integration-matrix.py ${ALL_PROVIDERS:+--all-providers})" >> "$GITHUB_OUTPUT"
+          if [ "$SCOPED" = "true" ]; then
+            echo "matrix=$(python3 .github/scripts/generate-integration-matrix.py ${ALL_PROVIDERS:+--all-providers} --namespaces "$CLIENT_NAMESPACES")" >> "$GITHUB_OUTPUT"
+          else
+            echo "matrix=$(python3 .github/scripts/generate-integration-matrix.py ${ALL_PROVIDERS:+--all-providers})" >> "$GITHUB_OUTPUT"
+          fi
           echo "all-providers=$INPUT_ALL_PROVIDERS" >> "$GITHUB_OUTPUT"
         env:
           ALL_PROVIDERS: ${{ inputs.all-providers && 'true' || '' }}
           INPUT_ALL_PROVIDERS: ${{ inputs.all-providers }}
+          SCOPED: ${{ steps.lanes.outputs.scoped }}
+          CLIENT_NAMESPACES: ${{ steps.lanes.outputs.client-namespaces }}
 
       - name: Discover Kernel integration namespaces
         id: kernel
@@ -93,6 +134,7 @@ jobs:
 
   client-integration-specs:
     needs: [discover]
+    if: needs.discover.outputs.client-run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 120
     strategy:
@@ -207,6 +249,7 @@ jobs:
 
   kernel-integration-specs:
     needs: [discover]
+    if: needs.discover.outputs.kernel-run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 120
     strategy:
@@ -283,6 +326,7 @@ jobs:
 
   clustering-integration-specs:
     needs: [discover]
+    if: needs.discover.outputs.clustering-run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 120
     strategy:
@@ -346,6 +390,7 @@ jobs:
 
   sql-clustering-integration-specs:
     needs: [discover]
+    if: needs.discover.outputs.sql-run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     strategy:
@@ -528,7 +573,7 @@ jobs:
   sql-clustering-rolling-upgrade:
     name: SQL clustering (RollingUpgrade)
     needs: [discover]
-    if: needs.discover.outputs.rolling-upgrade-enabled == 'true'
+    if: needs.discover.outputs.rolling-upgrade-enabled == 'true' && needs.discover.outputs.sql-run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     strategy:
