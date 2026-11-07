@@ -8,6 +8,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Grpc;
+using Cratis.Chronicle.Security;
 
 namespace Cratis.Chronicle.Sequences;
 
@@ -24,6 +25,7 @@ namespace Cratis.Chronicle.Sequences;
 /// <param name="CausedBy">Optional identity for application callers. Chronicle users are always recorded as the current principal.</param>
 /// <param name="ConcurrencyScopes">Optional concurrency scopes to validate the append against, one per event source. An event source with no entry gets no check.</param>
 /// <param name="EffectReceipt">Optional occurrence effect to commit atomically with this batch.</param>
+[StoreAccess(StoreAccess.Append)]
 [Command]
 [BelongsTo(WellKnownServices.EventSequences)]
 public record AppendManyForEventSources(

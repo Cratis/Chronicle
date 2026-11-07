@@ -24,8 +24,21 @@ static class KernelCommandRouting
     /// </summary>
     /// <param name="context">The <see cref="CommandContext"/> of the command.</param>
     /// <returns>The getters, empty if it is not a kernel command or has no routing values.</returns>
-    internal static RoutingGetter[] For(CommandContext context) =>
-        context.Type.Assembly == _kernelAssembly ? _getters.GetOrAdd(context.Type, static type => CreateGetters(type)) : [];
+    internal static RoutingGetter[] For(CommandContext context) => For(context.Type);
+
+    /// <summary>
+    /// Gets the routing value getters for a command type.
+    /// </summary>
+    /// <param name="type">The type of the command.</param>
+    /// <returns>The getters, empty if it is not a kernel command or has no routing values.</returns>
+    internal static RoutingGetter[] For(Type type) => type.Assembly == _kernelAssembly ? GettersFor(type) : [];
+
+    /// <summary>
+    /// Gets the routing value getters for a type, without regard to the assembly it is declared in.
+    /// </summary>
+    /// <param name="type">The type of the command.</param>
+    /// <returns>The getters.</returns>
+    internal static RoutingGetter[] GettersFor(Type type) => _getters.GetOrAdd(type, static key => CreateGetters(key));
 
     static RoutingGetter[] CreateGetters(Type type)
     {

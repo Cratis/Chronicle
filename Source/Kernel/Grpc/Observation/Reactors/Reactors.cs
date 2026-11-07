@@ -15,6 +15,7 @@ using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Observation.Reactors.Clients;
+using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Services.Events;
 using Cratis.Chronicle.Storage;
 using Cratis.Traces;
@@ -90,7 +91,7 @@ internal sealed class Reactors(
                         register.Reactor.EventSequenceId,
                         register.ConnectionId);
 
-                    registrationTcs.SetResult(register);
+                    _ = SystemStoreGuard.CompleteRegistration(context, register.EventStore, register.Namespace, StoreAccess.Manage, registrationTcs, register);
                     break;
 
                 case ReactorResult result:
@@ -279,13 +280,13 @@ internal sealed class Reactors(
             register?.Dispose();
         });
 
-        return observable;
+        return MonitorRegistration(observable, registrationTcs.Task, context, (messagesSubscription, register));
     }
 
     /// <inheritdoc/>
     public async Task<HasReactorResponse> HasReactor(HasReactorRequest request, CallContext context = default)
     {
-        await SystemStoreGuard.Ensure(context, new(request.EventStore, request.ReactorId));
+        await SystemStoreGuard.Ensure(context, new(request.EventStore, request.ReactorId), StoreAccess.Read, namespaceAddressed: false);
         var eventStore = storage.GetEventStore(request.EventStore);
         var exists = await eventStore.Reactors.Has(new(request.ReactorId));
 
@@ -297,6 +298,16 @@ internal sealed class Reactors(
         var definition = await eventStore.Reactors.Get(new(request.ReactorId));
         return new HasReactorResponse { Exists = true, EventSequenceId = definition.EventSequenceId.Value };
     }
+
+    static IObservable<EventsToObserve> MonitorRegistration(IObservable<EventsToObserve> source, Task<RegisterReactor> registration, CallContext context, (IDisposable Messages, CancellationTokenRegistration? Registration) lifetime) =>
+        Observable.FromAsync(() => registration.WaitAsync(context.CancellationToken))
+            .Catch<RegisterReactor, OperationCanceledException>(_ => Observable.Empty<RegisterReactor>())
+            .SelectMany(arguments => StoreCapabilityGuard.EndWhenRevoked(source, context, arguments.EventStore, arguments.Namespace, StoreAccess.Manage))
+            .Finally(() =>
+            {
+                lifetime.Messages.Dispose();
+                lifetime.Registration?.Dispose();
+            });
 
     IEnumerable<(string Partition, ObserverSubscriberResult Result)> ToSubscriberResults(ReactorResult result) =>
         result.Partitions.Count > 0

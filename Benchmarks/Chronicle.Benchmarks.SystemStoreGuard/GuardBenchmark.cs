@@ -5,6 +5,8 @@ using System.Security.Claims;
 using BenchmarkDotNet.Attributes;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Security;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
@@ -17,17 +19,16 @@ namespace Cratis.Chronicle.Benchmarks.SystemStoreGuard;
 [MedianColumn]
 [MinColumn]
 [MaxColumn]
-[InProcess]
-[WarmupCount(3)]
-[IterationCount(10)]
+[Config(typeof(ColdPathConfig))]
 public class GuardBenchmark
 {
     readonly SystemStoreAuthorizationProbe _admin = new(true);
     readonly SystemStoreAuthorizationProbe _nonAdmin = new(false);
-    readonly ClaimsPrincipal _caller = new(new ClaimsIdentity([new Claim("sub", "caller")], "bench"));
     readonly string _store = "bench";
     readonly string _namespace = "Default";
     readonly string _sequence = "event-log";
+    HttpContext[] _requests = [];
+    int _next;
     SystemStoreAccessVerdict _adminAccess = null!;
     SystemStoreAccessVerdict _nonAdminAccess = null!;
 
@@ -39,15 +40,33 @@ public class GuardBenchmark
     /// <summary>
     /// Creates the access primitives.
     /// </summary>
+    /// <returns>A task that completes when the verdicts have been verified.</returns>
+    /// <exception cref="InvalidOperationException">The configured callers received unexpected verdicts.</exception>
     [GlobalSetup]
-    public void Setup()
+    public async Task Setup()
     {
         _adminAccess = new(Decisions(_admin));
         _nonAdminAccess = new(Decisions(_nonAdmin));
+        var caller = new ClaimsPrincipal(new ClaimsIdentity([new Claim("sub", "caller")], "bench"));
+        if (!await _adminAccess.IsAllowed(caller) || await _nonAdminAccess.IsAllowed(caller))
+        {
+            throw new InvalidOperationException("The configured callers received unexpected verdicts.");
+        }
+        _admin.Reset();
+        _nonAdmin.Reset();
     }
 
-    static AuthorizationDecisions Decisions(SystemStoreAuthorizationProbe probe) =>
-        new(probe, Options.Create(new ChronicleOptions()), NullLogger<AuthorizationDecisions>.Instance);
+    /// <summary>Creates fresh callers outside the measured operation.</summary>
+    [IterationSetup]
+    public void PrepareRequests()
+    {
+        _next = 0;
+        _requests = new HttpContext[EntitledCaller.RequestCount];
+        for (var index = 0; index < _requests.Length; index++)
+        {
+            _requests[index] = new DefaultHttpContext { User = new ClaimsPrincipal(new ClaimsIdentity([new Claim("sub", "caller")], "bench")) };
+        }
+    }
 
     /// <summary>
     /// No guard: the cost of reading the same values.
@@ -73,7 +92,7 @@ public class GuardBenchmark
         // SystemAdmin and SystemNonAdmin legitimately call the roster; the non-System path must not.
         _admin.Reset();
         _nonAdmin.Reset();
-        _ = SystemStoreAccess.IsSystem(_store) ? _adminAccess.IsAllowed(_caller) : Task.CompletedTask;
+        _ = SystemStoreAccess.IsSystem(_store) ? _adminAccess.IsAllowed(_requests[0].User) : Task.CompletedTask;
         if (NonSystemRosterCalls != 0) throw new InvalidOperationException("A non-System call asked for the roster.");
     }
 
@@ -82,12 +101,20 @@ public class GuardBenchmark
     /// </summary>
     /// <returns>The verdict.</returns>
     [Benchmark]
-    public Task<bool> SystemAdmin() => SystemStoreAccess.IsSystem("System") ? _adminAccess.IsAllowed(_caller) : Task.FromResult(true);
+    public Task<bool> SystemAdmin() => SystemStoreAccess.IsSystem("System") ? _adminAccess.IsAllowed(_requests[_next++].User) : Task.FromResult(true);
 
     /// <summary>
     /// The verdict for a non-administrator addressing System.
     /// </summary>
     /// <returns>The verdict.</returns>
     [Benchmark]
-    public Task<bool> SystemNonAdmin() => SystemStoreAccess.IsSystem("SYSTEM") ? _nonAdminAccess.IsAllowed(_caller) : Task.FromResult(true);
+    public Task<bool> SystemNonAdmin() => SystemStoreAccess.IsSystem("SYSTEM") ? _nonAdminAccess.IsAllowed(_requests[_next++].User) : Task.FromResult(true);
+
+    static AuthorizationDecisions Decisions(SystemStoreAuthorizationProbe probe)
+    {
+        // The administrator check is resolved from the caller's request services, as in the server.
+        var services = new ServiceCollection().AddSingleton<IAdministratorAuthorization>(probe).BuildServiceProvider();
+        var accessor = new FixedHttpContextAccessor(new DefaultHttpContext { RequestServices = services });
+        return new(Options.Create(new ChronicleOptions()), NullLogger<AuthorizationDecisions>.Instance, httpContextAccessor: accessor);
+    }
 }

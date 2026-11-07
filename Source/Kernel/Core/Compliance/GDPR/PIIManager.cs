@@ -43,32 +43,15 @@ public class PIIManager(
         var key = GetKey();
         List<Exception> failures = [];
         var eventStores = await EventStoresToReach(key, failures);
+        await DeleteEncryptionKey(identifier, key, eventStores, failures);
+    }
 
-        // Fencing every event store before destroying anything in any of them is what closes the window the
-        // per-store erasure could not: between the first delete and the last, one store still held the key and
-        // another did not, and an event forwarded in that interval copied the survivor into a store that had just
-        // been cleared. With the fence recorded first there is no interval in which any store accepts the key.
-        await ForEach(eventStores, failures, eventStore => keyStore.RecordErasureFor(eventStore, key.Namespace, identifier));
-        await ForEach(eventStores, failures, eventStore => keyStore.DeleteFor(eventStore, key.Namespace, identifier));
-
-        // A unique-index claim derived from the subject's personal data still holds its value and a hash that confirms
-        // it. The fence above stops a new key, and therefore a new claim, so deleting the claims now is final.
-        await ForEach(eventStores, failures, eventStore => RemoveUniqueClaimsFor(eventStore, key.Namespace, identifier));
-
-        // The eviction is not conditional on the erase succeeding. A composite key store attempts every store and
-        // then reports a partial failure, so the key can be durably destroyed and the call still fail - and a
-        // failure that skipped the eviction would leave every peer silo serving the erased key from a cache that
-        // has no time-to-live and nothing else to clear it. Evicting is idempotent and cheap, so it always runs.
-        await ForEach(eventStores, failures, eventStore => cacheClient.Evict(eventStore, key.Namespace, identifier));
-
-        if (failures.Count > 0)
-        {
-            logger.SubjectErasureIncomplete(BindingFor(identifier), key.Namespace, failures.Count, eventStores.Count, Names(eventStores));
-            failures.ThrowIfUnderReview();
-            throw new EncryptionKeyErasureIncomplete(identifier, failures);
-        }
-
-        logger.ErasedSubject(BindingFor(identifier), key.Namespace, eventStores.Count, Names(eventStores));
+    /// <inheritdoc/>
+    public Task DeleteEncryptionKeyIn(EncryptionKeyIdentifier identifier, EventStoreName[] eventStores)
+    {
+        ThrowIfEncryptedValueIdentifier(identifier);
+        var key = GetKey();
+        return DeleteEncryptionKey(identifier, key, AuthorizedStores(key, eventStores), []);
     }
 
     /// <inheritdoc/>
@@ -78,21 +61,15 @@ public class PIIManager(
         var key = GetKey();
         List<Exception> failures = [];
         var eventStores = await EventStoresToReach(key, failures);
+        await AllowNewEncryptionKey(identifier, key, eventStores, failures);
+    }
 
-        await ForEach(eventStores, failures, eventStore => keyStore.AllowNewKeyFor(eventStore, key.Namespace, identifier));
-
-        // A silo that remembers the subject as absent would keep answering from that memory instead of reaching the
-        // store where the authorization now sits, so the next append would still fail to provision.
-        await ForEach(eventStores, failures, eventStore => cacheClient.Evict(eventStore, key.Namespace, identifier));
-
-        if (failures.Count > 0)
-        {
-            logger.NewEncryptionKeyAuthorizationIncomplete(BindingFor(identifier), key.Namespace, failures.Count, eventStores.Count, Names(eventStores));
-            failures.ThrowIfUnderReview();
-            throw new EncryptionKeyLifecycleIncomplete(identifier, failures);
-        }
-
-        logger.AllowedNewEncryptionKey(BindingFor(identifier), key.Namespace, eventStores.Count, Names(eventStores));
+    /// <inheritdoc/>
+    public Task AllowNewEncryptionKeyIn(EncryptionKeyIdentifier identifier, EventStoreName[] eventStores)
+    {
+        ThrowIfEncryptedValueIdentifier(identifier);
+        var key = GetKey();
+        return AllowNewEncryptionKey(identifier, key, AuthorizedStores(key, eventStores), []);
     }
 
     static void ThrowIfEncryptedValueIdentifier(EncryptionKeyIdentifier identifier)
@@ -122,6 +99,11 @@ public class PIIManager(
         return Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(identifier.Value)));
     }
 
+    static bool IsSystem(EventStoreName eventStore) => eventStore.Value.Equals(EventStoreName.System.Value, StringComparison.OrdinalIgnoreCase);
+
+    static EventStoreName[] AuthorizedStores(PIIManagerKey key, IEnumerable<EventStoreName> eventStores) =>
+        eventStores.Where(eventStore => !IsSystem(eventStore) || IsSystem(key.EventStore)).Distinct().ToArray();
+
     static async Task ForEach(IEnumerable<EventStoreName> eventStores, List<Exception> failures, Func<EventStoreName, Task> operation)
     {
         foreach (var eventStore in eventStores)
@@ -139,15 +121,51 @@ public class PIIManager(
         }
     }
 
+    async Task DeleteEncryptionKey(EncryptionKeyIdentifier identifier, PIIManagerKey key, IReadOnlyList<EventStoreName> eventStores, List<Exception> failures)
+    {
+        // Fence all authorized stores before deleting any key, so a forwarded event cannot restore an erased key.
+        await ForEach(eventStores, failures, eventStore => keyStore.RecordErasureFor(eventStore, key.Namespace, identifier));
+        await ForEach(eventStores, failures, eventStore => keyStore.DeleteFor(eventStore, key.Namespace, identifier));
+        await ForEach(eventStores, failures, eventStore => RemoveUniqueClaimsFor(eventStore, key.Namespace, identifier));
+
+        // Evict even after a partial storage failure: a durable deletion must not leave a cached key alive.
+        await ForEach(eventStores, failures, eventStore => cacheClient.Evict(eventStore, key.Namespace, identifier));
+        if (failures.Count > 0)
+        {
+            logger.SubjectErasureIncomplete(BindingFor(identifier), key.Namespace, failures.Count, eventStores.Count, Names(eventStores));
+            failures.ThrowIfUnderReview();
+            throw new EncryptionKeyErasureIncomplete(identifier, failures);
+        }
+
+        logger.ErasedSubject(BindingFor(identifier), key.Namespace, eventStores.Count, Names(eventStores));
+    }
+
+    async Task AllowNewEncryptionKey(EncryptionKeyIdentifier identifier, PIIManagerKey key, IReadOnlyList<EventStoreName> eventStores, List<Exception> failures)
+    {
+        await ForEach(eventStores, failures, eventStore => keyStore.AllowNewKeyFor(eventStore, key.Namespace, identifier));
+
+        // A cached absence must not hide the authorization to provision a fresh key.
+        await ForEach(eventStores, failures, eventStore => cacheClient.Evict(eventStore, key.Namespace, identifier));
+        if (failures.Count > 0)
+        {
+            logger.NewEncryptionKeyAuthorizationIncomplete(BindingFor(identifier), key.Namespace, failures.Count, eventStores.Count, Names(eventStores));
+            failures.ThrowIfUnderReview();
+            throw new EncryptionKeyLifecycleIncomplete(identifier, failures);
+        }
+
+        logger.AllowedNewEncryptionKey(BindingFor(identifier), key.Namespace, eventStores.Count, Names(eventStores));
+    }
+
     async Task<IReadOnlyList<EventStoreName>> EventStoresToReach(PIIManagerKey key, List<Exception> failures)
     {
+        if (IsSystem(key.EventStore)) return [key.EventStore];
         try
         {
             // The event store this manager is addressed at is always included, even when the cluster listing does
             // not have it yet - an erasure that skipped the store the caller named would be the most surprising
             // outcome of all, and the listing is registration state rather than a statement about which keys exist.
             var eventStores = await storage.GetEventStores();
-            return [.. eventStores.Append(key.EventStore).Distinct()];
+            return [.. eventStores.Append(key.EventStore).Where(eventStore => !IsSystem(eventStore)).Distinct()];
         }
         catch (Exception error)
         {

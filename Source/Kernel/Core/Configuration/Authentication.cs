@@ -8,6 +8,19 @@ namespace Cratis.Chronicle.Configuration;
 /// </summary>
 public class Authentication
 {
+    /// <summary>The default for enforcement of explicit event store entitlements.</summary>
+    public const bool DefaultEnforceStoreEntitlements = false;
+
+    /// <summary>
+    /// The default for <see cref="EnforceAdministratorPolicyForOperations"/>.
+    /// </summary>
+    public const bool DefaultEnforceAdministratorPolicyForOperations = true;
+
+    /// <summary>
+    /// The default for <see cref="EnforceDestructiveOperations"/>.
+    /// </summary>
+    public const bool DefaultEnforceDestructiveOperations = true;
+
     /// <summary>
     /// Gets the server-local, single-use administrator recovery request.
     /// </summary>
@@ -28,9 +41,33 @@ public class Authentication
 
     /// <summary>
     /// Gets whether to enforce administrator authorization for System-store operational recovery.
-    /// Defaults to audit-only; administrator management is always enforced.
+    /// Administrator management is always enforced. When this is off, an operation the administrator policy
+    /// would refuse is logged and allowed. Defaults to <see langword="true"/>. Setting it to <see langword="false"/>
+    /// is a temporary opt-out that is removed in the next major release.
     /// </summary>
-    public bool EnforceAdministratorPolicyForOperations { get; init; }
+    public bool EnforceAdministratorPolicyForOperations { get; init; } = DefaultEnforceAdministratorPolicyForOperations;
+
+    /// <summary>
+    /// Gets whether to refuse non-administrators the destructive operations: compliance key deletion and key re-allowance
+    /// that would reach event stores other than the requested one, and the destructive System-store operational
+    /// recovery operations. It is independent of <see cref="EnforceAdministratorPolicyForOperations"/> and
+    /// <see cref="EnforceStoreEntitlements"/>; either of those being on still enforces its broader scope.
+    /// The scope is deliberately narrow: destructive operations on the System store or at kernel scope, and compliance key
+    /// fan-out beyond the requested event store. Operations on an ordinary event store, such as an application replaying its
+    /// own observers, stay with the per-store rules and are not affected by this flag. Rotating an application secret is
+    /// deliberately excluded, because an administrator can rotate it again.
+    /// When this is off, such operations are logged and allowed as before. Defaults to <see langword="true"/>.
+    /// Setting it to <see langword="false"/> is a temporary opt-out that is removed in the next major release.
+    /// </summary>
+    public bool EnforceDestructiveOperations { get; init; } = DefaultEnforceDestructiveOperations;
+
+    /// <summary>
+    /// Gets whether to enforce explicit event store entitlements. Defaults to false for audit mode.
+    /// </summary>
+    public bool EnforceStoreEntitlements { get; init; } = DefaultEnforceStoreEntitlements;
+
+    /// <summary>Gets explicit grants for issuer-qualified external principals.</summary>
+    public IEnumerable<ExternalEventStoreAccess> EventStoreAccess { get; init; } = [];
 
     /// <summary>
     /// Gets the authentication authority URL. If not configured, uses the internal OAuth authority.

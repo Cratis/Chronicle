@@ -41,6 +41,8 @@ interface [GrainInterfaceType("Cratis.Chronicle.Captures.ICapturesManager")] Cra
 
 class [GrainType("connectedclients")] Cratis.Chronicle.Clients.ConnectedClients
 
+class [GrainType("connectionreservation")] Cratis.Chronicle.Clients.ConnectionReservation
+
 interface [GrainInterfaceType("Cratis.Chronicle.Clients.IConnectedClients")] Cratis.Chronicle.Clients.IConnectedClients [Version(2)]
   AE0E91A3: DeclaresProjection(Cratis.Chronicle.Concepts.EventStoreName, Cratis.Chronicle.Concepts.Projections.ProjectionId) -> Task<bool>
   4317FD1C: GetAllConnectedClients() -> Task<System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Clients.ConnectedClient>>
@@ -57,11 +59,17 @@ interface [GrainInterfaceType("Cratis.Chronicle.Clients.IConnectedClients")] Cra
   1F595548: RecordObserver(Cratis.Chronicle.Concepts.Clients.ConnectionId, Cratis.Chronicle.Concepts.Observation.ObserverKey) -> Task
   710D6431: ReserveConnection() -> Task
 
+interface [GrainInterfaceType("Cratis.Chronicle.Clients.IConnectionReservation")] Cratis.Chronicle.Clients.IConnectionReservation [Version(1)]
+  8FE2642A: Claim(Cratis.Chronicle.Clients.ConnectionOwner, Orleans.Runtime.SiloAddress, System.Guid, System.TimeSpan) -> Task<bool>
+  38462836: Release(Cratis.Chronicle.Clients.ConnectionOwner, System.Guid) -> Task
+
 class [GrainType("encryptionkeycachegrainservice")] Cratis.Chronicle.Compliance.EncryptionKeyCacheGrainService
 
-interface [GrainInterfaceType("Cratis.Chronicle.Compliance.GDPR.IPIIManager")] Cratis.Chronicle.Compliance.GDPR.IPIIManager [Version(0)]
+interface [GrainInterfaceType("Cratis.Chronicle.Compliance.GDPR.IPIIManager")] Cratis.Chronicle.Compliance.GDPR.IPIIManager [Version(1)]
   C7F9B124: AllowNewEncryptionKeyFor(Cratis.Chronicle.Compliance.EncryptionKeyIdentifier) -> Task
+  E6B4130E: AllowNewEncryptionKeyIn(Cratis.Chronicle.Compliance.EncryptionKeyIdentifier, Cratis.Chronicle.Concepts.EventStoreName[]) -> Task
   F86C64B2: DeleteEncryptionKeyFor(Cratis.Chronicle.Compliance.EncryptionKeyIdentifier) -> Task
+  2D88ED08: DeleteEncryptionKeyIn(Cratis.Chronicle.Compliance.EncryptionKeyIdentifier, Cratis.Chronicle.Concepts.EventStoreName[]) -> Task
 
 class [GrainType("piimanager")] Cratis.Chronicle.Compliance.GDPR.PIIManager
 
@@ -623,6 +631,26 @@ interface [GrainInterfaceType("Cratis.Chronicle.Security.IAdministratorRoster")]
 interface [GrainInterfaceType("Cratis.Chronicle.Security.IDataProtectionKeys")] Cratis.Chronicle.Security.IDataProtectionKeys [Version(0)]
   3D4FDEB9: GetAllKeys() -> Task<System.Collections.Generic.IEnumerable<string>>
   B58CBF6C: StoreKey(string, string) -> Task
+
+interface [GrainInterfaceType("Cratis.Chronicle.Security.IStoreEntitlementObservations")] Cratis.Chronicle.Security.IStoreEntitlementObservations [Version(1)]
+  9C622A57: GetSnapshot() -> Task<System.Collections.Generic.IEnumerable<Cratis.Chronicle.Security.StoreEntitlementObservation>>
+  57885EA8: Record(Cratis.Chronicle.Security.PrincipalKey, Cratis.Chronicle.Concepts.EventStoreName, Cratis.Chronicle.Concepts.EventStoreNamespaceName?, Cratis.Chronicle.Security.StoreAccess) -> Task
+
+interface [GrainInterfaceType("Cratis.Chronicle.Security.IStoreEntitlements")] Cratis.Chronicle.Security.IStoreEntitlements [Version(1)]
+  838B3BBE: GetSnapshot() -> Task<Cratis.Chronicle.Security.StoreEntitlementsState>
+  220D1D94: GetVersion() -> Task<long>
+  DD25DC07: Grant(Cratis.Chronicle.Security.EventStoreAccessGrant) -> Task
+  6CBC26A7: Reconcile(System.Collections.Generic.IEnumerable<Cratis.Chronicle.Security.ConfiguredGrant>) -> Task
+  87FC16D8: Revoke(Cratis.Chronicle.Security.EventStoreAccessGrant) -> Task<bool>
+
+interface [GrainInterfaceType("Cratis.Chronicle.Security.IStoreEntitlementsCacheGrainService")] Cratis.Chronicle.Security.IStoreEntitlementsCacheGrainService [Version(1)]
+  555B46A3: Refresh(Cratis.Chronicle.Security.StoreEntitlementsState) -> Task
+
+class [GrainType("storeentitlementobservations")] Cratis.Chronicle.Security.StoreEntitlementObservations
+
+class [GrainType("storeentitlements")] Cratis.Chronicle.Security.StoreEntitlements
+
+class [GrainType("storeentitlementscachegrainservice")] Cratis.Chronicle.Security.StoreEntitlementsCacheGrainService
 
 class [GrainType("eventseeding")] Cratis.Chronicle.Seeding.EventSeeding
 

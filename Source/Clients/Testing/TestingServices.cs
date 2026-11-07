@@ -42,6 +42,7 @@ using KernelApplicationsService = KernelGrpc::Cratis.Chronicle.Services.Security
 using KernelCaptureLanguageService = KernelCore::Cratis.Chronicle.Captures.Engine.DeclarationLanguage.LanguageService;
 using KernelCapturesService = KernelGrpc::Cratis.Chronicle.Services.Captures.Captures;
 using KernelCaptureValidator = KernelCore::Cratis.Chronicle.Captures.Engine.CaptureValidator;
+using KernelComplianceAuthorization = KernelGrpc::Cratis.Chronicle.Services.Compliance.ComplianceAuthorization;
 using KernelComplianceService = KernelGrpc::Cratis.Chronicle.Services.Compliance.ComplianceService;
 using KernelConstraintsService = KernelGrpc::Cratis.Chronicle.Services.Events.Constraints.Constraints;
 using KernelEventSourcesService = KernelGrpc::Cratis.Chronicle.Services.EventSources.EventSources;
@@ -337,7 +338,12 @@ internal sealed class TestingServices : IServices
             new KernelComplianceService(
                 grainFactory,
                 compliance.Manager,
-                NullLogger<KernelComplianceService>.Instance));
+                NullLogger<KernelComplianceService>.Instance,
+                new KernelComplianceAuthorization(
+                    kernelOptions,
+                    storage,
+                    null!, // Direct in-process calls bypass authorization and never resolve a request scope.
+                    NullLogger<KernelComplianceAuthorization>.Instance)));
     }
 
     /// <inheritdoc/>

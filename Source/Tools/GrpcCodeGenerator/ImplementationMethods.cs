@@ -103,7 +103,7 @@ public static class ImplementationMethods
             ? $"global::{context.ContractsNamespace}.{method.Name}Request request, {CallContextType} callContext = default"
             : $"{CallContextType} callContext = default";
 
-        var source = QueryDispatch(method.Name, method.Method, invocation, parameters, readModelType, serviceName, context, RoutingFor(wireParameters))
+        var source = QueryDispatch(method.Name, method.Method, invocation, parameters, readModelType, serviceName, context, RoutingFor(wireParameters, StoreCapability(readModelType), readModelType.FullName ?? readModelType.Name))
             .Replace("    public ", AuthorizationAttributes(readModelType, method.Method) + "    public ", StringComparison.Ordinal);
         return AllowsAnonymous(readModelType) || AllowsAnonymous(method.Method)
             ? source.Replace("    public ", "    [global::Microsoft.AspNetCore.Authorization.AllowAnonymous]\n    public ", StringComparison.Ordinal)
@@ -356,17 +356,24 @@ public static class ImplementationMethods
     /// Writes the expression that creates the routing a query addresses, from the request fields its parameters map onto.
     /// </summary>
     /// <param name="parameters">The parameters that arrive on the wire.</param>
+    /// <param name="capability">The capability the read model declares for the addressed event store, if any.</param>
+    /// <param name="artifact">The name of the read model, for diagnostics.</param>
     /// <returns>The C# expression, or null when no parameter carries a routing value.</returns>
-    /// <exception cref="UnsupportedServiceShape">Thrown when the query addresses more routing components than the guard carries.</exception>
-    static string? RoutingFor(IReadOnlyList<ParameterInfo> parameters)
+    /// <exception cref="UnsupportedServiceShape">Thrown when the query addresses more routing components than the guard carries, or declares a capability without addressing an event store.</exception>
+    static string? RoutingFor(IReadOnlyList<ParameterInfo> parameters, string? capability = null, string artifact = "")
     {
         var routing = parameters.Where(IsRouting).ToList();
+        var store = routing.FirstOrDefault(IsStore);
+        if (capability is not null && store is null)
+        {
+            throw new UnsupportedServiceShape(artifact, $"it declares the store capability '{capability}' but no parameter addresses an event store.");
+        }
+
         if (routing.Count == 0)
         {
             return null;
         }
 
-        var store = routing.FirstOrDefault(IsStore);
         var components = routing.Where(p => p != store).ToList();
         if (components.Count > MaximumRoutingComponents)
         {
@@ -377,8 +384,18 @@ public static class ImplementationMethods
 
         var values = new List<string> { store is null ? "null" : RequestField(store) };
         values.AddRange(components.Select(RequestField));
+        if (capability is not null)
+        {
+            values.Add($"Capability: {System.Text.Json.JsonSerializer.Serialize(capability)}");
+        }
+
+        var applicationScope = parameters.FirstOrDefault(IsApplicationScope);
+        if (applicationScope is not null) values.Add($"ApplicationScope: {RequestField(applicationScope)}");
+
         return $"new global::Cratis.Chronicle.Services.QueryRouting({string.Join(", ", values)})";
     }
+
+    static bool IsApplicationScope(ParameterInfo parameter) => parameter.Name == "applicationScope" && parameter.ParameterType == typeof(bool);
 
     static string RequestField(ParameterInfo parameter) => $"request.{ImplementationValues.PropertyName(parameter.Name ?? "value")}";
 
@@ -398,6 +415,11 @@ public static class ImplementationMethods
             $"request.{ImplementationValues.PropertyName(parameter.Name ?? "value")}",
             parameter.ParameterType,
             NullableAnnotations.IsNullable(parameter));
+
+    static string? StoreCapability(MemberInfo member) => member.GetCustomAttributesData()
+        .Where(attribute => string.Equals(attribute.AttributeType.FullName, "Cratis.Chronicle.Grpc.StoreCapabilityAttribute", StringComparison.Ordinal))
+        .Select(attribute => attribute.ConstructorArguments.FirstOrDefault().Value as string)
+        .FirstOrDefault(capability => !string.IsNullOrEmpty(capability));
 
     static bool AllowsAnonymous(MemberInfo member) => member.GetCustomAttributesData().Any(attribute =>
         string.Equals(attribute.AttributeType.FullName, "Cratis.Arc.Authorization.AllowAnonymousAttribute", StringComparison.Ordinal) ||

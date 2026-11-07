@@ -4,7 +4,9 @@
 using System.Reactive.Linq;
 using BenchmarkDotNet.Attributes;
 using Cratis.Chronicle.Contracts.Queries;
+using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Services;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Cratis.Chronicle.Benchmarks.SystemStoreGuard;
 
@@ -15,13 +17,14 @@ namespace Cratis.Chronicle.Benchmarks.SystemStoreGuard;
 [MedianColumn]
 [MinColumn]
 [MaxColumn]
-[InProcess]
-[WarmupCount(3)]
-[IterationCount(10)]
-public class QueryPathBenchmark
+[Config(typeof(ColdPathConfig))]
+public class QueryPathBenchmark : IDisposable
 {
     readonly IEnumerable<int> _items = Enumerable.Range(0, 100).ToArray();
     readonly QueryRouting _routing = new("bench", "Default", "event-log");
+    readonly QueryRouting _applicationRouting = new("bench", "Default", Capability: "chronicle.event-store.read");
+    EntitledCaller _entitled = null!;
+    EntitledCaller _unentitledAudited = null!;
     Task<IEnumerable<int>> _items100 = null!;
     Func<IObservable<IEnumerable<int>>> _observe = null!;
 
@@ -39,6 +42,55 @@ public class QueryPathBenchmark
     {
         _items100 = Task.FromResult(_items);
         _observe = Observe;
+        _entitled = new(true, true);
+        _unentitledAudited = new(false, false);
+    }
+
+    /// <summary>
+    /// Releases the snapshots.
+    /// </summary>
+    [GlobalCleanup]
+    public void Cleanup() => Dispose();
+
+    /// <inheritdoc/>
+    public void Dispose()
+    {
+        _entitled.Dispose();
+        _unentitledAudited.Dispose();
+        GC.SuppressFinalize(this);
+    }
+
+    /// <summary>
+    /// Executes a query for a caller whose Read grant is in the snapshot, with enforcement on.
+    /// </summary>
+    /// <returns>The query result.</returns>
+    [Benchmark]
+    public Task<QueryResult<IEnumerable<int>>> EntitledRead() => ReadFor(_entitled);
+
+    /// <summary>
+    /// Executes a query for a caller without a grant, with enforcement off (audited).
+    /// </summary>
+    /// <returns>The query result.</returns>
+    [Benchmark]
+    public Task<QueryResult<IEnumerable<int>>> AuditedUnentitledRead() => ReadFor(_unentitledAudited);
+
+    /// <summary>
+    /// Creates a hand-written application-store stream for an entitled caller, with enforcement on.
+    /// </summary>
+    [Benchmark]
+    public void EntitledObservableGuard()
+    {
+        using var scope = _entitled.Services.CreateScope();
+        var call = _entitled.NextRequest(scope.ServiceProvider);
+        using var subscription = (Guarded ? Services.SystemStoreGuard.Ensure(call, _applicationRouting, StoreAccess.Read, _observe) : _observe()).Subscribe();
+    }
+
+    /// <summary>Creates fresh request identities outside the measured operation.</summary>
+    [IterationSetup]
+    public void PrepareRequests()
+    {
+        _entitled.PrepareRequests();
+        _unentitledAudited.PrepareRequests();
     }
 
     /// <summary>
@@ -63,7 +115,14 @@ public class QueryPathBenchmark
     /// <returns>The stream.</returns>
     [Benchmark]
     public IObservable<IEnumerable<int>> ObservableGuard() =>
-        Guarded ? global::Cratis.Chronicle.Services.SystemStoreGuard.Ensure(default, _routing, _observe) : _observe();
+        Guarded ? Services.SystemStoreGuard.Ensure(default, _routing, StoreAccess.Read, _observe) : _observe();
+
+    async Task<QueryResult<IEnumerable<int>>> ReadFor(EntitledCaller caller)
+    {
+        await using var scope = caller.Services.CreateAsyncScope();
+        var call = caller.NextRequest(scope.ServiceProvider);
+        return Guarded ? await QueryExecutor.Execute(call, _applicationRouting, Read) : await QueryExecutor.Execute(Read);
+    }
 
     IObservable<IEnumerable<int>> Observe() => Observable.Return(_items);
 

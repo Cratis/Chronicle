@@ -31,7 +31,7 @@ public class when_an_unexpected_failure_occurs : given.a_compliance_service
             });
         var loggerFactory = Substitute.For<ILoggerFactory>();
         loggerFactory.CreateLogger(Arg.Any<string>()).Returns(_logger);
-        service = new ComplianceService(Substitute.For<IGrainFactory>(), manager, new Logger<ComplianceService>(loggerFactory));
+        service = new ComplianceService(Substitute.For<IGrainFactory>(), manager, new Logger<ComplianceService>(loggerFactory), authorization);
     }
 
     async Task Because()

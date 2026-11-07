@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Benchmarks;
 /// Measures the cost of appending batches of events to Chronicle.
 /// </summary>
 [MemoryDiagnoser]
-[SimpleJob(warmupCount: 3, iterationCount: 10)]
+[InProcess]
 public class AppendManyBenchmark : IDisposable, IAsyncDisposable
 {
     ChronicleBenchmarkFixture? _fixture;

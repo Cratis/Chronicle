@@ -18,6 +18,7 @@ public class when_an_external_administrator_mapping_is_enabled : Specification
             Authentication = new Configuration.Authentication
             {
                 Enabled = true,
+                EnforceAdministratorPolicyForOperations = true,
                 Authority = "https://identity.example",
                 ExternalAdministratorClaim = new ExternalAdministratorClaim { Type = "roles", Value = "secret-admin-value" }
             }

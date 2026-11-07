@@ -36,6 +36,7 @@ public class when_exchanging_client_credentials_for_a_known_client : a_client_cr
 
     [Fact] void should_sign_in() => _result.ShouldBeOfExactType<SignInResult>();
     [Fact] void should_sign_in_with_the_openiddict_scheme() => ((SignInResult)_result).AuthenticationScheme.ShouldEqual(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+    [Fact] void should_resolve_to_the_configured_grant_holder() => Security.PrincipalKey.From(_principal, new Configuration.Authentication()).ShouldEqual(new Security.PrincipalKey(Security.PrincipalKey.LocalIssuer, _applicationId.ToString()));
     [Fact] void should_use_the_application_id_as_subject() => _principal.FindFirst(OpenIddictConstants.Claims.Subject).Value.ShouldEqual(_applicationId.ToString());
     [Fact] void should_use_the_client_id_as_name() => _principal.FindFirst(OpenIddictConstants.Claims.Name).Value.ShouldEqual(ClientId);
     [Fact] void should_carry_the_requested_scopes() => _principal.GetScopes().ShouldContainOnly("chronicle.read", "chronicle.write");

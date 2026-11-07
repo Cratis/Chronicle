@@ -18,6 +18,7 @@ using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Projections.Engine.DeclarationLanguage;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Services.Events;
 using Cratis.Chronicle.Services.Projections.Definitions;
 using Cratis.Chronicle.Services.ReadModels;
@@ -71,7 +72,7 @@ internal sealed class Projections(
     /// <inheritdoc/>
     public async Task Register(RegisterRequest request, CallContext context = default)
     {
-        SystemStoreGuard.EnsureNotSystem(new(request.EventStore));
+        await SystemStoreGuard.EnsureNotSystem(context, new(request.EventStore), StoreAccess.Manage);
         foreach (var definition in request.Projections)
         {
             SystemStoreGuard.EnsureNotSystem(new(request.EventStore, definition.Identifier, definition.ReadModel, definition.EventSequenceId));
@@ -120,7 +121,7 @@ internal sealed class Projections(
     /// <inheritdoc/>
     public async Task<IEnumerable<ProjectionDefinition>> GetAllDefinitions(GetAllDefinitionsRequest request, CallContext context = default)
     {
-        await SystemStoreGuard.Ensure(context, new(request.EventStore));
+        await SystemStoreGuard.Ensure(context, new(request.EventStore), StoreAccess.Read);
         var projectionsManager = grainFactory.GetGrain<IProjectionsManager>(request.EventStore);
         var definitions = await projectionsManager.GetProjectionDefinitions();
         return definitions.Select(p => p.ToContract()).ToArray();
@@ -129,7 +130,7 @@ internal sealed class Projections(
     /// <inheritdoc/>
     public async Task<IEnumerable<Contracts.Projections.ProjectionWithDeclaration>> GetAllDeclarations(GetAllDeclarationsRequest request, CallContext context = default)
     {
-        await SystemStoreGuard.Ensure(context, new(request.EventStore));
+        await SystemStoreGuard.Ensure(context, new(request.EventStore), StoreAccess.Read);
         var projectionsManager = grainFactory.GetGrain<IProjectionsManager>(request.EventStore);
         var definitions = await projectionsManager.GetProjectionDeclarations();
         return definitions.Select(p => new Contracts.Projections.ProjectionWithDeclaration
@@ -143,7 +144,7 @@ internal sealed class Projections(
     /// <inheritdoc/>
     public async Task<OneOf<ContractProjectionPreview, ContractProjectionDefinitionParsingErrors>> Preview(PreviewProjectionRequest request, CallContext context = default)
     {
-        await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.EventSequenceId, request.DraftReadModel?.Identifier));
+        await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.EventSequenceId, request.DraftReadModel?.Identifier), StoreAccess.Read);
         request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
         if (languageService.IsGraphDeclaration(request.Declaration ?? string.Empty))
         {
@@ -188,7 +189,7 @@ internal sealed class Projections(
         return await compileResult.Match(
             async definition =>
             {
-                await SystemStoreGuard.Ensure(context, new(request.EventStore, definition.Identifier, definition.ReadModel, definition.EventSequenceId));
+                await SystemStoreGuard.Ensure(context, new(request.EventStore, definition.Identifier, definition.ReadModel, definition.EventSequenceId), StoreAccess.Read, namespaceAddressed: false);
                 ReadModelDefinition? readModelDefinition;
                 var isInferredReadModel = definition.ReadModel == ReadModelIdentifier.Inferred;
 
@@ -277,7 +278,7 @@ internal sealed class Projections(
     /// <inheritdoc/>
     public async Task<SaveProjectionResult> Save(SaveProjectionRequest request, CallContext context = default)
     {
-        SystemStoreGuard.EnsureNotSystem(new(request.EventStore, request.Namespace, request.EventSequenceId, request.DraftReadModel?.Identifier));
+        await SystemStoreGuard.EnsureNotSystem(context, new(request.EventStore, request.Namespace, request.EventSequenceId, request.DraftReadModel?.Identifier), StoreAccess.Manage);
         request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
         var storage = serviceProvider.GetRequiredService<IStorage>();
         if (languageService.IsGraphDeclaration(request.Declaration ?? string.Empty))

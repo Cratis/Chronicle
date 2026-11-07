@@ -79,3 +79,39 @@ immutable grant set, with a benchmark.
 - Scoped grants.
 - Re-checks at execution time for asynchronous operations.
 - Exposing outcomes to clients.
+
+## Addendum: the exception mechanism (skeleton)
+
+Status: pending. The default values below are not decided; they are recorded here so the mechanism is one pattern.
+
+Where a behavior has an enforcing form that cannot be the default yet, it follows one pattern:
+
+- **A flag.** Each is a boolean under `Authentication`, with a one-line public default constant beside it, so changing a default is a one-line change that the specs cover for both values.
+- **Independent flags.** A flag governs its own scope. A broader flag that is on still enforces its broader scope.
+- **Temporary opt-outs.** An opt-out exists to ease an upgrade, is documented with the release that removes it, and does not widen what any other flag covers.
+- **Startup notices.** A flag whose default differs from the enforcing form may log one notice at startup stating which behavior is in effect. The notice carries no caller data.
+- **Decisions are logged.** In the non-enforcing form a decision that would have been refused is logged, and in the enforcing form the refusal is logged.
+
+| Flag | Scope | Default in code today | Final default |
+| --- | --- | --- | --- |
+| `EnforceAdministratorPolicyForOperations` | operational mutations | `false` (`DefaultEnforceAdministratorPolicyForOperations`) | TODO: pending decision |
+| `EnforceComplianceCapabilities` | compliance operations per event store | `false` (no constant; audit-only) | TODO: pending decision |
+| `EnforceDestructiveOperations` | destructive operations on the System store or at kernel scope, and compliance key operations beyond the requested event store | `false` (`DefaultEnforceDestructiveOperations`) | TODO: pending decision |
+
+`EnforceDestructiveOperations` is deliberately narrow. Operations on an ordinary event store, such as an application replaying its own observers, stay with the per-store rules, and rotating an application secret is excluded because an administrator can rotate it again. With the flag off, such an operation is logged and allowed. A broader flag that is on still enforces its broader scope.
+
+TODO (pending decision): the release in which each default changes, the opt-out period, the wording of the startup notices, the amendment to Invariant 4 for snapshots and caches, per-store entitlements and how legacy grants map to them, and benchmark results.
+
+### Store capabilities enrolled so far
+
+- `chronicle.alerts.read` is the only store capability enrolled. A query declares it with `[StoreCapability]`, and the declaration carries the capability to the event store (and namespace) the query addresses.
+- `StoreCapabilityGuard` applies the decision for gRPC, and the HTTP query path applies the same decision through `StoreCapabilityDecision`, so both transports give the same answer.
+- The decision goes through `IAuthorizationDecisions`. Until per-store entitlements exist, a caller that is not granted a known capability at an ordinary event store is allowed and the decision is recorded. A failed decision, an unknown capability and a decision that cannot be made are refused (fail closed).
+- Users remain unenrolled: they are allowed and the decision is audited until #1965.
+
+### Per-connection cluster reservation
+
+- A connection id is reserved cluster-wide by a grain keyed by the connection id. The grain holds in-memory state only.
+- A claim is a lease. The holder renews it while its stream is open, so a claim that is never released, such as a lost call or a holder that went away, ends by itself. A grain reactivated empty is filled by the next renewal.
+- The same rules as the local ownership apply: the same owner may claim again, another owner is refused while the id is held and for a retention period after the last claim ends, and claims of silos that are no longer active are dropped.
+- The connection service claims locally first and then asks the reservation within the clustering response timeout. If the reservation refuses, fails or times out, the local claim is released and the caller is refused (fail closed). The reservation is released without blocking when the stream ends.

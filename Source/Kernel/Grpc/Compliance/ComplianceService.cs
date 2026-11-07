@@ -7,6 +7,7 @@ using Cratis.Chronicle.Compliance.GDPR;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Contracts.Compliance;
 using Cratis.Chronicle.Schemas;
+using Grpc.Core;
 using Microsoft.Extensions.Logging;
 using ProtoBuf.Grpc;
 
@@ -18,12 +19,14 @@ namespace Cratis.Chronicle.Services.Compliance;
 /// <param name="grainFactory">The <see cref="IGrainFactory"/> for resolving the kernel <see cref="IPIIManager"/> grain.</param>
 /// <param name="schemaMetadataManager">The <see cref="IJsonSchemaMetadataManager"/> for handling both compliance and security metadata on JSON.</param>
 /// <param name="logger">The <see cref="ILogger{T}"/> for logging.</param>
-internal sealed class ComplianceService(IGrainFactory grainFactory, IJsonSchemaMetadataManager schemaMetadataManager, ILogger<ComplianceService> logger) : ICompliance
+/// <param name="authorization">The compliance capability boundary.</param>
+internal sealed class ComplianceService(IGrainFactory grainFactory, IJsonSchemaMetadataManager schemaMetadataManager, ILogger<ComplianceService> logger, ComplianceAuthorization authorization) : ICompliance
 {
     /// <inheritdoc/>
     public async Task<ReleaseResponse> Release(ReleaseRequest request, CallContext context = default)
     {
         await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace));
+        await authorization.Release(request.EventStore, request.Namespace, context);
         try
         {
             var schema = await JsonSchema.FromJsonAsync(request.Schema);
@@ -47,12 +50,12 @@ internal sealed class ComplianceService(IGrainFactory grainFactory, IJsonSchemaM
         }
         catch (JsonException ex)
         {
-            logger.FailedToRelease(request.EventStore, request.Namespace, request.Subject, ex);
+            logger.FailedToRelease(request.EventStore, request.Namespace, ex.GetType().Name);
             return new ReleaseResponse { HasError = true, Error = ex.Message };
         }
         catch (InvalidOperationException ex)
         {
-            logger.FailedToRelease(request.EventStore, request.Namespace, request.Subject, ex);
+            logger.FailedToRelease(request.EventStore, request.Namespace, ex.GetType().Name);
             return new ReleaseResponse { HasError = true, Error = ex.Message };
         }
     }
@@ -60,15 +63,59 @@ internal sealed class ComplianceService(IGrainFactory grainFactory, IJsonSchemaM
     /// <inheritdoc/>
     public async Task DeleteEncryptionKey(DeleteEncryptionKeyRequest request, CallContext context = default)
     {
-        await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace));
-        await GetPIIManager(request.EventStore, request.Namespace).DeleteEncryptionKeyFor(request.Identifier);
+        await DeleteEncryptionKeyWithCoverage(request, context);
     }
 
     /// <inheritdoc/>
     public async Task AllowNewEncryptionKey(AllowNewEncryptionKeyRequest request, CallContext context = default)
     {
+        await AllowNewEncryptionKeyWithCoverage(request, context);
+    }
+
+    /// <inheritdoc/>
+    public async Task<DeleteEncryptionKeyResponse> DeleteEncryptionKeyWithCoverage(DeleteEncryptionKeyRequest request, CallContext context = default)
+    {
         await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace));
-        await GetPIIManager(request.EventStore, request.Namespace).AllowNewEncryptionKeyFor(request.Identifier);
+        var coverage = await authorization.KeyLifecycle("delete-key", request.EventStore, request.Namespace, request.Identifier, ComplianceKeyOperation.Delete, context);
+        EnsureRequestedStoreAllowed(coverage);
+        if (coverage.Allowed.Count > 0)
+        {
+            await GetPIIManager(request.EventStore, request.Namespace).DeleteEncryptionKeyIn(request.Identifier, coverage.Allowed.ToArray());
+        }
+
+        EnsureListed(coverage);
+        return new() { NotCoveredEventStores = coverage.NotCovered.Select(store => store.Value).ToArray() };
+    }
+
+    /// <inheritdoc/>
+    public async Task<AllowNewEncryptionKeyResponse> AllowNewEncryptionKeyWithCoverage(AllowNewEncryptionKeyRequest request, CallContext context = default)
+    {
+        await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace));
+        var coverage = await authorization.KeyLifecycle("allow-new-key", request.EventStore, request.Namespace, request.Identifier, ComplianceKeyOperation.AllowNew, context);
+        EnsureRequestedStoreAllowed(coverage);
+        if (coverage.Allowed.Count > 0)
+        {
+            await GetPIIManager(request.EventStore, request.Namespace).AllowNewEncryptionKeyIn(request.Identifier, coverage.Allowed.ToArray());
+        }
+
+        EnsureListed(coverage);
+        return new() { NotCoveredEventStores = coverage.NotCovered.Select(store => store.Value).ToArray() };
+    }
+
+    static void EnsureRequestedStoreAllowed(ComplianceKeyCoverage coverage)
+    {
+        if (coverage.RequestedDenied)
+        {
+            throw new RpcException(new Status(StatusCode.PermissionDenied, "Compliance operation is not permitted."));
+        }
+    }
+
+    static void EnsureListed(ComplianceKeyCoverage coverage)
+    {
+        if (coverage.ListingFailed)
+        {
+            throw new RpcException(new Status(StatusCode.Unavailable, "Compliance event store coverage could not be established."));
+        }
     }
 
     Task<JsonObject> ReleaseContent(ReleaseRequest request, JsonSchema schema, JsonObject json) =>

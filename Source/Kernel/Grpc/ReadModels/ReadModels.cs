@@ -22,6 +22,7 @@ using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Storage;
 using Grpc.Core;
 using ProtoBuf.Grpc;
@@ -69,7 +70,7 @@ internal sealed class ReadModels(
     /// <inheritdoc/>
     public async Task RegisterMany(RegisterManyRequest request, CallContext context = default)
     {
-        SystemStoreGuard.EnsureNotSystem(new(request.EventStore));
+        await SystemStoreGuard.EnsureNotSystem(context, new(request.EventStore), StoreAccess.Manage);
         foreach (var definition in request.ReadModels)
         {
             SystemStoreGuard.EnsureNotSystem(new(request.EventStore, definition.Type.Identifier, definition.ObserverIdentifier));
@@ -82,7 +83,7 @@ internal sealed class ReadModels(
     /// <inheritdoc/>
     public async Task RegisterSingle(RegisterSingleRequest request, CallContext context = default)
     {
-        SystemStoreGuard.EnsureNotSystem(new(request.EventStore));
+        await SystemStoreGuard.EnsureNotSystem(context, new(request.EventStore), StoreAccess.Manage);
         SystemStoreGuard.EnsureNotSystem(new(request.EventStore, request.ReadModel.Type.Identifier, request.ReadModel.ObserverIdentifier));
         var readModelsManager = grainFactory.GetReadModelsManager(request.EventStore);
         var readModelDefinition = request.ReadModel.ToChronicle(request.Owner, request.Source);
@@ -92,7 +93,7 @@ internal sealed class ReadModels(
     /// <inheritdoc/>
     public async Task UpdateDefinition(UpdateDefinitionRequest request, CallContext context = default)
     {
-        SystemStoreGuard.EnsureNotSystem(new(request.EventStore));
+        await SystemStoreGuard.EnsureNotSystem(context, new(request.EventStore), StoreAccess.Manage);
         SystemStoreGuard.EnsureNotSystem(new(request.EventStore, request.ReadModel.Type.Identifier, request.ReadModel.ObserverIdentifier));
         var readModelsManager = grainFactory.GetReadModelsManager(request.EventStore);
         var existingDefinitions = await readModelsManager.GetDefinitions();
@@ -123,7 +124,7 @@ internal sealed class ReadModels(
     /// <inheritdoc/>
     public async Task<GetDefinitionsResponse> GetDefinitions(GetDefinitionsRequest request, CallContext context = default)
     {
-        await SystemStoreGuard.Ensure(context, new(request.EventStore));
+        await SystemStoreGuard.Ensure(context, new(request.EventStore), StoreAccess.Read);
         var readModelsManager = grainFactory.GetReadModelsManager(request.EventStore);
         var definitions = await readModelsManager.GetDefinitions();
         return new()
@@ -135,7 +136,7 @@ internal sealed class ReadModels(
     /// <inheritdoc/>
     public async Task<GetOccurrencesResponse> GetOccurrences(GetOccurrencesRequest request, CallContext context = default)
     {
-        await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace));
+        await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace), StoreAccess.Read);
         var readModelReplayManager = grainFactory.GetReadModelReplayManager(request.EventStore, request.Namespace, request.Type.Identifier);
         var occurrences = await readModelReplayManager.GetOccurrences();
         return new()
@@ -147,7 +148,7 @@ internal sealed class ReadModels(
     /// <inheritdoc/>
     public async Task<GetInstancesResponse> GetInstances(GetInstancesRequest request, CallContext context = default)
     {
-        await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.ReadModel, request.Occurrence));
+        await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.ReadModel, request.Occurrence), StoreAccess.Read);
         request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
         var readModel = grainFactory.GetReadModel(request.ReadModel, request.EventStore);
         var definition = await readModel.GetKnownDefinition(request.ReadModel);
@@ -177,7 +178,7 @@ internal sealed class ReadModels(
     /// <inheritdoc/>
     public async Task<GetInstanceByKeyResponse> GetInstanceByKey(GetInstanceByKeyRequest request, CallContext context = default)
     {
-        await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.ReadModelIdentifier, request.EventSequenceId, request.SessionId));
+        await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.ReadModelIdentifier, request.EventSequenceId, request.SessionId), StoreAccess.Read);
         request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
         var readModel = grainFactory.GetReadModel(request.ReadModelIdentifier, request.EventStore);
         var definition = await readModel.GetKnownDefinition(request.ReadModelIdentifier);
@@ -307,7 +308,7 @@ internal sealed class ReadModels(
     /// <inheritdoc/>
     public async Task<GetAllInstancesResponse> GetAllInstances(GetAllInstancesRequest request, CallContext context = default)
     {
-        await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.ReadModelIdentifier, request.EventSequenceId));
+        await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.ReadModelIdentifier, request.EventSequenceId), StoreAccess.Read);
         request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
         var readModel = grainFactory.GetReadModel(request.ReadModelIdentifier, request.EventStore);
         var definition = await readModel.GetKnownDefinition(request.ReadModelIdentifier);
@@ -445,12 +446,12 @@ internal sealed class ReadModels(
 
     /// <inheritdoc/>
     public IObservable<ReadModelChangeset> Watch(WatchRequest request, CallContext context = default) =>
-        SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.ReadModelIdentifier, request.EventSequenceId), () => WatchGuarded(request, context));
+        SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.ReadModelIdentifier, request.EventSequenceId), StoreAccess.Read, () => WatchGuarded(request, context));
 
     /// <inheritdoc/>
     public async Task DehydrateSession(DehydrateSessionRequest request, CallContext context = default)
     {
-        await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.ReadModelIdentifier, request.EventSequenceId, request.SessionId));
+        await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.ReadModelIdentifier, request.EventSequenceId, request.SessionId), StoreAccess.Read);
         request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
         var readModel = grainFactory.GetReadModel(request.ReadModelIdentifier, request.EventStore);
         var definition = await readModel.GetKnownDefinition(request.ReadModelIdentifier);

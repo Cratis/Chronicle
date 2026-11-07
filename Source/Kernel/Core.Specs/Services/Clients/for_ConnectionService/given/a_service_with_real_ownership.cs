@@ -40,6 +40,7 @@ public class a_service_with_real_ownership : Specification
 
         var grainFactory = Substitute.For<IGrainFactory>();
         grainFactory.GetGrain<IConnectedClients>(_silo.ToParsableString(), Arg.Any<string>()).Returns(_connectedClients);
+        AllowingConnectionOwnership.WithAllowingReservations(grainFactory);
         _management = Substitute.For<IManagementGrain>();
         _management.GetHosts(true).Returns(_ => Hosts());
         grainFactory.GetGrain<IManagementGrain>(Arg.Any<long>(), Arg.Any<string>()).Returns(_management);

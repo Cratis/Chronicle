@@ -159,6 +159,9 @@
     <PackageVersion Include="protobuf-net" Version="3.4.40" />
     <PackageVersion Include="protobuf-net.Grpc" Version="1.3.14" />
     <PackageVersion Include="protobuf-net.Grpc.AspNetCore" Version="1.3.14" />
+    <!-- The version protobuf-net.Grpc.AspNetCore already brings to the server. Declared for the kernel gRPC layer,
+         which reads the request of a call through its GetHttpContext extension. -->
+    <PackageVersion Include="Grpc.AspNetCore.Server" Version="2.80.0" />
     <PackageVersion Include="Grpc.Net.Client" Version="2.84.0" />
     <PackageVersion Include="AspNetCore.HealthChecks.MongoDb" Version="9.0.0" />
     <PackageVersion Include="Swashbuckle.AspNetCore" Version="10.2.3" />

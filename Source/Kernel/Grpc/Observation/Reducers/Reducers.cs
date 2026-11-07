@@ -21,6 +21,7 @@ using Cratis.Chronicle.Observation.Reducers.Clients;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Services.Events;
 using Cratis.Traces;
 using Grpc.Core;
@@ -124,7 +125,7 @@ internal sealed class Reducers(
                         register.ConnectionId);
 
                     stateFingerprints.Enabled = register.StateCaching?.Enabled == true;
-                    registrationTcs.TrySetResult(register);
+                    _ = SystemStoreGuard.CompleteRegistration(context, register.EventStore, register.Namespace, StoreAccess.Manage, registrationTcs, register);
                     break;
 
                 case ReducerResult result:
@@ -146,6 +147,7 @@ internal sealed class Reducers(
         var eventStoreName = EventStoreName.NotSet;
         var namespaceName = EventStoreNamespaceName.NotSet;
         IObserver<ReduceOperationMessage>? observableObserver = null;
+        var revoked = false;
         (ReducerEventsObserver? deliver, ReducerReplayObserver? replay) = (null, null);
 
         var observable = Observable.Create<ReduceOperationMessage>(
@@ -290,8 +292,7 @@ internal sealed class Reducers(
                 }
                 catch (OperationCanceledException)
                 {
-                    logger.DisconnectedUngracefully(observerId, connectionId);
-                    clientObserver = null;
+                    clientObserver = ObserverAfterCancellation(clientObserver, revoked, (observerId, connectionId));
                 }
                 catch (Exception ex)
                 {
@@ -322,7 +323,7 @@ internal sealed class Reducers(
             register?.Dispose();
         });
 
-        return observable;
+        return MonitorRegistration(observable, registrationTcs.Task, context, (messagesSubscription, register, () => revoked = true));
     }
 
     static bool IsInitialStateUnchanged(ReducerStateFingerprints stateFingerprints, string partition, ExpandoObject? initialState)
@@ -364,6 +365,17 @@ internal sealed class Reducers(
 
         stateFingerprints.Remove(partition);
     }
+
+    static IObservable<ReduceOperationMessage> MonitorRegistration(IObservable<ReduceOperationMessage> source, Task<RegisterReducer> registration, CallContext context, (IDisposable Messages, CancellationTokenRegistration? Registration, Action Refused) ownership) =>
+        Observable.FromAsync(() => registration.WaitAsync(context.CancellationToken))
+            .Catch<RegisterReducer, OperationCanceledException>(_ => Observable.Empty<RegisterReducer>())
+            .SelectMany(arguments => StoreCapabilityGuard.EndWhenRevoked(source, context, arguments.EventStore, arguments.Namespace, StoreAccess.Manage))
+            .Do(_ => { }, _ => ownership.Refused())
+            .Finally(() =>
+            {
+                ownership.Messages.Dispose();
+                ownership.Registration?.Dispose();
+            });
 
     static ReducerRegistrationFailed CreateRegistrationFailure(RegisterReducer registration, Exception exception)
     {
@@ -410,6 +422,12 @@ internal sealed class Reducers(
                 registration,
                 new InvalidReadModelDefinitionForReducer(readModel.Identifier, "No key property could be inferred from the read model schema."));
         }
+    }
+
+    IReducer? ObserverAfterCancellation(IReducer? observer, bool revoked, (ObserverId Observer, ConnectionId Connection) stream)
+    {
+        logger.DisconnectedUngracefully(stream.Observer, stream.Connection);
+        return revoked ? observer : null;
     }
 
     bool DisconnectStream(
