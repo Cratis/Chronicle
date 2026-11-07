@@ -5,24 +5,20 @@ using System.Text.Json;
 using Cratis.Chronicle.Projections.given;
 using Cratis.Serialization;
 
-namespace Cratis.Chronicle.Projections.for_ChildrenJoinBuilder.when_building;
+namespace Cratis.Chronicle.Projections.for_JoinBuilder.when_building;
 
-public class and_on_is_specified : events_with_derivatives
+public class and_on_is_specified_through_the_inherited_child_join : events_with_derivatives
 {
-    ChildrenJoinBuilder<Container, Item, ItemChanged> _builder;
+    IProjectionBuilder<Item, IChildrenBuilder<Container, Item>> _children;
     Exception _error;
 
     void Establish()
     {
         var children = new ChildrenBuilder<Container, Item>(new DefaultNamingPolicy(), _eventTypes, new JsonSerializerOptions(), AutoMap.Inherit);
-        children.IdentifiedBy(_ => _.Id);
-        _builder = new(children, new DefaultNamingPolicy());
-#pragma warning disable CS0618 // Verifies the deprecated On() keeps its runtime behavior
-        _builder.On(_ => _.Id);
-#pragma warning restore CS0618 // Verifies the deprecated On() keeps its runtime behavior
+        _children = children.IdentifiedBy(_ => _.Id);
     }
 
-    void Because() => _error = Catch.Exception(() => _builder.Build());
+    void Because() => _error = Catch.Exception(() => _children.Join<ItemChanged>(join => join.On(_ => _.Id)));
 
     [Fact] void should_reject_the_explicit_join_property() => _error.ShouldBeOfExactType<OnPropertyShouldNotBeSpecifiedForChildJoin>();
 }
