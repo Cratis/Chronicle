@@ -24,7 +24,4 @@ internal static partial class ProjectionChangesetNotifierLogMessages
 
     [LoggerMessage(LogLevel.Debug, "Changeset notifier {Notifier} notifying {ObserverCount} observer(s) for namespace {Namespace} key {ReadModelKey}")]
     internal static partial void Notifying(this ILogger<ProjectionChangesetNotifier> logger, string notifier, int observerCount, EventStoreNamespaceName @namespace, ReadModelKey readModelKey);
-
-    [LoggerMessage(LogLevel.Warning, "Changeset notifier {Notifier} could not publish its watch state (watched: {IsWatched}); parent changesets may be missing until it is renewed")]
-    internal static partial void PublishingWatchStateFailed(this ILogger<ProjectionChangesetNotifier> logger, Exception exception, string notifier, bool isWatched);
 }

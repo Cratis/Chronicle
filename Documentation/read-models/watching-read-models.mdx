@@ -24,12 +24,6 @@ A .NET `ReadModelChangeset<TReadModel>` contains:
 
 The changeset does not contain the previous state. Check `Removed` and whether `ReadModel` is present before reading properties. To compare two observed states, keep the last value for each key. If a reaction depends on the original business event, use an [event reactor](../reactors/) instead.
 
-### When a join removes children
-
-When a projection removes a child from every parent with `RemovedWithJoin`, a watcher receives one change for each parent that held the child. Each change carries the full state of that parent after the removal, and `Removed` is false. There is no per-child delta, and nothing is sent for the key of the removal event itself. A parent that is removed too only produces its own removal change.
-
-These changes are produced after the event is handled, so they can arrive after later changes. They are produced only while the projection is being watched.
-
 ## Watch a read model
 
 Register the read model type before subscribing. The .NET example ignores removals and absent instances before reading `Status`:

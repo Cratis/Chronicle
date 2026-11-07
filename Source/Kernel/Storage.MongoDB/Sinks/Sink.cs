@@ -1187,48 +1187,6 @@ public partial class Sink(
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<Key>> FindKeysHoldingChild(ChildRemovedFromAll childRemoved)
-    {
-        await SettleGuardedBulkReads();
-        var keys = new HashSet<Key>(FindBulkKeysHoldingChild(childRemoved));
-
-        var names = childRemoved.ChildrenProperty.Segments.Concat(childRemoved.IdentifiedByProperty.Segments)
-            .Select(segment => segment.Value.ToMongoDBPropertyName());
-        var filter = Builders<BsonDocument>.Filter.Eq(string.Join('.', names), childRemoved.Key.ToBsonValue());
-
-        using var cursor = await Collection.FindAsync(
-            filter,
-            new FindOptions<BsonDocument> { Projection = Builders<BsonDocument>.Projection.Include("_id") });
-
-        foreach (var document in await cursor.ToListAsync())
-        {
-            if (document.TryGetValue("_id", out var idValue))
-            {
-                keys.Add(new Key(idValue.IsGuid ? idValue.AsGuid : idValue.ToString()!, ArrayIndexers.NoIndexers));
-            }
-        }
-
-        return keys;
-    }
-
-    IEnumerable<Key> FindBulkKeysHoldingChild(ChildRemovedFromAll childRemoved)
-    {
-        if (!_isBulkMode)
-        {
-            yield break;
-        }
-
-        var pathSegments = childRemoved.ChildrenProperty.Segments.Concat(childRemoved.IdentifiedByProperty.Segments).ToArray();
-        foreach (var (cacheKey, cachedState) in _bulkStateCache)
-        {
-            if (TryFindValueInDocument(cachedState, pathSegments, 0, childRemoved.Key) && _bulkKeysByCacheKey.TryGetValue(cacheKey, out var cachedKey))
-            {
-                yield return cachedKey;
-            }
-        }
-    }
-
-    /// <inheritdoc/>
     public async Task EnsureIndexes()
     {
         var collection = Collection;

@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Namespaces;
@@ -23,7 +22,6 @@ namespace Cratis.Chronicle.Projections;
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
 /// <param name="projections"><see cref="Engine.IProjectionsManager"/> for managing projections.</param>
 /// <param name="projectionPipelines"><see cref="IProjectionPipelineManager"/> for managing projection pipelines.</param>
-/// <param name="watchGates"><see cref="IProjectionWatchGates"/> that tell whether a projection is watched.</param>
 /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
 [ImplicitChannelSubscription]
 public class ProjectionsService(
@@ -32,7 +30,6 @@ public class ProjectionsService(
     IGrainFactory grainFactory,
     IEngineProjectionsManager projections,
     IProjectionPipelineManager projectionPipelines,
-    IProjectionWatchGates watchGates,
     ILoggerFactory loggerFactory) : GrainService(grainId, silo, loggerFactory), IProjectionsService
 {
     /// <inheritdoc/>
@@ -69,22 +66,6 @@ public class ProjectionsService(
     {
         var readModelDefinitions = await grainFactory.GetGrain<IReadModelsManager>(eventStore).GetDefinitions();
         await projections.AddNamespace(eventStore, @namespace, readModelDefinitions);
-    }
-
-    /// <inheritdoc/>
-    public Task SetWatchState(EventStoreName eventStore, EventStoreNamespaceName @namespace, ObserverId projection, bool isWatched)
-    {
-        var key = new ProjectionChangesetNotifierKey(projection, eventStore, @namespace);
-        if (isWatched)
-        {
-            watchGates.Open(key);
-        }
-        else
-        {
-            watchGates.Close(key);
-        }
-
-        return Task.CompletedTask;
     }
 
     void EvictProjectionPipelines(EventStoreName eventStore, IEnumerable<ProjectionDefinition> definitions, IEnumerable<EventStoreNamespaceName> allNamespaces)
