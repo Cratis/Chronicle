@@ -17,8 +17,6 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_Sink.given;
 public class a_child_removal_from_all : Specification
 {
     protected Sink _sink;
-    protected IMongoDBConverter _converter;
-    protected IChangesetConverter _changesetConverter;
     protected IChangeset<AppendedEvent, ExpandoObject> _changeset;
     protected BsonDocument _update;
     protected BsonDocument _filter;
@@ -64,12 +62,12 @@ public class a_child_removal_from_all : Specification
                 _matchedLeafValues = _leafValues.Where(value => leafType is null || value.BsonType == leafType).ToArray();
                 return Task.FromResult<UpdateResult>(new UpdateResult.Acknowledged(2, 2, null));
             });
-        _converter = Substitute.For<IMongoDBConverter>();
-        _converter.ToBsonValue(Arg.Any<Key>()).Returns(new BsonString("order"));
-        _changesetConverter = Substitute.For<IChangesetConverter>();
-        _changesetConverter.ToUpdateDefinition(Arg.Any<Key>(), Arg.Any<IChangeset<AppendedEvent, ExpandoObject>>(), Arg.Any<EventSequenceNumber>())
+        var converter = Substitute.For<IMongoDBConverter>();
+        converter.ToBsonValue(Arg.Any<Key>()).Returns(new BsonString("order"));
+        var changesetConverter = Substitute.For<IChangesetConverter>();
+        changesetConverter.ToUpdateDefinition(Arg.Any<Key>(), Arg.Any<IChangeset<AppendedEvent, ExpandoObject>>(), Arg.Any<EventSequenceNumber>())
             .Returns(new UpdateDefinitionAndArrayFilters(new BsonDocumentUpdateDefinition<BsonDocument>(new BsonDocument()), [], false));
-        _sink = new Sink(readModel, _converter, collections, _changesetConverter, Substitute.For<IExpandoObjectConverter>(), Substitute.For<IReadModelChangeStreams>());
+        _sink = new Sink(readModel, converter, collections, changesetConverter, Substitute.For<IExpandoObjectConverter>(), Substitute.For<IReadModelChangeStreams>());
         _changeset = Substitute.For<IChangeset<AppendedEvent, ExpandoObject>>();
     }
 }
