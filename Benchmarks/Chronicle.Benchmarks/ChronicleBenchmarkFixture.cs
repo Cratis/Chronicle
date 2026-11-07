@@ -139,7 +139,7 @@ public class ChronicleBenchmarkFixture : IAsyncDisposable
     {
         var postgres = storage == "PostgreSql";
         var password = $"Benchmark-{Guid.NewGuid():N}!";
-        var builder = new ContainerBuilder(postgres ? "postgres:16-alpine" : "mcr.microsoft.com/mssql/server:2025-CU10-ubuntu-24.04")
+        var builder = new ContainerBuilder(postgres ? "postgres:16-alpine" : Integration.SqlServerContainerImage.Name)
             .WithNetwork(_network)
             .WithNetworkAliases("benchmark-sql")
             .WithLogger(NullLogger.Instance);

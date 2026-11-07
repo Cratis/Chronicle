@@ -36,7 +36,7 @@ public sealed class SqlBenchmarkDatabase : IAsyncDisposable
             return;
         }
 
-        var sql = new MsSqlBuilder("mcr.microsoft.com/mssql/server:2025-CU10-ubuntu-24.04")
+        var sql = new MsSqlBuilder(Integration.SqlServerContainerImage.Name)
             .WithPassword(password)
             .WithLogger(NullLogger.Instance)
             .WithWaitStrategy(Wait.ForUnixContainer().UntilMessageIsLogged("SQL Server is now ready for client connections", wait => wait.WithTimeout(TimeSpan.FromSeconds(90))))
