@@ -57,7 +57,7 @@ public partial record VerifyContent(
             return new(ContentVerificationResult.Unavailable);
         }
 
-        using var cursor = await sequence.GetRange(SequenceNumber, SequenceNumber);
+        using var cursor = await sequence.GetRangeWithHistory(SequenceNumber, SequenceNumber);
         if (!await cursor.MoveNext())
         {
             return new(ContentVerificationResult.Unavailable);

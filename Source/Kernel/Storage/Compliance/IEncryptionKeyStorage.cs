@@ -198,4 +198,26 @@ public interface IEncryptionKeyStorage
     /// </remarks>
     Task AllowNewKeyFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier) =>
         throw new EncryptionKeyErasureNotSupported(identifier);
+
+    /// <summary>
+    /// Atomically get the kernel-internal secret of an event store for a <see cref="InternalSecretPurpose"/>, or persist
+    /// and return the provided candidate when none exists yet.
+    /// </summary>
+    /// <param name="eventStore"><see cref="EventStoreName"/> the secret belongs to.</param>
+    /// <param name="purpose">The <see cref="InternalSecretPurpose"/> of the secret.</param>
+    /// <param name="candidate">The secret to persist when none exists yet.</param>
+    /// <returns>The stored secret, or the candidate when it was the one persisted.</returns>
+    /// <exception cref="InternalSecretsNotSupported">Thrown when the store cannot hold internal secrets apart from subject keys.</exception>
+    /// <remarks>
+    /// <para>
+    /// Internal secrets are stored in a location that is disjoint from every subject key location, so no
+    /// <see cref="EncryptionKeyIdentifier"/>, event store or namespace passed to the subject key members can read,
+    /// overwrite, erase or re-provision one. Concurrent callers converge on one stored secret.
+    /// </para>
+    /// <para>
+    /// The default refuses: a store that has not implemented a disjoint location must not hold internal secrets.
+    /// </para>
+    /// </remarks>
+    Task<EncryptionKey> GetOrAddInternalSecretFor(EventStoreName eventStore, InternalSecretPurpose purpose, EncryptionKey candidate) =>
+        throw new InternalSecretsNotSupported(purpose);
 }

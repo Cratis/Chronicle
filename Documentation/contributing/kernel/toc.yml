@@ -6,6 +6,8 @@
   href: ./services.md
 - name: Grain Interfaces
   href: ./grain-interfaces.mdx
+- name: Event sequence mutation registry
+  href: ./mutation-registry.md
 - name: Patches
   href: ./patches/toc.yml
 - name: Legacy contract matrix

@@ -31,6 +31,13 @@ namespace Cratis.Chronicle.Storage.AzureKeyVault;
 /// single hyphens (plus the identifiers Chronicle builds for encrypted values). Earlier names are never written.
 /// </para>
 /// <para>
+/// Kernel-internal secrets are named <c language="csharp">chronicle-internal--{eventStore}--{purpose}</c>. A subject key
+/// name starts with <c language="csharp">chronicle-k1--</c> (or <c language="csharp">chronicle--</c> for earlier names),
+/// while an internal secret name starts with <c language="csharp">chronicle-internal--</c>. No subject key
+/// name, erasure name or subject key prefix can therefore equal or enumerate an internal secret name, whatever the
+/// event store, namespace or identifier.
+/// </para>
+/// <para>
 /// Authentication is performed using the <see cref="Azure.Core.TokenCredential"/> provided to the
 /// <see cref="SecretClient"/> constructor parameter.
 /// </para>
@@ -52,6 +59,7 @@ namespace Cratis.Chronicle.Storage.AzureKeyVault;
 /// </remarks>
 public class AzureKeyVaultEncryptionKeyStorage : IEncryptionKeyStorage
 {
+    const string InternalSecretNamePrefix = "chronicle-internal";
     const string PublicKeyField = "publicKey";
     const string PrivateKeyField = "privateKey";
     const string ErasedThroughField = "erasedThrough";
@@ -273,6 +281,34 @@ public class AzureKeyVaultEncryptionKeyStorage : IEncryptionKeyStorage
 
         await WriteErasure(locations, erasure with { NewKeyAllowed = true });
     }
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// The secret is provisioned through the same candidate election as subject keys, so concurrent creators converge
+    /// on one stored secret.
+    /// </remarks>
+    public async Task<EncryptionKey> GetOrAddInternalSecretFor(EventStoreName eventStore, InternalSecretPurpose purpose, EncryptionKey candidate)
+    {
+        var name = BuildInternalSecretName(eventStore, purpose);
+        if (await ReadKey(name) is { } existing)
+        {
+            return existing;
+        }
+
+        var secret = new KeyVaultSecret(name, Serialize(candidate));
+        ProvisioningCandidateElection.MarkAsCandidate(secret);
+        await _secretClient.SetSecretAsync(secret);
+        return await Elect(name) ?? throw new InternalSecretProvisioningConflict(purpose);
+    }
+
+    /// <summary>
+    /// Builds the secret name of a kernel-internal secret.
+    /// </summary>
+    /// <param name="eventStore">The <see cref="EventStoreName"/>.</param>
+    /// <param name="purpose">The <see cref="InternalSecretPurpose"/>.</param>
+    /// <returns>The secret name.</returns>
+    internal static string BuildInternalSecretName(EventStoreName eventStore, InternalSecretPurpose purpose) =>
+        $"{InternalSecretNamePrefix}--{SecretNames.InternalSecretHash(eventStore)}--{purpose.Value}";
 
     static bool IsDisabled(RequestFailedException exception) =>
         exception.Status == 403 &&

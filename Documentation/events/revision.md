@@ -33,3 +33,5 @@ Submitting records a revision request in the system event sequence. A built-in r
 The revision request identifies the event sequence, original sequence number, event type and generation, and corrected JSON content. Chronicle applies compliance protection to the corrected content using the original event's subject before recording the request.
 
 The stored revision includes the corrected content and its hash, generation, revision time, correlation, causation, and submitting identity. The original payload remains stored alongside the revisions. Ordinary event reads select the latest stored revision and its generation.
+
+Public event-sequence browsing includes `OriginalContent` and `Revisions`, including paged and windowed SQL reads. Observer delivery and replay use the current content without requiring history to be loaded. Storage-provider consumers that need history for a range or a starting sequence number can use `IEventSequenceStorage.GetRangeWithHistory()` or `GetFromSequenceNumberWithHistory()`.

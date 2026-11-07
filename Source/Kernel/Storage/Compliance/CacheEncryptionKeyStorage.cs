@@ -126,6 +126,11 @@ public class CacheEncryptionKeyStorage(
     }
 
     /// <inheritdoc/>
+    /// <remarks>Internal secrets are not cached here; the callers that use them keep their own derived state.</remarks>
+    public Task<EncryptionKey> GetOrAddInternalSecretFor(EventStoreName eventStore, InternalSecretPurpose purpose, EncryptionKey candidate) =>
+        actualKeyStore.GetOrAddInternalSecretFor(eventStore, purpose, candidate);
+
+    /// <inheritdoc/>
     public async Task<EncryptionKey> GetOrAddFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKey key)
     {
         var scope = new KeyScope(eventStore, eventStoreNamespace, identifier);

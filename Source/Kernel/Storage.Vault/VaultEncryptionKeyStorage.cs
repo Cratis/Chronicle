@@ -31,6 +31,10 @@ namespace Cratis.Chronicle.Storage.Vault;
 /// with the key, for the addresses <see cref="VaultPathSegments.LegacyDirectory"/> accepts: those made of characters
 /// that can belong to one address only. Earlier paths are never written.
 /// </para>
+/// <para>
+/// Kernel-internal secrets are not supported yet: <see cref="IEncryptionKeyStorage.GetOrAddInternalSecretFor"/> keeps its
+/// default and throws <see cref="InternalSecretsNotSupported"/>, so features that depend on one fail closed.
+/// </para>
 /// </remarks>
 public class VaultEncryptionKeyStorage : IEncryptionKeyStorage
 {
