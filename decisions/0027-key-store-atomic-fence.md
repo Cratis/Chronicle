@@ -152,7 +152,7 @@ scope and is dropped on fault. Nothing is memoized across scopes.
 Scope duration is bounded at the actual release, not by waiting: immediately before material leaves the scope (ciphertext handed to
 the append, plaintext returned, watch update emitted), with no `await` between the check and the hand-off, `ReleaseKeys` checks the
 entry's age (max of monotonic and wall-clock elapsed since the read started). If the age exceeds the `RevocationLease`
-(`RevocationGrace / 2`, so 2.5 s by default) it re-reads the fence (C8) and refuses if it now covers the key. Revocation: an
+(`RevocationGrace / 2`, so 2.5 s by default) it re-reads the fence (C8) and refuses if it now covers the key. The age is checked again after every awaited refresh: a refresh that itself stalls past the lease discards its result and re-reads (delayed-refresh spec). Revocation: an
 erasure is reported confirmed only after every store's verified sweep (C8) *and* `RevocationGrace` (D3, default 5 s,
 configurable) has elapsed since the raise. A memo read that started before the raise is therefore older than the lease by the time
 confirmation is reported, so any release after confirmation revalidates and is refused; a paused scope cannot resume on its
@@ -222,7 +222,7 @@ Linearizable reads (C8): Vault serves KV reads from the active node; standbys fo
 answer reads locally and may be stale. Every fence and validation read therefore sends `X-Vault-Inconsistent: forward-active-node`
 (through VaultSharp's request hook, `VaultClientSettings.BeforeApiRequestAction`, which slice 3 verifies in 1.17.5.1), and the startup
 check reads `sys/health` on the configured address: if it reports a performance standby and the forwarding header is rejected,
-the store reports `None`. The operator requirement (address the active node or allow forwarding; no client-side eventual-consistency
+the store reports `None`. Slice 3 verifies against a real Vault (CI integration) that the header forces a fresh read rather than only forwarding a detected inconsistency; until verified the store reports `None`. The operator requirement (address the active node or allow forwarding; no client-side eventual-consistency
 mode) is documented with the Vault store. A read that cannot be forwarded throws `EncryptionKeyFenceUnavailable`, never a stale answer.
 
 **Azure Key Vault.** There is no conditional write. `SecretClient.SetSecret` (Azure.Security.KeyVault.Secrets 4.11.2)
@@ -278,15 +278,15 @@ offending silo), and it stays invalid after the old silo leaves; the operator mu
 cluster id is ignored.
 - **Excluding incompatible writers** in the window before detection, and writers outside the cluster: (1) *Fence overwrite*: every
 N read verifies `Seal`; an old writer's Mongo `ReplaceOne` drops it and an old SQL upsert changes the sealed columns without
-updating it (which is why a retained `Version` was not enough), so a mismatched or missing seal on a fence that has a `Version`
-is treated as tampering: the fence is unavailable for that identifier (releases refused, erasure pending) and the attestation is
+updating it (which is why a retained `Version` was not enough), so a mismatched or missing seal on any fence the attestation covers, whether or not it still has a `Version` (an old Mongo `ReplaceOne` removes both `Seal` and `Version`, so a missing `Version` is no evidence of an unsealed fence),
+is treated as tampering. Before the attestation can be accepted, N+1 first seals (backfills `Seal` and `Version` on) every pre-N fence, recording that on the attestation; from then on a fence document without a seal is tampering: the fence is unavailable for that identifier (releases refused, erasure pending) and the attestation is
 invalidated. Detection is immediate on the next read; the regressed values are not trusted. (2) *Key injection*: when
 attestation is first accepted N+1 backfills `Published=true` on every pre-N key row, records that on the attestation, and from then on
 treats a row without `Published` as unpublished (absent). Rows an old writer inserts later are invisible. (3) *Old deletes*
 (the pre-N erasure path) can only remove keys: a loss of availability, never an erased key served. (4) *Direct storage users*
 (processes writing the key store or fence other than through Chronicle) are unsupported; the attestation states there are none,
 and the seal and the `Published` rule make their writes detected or invisible rather than trusted. Detection of old writers by a
-missing `Version` alone is not used. N+1 requires every silo to run N or later; no offline upgrade.
+missing `Version` alone is not used; an unsealed or version-less fence is never trusted once the attestation exists. N+1 requires every silo to run N or later; no offline upgrade.
 - **Unsupported stores (D4)**: the refusal of erasure on `None` stores ships in the N+1 switch-on PR, which is classified there:
 major via woksin if it breaks a supported setup, otherwise minor.
 - **Old silos reading new documents**: Mongo old class mapping must ignore unknown elements (spec). SQL: new columns nullable or
