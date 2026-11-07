@@ -19,11 +19,9 @@ namespace Cratis.Chronicle.Storage.MongoDB.Observation;
 /// <param name="database">Provider for <see cref="IEventStoreNamespaceDatabase"/>.</param>
 public class FailedPartitionStorage(IEventStoreNamespaceDatabase database) : IFailedPartitionsStorage
 {
-    const long Deleted = long.MinValue;
-
     readonly IMongoCollection<FailedPartition> _collection = database.GetCollection<FailedPartition>(WellKnownCollectionNames.FailedPartitions);
     readonly ConcurrentDictionary<string, byte> _ensuredIndexes = new();
-    readonly ConcurrentDictionary<FailedPartitionId, (ObserverId Observer, long Fingerprint)> _written = new();
+    readonly ConcurrentDictionary<FailedPartitionId, (ObserverId Observer, byte[]? Document)> _written = new();
 
     /// <summary>
     /// Gets the failed partition indexes.
@@ -49,32 +47,32 @@ public class FailedPartitionStorage(IEventStoreNamespaceDatabase database) : IFa
         // so with hundreds of failed partitions writing it all one round trip at a time is quadratic. Only what differs
         // from what was last written is sent, and all of it in one request.
         var writes = new List<WriteModel<FailedPartition>>();
-        var pending = new List<(FailedPartitionId Id, long Fingerprint)>();
+        var pending = new List<(FailedPartitionId Id, byte[]? Document)>();
         var current = new HashSet<FailedPartitionId>();
 
         foreach (var failedPartition in failedPartitions.ResolvedPartitions)
         {
             current.Add(failedPartition.Id);
-            if (_written.TryGetValue(failedPartition.Id, out var written) && written.Fingerprint == Deleted)
+            if (_written.TryGetValue(failedPartition.Id, out var written) && written.Document is null)
             {
                 continue;
             }
 
             writes.Add(new DeleteOneModel<FailedPartition>(Builders<FailedPartition>.Filter.Eq(_ => _.Id, failedPartition.Id)));
-            pending.Add((failedPartition.Id, Deleted));
+            pending.Add((failedPartition.Id, null));
         }
 
         foreach (var failedPartition in failedPartitions.Partitions)
         {
             current.Add(failedPartition.Id);
-            var fingerprint = FingerprintOf(failedPartition);
-            if (_written.TryGetValue(failedPartition.Id, out var written) && written.Fingerprint == fingerprint)
+            var document = failedPartition.ToBson();
+            if (_written.TryGetValue(failedPartition.Id, out var written) && written.Document?.AsSpan().SequenceEqual(document) == true)
             {
                 continue;
             }
 
             writes.Add(new ReplaceOneModel<FailedPartition>(Builders<FailedPartition>.Filter.Eq(_ => _.Id, failedPartition.Id), failedPartition) { IsUpsert = true });
-            pending.Add((failedPartition.Id, fingerprint));
+            pending.Add((failedPartition.Id, document));
         }
 
         if (writes.Count > 0)
@@ -82,9 +80,9 @@ public class FailedPartitionStorage(IEventStoreNamespaceDatabase database) : IFa
             await _collection.BulkWriteAsync(writes, new BulkWriteOptions { IsOrdered = false }).ConfigureAwait(false);
         }
 
-        foreach (var (id, fingerprint) in pending)
+        foreach (var (id, document) in pending)
         {
-            _written[id] = (observerId, fingerprint);
+            _written[id] = (observerId, document);
         }
 
         // What the observer no longer holds in either list is not going to be written again.
@@ -141,13 +139,6 @@ public class FailedPartitionStorage(IEventStoreNamespaceDatabase database) : IFa
         {
             Partitions = await cursor.ToListAsync()
         };
-    }
-
-    static long FingerprintOf(FailedPartition failedPartition)
-    {
-        var bytes = failedPartition.ToBson();
-        var hash = System.IO.Hashing.XxHash3.HashToUInt64(bytes);
-        return (long)hash == Deleted ? 0 : (long)hash;
     }
 
     Task EnsureIndexes() => _collection.EnsureIndexesOnceAsync(_ensuredIndexes, Indexes.ToArray());
