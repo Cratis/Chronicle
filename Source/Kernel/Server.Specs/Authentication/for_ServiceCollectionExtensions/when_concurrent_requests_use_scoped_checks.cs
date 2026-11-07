@@ -30,6 +30,7 @@ public class when_concurrent_requests_use_scoped_checks : Specification
         builder.Services.AddSingleton(Substitute.For<IAdministratorPrivileges>());
         builder.Services.AddAuthorization();
         builder.Services.AddChronicleAdministratorAuthorization();
+        builder.Services.AddSingleton<Rendezvous>();
         builder.Services.AddScoped<CallerState>();
         builder.Services.AddScoped<IAdministratorAuthorization, RequestCheck>();
         await using var app = builder.Build();
@@ -57,11 +58,24 @@ public class when_concurrent_requests_use_scoped_checks : Specification
     }
 
     [IgnoreConvention]
-    public class RequestCheck(CallerState state) : IAdministratorAuthorization
+    public class Rendezvous
+    {
+        readonly TaskCompletionSource _both = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        int _arrived;
+
+        public Task BothArrive()
+        {
+            if (Interlocked.Increment(ref _arrived) == 2) _both.TrySetResult();
+            return _both.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        }
+    }
+
+    [IgnoreConvention]
+    public class RequestCheck(CallerState state, Rendezvous rendezvous) : IAdministratorAuthorization
     {
         public async Task<bool> IsAuthorized(ClaimsPrincipal principal)
         {
-            await Task.Yield();
+            await rendezvous.BothArrive();
             return state.Name is not null && state.Name == principal.Identity?.Name;
         }
     }

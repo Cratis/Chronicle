@@ -77,13 +77,15 @@ public class a_command_filter : Specification
 
     protected async Task<bool> AuditLogged(string capability)
     {
-        for (var attempt = 0; attempt < 100; attempt++)
+        try
         {
-            if (_loggers.Messages.Any(message => message.Contains(capability, StringComparison.Ordinal))) return true;
-            await Task.Delay(50);
+            await _loggers.WhenLogged(message => message.Contains(capability, StringComparison.Ordinal)).WaitAsync(TimeSpan.FromSeconds(5));
+            return true;
         }
-
-        return false;
+        catch (TimeoutException)
+        {
+            return false;
+        }
     }
 
     static StoreAccess AccessOf(Type type)
