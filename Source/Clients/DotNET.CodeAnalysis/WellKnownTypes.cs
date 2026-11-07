@@ -194,6 +194,16 @@ public static class WellKnownTypes
     public const string ReadModelAttributeName = "Cratis.Arc.Queries.ModelBound.ReadModelAttribute";
 
     /// <summary>
+    /// The full name of the node attribute.
+    /// </summary>
+    public const string NodeAttributeName = "Cratis.Chronicle.Projections.Graphs.NodeAttribute";
+
+    /// <summary>
+    /// The full name of the edge attribute.
+    /// </summary>
+    public const string EdgeAttributeName = "Cratis.Chronicle.Projections.Graphs.EdgeAttribute";
+
+    /// <summary>
     /// The open-generic display string of the EventTypeMigration&lt;TUpgrade, TPrevious&gt; base class.
     /// </summary>
     public const string EventTypeMigrationGenericDisplay = "Cratis.Chronicle.Events.Migrations.EventTypeMigration<TUpgrade, TPrevious>";

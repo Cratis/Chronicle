@@ -1,8 +1,7 @@
 ---
+title: Resolve storage connections in Cratis Chronicle
 description: Let Chronicle ask a resolver where each tenant's database lives, instead of one connectionDetails, for multi-tenant storage placement.
 ---
-# Storage Connection Resolution
-
 A multi-tenant platform often decides where each tenant's database lives: which server, which database, which schema, and which identity is allowed in. With a single `connectionDetails`, Chronicle cannot follow that. It derives a database name for every event store and namespace, connects with one credential, and creates whatever is missing.
 
 Connection resolution lets Chronicle ask instead. Whenever it connects to a database, it describes what it is connecting for: the kind of database, the event store, the namespace, and the purpose. A resolver answers with the parts it decides. Anything it leaves out keeps Chronicle's default.
@@ -13,9 +12,9 @@ Nothing changes until you configure it. For how this fits with selecting tenants
 
 | Field | Values |
 | --- | --- |
-| `storage` | `SqlServer`, `PostgreSql`, `Sqlite` or `MongoDB` |
+| `storage` | `SqlServer`, `PostgreSql`, `Sqlite`, `MongoDB` or `Neo4j` |
 | `purpose` | `Runtime` for reading and writing data, `Schema` for creating databases and schemas, migrating and renaming tables, and offline MongoDB index provisioning or verification |
-| `scope.kind` | `cluster`, `eventStore`, `namespace` (its events) or `readModels` (its projected read models) |
+| `scope.kind` | `cluster`, `eventStore`, `namespace` (its events) or `readModels` (its projected read models). The `Neo4j` storage always asks for `readModels` |
 | `scope.eventStore` | The event store, empty for the cluster |
 | `scope.namespace` | The namespace, empty for the cluster and an event store |
 
@@ -25,13 +24,17 @@ Every part is optional:
 
 | Part | Effect |
 | --- | --- |
-| `connectionString` | Replaces `connectionDetails` for this database |
-| `database` | The database to use. Chronicle does not derive a name for it, and does not record a [binding](storage.mdx#permanent-bindings) |
+| `connectionString` | Replaces `connectionDetails` for this database. For `Neo4j` it is a bolt URI that replaces `neo4j.server` |
+| `database` | The database to use. Chronicle does not derive a name for it, and does not record a [binding](storage.mdx#permanent-bindings). For `Neo4j` it names the graph database, which Chronicle never creates |
 | `schema` | The schema Chronicle keeps its tables in (SQL only), overriding `storage.schema` |
-| `identity` | `userName` and `password`, or `accessToken`. The token is used as an Entra ID token on SQL Server, as the password on PostgreSQL, and as an OIDC token on MongoDB |
+| `identity` | `userName` and `password`, or `accessToken`. The token is used as an Entra ID token on SQL Server, as the password on PostgreSQL, as an OIDC token on MongoDB and as a bearer token on Neo4j |
 | `expiresAt` | When to ask again |
 
 A connection string or a database means the platform owns the placement of that database. With only an identity, Chronicle keeps deriving and binding names, and only changes who connects. The cluster database is always `connectionDetails`, so for it only the identity and schema are used.
+
+## Neo4j graphs
+
+The [Neo4j graph sink](../../sinks/neo4j.mdx) resolves one request for the graph of every event store and namespace, with the storage `Neo4j`, the scope kind `readModels`, and the purposes `Runtime` and `Schema`. `Runtime` reads and writes the graph; `Schema` creates the database and its constraints. A resolver answers the parts it decides, and the sink hands a resolved identity to the driver's authentication token manager so rotated credentials reach a long-lived connection. There is no `schema` for Neo4j.
 
 ## Two slots and the resolvers
 
@@ -245,7 +248,7 @@ On SQL Server, the kernel supports every Microsoft Entra ID mode of the `Authent
 
 Do not combine an `identity.accessToken` returned by a resolver with `Authentication=`, `Password` or `Integrated Security` in `connectionDetails` or in the resolved `connectionString`. SqlClient rejects a connection that has both a token and a credential. Pick one way per connection: either the connection string carries the authentication mode, or the resolver returns the token on an otherwise credential-free connection string.
 
-For Azure Database for PostgreSQL, [native Entra authentication](../azure.md#azure-database-for-postgresql) acquires and refreshes tokens without a resolver. Enable `storage.postgreSqlEntra.enabled`, optionally set `storage.postgreSqlEntra.managedIdentityClientId`, and provide the PostgreSQL `Username` but no password in the connection string. Do not combine native authentication with a resolver returning credentials; placement and schema resolution remain supported.
+For Azure Database for PostgreSQL, [native Entra authentication](../azure.md#store-events-in-azure-database-for-postgresql) acquires and refreshes tokens without a resolver. Enable `storage.postgreSqlEntra.enabled`, optionally set `storage.postgreSqlEntra.managedIdentityClientId`, and provide the PostgreSQL `Username` but no password in the connection string. Do not combine native authentication with a resolver returning credentials; placement and schema resolution remain supported.
 
 With native authentication disabled (the default), a resolver can instead return the Entra token as `identity.accessToken`, and Chronicle uses it as the password:
 

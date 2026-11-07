@@ -16,6 +16,7 @@ using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.ReadModels;
+using Cratis.Chronicle.Serverless;
 using Cratis.Chronicle.Transactions;
 using Cratis.Serialization;
 using Cratis.Traces;
@@ -148,6 +149,11 @@ public partial class Reducers : IReducers
     internal Observation.EventGenerationDelivery GenerationDelivery { get; init; }
 
     /// <summary>
+    /// Gets how the events of reducers are delivered, when supplied by the event store.
+    /// </summary>
+    internal ObserverDeliveries? Deliveries { get; init; }
+
+    /// <summary>
     /// Gets how many partitions of one reducer are handled at the same time.
     /// </summary>
     internal int MaxConcurrentPartitions { get; init; } = PartitionedDeliveryScheduler.DefaultMaxConcurrentPartitions;
@@ -160,7 +166,7 @@ public partial class Reducers : IReducers
     /// <summary>
     /// Gets how the re-registration work is started. Specs replace this to run the work deterministically.
     /// </summary>
-    internal Func<Func<Task>, Task> ScheduleReconnectWork { get; init; } = work => Task.Run(work);
+    internal Func<Func<Task>, Task> ScheduleReconnectWork { get; init; } = Observation.ObserverDeliveryScope.RunDetached;
 
     /// <inheritdoc/>
     public Task Discover()
@@ -537,8 +543,22 @@ public partial class Reducers : IReducers
             SkippedReducerMethods.Describe(handler.ReducerType, handler.ReadModelType, _eventTypes.AllClrTypes));
     }
 
+    /// <summary>
+    /// Refuses a reducer that resolves to HTTP delivery, which is not available yet.
+    /// </summary>
+    /// <param name="handler">The <see cref="IReducerHandler"/> being registered.</param>
+    /// <exception cref="HttpDeliveryNotAvailable">Thrown when the reducer resolves to HTTP delivery.</exception>
+    void ThrowIfDeliveredOverHttp(IReducerHandler handler)
+    {
+        if (Deliveries?.Resolve(handler.Id.Value, handler.ReducerType) == ObserverDelivery.Http)
+        {
+            throw new HttpDeliveryNotAvailable([handler.Id.Value]);
+        }
+    }
+
     void RegisterReducerWhenHostable(IReducerHandler handler)
     {
+        ThrowIfDeliveredOverHttp(handler);
         ClientObserverHosting.ThrowIfUnavailable(_eventStore.Connection, "Reducer", () => handler.Id.Value);
         RegisterReducer(handler);
     }
@@ -561,6 +581,7 @@ public partial class Reducers : IReducers
             EventStore = _eventStore.Name,
             Namespace = _eventStore.Namespace,
             PageDelivery = new() { Enabled = true },
+            StateCaching = new() { Enabled = true },
             Reducer = new ReducerDefinition
             {
                 GenerationDelivery = (Contracts.Observation.EventGenerationDelivery)GenerationDelivery,

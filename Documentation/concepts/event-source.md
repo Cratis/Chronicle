@@ -1,13 +1,20 @@
 ---
 title: Event source
-description: What a Chronicle event source is, how event source id, type, streams and definitions relate, and which of them take part in concurrency.
+description: Identify related Chronicle events with an event source id, organize them into streams, and choose which values participate in concurrency checks.
 ---
 
-An event source is one entity or process in your domain: a person, an account, an order, a transfer. All the state changes of that entity are events, and the **event source id** (`EventSourceId`) is what binds them together. It is comparable to the primary key of a row in a database.
+An event source in Cratis Chronicle is an entity or process whose changes you record as events: a person, an account,
+an order, or a transfer. Its **event source id** (`EventSourceId`) ties those events together,
+much as a primary key identifies a database row. Use the same id when recording later changes to
+the same entity.
 
-For a person, generate an opaque surrogate id, such as a random `Guid`, and use it for every event about that person. Keep sensitive values out of identifiers: store them in event content marked with `[PII]`, as described in [PII and event source identifiers](../compliance/index.md#event-source-identifiers-cannot-be-encrypted).
+Choose a non-sensitive identifier, such as a randomly generated `Guid`, when the entity represents
+a person. Event source identifiers cannot be marked as personally identifiable information (PII)
+and encrypted; keep sensitive identifiers in [PII-marked event properties](../compliance/index.md#event-source-identifiers-cannot-be-encrypted)
+instead.
 
-The diagram shows two event sources, two people, each with its own ordered story of events, all sharing the same event source id throughout:
+Here, `person-123` and `person-456` have separate histories. Each person's events retain that
+person's id throughout:
 
 ```mermaid
 flowchart LR
@@ -21,7 +28,8 @@ flowchart LR
     end
 ```
 
-When you append an event, the first argument is the event source id. Every event has exactly one.
+When you append an event, the first argument is the event source id. Every event has exactly one;
+adding streams or a definition does not change that.
 
 ## Four values that describe where an event belongs
 
@@ -34,7 +42,10 @@ Every stored event carries four routing values. Two identify the entity and two 
 | `EventStreamType` | Which named part of the story? | `Transactions` |
 | `EventStreamId` | Which instance of that part? | `2026-04` |
 
-The last three are optional. An event appended with only an event source id has the default event source type and the default stream, and that is how Chronicle has always worked. All four are indexed, filterable, and the dimensions a [concurrency scope](../events/concurrency.mdx) can narrow to.
+Only the event source id is required. An append without the other three values uses the default
+event source type and stream. Start there when you do not need named subdivisions. All four
+values are indexed and filterable, and a [concurrency scope](../events/concurrency.mdx) can narrow
+to them.
 
 A **stream** is a named part of an event source, such as the transactions of one month, or the onboarding of an account. It is not a separate entity: its events belong to the same event source and share its event source id. The stream type names the part, and the stream id picks one instance of it.
 
@@ -49,9 +60,17 @@ You can leave the type and stream values as strings you pass on each append. Or 
 public class AccountEventSource : IEventSource;
 ```
 
-That type is an **event source definition**. Its name becomes the event source type of events appended through it. Each stream's name becomes an event stream type. The definition also declares which of the four values take part in the concurrency check of an append, per event source and per stream.
+This .NET **event source definition** names the source type `Account` and declares `Onboarding`
+and `Transactions` as stream types. One account can have many transaction streams, each selected
+by a stream id such as `2026-04`. The definition also declares which routing values take part in
+an append's concurrency check, per event source and per stream.
 
-A definition does not list event types, is never instantiated, and does not replace the event source id: one definition serves every instance. The client discovers definitions, registers them with the kernel, and both sides check appends against them. Everything about them, from declaring one to how Chronicle uses it, is in [Event sources and streams](../event-sources/index.mdx).
+A definition does not list event types and is never instantiated. `AccountEventSource` describes
+the kind of source; an event source id such as `account-42` still selects the account. The client
+discovers definitions, registers them with the Chronicle server (the kernel), and both sides check
+appends against them.
+Follow [Event sources and streams](../event-sources/index.mdx) to declare a definition and append
+through it.
 
 ## What takes part in consistency
 
@@ -64,7 +83,14 @@ A definition does not list event types, is never instantiated, and does not repl
 | Event types | Yes | Yes. The event types of the read model |
 | [Tags](./tagging.mdx) | No | No |
 
-The first four values are the stream metadata, and they play the role that tags play in DCB. [Tags](./tagging.mdx) are labels you can filter and categorize by. They do not take part in consistency. An event has one event source, so a fact that concerns two entities is written as two events, one per event source, in one atomic append. [Dynamic Consistency Boundary in Chronicle](../dynamic-consistency-boundary/chronicle.md) explains what that means for DCB.
+In a Dynamic Consistency Boundary (DCB), the events used for a decision determine what must remain
+unchanged until the append. Chronicle uses the first four routing values above as stream metadata
+to scope that check. [Tags](./tagging.mdx) remain labels for filtering and categorization; they do
+not take part in consistency.
+
+Because an event has one event source, a fact concerning two entities is written as two events,
+one per event source, in one atomic append. [Dynamic Consistency Boundary in Chronicle](../dynamic-consistency-boundary/chronicle.md)
+explains how that differs from DCB event stores.
 
 ## Related
 

@@ -1,31 +1,39 @@
 ---
-title: Releasing PII and encrypted values
-description: Decrypt PII and [Encrypted] values in a read model instance you already have, and how Chronicle decides whose encryption key to use.
+title: Release PII and encrypted values from Chronicle read models
+description: Use IReadModels.Release in .NET to decrypt PII and encrypted values in read models from caches, raw storage, or Watch updates, using the resolved subject.
 ---
 
-Most of the time you never think about this. `GetInstanceById`, `GetInstances`, and `GetSnapshotsById` on `IReadModels` already hand you both `[PII]` and `[Encrypted]` values decrypted — a projection is decrypted by the kernel before it reaches you, and a reducer-backed instance is decrypted by the client right before it's returned. See [Read models and PII](../compliance/read-models) for how that automatic path works and what it takes to mark a property as PII in the first place, and [Security](../security/) for `[Encrypted]`.
+Use `IReadModels.Release` in the Chronicle .NET client to decrypt personally identifiable information marked `[PII]` and values marked `[Encrypted]` in a read model you already hold. You need this when the instance came from raw storage, a cache or message payload, or a `Watch<TReadModel>()` update that has not been released.
 
-`IReadModels.Release` is the same decryption, exposed for the cases that skip that path: an instance you built from raw storage, restored from a cache or message payload, or received somewhere that doesn't release automatically. One built-in case exists today — `Watch<TReadModel>()` streams changes to you directly and does not call `Release` first. `Release` decrypts whichever of `[PII]` and `[Encrypted]` the read model actually carries - both, either, or neither - there is nothing to configure.
+You do not need a separate release after `GetInstanceById`, `GetInstances` or `GetSnapshotsById` on `IReadModels`. The kernel decrypts projection-backed instances before returning them, and the client releases reducer-backed instances before returning them. [Read models and PII](../compliance/read-models) explains that automatic path and how to mark personal data; [Security](../security/) covers `[Encrypted]` values.
+
+Manual release uses the read model's schema to find both kinds of protected value. Start by declaring the annotations and the identity needed for subject-scoped encryption:
 
 <ChronicleClientTabs snippet="read-models/releasing-pii/read-model" />
 
-`RequesterName` is `[PII]`-marked explicitly on the read model — required for a reducer, and for a projection as well, since Chronicle encrypts from the read model's own schema and does not carry an event property's PII marker over to the property it is mapped to. `CustomerId` carries `[Subject]`: the ticket's own `Id` identifies the ticket, not the person the PII belongs to, so `Release` needs to be told which property to use as the encryption key's owner. A property having the `Subject` type does not select it by itself; the attribute is what declares the role.
+The ticket's `Id` identifies the ticket, while `CustomerId` identifies the person whose name is protected. `[Subject]` tells manual release to use `CustomerId` to find that person's key. A property with the `Subject` type alone does not declare this role.
+
+`RequesterName` also needs `[PII]` on the read model. Chronicle uses the read model's own schema for encryption; mapping a PII-marked event property does not transfer that marker. This applies to both reducers and projections.
 
 ## Release a single instance
+
+Pass the instance to `Release` and use the returned value. The client resolves its subject, sends the annotated payload to the kernel and deserializes the released result:
 
 <ChronicleClientTabs snippet="read-models/releasing-pii/single-instance" />
 
 ## Release a collection
 
-Releasing more than one instance at once resolves the subject for each independently, so a single batch can freely mix data belonging to different people.
+The collection overload resolves a subject for each instance independently. You can pass tickets belonging to different customers in the same collection:
 
 <ChronicleClientTabs snippet="read-models/releasing-pii/collection" />
 
 ## Release while watching for changes
 
+`Watch` delivers changes without calling `Release`. Release each update before using its protected values, and skip removal notifications or changes without an instance:
+
 <ChronicleClientTabs snippet="read-models/releasing-pii/watch" />
 
-Every other read on `IReadModels` releases before returning to you. `Watch` is the exception, because it's a live feed rather than one completed read — release each change yourself as it arrives, the same way you'd release any other instance.
+Here, the subscriber uses the returned `ticket` to print the released requester name. It does not read that name directly from the incoming changeset.
 
 ## How the subject is resolved
 
@@ -37,15 +45,17 @@ Every other read on `IReadModels` releases before returning to you. `Watch` is t
 | 2 | A constructor parameter decorated with `[Subject]` (record shorthand) |
 | 3 | A property named `Id`, case-insensitive |
 
-The first match **with a value** wins. If an attributed property is `null`, empty or `Subject.NotSet`, `Release` continues to the `Id` fallback. This lets older rows and partially populated instances remain releasable while a newly projected `[Subject]` property is introduced.
+A property attribute takes precedence over a constructor-parameter attribute. If the selected subject property is `null`, empty or `Subject.NotSet`, `Release` tries `Id`. During a migration to an explicit `[Subject]` property, that fallback can still release older rows when their `Id` identifies the correct subject.
 
-A subject is what a subject-scoped value is keyed by — `[PII]`, and `[Encrypted]` with the default `EncryptionScope.Subject`. A namespace- or global-scoped `[Encrypted]` value (see [Scope](../security/encrypted-values#scope)) needs no subject at all, so what happens when none of the three resolve depends on what the read model actually carries:
+`[PII]` values and `[Encrypted]` values with the default `EncryptionScope.Subject` need a subject to identify their key. Namespace- and global-scoped encryption do not; see [Scope](../security/encrypted-values#scope). When no subject resolves, the annotations determine what happens:
 
-- If the read model carries no `[PII]`/`[Encrypted]` metadata at all, `Release` returns the instance unchanged — there is nothing to release, so it doesn't call the kernel.
-- If it carries only subject-scoped values, `Release` returns the instance unchanged and logs a warning — there is no key identity to release them under, the same as a computed `[PII]` value that was never round-tripped through encryption.
-- If it carries a namespace- or global-scoped `[Encrypted]` value — with or without subject-scoped values alongside it — `Release` still calls the kernel, because that value's key doesn't depend on a subject. Any subject-scoped value alongside it, with no subject to release against, degrades exactly as described below in "When release can't recover a value".
+| Read model annotations | Result without a resolved subject |
+|---|---|
+| No `[PII]` or `[Encrypted]` metadata | Returns the instance unchanged without calling the kernel |
+| Only subject-scoped values | Returns the instance unchanged; logs a warning if a subject-scoped value is present |
+| At least one namespace- or global-scoped `[Encrypted]` value | Calls the kernel even without a subject; any subject-scoped values that cannot be released degrade as described below |
 
-This is also why a read model carrying only a namespace- or global-scoped secret is ordinarily written with no `Id` or `[Subject]` property at all — there is no per-document identity for that kind of value to be scoped by in the first place.
+A model carrying only namespace- or global-scoped secrets therefore needs no `Id` or `[Subject]` property for release.
 
 Add `[Subject]` when the identity that manual `Release` should use differs from the read model's own key, exactly as you would on a command or event property to control which identity an append is encrypted under. When the two already match — a person's own profile, keyed by their own identity — the `Id` fallback handles it and no attribute is needed.
 
@@ -55,7 +65,7 @@ This attribute affects only subject discovery from the object passed to `Release
 
 A property that can't be decrypted — its encryption key was deleted, or it was encrypted under a different subject entirely — degrades on its own; the rest of the instance still comes back intact. The property comes back as the empty value of its type: an empty string for a string, `0` or `false` for a non-nullable number or boolean, `null` for a nullable one, and an empty collection or object for a collection or value object. Whether an erased value should be distinguishable from a stored `0`, `false` or empty value is an open decision in [issue 4620](https://github.com/Cratis/Chronicle/issues/4620). What a caller sees for each of those cases is covered in [Read models and PII](../compliance/read-models#one-property-never-fails-the-whole-read).
 
-If the release call itself can't complete — a schema mismatch, for instance — Chronicle logs the failure and returns the instance exactly as you passed it in, still encrypted. If a value you expect to read back stays ciphertext after calling `Release`, check the application logs for that failure before assuming the data is unrecoverable.
+If the kernel returns a release error, such as a schema mismatch, the client logs it and returns the original instance, still encrypted. This fallback does not catch every failure: transport, serialization and deserialization exceptions can propagate to the caller. If `Release` returns but a value remains ciphertext, check the application logs before treating the data as unrecoverable.
 
 ## Related topics
 

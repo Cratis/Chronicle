@@ -29,7 +29,7 @@ internal sealed class Identities(
     public IObservable<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.Identities.IdentityDetailsResponse>>> AllIdentities(global::Cratis.Chronicle.Contracts.Identities.AllIdentitiesRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Identities.IdentityDetailsResponse>>(
             callContext,
-            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, request.Namespace),
+            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: request.Namespace),
             () => global::Cratis.Chronicle.Identities.IdentityDetails.AllIdentities((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, storage)
                 .CompletedBy(callContext.CancellationToken)
                 .Select(_ => (IEnumerable<global::Cratis.Chronicle.Contracts.Identities.IdentityDetailsResponse>)_.Select(ToIdentityDetailsResponse).ToList()),
@@ -39,7 +39,7 @@ internal sealed class Identities(
     public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.Identities.IdentityDetailsResponse>>> GetIdentities(global::Cratis.Chronicle.Contracts.Identities.GetIdentitiesRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Identities.IdentityDetailsResponse>>(
             callContext,
-            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, request.Namespace),
+            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: request.Namespace),
             async () =>
             {
                 var result = await global::Cratis.Chronicle.Identities.IdentityDetails.GetIdentities((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, storage);

@@ -1,0 +1,20 @@
+---
+title: "CHR0067: A node needs exactly one key"
+description: "CHR0067 reports a node without exactly one key, or an edge with more than one key."
+---
+
+## Rule description
+
+A node is identified by exactly one property marked with `[Key]`. An edge is identified by its type, its source and its target. An edge can additionally have one property marked with `[Key]`, which identifies it among edges of the same type between the same two nodes. The rule reports a node with no key or several keys, and an edge with several keys.
+
+## Severity
+
+Error
+
+## How to fix
+
+Mark exactly one property of a node with `[Key]`. Remove all but one `[Key]` from an edge, or remove them all when there is at most one edge of the type between two nodes.
+
+## Related topics
+
+- [Graph projections](../projections/graph-projections.mdx)

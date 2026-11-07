@@ -22,7 +22,7 @@ namespace Cratis.Chronicle.Projections;
 /// silently dropped on slower backends. Registrations are in memory; each live watch re-registers periodically,
 /// which restores them after an activation is lost.
 /// </remarks>
-[Version(1)]
+[Version(2)]
 public interface IProjectionChangesetNotifier : IGrainWithStringKey
 {
     /// <summary>
@@ -48,6 +48,12 @@ public interface IProjectionChangesetNotifier : IGrainWithStringKey
     /// <param name="change">The <see cref="ReadModelChangeContext"/> describing the change and the event that caused it.</param>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     Task Notify(EventStoreNamespaceName namespaceName, ReadModelKey readModelKey, JsonObject readModel, ReadModelChangeContext change);
+
+    /// <summary>
+    /// Gets whether anything is watching the read model, so a producer can skip building a notification nobody receives.
+    /// </summary>
+    /// <returns>True when at least one subscriber is registered.</returns>
+    Task<bool> HasSubscribers();
 
     /// <summary>
     /// Notify all subscribed watch subscribers of changesets in order.

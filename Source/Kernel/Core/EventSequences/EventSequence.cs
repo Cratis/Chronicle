@@ -145,7 +145,12 @@ public partial class EventSequence(
         if (_eventSequenceKey.EventStore != EventStoreName.System || _eventSequenceKey.Namespace != EventStoreNamespaceName.Default || _eventSequenceId != EventSequenceId.System)
         {
             var namespaces = GrainFactory.GetGrain<INamespaces>(_eventSequenceKey.EventStore);
-            await namespaces.Ensure(_eventSequenceKey.Namespace);
+            var canonical = await namespaces.EnsureCanonical(_eventSequenceKey.Namespace);
+            if (!string.Equals(canonical.Value, _eventSequenceKey.Namespace.Value, StringComparison.Ordinal))
+            {
+                logger.RefusedCaseVariant(_eventSequenceKey.Namespace.Value, _eventSequenceKey.EventStore.Value, canonical.Value);
+                throw new NamespaceIsCaseVariant(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, canonical);
+            }
         }
 
         _appendedEventsQueues = GrainFactory.GetGrain<IAppendedEventsQueues>(_eventSequenceKey);

@@ -1,16 +1,55 @@
 <!-- cratis-ai-managed: skills/cratis-ci-pipeline-performance/references/runner-sizing-and-images.md -->
 # Runner sizing, images and cache layers
 
-Use this when every job is uniformly slow, when jobs spend time pulling or
-installing tools, or when deciding how to warm workspaces.
-
 ## Contents
 
+- Choosing Cratis runners
 - Cores per job before job count
 - Container images
 - Tools baked into the runner image
 - Cache layers and warm workspaces
 - Publish stages
+
+Use this when every job is uniformly slow, when jobs spend time pulling or
+installing tools, or when choosing runners and deciding how to warm workspaces.
+
+## Choosing Cratis runners
+
+Read the [Infrastructure runner guide](https://github.com/Cratis/Infrastructure/blob/main/Documentation/deployment/github-runners.md)
+for the UpCloud scale sets, resource requests and limits, pod ceilings, scratch
+storage and autoscaling. Keep those numbers there, not in this skill. The routing
+and public-fork safety invariants live in
+[github-actions.md](../../../rules/github-actions.md).
+
+Choose by the work, not just the queue length:
+
+| Choice | When it fits | Check before routing |
+|---|---|---|
+| GitHub-hosted | Public repositories, Windows/macOS jobs | Public hosted execution is free; compare queue and startup time, not just billed minutes |
+| `cratis-arc-small` | Lightweight script/API guards such as release-note or work-record checks | No Docker daemon, container actions, service containers or Testcontainers; not for builds, specs, audits or deployments |
+| `cratis-arc` | Private Linux builds, specs, dependency audits, deployments and Docker work | Fit peak memory, worker count and scratch use inside the documented limits |
+
+For example, a private-repository release-note script can use
+`runs-on: cratis-arc-small`; a private-repository Testcontainers suite needs
+`runs-on: cratis-arc`.
+
+- Measure peak memory for the whole job, including Docker services and test
+  workers. Leave headroom below the documented limit; an OOM is not evidence that
+  more shards will help when those shards share nodes.
+- Set build/test worker counts from the pod's CPU and memory limits, not the
+  node's advertised cores. A larger in-job worker count can cause contention.
+- Compare fan-out with each set's pod ceiling and the shared node pool. More
+  shards can wait for slots or node autoscaling instead of shortening the run.
+- Include runner startup, image pulls and fresh-node provisioning in wall time.
+  For short jobs, merge compatible checks with one setup before adding shards;
+  compare the hosted alternative where routing policy permits it.
+- Reduce redundant work before requesting capacity: apply PR cancellation,
+  change-detected heavy jobs and event deduplication as described in
+  `required-checks-and-path-filters.md` and the owning rule.
+
+Do not infer live node counts, runner cost/quotas, network/egress policy or shared
+package-cache availability from the YAML. Record missing operational facts in
+Infrastructure, not as assumptions in the corpus.
 
 ## Cores per job before job count
 
@@ -45,6 +84,12 @@ a version check. Keep the image's contents versioned so a change is reviewable.
 
 Prefer content-addressed caches, which are correct by construction, before
 warm volumes:
+
+Cratis runner pods start with per-job workspaces and Docker storage; neither is
+a persistent shared NuGet, npm or BuildKit cache. Restore remote caches explicitly
+(see `caching.md`) rather than treating a previous job's downloads as available.
+The layers below are options to configure, not claims that Infrastructure provides
+them:
 
 1. A registry mirror or pull-through cache for images.
 2. A remote or registry-backed BuildKit cache (see `caching.md`).

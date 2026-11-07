@@ -19,6 +19,7 @@ namespace Cratis.Chronicle.Alerts;
 /// <param name="Next">Continuation if more rows exist.</param>
 [ReadModel]
 [BelongsTo(WellKnownServices.Alerts)]
+[StoreCapability("chronicle.alerts.read")]
 public record AlertIncidentPage(
     AlertIncidentsReadinessState Status,
     IEnumerable<AlertIncidentDetails> Items,

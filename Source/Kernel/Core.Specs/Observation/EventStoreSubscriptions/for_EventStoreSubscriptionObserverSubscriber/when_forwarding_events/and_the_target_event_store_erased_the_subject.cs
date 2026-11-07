@@ -45,6 +45,7 @@ public class and_the_target_event_store_erased_the_subject : Specification
     async Task Establish()
     {
         _silo = new TestKitSilo();
+        _silo.AddNamespaceCasing();
         _silo.AddService(Substitute.For<IStorage>());
         _silo.AddService(Substitute.For<IEventGenerationRelease>());
         _silo.AddService(new JsonSerializerOptions());

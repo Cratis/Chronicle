@@ -1,19 +1,23 @@
 ---
-title: Filter observers by event source and stream
-description: Make a reactor or reducer handle only the events of one stream of an event source definition, and what CHR0055 and CHR0056 check at build time.
+title: Filter Chronicle observers by event source and stream
+description: Use a typed event source filter to restrict Chronicle reactors and reducers to a declared stream, with analyzer checks for routing mistakes.
 ---
 
-Use `[FromEventSource<TSource>("Stream")]` on a reactor or a reducer when it should handle only the events appended to one stream of a definition. The filter replaces the pair of strings in `[EventSourceType]` and `[EventStreamType]`.
+Use `[FromEventSource<TSource>("Stream")]` in Cratis Chronicle to restrict a reactor or reducer to a declared stream, such as an account's transactions. The attribute takes the event source type from the definition and replaces the pair of strings in `[EventSourceType]` and `[EventStreamType]`.
+
+The examples use a .NET event source definition. [Define an event source](./defining.mdx) explains how to declare one.
 
 ## Filter a reactor
 
 <ChronicleClientTabs snippet="event-sources/filtering/reactor" variants="csharp" />
 
-The reactor receives `MoneyDeposited` only when it was appended to the `Transactions` stream of the `Account` event source. A deposit appended through another definition, or to the `Onboarding` stream, is skipped.
+The reactor receives `MoneyDeposited` only when the stored event source type is `Account` and the stream type is `Transactions`. A deposit with a different event source type, or in the `Onboarding` stream, is skipped. The filter does not select one account id or one month's stream id.
 
 ## Filter a reducer
 
 <ChronicleClientTabs snippet="event-sources/filtering/reducer" variants="csharp" />
+
+The reducer uses the same `AccountEventSource` and `MoneyDeposited` declarations as the reactor example. Its total includes only deposits that pass the `Account` and `Transactions` filters; deposits in `Onboarding` do not contribute.
 
 ## How the match works
 
@@ -40,7 +44,4 @@ An explicit attribute that repeats the same value as the typed filter is allowed
 
 ## Next steps
 
-- [Scenarios](./scenarios.mdx#a-process-stream): a reactor that follows one process stream.
-- [Dynamic Consistency Boundary](./dcb.mdx): the decision happens on the write side, and observers react afterwards.
-- [Reactors](../reactors/index.mdx)
-- [Dynamic Consistency Boundary in Chronicle](../dynamic-consistency-boundary/chronicle.md): what consistency covers and what observers do not.
+For a reactor that follows a process until its stream closes, continue with [A process stream](./scenarios.mdx#a-process-stream). The [Reactors guide](../reactors/index.mdx) covers event handling. If the rule must reject an append before it is written, use the write-side guards in [Dynamic Consistency Boundary](./dcb.mdx); [Dynamic Consistency Boundary in Chronicle](../dynamic-consistency-boundary/chronicle.md) explains that boundary.

@@ -154,7 +154,7 @@ public class CatchUpObserver(
 
         // The keys are registered whichever shape the steps take: live delivery is held back per partition while
         // that partition is catching up, and the observer clears the whole set when it routes again afterwards.
-        var steps = CreateStepsFor(request, keysToCatchUp);
+        var steps = CreateStepsFor(request, keysToCatchUp, (await observer.GetSubscription()).DeliversPartitionPages);
         if (steps.Count == 0)
         {
             // The job logs its own "no job steps to start" with no observer in its scope, so say which observer it was.
@@ -166,9 +166,10 @@ public class CatchUpObserver(
         return steps;
     }
 
-    ImmutableList<JobStepDetails> CreateStepsFor(CatchUpObserverRequest request, IEnumerable<Key> keys)
+    ImmutableList<JobStepDetails> CreateStepsFor(CatchUpObserverRequest request, IEnumerable<Key> keys, bool deliversPartitionPages)
     {
-        if (request.ObserverType == ObserverType.Projection)
+        // An observer that takes pages spanning partitions is caught up in one walk, like a projection, so its pages are filled.
+        if (request.ObserverType == ObserverType.Projection || deliversPartitionPages)
         {
             return
             [

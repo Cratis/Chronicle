@@ -130,6 +130,18 @@ public abstract partial class ChronicleClientFixture<TChronicleFixture> : IDispo
     public virtual IEnumerable<Type> ModelBoundProjections => GetArtifactTypes(provider => provider.ModelBoundProjections);
 
     /// <inheritdoc/>
+    public virtual IEnumerable<Type> GraphElements => GetArtifactTypes(provider => provider.GraphElements);
+
+    /// <inheritdoc/>
+    public virtual IEnumerable<Type> GraphProjections => GetArtifactTypes(provider => provider.GraphProjections);
+
+    /// <inheritdoc/>
+    public virtual IReadOnlyDictionary<string, string?>? AdditionalHostConfiguration => null;
+
+    /// <inheritdoc/>
+    public virtual Action<IServiceCollection>? ConfigureHostServices => null;
+
+    /// <inheritdoc/>
     public virtual IEnumerable<Type> Reactors => GetArtifactTypes(provider => provider.Reactors);
 
     /// <inheritdoc/>

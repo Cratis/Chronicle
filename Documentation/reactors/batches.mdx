@@ -1,14 +1,16 @@
 ---
-description: Handle a page of Chronicle events in one reactor method, declare its event types with Observes, and report failures or deferrals per partition.
+title: Cratis Chronicle reactors — handle events in batches
+description: Handle a page of Cratis Chronicle events in one reactor method for bulk work, and report failures or delayed retries for individual partitions.
 ---
-# Handling events in batches
+<span id="handling-events-in-batches"></span>
 
-Chronicle delivers events to a reactor in **pages**. A page holds events for one or more partitions, in sequence order.
-Per-event handler methods keep working as they always have: the client calls them once per event, partition by
-partition. A **batch method** is called once per page instead, with every event of the types it observes. Use it when
-the work is cheaper in bulk, for example one bulk request to a search index instead of one request per event.
+A batch method handles the matching events from a page of Cratis Chronicle events in one call. Use it when a downstream system accepts bulk work, such as updating a search index with one request instead of a request per event. You can still report failures or delayed retries for individual partitions.
+
+A page is a delivery containing events for one or more partitions, each identified by an event source id. A batch method receives only the event types it observes, in sequence order, and runs once for a page that contains matching events. Per-event methods continue to run once per event, partition by partition.
 
 <ChronicleClientTabs snippet="reactors/batches/index-users" />
+
+Here, `Index` receives `UserRegistered` and `UserRenamed` events together, while `EmailChanged` remains a per-event method. The bulk response identifies partitions that failed or need more time; `Fail` and `Defer` let the rest of the page succeed.
 
 ## Declaring a batch method
 
@@ -16,15 +18,14 @@ A batch method takes an `EventBatch` as its first parameter and declares each ev
 `[Observes<TEvent>]`, once per type. It may also take a `BatchContext`, a `CancellationToken`, and services from the
 service provider. Inside, pattern-match on the events.
 
-A reactor can have batch methods and per-event methods side by side. Each event type reaches exactly one method, and
-Chronicle refuses to register a reactor that breaks this:
+Each event type assigned to a batch method must belong to that method alone. Chronicle refuses to register a reactor when:
 
-- an event type observed by a batch method and also handled by a per-event method, or observed by two batch methods
-- a batch method without `[Observes<TEvent>]`, or `[Observes<TEvent>]` on a method that does not take an `EventBatch`
-- a per-event method taking a `BatchContext`
-- a batch method returning anything but `Task` or `void`
+- An event type is observed by both a batch method and a per-event method, or by two batch methods.
+- A batch method has no `[Observes<TEvent>]`, or a method with `[Observes<TEvent>]` does not take an `EventBatch`.
+- A per-event method takes a `BatchContext`.
+- A batch method returns anything but `Task` or `void`.
 
-Returning events from a batch method is not supported. Append through the event log the reactor takes as a dependency.
+Returning events from a batch method is not supported. If the batch must produce events, append them through an event log supplied as a dependency.
 
 ## Order
 
@@ -34,9 +35,9 @@ order, handle them in the same method.
 
 ## The batch context
 
-`BatchContext` describes the page: the observer, event store, namespace and event sequence, the partitions in the page,
-how many events it holds, its first and last sequence numbers, the deadline the kernel waits until, and the
-cancellation token. `Origin` says where the page came from:
+`BatchContext` describes the whole page, even when a method's `EventBatch` contains only some of its events. It includes the observer, event store, namespace, event sequence, partitions, event count, and first and last sequence numbers. It also supplies a cancellation token and the deadline until which the kernel waits; a null deadline means it waits without a deadline.
+
+`Origin` explains why Chronicle delivered the page:
 
 | Origin | Meaning |
 | --- | --- |
@@ -47,16 +48,17 @@ cancellation token. `Origin` says where the page came from:
 
 ## Reporting outcomes
 
-- **Return normally** and every partition in the batch succeeded.
-- **Throw** and every partition in the batch fails at its first event in the batch. The partitions go through the normal
-  [failed partition](../concepts/observers.mdx#failed-partitions) recovery.
-- **`Fail`** a partition, or the partition of one event, and only that partition fails, from its first event in the
-  batch or from that event. Its earlier events count as handled, and the rest of the batch succeeds.
-- **`Defer`** a partition, or the partition of one event, and it is delivered again after the delay you give. A deferral
-  is not a failure and does not count towards quarantine, so use it when a downstream system asks you to back off.
+Return normally without reporting a problem to mark every partition in the batch as successful. Throwing an exception fails every partition in that batch at its first event in the batch. Those partitions enter the normal [failed partition](../concepts/observers.mdx#failed-partitions) recovery process.
 
-When several methods of one reactor report on the same partition, the partition settles at the earliest event any of
-them reported. Everything from that event is delivered again, including events another method already handled, so keep
-side effects idempotent and use the [delivery identity](delivery-identity) to recognize a redelivery.
+For a partial result, report the affected partition on `EventBatch`:
 
-A kernel that does not deliver pages cannot defer a partition. The client then fails the partition instead and says why.
+| Call | Result |
+| --- | --- |
+| `Fail(partition, exception)` | Fails that partition from its first event in the batch |
+| `Fail(eventContext, exception)` | Fails that event's partition from that event; earlier events count as handled |
+| `Defer(partition, retryAfter)` | Delivers that partition again from its first event in the batch after the delay |
+| `Defer(eventContext, retryAfter)` | Delivers that event's partition again from that event after the delay |
+
+A deferral does not count as a failure toward quarantine. Use it when a downstream system asks you to back off. A kernel that does not deliver pages cannot defer a partition; the client fails the partition instead and says why.
+
+When several methods report a problem for the same partition, Chronicle retries from the earliest event any of them reported. That can deliver events another method already handled. Keep side effects idempotent, meaning that repeating the same work does not repeat its effect, and use the [delivery identity](delivery-identity) to recognize a redelivery.

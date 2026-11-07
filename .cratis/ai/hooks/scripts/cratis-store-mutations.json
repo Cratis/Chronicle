@@ -156,6 +156,10 @@
       "reason": "lists active recommendations"
     },
     {
+      "command": "streams closed list",
+      "reason": "lists closed stream scopes and their closure metadata without changing them"
+    },
+    {
       "command": "subscriptions list",
       "reason": "lists event store subscriptions"
     },
@@ -178,6 +182,10 @@
       "effect": "retries a failed partition from the sequence number where it failed"
     },
     {
+      "command": "observers retry-failed-partitions",
+      "effect": "starts bounded-batch recovery of every failed partition of an observer; acceptance does not mean recovery finished"
+    },
+    {
       "command": "observers clear-quarantine",
       "effect": "clears observer-level quarantine only, not a partition\u0027s quarantine"
     },
@@ -198,12 +206,20 @@
       "effect": "resumes a stopped background job"
     },
     {
+      "command": "jobs delete",
+      "effect": "requests irreversible deletion of a job and its retained state; acceptance does not confirm completed removal"
+    },
+    {
       "command": "recommendations perform",
       "effect": "executes a server recommendation, such as a schema or replay maintenance action"
     },
     {
       "command": "recommendations ignore",
       "effect": "marks a recommendation as ignored so it no longer appears"
+    },
+    {
+      "command": "streams closed reopen",
+      "effect": "reopens one exact manual stream closure and records the authenticated actor and repair reason in a StreamScopeReopened system event; event-driven closures are refused"
     },
     {
       "command": "subscriptions add",

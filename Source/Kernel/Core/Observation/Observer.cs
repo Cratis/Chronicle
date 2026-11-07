@@ -618,6 +618,7 @@ public partial class Observer(
         if (reminderName == AlertReminderName)
         {
             await ReconcileAlertsIfNeeded();
+            await ReleaseAlertReminderWhenSettled();
             return;
         }
 
@@ -697,7 +698,7 @@ public partial class Observer(
     /// <returns>Awaitable task.</returns>
     internal async Task StopAllRetryFailedPartitionJobs()
     {
-        var jobs = await _jobsManager.GetUnfinishedJobs();
+        var jobs = await _jobsManager.GetUnfinishedJobsOf<IRetryFailedPartition>();
         var stopTasks = jobs
             .Where(_ => _.Request is RetryFailedPartitionRequest request && request.ObserverKey == _observerKey)
             .Select(_ => _jobsManager.Stop(_.Id));

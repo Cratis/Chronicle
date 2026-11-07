@@ -1,15 +1,26 @@
 ---
-description: A Chronicle projection is a declarative observer that turns the events you care about into a read model for your application or API.
+title: Projection
+description: A Chronicle projection declares how events become a read model. Understand mapping, keys, relationships, and when a separate view is worth maintaining.
 ---
-# Projection
 
-A projection in Chronicle is a specialized observer. It is a declarative approach to describing
-events you're interested in and how you want Chronicle to project it into something that you can
-display in your application or provide as data for an API. Every projection can be very specialized
-for the purpose it is being used in, in fact it is encouraged to create specialized projections
-rather than reuse a projection for multiple scenarios. The reason for this is that you then don't
-run the risk of serving multiple conflicting scenarios, which could for instance impact performance
-and also general maintainability of your code.
+<a id="projection"></a>
+
+A projection declares how Cratis Chronicle turns events into a read model: the state a screen displays or
+an API returns. It is an [observer](./observers.mdx), meaning it processes events as they arrive.
+Use a projection when the view you need can be described as mappings, relationships, or calculations
+over those events.
+
+For example, the [.NET model-bound example](../projections/model-bound/index.mdx#basic-example)
+uses `[FromEvent<MbIndexAccountOpened>]` on `MbIndexAccountInfo`. The event's `Name` maps to the
+same-named read model property. `[SetFrom<MbIndexAccountOpened>(nameof(MbIndexAccountOpened.InitialBalance))]`
+maps `InitialBalance` into `Balance`. The event remains a record of opening the account; the read
+model holds the values the application wants to query.
+
+## Shape the view for its reader
+
+The same events can feed several projections. Give a screen or API its own focused view when its
+needs differ from other consumers. A shared model means every change must account for all those
+consumers; separate models cost more definitions to maintain, but let their shapes evolve separately.
 
 ```mermaid
 flowchart LR
@@ -19,15 +30,22 @@ flowchart LR
     P --> RM["Read model instance keyed by the event source"]
 ```
 
-Chronicle projections support relationships, one-to-one and one-to-many. It also supports functions that
-allow you to count, add or subtract values. The identifier of the projected instance can also be
-configured. By default it will use the [event source identifier](./event-source.md), but you can
-point it to any other property or create a composite of multiple properties.
+Chronicle supports one-to-one and one-to-many relationships between events, plus functions that
+count, add, or subtract values. Projections join events, not other read models, so each view derives
+from the event history rather than another view's update schedule.
 
-Projections can also use event metadata in composite keys. For example, a key based on the
-`occurred` date groups events into time buckets for a histogram, with counts or totals per bucket.
+## Choose what identifies an instance
 
-## Next steps
+By default, the [event source identifier](./event-source.md) identifies a projected instance. You
+can instead use an event property or a composite of several properties. Event metadata can also
+contribute to a key: grouping by the `occurred` date/time value lets a projection count or sum
+values into histogram buckets.
 
-- [Create your first projection](../tutorial/read-model.mdx) — build a queryable library catalog from events.
-- [Projection reference](../projections/index.md) — choose a projection style and look up mapping and consistency options.
+That choice affects how you read the result. A materialized projection stores the derived view
+and updates it asynchronously. An on-demand, passive read folds one event source's history; it is
+not a substitute for a materialized view that joins other sources or uses an event-content key.
+[Read model consistency](../read-models/consistency.md) explains the retrieval trade-off.
+
+To implement the view, follow [Choose how to build a read model](../projections/choosing-a-read-model-style.mdx).
+Start with model-bound attributes for straightforward mappings, and compare the fluent API or
+reducer code when the definition needs more structure.

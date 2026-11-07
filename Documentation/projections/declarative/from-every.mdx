@@ -1,27 +1,26 @@
 ---
-description: Use FromEvery in a declarative Chronicle projection to update a read model property whenever any handled event is processed, such as audit metadata.
+title: Chronicle FromEvery mappings for audit fields
+description: FromEvery updates shared fields, such as audit timestamps, for events a Chronicle projection already handles. It does not subscribe to unrelated events.
 ---
-# Projection With FromEvery
+Use `FromEvery` in a Cratis Chronicle projection to update shared fields, such as a last-updated timestamp, whenever the projection handles an event. It saves you from repeating the same mapping in each event declaration. It does not subscribe the projection to unrelated event types; use [FromAll](from-all) for that.
 
-Use an every-event mapping in a declarative projection when a read model property should update whenever any event handled by the projection is processed. This is most useful for audit metadata, event source identifiers, and other fields that should stay synchronized with the latest event.
-
-The exact API name depends on the client. .NET and TypeScript expose `FromEvery` / `fromEvery`, while Elixir exposes `from_every`.
+The client APIs use different names: .NET has `FromEvery`, TypeScript has `fromEvery`, and Elixir has `from_every`. The examples show the declaration for each client.
 
 ## Basic Usage
 
-Map event context metadata when the read model needs to know when it was last touched.
+Map the event's occurrence time when the read model needs to show when it was last touched. Event context is the metadata stored with an event, separate from its payload:
 
 <ChronicleClientTabs snippet="projections/declarative/from-every/basic" />
 
 ## Event Context Fields
 
-Every-event mappings can map more than one context field.
+Keep several metadata fields together when readers need to trace a change. For example, an occurrence time tells them when it happened, while a correlation ID links events from the same operation:
 
 <ChronicleClientTabs snippet="projections/declarative/from-every/context-fields" />
 
 ## Event Source Id
 
-Map the event source id when the read model's primary identifier is not otherwise populated from each event payload.
+Map the event source ID when a read model property needs the stream identifier even though events do not carry it in their payload. This sets a property; it does not change the projection's key:
 
 <ChronicleClientTabs snippet="projections/declarative/from-every/event-source-id" />
 
@@ -29,23 +28,23 @@ Map the event source id when the read model's primary identifier is not otherwis
 
 In .NET, `FromEvery` and `FromAll` both support `.Set(m => m.Status).ToValue("active")` to assign a constant whenever a matching event is processed. Concept values are unwrapped. Enums with an `int` underlying type use their numeric value; other enums use their name. Use `.ToValue<string?>(null)` to clear a nullable property.
 
-The value is not type-checked against the read model property. The every-event builder does not know the property's type, so `ToValue` infers it from the value you pass, and a value of the wrong type compiles and is not reported when the projection is defined. Pass a value of the property's own type.
+Pass a value of the read model property's own type. `ToValue` infers its type from the supplied value, not the target property, so an incompatible value can compile without being reported when the projection is defined.
 
 ## Child Projection Inclusion
 
-The kernel now honors the child-inclusion flag. In .NET, `FromEvery` includes events handled only by child projections by default, including nested child collections. These mappings update the containing parent using the child's resolved parent key, not a new root keyed by the child identifier. Existing fluent projections therefore start updating parent audit fields on child-only events.
+In .NET, `FromEvery` includes events handled only by child projections by default, including events in nested child collections. Those events update the containing parent's every-event fields using the child's resolved parent key. They do not create a separate root keyed by the child identifier. A parent's last-updated timestamp can therefore reflect changes to its children as well as its own events.
 
-Call `ExcludeChildProjections()` to keep every-event mappings local to the level where they are declared. That level's own `from` and `join` events still apply the mappings. In the declaration language, `every` also includes child events by default; add `exclude children` to opt out.
+Call `ExcludeChildProjections()` when the field should track only the level where you declared it. That level's own `from` and `join` events still apply the mappings. In the declaration language, `every` also includes child events by default; add `exclude children` to opt out.
 
 <ChronicleClientTabs snippet="projections/declarative/from-every/exclude-children" />
 
-Use a root `FromAll` mapping only when the parent must also observe unrelated event types in the sequence. Its child-inclusion flag is true, so child-only events update their containing parent too. Use `FromEvery` for audit metadata that should follow just the projection's handled events.
+Keep `FromEvery` when a parent's audit fields should follow only events the projection already handles. A root `FromAll` mapping also subscribes to unrelated event types in the sequence and includes child events by default; choose it only when you need that wider subscription.
 
 <ChronicleClientTabs snippet="projections/declarative/from-every/with-children" />
 
 ## Multiple Declarations
 
-Clients that support multiple every-event declarations merge the property mappings into one projection definition.
+In .NET, separate `FromEvery` calls merge their property mappings into one definition. Give each property one mapping rather than declaring the same target in several calls:
 
 <ChronicleClientTabs snippet="projections/declarative/from-every/multiple-declarations" />
 
@@ -58,4 +57,4 @@ Clients that support multiple every-event declarations merge the property mappin
 | Correlation tracking | Event context correlation id |
 | Event source identification | Event source id |
 
-Use event-specific mappings when the property should update only for selected event types.
+If only selected events should update a property, put its mapping in those events' [Set properties](set-properties) declarations instead. For a value that should exist before any mapping assigns it, use [Initial values](initial-values).

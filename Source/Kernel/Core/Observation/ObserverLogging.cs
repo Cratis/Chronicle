@@ -96,6 +96,9 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Debug, "Deferring recovery of {Count} failed partition(s) to a later turn so other calls can reach the observer")]
     internal static partial void DeferringRecoveryOfFailedPartitions(this ILogger<Observer> logger, int count);
 
+    [LoggerMessage(LogLevel.Warning, "Could not start recovery of failed partition {Partition}; it is tried again in a later turn")]
+    internal static partial void CouldNotStartRecoveryOfFailedPartition(this ILogger<Observer> logger, Exception exception, Key partition);
+
     [LoggerMessage(LogLevel.Debug, "Skipping catch-up because observer is replaying")]
     internal static partial void SkippingCatchUpBecauseObserverIsReplaying(this ILogger<Observer> logger);
 
@@ -226,6 +229,12 @@ internal static partial class ObserverLogMessages
 
     [LoggerMessage(LogLevel.Warning, "Watchdog detected that the replay job is missing while observer is in replaying state. Re-routing observer.")]
     internal static partial void WatchdogReplayJobMissing(this ILogger<Observer> logger);
+
+    [LoggerMessage(LogLevel.Debug, "Delivering a page of {EventCount} events across {PartitionCount} partitions")]
+    internal static partial void DeliveringPage(this ILogger<Observer> logger, int eventCount, int partitionCount);
+
+    [LoggerMessage(LogLevel.Warning, "Replay job restarted {Attempts} times without a live job in between. The next restart is held back for {Delay}.")]
+    internal static partial void WatchdogRestartingReplayWithBackoff(this ILogger<Observer> logger, int attempts, TimeSpan delay);
 
     [LoggerMessage(LogLevel.Warning, "Watchdog detected that the catch-up job is missing while observer has catching-up partitions. Re-routing observer.")]
     internal static partial void WatchdogCatchupJobMissing(this ILogger<Observer> logger);

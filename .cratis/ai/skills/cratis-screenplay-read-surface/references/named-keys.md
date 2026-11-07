@@ -184,7 +184,9 @@ module Billing
         when append PaymentRemoved
           invoice = "INV-1"
           method = "card"
-        then no readmodel PaymentTotals for {"invoiceId":"INV-1","method":"card"}
+        then no readmodel PaymentTotals for
+          invoiceId = "INV-1"
+          method    = "card"
         then readmodel PaymentTotals
           invoiceId = "INV-1"
           method = "cash"
@@ -230,7 +232,7 @@ Requires Stage 4.137.0 for v27 admission (older Stage refuses the whole model wi
 `STAGE-ESM-016`). The semantic Host runs composite-keyed read models and the CLI's `cratis run`
 default engine runs them (Requires Cratis CLI 3.75.0); the legacy `eventmodel` engine and the specification
 executor refuse them. Rendering refuses a read model with several key parts or a projection keyed by
-parts (`STAGE-ESM-048`) and a single-instance query by parts (`STAGE-ESM-047`, pending Chronicle#4265),
+parts (`STAGE-ESM-048`; a DateTime part, a `Decimal` part or a concept over `Decimal` is always refused, because Chronicle keeps a decimal key part's scale and a replay can split `1.0` and `1.00` into two instances; the decimal refusal lifts with Stage#847 once Chronicle#5427 lands) and a single-instance query by parts (`STAGE-ESM-047`, pending Chronicle#4265),
 and publishes nothing, so `cratis render` cannot deliver it. Verify and reference-test the model with the
 standalone compiler, then hand the delivery to gap-fill
 (`cratis-screenplay-render-and-gap-fill`) with the model as the contract. Composite-keyed read models get

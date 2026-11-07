@@ -1,6 +1,6 @@
 ---
 name: cratis-components-styling
-description: Style and theme an application built on Cratis Components 4 — the three stylesheet entries an app must import, the --cratis-* design-token seam, choosing between the baseline theme, a product theme and fully owned styling, dark mode, the typed pt parts and data-cratis-part selectors, the optional renderer adapters, and where Tailwind actually fits. Use when setting up a new Cratis frontend, changing colors or theming, fixing components that render unstyled, or styling one part of a component. Do not use for component API or page composition questions.
+description: Use when setting up Cratis Components styles, fixing unstyled components or changing themes, tokens and component parts. Not for component binding APIs or page composition.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-components-styling/SKILL.md -->

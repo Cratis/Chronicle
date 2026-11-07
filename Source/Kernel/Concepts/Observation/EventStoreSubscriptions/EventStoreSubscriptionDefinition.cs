@@ -20,4 +20,10 @@ public record EventStoreSubscriptionDefinition(
     /// Gets the policy for delivering event generations.
     /// </summary>
     public EventGenerationDelivery GenerationDelivery { get; init; } = EventGenerationDelivery.Compatibility;
+
+    /// <summary>
+    /// Gets the named-tag filter. Several values of one tag name are alternatives, different names must all match,
+    /// and untagged events never match a non-empty filter. An empty filter matches every event.
+    /// </summary>
+    public IEnumerable<NamedTag> NamedTags { get; init; } = [];
 }

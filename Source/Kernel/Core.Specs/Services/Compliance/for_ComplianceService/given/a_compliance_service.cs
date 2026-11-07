@@ -10,6 +10,7 @@ using Cratis.Chronicle.ProtectedValues;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.Compliance;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.Services.Compliance.for_ComplianceService.given;
 
@@ -23,6 +24,7 @@ public class a_compliance_service : Specification
     protected ReleaseRequest request;
     protected ReleaseResponse result;
     private protected ComplianceService service;
+    protected ComplianceAuthorization authorization;
 
     async Task Establish()
     {
@@ -44,7 +46,9 @@ public class a_compliance_service : Specification
             Payload = content.ToJsonString(),
             Strict = true
         };
-        service = new ComplianceService(Substitute.For<IGrainFactory>(), manager, NullLogger<ComplianceService>.Instance);
+        var options = Options.Create(new Configuration.ChronicleOptions());
+        authorization = new ComplianceAuthorization(options, Substitute.For<Storage.IStorage>(), null!, NullLogger<ComplianceAuthorization>.Instance);
+        service = new ComplianceService(Substitute.For<IGrainFactory>(), manager, NullLogger<ComplianceService>.Instance, authorization);
     }
 
     protected async Task EraseKey()

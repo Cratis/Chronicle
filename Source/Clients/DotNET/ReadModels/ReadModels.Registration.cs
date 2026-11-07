@@ -59,6 +59,11 @@ public partial class ReadModels
             };
         });
 
+        if (projections is Projections.Projections { Graphs: { } graphs })
+        {
+            definitions.AddRange(graphs.Registrations.Select(_ => _.ReadModel));
+        }
+
         return new()
         {
             EventStore = eventStore.Name,

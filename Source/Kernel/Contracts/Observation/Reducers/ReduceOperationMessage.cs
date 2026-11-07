@@ -64,4 +64,12 @@ public class ReduceOperationMessage
     /// </summary>
     [ProtoMember(8)]
     public ObservationOrigin Origin { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the state is unchanged since the client's previous reduce of the partition.
+    /// When true, <see cref="InitialState"/> is null and the client uses the state it returned on that reduce. Only set
+    /// for a client that enabled <see cref="StateCaching"/> at registration.
+    /// </summary>
+    [ProtoMember(9)]
+    public bool InitialStateUnchanged { get; set; }
 }

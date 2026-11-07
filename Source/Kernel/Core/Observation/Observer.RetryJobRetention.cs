@@ -83,7 +83,7 @@ public partial class Observer
         List<JobState> candidates;
         try
         {
-            candidates = RetryJobsThatCanNeverRun(await _jobsManager.GetOutstandingJobs());
+            candidates = RetryJobsThatCanNeverRun(await _jobsManager.GetOutstandingJobsOf<IRetryFailedPartition>());
         }
         catch (Exception ex)
         {

@@ -30,7 +30,10 @@ public class and_one_definition_in_the_batch_fails : Specification
             Substitute.For<IServiceProvider>(),
             Substitute.For<Chronicle.ReadModels.IReadModelsCompliance>(),
             Substitute.For<ILocalSiloDetails>(),
-            Microsoft.Extensions.Logging.Abstractions.NullLogger<Projections>.Instance);
+            AllowingConnectionOwnership.Create(),
+            Microsoft.Extensions.Options.Options.Create(new Cratis.Chronicle.Configuration.ChronicleOptions()),
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<Projections>.Instance,
+            NamespaceCasingContext.Create());
     }
 
     async Task Because() => _exception = await Catch.Exception(() => _service.Register(new RegisterRequest

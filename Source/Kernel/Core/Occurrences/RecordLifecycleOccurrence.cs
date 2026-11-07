@@ -5,6 +5,7 @@ using System.Text.Json;
 using Cratis.Arc.Commands.ModelBound;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Grpc;
+using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Storage.Occurrences;
 
 namespace Cratis.Chronicle.Occurrences;
@@ -16,6 +17,7 @@ namespace Cratis.Chronicle.Occurrences;
 /// <param name="ActivationId">The host-supplied activation.</param>
 /// <param name="Kind">Startup or shutdown.</param>
 /// <param name="AllNamespaces">Whether to snapshot existing namespaces.</param>
+[StoreAccess(StoreAccess.Append)]
 [Command]
 [BelongsTo(WellKnownServices.Occurrences)]
 public record RecordLifecycleOccurrence(EventStoreName EventStore, string ActivationId, OccurrenceKind Kind, bool AllNamespaces = false)

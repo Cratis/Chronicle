@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Reactors;
+
 namespace Cratis.Chronicle.Registrations;
 
 /// <summary>
@@ -20,6 +22,12 @@ internal sealed class StoreClientArtifactsProvider(IClientArtifactsProvider nati
 
     /// <inheritdoc/>
     public IEnumerable<Type> ModelBoundProjections => Current.ModelBoundProjections;
+
+    /// <inheritdoc/>
+    public IEnumerable<Type> GraphElements => Current.GraphElements;
+
+    /// <inheritdoc/>
+    public IEnumerable<Type> GraphProjections => Current.GraphProjections;
 
     /// <inheritdoc/>
     public IEnumerable<Type> Reactors => Current.Reactors;
@@ -77,6 +85,11 @@ internal sealed class StoreClientArtifactsProvider(IClientArtifactsProvider nati
 
     /// <inheritdoc/>
     public IEnumerable<Type> OccurrenceHandlers => Current.OccurrenceHandlers;
+
+    /// <summary>
+    /// Gets the identifiers of the fluent reactors captured at store construction.
+    /// </summary>
+    internal IEnumerable<ReactorId> ExplicitReactorIds => snapshot.Reactors.Select(_ => _.Id);
 
     /// <summary>
     /// Gets the currently captured immutable catalog, or the untouched native manual provider.

@@ -1,6 +1,6 @@
 ---
 name: cratis-multi-service-local-orchestration
-description: Run several Cratis services, one Chronicle kernel and their frontends together from one repository - layout with contracts projects, a .NET Aspire AppHost with Cratis.Chronicle.Aspire, the Docker Compose alternative with a MongoDB replica set, explicit per-service connection and event-store settings, health-gated startup, a cratis CLI context per store, and a frontend per service. Use when laying out a multi-service repository, writing an AppHost or compose file for several services, or when a service locally reaches the wrong kernel or store. Not for how services communicate (use cratis-multi-service-architecture) or production kernel hosting (use cratis-chronicle-hosting).
+description: Use when laying out or locally running several Cratis services with Aspire or Compose, or diagnosing a wrong local kernel or store. Not for service-contract design or production kernel hosting.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-multi-service-local-orchestration/SKILL.md -->

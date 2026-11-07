@@ -1,6 +1,6 @@
 ---
 name: microbenchmarking
-description: 'Designs, configures, runs, and reviews BenchmarkDotNet (BDN) benchmarks, including project setup, efficient runs, and side-by-side performance comparisons. Use when BenchmarkDotNet is involved, or a .NET performance question needs measurement and BenchmarkDotNet is the likely tool. Not for profiling or tracing (use profiling or dotnet-trace-collect), production telemetry, or load and stress testing.'
+description: Use when authoring or reviewing BenchmarkDotNet benchmarks or comparing .NET code paths with controlled microbenchmarks. Not for runtime profiling, production telemetry or load and stress tests.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/microbenchmarking/SKILL.md -->

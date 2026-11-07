@@ -22,6 +22,7 @@ public partial class Occurrences : IDisposable, IAsyncDisposable
     Action? _cancelWorkers;
     Task _workers = Task.CompletedTask;
     bool _disposed;
+    bool _registeredBefore;
     long _epoch;
     long? _workerEpoch;
 
@@ -37,6 +38,7 @@ public partial class Occurrences : IDisposable, IAsyncDisposable
         {
             if (_disposed) return;
             _disposed = true;
+            eventStore.Connection.Lifecycle.OnConnected -= RegisterAgainAfterReconnect;
             eventStore.Connection.Lifecycle.OnDisconnected -= Disconnect;
             _cancelWorkers?.Invoke();
         }
@@ -50,6 +52,7 @@ public partial class Occurrences : IDisposable, IAsyncDisposable
         lock (_workerSync)
         {
             _disposed = true;
+            eventStore.Connection.Lifecycle.OnConnected -= RegisterAgainAfterReconnect;
             eventStore.Connection.Lifecycle.OnDisconnected -= Disconnect;
             workers = _workers;
         }
@@ -70,6 +73,7 @@ public partial class Occurrences : IDisposable, IAsyncDisposable
     /// <param name="identity">The identity context.</param>
     /// <param name="logger">The worker logger.</param>
     /// <param name="options">Optional lifecycle configuration.</param>
+    /// <param name="registerAgainAfterReconnect">Whether to register previously started workers again on reconnect.</param>
     internal void Configure(
         IClientArtifactsProvider artifacts,
         IJsonSchemaGenerator schemas,
@@ -79,7 +83,8 @@ public partial class Occurrences : IDisposable, IAsyncDisposable
         ICausationManager causation,
         IIdentityProvider identity,
         ILogger<Occurrences> logger,
-        ChronicleOptions? options = null)
+        ChronicleOptions? options = null,
+        bool registerAgainAfterReconnect = false)
     {
         _options = options ?? new();
         _triggers = new(eventStore, artifacts, schemas);
@@ -99,6 +104,7 @@ public partial class Occurrences : IDisposable, IAsyncDisposable
             logger,
             scope);
         eventStore.Connection.Lifecycle.OnDisconnected += Disconnect;
+        if (registerAgainAfterReconnect) eventStore.Connection.Lifecycle.OnConnected += RegisterAgainAfterReconnect;
     }
 
     /// <summary>
@@ -131,6 +137,7 @@ public partial class Occurrences : IDisposable, IAsyncDisposable
             if (_disposed || epoch != _epoch || _workerEpoch == epoch) return;
             if (!_triggers.Handlers.Any()) return;
             _workerEpoch = epoch;
+            _registeredBefore = true;
             _workers = RunWorkers(_workers, epoch);
         }
     }
@@ -143,6 +150,20 @@ public partial class Occurrences : IDisposable, IAsyncDisposable
     {
         _triggers?.Discover();
         _registerForTesting = _triggers is null ? null : _triggers.Register;
+    }
+
+    /// <summary>
+    /// Restarts previously registered workers when manual registration owns the connection lifecycle.
+    /// </summary>
+    /// <returns>The registration work.</returns>
+    internal async Task RegisterAgainAfterReconnect()
+    {
+        lock (_workerSync)
+        {
+            if (_disposed || !_registeredBefore) return;
+        }
+        if (!eventStore.Connection.Lifecycle.IsConnected) return;
+        await Register();
     }
 
     async Task RunWorkers(Task previous, long epoch)

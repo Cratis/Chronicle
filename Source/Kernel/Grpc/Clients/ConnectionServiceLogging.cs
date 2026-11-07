@@ -29,6 +29,27 @@ internal static partial class ConnectionServiceLogMessages
     [LoggerMessage(LogLevel.Information, "The registry of connected clients no longer knows connection {ConnectionId}, which is still open. Registering it again")]
     internal static partial void RegisteringClientAgain(this ILogger<ConnectionService> logger, string connectionId);
 
+    [LoggerMessage(LogLevel.Warning, "Connection {ConnectionId} was not opened because the caller could not be identified")]
+    internal static partial void ConnectionRefusedWithoutIdentity(this ILogger<ConnectionService> logger, string connectionId);
+
+    [LoggerMessage(LogLevel.Warning, "Connection {ConnectionId} was not opened because it is not available to the caller")]
+    internal static partial void ConnectionRefusedForAnotherCaller(this ILogger<ConnectionService> logger, string connectionId);
+
+    [LoggerMessage(LogLevel.Warning, "A keep-alive for connection {ConnectionId} was refused because the connection is not available to the caller")]
+    internal static partial void KeepAliveRefused(this ILogger<ConnectionService> logger, string connectionId);
+
     [LoggerMessage(LogLevel.Warning, "Could not check that connection {ConnectionId} is still registered. Retrying at the next keep-alive")]
     internal static partial void FailedToKeepClientRegistered(this ILogger<ConnectionService> logger, string connectionId, Exception exception);
+
+    [LoggerMessage(LogLevel.Warning, "Connection {ConnectionId} was not opened because its reservation could not be verified across the cluster")]
+    internal static partial void ConnectionReservationFailed(this ILogger<ConnectionService> logger, string connectionId, Exception exception);
+
+    [LoggerMessage(LogLevel.Warning, "The cluster-wide reservation for connection {ConnectionId} could not be renewed. Retrying at the next keep-alive")]
+    internal static partial void FailedToRenewReservation(this ILogger<ConnectionService> logger, string connectionId, Exception exception);
+
+    [LoggerMessage(LogLevel.Warning, "Connection {ConnectionId} was closed because it is now reserved for another caller")]
+    internal static partial void ConnectionClosedForAnotherCaller(this ILogger<ConnectionService> logger, string connectionId);
+
+    [LoggerMessage(LogLevel.Warning, "The cluster-wide reservation for connection {ConnectionId} could not be released")]
+    internal static partial void FailedToReleaseReservation(this ILogger<ConnectionService> logger, string connectionId, Exception exception);
 }

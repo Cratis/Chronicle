@@ -29,6 +29,21 @@ public static class DiagnosticIds
     public const string SelfReducerMethodWillNotBeDiscovered = "CHR0065";
 
     /// <summary>
+    /// A node or an edge in a graph has a property that is an object.
+    /// </summary>
+    public const string GraphElementPropertyMustBePrimitive = "CHR0066";
+
+    /// <summary>
+    /// A node does not have exactly one key, or an edge has more than one.
+    /// </summary>
+    public const string GraphElementKeyMustBeDeclaredOnce = "CHR0067";
+
+    /// <summary>
+    /// A type is both a node or an edge in a graph and a read model.
+    /// </summary>
+    public const string GraphElementCannotBeReadModel = "CHR0068";
+
+    /// <summary>
     /// Event type must have EventType attribute when appended to event sequence.
     /// </summary>
     public const string EventTypeMustHaveAttributeWhenAppended = "CHR0001";

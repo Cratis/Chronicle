@@ -1,6 +1,6 @@
 ---
 name: cratis-engineering-decision-record
-description: Consult, author, accept, and supersede decision records in a Cratis repository's decisions/ folder (or the folder in `.cratis/ai.json` `process.decisions.path`). Use before an architectural, contract, scope, or cross-cutting change, when a ruling has been made that later work must obey, or when an accepted decision has to be replaced. Defer product documentation, session handovers, and work-item status to their own workflows.
+description: Use before a significant architectural, contract or cross-cutting change, or when recording or replacing a durable decision. Not for routine implementation approvals, product docs, session handovers or issue status.
 license: LICENSE
 ---
 <!-- cratis-ai-managed: skills/cratis-engineering-decision-record/SKILL.md -->

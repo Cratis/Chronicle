@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Contracts.Observation;
+using Cratis.Chronicle.Observation;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Cratis.Chronicle.Reducers.for_SelfReducerReplayHooks.when_invoking;
@@ -23,14 +24,14 @@ public class and_missing_services_and_hook_faults_are_loud : Specification
         var registry = RegisteredEventTypesForSpecifications.Create((typeof(Created), new("created", 1)));
         var hooks = new SelfReducerReplayHooks(registry, typeof(State));
         await using var missing = new ServiceCollection().BuildServiceProvider();
-        _missing = await Catch.Exception(async () => await hooks.Invoke(missing, ReplayState.BeginReplay, "one"));
+        _missing = await Catch.Exception(async () => await hooks.Invoke(missing, new("store", "ns", new("reducer"), ObserverDeliveryKind.Reducer, typeof(object)), ReplayState.BeginReplay, "one"));
         await using var provider = new ServiceCollection().AddScoped<IReplayWork>(_ =>
         {
             Interlocked.Increment(ref _created);
             return new DisposableWork(_work, () => Interlocked.Increment(ref _disposed));
         }).BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true });
-        _sync = await Catch.Exception(async () => await hooks.Invoke(provider, ReplayState.BeginReplay, "one"));
-        _async = await Catch.Exception(async () => await hooks.Invoke(provider, ReplayState.EndReplay, "one"));
+        _sync = await Catch.Exception(async () => await hooks.Invoke(provider, new("store", "ns", new("reducer"), ObserverDeliveryKind.Reducer, typeof(object)), ReplayState.BeginReplay, "one"));
+        _async = await Catch.Exception(async () => await hooks.Invoke(provider, new("store", "ns", new("reducer"), ObserverDeliveryKind.Reducer, typeof(object)), ReplayState.EndReplay, "one"));
     }
 
     [Fact] void should_reject_a_missing_service_without_default_injection() => _missing.ShouldBeOfExactType<InvalidSelfReducerLifecycleHook>();

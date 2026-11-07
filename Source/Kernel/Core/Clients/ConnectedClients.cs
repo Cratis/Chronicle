@@ -5,6 +5,7 @@ using System.Diagnostics;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Configuration;
+using Cratis.Chronicle.Diagnostics;
 using Cratis.Chronicle.Occurrences;
 using Cratis.Chronicle.Storage;
 using Cratis.Metrics;
@@ -123,12 +124,12 @@ public partial class ConnectedClients(
         // Expiry is best effort and must not hold up connection bookkeeping. Leases also expire
         // by kernel time, so a failed scope only delays redelivery until its lease deadline.
         var now = DateTimeOffset.UtcNow;
-        _ = Task.Run(() => OccurrenceRecovery.ExpireLeases(storage, connectionId.Value, now, logger));
+        _ = BackgroundFaults.Run(() => OccurrenceRecovery.ExpireLeases(storage, connectionId.Value, now, logger), logger, $"{nameof(ConnectedClients)}.{nameof(OccurrenceRecovery.ExpireLeases)}");
 
         // Handing over must not hold up the registry either, and an observer that is not told falls back to the watchdog.
         if (observers.Length > 0)
         {
-            _ = Task.Run(() => departureNotifier.Notify(connectionId, observers));
+            _ = BackgroundFaults.Run(() => departureNotifier.Notify(connectionId, observers), logger, $"{nameof(ConnectedClients)}.{nameof(IClientDepartureNotifier.Notify)}");
         }
 
         return Task.CompletedTask;

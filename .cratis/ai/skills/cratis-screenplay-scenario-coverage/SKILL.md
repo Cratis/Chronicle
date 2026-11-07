@@ -1,6 +1,6 @@
 ---
 name: cratis-screenplay-scenario-coverage
-description: "Decide and write Screenplay specifications for slices: a coverage matrix before drafting, every applicable scenario type per command (rules, denial, duplicates and retries, competing claims, ordering, external failure, compensation, evolution), view lifecycle specs per read model, shared example data, spec forms per mode, and a workshop guide for scenario sessions. Use when writing or auditing given/when/then in a `.play` model. Not for: spec grammar and comparison semantics (use `cratis-screenplay-specifications`), C# specs (use `cratis-specifications-csharp`)."
+description: Use when deciding which Screenplay scenarios a slice needs or auditing its refusal, retry, race and view-lifecycle coverage. Not for specification grammar, comparison semantics or C# tests.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-screenplay-scenario-coverage/SKILL.md -->
@@ -176,8 +176,8 @@ Use a separate `when added` append when initial observations should produce a fa
 Read captures-and-reactions `references/record-capture-specifications.md` for the
 prerequisite and runnable cases. Include first, changed and unchanged rows in the matrix.
 
-## Version skew: reaction cascades and false PLAY0285
-Under ESM v6 a command spec's `then` lists the events reactions cascade from it; an older `cratis` bundle reports a **false PLAY0285** for it. Never delete the reaction. Read [references/version-skew.md](references/version-skew.md) when a spec with cascade events reports PLAY0285 or the bundled compiler is older than the standalone tool.
+## Reaction chains: one slice per specification
+A specification runs only its own slice. Prove a chain across slices link by link: the command's spec states its own events, the Automation's `when append` spec states what it appends, and `then invokes <Command>` (ESM v34) states a command it invokes in another slice. Another slice's event in a spec is PLAY0285. Never delete the reaction. Read [references/version-skew.md](references/version-skew.md) when a spec reports PLAY0285 or the bundled compiler is older than the standalone tool.
 
 ## Gate
 A scope is spec-complete only when: the matrix has no `open`, `question` or `gap` cell (or the

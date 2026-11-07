@@ -1,6 +1,6 @@
 ---
 name: cratis-multi-service-architecture
-description: Design a system of several Cratis services that each own a Chronicle event store - store per service on one kernel, namespace alignment, public contract events and the outbox, the three consumer routes, at-least-once delivery and idempotent consumers, personal data across stores, contract versioning, and what Arc leaves to the application. Use when splitting an application into services, connecting two event stores, or publishing and consuming events across services. Not for running the services locally (use cratis-multi-service-local-orchestration), tenancy inside one store (use cratis-chronicle-multi-tenancy), or Screenplay models (use cratis-screenplay-streams-and-consistency).
+description: Use when splitting Cratis services, connecting event stores or designing public cross-service event contracts. Not for local process orchestration, tenancy within one store or Screenplay boundary modeling.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-multi-service-architecture/SKILL.md -->

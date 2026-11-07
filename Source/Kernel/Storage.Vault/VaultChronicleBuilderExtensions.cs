@@ -3,6 +3,8 @@
 
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage.Compliance;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Setup;
 
@@ -36,9 +38,14 @@ public static class VaultChronicleBuilderExtensions
             return builder;
         }
 
+        builder.Services.AddSingleton<IEncryptionKeyStoreUpgradeCheck>(_ =>
+            new Storage.Vault.VaultKeyStoreUpgradeCheck(Storage.Vault.VaultClients.Create(complianceStorage.ConnectionDetails)));
+
         return builder.WithComplianceEncryptionKeyStorage(
             options,
-            _ => new CacheEncryptionKeyStorage(
-                new Storage.Vault.VaultEncryptionKeyStorage(complianceStorage.ConnectionDetails)));
+            serviceProvider => new CacheEncryptionKeyStorage(
+                new Storage.Vault.VaultEncryptionKeyStorage(
+                    complianceStorage.ConnectionDetails,
+                    logger: serviceProvider.GetRequiredService<ILoggerFactory>().CreateLogger<Storage.Vault.VaultEncryptionKeyStorage>())));
     }
 }

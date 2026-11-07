@@ -49,6 +49,9 @@ public partial class JsonSchema
     volatile Cached<bool>? _hasComplianceMetadataCache;
     volatile Cached<bool>? _hasSecurityMetadataCache;
     volatile Cached<JsonSchema?>? _referenceCache;
+    volatile Cached<string?>? _formatCache;
+    volatile Cached<JsonObjectType>? _typeCache;
+    volatile Dictionary<string, JsonSchemaProperty>? _flattenedPropertiesByExactNameCache;
     volatile Cached<JsonSchema?>? _itemCache;
 
     /// <summary>
@@ -76,8 +79,13 @@ public partial class JsonSchema
     /// </summary>
     public JsonObjectType Type
     {
-        get => ParseTypeFromNode(Node);
-        set => SetTypeOnNode(Node, value);
+        // Read for every value converted, and parsing it walks the node each time.
+        get => (_typeCache ??= new Cached<JsonObjectType>(ParseTypeFromNode(Node))).Value;
+        set
+        {
+            _typeCache = null;
+            SetTypeOnNode(Node, value);
+        }
     }
 
     /// <summary>
@@ -85,9 +93,11 @@ public partial class JsonSchema
     /// </summary>
     public string? Format
     {
-        get => Node["format"]?.GetValue<string>();
+        // Read for every value converted, and reading it from the node allocates a string each time.
+        get => (_formatCache ??= new Cached<string?>(Node["format"]?.GetValue<string>())).Value;
         set
         {
+            _formatCache = null;
             if (value is null)
             {
                 Node.Remove("format");
@@ -430,6 +440,11 @@ public partial class JsonSchema
     internal IReadOnlyList<JsonSchemaProperty> FlattenedProperties => _flattenedPropertiesCache ??= BuildFlattenedProperties();
 
     /// <summary>
+    /// Gets the flattened properties keyed by name, using case-sensitive lookup.
+    /// </summary>
+    internal IReadOnlyDictionary<string, JsonSchemaProperty> FlattenedPropertiesByExactName => _flattenedPropertiesByExactNameCache ??= BuildFlattenedPropertiesByExactName();
+
+    /// <summary>
     /// Gets the flattened properties keyed by name, using case-insensitive lookup.
     /// </summary>
     internal IReadOnlyDictionary<string, JsonSchemaProperty> FlattenedPropertiesByName => _flattenedPropertiesByNameCache ??= BuildFlattenedPropertiesByName();
@@ -593,9 +608,9 @@ public partial class JsonSchema
         var typeNode = node["type"];
         if (typeNode is null) return JsonObjectType.None;
 
-        if (typeNode is JsonValue strValue && strValue.TryGetValue<string>(out var typeStr))
+        if (typeNode is JsonValue strValue)
         {
-            return ParseTypeSingle(typeStr);
+            return ParseTypeFromValue(strValue);
         }
 
         if (typeNode is JsonArray arr)
@@ -603,15 +618,42 @@ public partial class JsonSchema
             var result = JsonObjectType.None;
             foreach (var item in arr)
             {
-                if (item is JsonValue val && val.TryGetValue<string>(out var s))
+                if (item is JsonValue val)
                 {
-                    result |= ParseTypeSingle(s);
+                    result |= ParseTypeFromValue(val);
                 }
             }
             return result;
         }
 
         return JsonObjectType.None;
+    }
+
+    /// <summary>
+    /// Parses a type name without allocating: the type is read for every value converted against a schema, and a
+    /// value backed by a JsonElement (anything parsed from JSON text) hands out a new string on every GetValue.
+    /// </summary>
+    /// <param name="value">The <see cref="JsonValue"/> holding the type name.</param>
+    /// <returns>The <see cref="JsonObjectType"/>.</returns>
+    static JsonObjectType ParseTypeFromValue(JsonValue value)
+    {
+        if (value.TryGetValue<JsonElement>(out var element))
+        {
+            return element.ValueKind == JsonValueKind.String ? ParseTypeSingle(element) : JsonObjectType.None;
+        }
+
+        return value.TryGetValue<string>(out var type) ? ParseTypeSingle(type) : JsonObjectType.None;
+    }
+
+    static JsonObjectType ParseTypeSingle(JsonElement type)
+    {
+        if (type.ValueEquals("string")) return JsonObjectType.String;
+        if (type.ValueEquals("object")) return JsonObjectType.Object;
+        if (type.ValueEquals("array")) return JsonObjectType.Array;
+        if (type.ValueEquals("integer")) return JsonObjectType.Integer;
+        if (type.ValueEquals("number")) return JsonObjectType.Number;
+        if (type.ValueEquals("boolean")) return JsonObjectType.Boolean;
+        return type.ValueEquals("null") ? JsonObjectType.Null : JsonObjectType.None;
     }
 
     static JsonObjectType ParseTypeSingle(string type) => type switch
@@ -914,6 +956,17 @@ public partial class JsonSchema
                 allOfSchema.CollectPropertiesInto(properties);
             }
         }
+    }
+
+    Dictionary<string, JsonSchemaProperty> BuildFlattenedPropertiesByExactName()
+    {
+        var byName = new Dictionary<string, JsonSchemaProperty>(StringComparer.Ordinal);
+        foreach (var property in FlattenedProperties)
+        {
+            byName.TryAdd(property.Name, property);
+        }
+
+        return byName;
     }
 
     Dictionary<string, JsonSchemaProperty> BuildFlattenedPropertiesByName() =>

@@ -1,21 +1,21 @@
 ---
-description: Subscribe a Chronicle reducer to events from external event stores through automatic inbox routing based on event-store metadata.
+title: Cratis Chronicle reducer subscriptions to external event stores
+description: Build a read model from another event store's events with Cratis Chronicle .NET reducers, using metadata to select an inbox and create a subscription.
 ---
-# Subscribe Reducers to External Event Stores
 
-This page shows automatic inbox selection and subscription from event-store metadata on events or
-observers. For a subscription you configure explicitly, use [explicit event-store subscriptions](../subscriptions/explicit-subscriptions.mdx).
+<span id="subscribe-reducers-to-external-event-stores"></span>
 
-[Self reducers](self-reducing-read-models) use the same inbox routing. Their subscription event set comes from the owning registry's selected static transitions; query methods and other helpers do not add subscription events.
+Cratis Chronicle's .NET client can subscribe a reducer to another event store by forwarding its handled event types from the source outbox to a local inbox. Use event-store metadata when Chronicle should select the inbox and create the subscription for you.
+
+For a subscription you configure yourself, use [explicit event-store subscriptions](../subscriptions/explicit-subscriptions.mdx).
+
+[Self-reducing read models](self-reducing-read-models) use the same inbox routing. Chronicle derives their subscription event types from the static transitions selected by the owning registry, not from query methods or unrelated helpers.
 
 ## Automatic Inbox Routing
 
-When all event types reduced by a reducer come from the same source event store, Chronicle routes the reducer to the matching inbox sequence automatically:
+Declare the source with `[EventStore("...")]` on event types or their assembly. When the handled events identify a single external source and the reducer has no explicit event sequence, Chronicle selects that source's inbox. Events belonging to the current store continue to use the local event log.
 
-- Source event store: `fulfillment-service`
-- Inbox sequence observed by the reducer: `inbox-fulfillment-service`
-
-This works when the source is declared on event types (or assembly) using `[EventStore("...")]`, and no explicit event sequence is configured on the reducer.
+For example, events from `fulfillment-service` arrive in `inbox-fulfillment-service`, which the reducer observes:
 
 <ChronicleClientTabs snippet="reducers/external-event-store-subscriptions/automatic-routing" />
 
@@ -23,19 +23,15 @@ This works when the source is declared on event types (or assembly) using `[Even
 
 When event contracts cannot carry `[EventStore]` metadata, apply `[EventStore]` directly on the reducer.
 
-Chronicle resolves the reducer to the inbox for that source event store and implicitly creates or reuses the outbox-to-inbox subscription.
+Chronicle selects that source's inbox and creates or reuses the outbox-to-inbox subscription. For a self-reducing read model, put `[EventStore]` on the model instead.
 
 <ChronicleClientTabs snippet="reducers/external-event-store-subscriptions/observer-level-event-store" />
 
 ## Implicit Combined Event Type Filtering
 
-For each source event store, Chronicle combines all reducer and reactor event types into one implicit subscription filter.
+Chronicle creates one implicit subscription per source event store, combining the handled event types of participating reducers and reactors. External-store projection subscriptions also contribute their event types to this combined filter.
 
-This means:
-
-- You get one subscription per source event store.
-- The filter is the union of handled event types from all participating observers.
-- Only those event types are forwarded from source outbox to target inbox.
+Adding a reducer that handles another event type widens the subscription's event-type filter; it does not create a separate subscription for that reducer. The source forwards the combined set to the target inbox, and each reducer still receives only the event types and metadata matches it observes.
 
 ## Explicit Event Sequence Is Not Allowed with Observer EventStore
 
@@ -45,14 +41,15 @@ When a reducer has `[EventStore("...")]`, do not combine it with:
 - `[EventLog]`
 - `[Reducer(eventSequence: "...")]`
 
-This is invalid and fails:
-
-- At runtime with `EventStoreCannotBeCombinedWithExplicitEventSequence`.
-- At compile time with analyzer rule `CHR0014`.
+The .NET client rejects this combination with `EventStoreCannotBeCombinedWithExplicitEventSequence`; analyzer rule `CHR0014` reports it at compile time. Remove the explicit sequence to use automatic inbox routing, or remove the reducer's `[EventStore]` to select a sequence yourself.
 
 ## Forwarded metadata
 
-Inbox forwarding now preserves append tags along with event-source and stream-route metadata. Tag filters can select forwarded events for classic and self reducers alike. Events forwarded by earlier releases that dropped tags remain untagged; upgrading does not backfill them.
+<span id="forwarded-metadata-limitation"></span>
+
+Inbox forwarding preserves append tags, event source type, and stream-route metadata. Both separate reducers and self-reducing read models can use [metadata filters](filtering) to select forwarded events.
+
+Events forwarded by earlier releases that dropped tags remain untagged; upgrading does not backfill them. Check the stored inbox metadata when an older event does not match a tag filter.
 
 ## See Also
 

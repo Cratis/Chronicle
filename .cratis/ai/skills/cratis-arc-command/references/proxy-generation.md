@@ -17,7 +17,7 @@ Reference the build package from the project that contains the commands,
 queries and read models, and set an output path:
 
 ```xml
-<PackageReference Include="Cratis.Arc.ProxyGenerator.Build" Version="22.75.0" />
+<PackageReference Include="Cratis.Arc.ProxyGenerator.Build" Version="22.139.0" />
 
 <PropertyGroup>
   <CratisProxiesOutputPath>$(MSBuildThisFileDirectory)../<Web>/src/api</CratisProxiesOutputPath>
@@ -48,6 +48,8 @@ switches without a declared default are off when absent.
 | --- | --- | --- |
 | `CratisProxiesOutputPath` | empty | Where to write. Empty disables generation entirely |
 | `CratisProxiesInputAssembly` | empty | Overrides the assembly to read |
+| `CratisProxiesIncremental` | `true` | Requires Arc 22.138.0; reuse unchanged owned output; set `false` to regenerate every build |
+| `CratisProxiesFileHeader` | project setting | Requires Arc 22.123.0; otherwise uses `.editorconfig` `file_header_template`, or no header; `none` disables it |
 | `CratisProxiesSegmentsToSkip` | empty | Leading namespace segments to drop from the output path |
 | `CratisProxiesLibraryMode` | `false` | Generates for a library rather than an application |
 | `CratisProxiesSkipOutputDeletion` | **`true`** | Already the default — the generator does not wipe the output folder |
@@ -70,6 +72,13 @@ model: generated TypeScript erases them to primitives; nullable concept properti
 are optional. Sources:
 `Tools/ProxyGenerator.Build/build/Cratis.Arc.ProxyGenerator.Build.targets` under
 `Source/DotNET`.
+
+Incremental generation fingerprints assemblies, generator/configuration, validation metadata
+and owned output. A changed or missing generated file forces regeneration, as
+does a previous warning so diagnostics remain visible. It does not make a
+hand-edited generated file an input. Configure `file_header_template` explicitly
+if you previously relied on the built-in Cratis MIT header; it is no longer
+inserted without configuration.
 
 Item groups the target also forwards: `AssemblyToPackageMapping`,
 `ExcludeType`, `ExcludeNamespace`, `NamespaceRoot`, and `TypeToTsType`.

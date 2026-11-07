@@ -1,34 +1,37 @@
 ---
-description: Adorn an event type with [Unique] so Chronicle allows only one event of that type per event source, enforced as a model-bound constraint.
+title: Cratis Chronicle unique event type constraints
+description: Declare a Cratis Chronicle unique event type constraint to allow an event once per source, then release it with a named removal event.
 ---
-# Unique event type constraint
+A Cratis Chronicle unique event type constraint allows an event type once per event source until a removal event releases the constraint. Use it when repeating the event would contradict the domain, such as initializing the same project twice.
 
-Adorn the event type class with `[Unique]` to enforce that **only one event of this type** can be appended per event source. Use this when the event itself is a unique fact — for example, registering a user can only happen once.
-
-Chronicle discovers `[Unique]`-adorned types automatically and registers the constraints with the Kernel when the client starts.
+Declare the rule on the event type itself. In .NET, apply `[Unique]` to the class; the client discovers it on registered event types and sends the constraint definition to the Kernel when it starts.
 
 ## Defining a unique event type constraint
+
+With the declaration below, the first registration event for a user is accepted. Another registration event of that type for the same event source violates the constraint, while a different source can still register:
 
 <ChronicleClientTabs snippet="constraints/model-bound/unique-event-type/basic" />
 
 ## Constraint name and violation message
 
-An optional constraint name and violation message can be provided:
+Give the constraint an explicit name when another event will release it. You can also supply the message returned when an append violates the rule:
 
 <ChronicleClientTabs snippet="constraints/model-bound/unique-event-type/name-and-message" />
 
-The `message` parameter is optional. Chronicle produces a default violation message when one is not supplied.
+Without a custom message, Chronicle uses its default violation message. The name identifies the rule; the message explains the rejected append to its caller.
 
 ## Releasing a constraint
 
-Apply `[RemoveConstraint]` to the event type that signals a domain object has been removed. When this event is appended, Chronicle releases the constraint, and the event source can accept a new event of this type:
+Declare a removal event when the lifecycle can start again. In .NET, apply `[RemoveConstraint]` to that event type. Appending it releases the named constraint for its event source, allowing another event of the constrained type:
 
 <ChronicleClientTabs snippet="constraints/model-bound/unique-event-type/releasing" />
 
-The constraint name must exactly match the name provided to the `[Unique]` attribute. When no name was provided to `[Unique]`, Chronicle uses the event type name as the default constraint name.
+The removal declaration must name the constraint exactly. In .NET, TypeScript, Kotlin, and Java, the default name is the event class name. Elixir defaults to the event type id. An explicit name keeps the connection visible on both events.
 
-More than one event type can name the same constraint. Each of them releases it on its own, which is how a cycle that can end in more than one way is expressed with attributes.
+In .NET, several removal event types can name the same constraint, so each way of ending a lifecycle can release it. Kotlin and Java accept only one removal event type per constraint name; registration keeps the first one it finds.
 
 ## How constraints are enforced
 
-The Chronicle Kernel reads the `[Unique]` and `[RemoveConstraint]` attributes when the client connects and creates the indexes it needs. Every subsequent append is checked against those indexes server-side, so no constraint logic runs in client code.
+The client reads the model-bound declarations and registers constraint definitions. The Kernel checks appends against those definitions and the event history; it does not read .NET attributes itself.
+
+If you need to reserve a value across different event sources instead of limiting event occurrences, use a [unique property constraint](unique).

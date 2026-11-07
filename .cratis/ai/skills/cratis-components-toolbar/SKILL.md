@@ -1,6 +1,6 @@
 ---
 name: cratis-components-toolbar
-description: Build a canvas-style icon toolbar with the Cratis Components Toolbar family — Toolbar, ToolbarButton, ToolbarSeparator, ToolbarGroup, ToolbarSection, ToolbarContext, ToolbarFanOutItem, ToolbarFolder, and the slot components that let a distant part of the tree contribute buttons. Use when building a drawing or diagram tool palette, a zoom or mode control strip, or any icon-button group with active state, context switching, or fan-out sub-panels. Do not use for a page action menu over a data table.
+description: Use when building a Cratis drawing or diagram tool palette, zoom strip or icon-button group with active modes and fan-out panels. Not for page actions over a data table; use cratis-arc-react-page.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-components-toolbar/SKILL.md -->

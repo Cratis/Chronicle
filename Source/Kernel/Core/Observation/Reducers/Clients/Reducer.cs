@@ -43,13 +43,11 @@ public class Reducer(
     ReducerDefinition? _deferredDefinition;
     bool _subscribed;
     ConnectedObserverKey? _observerKey;
-    IConnectedClients? _connectedClients;
 
     /// <inheritdoc/>
     public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
         _observerKey = ConnectedObserverKey.Parse(this.GetPrimaryKeyString());
-        _connectedClients = GrainFactory.GetConnectedClients(localSiloDetails.SiloAddress);
 
         return Task.CompletedTask;
     }
@@ -138,6 +136,26 @@ public class Reducer(
     }
 
     /// <inheritdoc/>
+    public async Task<bool> IsSubscriptionIntact()
+    {
+        // Anything that needs the definition - a registration waiting for a webhook to leave, an observer served by a
+        // webhook, a client the observer has lost - answers false, and the full check handles it.
+        if (_deferredDefinition is not null || _observerKey is null)
+        {
+            return false;
+        }
+
+        _observer ??= GrainFactory.GetGrain<IObserver>(new ObserverKey(_observerKey.ObserverId, _observerKey.EventStore, _observerKey.Namespace, _observerKey.EventSequenceId));
+        if (!await _observer.KnowsClient(_observerKey.ConnectionId))
+        {
+            return false;
+        }
+
+        _subscribed = true;
+        return true;
+    }
+
+    /// <inheritdoc/>
     public async Task KeepSubscription(ReducerDefinition definition)
     {
         if (await CompleteDeferredRegistration())
@@ -159,12 +177,13 @@ public class Reducer(
 
         if (!await _observer.KnowsClient(_observerKey.ConnectionId))
         {
-            if (!await _connectedClients!.IsConnected(_observerKey.ConnectionId))
+            var owner = await FindConnectionOwner();
+            if (owner is null)
             {
                 return;
             }
 
-            var connectedClient = await _connectedClients!.GetConnectedClient(_observerKey.ConnectionId);
+            var connectedClient = await owner.GetConnectedClient(_observerKey.ConnectionId);
             logger.RestoringLostClientSubscription(_observerKey.ObserverId, _observerKey.ConnectionId);
             try
             {
@@ -222,13 +241,23 @@ public class Reducer(
         logger.WaitingForWebhook(_observerKey!.ObserverId);
     }
 
+    /// <summary>The connection may be registered on another silo than the one its streams reach, so every silo is considered.</summary>
+    Task<IConnectedClients?> FindConnectionOwner() =>
+        ConnectedClientsLocator.Find(GrainFactory, localSiloDetails.SiloAddress, _observerKey!.ConnectionId);
+
     /// <summary>Lets the connection registry tell this observer when the connection is dropped, instead of leaving it to the watchdog.</summary>
     /// <remarks>Best effort: a failure (for example during a rolling upgrade) leaves takeover to the watchdog and never fails the subscription.</remarks>
     async Task RecordObserver()
     {
         try
         {
-            await _connectedClients!.RecordObserver(
+            var owner = await FindConnectionOwner();
+            if (owner is null)
+            {
+                return;
+            }
+
+            await owner.RecordObserver(
                 _observerKey!.ConnectionId,
                 new ObserverKey(_observerKey.ObserverId, _observerKey.EventStore, _observerKey.Namespace, _observerKey.EventSequenceId));
         }
@@ -241,7 +270,8 @@ public class Reducer(
     async Task SubscribeToObserver(ReducerKey key, ReducerDefinition definition)
     {
         _observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(key.ReducerId, key.EventStore, key.Namespace, key.EventSequenceId));
-        var connectedClient = await _connectedClients!.GetConnectedClient(_observerKey!.ConnectionId!);
+        var owner = await FindConnectionOwner() ?? throw new ClientIsNotConnected(_observerKey!.ConnectionId!);
+        var connectedClient = await owner.GetConnectedClient(_observerKey!.ConnectionId!);
 
         try
         {

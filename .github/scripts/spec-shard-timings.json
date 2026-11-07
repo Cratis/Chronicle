@@ -38,6 +38,7 @@
         { "project": "Source/Clients/XUnit.Integration.v3.Specs/XUnit.Integration.v3.Specs.csproj", "seconds": 7.50 },
         { "project": "Source/Kernel/Storage.Specs/Storage.Specs.csproj", "seconds": 3.37 },
         { "project": "Source/Kernel/Storage.InMemory.Specs/Storage.InMemory.Specs.csproj", "seconds": 14.34 },
-        { "project": "Source/Kernel/Storage.MongoDB.Specs/Storage.MongoDB.Specs.csproj", "seconds": 133.06 }
+        { "project": "Source/Kernel/Storage.MongoDB.Specs/Storage.MongoDB.Specs.csproj", "seconds": 133.06 },
+        { "project": "Source/Kernel/Storage.Neo4j.Specs/Storage.Neo4j.Specs.csproj", "seconds": 3.00 }
     ]
 }

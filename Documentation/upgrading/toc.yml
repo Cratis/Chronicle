@@ -4,3 +4,5 @@
   href: major-versions.md
 - name: 18 to 19
   href: 18-to-19.mdx
+- name: Security-related behavior changes
+  href: security-behavior-changes.md

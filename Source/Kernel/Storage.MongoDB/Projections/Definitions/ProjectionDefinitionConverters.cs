@@ -1,8 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json;
 using System.Text.Json.Nodes;
+using Cratis.Chronicle.Concepts.Projections.Graphs;
 using Cratis.Chronicle.Properties;
+using Cratis.Json;
 using MongoDB.Bson;
 using KernelDefs = Cratis.Chronicle.Concepts.Projections.Definitions;
 
@@ -14,6 +17,8 @@ namespace Cratis.Chronicle.Storage.MongoDB.Projections.Definitions;
 public static class ProjectionDefinitionConverters
 {
     const int LosslessStorageFormatVersion = 1;
+
+    static readonly JsonSerializerOptions _graphOptions = new() { Converters = { new ConceptAsJsonConverterFactory() } };
 
     /// <summary>
     /// Converts a MongoDB ProjectionDefinition to a Kernel ProjectionDefinition.
@@ -58,6 +63,7 @@ public static class ProjectionDefinitionConverters
         {
             GenerationDelivery = source.GenerationDelivery,
             Version = source.Version,
+            Graph = source.Graph is null ? null : JsonSerializer.Deserialize<GraphProjectionDefinition>(source.Graph, _graphOptions),
             HasLegacyStorageFields = source.StorageFormatVersion < LosslessStorageFormatVersion
         };
 
@@ -71,6 +77,7 @@ public static class ProjectionDefinitionConverters
         {
             GenerationDelivery = source.GenerationDelivery,
             Version = source.Version,
+            Graph = source.Graph is null ? null : JsonSerializer.Serialize(source.Graph, _graphOptions),
             Owner = source.Owner,
             EventSequenceId = source.EventSequenceId,
             Identifier = source.Identifier,
