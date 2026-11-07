@@ -1,9 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Linq.Expressions;
 using Cratis.Chronicle.Contracts.Projections;
-using Cratis.Chronicle.Properties;
 using Cratis.Serialization;
 
 namespace Cratis.Chronicle.Projections;
@@ -20,30 +18,13 @@ public class ChildrenJoinBuilder<TParentReadModel, TChildReadModel, TEvent>(IChi
     : ReadModelPropertiesBuilder<TChildReadModel, TEvent, IChildrenJoinBuilder<TChildReadModel, TEvent>, IChildrenBuilder<TParentReadModel, TChildReadModel>>(childrenBuilder, namingPolicy),
       IChildrenJoinBuilder<TChildReadModel, TEvent>
 {
-    readonly INamingPolicy _namingPolicy = namingPolicy;
-    PropertyPath? _on;
-
-    /// <inheritdoc/>
-    [Obsolete("Child joins always join on the identity set with IdentifiedBy() on the children builder, and specifying On() throws OnPropertyShouldNotBeSpecifiedForChildJoin when the projection is built. Remove the call - On() on child joins will be removed in the next major version.")]
-    public IChildrenJoinBuilder<TChildReadModel, TEvent> On<TProperty>(Expression<Func<TChildReadModel, TProperty>> keyAccessor)
-    {
-        _on = ProjectionPropertyPaths.FromExpression(keyAccessor, _namingPolicy, ProjectionPathRole.Target, $"the join 'on' property on read model '{typeof(TChildReadModel).FullName}'");
-        return this;
-    }
-
     /// <summary>
     /// Builds a <see cref="JoinDefinition"/> from the builder.
     /// </summary>
     /// <returns>A new instance of <see cref="JoinDefinition"/>.</returns>
-    /// <exception cref="OnPropertyShouldNotBeSpecifiedForChildJoin">An explicit join property was specified.</exception>
     /// <exception cref="MissingIdentifiedByPropertyExpressionWhenJoiningWithEvent">The child identity was not configured.</exception>
     internal JoinDefinition Build()
     {
-        if (_on is not null)
-        {
-            throw new OnPropertyShouldNotBeSpecifiedForChildJoin(typeof(TChildReadModel), typeof(TEvent));
-        }
-
         if (!childrenBuilder.HasIdentifiedBy)
         {
             throw new MissingIdentifiedByPropertyExpressionWhenJoiningWithEvent(typeof(TChildReadModel), typeof(TEvent));

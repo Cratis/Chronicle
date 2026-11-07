@@ -369,6 +369,11 @@ public static class WellKnownTableNames
     public const string GenerationFloor = "GenerationFloor";
 
     /// <summary>
+    /// The table that holds the unique-constraint encoding key.
+    /// </summary>
+    public const string UniqueConstraintEncodingKey = "UniqueConstraintEncodingKey";
+
+    /// <summary>
     /// The table that holds generation floor history.
     /// </summary>
     public const string GenerationFloorHistory = "GenerationFloorHistory";
