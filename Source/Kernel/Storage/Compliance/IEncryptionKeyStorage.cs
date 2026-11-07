@@ -12,6 +12,68 @@ namespace Cratis.Chronicle.Storage.Compliance;
 public interface IEncryptionKeyStorage
 {
     /// <summary>
+    /// Gets the atomic guarantees offered by this store, independently of durability (C6).
+    /// </summary>
+    EncryptionKeyFenceGuarantees FenceGuarantees => EncryptionKeyFenceGuarantees.None;
+
+    /// <summary>
+    /// Record an immutable, retry-safe erasure boundary (C1, C4).
+    /// </summary>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="eventStoreNamespace">The namespace.</param>
+    /// <param name="identifier">The key identifier.</param>
+    /// <param name="request">The request identity and optional observed lifecycle. Boundaries are assigned on first application.</param>
+    /// <returns>Async task.</returns>
+    /// <remarks>
+    /// Fence writes merge floors and fingerprints, close provisioning, and increment Version. Request ids are never
+    /// evicted; the inline limit is 1024. Unknown write outcomes propagate without blind retries (C5).
+    /// Stores that have not adopted this protocol retain their existing behavior through the legacy member.
+    /// </remarks>
+    Task RecordErasureFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyErasureRequest request) =>
+        RecordErasureFor(eventStore, eventStoreNamespace, identifier);
+
+    /// <summary>
+    /// Sweep only the recorded request boundary, including staged rows, never a successor lifecycle (C4).
+    /// </summary>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="eventStoreNamespace">The namespace.</param>
+    /// <param name="identifier">The key identifier.</param>
+    /// <param name="requestId">The recorded request identity.</param>
+    /// <returns>Async task.</returns>
+    /// <exception cref="EncryptionKeyErasureNotSupported">The store has not adopted request-bounded erasure.</exception>
+    Task DeleteThroughFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, string requestId) =>
+        throw new EncryptionKeyErasureNotSupported(identifier);
+
+    /// <summary>
+    /// Verify the bounded sweep and mark its request confirmed, after the caller's release grace (C4, C8).
+    /// </summary>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="eventStoreNamespace">The namespace.</param>
+    /// <param name="identifier">The key identifier.</param>
+    /// <param name="requestId">The recorded request identity.</param>
+    /// <returns>Async task.</returns>
+    /// <exception cref="EncryptionKeyErasureNotSupported">The store has not adopted request-bounded erasure.</exception>
+    Task ConfirmErasureFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, string requestId) =>
+        throw new EncryptionKeyErasureNotSupported(identifier);
+
+    /// <summary>
+    /// Authorize only the observed fence state (C2).
+    /// </summary>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="eventStoreNamespace">The namespace.</param>
+    /// <param name="identifier">The key identifier.</param>
+    /// <param name="observedVersion">The version read by the caller.</param>
+    /// <param name="observedLifecycle">The lifecycle read with that version.</param>
+    /// <returns>Async task.</returns>
+    /// <remarks>
+    /// A retry succeeds without writing only at observedVersion + 1, with NewKeyAllowed and observedLifecycle + 1.
+    /// Any later fence write throws EncryptionKeyFenceChanged. The lifecycle is supplied with the version so that
+    /// a confirmation write cannot be mistaken for an authorization. Legacy providers retain their N behavior.
+    /// </remarks>
+    Task AllowNewKeyFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, ulong observedVersion, uint observedLifecycle) =>
+        AllowNewKeyFor(eventStore, eventStoreNamespace, identifier);
+
+    /// <summary>
     /// Save an <see cref="EncryptionKey"/> for a specific <see cref="EncryptionKeyIdentifier"/>.
     /// </summary>
     /// <param name="eventStore"><see cref="EventStoreName"/> the key belongs to.</param>
@@ -22,6 +84,10 @@ public interface IEncryptionKeyStorage
     /// <returns>Async task.</returns>
     /// <exception cref="EncryptionKeyErased">Thrown when the write would undo a completed erasure.</exception>
     /// <remarks>
+    /// Protocol stores ensure an empty fence before the first write, stage with its Version and Lifecycle, validate
+    /// with a linearizable read, and conditionally publish only their own row (C3). Every read, including GetOrAdd's
+    /// existing-key branch, excludes unpublished rows. Atomic in-memory stores perform these steps under one lock.
+    /// Validation failures undo only the writer's own stage. Fence activity is confined to key operations, not appends (C7).
     /// A save at or below the <see cref="EncryptionKeyErasure.ErasedThrough"/> floor recorded for the identifier is
     /// refused, and so is a save of key material that was destroyed by an erasure — at any revision. Those two
     /// refusals are what stop a composed store healing a survivor back into a store that was erased, and a
@@ -53,7 +119,7 @@ public interface IEncryptionKeyStorage
     /// It is also where a completed erasure is enforced. An identifier with an <see cref="EncryptionKeyErasure"/>
     /// recorded against it does not get a fresh key here — provisioning throws instead of quietly restarting
     /// protection for a person who asked to be forgotten. Once a new lifecycle has been authorized through
-    /// <see cref="AllowNewKeyFor"/>, provisioning mints above the fence rather than back at the initial revision.
+    /// <see cref="AllowNewKeyFor(EventStoreName, EventStoreNamespaceName, EncryptionKeyIdentifier)"/>, provisioning mints above the fence rather than back at the initial revision.
     /// </para>
     /// </remarks>
     async Task<EncryptionKey> GetOrAddFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKey key)
@@ -140,7 +206,7 @@ public interface IEncryptionKeyStorage
     /// <remarks>
     /// Removing key material is not by itself an erasure — it leaves the same absence as "never provisioned", which
     /// is what lets a later provisioning or a cross-event-store copy put a key back. An erasure is
-    /// <see cref="RecordErasureFor"/> followed by this; that order matters, because the fence has to be in place
+    /// <see cref="RecordErasureFor(EventStoreName, EventStoreNamespaceName, EncryptionKeyIdentifier)"/> followed by this; that order matters, because the fence has to be in place
     /// before the material is gone.
     /// </remarks>
     Task DeleteFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyRevision? revision = null);
@@ -156,7 +222,7 @@ public interface IEncryptionKeyStorage
     /// This is the distinction a key store cannot otherwise make: <see langword="null"/> means never erased —
     /// whether or not a key exists — and a record means erased, whether or not anything was there to erase. The
     /// default implementation answers <see langword="null"/> because a store that cannot record an erasure has
-    /// never recorded one; <see cref="RecordErasureFor"/> refuses loudly rather than letting it pretend otherwise.
+    /// never recorded one; <see cref="RecordErasureFor(EventStoreName, EventStoreNamespaceName, EncryptionKeyIdentifier)"/> refuses loudly rather than letting it pretend otherwise.
     /// </remarks>
     Task<EncryptionKeyErasure?> GetErasureFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier) =>
         Task.FromResult<EncryptionKeyErasure?>(null);

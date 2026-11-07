@@ -1,0 +1,262 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using Cratis.Chronicle.Compliance;
+using Cratis.Chronicle.Concepts;
+
+namespace Cratis.Chronicle.Storage.Compliance.for_EncryptionKeyStorageContract;
+
+/// <summary>
+/// Provider-independent atomic fence contract. Each fact needs a fresh store and request history.
+/// </summary>
+[PerFactSpecificationLifecycle]
+public abstract class EncryptionKeyStorageContract : Specification
+{
+    static readonly EventStoreName _eventStore = "contract";
+    static readonly EventStoreNamespaceName _namespace = "contract";
+    static readonly EncryptionKeyIdentifier _identifier = "subject";
+    static readonly EncryptionKey _original = new([1], [2]);
+    static readonly EncryptionKey _successor = new([3], [4]);
+    IEncryptionKeyStorage _storage;
+
+    /// <summary>
+    /// Open a fresh provider store for one contract fact.
+    /// </summary>
+    /// <returns>The store.</returns>
+    protected abstract IEncryptionKeyStorage CreateStorage();
+
+    /// <summary>
+    /// Run a deterministic publication interleaving. Atomic stores have no stage-to-publish window, so the
+    /// competing operation precedes the indivisible write. Transport-backed harnesses override this to pause
+    /// after staging, run the competing operation, then resume validation/publication (never use a clock delay).
+    /// </summary>
+    /// <param name="write">The write to pause.</param>
+    /// <param name="competingOperation">The operation while publication is paused.</param>
+    /// <returns>Async task.</returns>
+    protected virtual async Task DuringPublication(Func<Task> write, Func<Task> competingOperation)
+    {
+        await competingOperation();
+        await write();
+    }
+
+    void Establish() => _storage = CreateStorage();
+
+    [Fact] public void should_declare_both_atomic_guarantees() =>
+        _storage.FenceGuarantees.ShouldEqual(EncryptionKeyFenceGuarantees.MonotonicFence | EncryptionKeyFenceGuarantees.FencedSave);
+
+    [Fact] public async Task should_ensure_a_fence_before_the_first_save()
+    {
+        await Save(_original);
+        var fence = await Fence();
+        fence.NewKeyAllowed.ShouldBeTrue();
+        fence.ErasedLifecycle.ShouldEqual(0u);
+        (await Latest())!.StagedLifecycle.ShouldEqual(fence.Lifecycle);
+    }
+
+    [Fact] public async Task should_refuse_a_delayed_save_of_destroyed_material_at_a_higher_revision()
+    {
+        await Save(_original);
+        await Raise("erase");
+        await Sweep("erase");
+        await Authorize(await Fence());
+        await Assert.ThrowsAsync<EncryptionKeyErased>(() => Save(_original, 99u));
+    }
+
+    [Fact] public async Task should_refuse_a_stalled_authorization_after_another_erasure()
+    {
+        await Raise("first");
+        var observed = await Fence();
+        await Raise("second");
+        await Assert.ThrowsAsync<EncryptionKeyFenceChanged>(() => Authorize(observed));
+        (await Fence()).NewKeyAllowed.ShouldBeFalse();
+    }
+
+    [Fact] public async Task should_accept_only_the_immediate_authorization_retry_without_another_write()
+    {
+        await Raise("erase");
+        var observed = await Fence();
+        await Authorize(observed);
+        var authorized = await Fence();
+        await Authorize(observed);
+        (await Fence()).ShouldEqual(authorized);
+        authorized.Version.ShouldEqual(observed.Version + 1);
+        authorized.Lifecycle.ShouldEqual(observed.Lifecycle + 1);
+    }
+
+    [Fact] public async Task should_refuse_an_authorization_retry_after_a_later_fence_write_even_when_still_allowed()
+    {
+        await Raise("erase");
+        var observed = await Fence();
+        await Authorize(observed);
+        await Confirm("erase");
+        await Assert.ThrowsAsync<EncryptionKeyFenceChanged>(() => Authorize(observed));
+        (await Fence()).NewKeyAllowed.ShouldBeTrue();
+    }
+
+    [Fact] public async Task should_not_mistake_a_confirmation_for_an_authorization()
+    {
+        await Raise("erase");
+        await Authorize(await Fence());
+        var observed = await Fence();
+        await Confirm("erase");
+        await Assert.ThrowsAsync<EncryptionKeyFenceChanged>(() => Authorize(observed));
+    }
+
+    [Fact] public async Task should_require_the_observed_lifecycle_for_an_authorization_retry()
+    {
+        await Raise("erase");
+        var observed = await Fence();
+        await Authorize(observed);
+        await Assert.ThrowsAsync<EncryptionKeyFenceChanged>(() => Authorize(observed with { Lifecycle = 0 }));
+    }
+
+    [Fact] public async Task should_refuse_revision_two_under_an_empty_subject_fence()
+    {
+        await Raise("empty");
+        await Assert.ThrowsAsync<EncryptionKeyErased>(() => Save(_original, 2u));
+        (await Latest()).ShouldBeNull();
+    }
+
+    [Fact] public async Task should_refuse_first_provisioning_racing_an_empty_erasure()
+    {
+        await Assert.ThrowsAsync<EncryptionKeyErased>(() => DuringPublication(
+            async () => await Provision(_original),
+            () => Raise("empty")));
+        (await Latest()).ShouldBeNull();
+    }
+
+    [Fact] public async Task should_never_read_an_unpublished_revision()
+    {
+        await DuringPublication(() => Save(_original), async () =>
+        {
+            (await Latest()).ShouldBeNull();
+            (await _storage.TryGetFor(_eventStore, _namespace, _identifier, 1u)).ShouldBeNull();
+            (await _storage.HasFor(_eventStore, _namespace, _identifier)).ShouldBeFalse();
+        });
+        (await Latest())!.Key.ShouldEqual(_original);
+    }
+
+    [Fact] public async Task should_keep_get_or_add_on_the_published_revision_during_a_later_stage()
+    {
+        await Save(_original);
+        await DuringPublication(() => Save(_successor, 2u), async () =>
+        {
+            (await Provision(_successor)).Key.ShouldEqual(_original);
+            (await _storage.GetOrAddFor(_eventStore, _namespace, _identifier, _successor)).ShouldEqual(_original);
+        });
+        (await Latest())!.Key.ShouldEqual(_successor);
+    }
+
+    [Fact] public async Task should_hide_covered_rows_before_the_sweep_including_get_or_add()
+    {
+        await Save(_original);
+        await Raise("erase");
+        (await Latest()).ShouldBeNull();
+        (await _storage.TryGetFor(_eventStore, _namespace, _identifier, 1u)).ShouldBeNull();
+        await Assert.ThrowsAsync<EncryptionKeyErased>(async () => await Provision(_successor));
+        await Assert.ThrowsAsync<EncryptionKeyErased>(async () => await _storage.GetOrAddFor(_eventStore, _namespace, _identifier, _successor));
+    }
+
+    [Fact] public async Task should_not_sweep_an_authorized_successor_when_an_old_request_is_retried()
+    {
+        await Save(_original);
+        await Raise("old");
+        await Sweep("old");
+        await Confirm("old");
+        var request = (await Fence()).Requests!.Single();
+        await Authorize(await Fence());
+        var successor = await Provision(_successor);
+        var beforeRetry = await Fence();
+        await Raise("old");
+        await Sweep("old");
+        await Confirm("old");
+        (await Latest()).ShouldEqual(successor);
+        (await Fence()).ShouldEqual(beforeRetry);
+        (await Fence()).Requests!.Single().ShouldEqual(request);
+    }
+
+    [Fact] public async Task should_keep_an_old_request_after_the_inline_log_reaches_capacity()
+    {
+        await Raise("old");
+        await Confirm("old");
+        for (var index = 1; index < 1024; index++)
+        {
+            await Raise($"request-{index}");
+        }
+
+        var beforeRetry = await Fence();
+        await Raise("old");
+        (await Fence()).ShouldEqual(beforeRetry);
+        await Assert.ThrowsAsync<EncryptionKeyRequestLogFull>(() => Raise("overflow"));
+        (await Fence()).Requests!.Count.ShouldEqual(1024);
+    }
+
+    [Fact] public async Task should_refuse_a_request_bound_to_a_superseded_lifecycle()
+    {
+        await Raise("first");
+        var observed = await Fence();
+        await Authorize(observed);
+        await Assert.ThrowsAsync<EncryptionKeyFenceChanged>(() => _storage.RecordErasureFor(
+            _eventStore, _namespace, _identifier, new("stale", Lifecycle: observed.Lifecycle)));
+    }
+
+    [Fact] public async Task should_verify_the_sweep_before_confirming()
+    {
+        await Save(_original);
+        await Raise("erase");
+        await Assert.ThrowsAsync<EncryptionKeyFenceUnavailable>(() => Confirm("erase"));
+        (await Fence()).Requests!.Single().Confirmed.ShouldBeFalse();
+        await Sweep("erase");
+        await Confirm("erase");
+        (await Fence()).Requests!.Single().Confirmed.ShouldBeTrue();
+    }
+
+    [Fact] public async Task should_keep_floors_fingerprints_and_lifecycle_boundaries_monotone()
+    {
+        EncryptionKeyErasure? previous = null;
+        for (uint index = 1; index <= 32; index++)
+        {
+            var key = new EncryptionKey([(byte)index], [(byte)(index + 1)]);
+            await Save(key, index * 3);
+            await Raise($"erase-{index}");
+            var current = await Fence();
+            if (previous is not null)
+            {
+                (current.ErasedThrough.Value >= previous.ErasedThrough.Value).ShouldBeTrue();
+                (current.ErasedLifecycle >= previous.ErasedLifecycle).ShouldBeTrue();
+                previous.ErasedKeyFingerprints.All(current.ErasedKeyFingerprints.Contains).ShouldBeTrue();
+                (current.Version > previous.Version).ShouldBeTrue();
+            }
+
+            await Sweep($"erase-{index}");
+            await Confirm($"erase-{index}");
+            await Authorize(await Fence());
+            previous = current;
+        }
+    }
+
+    [Fact] public async Task should_surface_an_unknown_fence_write_outcome_and_deduplicate_the_explicit_retry()
+    {
+        // Model a transport losing the response after the server applied the write. A caller must see the error;
+        // it may retry only with the same request id, not turn the ambiguous outcome into a fresh erasure.
+        async Task LoseResponse()
+        {
+            await Raise("lost-response");
+            throw new TimeoutException();
+        }
+
+        await Assert.ThrowsAsync<TimeoutException>(LoseResponse);
+        var applied = await Fence();
+        await Raise("lost-response");
+        (await Fence()).ShouldEqual(applied);
+    }
+
+    Task Save(EncryptionKey key, EncryptionKeyRevision? revision = null) => _storage.SaveFor(_eventStore, _namespace, _identifier, key, revision);
+    Task<EncryptionKeyAtRevision> Provision(EncryptionKey key) => _storage.GetOrAddWithRevisionFor(_eventStore, _namespace, _identifier, key);
+    Task<EncryptionKeyAtRevision?> Latest() => _storage.TryGetLatestFor(_eventStore, _namespace, _identifier);
+    Task Raise(string requestId) => _storage.RecordErasureFor(_eventStore, _namespace, _identifier, new(requestId));
+    Task Sweep(string requestId) => _storage.DeleteThroughFor(_eventStore, _namespace, _identifier, requestId);
+    Task Confirm(string requestId) => _storage.ConfirmErasureFor(_eventStore, _namespace, _identifier, requestId);
+    Task Authorize(EncryptionKeyErasure observed) => _storage.AllowNewKeyFor(_eventStore, _namespace, _identifier, observed.Version, observed.Lifecycle);
+    async Task<EncryptionKeyErasure> Fence() => (await _storage.GetErasureFor(_eventStore, _namespace, _identifier))!;
+}
