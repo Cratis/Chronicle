@@ -5,7 +5,6 @@ using Cratis.Chronicle.Connections;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
 using DotNet.Testcontainers.Networks;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cratis.Chronicle.Benchmarks;
 
@@ -21,7 +20,6 @@ public class ChronicleBenchmarkFixture : IAsyncDisposable
     static readonly string _backupsPath;
 
     INetwork? _network;
-    IContainer? _sql;
     IContainer? _container;
     bool _started;
 
@@ -75,10 +73,6 @@ public class ChronicleBenchmarkFixture : IAsyncDisposable
         {
             await _container.DisposeAsync();
         }
-        if (_sql is not null)
-        {
-            await _sql.DisposeAsync();
-        }
         if (_network != null)
         {
             await _network.DisposeAsync();
@@ -96,15 +90,13 @@ public class ChronicleBenchmarkFixture : IAsyncDisposable
 
         var imageName = Environment.GetEnvironmentVariable("CRATIS_CHRONICLE_LOCAL_IMAGE") ?? "cratis/chronicle:local-development";
 
-        var environment = await StorageEnvironment();
-        var sql = _sql is not null;
-
-        var waitStrategy = Wait.ForUnixContainer();
-        if (!sql) waitStrategy = waitStrategy.UntilInternalTcpPortIsAvailable(27017);
-        waitStrategy = waitStrategy.UntilInternalTcpPortIsAvailable(35000).AddCustomWaitStrategy(new HttpsHealthWait(35000));
+        var waitStrategy = Wait.ForUnixContainer()
+            .UntilInternalTcpPortIsAvailable(27017)
+            .UntilInternalTcpPortIsAvailable(35000)
+            .AddCustomWaitStrategy(new HttpsHealthWait(35000));
 
         _container = new ContainerBuilder(imageName)
-            .WithEnvironment(environment)
+            .WithEnvironment("Storage__ConnectionDetails", $"mongodb://localhost:{MongoDBPort}/?maxPoolSize=500")
             .WithPortBinding(MongoDBPort, 27017)
             .WithPortBinding(ChroniclePort, 35000)
             .WithHostname("chronicle")
@@ -124,40 +116,6 @@ public class ChronicleBenchmarkFixture : IAsyncDisposable
             .Build();
 
         await StartContainerAsync();
-    }
-
-    async Task<Dictionary<string, string>> StorageEnvironment()
-    {
-        var storage = Environment.GetEnvironmentVariable("CRATIS_BENCHMARK_STORAGE") ?? "MongoDB";
-        if (storage == "MongoDB") return new() { ["Storage__ConnectionDetails"] = $"mongodb://localhost:{MongoDBPort}/?maxPoolSize=500" };
-        if (storage != "PostgreSql" && storage != "MsSql") throw new InvalidOperationException("Unknown benchmark storage provider");
-        var connection = await StartSqlDatabase(storage);
-        return new() { ["Cratis__Chronicle__Storage__Type"] = storage, ["Cratis__Chronicle__Storage__ConnectionDetails"] = connection };
-    }
-
-    async Task<string> StartSqlDatabase(string storage)
-    {
-        var postgres = storage == "PostgreSql";
-        var password = $"Benchmark-{Guid.NewGuid():N}!";
-        var builder = new ContainerBuilder(postgres ? "postgres:16-alpine" : "mcr.microsoft.com/mssql/server:2025-CU10-ubuntu-24.04")
-            .WithNetwork(_network)
-            .WithNetworkAliases("benchmark-sql")
-            .WithLogger(NullLogger.Instance);
-        if (postgres)
-        {
-            builder = builder.WithEnvironment("POSTGRES_DB", "chronicle").WithEnvironment("POSTGRES_PASSWORD", password)
-                .WithWaitStrategy(Wait.ForUnixContainer().UntilInternalTcpPortIsAvailable(5432));
-        }
-        else
-        {
-            builder = builder.WithEnvironment("ACCEPT_EULA", "Y").WithEnvironment("MSSQL_SA_PASSWORD", password)
-                .WithWaitStrategy(Wait.ForUnixContainer().UntilMessageIsLogged("SQL Server is now ready for client connections", wait => wait.WithTimeout(TimeSpan.FromSeconds(90))));
-        }
-        _sql = builder.Build();
-        await _sql.StartAsync();
-        return postgres
-            ? $"Host=benchmark-sql;Database=chronicle;Username=postgres;Password={password}"
-            : $"Server=benchmark-sql,1433;Database=master;User ID=sa;Password={password};TrustServerCertificate=True";
     }
 
     async Task StartContainerAsync()

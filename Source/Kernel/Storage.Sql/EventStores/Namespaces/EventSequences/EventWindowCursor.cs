@@ -35,7 +35,7 @@ public class EventWindowCursor(
         }
 
         _read = true;
-        var entries = await query.WithoutHistory().ToListAsync(cancellationToken);
+        var entries = await query.ToListAsync(cancellationToken);
         var namedTags = await NamedTagEntries.LoadFor(scope.DbContext, scope.DbContext.TableName, entries.Select(_ => _.SequenceNumber), cancellationToken);
         var events = new List<AppendedEvent>(entries.Count);
         foreach (var entry in entries)

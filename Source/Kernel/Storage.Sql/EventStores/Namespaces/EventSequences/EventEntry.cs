@@ -85,16 +85,6 @@ public class EventEntry
     public string ContentHashes { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the original generational content and hashes before the first recorded revision.
-    /// </summary>
-    public string? OriginalContent { get; set; }
-
-    /// <summary>
-    /// Gets or sets the recorded revisions, ordered from oldest to newest.
-    /// </summary>
-    public string? Revisions { get; set; }
-
-    /// <summary>
     /// Gets or sets the JSON provenance of generations added by backfill. Null for legacy and append-derived content.
     /// </summary>
     public string? DerivedGenerations { get; set; }

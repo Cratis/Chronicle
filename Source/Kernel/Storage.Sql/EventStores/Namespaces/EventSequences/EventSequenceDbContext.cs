@@ -4,7 +4,6 @@
 using Cratis.Arc.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Metadata;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 
@@ -105,8 +104,6 @@ public class EventSequenceDbContext(DbContextOptions<EventSequenceDbContext> opt
             entity.Property(e => e.EventStreamType).IsRequired();
             entity.Property(e => e.Type).IsRequired();
             entity.Property(e => e.Content).IsRequired();
-            entity.Property(e => e.OriginalContent).Metadata.SetBeforeSaveBehavior(PropertySaveBehavior.Ignore);
-            entity.Property(e => e.Revisions).Metadata.SetBeforeSaveBehavior(PropertySaveBehavior.Ignore);
             entity.Property(e => e.Occurred).IsRequired();
         });
     }
