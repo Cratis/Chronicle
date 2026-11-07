@@ -20,7 +20,8 @@ public class and_discovery_fails : given.an_external_authority
 
     [Fact] void should_fail_the_first_request() => _firstResult.ShouldBeOfExactType<TokenEndpointDiscoveryFailed>();
     [Fact] void should_name_the_authority_in_the_error() => _firstResult.Message.Contains("Authentication:Authority", StringComparison.Ordinal).ShouldBeTrue();
-    [Fact] void should_keep_the_cause() => _firstResult.InnerException.ShouldBeOfExactType<HttpRequestException>();
+    [Fact] void should_not_keep_the_cause() => _firstResult.InnerException.ShouldBeNull();
+    [Fact] void should_report_only_the_failure_category() => _firstResult.Message.Contains("reason: unreachable", StringComparison.Ordinal).ShouldBeTrue();
     [Fact] void should_not_cache_the_failure() => _secondToken.ShouldEqual("the-token");
     [Fact] void should_discover_again() => _handler.DiscoveryRequests.Count().ShouldEqual(2);
 }

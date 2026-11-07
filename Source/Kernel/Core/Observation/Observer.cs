@@ -13,6 +13,7 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.DevelopmentTools;
+using Cratis.Chronicle.Diagnostics;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Observation.Jobs;
@@ -114,7 +115,7 @@ public partial class Observer(
     bool _removed;
     IEventSequence _eventSequence = null!;
     IAppendedEventsQueues _appendedEventsQueues = null!;
-    IMeterScope<Observer>? _metrics;
+    ObserverMetrics? _metrics;
     bool _isPreparingCatchup;
     int _catchUpHandoversInFlight;
 
@@ -209,7 +210,7 @@ public partial class Observer(
 
         var eventSequenceKey = new EventSequenceKey(_observerKey.EventSequenceId, _observerKey.EventStore, _observerKey.Namespace);
         _appendedEventsQueues = GrainFactory.GetGrain<IAppendedEventsQueues>(eventSequenceKey);
-        _metrics = meter.BeginObserverScope(_observerId, _observerKey);
+        _metrics = meter.BeginObserverScope(_observerId, _observerKey, optionsMonitor.CurrentValue?.Telemetry.MetricNames ?? MetricNames.Legacy);
 
         var config = await configurationProvider.GetFor(_observerKey);
         _statePersistenceBatchInterval = config.StatePersistenceBatchInterval < 1 ? 1 : config.StatePersistenceBatchInterval;
@@ -374,6 +375,12 @@ public partial class Observer(
             foreach (var inFlight in await namespaceStorage.InFlightEvents.GetFor(_observerId))
             {
                 await namespaceStorage.InFlightEvents.Remove(_observerId, inFlight.Partition, inFlight.EventSequenceNumber);
+            }
+
+            var pruned = await Recommendations.IgnoredRecommendations.Remove(namespaceStorage.Recommendations, Recommendations.IgnoredRecommendations.ForRemovedObserver(await namespaceStorage.Recommendations.GetAll(), _observerId, _observerKey.EventSequenceId));
+            if (pruned > 0)
+            {
+                logger.PrunedIgnoredRecommendations(pruned);
             }
 
             // The deletion can commit and then throw. Seal this activation before attempting it so neither
@@ -611,6 +618,7 @@ public partial class Observer(
         if (reminderName == AlertReminderName)
         {
             await ReconcileAlertsIfNeeded();
+            await ReleaseAlertReminderWhenSettled();
             return;
         }
 
@@ -690,7 +698,7 @@ public partial class Observer(
     /// <returns>Awaitable task.</returns>
     internal async Task StopAllRetryFailedPartitionJobs()
     {
-        var jobs = await _jobsManager.GetUnfinishedJobs();
+        var jobs = await _jobsManager.GetUnfinishedJobsOf<IRetryFailedPartition>();
         var stopTasks = jobs
             .Where(_ => _.Request is RetryFailedPartitionRequest request && request.ObserverKey == _observerKey)
             .Select(_ => _jobsManager.Stop(_.Id));
@@ -739,7 +747,15 @@ public partial class Observer(
     /// <inheritdoc/>
     protected override async Task OnAfterEnteringState(IState<ObserverState> state)
     {
+        _stateTransitionInProgress = false;
         KeepWhatWasRecordedDuringTransitionHook();
+        if (state is States.Replay { StartRefusal: { } refusal })
+        {
+            // Nothing drives this replay forward, so it settles no owed recovery; routing decides that afresh.
+            await SettleRefusedReplayStart(refusal);
+            return;
+        }
+
         if (state is QuarantinedObserver) await ReconcileWebhookProbe();
         if (SettlesOwedRecovery(state))
         {
@@ -979,6 +995,13 @@ public partial class Observer(
         {
             var eventTypeSchemas = await storage.GetEventStore(_observerKey.EventStore).EventTypes.GetFor(eventTypes);
             _eventTypeSchemas = eventTypeSchemas.ToDictionary(s => s.Type);
+
+            // Another instance of a client already being observed for needs only to be added as a fan-out target.
+            if (!additive && !recovering && !automatic && subscriberArgs is ConnectedClient connectedClient &&
+                await TryHandOverToAnotherClientInstance<TObserverSubscriber>(type, eventTypes, siloAddress, connectedClient, isReplayable, filters, generationDelivery))
+            {
+                return;
+            }
 
             using var scope = logger.BeginObserverScope(_observerId, _observerKey);
 

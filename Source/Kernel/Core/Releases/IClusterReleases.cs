@@ -20,4 +20,11 @@ public interface IClusterReleases
     /// </summary>
     /// <returns>A bounded release summary.</returns>
     ClusterReleaseSummary Summarize();
+
+    /// <summary>
+    /// Finds the releases in the cluster that the given release cannot exchange grain calls with because of a <see cref="ClusterReleaseBoundary"/>.
+    /// </summary>
+    /// <param name="local">The release of this silo.</param>
+    /// <returns>The incompatible releases, empty when there are none.</returns>
+    IReadOnlyList<Cratis.Chronicle.Concepts.System.SemanticVersion> FindIncompatible(Cratis.Chronicle.Concepts.System.SemanticVersion local);
 }

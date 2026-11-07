@@ -22,6 +22,7 @@ public class and_the_external_endpoint_is_not_https : Specification
     [Fact] void should_reject_http() => _httpResult.ShouldBeOfExactType<InsecureTokenEndpoint>();
     [Fact] void should_reject_user_info() => _userInfoResult.ShouldBeOfExactType<InsecureTokenEndpoint>();
     [Fact] void should_not_leak_the_user_info() => _userInfoResult.Message.Contains("pw", StringComparison.Ordinal).ShouldBeFalse();
+    [Fact] void should_not_name_the_rejected_endpoint() => new[] { _httpResult, _userInfoResult }.All(_ => !_.Message.Contains("idp.example.com", StringComparison.Ordinal) && !_.Message.Contains("/token", StringComparison.Ordinal)).ShouldBeTrue();
     [Fact] void should_not_post_anything() => _handler.Requests.ShouldBeEmpty();
 
     OAuthTokenProvider Create(string endpoint) => new(

@@ -20,7 +20,7 @@ internal sealed class Statistics(
     public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<global::Cratis.Chronicle.Contracts.Statistics.EventStatisticsResponse>> StatisticsForEventStore(global::Cratis.Chronicle.Contracts.Statistics.StatisticsForEventStoreRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<global::Cratis.Chronicle.Contracts.Statistics.EventStatisticsResponse>(
             callContext,
-            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore),
+            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: null),
             async () =>
             {
                 var result = await global::Cratis.Chronicle.Statistics.EventStatistics.StatisticsForEventStore(statisticsReader, (global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore);
@@ -32,7 +32,7 @@ internal sealed class Statistics(
     public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<global::Cratis.Chronicle.Contracts.Statistics.EventStatisticsResponse>> StatisticsForNamespace(global::Cratis.Chronicle.Contracts.Statistics.StatisticsForNamespaceRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<global::Cratis.Chronicle.Contracts.Statistics.EventStatisticsResponse>(
             callContext,
-            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, request.Namespace),
+            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: request.Namespace),
             async () =>
             {
                 var result = await global::Cratis.Chronicle.Statistics.EventStatistics.StatisticsForNamespace(statisticsReader, (global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace);

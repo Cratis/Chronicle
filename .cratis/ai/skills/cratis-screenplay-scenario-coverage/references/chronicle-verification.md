@@ -8,9 +8,11 @@ or `question` cells).
 
 - **Claims**: different-source collision, same-source reclaim, change or release, a legitimate
   repeat.
-- **Decision reads**: never-created absence, removal then recreation, a relevant concurrent
-  change, an irrelevant one, rejected or no-fact outcomes, refusal of an incompatible
-  projection or key.
+- **Decision reads**: application specs call `Handle()` or the validator directly
+  with supplied state and assert business outcomes. Their only decision-read
+  obligation is one cheap assembly-level admission spec for the application's
+  own models/projections; see [specs.scenarios.csharp.md](../../../rules/specs.scenarios.csharp.md).
+  The concurrency, conflict-refusal and isolation matrix belongs only to Arc/Chronicle.
 - **Namespaces**: identical business keys in different tenants, background target selection,
   independent observer progress, every namespace covered by erasure.
 - **Compliance**: subject resolution, unreadable values after erasure, fenced new writes,

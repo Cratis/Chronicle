@@ -10,6 +10,7 @@ using Cratis.Chronicle.EventSequences.Migrations;
 using Cratis.Chronicle.Grpc;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Storage;
 
 namespace Cratis.Chronicle.Sequences;
@@ -27,6 +28,7 @@ namespace Cratis.Chronicle.Sequences;
 /// <remarks>
 /// This read-only operation is a command so plaintext travels in a request body, never in a query URL.
 /// </remarks>
+[StoreAccess(StoreAccess.Read)]
 [Command]
 [BelongsTo(WellKnownServices.EventSequences)]
 public partial record VerifyContent(

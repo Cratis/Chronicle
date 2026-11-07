@@ -69,6 +69,12 @@ public interface IEventStoreNamespaceDatabase
     Task<bool> HasAnyCollections();
 
     /// <summary>
+    /// Checks for the exact requested database name, without resolving casing or creating data.
+    /// </summary>
+    /// <returns>Whether the exact database exists.</returns>
+    Task<bool> HasOwnDatabase();
+
+    /// <summary>
     /// Drop the database holding the namespace's event store data.
     /// </summary>
     /// <returns>Awaitable task.</returns>

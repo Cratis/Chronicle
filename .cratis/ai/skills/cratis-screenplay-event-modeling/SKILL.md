@@ -1,6 +1,6 @@
 ---
 name: cratis-screenplay-event-modeling
-description: "Entry point and router for model-first Cratis work: the short decision rule (model, or code), the nine-step workflow per behavior, the four slice types, the Cratis divergences from the generic method, the quick validation gate, file layout and what parsed-but-not-runnable means, then the phase skill to load next. Use when designing an information system, mapping a business process or information flow, deciding the event vocabulary or stream boundaries, turning a whiteboard model into `.play`, or when a request may change behavior in an application with a Screenplay model. Not for: Screenplay syntax and the compiler alone (use `cratis-screenplay-toolchain`), the lifecycle, verdicts and handoffs (use `cratis-screenplay-modeling-lifecycle`), or rendering a settled model (use `cratis-screenplay-render-and-gap-fill`)."
+description: Use when starting a Screenplay modeling task, mapping a business process or deciding where a modeled behavior change enters the workflow. Not for syntax-only questions, lifecycle verdicts or rendering a settled model.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-screenplay-event-modeling/SKILL.md -->
@@ -116,12 +116,12 @@ result are in [references/parsed-not-runnable.md](references/parsed-not-runnable
 and `cratis-screenplay-toolchain` (`references/executable-subset.md`). Read `references/parsed-not-runnable.md` when determining the required ESM version or interpreting binding dispositions. Read `cratis-screenplay-toolchain`'s `references/executable-subset.md` when checking binder admission or reference-execution limits. Model the wider
 language freely when the `.play` file **is** the deliverable - documentation,
 review, a shared description of a system. Never read a clean `screenplay` run as
-evidence a construct works downstream. The language is frozen at ESM v1–v28 ([the freeze decision](https://github.com/Cratis/Screenplay/blob/main/decisions/0092-the-language-is-frozen-at-esm-v28.md)): model with it, and report a typed
-Stage, `cratis render` or Studio refusal as a platform gap rather than waiting for new constructs.
+evidence a construct works downstream. New constructs can be admitted, each byte-changing one with its own ESM version, and count as delivered once Stage admits it or refuses it with a typed refusal. Model with what the installed compiler admits, and report a typed
+Stage, `cratis render` or Studio refusal as a platform gap.
 
 ## Locate the model
 
-Look first for the project's existing `.play` files: the folder holding them is the model; a new model goes under `Source/` or `src/`, else `Screenplay/`, never under `.cratis/`. Read [references/file-layout.md](references/file-layout.md) (section "Locate the model") when the location is unclear or source might be copied between repositories. `cratis ai install` manages `.cratis/ai/`, never model files.
+Look first for the project's existing `.play` model and workspace state; reuse that root. Code-only `Source/` or `src/` is not a model root; otherwise use repository-root `Screenplay/`, never `.cratis/`. Read [references/file-layout.md](references/file-layout.md) (section "Locate the model") when the location is unclear or source might be copied between repositories. `cratis ai install` manages `.cratis/ai/`, never model files.
 
 ## Verified product sources
 
@@ -169,7 +169,9 @@ Read [references/parsed-not-runnable.md](references/parsed-not-runnable.md) (sec
 Two divergences matter, and getting them wrong produces a model that will not
 compile or will not be safe. Both are deliberate.
 
-- **A command may read state.** The generic method forbids `ReadModel -> Command`
+- **A command may read state.** A newly scaffolded model starts its application root
+  with `command reads protected`; leave the preamble out only for a model whose reads are
+  not admissible (PLAY0781/PLAY0786). The generic method forbids `ReadModel -> Command`
   edges. Screenplay ships `reads <ReadModel> [as <alias>] [by <property>]` so the
   model shows what a state-dependent decision consulted. Application-root
   `command reads protected` admits eligible command reads as v25: absent state

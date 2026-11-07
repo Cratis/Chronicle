@@ -1,6 +1,6 @@
 ---
 name: cratis-chronicle-multi-tenancy
-description: Isolate tenants in Chronicle with namespaces - what a namespace actually isolates, how a namespace is selected and resolved through IEventStoreNamespaceResolver, how namespaces come into existence, and the code rules that let a single-tenant deployment grow a second tenant. Use when setting up tenancy, when writing code that touches events or data on behalf of a tenant, or when adding a second tenant. Do not use for authentication, authorization, or identity-provider setup.
+description: Use when selecting Chronicle tenant namespaces, resolving tenant-bound events and read models or adding another tenant. Not for caller authentication, authorization or identity-provider setup.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-chronicle-multi-tenancy/SKILL.md -->

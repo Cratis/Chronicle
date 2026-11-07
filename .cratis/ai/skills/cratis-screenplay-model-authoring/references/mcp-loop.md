@@ -31,13 +31,21 @@ Without a fixed root, it binds the client's single workspace root, else a launch
 directory holding `.play` files. Only after a no-root or multiple-roots response,
 pass `path`: the folder holding the project's models, otherwise the folder the
 user names. Without a project the server uses `Documents/Screenplay` in the user's
-home; do not invent a location. A fixed root can switch only to the same model
-folder in a registered Git worktree of the same repository.
+home; do not invent a location. A fixed root can switch to the same model
+folder in a registered Git worktree of the same repository. Screenplay 4.236.1
+also admits an explicitly requested sibling from a code-only `Source/` or `src/`
+root, not arbitrary root changes; existing model/workspace state prevents that
+switch. An empty fixed root named `data` still cannot rebind; nested targets,
+links and unrelated nonempty folders remain refused. `semantic-diff` path sources
+share these checks. A Java project with only code in `src` selects
+`<project>/Screenplay`, not `<project>/src`. Read [sibling admission boundaries](mcp-tools.md#working-with-the-screenplay-mcp).
 
 1. Launch with a **fixed root**: `screenplay mcp <model-folder>`, or
    `cratis screenplay mcp <model-folder>`, or `cratis screenplay mcp` inside a
-   project, where the CLI locates the model (the project's `.play` files, else `Source/`
-   or `src/`, else a new `Screenplay/` folder; what the `cratis/screenplay` profile registers). Stdio, newline-delimited
+   project, where the CLI reuses model/workspace roots, else chooses repository-root
+   `Screenplay/`; code-only `Source/` or `src/` does not qualify (Requires Cratis CLI
+   3.93.1; `cratis --version`; older versions can select the code folder).
+   Discovery creates no directory; the first write does. Stdio, newline-delimited
    JSON-RPC, one sequential connection.
 2. Send `initialize`, then the `notifications/initialized` notification, **before
    any tool call**. Earlier calls fail with `-32600` "Initialize and send
@@ -177,6 +185,9 @@ connection. Passing `open-workspace.path` does **not** avoid it, because the err
    move or removal is that approval, also unattended: do not ask again per apply. Then `apply` with the **before**
    revisions. Every old handle and proposal is gone afterwards: re-read at the new
    revision.
+   For a PLAY0516 [wildcard-import repair](repairs.md#timeline-import-order), review
+   that future files will need explicit imports, then rediscover diagnostics and
+   repairs after the apply; never reuse the old ordering proposal.
 9. Verify: compile the whole folder (V1), read `executable-diagnostics` (V2,
    V3), and run `screenplay test <root> --format json` or workspace
    `run-specifications` (V4), naming the tool, version and source revision. A

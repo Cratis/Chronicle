@@ -25,9 +25,10 @@ public interface IConnectionService
     /// Notify server the client is still alive.
     /// </summary>
     /// <param name="keepAlive"><see cref="ConnectionKeepAlive"/> with information about the client.</param>
+    /// <param name="context">The <see cref="CallContext"/> for the call.</param>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Operation]
-    Task ConnectionKeepAlive(ConnectionKeepAlive keepAlive);
+    Task ConnectionKeepAlive(ConnectionKeepAlive keepAlive, CallContext context = default);
 
     /// <summary>
     /// Get the FileDescriptorSet for all services exposed by the server.

@@ -9,6 +9,9 @@ on:
       - .github/actions/**
       - .github/actionlint.yaml
       - .github/actionlint.yml
+      - .github/scripts/nightly-build-health-policy.mjs
+      - .github/scripts/nightly-build-health.mjs
+      - .github/scripts/test-nightly-build-health.mjs
 
 permissions:
   contents: read
@@ -20,3 +23,17 @@ concurrency:
 jobs:
   lint:
     uses: Cratis/Workflows/.github/workflows/workflow-lint.yml@main
+
+  nightly-health-policy:
+    name: Scheduled nightly health policy fixtures
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Check out policy fixtures
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - name: Test scheduled nightly health policy
+        run: node --test .github/scripts/test-nightly-build-health.mjs

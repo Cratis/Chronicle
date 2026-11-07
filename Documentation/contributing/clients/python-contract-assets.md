@@ -1,6 +1,6 @@
 ---
 title: Python contracts as release assets
-description: How the generated Python gRPC contracts are attached to a Chronicle release while PyPI publication is not configured.
+description: Cratis Chronicle attaches generated Python gRPC contracts to each selected release as verified assets; PyPI publication is not configured.
 ---
 
 The Python gRPC contracts (`cratis-chronicle-contracts`) are generated from Chronicle's canonical `.proto` files. They are **not published to PyPI**: trusted publishing has not been configured, and the publish job in `publish-python-client.yml` stays disabled. Until it is, a wheel and source distribution are attached to the GitHub release of the exact tag they were generated from. This is a temporary convention, and it is not a statement that Python is supported or at parity with the other clients.

@@ -4,18 +4,22 @@
 using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Contracts.Events.Constraints;
 
+using Cratis.Chronicle.Security;
+using Microsoft.AspNetCore.Http;
+
 namespace Cratis.Chronicle.Services.Events.Constraints;
 
 /// <summary>
 /// Represents the service for working with constraints.
 /// </summary>
 /// <param name="grainFactory">The <see cref="IGrainFactory"/> to use.</param>
-internal sealed class Constraints(IGrainFactory grainFactory) : IConstraints
+/// <param name="httpContextAccessor">The current request accessor.</param>
+internal sealed class Constraints(IGrainFactory grainFactory, IHttpContextAccessor? httpContextAccessor = null) : IConstraints
 {
     /// <inheritdoc/>
     public async Task Register(RegisterConstraintsRequest request)
     {
-        SystemStoreGuard.EnsureNotSystem(new(request.EventStore));
+        await SystemStoreGuard.EnsureNotSystemFromRequest(httpContextAccessor?.HttpContext, new(request.EventStore), StoreAccess.Manage);
         var key = new ConstraintsKey(request.EventStore);
         var grain = grainFactory.GetGrain<Chronicle.Events.Constraints.IConstraints>(key);
 

@@ -8,6 +8,8 @@ Which skill owns each task next to the toolchain.
 - Construct depth: `cratis-screenplay-command-surface`, `cratis-screenplay-projections`,
   `cratis-screenplay-read-surface`, `cratis-screenplay-captures-and-reactions`,
   `cratis-screenplay-specifications`, `cratis-screenplay-ui-composition`.
+- Sign-in providers, onboarding and the environment keys a model needs: `cratis-screenplay-authentication-and-onboarding`;
+  creating the environment and setting secrets: `cratis-environments-and-secrets`.
 - Rendering and gap-fill: `cratis-screenplay-render-and-gap-fill`,
   `cratis-stage-rendering-and-sandbox`.
 - Running systems (Chronicle server operations through the `cratis` CLI, with its authorization boundaries): `cratis-chronicle-cli-operations`.

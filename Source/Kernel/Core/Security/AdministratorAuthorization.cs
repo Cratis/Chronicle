@@ -3,6 +3,7 @@
 
 using System.Security.Claims;
 using Cratis.Chronicle.Configuration;
+using Cratis.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -15,6 +16,7 @@ namespace Cratis.Chronicle.Security;
 /// <param name="options">The server configuration.</param>
 /// <param name="privileges">The authoritative privilege lookup.</param>
 /// <param name="logger">The logger.</param>
+[Singleton]
 public class AdministratorAuthorization(IOptions<ChronicleOptions> options, IAdministratorPrivileges privileges, ILogger<AdministratorAuthorization> logger) : IAdministratorAuthorization
 {
     /// <inheritdoc/>

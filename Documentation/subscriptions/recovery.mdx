@@ -1,17 +1,18 @@
 ---
 uid: subscription-recovery
-description: Understand retained subscription progress and the different effects of replaying source forwarding and consumer inbox observers.
+title: Chronicle subscription recovery and replay
+description: Locate a Chronicle subscription failure before replaying. Forwarding can add duplicate inbox events; consumer replay processes stored events again.
 ---
 
-# Subscription recovery
+Recover a Cratis Chronicle subscription by first checking whether the event reached the consumer's inbox. If it is there but the view is empty, investigate consumer processing; replaying source forwarding can add duplicate inbox events without fixing the consumer's failure.
 
-An empty consumer view does not necessarily mean that an event is missing from its inbox. Before replaying anything, distinguish forwarding events into the inbox from processing events already stored there.
+Check the source outbox, the target's `inbox-{sourceEventStore}` sequence, and the affected consumer observer in that order. The point where progress stops tells you which part of the flow needs attention.
 
 ## Fresh history and retained progress
 
-A fresh subscription identity with no saved observer progress starts at sequence number zero in the retained source outbox. It forwards matching historical events as well as later publications; you do not need a replay just because the subscription was created after publication.
+A fresh subscription identity with no saved observer progress starts at sequence number zero in the retained source outbox. It forwards matching historical events as well as later publications. If you created the subscription after publication, check whether it is still catching up before requesting a replay.
 
-Disconnecting a subscription does not erase its forwarding observer's checkpoint. Reconnecting the same identity can resume from that saved progress and catch up on publications made while disconnected. It does not necessarily forward old events again. Removing and recreating a subscription is therefore not a reliable way to restart delivery from zero.
+The forwarding observer saves a checkpoint: the position it has reached in the source outbox. Disconnecting does not erase it. Reconnecting the same subscription identity can resume there and catch up on publications made while disconnected, rather than forwarding the whole history again. Removing and recreating a subscription is not a reliable way to restart delivery from zero.
 
 These behaviors concern retained source events. Neither subscribing nor replaying restores events that are no longer available in the source outbox.
 
@@ -22,21 +23,29 @@ These behaviors concern retained source events. Neither subscribing nor replayin
 | Reprocess events already in a consumer inbox | The consumer reactor, projection, or reducer observing that inbox | Processes existing inbox rows again without itself forwarding source events |
 | Forward retained source publications again | The source outbox subscription observer for that consumer | Appends forwarded events to the consumer inbox again |
 
-Replaying source forwarding is not deduplication. Events already forwarded can become additional inbox rows with new inbox sequence numbers. Those rows can trigger ordinary consumer processing and its side effects. Replaying an inbox consumer can also repeat that consumer's side effects. Review the affected observers and their replay behavior before either operation.
+Before either operation, review what the affected consumers do when processing an event again. Source-forwarding replay can append another inbox row for an event already delivered, with a new inbox sequence number. That row can trigger ordinary consumer processing and repeat external actions. Replaying the inbox consumer can also repeat its actions, even though it does not add another forwarded copy.
 
-Wait for the actual replay job to complete before assessing the result; a replay request returning successfully does not establish that replay has finished. Inspect the consumer inbox separately from its derived views to distinguish forwarding from processing failures.
+Fix the cause of the failure before choosing a replay. For example, a missing pinned schema or an erased subject's blocked encryption key will still prevent a target append after replay. See [Explicit Event Store Subscriptions](explicit-subscriptions) for generation pins and [Compliance and PII](compliance-and-pii.md) for the erasure behavior.
 
 ## Resolve the exact subscription scope
 
-For a source-forwarding operation, start with the consumer's stored subscription definition, its explicit identifier, and its source event store. The current forwarding observer uses the identifier followed by `->` and the consumer event-store name. It belongs to the **source** event store, the relevant namespace, and the source outbox. Different consumers and namespaces have separate forwarding progress.
+For source-forwarding replay, start with the consumer's stored subscription definition. Identify its subscription ID, source event store, target event store, and namespace. The current forwarding observer ID is the subscription ID followed by `->` and the target event-store name.
 
-Do not reconstruct that scope by splitting an arbitrary observer name: subscription identifiers themselves can contain separators. Nor does runtime metadata naming a target store alone prove which stored subscription definition owns an observer.
+That observer belongs to the source store's outbox in the relevant namespace, not to the consumer's inbox. Different consumers and namespaces have separate forwarding progress, so verify the full scope before requesting replay.
 
-An older observer can have a different identity from the observer linked by the current definition. Recreating a definition does not establish that its current observer inherits that older observer's checkpoint. If a definition is missing, the linkage conflicts, or an older identity cannot be linked unambiguously, stop and inspect the actual stored definition and scoped observer before requesting replay. Do not guess a forwarding target from a name.
+Do not derive the scope by splitting an arbitrary observer name: subscription IDs can themselves contain separators. Runtime metadata naming a target store is not enough to establish which stored definition owns the observer.
 
-If you wrap the existing replay API with explicit subscription and consumer labels, treat those labels as **UNVERIFIED, operator-attested information**. Only the supplied producer event store, namespace, and outbox observer ID select the source-forwarding replay target; the labels neither verify nor restrict which consumer receives events. You are responsible for checking that the supplied scope and observer match the subscription you intend to replay. Before opening a connection, such a wrapper must warn that replay can create duplicate inbox rows and repeat consumer side effects, and require explicit confirmation to proceed.
+Older observers can have different IDs from those linked by the current definition. Recreating a definition does not establish that the current observer inherits an older checkpoint. If the definition is missing or the link to an observer is unclear, stop and inspect the stored definition and scoped observer. Do not guess a forwarding target from its name.
 
-This page explains existing subscription and replay behavior. It does not introduce a subscription-specific recovery command or guarantee that administrative lookups are non-mutating on every storage provider.
+If your own tooling adds subscription and consumer labels around the replay API, treat them as unverified information supplied by the operator. Only the producer event store, namespace, and outbox observer ID select the replay target. Labels neither verify that selection nor restrict which consumer receives the forwarded events.
+
+Before such tooling opens a connection, it must warn that replay can create duplicate inbox rows and repeat consumer side effects, then require explicit confirmation. Verify the stored definition against the supplied scope rather than relying on a label.
+
+Do not assume that administrative lookups are read-only on every storage provider. This procedure uses the existing observer replay behavior; it does not provide a subscription-specific recovery command.
+
+## Confirm recovery
+
+Wait for the replay job to complete before assessing the result. A successful replay request means the request was accepted, not that processing has finished. Check the consumer inbox separately from its derived views: source-forwarding replay should produce inbox events, while consumer replay should reprocess events already there.
 
 ## See also
 

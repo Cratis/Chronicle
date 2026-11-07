@@ -46,6 +46,11 @@ public class JobStateWithLastHandledEvent : JobState
     public IList<ReplayPartitionStep> ReplayPartitionSteps { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets a value indicating whether the replay walks the whole sequence in one step instead of one step per partition.
+    /// </summary>
+    public bool ReplayedInOneSweep { get; set; }
+
+    /// <summary>
     /// Gets or sets the failed partition keys captured before the replay began.
     /// </summary>
     public IList<Key> FailedPartitionKeys { get; set; } = [];

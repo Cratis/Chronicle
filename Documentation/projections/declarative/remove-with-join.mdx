@@ -1,73 +1,66 @@
 ---
-description: Use RemovedWithJoin<>() in a Chronicle child projection to remove child items when events from other streams show related data was removed.
+title: "Cratis Chronicle projections: remove children with RemovedWithJoin"
+description: "Use RemovedWithJoin<TEvent>() in Cratis Chronicle to remove matching children across parent read models when a related entity is deleted or closed."
 ---
-# Projection with RemoveWithJoin
-
-The `RemovedWithJoin<>()` method allows you to remove child items from collections when events from other streams indicate that related data should be removed. This is particularly useful in scenarios where the removal event occurs on a different stream than the one that originally added the child.
+`RemovedWithJoin<TEvent>()` in Cratis Chronicle removes matching child items across the parent read models maintained by a projection. Use it when a related entity changes independently: disbanding a group, for example, should remove that group's membership from every user's collection without listing the users in the event.
 
 ## Understanding RemoveWithJoin vs RemovedWith
 
-- **`RemovedWith<>()`**: Removes children based on events from the same stream
-- **`RemovedWithJoin<>()`**: Removes children based on events from different streams (joins)
+`RemovedWith<TEvent>()` targets a child under a particular parent, using the event's parent and child keys. It fits a user leaving one group. The keys can come from event content; the event does not have to originate on the parent's event source.
+
+`RemovedWithJoin<TEvent>()` uses a child key without requiring a parent key. It removes matching children across parents in this projection, which fits a group being disbanded for all its members.
 
 ## Basic RemoveWithJoin usage
 
-Use `RemovedWithJoin<>()` in child projections to specify which events should trigger child removal:
+Declare `RemovedWithJoin<>()` inside `Children(...)`, alongside the events that add and enrich the child:
 
 <ChronicleClientTabs snippet="projections/declarative/remove-with-join/basic" />
 
-In this example:
+The membership event routes to a user through `UsingParentKey(e => e.UserId)`. The child collection identifies each group through `IdentifiedBy(e => e.GroupId)`, while `Join` supplies the group's details. The deletion handler removes children matching its resolved key across users in this projection.
 
-- When a `UserAddedToGroup` event occurs, a group is added to the user's collection
-- `UsingParentKey(e => e.UserId)` extracts the parent (user) identifier from the event content
-- When a `GroupDeleted` event occurs anywhere in the system, that group is removed from all users
-- The removal is based on the group ID that was used to join the data
-
-> **Note**: If you don't specify `UsingParentKey()`, the framework uses the EventSourceId as the parent identifier by default. Use `UsingParentKey()` when the parent identifier is a property in the event content rather than the EventSourceId.
+Keys default to the event source ID. The adding event's child key and the deletion event's removal key must resolve to the same group identifier. When that identifier is in event content instead, configure `UsingKey(...)` as in the explicit-key example below. Use `UsingParentKey(...)` when the parent identifier also comes from event content.
 
 ## How RemoveWithJoin works
 
-When using `RemovedWithJoin<>()`:
+When the projection processes the removal event, Chronicle resolves its key from the event source ID or the configured key expression. It then removes children whose `IdentifiedBy` value matches that key from the configured collection across parent instances.
 
-1. **Event occurs**: The specified event type (e.g., `GroupDeleted`) is processed
-2. **Key extraction**: The system extracts the key from the event source ID or specified key expression
-3. **Child lookup**: All projections with children joined on that key are found
-4. **Removal**: The matching child items are removed from all affected collections
+This is a child-collection operation, not a search through every projection in the system. Root-level `RemovedWithJoin` removal is not supported.
 
 Watchers of the read model are notified once for each parent that held the child. See [When a join removes children](../../read-models/watching-read-models.mdx#when-a-join-removes-children).
 
 ## RemoveWithJoin with explicit keys
 
-You can specify which property to use as the key for removal:
+Here, the assignment and cancellation events both carry `ProjectId`. `UsingKey(e => e.ProjectId)` makes each event resolve to the same child identifier, even if their event source IDs differ:
 
 <ChronicleClientTabs snippet="projections/declarative/remove-with-join/explicit-keys" />
 
 ## Real-world example: User groups
 
-Consider a system where users can be members of groups, and groups can be deleted:
+A membership can end because one user leaves or because the group is disbanded. Declare both handlers on the membership collection:
 
 <ChronicleClientTabs snippet="projections/declarative/remove-with-join/user-groups-example" />
 
-In this example:
-
-- **`RemovedWith<UserLeftGroup>`**: Removes membership when a user explicitly leaves a group
-- **`RemovedWithJoin<GroupDisbanded>`**: Removes membership from all users when a group is disbanded
+The user-left handler supplies both `UserId` and `GroupId`, so it removes one membership. The group-disbanded handler supplies the group key, so it removes that group from every user's membership collection in this projection.
 
 ## Complex scenario: Project assignments
 
 <ChronicleClientTabs snippet="projections/declarative/remove-with-join/project-assignments-example" />
 
-This handles three removal scenarios:
+The same distinction applies to project assignments:
 
-1. **Individual unassignment**: `DeveloperUnassignedFromProject` removes one developer from one project
-2. **Project cancellation**: `ProjectCancelled` removes the project from all developers
-3. **Project completion**: `ProjectCompleted` removes the project from all developers
+- An unassignment removes one project from one developer's collection.
+- A cancellation removes that project from all developer collections in the projection.
+- A completion removes it from those collections in the same way.
 
 ## Read model examples
+
+Each parent keeps its own collection of memberships or assignments. The child identifier is the group or project ID shared with the removal event:
 
 <ChronicleClientTabs snippet="projections/declarative/remove-with-join/read-models" />
 
 ## Event definitions
+
+Individual removal events carry the parent and child IDs. Group-wide and project-wide removal events can use their event source ID as the child key:
 
 <ChronicleClientTabs snippet="projections/declarative/remove-with-join/events" />
 
@@ -75,21 +68,14 @@ This handles three removal scenarios:
 
 ### Use for cross-stream cleanup
 
-`RemovedWithJoin<>()` is ideal when:
-
-- Events from one stream should trigger cleanup in projections of other stream
-- You need to maintain referential integrity across stream boundaries
-- Deletion or deactivation events should cascade to related read models
+Use `RemovedWithJoin<>()` when an event about one entity should remove its representation from many parent collections. This updates derived read models; it does not delete the source events or enforce a write-time relationship constraint.
 
 ### Combine with RemovedWith
 
-Often you'll use both removal methods together:
-
-- `RemovedWith<>()` for explicit removals within the same stream
-- `RemovedWithJoin<>()` for cascade removals from related streams
+Choose by the scope of the removal, not just by which stream emitted the event. Use `RemovedWith<>()` when you know the parent and child. Use `RemovedWithJoin<>()` when the child key should match across parents.
 
 ### Consider event ordering
 
-Be aware that `RemovedWithJoin<>()` events might be processed before all related `Join<>()` events have completed, so ensure your system handles partial data gracefully.
+Parent instances can be updated by different event-source partitions. Do not treat removal across their collections as a single atomic change. See [eventual consistency in projections](../eventual-consistency) when deciding what callers may read while processing catches up.
 
-The `RemovedWithJoin<>()` method provides powerful cross-stream cleanup capabilities, ensuring that your read models stay consistent when related data is removed from other parts of your system.
+If you are still choosing the child identifier or routing membership events to a parent, start with [child projections](./children).

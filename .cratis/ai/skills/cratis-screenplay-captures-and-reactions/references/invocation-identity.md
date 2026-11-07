@@ -55,9 +55,15 @@ module Work
       specification ProcessingRequestedWork
         when append WorkRequested
           workId = "work-1"
-        then WorkRecorded
-          for "work-1"
+        then invokes RecordWork
+          workId = "work-1"
 ```
+
+The automation states the hand-over with `then invokes` (ESM v34). `RecordWork` is
+decided under the declared system identity, so a denial would reach the reaction's
+refusal branches, but `WorkRecorded` belongs to the `RecordWork` slice and is not kept
+in this specification (Screenplay decision 0115). `RecordWork`'s own slice proves the
+event with a `when RecordWork` specification.
 
 ## Diagnostics and target boundaries
 

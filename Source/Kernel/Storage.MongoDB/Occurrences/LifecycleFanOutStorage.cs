@@ -14,7 +14,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.Occurrences;
 /// <param name="database">The event-store database.</param>
 public class LifecycleFanOutStorage(IMongoDatabase database) : ILifecycleFanOutStorage
 {
-    readonly IMongoCollection<BsonDocument> _intents = database.GetCollection<BsonDocument>("lifecycle-fan-out-intents");
+    readonly IMongoCollection<BsonDocument> _intents = database.GetCollection<BsonDocument>(WellKnownCollectionNames.LifecycleFanOutIntents);
 
     /// <inheritdoc/>
     public async Task<LifecycleFanOutIntent?> Get(OccurrenceId id)

@@ -3,7 +3,8 @@ name: Wire Compatibility
 # Everything released within a major has to keep serving the first release of that major, so a client built against
 # 16.0.0 keeps talking to a 16.x server. Nothing enforced that, and 16.x shipped breaking wire changes anyway - whole
 # services renamed out from under their proto package, streaming rpcs turned unary, messages removed. This is the
-# gate that stops the next one, and it runs before anything else because there is no point building what cannot ship.
+# gate that stops the next one. It runs on every pull request, beside the build, and is required by the `specs`
+# aggregate; the publish workflow does not repeat it.
 #
 # It checks two things, in order:
 #   1. The committed proto files and descriptor set still match the contracts source. A stale descriptor set would
@@ -68,7 +69,7 @@ jobs:
   wire-compatibility:
     runs-on: ubuntu-latest
     # Downloading a contracts package per released minor and building Contracts takes about a minute. The
-    # default is six hours, and this job gates every build and every publish - so a run that hangs holds a
+    # default is six hours, and this job gates every pull request - so a run that hangs holds a
     # slot in the organization's shared concurrency pool for all of it, with everything downstream of it
     # queued behind a check that is never going to answer.
     timeout-minutes: 30

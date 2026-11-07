@@ -12,6 +12,12 @@ namespace Cratis.Chronicle.Configuration;
 public class Telemetry
 {
     /// <summary>
+    /// Gets or inits the metric naming mode. Legacy is the default until the next major release;
+    /// Convention opts into the shared names, and Both publishes both sets during migration.
+    /// </summary>
+    public MetricNames MetricNames { get; init; } = MetricNames.Legacy;
+
+    /// <summary>
     /// Gets or inits whether Orleans runtime and grain-call spans are exported. Defaults to false:
     /// these sources accounted for about 99% of kernel spans. Trace context propagation stays enabled.
     /// </summary>

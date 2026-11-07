@@ -60,7 +60,7 @@ These non-refusal failures and unhandled refusals fail the observer for recovery
 ## Verify
 
 Run `dotnet build -c Debug` and the affected specification project with
-`dotnet test`. Cover selector ordering, each handled refusal, unchanged
+the owning project's built spec executable (see [specs.csharp](../../../rules/specs.csharp.md)). Cover selector ordering, each handled refusal, unchanged
 remaining-command collaborators, branch append failure, and a concurrency or
 exception failure that must not be acknowledged. Assert earlier committed effects
 separately; a failed result does not prove rollback.

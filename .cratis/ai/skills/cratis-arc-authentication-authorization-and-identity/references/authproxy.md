@@ -24,6 +24,58 @@ The headers are **not signed**. A backend cannot tell a request that came throug
 
 `IdentityVerification` on an AuthProxy service defaults to `Required` (fail closed). Only a `2xx` with `"isAuthorized": true` admits the caller. A `404`, an unreachable backend, a timeout (default ten seconds), any other non-`2xx`, an empty or unparseable body, a missing verdict, or `isAuthorized: false` all deny. The earlier `BestEffort` mode denied only on `403`. Consequently your `IProvideIdentityDetails` result is the admission verdict at the proxy, not only display data: return `IsUserAuthorized = false` deliberately, and keep the endpoint reachable and fast. A service can opt back into `BestEffort` explicitly; do not do that to hide a broken identity endpoint.
 
+## Multi-host sessions are opt-in
+
+Requires AuthProxy 2.32.4 for the multi-host/crawler/invitation contract below; check the deployed version, or retain host-only sessions and the older error-page contract.
+
+Defaults stay host-only with cookie name
+`.Cratis.AuthProxy.Auth.v2`, per-host handshakes and relative return URLs.
+`Session:CookieDomain` shares sessions beneath a parent domain;
+`Session:CookieName` isolates independent deployments. `SignIn:CallbackHost`
+centralizes OAuth/OIDC handshakes and requires the cookie domain. Restrict
+`AllowedHosts`; never broaden hosts merely to make shared cookies work.
+
+The callback and declared service hosts must lie inside the cookie domain;
+`SubHost` tenant resolution cannot be combined with it. Absolute returns require
+the callback host and an allowed origin inside that domain on the request's
+scheme; otherwise they reduce to a local path. Invitations, credential links and
+registration still start on their original host and need provider callbacks
+there. Use the product's one-proxy/several-hosts migration guide, not an inferred
+cross-domain cookie recipe.
+
+`AuthProxy:SearchIndexing:Exclude` optionally serves anonymous
+`robots.txt` and adds `X-Robots-Tag: noindex, nofollow`. It is off by default and
+is a crawler policy, not authorization. Invitation error-page tokens
+`{{invitedEmail}}` and `{{assertedEmail}}` are blank for addresses outside ASCII
+letters, digits and `._+-@`; do not assume these placeholders always contain text.
+Signed-in `/register` forwarding needs no host workaround.
+
+## Starting AuthProxy from a Screenplay application's contract
+
+Requires AuthProxy 2.40.0 or later for `Cratis:AuthProxy:Application`; an older image ignores it and starts with no providers.
+
+AuthProxy can start from two inputs: the **provider list** of a Screenplay model (kind and identity per provider) and the **values of a Cratis environment**. It translates them onto its ordinary `Cratis:AuthProxy` options, so an application behind it trusts the proxy exactly as described above. The model never carries provider configuration; see `cratis-screenplay-authentication-and-onboarding` for the keys and `cratis-environments-and-secrets` for the values.
+
+```json
+{
+  "Cratis": { "AuthProxy": { "Application": {
+    "EnvironmentName": "production",
+    "Providers": [
+      { "Kind": "EntraId", "Identity": "EntraId" },
+      { "Kind": "OpenId", "Identity": "Partner" }
+    ]
+  } } }
+}
+```
+
+- A provider's `Kind` is `EntraId`, `GitHub`, `Google`, `Apple` or `OpenId`; `Identity` is the model's alias, otherwise the provider name, unique ignoring case. The identity is also the scheme (lowercase, spaces to hyphens), so the callback is `/signin-<scheme>`.
+- Required keys per kind: `clientId` and `clientSecret` for all; plus `tenantId` for `EntraId` and `authority` for `OpenId`. Each is addressed as `authentication.providers.<Identity>.<key>`.
+- The contract cannot be combined with providers configured directly under `Authentication:OidcProviders` or `OAuthProviders`; AuthProxy refuses to start.
+- A missing required key stops AuthProxy before it listens (exit code 78), naming the key, provider and environment, never a value.
+- **Secrets are never read from arguments and never logged.** A key resolves from `Cratis:AuthProxy:Application:Environment:<key>`, then the same key with `_FILE` appended (a path to a file holding the value), then a file named exactly `<key>` in `SecretsDirectory`. Mount secrets as files and point `SecretsDirectory` at the folder; do not put a secret in an environment variable or an image.
+- `Application:Development=true` allows HTTP only on loopback addresses; every other URL must be HTTPS. Never set it outside local development.
+- With `Application:Onboarding=true`, supply the `onboarding.*` keys for the application's own Ante and every provider also gets invitation completion; see `cratis-onboarding-runtime`.
+
 ## Tenants and services
 
 AuthProxy resolves the tenant through ordered strategies under `Cratis:AuthProxy:TenantResolutions` (`Host`, `Claim`, `Route`, `Specified`, `Default`, `SubHost`, `Selection`). The result reaches the backend as `x-cratis-tenant-id`, which is Arc's default tenant header, so an Arc application behind AuthProxy needs no tenancy configuration and the `UseHeaderTenancy("Tenant-ID")` workaround seen in older applications can be removed.

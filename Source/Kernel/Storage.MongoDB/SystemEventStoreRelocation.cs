@@ -7,6 +7,7 @@ using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage.MongoDB.Namespaces;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using MongoDB.Bson;
 using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB;
@@ -54,17 +55,40 @@ public class SystemEventStoreRelocation(
         var eventStore = connections.GetDatabase(StorageConnectionKind.EventStore, DatabaseNames.ForEventStore(system, prefix, from), system.Value);
         var server = clientManager.GetClientFor(Setup.MongoDBChronicleBuilderExtensions.GetMongoClientSettings(mongoDBOptions.Value.Server));
 
+        var complete = true;
         foreach (var @namespace in await Namespaces(eventStore, prefix, from))
         {
-            await Move(StorageConnectionKind.Namespace, DatabaseNames.ForEventStoreNamespace(system, @namespace, prefix, from), DatabaseNames.ForEventStoreNamespace(system, @namespace, prefix, to), @namespace);
-            await Move(StorageConnectionKind.ReadModels, DatabaseNames.ForReadModels(system, @namespace, prefix, from), DatabaseNames.ForReadModels(system, @namespace, prefix, to), @namespace);
-            await Move(
+            complete &= await Move(StorageConnectionKind.Namespace, DatabaseNames.ForEventStoreNamespace(system, @namespace, prefix, from), DatabaseNames.ForEventStoreNamespace(system, @namespace, prefix, to), @namespace);
+            complete &= await Move(StorageConnectionKind.ReadModels, DatabaseNames.ForReadModels(system, @namespace, prefix, from), DatabaseNames.ForReadModels(system, @namespace, prefix, to), @namespace);
+            complete &= await Move(
                 server.GetDatabase(DatabaseNames.ForEventStoreNamespace(system, @namespace, prefix, from)),
                 server.GetDatabase(DatabaseNames.ForEventStoreNamespace(system, @namespace, prefix, to)));
         }
 
-        await Move(StorageConnectionKind.EventStore, DatabaseNames.ForEventStore(system, prefix, from), DatabaseNames.ForEventStore(system, prefix, to), EventStoreNamespaceName.Default, includeNamespace: false);
-        logger.Moved(from, to);
+        complete &= await Move(StorageConnectionKind.EventStore, DatabaseNames.ForEventStore(system, prefix, from), DatabaseNames.ForEventStore(system, prefix, to), EventStoreNamespaceName.Default, includeNamespace: false);
+        if (complete)
+        {
+            logger.Moved(from, to);
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task<string?> FindMisplacedData()
+    {
+        var prefix = storageOptions.Value.DatabaseNamePrefix;
+        var configured = storageOptions.Value.SystemDatabaseName;
+        var other = string.Equals(configured, DatabaseNames.LegacySystemDatabaseName, StringComparison.OrdinalIgnoreCase)
+            ? Configuration.Storage.DefaultSystemDatabaseName
+            : DatabaseNames.LegacySystemDatabaseName;
+
+        if (await HoldsEvents(prefix, configured) || !await HoldsEvents(prefix, other))
+        {
+            return null;
+        }
+
+        return $"The System event store is empty under the configured database name '{configured}', but holds events under '{other}'. " +
+            $"The databases named '{DatabaseNames.LegacySystemDatabaseName}' were renamed to '{Configuration.Storage.DefaultSystemDatabaseName}' in Chronicle 19.117. " +
+            $"Set storage.systemDatabaseName to '{other}' (Cratis__Chronicle__Storage__SystemDatabaseName) or move the data back; the kernel does not copy it back.";
     }
 
     static async Task<IEnumerable<EventStoreNamespaceName>> Namespaces(IMongoDatabase eventStore, string prefix, string from)
@@ -86,12 +110,26 @@ public class SystemEventStoreRelocation(
             .ToArray();
     }
 
-    Task Move(StorageConnectionKind kind, string fromName, string toName, EventStoreNamespaceName @namespace, bool includeNamespace = true) =>
+    async Task<bool> HoldsEvents(string prefix, string systemDatabaseName)
+    {
+        var server = clientManager.GetClientFor(Setup.MongoDBChronicleBuilderExtensions.GetMongoClientSettings(mongoDBOptions.Value.Server));
+        var databaseName = DatabaseNames.ForEventStoreNamespace(EventStoreName.System, EventStoreNamespaceName.Default, prefix, systemDatabaseName);
+        var names = await (await server.ListDatabaseNamesAsync()).ToListAsync();
+        if (!names.Contains(databaseName, StringComparer.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var events = server.GetDatabase(databaseName).GetCollection<BsonDocument>(WellKnownCollectionNames.EventLog);
+        return await events.Find(FilterDefinition<BsonDocument>.Empty).Limit(1).AnyAsync();
+    }
+
+    Task<bool> Move(StorageConnectionKind kind, string fromName, string toName, EventStoreNamespaceName @namespace, bool includeNamespace = true) =>
         Move(
             connections.GetDatabase(kind, fromName, EventStoreName.System.Value, includeNamespace ? @namespace.Value : string.Empty),
             connections.GetDatabase(kind, toName, EventStoreName.System.Value, includeNamespace ? @namespace.Value : string.Empty));
 
-    async Task Move(IMongoDatabase source, IMongoDatabase target)
+    async Task<bool> Move(IMongoDatabase source, IMongoDatabase target)
     {
         var sourceName = source.DatabaseNamespace.DatabaseName;
         var targetName = target.DatabaseNamespace.DatabaseName;
@@ -101,12 +139,20 @@ public class SystemEventStoreRelocation(
         if (string.Equals(sourceName, targetName, StringComparison.OrdinalIgnoreCase))
         {
             logger.DatabaseNameUnchanged(sourceName);
-            return;
+            return true;
         }
 
-        if (await MongoDatabaseMove.Move(source, target, logger))
+        switch (await MongoDatabaseMove.Move(source, target, logger))
         {
-            logger.DatabaseMoved(sourceName, targetName);
+            case DatabaseMoveOutcome.Moved:
+                logger.DatabaseMoved(sourceName, targetName);
+                break;
+
+            case DatabaseMoveOutcome.Kept:
+                logger.DatabaseKept(sourceName, targetName);
+                return false;
         }
+
+        return true;
     }
 }

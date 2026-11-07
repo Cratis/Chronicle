@@ -12,7 +12,7 @@ public class when_the_management_command_targets_a_missing_user : given.an_admin
     void Establish() => _grainFactory.GetGrain<IAdministratorRoster>(Concepts.Security.AdministratorRoster.Key).Returns(_roster);
 
     async Task Because() => _error = await Catch.Exception(() => new GrantAdministrator(_first)
-        .Handle(_grainFactory, Substitute.For<ICurrentPrincipalAccessor>()));
+        .Handle(_grainFactory, Substitute.For<ICurrentPrincipalAccessor>(), Microsoft.Extensions.Options.Options.Create(new Cratis.Chronicle.Configuration.ChronicleOptions())));
 
     [Fact] void should_reject_the_grant() => _error.ShouldBeOfExactType<InvalidOperationException>();
     [Fact] void should_not_append_a_grant() => Recorded<UserGrantedAdministrator>().ShouldBeEmpty();

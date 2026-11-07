@@ -15,6 +15,7 @@ namespace Cratis.Chronicle.Alerts;
 /// <param name="Counts">Complete scoped counts.</param>
 [ReadModel]
 [BelongsTo(WellKnownServices.Alerts)]
+[StoreCapability("chronicle.alerts.read")]
 public record AlertIncidentSummary(
     AlertIncidentsReadinessState Status,
     IEnumerable<AlertIncidentCountDetails> Counts)

@@ -20,7 +20,7 @@ public class and_notification_fails : given.a_subscriber_with_a_change
     [Fact] void should_notify_only_after_commit() => _notifiedBeforeCommit.ShouldBeFalse();
     [Fact] void should_not_fail_the_partition() => _result.State.ShouldEqual(ObserverSubscriberState.Ok);
     [Fact] void should_advance_past_the_committed_events() => _result.LastSuccessfulObservation.ShouldEqual((EventSequenceNumber)42);
-    [Fact] void should_not_retry_the_committed_write() => _firstPipeline.Received(1).Reduce(Arg.Any<ReducerContext>(), Arg.Any<ReducerDelegate>());
+    [Fact] void should_not_retry_the_committed_write() => _firstPipeline.Received(1).Reduce(Arg.Any<ReducerContext>(), Arg.Any<ReducerDelegate>(), Arg.Any<bool>());
     [Fact] void should_not_retry_the_notification() => _notifier.Received(1).Notify(_key.Namespace, _change.ReadModelKey, _change.ReadModel, _change.Change);
     [Fact] void should_log_the_notification_failure() => _logger.ReceivedCalls().Count(call => call.GetMethodInfo().Name == nameof(ILogger.Log) && call.GetArguments()[0] is LogLevel.Error && ReferenceEquals(call.GetArguments()[3], _error)).ShouldEqual(1);
 }

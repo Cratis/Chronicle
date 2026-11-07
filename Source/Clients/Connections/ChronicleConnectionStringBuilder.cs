@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Data.Common;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 
 namespace Cratis.Chronicle.Connections;
@@ -15,6 +16,7 @@ namespace Cratis.Chronicle.Connections;
 /// chronicle+srv://host[/?options] for DNS SRV record lookup.
 /// </remarks>
 #pragma warning disable CA1010 // Generic interface should also be implemented
+[DebuggerDisplay("{BuildRedacted(),nq}")]
 public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
 #pragma warning restore CA1010 // Generic interface should also be implemented
 {
@@ -31,6 +33,7 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     const string DisableTlsKey = "disableTls";
     const string SkipCompatibilityCheckKey = "skipCompatibilityCheck";
     const string SkipKeepAliveKey = "skipKeepAlive";
+    const string ServerlessKey = "serverless";
     const string LoadBalancerKey = "loadBalancer";
     const string SrvNameServerKey = "srvNameServer";
     const string CertificatePathKey = "certificatePath";
@@ -38,15 +41,7 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     const string SrvScheme = "chronicle+srv";
     const int DefaultPort = 35000;
 
-    /// <summary>
-    /// The value every credential is replaced by when building a redacted connection string.
-    /// </summary>
-    const string RedactedValue = "REDACTED";
-
-    /// <summary>
-    /// Fragments in an option name that mark its value as a credential.
-    /// </summary>
-    static readonly string[] _sensitiveKeyFragments = ["password", "secret", "token", "key", "credential"];
+    static readonly HashSet<string> _keysThatMayHoldAtSign = new([ApiKeyKey, CertificatePathKey, CertificatePasswordKey, LoadBalancerKey, SrvNameServerKey], StringComparer.OrdinalIgnoreCase);
 
     static readonly HashSet<string> _keysWithDedicatedRendering =
     [
@@ -61,11 +56,14 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
         DisableTlsKey,
         SkipCompatibilityCheckKey,
         SkipKeepAliveKey,
+        ServerlessKey,
         LoadBalancerKey,
         SrvNameServerKey,
         CertificatePathKey,
         CertificatePasswordKey
     ];
+
+    readonly bool _hasUncertainDiagnosticInput = true;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ChronicleConnectionStringBuilder"/> class.
@@ -80,7 +78,18 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     /// <param name="connectionString">The connection string to parse.</param>
     public ChronicleConnectionStringBuilder(string connectionString)
     {
+        _hasUncertainDiagnosticInput = !ConnectionStringDiagnostics.HasUnambiguousStructure(connectionString);
         ParseConnectionString(connectionString);
+    }
+
+    /// <summary>
+    /// Initializes a diagnostic-preserving copy without changing raw serialization.
+    /// </summary>
+    /// <param name="source">The builder to copy.</param>
+    internal ChronicleConnectionStringBuilder(ChronicleConnectionStringBuilder source)
+        : this(source.Build())
+    {
+        _hasUncertainDiagnosticInput |= source._hasUncertainDiagnosticInput;
     }
 
     /// <summary>
@@ -103,7 +112,7 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     /// </summary>
     public int Port
     {
-        get => ContainsKey(PortKey) ? Convert.ToInt32(this[PortKey]) : DefaultPort;
+        get => ContainsKey(PortKey) ? ConvertOption(PortKey, Convert.ToInt32) : DefaultPort;
         set
         {
             Remove(ServersKey);
@@ -292,7 +301,7 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     /// </remarks>
     public bool SkipTlsValidation
     {
-        get => !ContainsKey(SkipTlsValidationKey) || Convert.ToBoolean(this[SkipTlsValidationKey]);
+        get => !ContainsKey(SkipTlsValidationKey) || ConvertOption(SkipTlsValidationKey, Convert.ToBoolean);
         set => this[SkipTlsValidationKey] = value;
     }
 
@@ -310,7 +319,7 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     /// </remarks>
     public bool DisableTls
     {
-        get => ContainsKey(DisableTlsKey) && Convert.ToBoolean(this[DisableTlsKey]);
+        get => ContainsKey(DisableTlsKey) && ConvertOption(DisableTlsKey, Convert.ToBoolean);
         set
         {
             if (value)
@@ -340,7 +349,7 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     /// </remarks>
     public bool SkipCompatibilityCheck
     {
-        get => ContainsKey(SkipCompatibilityCheckKey) && Convert.ToBoolean(this[SkipCompatibilityCheckKey]);
+        get => ContainsKey(SkipCompatibilityCheckKey) && ConvertOption(SkipCompatibilityCheckKey, Convert.ToBoolean);
         set => this[SkipCompatibilityCheckKey] = value;
     }
 
@@ -354,8 +363,22 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     /// </remarks>
     public bool SkipKeepAlive
     {
-        get => ContainsKey(SkipKeepAliveKey) && Convert.ToBoolean(this[SkipKeepAliveKey]);
+        get => ContainsKey(SkipKeepAliveKey) && ConvertOption(SkipKeepAliveKey, Convert.ToBoolean);
         set => this[SkipKeepAliveKey] = value;
+    }
+
+    /// <summary>
+    /// Gets or sets whether the .NET client runs in serverless mode.
+    /// </summary>
+    /// <remarks>
+    /// Serverless mode implies skipping the keep-alive connection. It is equal to setting
+    /// <c language="json">Cratis:Chronicle:Serverless:Mode</c> to <c language="csharp">Serverless</c> in the .NET client. Other clients ignore the key.
+    /// </remarks>
+    [Experimental("CHRX0001", UrlFormat = "https://www.cratis.io/docs/chronicle/clients/dotnet/serverless-mode")]
+    public bool Serverless
+    {
+        get => ContainsKey(ServerlessKey) && Convert.ToBoolean(this[ServerlessKey]);
+        set => this[ServerlessKey] = value;
     }
 
     /// <summary>
@@ -486,6 +509,7 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
         }
 
         AddSkipKeepAlive(queryParams);
+        AddServerless(queryParams);
 
         if (ContainsKey(LoadBalancerKey))
         {
@@ -530,25 +554,12 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     /// </summary>
     /// <returns>The Chronicle connection string, safe to log.</returns>
     /// <remarks>
-    /// Scheme, host, port and every non-sensitive option are preserved so the result stays useful for
-    /// diagnostics; the password, the API key, the certificate password and any option whose name looks
-    /// like a credential are replaced by <c language="csharp">REDACTED</c>. The result is not a usable connection string.
+    /// Only structurally attributable endpoints and explicitly recognized settings are projected.
+    /// Credentials are masked; ambiguous input, paths and arbitrary options produce an opaque
+    /// <c language="csharp">REDACTED</c>. The result is not a usable connection string.
     /// </remarks>
     [SuppressMessage("Design", "CA1055:Uri return values should not be strings", Justification = "Returning a Chronicle URL string format")]
-    public string BuildRedacted() => CreateRedactedCopy().Build();
-
-    /// <summary>
-    /// Determines whether the value of an option is sensitive and must be masked when redacting.
-    /// </summary>
-    /// <param name="key">Name of the option.</param>
-    /// <returns>True if the value must be masked, false if not.</returns>
-    /// <remarks>
-    /// Connection strings carry arbitrary options, so a name-based heuristic is the only thing that can
-    /// catch a credential this type does not model. Masking a value that turned out not to be a secret
-    /// costs a little diagnostic detail; missing one puts it in the log forever.
-    /// </remarks>
-    static bool IsSensitiveKey(string key) =>
-        _sensitiveKeyFragments.Any(fragment => key.Contains(fragment, StringComparison.OrdinalIgnoreCase));
+    public string BuildRedacted() => ConnectionStringDiagnostics.Build(this, _hasUncertainDiagnosticInput);
 
     static ChronicleServerAddress[] ParseServerAddresses(string authority)
     {
@@ -599,6 +610,68 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
             : throw new InvalidServerAddress(entry);
     }
 
+    static void ThrowIfUserInfoIsNotEncoded(string rest, int pathIndex)
+    {
+        if (pathIndex == -1)
+        {
+            return;
+        }
+
+        // Nothing after the authority may carry an at sign, except the value of a setting that is known to hold one.
+        // An at sign anywhere else means the user information contained a separator that was not percent-encoded.
+        var tail = rest[pathIndex..];
+        var queryIndex = tail.IndexOf('?', StringComparison.Ordinal);
+        var path = queryIndex == -1 ? tail : tail[..queryIndex];
+        var query = queryIndex == -1 ? string.Empty : tail[(queryIndex + 1)..];
+
+        if (path.Contains('@', StringComparison.Ordinal) || query.Split('&').Any(IsPairWithMisplacedAtSign))
+        {
+            throw new InvalidUserInfo();
+        }
+    }
+
+    static bool IsPairWithMisplacedAtSign(string pair)
+    {
+        if (!pair.Contains('@', StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        var equalsIndex = pair.IndexOf('=', StringComparison.Ordinal);
+        if (equalsIndex == -1 || pair.IndexOf('@', StringComparison.Ordinal) < equalsIndex)
+        {
+            return true;
+        }
+
+        var key = Uri.UnescapeDataString(pair[..equalsIndex]);
+        return !_keysThatMayHoldAtSign.Contains(key);
+    }
+
+    /// <summary>
+    /// Converts an option, naming only the option key when it is rejected instead of quoting configuration text.
+    /// </summary>
+    /// <typeparam name="T">The option type.</typeparam>
+    /// <param name="key">The option key.</param>
+    /// <param name="convert">The conversion to apply.</param>
+    /// <returns>The converted value.</returns>
+    /// <exception cref="FormatException">Thrown when the value is not in a valid format.</exception>
+    /// <exception cref="OverflowException">Thrown when the value is outside the range of the option type.</exception>
+    T ConvertOption<T>(string key, Func<object, T> convert)
+    {
+        try
+        {
+            return convert(this[key]);
+        }
+        catch (OverflowException)
+        {
+            throw new OverflowException($"The value of the '{key}' option is invalid.");
+        }
+        catch (FormatException)
+        {
+            throw new FormatException($"The value of the '{key}' option is invalid.");
+        }
+    }
+
     void ParseConnectionString(string connectionString)
     {
         if (string.IsNullOrWhiteSpace(connectionString))
@@ -627,6 +700,16 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
         }
     }
 
+    void AddServerless(List<string> queryParams)
+    {
+#pragma warning disable CHRX0001 // The serverless switch is experimental; the builder serialises it internally.
+        if (Serverless)
+#pragma warning restore CHRX0001
+        {
+            queryParams.Add("serverless=true");
+        }
+    }
+
     void Parse(string url)
     {
         var schemeSeparatorIndex = url.IndexOf("://", StringComparison.Ordinal);
@@ -642,6 +725,8 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
             var queryIndex = rest.IndexOf('?', pathIndex);
             query = queryIndex == -1 ? string.Empty : rest[(queryIndex + 1)..];
         }
+
+        ThrowIfUserInfoIsNotEncoded(rest, pathIndex);
 
         // Extract username and password from the userinfo part
         var userInfoIndex = authority.LastIndexOf('@');
@@ -671,31 +756,5 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
                 }
             }
         }
-    }
-
-    /// <summary>
-    /// Creates a copy of the builder holding the same settings, with every credential replaced by a mask.
-    /// </summary>
-    /// <returns>A <see cref="ChronicleConnectionStringBuilder"/> that carries no credential.</returns>
-    /// <remarks>
-    /// Redaction works by masking the values first and rendering afterwards, rather than by rendering
-    /// conditionally. The copy a redacted connection string is built from holds no secret at all, so no
-    /// argument about which branch ran is needed to know that none can reach the result.
-    /// </remarks>
-    ChronicleConnectionStringBuilder CreateRedactedCopy()
-    {
-        var redacted = new ChronicleConnectionStringBuilder();
-
-        foreach (var key in Keys)
-        {
-            if (key.ToString() is not { } name)
-            {
-                continue;
-            }
-
-            redacted[name] = IsSensitiveKey(name) ? RedactedValue : this[name];
-        }
-
-        return redacted;
     }
 }

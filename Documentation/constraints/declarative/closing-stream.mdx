@@ -1,15 +1,19 @@
 ---
-title: Closing stream constraint
-description: Declare in an IConstraint class that appending an event type closes a stream scope, and which events reopen it.
+title: Declare Chronicle closing stream constraints
+description: Use a Chronicle closing stream constraint to reject later appends in a chosen scope after a domain event, and declare which events can reopen it.
 ---
 
-Use `ClosesStreamOn<TEvent>` on the constraint builder to close a stream scope whenever an event of that type is appended. The closure is written in the same step as the event, and later appends inside the scope are rejected with a `StreamClosed` violation. For the concept and the guarantees, see [Closing events](../../closing-streams/closing-events.mdx). For the attribute style, see the [model-bound closing stream constraint](../model-bound/closing-stream.mdx).
+A closing stream constraint stops later appends in a chosen scope after a domain event, such as delivering a report or closing an accounting period. Declare it with `ClosesStreamOn<TEvent>` on the .NET constraint builder. Later appends inside the closed scope receive a `StreamClosed` violation.
+
+The event becomes durable before the closure index is updated. Both happen in one kernel execution turn, so another append cannot interleave, but they are not crash-atomic. A lost update needs index recovery or reindexing. Read [Closing events](../../closing-streams/closing-events.mdx) for the guarantees before relying on closure. To put the declaration on an event type instead, use the [model-bound closing stream constraint](../model-bound/closing-stream.mdx).
 
 ## Defining a closing constraint
 
-Choose the dimensions with the `Per...` methods on the configuration callback:
+Choose the scope first: its dimensions are the identifiers that must match for an append to be blocked. This example closes every stream id for the report's event source and stream type, because it selects those two dimensions but not stream id:
 
 <ChronicleClientTabs snippet="constraints/declarative/closing-stream/basic" />
+
+Use the `Per...` methods inside the configuration callback to select the dimensions:
 
 | Method | Adds the dimension |
 |---|---|
@@ -18,23 +22,23 @@ Choose the dimensions with the `Per...` methods on the configuration callback:
 | `PerEventStreamType()` | Event stream type |
 | `PerEventStreamId()` | Event stream id |
 
-If you call none of them, the scope is event source id, stream type and stream id of the append.
+If you call none of them, the scope includes the append's event source id, stream type, and stream id together. Selecting only `PerEventSourceId()` is broader: it blocks every stream for that source. Closure stops new writes; it does not remove stored events or prevent reads and replays.
 
 ## Take the stream id from a property
 
-`EventStreamIdFrom` reads the stream id from an event property and implies the stream id dimension:
+Use `EventStreamIdFrom` when the closing event names the scope in its payload. Here, `Period` supplies the stream id, so each period can close separately for the same event source. The call also includes the stream id dimension:
 
 <ChronicleClientTabs snippet="constraints/declarative/closing-stream/event-stream-id-from" />
 
-The property must have a non-empty value on every append. The kernel refuses an append where it is missing, null or empty. Avoid a nullable property; the analyzer [CHR0012](../../code-analysis/CHR0012.mdx) warns on nullable event properties.
+The property must have a non-empty value on every closing or reopening event. The kernel refuses an append where it is missing, null, or empty. Avoid a nullable property; the analyzer [CHR0012](../../code-analysis/CHR0012.mdx) warns on nullable event properties.
 
 ## Reopening events and the constraint name
 
-`ReopenedBy<T>()` names an event type that removes this constraint's closure for the exact scope it resolves to. The optional `name` argument sets the owner of the closure and defaults to the event type name:
+Call `ReopenedBy<T>()` when a domain event should allow writes again. It removes only this constraint's closure for the exact scope the event resolves to, not a manual closure or another constraint's closure. The optional `name` argument identifies the closure's owner and defaults to the closing event type identifier:
 
 <ChronicleClientTabs snippet="constraints/declarative/closing-stream/reopened-by" />
 
-The reopening event type must carry the same property as the closing event when `EventStreamIdFrom` is used.
+When you use `EventStreamIdFrom`, the reopening event type must carry the same property as the closing event. In this example, reopening one month leaves every other month's closure unchanged.
 
 ## Several closing events, one constraint
 
@@ -42,4 +46,4 @@ Declarations that share a name merge into one constraint, so a scope can be clos
 
 <ChronicleClientTabs snippet="constraints/declarative/closing-stream/several-events" />
 
-Registering or changing the declaration does not close anything that is already in the log.
+Registering or changing the declaration does not apply it to historical events. If you need to rebuild event-driven closures from the log, review the recovery and redaction limits in [Closing events](../../closing-streams/closing-events.mdx) before reindexing.

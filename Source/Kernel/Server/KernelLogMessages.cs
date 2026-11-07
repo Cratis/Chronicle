@@ -67,6 +67,9 @@ internal static partial class KernelLogMessages
     [LoggerMessage(LogLevel.Critical, "Unhandled exception occurred (terminating: {IsTerminating})")]
     internal static partial void UnhandledException(this ILogger<Kernel> logger, Exception exception, bool isTerminating);
 
-    [LoggerMessage(LogLevel.Error, "Unobserved task exception occurred")]
-    internal static partial void UnobservedTaskException(this ILogger<Kernel> logger, Exception exception);
+    [LoggerMessage(LogLevel.Error, "Unobserved task exception occurred; owner: {Owner}")]
+    internal static partial void UnobservedTaskException(this ILogger<Kernel> logger, Exception exception, string owner);
+
+    [LoggerMessage(LogLevel.Warning, "Unobserved transient task exception occurred and was ignored; owner: {Owner}")]
+    internal static partial void UnobservedTransientTaskException(this ILogger<Kernel> logger, Exception exception, string owner);
 }

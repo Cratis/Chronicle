@@ -19,7 +19,7 @@ public class when_checking_whether_a_caller_is_allowed : Specification
     {
         _authorization = Substitute.For<IAdministratorAuthorization>();
         _authorization.IsAuthorized(Arg.Any<ClaimsPrincipal>()).Returns(false);
-        _decisions = new AuthorizationDecisions(_authorization, Options.Create(new ChronicleOptions()), NullLogger<AuthorizationDecisions>.Instance);
+        _decisions = new AuthorizationDecisions(Options.Create(new ChronicleOptions()), NullLogger<AuthorizationDecisions>.Instance);
         _verdict = new SystemStoreAccessVerdict(_decisions);
     }
 

@@ -20,7 +20,7 @@ namespace Cratis.Chronicle.Generations.Enablement;
 /// <param name="legacyWork">Legacy work inspection.</param>
 /// <param name="materializations">Existing materializations.</param>
 /// <param name="binarySupport">The executing binary support, defaulting to the bridge contract through DI.</param>
-/// <param name="catalog">A1's optional catalog seam.</param>
+/// <param name="catalog">A1's optional catalog seam. It is absent when the storage provider cannot adopt; initialization is then refused before any receipt or floor read.</param>
 public sealed class GenerationInitializer(
     IGenerationEnablement enablement,
     IStorage storage,
@@ -40,6 +40,10 @@ public sealed class GenerationInitializer(
         }
         var store = storage.GetEventStore(eventStore);
         var audit = store.GenerationInitialization;
+        if (catalog is null)
+        {
+            return await Block(audit, eventStore, GenerationInitializationBlockerKind.CatalogUnavailable, "store", "This storage provider does not support generation adoption; the generation catalog is unavailable.");
+        }
         var floor = await store.GenerationFloor.Get();
         if (floor is null || floor.Revision == 0 || floor.Incarnation.Value == Guid.Empty ||
             floor.MinimumStorageProtocol.Value == 0 || floor.MinimumWriterProtocol.Value == 0 ||
@@ -93,10 +97,6 @@ public sealed class GenerationInitializer(
             await audit.ResolveBlocker(blocker.Kind, blocker.Subject, DateTimeOffset.UtcNow);
         }
         await Record(audit, eventStore, floor, GenerationInitializationStep.LegacyWorkReconciled, "store", "No unresolved legacy replay work.");
-        if (catalog is null)
-        {
-            return await Block(audit, eventStore, GenerationInitializationBlockerKind.CatalogUnavailable, "store", "The generation catalog is unavailable.");
-        }
         LegacyMaterialization[] snapshot;
         try
         {
@@ -156,6 +156,10 @@ public sealed class GenerationInitializer(
         }
         await audit.ResolveBlocker(GenerationInitializationBlockerKind.ContradictoryLegacyState, "store", DateTimeOffset.UtcNow);
         await audit.ResolveBlocker(GenerationInitializationBlockerKind.CatalogUnavailable, "store", DateTimeOffset.UtcNow);
+        if (await InspectLateLegacyWork(audit, eventStore) is { } late)
+        {
+            return late;
+        }
         var unresolved = (await audit.GetBlockers()).Where(_ => _.ResolvedAt is null).ToArray();
         if (unresolved.Length != 0)
         {
@@ -183,5 +187,23 @@ public sealed class GenerationInitializer(
     {
         await audit.RecordBlocker(new(store, kind, subject, detail, DateTimeOffset.UtcNow, null));
         return new GenerationInitializationBlocked((await audit.GetBlockers()).Where(_ => _.ResolvedAt is null).ToArray());
+    }
+
+    async Task<GenerationInitializationResult?> InspectLateLegacyWork(IGenerationInitializationStorage audit, EventStoreName eventStore)
+    {
+        IReadOnlyList<GenerationInitializationBlocker> blockers;
+        try
+        {
+            blockers = await legacyWork.Inspect(eventStore);
+        }
+        catch (InvalidOperationException error)
+        {
+            return await Block(audit, eventStore, GenerationInitializationBlockerKind.UnknownLegacyState, "legacy-work", error.Message);
+        }
+        foreach (var blocker in blockers)
+        {
+            await audit.RecordBlocker(blocker);
+        }
+        return blockers.Count == 0 ? null : new GenerationInitializationBlocked(blockers);
     }
 }

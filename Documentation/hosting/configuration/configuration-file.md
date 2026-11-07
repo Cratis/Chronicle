@@ -1,8 +1,7 @@
 ---
+title: Configure Cratis Chronicle with chronicle.json
 description: Chronicle Server loads its settings from a chronicle.json file in the application root, typically mounted at /app/chronicle.json in containers.
 ---
-# Configuration File
-
 Chronicle Server loads configuration from a `chronicle.json` file in the application root directory. In containers, this file is typically mounted at `/app/chronicle.json`.
 
 ## Outbound HTTP destinations
@@ -99,5 +98,5 @@ Environment variables can override any of these values. See [Configuration Prece
 | constraintIndexRepair | Constraint-index repair budgets, retries and memory caps |
 | authentication | Authentication, default admin username, and initial admin user bootstrap |
 | tls | TLS certificate for the main Chronicle port by default; explicit `tls.enabled=false` requires a private h2c backend behind an HTTPS proxy |
-| encryptionCertificate | Certificate protecting OAuth keys, webhook credentials, and Data Protection keys — required in production |
+| encryptionCertificate | Certificate protecting OAuth keys, webhook credentials, and Data Protection keys — required in builds without `DEVELOPMENT` when authentication, the OAuth authority feature, and use of the internal authority are all enabled |
 | identityProvider | Legacy certificate settings, accepted but ignored; see [migration guidance](identity-provider-certificate.md) |

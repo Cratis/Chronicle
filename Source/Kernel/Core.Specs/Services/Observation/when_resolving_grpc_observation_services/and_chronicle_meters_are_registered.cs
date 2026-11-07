@@ -24,11 +24,13 @@ public class and_chronicle_meters_are_registered : Specification
     {
         var services = new ServiceCollection();
         services.AddLogging();
+        services.AddSingleton(NamespaceCasingContext.Create());
         services.AddChronicleMeters();
         services.AddSingleton(Substitute.For<IGrainFactory>());
         services.AddSingleton(Substitute.For<IReactorMediator>());
         services.AddSingleton(Substitute.For<IReducerMediator>());
         services.AddSingleton(Substitute.For<IStorage>());
+        services.AddSingleton(Substitute.For<Cratis.Chronicle.Clients.IConnectionOwnership>());
         services.AddSingleton(Substitute.For<IExpandoObjectConverter>());
         services.AddSingleton(new JsonSerializerOptions());
         services.AddSingleton<IObserverRegistrationGate, ObserverRegistrationGate>();

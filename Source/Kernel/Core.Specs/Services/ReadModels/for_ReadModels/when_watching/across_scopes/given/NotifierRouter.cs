@@ -140,6 +140,8 @@ public class NotifierRouter
 
         public async Task Unsubscribe(IReadModelChangesetSubscriber subscriber) => await (await router.Activation(key)).Unsubscribe(subscriber);
 
+        public async Task<bool> HasSubscribers() => await (await router.Activation(key)).HasSubscribers();
+
         public async Task Notify(EventStoreNamespaceName namespaceName, ReadModelKey readModelKey, JsonObject readModel, ReadModelChangeContext change) =>
             await (await router.Activation(key)).Notify(namespaceName, readModelKey, readModel, change);
 

@@ -74,12 +74,14 @@
     -->
     <ItemGroup>
         <PackageReference Include="AspNetCore.HealthChecks.MongoDb" />
+        <PackageReference Include="BouncyCastle.Cryptography" />
         <PackageReference Include="Cratis.Arc" />
         <PackageReference Include="Cratis.Arc.Core" />
         <PackageReference Include="Cratis.Choreography" />
         <PackageReference Include="Cratis.Choreography.Storage" />
         <PackageReference Include="Cratis.Choreography.Storage.MongoDB" />
         <PackageReference Include="Cratis.Screenplay" />
+        <PackageReference Include="Grpc.AspNetCore.Server" />
         <PackageReference Include="JsonCons.JmesPath" />
         <PackageReference Include="Microsoft.AspNetCore.DataProtection" />
         <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
@@ -108,6 +110,7 @@
         <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" />
         <PackageReference Include="Orleans.Providers.MongoDB" />
         <PackageReference Include="protobuf-net" />
+        <PackageReference Include="protobuf-net.Grpc.AspNetCore" />
         <PackageReference Include="protobuf-net.Reflection" />
         <PackageReference Include="SharpCompress" />
         <PackageReference Include="Snappier" />

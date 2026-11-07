@@ -23,6 +23,15 @@ public static class JsonSchemaExtensions
         schema.FlattenedProperties;
 
     /// <summary>
+    /// Gets the flattened properties of a schema keyed by their exact name. The dictionary is built once per
+    /// schema, so it is cheap to ask for on every document converted.
+    /// </summary>
+    /// <param name="schema"><see cref="JsonSchema"/> to get from.</param>
+    /// <returns>A read-only dictionary of properties by name; it must not be modified.</returns>
+    public static IReadOnlyDictionary<string, JsonSchemaProperty> GetFlattenedPropertiesByExactName(this JsonSchema schema) =>
+        schema.FlattenedPropertiesByExactName;
+
+    /// <summary>
     /// Checks if the schema has a key property.
     /// </summary>
     /// <param name="schema"><see cref="JsonSchema"/> to check.</param>

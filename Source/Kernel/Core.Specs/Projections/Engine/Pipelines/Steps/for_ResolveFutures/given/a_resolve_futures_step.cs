@@ -17,6 +17,7 @@ namespace Cratis.Chronicle.Projections.Engine.Pipelines.Steps.for_ResolveFutures
 public class a_resolve_futures_step : Specification
 {
     protected ResolveFutures _step;
+    protected ICanProtectFutureChangesets _futureProtection = Substitute.For<ICanProtectFutureChangesets>();
     protected IProjectionFutures _projectionFutures;
     protected ProjectionFuturesTracker _tracker;
     protected ITypeFormats _typeFormats;
@@ -38,7 +39,7 @@ public class a_resolve_futures_step : Specification
         _logger = Substitute.For<ILogger<ResolveFutures>>();
         _eventSequenceStorage = Substitute.For<IEventSequenceStorage>();
         _sink = Substitute.For<ISink>();
-        _step = new ResolveFutures(_tracker, new ProjectionFuturesStore(_projectionFutures), _typeFormats, _objectComparer, _logger, _eventSequenceStorage, _sink);
+        _step = new ResolveFutures(_tracker, new ProjectionFuturesStore(_projectionFutures), _typeFormats, _objectComparer, _futureProtection, _logger, _eventSequenceStorage, _sink);
 
         _projection = Substitute.For<IProjection>();
         _projection.Identifier.Returns(new ProjectionId("test-projection"));

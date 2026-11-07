@@ -1,17 +1,21 @@
 ---
-title: Read protection (.NET)
-description: Make the Chronicle .NET client refuse unguarded reads and immediate appends in one invocation, so every decision read joins the committing unit of work.
+title: Chronicle read protection for .NET hosts
+description: Use Chronicle read protection in a .NET host to enroll decision reads in a unit of work and refuse raw reads unless an explicit allowance is open.
 ---
 
-Use read protection when you own the code that begins and completes a [unit of work](../events/transactions.mdx), such as a command pipeline or a request host, and you want Chronicle to refuse a decision that is not guarded. Inside a protected invocation, a read either becomes a guard for the commit or is refused. If you only need to guard one append, a [decision read](decision-reads.mdx) passed to the append is enough. If the rule is uniqueness, use a [constraint](../constraints/index.md).
+Chronicle read protection enrolls decision reads in a .NET invocation's unit of work and refuses raw Chronicle reads unless explicitly allowed. Use it when you own the code that begins and completes a [unit of work](../events/transactions.mdx), such as a command pipeline or request host.
+
+A guard checks whether matching events arrived after the read's captured position before allowing the append. If you only need to guard one append, pass it a [decision read](decision-reads.mdx) instead. For uniqueness, use a [constraint](../constraints/index.md).
 
 ## Why it exists
 
-A decision read guards a decision only when you remember to use one. Nothing stops the next change from reading a read model through `IReadModels`, deciding on the value and appending, which guards nothing and fails silently when two requests race. Read protection turns that mistake into an error at the first call: inside the invocation, a plain read is refused unless you say it is advisory.
+A read through `IReadModels` does not by itself protect an append based on that value. Two requests can read the same state and both decide to write. Read protection catches this omission at the read call: inside the protected invocation, the raw read is refused unless you open an advisory or contributed allowance.
 
 <ChronicleClientTabs snippet="read-models/read-protection/refused-read" variants="csharp" />
 
-The safe form is the default, and the unsafe form needs a reason that stays in the code. Protection costs more than an unprotected read, and it refuses reads Chronicle cannot guard exactly. See [Why protection is opt-in](../dynamic-consistency-boundary/choosing.mdx#why-protection-is-opt-in).
+In this example, the seat count is for display, not for deciding whether to reserve a seat. The advisory allowance records that reason and permits the raw read without guarding it. A reservation decision needs a decision read instead, as shown below.
+
+Protection costs more than an unprotected read and refuses reads Chronicle cannot guard exactly. See [Why protection is opt-in](../dynamic-consistency-boundary/choosing.mdx#why-protection-is-opt-in) when choosing which invocations to protect.
 
 This is the Chronicle API that a host drives. Cratis Arc is such a host: when read protection is on for an Arc project, Arc begins the frame for each command and resolves read-model parameters through `IDecisionReads.GetFor`. [How Arc uses this API](#how-arc-uses-this-api) maps Arc's side to Chronicle's. Read this page when you use Chronicle directly or write a host like Arc's.
 
@@ -30,14 +34,26 @@ Nothing changes outside a protected invocation, and nothing changes for code tha
 
 <ChronicleClientTabs snippet="read-models/read-protection/owner-commit" variants="csharp" />
 
+`GetFor` enrolls the seat-count read before the reservation code uses it. The code stages a new event
+and commits as the unit's owner. If a matching reservation event arrived after the captured read,
+the commit reports a conflict and appends nothing; read again and make a fresh decision before retrying.
+
 ## The frame and its lifetime
 
-`IUnitOfWork.EnforceReadProtection()` returns a `ReadProtectionFrame`. The frame is flow-local: it follows the asynchronous flow that created it and nothing else.
+Call `IUnitOfWork.EnforceReadProtection()` before enrolling any event or read; otherwise it throws
+`ReadProtectionMustBeginBeforeEnrollment`. It returns a `ReadProtectionFrame` that follows the
+asynchronous flow that created it.
 
-- **Owner and lease.** The first call for a unit returns the owning frame. Later calls on the same unit return a lease. Disposing a lease does nothing. Only the owner ends enforcement, so dispose it in a `finally` block on success, failure and cancellation.
-- **Begin first.** Call it before any event or read is enrolled. Otherwise it throws `ReadProtectionMustBeginBeforeEnrollment`.
-- **One unit.** While a frame is active, enrollment, staging and completion must use the frame's unit. Any other unit, including one set with `UnitOfWorkManager.SetCurrent`, is refused with `ReadProtectionUnitMismatch`.
-- **After completion.** `ReadProtectionFrame.UnitCompleted` reports whether the unit was committed or rolled back. The frame stays active until the owner disposes it. Protected reads and staging after completion are refused with `ReadAfterProtectedCommit` and `UnitOfWorkIsCompleted`.
+The first call for a unit owns the frame's lifetime. Later calls on that unit return leases whose
+disposal does nothing. Dispose the owning frame on success, failure and cancellation, using a `using`
+statement as in the example or a `finally` block.
+
+While the frame is active, enrollment, staging and completion must use its unit. Another unit is
+refused with `ReadProtectionUnitMismatch`, even if it was set with `UnitOfWorkManager.SetCurrent`.
+
+Completing the unit does not end the frame. `ReadProtectionFrame.UnitCompleted` reports whether the
+unit was committed or rolled back, but enforcement stays active until the owning frame is disposed.
+Protected reads after completion throw `ReadAfterProtectedCommit`; staging throws `UnitOfWorkIsCompleted`.
 
 A unit implementation that does not support this throws `UnitOfWorkReadProtectionNotSupported`.
 
@@ -92,7 +108,7 @@ For a model declaring `[EventStream<TSource>(stream)]`, these same enrollment ru
 
 ## Contributed reads
 
-Use a contributed read when a decision depends on events you read yourself, for example an aggregate rehydrated from one event source. Capture the boundary first, read, then enroll a `ContributedRead` before the value is used:
+Use a contributed read when a decision depends on events you read yourself, for example an aggregate rebuilt from one event source. Capture the event position that bounds the read first, read the events, then enroll a `ContributedRead` before using the result:
 
 <ChronicleClientTabs snippet="read-models/read-protection/contributed-read" variants="csharp" />
 
@@ -154,20 +170,21 @@ Every public immediate append on an event sequence is refused regardless of allo
 | `ConflictingContributionsOnLabel`, `ConflictingExplicitScopes` | Explicit expectations contradict each other for one predicate, or mix no guard with a guard |
 | `ExplicitScopeDoesNotCoverReads`, `DeclaredRoutingNotCoveredByExplicitScope` | An explicit scope is narrower than what was read or declared |
 
-Each message names the fix. Chronicle refuses rather than guard something it cannot compute exactly.
+Use the exception to identify the missing allowance, unsupported read or ownership mismatch. Chronicle refuses a read when it cannot compute an exact guard; changing to a raw read would remove that protection.
 
 ## Limits
 
-- **History mutation.** Revising or redacting an event does not advance the tail, so a read that was folded before the change is not invalidated. Inside a frame, `Revise` and `Redact` are refused; run them as separate administrative operations. Chronicle issue [#4900](https://github.com/Cratis/Chronicle/issues/4900) tracks a kernel check.
-- **Reducers.** A classic reducer is admitted only if it has no filters and no constructor dependencies other than `ILogger<T>`. A self-reducing read model is exempt from the dependency rule. See [Decision reads](decision-reads.mdx#reducers).
-- **Pinned delivery.** A projection with Pinned generation delivery is refused with `GenerationDeliveryNotSupported`.
-- **Source-less reads.** A contributed read must name an event source. Reads over many sources are refused.
-- **One event log.** Guards apply to one event sequence, the event log, and one unit of work cannot span sequences.
-- **Writers without a guard.** A writer that decides without a guard can still break the rule. The rule holds only when every writer that decides on it is protected, or when it is a constraint.
+- Revising or redacting an event does not advance the tail, so a read folded before that change is not invalidated. Inside a frame, `Revise` and `Redact` are refused; run them as separate administrative operations. Chronicle issue [#4900](https://github.com/Cratis/Chronicle/issues/4900) tracks a kernel check.
+- A classic reducer is admitted only if it has no filters and no constructor dependencies other than `ILogger<T>`. A self-reducing read model is exempt from the dependency rule. See [Decision reads](decision-reads.mdx#reducers).
+- A projection with Pinned generation delivery is refused with `GenerationDeliveryNotSupported`.
+- A contributed read must name one event source. Reads over many sources are refused.
+- Guards apply to one event sequence, the event log. A unit of work cannot span sequences.
+- A writer that decides without a guard can still break the rule. Protect every writer whose decision depends on that rule, or enforce it as a constraint.
 
 ## How Arc uses this API
 
-If you come from an Arc command, this table maps what you declare there to what this page calls it. Arc's own pages describe its settings and attributes. The Chronicle names are the stable API.
+Cratis Arc manages this lifetime for protected commands. If you use its command pipeline, the table
+below connects Arc's command declarations to the Chronicle calls you would otherwise make in a host.
 
 | In an Arc command | In the Chronicle API |
 |---|---|
@@ -184,9 +201,9 @@ The word "advisory" in this API and "unprotected" in Arc mean the same thing: yo
 
 ## Related topics
 
-- [Decision reads](decision-reads.mdx)
-- [How guards are derived](../dynamic-consistency-boundary/how-guards-are-derived.mdx)
-- [Choosing how a rule holds](../dynamic-consistency-boundary/choosing.mdx)
-- [Concurrency scopes](../events/concurrency.mdx)
-- [Transactions](../events/transactions.mdx)
-- [CHR0062: Concurrency applies across event sources](../code-analysis/CHR0062.mdx)
+- [Decision reads](decision-reads.mdx) — choose a model Chronicle can guard and acquire its value.
+- [How guards are derived](../dynamic-consistency-boundary/how-guards-are-derived.mdx) — understand which events can invalidate a read.
+- [Choosing how a rule holds](../dynamic-consistency-boundary/choosing.mdx) — decide between read protection and constraints.
+- [Concurrency scopes](../events/concurrency.mdx) — declare explicit expectations for an append.
+- [Transactions](../events/transactions.mdx) — manage staged events and unit-of-work completion.
+- [CHR0062: Concurrency applies across event sources](../code-analysis/CHR0062.mdx) — check cross-source concurrency assumptions.

@@ -17,8 +17,10 @@ Authority in [`general.md`](../../../rules/general.md). Read this before any bro
   request or an applicable policy names that exact action. A configured browser tool is not
   a permit.
 - **[contract] One production tab per session.** No parallel polling or parallel findings on
-  production. Run the health check first, close idle browsers, and look for stale tabs from
-  other sessions before opening one.
+  production. Run the health check first and close your own idle pages before opening one.
+- **[contract] Close only what you opened.** Promptly close the browser backend you
+  started; if no shutdown tool exists, close your pages and report it. Subagents do the
+  same. Never touch a user's or shared session; no `pkill`/`killall`. One browser per lane.
 - **[convention] Prefer staging or a local copy** for interactive and visual smoke runs.
 - **[contract] Only the `browser-operator` agent receives browser tools.** Hand it the URL,
   scope, permit and artifact directory. The main session does not do browser work itself

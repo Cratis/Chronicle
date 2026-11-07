@@ -52,7 +52,7 @@ public sealed class FailedPartitionEqualityComparer :
         x.RecoveryCursor == y.RecoveryCursor && x.RecoveryOwner == y.RecoveryOwner && x.Hold == y.Hold;
 
     static bool SameRetryBudget(Concepts.Observation.FailedPartition x, Concepts.Observation.FailedPartition y) =>
-        x.WebhookRecoveryId == y.WebhookRecoveryId && x.AttemptsBeforeBudgetReset == y.AttemptsBeforeBudgetReset && x.Deferral == y.Deferral;
+        x.WebhookRecoveryId == y.WebhookRecoveryId && Equals(x.ReplayEpoch, y.ReplayEpoch) && x.AttemptsBeforeBudgetReset == y.AttemptsBeforeBudgetReset && x.Deferral == y.Deferral;
 
     static bool AttemptsEqual(
         IEnumerable<Concepts.Observation.FailedPartitionAttempt> left,

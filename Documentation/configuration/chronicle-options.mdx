@@ -1,8 +1,7 @@
 ---
+title: ChronicleOptions Reference
 description: Reference for ChronicleOptions, the root configuration class of Chronicle .NET clients, set in code or bound from appsettings.json.
 ---
-# ChronicleOptions Reference
-
 `ChronicleOptions` is the root configuration class for all Chronicle .NET clients. All properties can be set in code via the `configureOptions` callback on `AddCratisChronicle`, and most can be bound directly from `appsettings.json` under the `Cratis:Chronicle` section.
 
 There are three options classes that form an inheritance chain, each adding settings relevant to its hosting context:
@@ -130,6 +129,19 @@ Intended for short-lived processes such as command line tools, functions and job
 ### RegistrationMode
 
 Controls what the client registers when it connects: `Inline` (everything discovered, the default), `EventTypesOnly` or `AtDeployment` (nothing). Only has an effect when `AutoDiscoverAndRegister` is enabled. See [Short-lived processes](../clients/dotnet/short-lived-processes.md).
+
+### Serverless
+
+Settings for running the .NET client in a function or another scaled-to-zero host, bound from `Cratis:Chronicle:Serverless`.
+
+| | |
+|---|---|
+| Type | `ChronicleServerlessOptions` |
+| Default | `Mode` is `Off` |
+
+Set `Mode` to `Serverless` to skip keep-alive and validate the serverless configuration at start. HTTP delivery is not available yet, so an observer that resolves to it fails at startup. `Delivery:Timeout` (30 seconds by default, must be greater than zero) is the delivery timeout for HTTP reactors and reducers; it has no effect until HTTP delivery ships and does not change the kernel's 60 second webhook timeout. See [Serverless mode](../clients/dotnet/serverless-mode.md).
+
+`Serverless:CheckArtifactFingerprint` defaults to `true`. In serverless `Deploy` mode only, it schedules one background deployment-metadata query and a local prepared-definition fingerprint comparison per client and event-store name, shared across namespaces. It warns about missing or stale deployment metadata without blocking callers, registering artifacts or changing readiness. A nonzero `DeploymentGeneration` is compared too; zero leaves only the fingerprint comparison. Set `Cratis:Chronicle:Serverless:CheckArtifactFingerprint` to `false` to avoid the query and computation. This is a best-effort diagnostic, not enforcement or automatic repair; manual discovery mode checks only current prepared artifacts. Deployment tooling remains responsible for [registering definitions](../clients/dotnet/explicit-artifacts.md), and non-native registries retain their existing empty fingerprint contribution.
 
 ### DefaultSinkTypeId
 
@@ -279,17 +291,20 @@ Use `Fail` in CI or staging to investigate likely identity changes before deploy
 
 ### Tls
 
-TLS certificate settings for the gRPC connection. TLS is active when both `CertificatePath` and `CertificatePassword` are set. See [TLS](tls) for full details.
+The client uses TLS by default for the gRPC connection, independently of client-certificate configuration. `CertificatePath` and `CertificatePassword` configure a client certificate; they do not enable TLS. The `disableTls=true` connection-string option uses cleartext HTTP/2 instead and requires a matching cleartext kernel listener.
+
+Server certificate validation is separate: `SkipCertificateValidation` defaults to `true`. Validation is skipped only when both this option and the connection string's `skipTlsValidation` permit it; skipping accepts any server certificate, including self-signed certificates. Set `SkipCertificateValidation` to `false` to enable validation. When the only validation errors are certificate-chain errors, the client still accepts the server certificate if its hash matches the configured client certificate's hash. This pinning exception does not bypass a host-name mismatch or a missing server certificate. See [TLS](tls) for full details.
 
 | | |
 |---|---|
 | Type | `Tls` |
-| Default | TLS disabled (no certificate configured) |
+| Default | TLS enabled, no client certificate configured, server certificate validation skipped |
 
 | Nested property | Type | Description |
 |---|---|---|
-| `CertificatePath` | `string?` | Path to a PFX certificate file |
-| `CertificatePassword` | `string?` | Password for the certificate file |
+| `CertificatePath` | `string?` | Path to a PFX client certificate file |
+| `CertificatePassword` | `string?` | Password for the client certificate file |
+| `SkipCertificateValidation` | `bool` | Skip server certificate validation; defaults to `true` |
 
 ### Occurrences
 
@@ -391,7 +406,7 @@ options above. Set these keys under `webhooks` in the Kernel's `chronicle.json`,
 
 | Key | Default | Purpose |
 |---|---|---|
-| `Validation` | `Warn` in Development builds; `BlockLocalAddresses` otherwise | `BlockLocalAddresses` blocks local ranges, `BlockPrivateAddresses` blocks all private/special ranges, and `Enforce` rejects every violation. Other violations warn. Metadata requires explicit approval in every mode. Enforce is reserved as the next-major default. |
+| `Validation` | `Warn` in builds compiled with `DEVELOPMENT`; `BlockLocalAddresses` otherwise | `BlockLocalAddresses` blocks local ranges, `BlockPrivateAddresses` blocks all private/special ranges, and `Enforce` rejects every violation. Other violations warn. Metadata requires explicit approval in every mode. Enforce is reserved as the next-major default. |
 | `AllowInsecureHttp` | `false` | Permit HTTP in Development. Ignored with a startup warning outside Development. Loopback HTTP is automatically permitted in Development. |
 | `AllowedHosts` | `[]` | Exact receiver/OAuth hosts or wildcard subdomains such as `*.example.com`. In Enforce mode unlisted hosts are rejected; approving a host also permits its private addresses. |
 | `EventStoreAllowedHosts` | `{}` | Map of event-store names to host arrays. An entry replaces the global array, including when empty. Requests without an event-store option use the global list. |

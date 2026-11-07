@@ -1,28 +1,28 @@
 ---
-description: Use UsingConstantKey in a declarative Chronicle projection so all events of a type accumulate into one read model instance.
+title: "Cratis Chronicle projections: use a constant key"
+description: "Use UsingConstantKey in Cratis Chronicle to direct events from different sources into one read model instance for shared counters or totals."
 ---
-# Constant Keys
+<a id="constant-keys"></a>
 
-A constant key allows all events of a given type to accumulate into a **single** read model instance, regardless of which event source the events originate from. This is useful for global aggregates, system-wide counters, and singleton read models.
+A constant key in Cratis Chronicle directs events from different event sources into one read model instance. Use it when you need one order count or engagement total rather than a separate result for each source. Apply the same key to every event mapping that contributes to that result.
 
 ## Defining a constant key
 
-Use `UsingConstantKey(string value)` to specify a fixed key value for a `from` block. The read model is a normal record or class — the constant key becomes its `_id` in the underlying store:
+Use `UsingConstantKey(string value)` on a `From` mapping to select a fixed read model key. The read model remains a normal record or class; you do not need a different model shape to share one instance across event sources.
 
 <ChronicleClientTabs snippet="projections/declarative/constant-key/basic" />
 
-Every `OrderPlaced` event, from every event source, updates the single `GlobalCounter` instance with the key `"global"`.
+Every handled order-placement event updates the same counter with the key `"global"`, regardless of its event source ID. A constant key changes where events are mapped; it does not subscribe the projection to additional event types or sequences.
 
 ## Combining with functions
 
-Constant keys work with counting and arithmetic functions. Keep separate totals for occurrences and
-currently active items, using count for the former and increment/decrement for the latter:
+Use `Count` for the number of registrations and `Increment`/`Decrement` for a total that can rise and fall, such as active sessions. Each contributing mapping below uses the key `"site"` so the totals stay in one instance:
 
 <ChronicleClientTabs snippet="projections/declarative/constant-key/increment-decrement" />
 
 ## Constant parent keys
 
-Use `UsingConstantParentKey(string value)` when working with child collections and you want all events to target the same parent read model:
+Use `UsingConstantParentKey(string value)` to send child events to one shared parent. The child still needs its own key so Chronicle can distinguish items within that parent's collection:
 
 <ChronicleClientTabs snippet="projections/declarative/constant-key/constant-parent-key" />
 
@@ -30,14 +30,16 @@ Use `UsingConstantParentKey(string value)` when working with child collections a
 
 | Strategy | Method | When to use |
 |---|---|---|
-| Event source ID | (default) | Each event stream is one instance |
-| Event property | `UsingKey(e => e.Property)` | Property on the event identifies instance |
-| Event context | `UsingKeyFromContext(c => c.Property)` | Event context property identifies instance |
-| Composite | `UsingCompositeKey<T>(...)` | Multiple values together form identity |
-| **Constant** | **`UsingConstantKey("value")`** | **All events update the same instance** |
+| Event source ID | (default) | Keep one instance per event source ID. |
+| Event property | `UsingKey(e => e.Property)` | Identify the instance from event content. |
+| Event context | `UsingKeyFromContext(c => c.Property)` | Identify the instance from event metadata. |
+| Composite | `UsingCompositeKey<T>(...)` | Use several values together as the identity. |
+| Constant | `UsingConstantKey("value")` | Direct the configured events to one shared instance. |
 
 ## Full example
 
+Use the same key across several event types to collect their metrics in one document:
+
 <ChronicleClientTabs snippet="projections/declarative/constant-key/multi-event-metrics" />
 
-This projection collects engagement events from all users and event sources into a single `EngagementMetrics` document with the key `"metrics"`.
+The configured engagement events contribute to a single metrics document with the key `"metrics"`. To keep separate totals for combinations such as customer and reporting period, use [composite keys](./composite-keys). For the operations available on each total, see [projection functions](./functions).

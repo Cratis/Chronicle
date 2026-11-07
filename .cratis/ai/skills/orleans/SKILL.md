@@ -1,6 +1,6 @@
 ---
 name: orleans
-description: 'Designs Microsoft Orleans systems from each primitive''s purpose and failure model: grains, digital twins, state versus databases, transactions, messaging, streams, timers, reminders, Durable Jobs, stateless workers, grain services, startup, and hosting. Use when a task needs an Orleans design decision: inspect version and topology, choose the primitive, implement, and validate. Not for other actor stacks, batch processing, relational-only CRUD, or advice without an Orleans decision.'
+description: Use when an Orleans task requires choosing state ownership, communication, scheduling or hosting guarantees against failure. Not for other actor stacks, relational-only CRUD or Cratis.Orleans job implementation.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/orleans/SKILL.md -->

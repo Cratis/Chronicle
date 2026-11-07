@@ -1,19 +1,22 @@
 ---
-description: Provision and verify Chronicle's MongoDB indexes before deployment without starting the kernel, using the schema connection identity.
+title: Provision and verify Cratis Chronicle MongoDB indexes
+description: Provision Chronicle MongoDB indexes before deployment and verify them without starting the Kernel, using the configured schema connection identity.
 ---
-# MongoDB Index Operations
-
-Use Chronicle's one-shot schema commands to provision MongoDB indexes before starting the kernel. These commands use the normal configuration files and environment variables, but do not start Orleans, HTTP listeners, or observers.
+Chronicle's one-shot schema commands provision MongoDB indexes before deployment or check them without starting the Kernel. They read the normal configuration files and environment variables but do not start Orleans, HTTP listeners, or observers. Use `--verify-schema` when a deployment must stop if required indexes are missing or incompatible; MongoDB's startup `Verify` mode only warns.
 
 ## Provision before deployment
 
-Configure MongoDB storage, then run the server executable with `--migrate-only`:
+Configure MongoDB storage and a schema identity with permission to read discovery data, list collections and indexes, create indexes, and remove obsolete indexes on the targeted databases. [Scope and permissions](#scope-and-permissions) explains connection routing and the jobs exception. Before provisioning a large event log, back up the deployment and review index-build capacity.
+
+Run the server executable with `--migrate-only`:
 
 ```shell
 ./Cratis.Chronicle.Server --migrate-only
 ```
 
-Chronicle creates missing named indexes, removes obsolete event indexes, and verifies the result. Repeating the command against a current deployment performs no index DDL. It does not drop collections, remove application data, or rebuild indexes whose names already exist. An existing index with different keys or options is reported as incompatible (exit code `2`) and left untouched. Review incompatible indexes before dropping them manually and running `--migrate-only` again with a schema identity, which is an identity allowed to create and remove indexes (see the permissions below). Back up the deployment and review index-build capacity before provisioning a large event log.
+Chronicle creates missing named indexes, removes obsolete event indexes, and verifies the result. Repeating the command against a current deployment performs no index DDL (data definition operations such as creating or dropping an index). It does not drop collections, remove application data, or rebuild indexes whose names already exist.
+
+An existing index with different keys or options is reported as incompatible and left untouched, with exit code `2`. Review the reported definition before manually dropping an incompatible index, then rerun `--migrate-only` with the schema identity.
 
 Stored event stores, their stored namespaces, the system store, and default namespaces are discovered automatically. Add explicit scopes to provision a new store or tenant before it has registration data:
 
@@ -25,11 +28,15 @@ Repeat `--event-store` and `--namespace` to add scopes. Explicit namespaces appl
 
 ## Verify without DDL
 
+Run a read-only check against the same configuration and explicit scopes used for provisioning:
+
 ```shell
 ./Cratis.Chronicle.Server --verify-schema --event-store orders --namespace tenant-a
 ```
 
-Verification only reads registration data, lists collection names, and lists indexes. Missing databases and collections are reported as missing indexes; verification does not create them. The report identifies each logical scope, its database name, missing, obsolete or incompatible collection/index names, and unclassified constraint collections. Unclassified collections produce a warning but do not make the report non-current or cause exit code `2`. Verification compares key fields and their order, key direction or type, uniqueness, sparseness, hidden state, TTL, partial filters, and collation. Simple collation is equivalent whether explicitly listed or omitted. Non-simple collation, including an inherited collection default, must match the expected definition. The legacy non-unique `value` index on per-event-source constraint collections is accepted.
+Verification reads registration data, lists collection names, and lists indexes. Missing databases and collections are reported as missing indexes; the command does not create them. The report names each logical scope and physical database, then identifies missing, obsolete, or incompatible indexes and unclassified constraint collections. Unclassified collections produce a warning but do not cause exit code `2`; see [Scope and permissions](#scope-and-permissions) for how they are handled.
+
+The comparison checks key fields and their order, key direction or type, uniqueness, sparseness, hidden state, time-to-live (TTL), partial filters, and collation. Simple collation is equivalent whether explicitly listed or omitted. Non-simple collation, including an inherited collection default, must match the expected definition. The legacy non-unique `value` index on per-event-source constraint collections is accepted.
 
 | Exit code | Meaning |
 | --- | --- |
@@ -38,6 +45,8 @@ Verification only reads registration data, lists collection names, and lists ind
 | `2` | Indexes are missing, obsolete, or incompatible |
 | `3` | Schema lock could not be acquired; reserved for the shared SQL command contract |
 | `4` | Configuration or operation validation failure |
+
+Require exit code `0` before proceeding with a deployment that depends on these indexes. For code `2`, review the report and provision or correct the named indexes before checking again. A connection or authorization failure is not a successful verification.
 
 Other exceptions follow the same exit-code mapping as [SQL schema operations](sql-schema-operations.md). MongoDB does not use SQL's schema lock.
 
@@ -57,7 +66,9 @@ Set `storage.schemaMode` to `Verify` to add a read-only startup inspection limit
 }
 ```
 
-For MongoDB, startup verification **only warns** about missing, obsolete, or incompatible indexes. Connection and authorization failures during this inspection also produce warnings, not startup exceptions. Unlike SQL verification, this is not a fail-startup policy. Runtime lazy index creation remains unchanged in both modes; a missing index encountered later by a runtime store can still require DDL privileges. Use `--verify-schema` when a deployment gate needs a nonzero exit code. On a fresh deployment, `Verify` warns about every missing index until the kernel or `--migrate-only` has created them.
+MongoDB startup verification only warns about missing, obsolete, or incompatible indexes. Connection and authorization failures during this inspection also produce warnings rather than startup exceptions. Unlike SQL verification, it does not block startup.
+
+Runtime index creation remains unchanged in both modes: stores create indexes on first access, so an index missing later can still require DDL privileges. On a fresh deployment, `Verify` warns about missing indexes until the Kernel or `--migrate-only` creates them. Use the one-shot `--verify-schema` command, not startup warnings, to block a deployment.
 
 ## Scope and permissions
 
@@ -86,6 +97,8 @@ If no definition matches, or matching definitions disagree on mode, the collecti
 
 The cluster registry, store namespace registries, and namespace event-sequence registries are read for discovery; they have no additional Chronicle-owned named indexes beyond their document identities. Application-owned MongoDB read-model indexes are outside this catalog.
 
+### Choose identities for offline and runtime access
+
 [Storage connection resolution](storage-connection-resolution.md) selects the `schema` purpose for offline Chronicle database connections. Startup verification uses the `runtime` purpose. Give the schema identity permission to read discovery data, list collections/indexes, create indexes, and remove obsolete indexes on all targeted databases. Verification needs discovery and index-listing permissions, but no index DDL permissions.
 
 Jobs are an exception to namespace connection routing: the shared Orleans jobs adapter uses the MongoDB server in `storage.connectionDetails` and the prefix-derived namespace database name. Provisioning uses that same jobs client and database, even when Chronicle's namespace storage is redirected. Ensure the configured jobs identity can provision those indexes too.
@@ -112,4 +125,10 @@ For example, run this `createRole` command on the `admin` database for one names
 
 Apply equivalent data/discovery privileges to each targeted event-store, namespace, global encryption, and cluster database. This example deliberately grants neither `createIndex` nor `dropIndex`; it is not a complete role for every deployment.
 
-`Verify` only inspects indexes; it does not disable runtime DDL or guarantee that the whole kernel can run without index privileges. Retain the index privileges required by runtime paths, including event-sequence fences and bindings, publication receipts, and constraints first used after provisioning. The Orleans MongoDB provider still creates indexes unconditionally on the prefix-derived reminders collection (`chronicle.OrleansReminderV2`) and, with MongoDB clustering, the membership collection (`OrleansMembershipV3`). Grant the required index privileges on those collection resources. MongoDB read-model databases also retain their existing index-creation requirements. Fence and binding indexes in read-model databases are created by Chronicle at runtime and are outside this catalog, which does not pre-provision them.
+### Retain permissions for runtime index creation
+
+`Verify` only inspects indexes; it does not disable runtime DDL or guarantee that the whole Kernel can run without index privileges. Retain the index privileges required by runtime paths, including event-sequence fences and bindings, publication receipts, and constraints first used after provisioning.
+
+The catalog does not provision indexes for the Orleans MongoDB provider's prefix-derived reminders collection (`chronicle.OrleansReminderV2`) or, with MongoDB clustering, its membership collection (`OrleansMembershipV3`). Retain the index privileges required by those provider paths on their collection resources.
+
+MongoDB read-model databases also retain their existing index-creation requirements. Fence and binding indexes in read-model databases are created by Chronicle at runtime and are outside this catalog, which does not pre-provision them.

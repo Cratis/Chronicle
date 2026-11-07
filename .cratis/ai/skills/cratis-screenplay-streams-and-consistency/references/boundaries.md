@@ -166,7 +166,8 @@ integration support.
   slice with an explicit direction (`cratis-screenplay-automations-and-translations`
   `references/public-events-and-direction.md`). Nothing checks that the foreign shape matches the
   other store, so also name the consumers in the event's `documentation` and keep the list in
-  `STATE.md`. Stage 4.73.1 refuses public events (`STAGE-ESM-032`).
+  `STATE.md`. Check [Stage target boundaries](../../cratis-stage-rendering-and-sandbox/references/current-boundaries.md)
+  for bounded publication support; public-event use is not universally renderable.
 
 ## Crossing a boundary in Screenplay
 | Situation | Construct |
@@ -179,9 +180,11 @@ integration support.
 
 Never let an external system's ids, codes or shapes become our domain vocabulary: translate at
 the edge, keep the external reference as a property when it is needed for correlation or dedup.
-Stage 4.89.1 renders supported internal event-triggered Automation, but Translate,
-captures and foreign/public event boundaries remain refused. The translation is gap-fill
-with the model as its contract (`cratis-screenplay-render-and-gap-fill`).
+Stage renders supported internal event-triggered Automation and bounded
+source-event capture/outbound Translate paths. Unsupported translation shapes
+remain gap-fill with the model as contract; check
+[Stage target boundaries](../../cratis-stage-rendering-and-sandbox/references/current-boundaries.md)
+rather than assuming that any foreign/public boundary renders.
 
 ## Change data capture is not a domain event
 A row change captured from a database (CDC) says which columns changed, not why. Treat it as an

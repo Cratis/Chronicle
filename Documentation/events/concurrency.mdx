@@ -1,10 +1,9 @@
 ---
 uid: Chronicle.ConcurrencyScope
-description: Chronicle concurrency control uses scopes and expected positions to keep operations from interfering when appending events to the same event source.
+title: Protect Chronicle decisions with concurrency scopes
+description: A Chronicle concurrency scope rejects an append if matching events arrived after an expected position. Capture that position before reading state.
 ---
-# Concurrency
-
-Concurrency control in Chronicle ensures that multiple operations don't interfere with each other when appending events to the same event source. Chronicle provides a sophisticated concurrency control mechanism through the `ConcurrencyScope` concept, which allows you to define precisely how concurrency should be handled based on formalized event metadata tags.
+A Chronicle concurrency scope rejects an append when matching events have arrived after the position your decision relies on. Use it when two operations could read the same state and both try to act on it, such as two withdrawals from one account. Capture the expected position before reading the facts so the check covers the decision, not just the write.
 
 :::caution[A scope guards a decision only if its position is captured before you read]
 The default scope is built when you append: the client reads the tail then and uses it as the expected position. That covers only the moment between that read and the write. It does not cover the time you spent reading state and deciding. To guard a decision, capture the position before you read the facts, or use a [decision read](../read-models/decision-reads.mdx), which does it for you. A read model you read through `IReadModels` captures nothing. See [Choosing how a rule holds](../dynamic-consistency-boundary/choosing.mdx).
@@ -26,29 +25,33 @@ What a guard covers, and how scopes and reads merge, is in [How guards are deriv
 
 ## Understanding ConcurrencyScope
 
-A `ConcurrencyScope` defines the boundaries and constraints for concurrent operations when appending events. It uses formalized, well-known event metadata tags that are indexed by Chronicle to scope concurrency control to specific aspects of your events, providing fine-grained control over when concurrency violations should be detected. These tags are separate from any user-controlled event tags you may add for categorization. See [Event Metadata Tags](../concepts/event-metadata-tags.md) for details.
+A `ConcurrencyScope` combines an expected sequence position with filters that select which events matter to the decision. The kernel checks those matching events before accepting the append. For example, a scope for one account need not reject a write just because another account changed.
+
+The filters use Chronicle's indexed event metadata, such as event source id and stream type. They are separate from user-controlled tags you add for categorization; adding a tag does not add a concurrency guard. See [Event Metadata Tags](../concepts/event-metadata-tags.md).
 
 ### Formalized Metadata Tags for Concurrency
 
 Chronicle uses the following formalized, indexed metadata tags to scope concurrency:
 
-- **EventSourceId**: Unique identifier for the event source
-- **EventSourceType**: Overarching, binding concept (e.g., Account)
-- **EventStreamType**: A concrete process related to event source type (e.g., Onboarding, Transactions)
-- **EventStreamId**: A marker to separate independent streams for a stream type (e.g., Monthly, Yearly)
-- **EventTypes**: Specific event types to scope concurrency to
+- `EventSourceId` identifies the entity instance, such as one account.
+- `EventSourceType` identifies the kind of entity, such as Account.
+- `EventStreamType` identifies a process, such as Onboarding or Transactions.
+- `EventStreamId` separates streams within that process, such as a particular month.
+- `EventTypes` selects the event types that affect the decision.
 
 ## Basic Usage
 
 ### Simple Concurrency Scope
 
-The most basic form of concurrency control scopes to a specific sequence number for an event source:
+The simplest scope selects one event source and an expected sequence position. In this example, `42` stands for the position captured before reading the account's state; it is not a value to copy into your application:
 
 <ChronicleClientTabs snippet="events/concurrency/basic" />
 
+If another matching event arrived after that position, Chronicle rejects the append with a concurrency violation. Read fresh state and reconsider the operation before trying again.
+
 ### Using ConcurrencyScopeBuilder
 
-For more complex scenarios, use the `ConcurrencyScopeBuilder` to fluently construct concurrency scopes:
+Use `ConcurrencyScopeBuilder` when you need to combine filters, such as one event source and a subset of event types:
 
 <ChronicleClientTabs snippet="events/concurrency/builder" />
 
@@ -108,7 +111,7 @@ You can also use concurrency scopes with event source operations:
 
 ## Handling Concurrency Violations
 
-When a concurrency violation occurs, Chronicle will return a `ConcurrencyViolation` in the append result:
+A `ConcurrencyViolation` means a matching append invalidated the expectation in your scope. Chronicle rejects your append; it does not choose a new decision for you. Inspect the result, read fresh state, and decide whether the operation is still valid before retrying. If the user must resolve the change, return the conflict instead.
 
 <ChronicleClientTabs snippet="events/concurrency/handling-violations" />
 
@@ -160,8 +163,7 @@ There are two levels, and you can use either or both:
 
 <ChronicleClientTabs snippet="events/concurrency/first-append-check" />
 
-- **Application-wide** — `ConcurrencyOptions.CheckFirstAppendIntoAScope`. Every scope the optimistic strategy resolves gets the check.
-- **Per append** — `ConcurrencyScopeBuilder.ExpectingNoMatchingEvent()`. One behavior asks for the check without changing the default for everything else.
+Set `ConcurrencyOptions.CheckFirstAppendIntoAScope` to enable the check for every scope the optimistic strategy resolves. To ask for it on one append instead, use `ConcurrencyScopeBuilder.ExpectingNoMatchingEvent()` without changing the application-wide default.
 
 :::caution[This rejects appends that succeed with it off]
 That is the point — it is the race the check exists to catch — but adopt it per behavior and be ready to handle `ConcurrencyViolation` on appends that never produced one before. Treat it like any other violation: retry against the state the winner produced, or surface the conflict. See [Handling Concurrency Violations](#handling-concurrency-violations).
@@ -213,14 +215,16 @@ The `ApiKey` shows the limit of this check. Freshness applies to the stream's id
 |---|---|
 | Prove a generated identifier is not already in use, at the moment you append | A `BeforeFirst` scope with `ExpectingNoMatchingEvent()` |
 | Every writer, forever, may produce at most one event of a type for a source | A [unique event type constraint](../constraints/index.md) |
-| The identifier is a natural key from outside, such as an email address or a national number | A unique constraint on that value, or a deterministic event source id derived from it |
+| The identifier is a non-sensitive natural key from outside | A unique constraint on that value, or a deterministic event source id derived from it |
 | Extending an existing stream without overwriting a concurrent change | A sequence-number scope from the [optimistic strategy](#optimistic-concurrency-strategy) |
 
 #### When not to use it
 
-- **The identifier is a natural key that is already unique.** Do not generate a value just to prove it is new. Derive the event source id from the key, so a second use lands on the same stream by design, or declare a unique constraint so the event store refuses duplicates for every writer.
-- **The rule has to hold for writers that never declared a scope.** A scope only protects the appends that carry it. A constraint is enforced by the kernel for everyone.
-- **You want a retry to succeed after an error.** A write can commit and still report an error, for example when a connection drops after the event store accepted it. Retrying with the same identifier then reports a violation, because the stream now exists: your own earlier write. Make the retry idempotent: when you retry after an error, first check whether the stream you attempted to create already holds your own events before you generate a new identifier.
+For a non-sensitive natural key, a deterministic event source id can make repeated uses land on the same stream by design. Do not put personal data, such as an email address or national number, in the event source id. Use a non-sensitive surrogate and protected event content instead; see [Personal data in events](../compliance/pii.mdx).
+
+If the rule must hold for writers that never declared a scope, use a constraint. A scope only protects appends that carry it; the kernel enforces a constraint for every writer.
+
+A freshness scope also does not make retries succeed after an error. A write can commit before its connection drops. Retrying with the same identifier then reports a violation because your own earlier events created the stream. Before generating another identifier, resolve whether that earlier attempt was stored. See [When the outcome is unknown](./appending#when-the-outcome-is-unknown) for recovery and keyed appends.
 
 ### Telling a Skipped Check From a Passing One
 
@@ -256,11 +260,8 @@ For plain scopes and constraints, coordinate history mutations operationally: pa
 
 ## Best Practices
 
-1. **Use specific scoping**: Scope concurrency as narrowly as possible to avoid unnecessary blocking — but note that the narrower the scope, the more scopes there are, and [the first append into each one is not checked unless you ask for it](#the-first-append-into-a-scope-is-not-checked-by-default)
-2. **Event type scoping**: When possible, scope to specific event types to allow concurrent operations on different event types
-3. **Handle violations gracefully**: Always check for concurrency violations and implement appropriate retry or fallback logic
-4. **Use builders for complex scopes**: The `ConcurrencyScopeBuilder` provides a clear, fluent API for complex concurrency requirements
-5. **Use concurrency scope strategies**: Inject `IConcurrencyScopeStrategies` to get a built-in strategy (such as optimistic concurrency) instead of hand-rolling sequence-number lookups
-6. **Assert the check ran**: Read `IAppendResult.ConcurrencyCheckPerformed` when a behavior depends on serialization — [a skipped check looks exactly like a passing one](#telling-a-skipped-check-from-a-passing-one)
-7. **Adopt the first-append check per behavior**: Turn on [the first-append check](#checking-it--opt-in) where two writers must not both open the same partition, ahead of it becoming the default in the next major version
-8. **Capture the position before you read**: A scope protects a decision only if its position was taken before the facts were read. Read the facts from the event log or a fresh fold, not from a materialized read model that may lag: otherwise the captured position covers events the decision never saw. See [Choosing how a rule holds](../dynamic-consistency-boundary/choosing.mdx) and the [editing conflict scenario](../dynamic-consistency-boundary/scenarios.mdx#an-editing-conflict)
+Choose filters from the facts the decision depends on. Narrowing by event type lets unrelated operations proceed, but omitting an event type that affects the rule leaves the decision unprotected. Each narrower scope also has its own [first-append behavior](#the-first-append-into-a-scope-is-not-checked-by-default). Turn on that check where two writers must not both open the same partition.
+
+Capture the position before reading from the event log or folding fresh state. A materialized read model may lag behind that position, leaving the decision unaware of events its scope already covers. Use a [decision read](../read-models/decision-reads.mdx) when the rule depends on projected state. For a user editing a revision they previously saw, use that revision instead; see the [editing conflict scenario](../dynamic-consistency-boundary/scenarios.mdx#an-editing-conflict).
+
+Use `ConcurrencyScopeBuilder` for explicit filters or inject `IConcurrencyScopeStrategies` for a built-in strategy. Neither replaces choosing the correct capture point. Check violations on every append and assert `IAppendResult.ConcurrencyCheckPerformed` in tests when correctness depends on the guard running: [a skipped check looks like a passing one](#telling-a-skipped-check-from-a-passing-one). [Choosing how a rule holds](../dynamic-consistency-boundary/choosing.mdx) helps distinguish these guards from constraints enforced for every writer.

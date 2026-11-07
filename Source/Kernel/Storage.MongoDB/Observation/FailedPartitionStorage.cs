@@ -40,17 +40,22 @@ public class FailedPartitionStorage(IEventStoreNamespaceDatabase database) : IFa
     public async Task Save(ObserverId observerId, FailedPartitions failedPartitions)
     {
         await EnsureIndexes().ConfigureAwait(false);
+
+        // One request for everything, instead of a round trip per partition.
+        var writes = new List<WriteModel<FailedPartition>>();
         foreach (var failedPartition in failedPartitions.ResolvedPartitions)
         {
-            await _collection.DeleteOneAsync(_ => _.Id == failedPartition.Id).ConfigureAwait(false);
+            writes.Add(new DeleteOneModel<FailedPartition>(Builders<FailedPartition>.Filter.Eq(_ => _.Id, failedPartition.Id)));
         }
 
         foreach (var failedPartition in failedPartitions.Partitions)
         {
-            await _collection.ReplaceOneAsync(
-                _ => _.Id == failedPartition.Id,
-                failedPartition,
-                new ReplaceOptions { IsUpsert = true }).ConfigureAwait(false);
+            writes.Add(new ReplaceOneModel<FailedPartition>(Builders<FailedPartition>.Filter.Eq(_ => _.Id, failedPartition.Id), failedPartition) { IsUpsert = true });
+        }
+
+        if (writes.Count > 0)
+        {
+            await _collection.BulkWriteAsync(writes, new BulkWriteOptions { IsOrdered = false }).ConfigureAwait(false);
         }
     }
 
