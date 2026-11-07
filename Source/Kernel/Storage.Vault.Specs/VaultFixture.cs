@@ -31,7 +31,7 @@ public sealed class VaultFixture : IAsyncLifetime
     /// <inheritdoc/>
     public async ValueTask InitializeAsync()
     {
-        _container = new ContainerBuilder("hashicorp/vault:latest")
+        _container = new ContainerBuilder("hashicorp/vault:1.20.4")
             .WithCommand(
                 "vault",
                 "server",

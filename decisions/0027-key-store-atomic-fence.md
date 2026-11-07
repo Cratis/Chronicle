@@ -81,8 +81,9 @@ conditional update of exactly its own staged row; if the fence forbids it, it de
 "an erasure that found nothing"). An erasure orders itself: raise the fence (recording its boundary, C4), sweep every row inside
 the boundary, published or not, then verify (C8). Ordering proof: a save validates after staging; the erasure sweeps after
 raising. Either the save's validation sees the raise (it undoes), or the save staged before the raise and the sweep deletes it;
-a publish that lands after the sweep updates a deleted row and fails. A row published between raise and sweep is
-never released: readers validate the fence at release (#4978, shipped in the same release, see Release gate), and the
+a publish that lands after the sweep updates a deleted row and fails. Vault differs: destroy leaves CurrentVersion;
+a CAS tombstone invalidates delayed publication before the covered versions are destroyed (see Vault and C9).
+A row published between raise and sweep is never released: readers validate the fence at release (#4978, shipped in the same release, see Release gate), and the
 fence already shows the raise. Release validation uses the **same predicate as the sweep** (one helper, `Covers`): a key is
 refused if `revision <= ErasedThrough`, or its fingerprint is recorded, or its `StagedLifecycle <= ErasedLifecycle` (pre-N rows
 have no staged lifecycle and are bounded by revision and fingerprint only). So every read path carries the staged lifecycle:
@@ -141,7 +142,10 @@ would invalidate the ordering proof). A store that cannot offer one reports `Fen
 
 C9. **Revision ownership before undo.** A writer may only undo what it staged: each staged write carries a unique writer
 nonce and the store's own write identity (Mongo `_id` plus nonce, SQL row nonce, Vault version number, Azure version id). Undo is
-conditional on that identity; if the revision no longer carries it, the writer does nothing.
+conditional on that identity; if the revision no longer carries it, the writer does nothing. In Vault, destroy leaves
+CurrentVersion; a CAS tombstone invalidates delayed publication. Undo CAS-writes a key-free tombstone against its own
+observed staged version and nonce, then destroys versions through that stage. If another writer has advanced the version,
+undo does nothing. It never deletes the revision's metadata.
 
 C10. **Release linearization and revocation.** A release (append, idempotency, watch update) is permitted if a linearizable fence
 read taken inside its release scope shows the key not covered (`Covers`, C3); that read is the linearization point. The scope memo
@@ -210,20 +214,40 @@ about old writers; the N+1 gate (rollout) does not rely on detecting it. `GetOrA
 **Vault (KV v2).** CAS is a native primitive: `WriteSecretAsync(path, data, checkAndSet: n, mountPoint)` exists in
 the pinned VaultSharp 1.17.5.1 and is already used by provisioning (`VaultEncryptionKeyStorage.cs` `checkAndSet: 0`);
 the version to condition on is `Data.Metadata.Version` of the read. KV v2 CAS exists on every Vault with the v2 engine
-(0.10 and later), so the server floor is "KV v2". The spec fixture uses `hashicorp/vault:latest`
-(`Storage.Vault.Specs/VaultFixture.cs`), which is unpinned; slice 3 pins a tag. The fence is its own secret
+(0.10 and later), so the server floor is "KV v2". Slice 3 pins the spec fixture to `hashicorp/vault:1.20.4`
+(`Storage.Vault.Specs/VaultFixture.cs`). The fence is its own secret
 (`ErasurePath`): read with version, merge, write with `checkAndSet = version` (0 when absent); a mismatch re-reads and
 re-evaluates under the same rules as Mongo. Key writes use CAS 0 for a new revision (an explicit overwrite uses the
-read version), stage with `published=false` and a writer nonce, validate, then publish by CAS on the version it wrote. Undo (C9) reads the path, confirms nonce and version, and destroys that version only with `DestroySecretVersions` (never the path-wide `DeleteMetadataAsync` that `DeleteFor` uses today at `VaultEncryptionKeyStorage.cs:186-214`). A KV v1 mount ignores CAS and would silently
+read version), stage with `published=false`, staged lifecycle and a writer nonce, validate, then publish by CAS on the version it wrote.
+The writer also validates the primary fence after a successful publish, before releasing its candidate; if erasure won
+between validation and publication without yet sweeping, that check refuses and conditionally tombstones its own known
+published version. An ambiguous publication result is never retried or guessed.
+Destruction does **not** change KV v2 `CurrentVersion`: CAS against a destroyed-but-current version still succeeds. Before
+destroying covered versions through V, the sweep CAS-writes a key-free `{erasedTombstone:true}` at V+1. Readers treat it as
+absent. A publisher holding CAS V now loses and re-reads the fence before failing closed. If publication wins first, the
+sweep re-reads and tombstones the new current version, bounded and jittered against the original request lifecycle.
+Undo (C9) checks its nonce and staged version, CAS-tombstones that version, then destroys versions through it; it never
+removes subject metadata. Tombstones are retained so native CAS cannot suffer an ABA reset. Before reusing a tombstoned
+revision, a writer completes destruction of its historical versions. Confirmation checks metadata to prove those versions
+were destroyed; a successful tombstone alone is not proof of physical erasure. Fake and pinned-server contracts exercise
+both the destroy-without-version-change behavior and publication paused after validation until after the sweep.
+A KV v1 mount ignores CAS and would silently
 lose the guarantee, so the startup check performs a probe (write a probe secret with CAS 0 twice; the second must be refused
 with `check-and-set`) and reports `None` when it is not refused (warning in N, refusal from N+1, D4). Vault's `cas_required` mount option is
 recommended for operators but not assumed.
 Linearizable reads (C8): Vault serves KV reads from the active node; standbys forward, but Enterprise performance standbys
 answer reads locally and may be stale. Every fence and validation read therefore sends `X-Vault-Inconsistent: forward-active-node`
 (through VaultSharp's request hook, `VaultClientSettings.BeforeApiRequestAction`, which slice 3 verifies in 1.17.5.1), and the startup
-check reads `sys/health` on the configured address: if it reports a performance standby and the forwarding header is rejected,
-the store reports `None`. Slice 3 verifies against a real Vault (CI integration) that the header forces a fresh read rather than only forwarding a detected inconsistency; until verified the store reports `None`. The operator requirement (address the active node or allow forwarding; no client-side eventual-consistency
-mode) is documented with the Vault store. A read that cannot be forwarded throws `EncryptionKeyFenceUnavailable`, never a stale answer.
+check reads `sys/health` on the configured address. `X-Vault-Inconsistent` only forwards detected inconsistencies; it is
+not an unconditional freshness guarantee for Enterprise performance standbys. Until an Enterprise CI topology proves
+unconditional active-node forwarding, all Enterprise/performance-standby endpoints report `None` and fence operations
+throw `EncryptionKeyFenceUnavailable`. The OSS contract uses Vault **1.20.4** in CI (never `latest`), whose active reads
+and ordinary standby forwarding provide the required primary reads. Operators must use an OSS active/ordinary-standby
+address, not a proxy to an unverified Enterprise topology, and grant health, KV data CAS, metadata read/list and version
+destroy access. The capability probe writes a unique key-free probe twice with CAS 0, requires a definite mismatch on the
+second write, and removes only that probe's metadata. A refused or ambiguous probe reports `None`. The forwarding hook
+preserves any existing request hook. A validation read that is denied or unavailable throws
+`EncryptionKeyFenceUnavailable`, never a stale answer.
 
 **Azure Key Vault.** There is no conditional write. `SecretClient.SetSecret` (Azure.Security.KeyVault.Secrets 4.11.2)
 takes no ETag or `If-Match` condition, `SecretProperties` exposes no ETag, and version listing only lets readers elect a winner

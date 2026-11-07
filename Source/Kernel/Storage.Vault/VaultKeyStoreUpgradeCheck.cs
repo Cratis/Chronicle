@@ -95,6 +95,35 @@ internal class VaultKeyStoreUpgradeCheck(IVaultClient vaultClient, string? mount
         }
     }
 
+    /// <summary>Verify native CAS and an OSS primary/ordinary-standby read topology.</summary>
+    /// <param name="access">The versioned KV access with its consistency hook installed.</param>
+    /// <returns>The guarantees verified for this endpoint.</returns>
+    internal async Task<EncryptionKeyFenceGuarantees> ProbeFenceGuarantees(VaultFenceAccess access)
+    {
+        // Enterprise performance forwarding needs its own CI proof. Never advertise an unverified strong read.
+        var path = $"{VaultPathSegments.Root}/~fence-probe-{Guid.NewGuid():N}";
+        try
+        {
+            if ((await EnsureLayout()).LayoutUnusable) return EncryptionKeyFenceGuarantees.None;
+            var health = await _vaultClient.V1.System.GetHealthStatusAsync(standbyOk: true);
+            if (!health.Initialized || health.Sealed || health.Enterprise || health.PerformanceStandby) return EncryptionKeyFenceGuarantees.None;
+            var data = new Dictionary<string, object> { ["probe"] = true };
+            if (await access.Write(path, data, 0) is not { } version) return EncryptionKeyFenceGuarantees.None;
+            if (await access.Write(path, data, 0) is not null) return EncryptionKeyFenceGuarantees.None;
+            await access.Destroy(path, version);
+            return EncryptionKeyFenceGuarantees.MonotonicFence | EncryptionKeyFenceGuarantees.FencedSave;
+        }
+        catch (Exception)
+        {
+            return EncryptionKeyFenceGuarantees.None;
+        }
+        finally
+        {
+            // The random probe contains no keys. Removing its metadata cannot race a subject writer.
+            _ = await RemoveProbe(path);
+        }
+    }
+
     static EncryptionKeyStoreUpgradeStatus Layout(bool verified, bool conflict) =>
         new(verified, conflict, 0, 0, 0, false);
 
@@ -122,6 +151,19 @@ internal class VaultKeyStoreUpgradeCheck(IVaultClient vaultClient, string? mount
         else
         {
             counts.Unresolved++;
+        }
+    }
+
+    async Task<bool> RemoveProbe(string path)
+    {
+        try
+        {
+            await _vaultClient.V1.Secrets.KeyValue.V2.DeleteMetadataAsync(path, mountPoint: _mountPoint);
+            return true;
+        }
+        catch (Exception)
+        {
+            return false;
         }
     }
 
