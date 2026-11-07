@@ -150,6 +150,11 @@ public partial class UnitOfWork : IUnitOfWork
         }
     }
 
+    /// <summary>
+    /// Gets or sets the <see cref="EventTagResolver"/> used to resolve the named tags of staged events at enrollment.
+    /// </summary>
+    internal EventTagResolver? TagResolver { get; set; }
+
     /// <summary>Gets the client span naming convention.</summary>
     internal ClientSpanNames SpanNames { get; init; }
 
@@ -254,7 +259,7 @@ public partial class UnitOfWork : IUnitOfWork
             }
             var stagedEvents = batch.Events.Select(_ => _ with
             {
-                NamedTags = NamedTagConverters.Merge(_.NamedTags, [])
+                NamedTags = ResolveTags(eventSequenceId, _.EventSourceId, _.Event, _.NamedTags)
             }).ToArray();
 
             BindToEventSequence(eventSequenceId);

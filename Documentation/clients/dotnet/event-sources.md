@@ -1,6 +1,6 @@
 ---
 title: Event sources in the .NET client
-description: Look up Chronicle .NET event source definition types, exceptions, and explicit registration APIs, with links to event source and stream guides.
+description: Cratis Chronicle's .NET event source APIs define sources and streams, route appends, set concurrency dimensions, and filter reactors and reducers.
 ---
 
 This page covers the .NET client's API for event source definitions. The guides, the scenarios and the explanation of how they work are in [Event sources and streams](../../event-sources/index.mdx). This page lists the client types and where each is explained. An event source is optional: the existing append APIs remain valid and append events without a definition.
@@ -29,7 +29,7 @@ This page covers the .NET client's API for event source definitions. The guides,
 | `UnknownEventSource` | A type or name is not a discovered definition |
 | `EventStreamDoesNotBelongToEventSource` | A stream name is not declared by the definition |
 | `EventRoutingContradictsEventSource` | An explicit event source type or stream type contradicts the definition |
-| `IncompatibleConcurrencyScopesForEventSource` | A batch needs different guards for one event source id. See [Concurrency](../../event-sources/concurrency.mdx#a-batch-that-needs-two-guards-for-one-event-source-id) |
+| `IncompatibleConcurrencyScopesForEventSource` | A batch needs different guards for one event source id and the kernel does not advertise support for concurrency-scope conjunctions. See [Concurrency](../../event-sources/concurrency.mdx#a-batch-that-needs-two-guards-for-one-event-source-id) |
 | `EventSourcesNotSupported` | An `IEventStore` or `IEventSequence` implementation does not support event sources, such as a custom test double |
 
 ## Explicit registration

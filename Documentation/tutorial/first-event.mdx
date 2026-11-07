@@ -1,49 +1,48 @@
 ---
 title: "1. Your first event"
-description: Record a book's arrival as your first Chronicle event, choose an event source identity, and append immutable facts instead of inserting database rows.
+description: Define BookAdded, give the book an event-source ID, and append your first event to Cratis Chronicle. Then inspect it in the workbench.
 ---
 
-Every library starts the same way: a book shows up. So that's where we'll start too — by recording that fact. By the end of this chapter you'll have written your first event to Chronicle and understood why we reach for an *event* instead of a database row.
+To record a book arriving in Cratis Chronicle, define a `BookAdded` event, give the book an identity, and append the event to the log. By the end of this chapter you will have one recorded fact to inspect, ready to feed the catalog in the next chapter.
+
+Before writing code, make sure your [kernel is running and your project has a connected client](/chronicle/get-started/). The C# append example takes an `IEventStore`; use the event-store handle from that setup. The other client tabs use their corresponding connection and registration instructions.
 
 ## Think in facts, not rows
 
-Your instinct, coming from most databases, is probably to create a `Book` row and `INSERT` it. Hold that thought — because it throws away the most interesting thing: *that the book arrived, and when*. In event sourcing we record what **happened**. The book arriving is a fact, and facts have a few properties: they're immutable (it happened; you can't un-happen it), and they're named in the past tense.
+A `Book` row can describe a book you have now. Here we also want to retain the fact that it was added, so we record that change as an event. Name events in the past tense: `BookAdded` describes something that happened, not a request that might still fail.
 
-So let's name it: a `BookAdded` event, declared and registered using your client's event-type syntax:
+In C#, define the event as a record marked with `[EventType]`. It carries the title and ISBN:
 
 <ChronicleClientTabs snippet="tutorial/first-event/book-added" />
 
-A couple of things worth noticing here:
+With no explicit name on `[EventType]`, Chronicle uses `BookAdded` as the event type's stored identity. Keep that identity when you later rename a class: changing the default name does not rename existing history. [Event types](../concepts/event-type.md) explains how to preserve it.
 
-- The event needs a stable identity. C#'s `[EventType]` defaults to the type's name (`BookAdded`); the Elixir example declares an explicit `id`. Use your client's event-type registration conventions.
-- The properties aren't nullable. An event states what *was* true the moment it happened. If you ever find yourself reaching for a nullable property, that's Chronicle nudging you: you probably have a *second* fact hiding in there, and it deserves its own event.
+The title and ISBN are required here because this fact says both were known when the book arrived. For other events, decide what was actually known at that moment. Missing information may belong in a later event rather than in a partially filled record.
 
 ## Give the book an identity
 
-Every event is about *something* — here, a specific book. Chronicle calls that the **event source**, and the events that share a source form that book's own little stream of history. Give each book a unique identifier. Where your client supports it, a domain-specific wrapper can help prevent mixing a book's id with a member's:
+The **event source** identifies which book this event belongs to. Later borrow and return events use that same identity, keeping the book's history together. In C#, use a `BookId` rather than passing an untyped `Guid` throughout your application; code that expects a `BookId` can then distinguish it from a member's ID:
 
 <ChronicleClientTabs snippet="tutorial/first-event/book-id" />
 
-In C#, by inheriting from `EventSourceId<Guid>`, `BookId` becomes a specialized concept — a `ConceptAs<>` targeting `EventSourceId` — so it converts to and from the stream key automatically: you hand a `BookId` straight to Chronicle, no ceremony. And because the *type itself* says "I am an event source id", conventions elsewhere in the stack pick it up — [Arc](/arc/), for instance, recognizes an `EventSourceId`-derived parameter on a command and resolves which stream to write to without any wiring from you. One small record, and the whole stack knows what a book's identity is. The [event source concept](../concepts/event-source.md) goes deeper on how these per-thing streams of facts work.
+`EventSourceId<Guid>` wraps a `Guid` as a domain-specific value using `ConceptAs<T>`, with conversions to Chronicle's untyped event-source key. That lets the append example pass a `BookId` directly. [Arc](/arc/) also recognizes event-source ID types when resolving where a command appends events; you do not need Arc for this tutorial. The [event source concept](../concepts/event-source.md) explains how events are grouped.
 
-Kotlin, Java, and TypeScript don't currently have an equivalent typed-id wrapper — event source ids in those clients are plain strings, so the compiler can't stop you from mixing up a book's id and a member's the way it can in C#. Elixir marks a `Chronicle.Concept` with `event_source_id: true` to mark a type as an event source id.
+Kotlin, Java, and TypeScript use plain strings for event-source IDs rather than this C# typed wrapper. Elixir can mark a `Chronicle.Concept` with `event_source_id: true`; its client tab shows a `BookId` concept. Those are different client conventions, not the same type-safety guarantee.
 
 ## Append it
 
-Now the moment itself. With your client connected to the event store, append the event against the book's id using the identifier representation your client accepts:
+Use your connected event store to append `BookAdded` under the book's ID. The C# helper creates a `BookId`, appends the title and ISBN, and returns the ID so you can use it for later events:
 
 <ChronicleClientTabs snippet="tutorial/first-event/append" />
 
-Run it. Nothing dramatic appears on screen — and that's exactly right. Behind that one line, Chronicle validated the event against its registered schema, assigned it the next sequence number, and committed it to the **event log** — permanently, and in order. The fact is now part of your system's history; nothing will ever quietly overwrite it.
+In C#, call `TutorialFirstEventAppend.AddBook` with your `IEventStore` and await the result. For another client, run its append example after the setup has registered the event type. A successful append validates the event against its registered schema, assigns a sequence number, and stores it in the **event log**, the ordered history from which observers read.
+
+To see the result, open the [workbench](/chronicle/workbench/) at `https://localhost:35000`, select the event store and namespace your client used, and browse its event log. Find `BookAdded` with the title `The Pragmatic Programmer` and ISBN `978-0135957059`. Running the helper again creates a new book ID and another event; it does not update the first book.
 
 :::note[Where did it go?]
-The event log is the source of truth — an append-only sequence of everything that has happened. You just wrote position `0`. Every projection, reducer, and reactor you build from here on is, in the end, just a different way of *reading* this log.
+The event log is the source of truth for the facts your application appends. This is position `0` only if the log was empty. Other setup examples or earlier runs may already have written events. Projections, reducers, and reactors consume that recorded history.
 :::
 
 ## What you did
 
-- Modeled a real-world moment as an **immutable event** (`BookAdded`) instead of a row to be updated later.
-- Gave the book an **event source id** so its events form one stream.
-- **Appended** that event to the log — your first permanent fact.
-
-A fact you can't query, though, isn't much use yet — right now the book exists only as history. In the [next chapter](./read-model) we'll fix that: we'll teach Chronicle to fold this stream of events into a `Books` read model you can actually query, and watch it update itself as more events arrive. [Onward →](./read-model)
+You defined `BookAdded`, associated it with a book ID, and appended it to the log. You can inspect the recorded fact, but you have not built a queryable catalog yet. In [Building a read model](./read-model), you will map these events onto the book view the librarian needs.

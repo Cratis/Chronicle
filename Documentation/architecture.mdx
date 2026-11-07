@@ -1,31 +1,14 @@
 ---
-title: Chronicle architecture
-description: Explore Chronicle's runtime architecture across the kernel, client protocol, event stores, namespaces, and persistent subscriptions, with inspection links.
+title: Cratis Chronicle architecture and runtime boundaries
+description: Cratis Chronicle runs event storage and processing in a server kernel. Learn where client calls, namespaces, and event-store subscriptions fit.
 ---
 
 import { CardGrid } from '@astrojs/starlight/components';
 import SimpleCard from '@components/SimpleCard.astro';
-import TopicHero from '@components/TopicHero.astro';
-import YouWillLearn from '@components/YouWillLearn.astro';
 
-<TopicHero
-  icon="puzzle"
-  eyebrow="Chronicle"
-  title="Kernel and protocol boundaries"
->
-  Chronicle uses a .NET/Orleans actor-based kernel behind gRPC/HTTP surfaces and
-  supports multiple event stores, namespaces, and persistent event-store
-  subscriptions with outbox/inbox sequences.
-</TopicHero>
+Cratis Chronicle runs event storage and processing in a server called the kernel. Applications connect through client APIs; the kernel handles appends, runs projections that derive queryable state, and manages event delivery. This separation lets application code describe facts and their uses without hosting the event store itself.
 
-<YouWillLearn title="Use this page to locate">
-
-- the gRPC and HTTP protocol surfaces;
-- the .NET/Orleans kernel;
-- event-store and namespace runtime scopes; and
-- persistent-subscription outbox/inbox sequences.
-
-</YouWillLearn>
+Use these boundaries when deciding where code should run and how to separate application data. A protocol entry point, an event store, and a namespace each answer a different question; none is a substitute for the others.
 
 ## Runtime shape
 
@@ -39,28 +22,24 @@ flowchart LR
     Subscriptions --> Sequences["Outbox / inbox sequences"]
 ```
 
-| Boundary | Owns in this diagram | Does not imply |
+The kernel is a .NET application built on Microsoft Orleans, whose actors, called grains, coordinate runtime work. It also uses Cratis Choreography for durable jobs such as event-generation backfills. gRPC and HTTP expose entry points to that runtime; a particular client or tool need not use both transports.
+
+| Boundary | Responsibility | Design decision |
 | --- | --- | --- |
-| Protocol surfaces | gRPC and HTTP entry boundaries around the kernel | Every client or tool uses both transports |
-| Kernel | .NET/Orleans runtime | Horizontal scale, throughput, recovery, or topology guarantees |
-| Event stores and namespaces | Separate runtime scopes | Client/provider parity or compatibility breadth |
-| Persistent subscriptions | Event-store subscription state with outbox/inbox sequences | Guaranteed or exactly-once delivery |
+| Protocol surfaces | Accept calls into the kernel | Use the API and setup supported by your client |
+| Kernel | Coordinate event storage and processing | Keep server enforcement separate from application handlers |
+| Event stores and namespaces | Separate named runtime scopes | Choose where an application's events belong |
+| Persistent subscriptions | Forward events between stores through outbox/inbox sequences | Choose which facts another store should receive |
+
+An [event store](./concepts/event-store.md) contains namespaces, and each [namespace](./namespaces/) has its own event sequences. A namespace can separate one tenant's events from another's within a store. It is a data scope, not a claim that every client or storage provider has identical capabilities.
+
+A [persistent subscription](./subscriptions/) connects event stores through an outbox on the source and an inbox on the receiving store. The kernel retains subscription state independently of a client connection. Forwarding is separate from the original append: recording a fact does not mean that another store or its consumers have finished processing it. Read [subscription recovery](./subscriptions/recovery) before choosing a replay operation, since forwarding replay can append events to the inbox again.
 
 ## Related inspection surfaces
 
-Chronicle Workbench provides a bundled local browser surface for authorized
-inspection of Chronicle runtime state and preview of supported projection
-behavior.
+Use Chronicle Workbench when you want to inspect a running instance in a browser, including its events and supported projection behavior. It is bundled with Chronicle and requires authorization. The Cratis CLI offers terminal workflows for inspection and diagnosis. Neither tool replaces the kernel or the application client.
 
-The Cratis CLI provides terminal workflows for inspecting and diagnosing
-Chronicle. These statements do not assign either tool to a specific transport
-in the diagram above.
-
-:::caution[Architecture is not an operational guarantee]
-This page does not claim horizontal scale, throughput, guaranteed delivery,
-exactly-once behavior, client/provider parity, durability tier, compliance, or
-support for every topology.
-:::
+The diagram describes responsibilities, not a deployment topology or a delivery guarantee. For an application setup, continue to the [hosting-model guide](./get-started/choose-hosting-model). For processing and recovery behavior, follow the subscription documentation rather than inferring exactly-once delivery from an outbox/inbox connection.
 
 ## Continue
 

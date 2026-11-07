@@ -1,29 +1,23 @@
 ---
-title: "Event Redaction"
-description: "Redact Chronicle event content while retaining sequence slots and limited audit metadata, and handle EventRedacted notifications in observers."
+title: "Cratis Chronicle event redaction and its erasure boundaries"
+description: "Redaction replaces stored event content in Cratis Chronicle with a marker. Metadata remains, and copies, read models, and external effects need separate handling."
 ---
 
-Redaction removes the meaningful content of a previously appended event when you need to erase data — for example, to comply with a right-to-erasure request. Rather than deleting the event entirely, Chronicle replaces the event's payload with a redaction marker that preserves the sequence number and limited audit metadata. The original event type, occurrence, correlation ID, caused-by identities, and causation types and times remain; original causation property values, revision history, and content hashes do not.
+Redaction in Cratis Chronicle replaces a stored event's payload with a marker while keeping its sequence number and audit metadata. Use it when event content must be removed, but treat it as one part of an erasure workflow: it does not remove every copy of the data or every identifier associated with the event.
 
 ## Why redaction keeps the event slot
 
-Events are immutable, and their sequence numbers are permanent identifiers. Observers, projections, and reducers may have already processed an event and advanced their positions based on those sequence numbers. Removing the slot entirely would corrupt every downstream position. Redaction instead replaces the content in-place, changes the event type to the internal `EventRedacted` type, and stores the reason and the original context alongside it.
+Observers use sequence numbers to track their progress. Keeping the slot means those positions still refer to the same place in history after redaction. Chronicle replaces the content in place, changes the event type to the internal `EventRedacted` type, and stores the reason and selected original audit fields in the marker.
 
-This means:
-
-- Observers that replay the event see only the redaction marker, not the original data.
-- Positions and sequence numbers remain stable and consistent.
-- An auditor can still determine that an event existed at that position and who requested its removal.
+Later reads and replays see the marker rather than the original payload. The event's context records the redaction action, so you can distinguish who requested redaction from the identity chain that caused the original event. Keeping that context also means redaction is not anonymous history.
 
 ## When to use redaction
 
-Redact an event when:
+Use redaction to remove sensitive content from selected events, including events identified during a right-to-erasure workflow. An event-source request selects events by their event source identifier in the target sequence; it does not discover every event whose payload refers to that person.
 
-- A regulation or legal request (e.g. GDPR right to erasure) requires that personal data be removed.
-- An event was appended in error and contains sensitive information that must not be retained.
-- You need to wipe all events associated with a specific event source (e.g. a user account deletion).
+Review retained identifiers, tags, subject values, and audit metadata as part of that workflow. They can still contain personal information. Keep sensitive details out of the redaction reason too. For subject-key erasure, use [Erasing a subject](../compliance/erasing-a-subject.mdx), and review the broader [regulatory responsibilities](../compliance/regulatory-responsibilities.md).
 
-Do not use redaction as a way to undo domain decisions. If a correction is being made in the domain — for example, a cancellation, reversal, or override — model that as a new event instead.
+Do not use redaction to undo a business decision. Record a cancellation or reversal as a new event; [compensation](compensation.md) can link it to the event it offsets. Use [revision](revision.md) when content needs correction but the original should remain stored.
 
 ## Redacting a single event
 
@@ -37,7 +31,7 @@ Always provide a meaningful reason when possible:
 
 ## Redacting all events for an event source
 
-To redact every event associated with a particular event source — for example, to erase all data for a specific user — pass the event source identifier and a reason:
+Pass the event source identifier and a reason to redact its events in the target event sequence. This selects by event source, not by compliance subject or references inside event content:
 
 <ChronicleClientTabs snippet="events/redaction/by-event-source" />
 
@@ -56,21 +50,23 @@ The replacement stores an `EventRedacted` content record inside the event docume
 - The **original** `Occurred`, `CorrelationId`, and `CausedBy` identity chain.
 - The original `Causation` entries' types and occurrence times, **without** their property values.
 
-The event's own context fields reflect the redaction action. The original payload, revision history, and content hashes are removed from event sequence storage. Redaction cannot reach copies made before redaction, such as database oplogs or backups, or events already forwarded to other event stores through outbox/inbox. Handle those copies separately.
+The event's own audit context reflects the redaction action. The original payload, revision history, and content hashes are removed from event sequence storage. Routing identifiers, tags, and subject values remain. The marker retains the original audit fields listed above, but not the original causation property values.
+
+Redaction does not reach copies made earlier, such as database oplogs, backups, exports, or events forwarded through outbox/inbox. Nor does replacing the stored payload retract a message or erase a derived read model by itself. Handle those copies and effects separately before reporting an erasure request complete.
 
 ## Observing redacted events in Reactors and Reducers
 
-When an event is redacted, the `EventRedacted` event is dispatched to any observer that was subscribed to the original event type and also includes `EventRedacted` in its subscription. This lets Reactors and Reducers react to the removal of data — for example, to clean up read models or trigger downstream notifications.
+After replacement, Chronicle requests replay for affected observers marked replayable. Depending on their partitioning, this can replay one event-source partition or the whole observer. Non-replayable observers are not automatically rebuilt.
+
+A reactor or reducer that handles both the original event type and `EventRedacted` can process the marker when it reads that position. Use that handler to clean up derived state or request downstream cleanup. This is not an immediate notification to every consumer, and replay can run other handlers again; review their external effects.
 
 ### Why subscribe to `EventRedacted`?
 
-- **Read model cleanup**: If a Reducer builds state from an event that is later redacted, subscribing to `EventRedacted` lets you remove or anonymise that state in reaction.
-- **Audit and notifications**: A Reactor can notify external systems or write a compliance log entry whenever sensitive data is erased.
-- **Cross-aggregate side effects**: If redacting one event should trigger cancellations or clean-up in other parts of the system, a Reactor can coordinate that work.
+A reducer's handler can remove or sanitise state derived from the original event. A reactor's handler can notify another system that it needs to remove a copy. Implement and monitor that work explicitly: receiving a marker does not prove the downstream cleanup succeeded.
 
 ### Subscribing in a Reactor
 
-Add a handler method that accepts `EventRedacted` alongside the event type(s) you already handle. The Kernel will only dispatch `EventRedacted` to your Reactor when the redacted event belongs to a type that your Reactor is also subscribed to.
+In .NET, add a handler accepting `EventRedacted` alongside the original event types you handle. The kernel filters markers by those original types, so an unrelated redaction does not invoke this handler.
 
 <ChronicleClientTabs snippet="events/redaction/reactor" />
 
@@ -87,7 +83,7 @@ The `EventRedacted` record is defined in `Cratis.Chronicle.Events` and carries:
 
 ### Subscribing in a Reducer
 
-The same approach applies to reducers. Add an `EventRedacted` handler to the reducer (`IReducerFor<TReadModel>` in .NET) to update the read model when a source event is erased.
+In .NET, include `EventRedacted` handling in the `IReducerFor<TReadModel>` implementation to decide what state should remain when it processes a redaction marker:
 
 <ChronicleClientTabs snippet="events/redaction/reducer" />
 
@@ -105,4 +101,4 @@ The Workbench lets you redact events without writing any code:
 4. In the dialog that appears, enter the reason for the redaction.
 5. Click **OK** to confirm.
 
-Confirming records the redaction request; a built-in reactor then replaces the event's content with the redaction marker, usually within moments. The event slot remains visible in the sequence but no longer contains the original data. Before you report the data as removed, reopen the event and check that its content has been replaced.
+Confirming records the redaction request; a built-in reactor applies it asynchronously. Reopen the event to check that the marker has replaced its payload, then inspect affected observers for replay progress and failures. Before reporting an erasure complete, also check the retained metadata, copies, and derived state identified in your erasure workflow.

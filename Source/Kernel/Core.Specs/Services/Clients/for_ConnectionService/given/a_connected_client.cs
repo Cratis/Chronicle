@@ -57,12 +57,16 @@ public class a_connected_client : Specification
         var localSiloDetails = Substitute.For<ILocalSiloDetails>();
         localSiloDetails.SiloAddress.Returns(silo);
 
+        AllowingConnectionOwnership.WithActiveSilos(grainFactory, silo);
+        var ownership = AllowingConnectionOwnership.Create();
         var options = Options.Create(new ChronicleOptions { ConnectedClients = new() { KeepAliveIntervalSeconds = 1 } });
         _connectionService = new KernelConnectionService(
             grainFactory,
             localSiloDetails,
             new ConnectedClientsQuery(grainFactory, options),
             _openConnections,
+            ownership,
+            AllowingConnectionOwnership.VisibilityFor(options, ownership),
             NullLogger<KernelConnectionService>.Instance,
             options);
     }
@@ -97,10 +101,21 @@ public class a_connected_client : Specification
                     _somethingHappened.Release();
                 });
 
+    /// <summary>
+    /// Connects and waits until the connection service has taken the connection into service, which the first
+    /// keep-alive tells.
+    /// </summary>
+    /// <remarks>
+    /// Seeing the registry called is not enough: a call that ends before the service has looked at the outcome of the
+    /// registration is treated as an abandoned connect, which is neither opened locally nor disconnected. Only once the
+    /// first keep-alive is sent is the connection open, and ending the call then always disconnects it.
+    /// </remarks>
+    /// <param name="isRunningWithDebugger">Whether the client is running with a debugger.</param>
+    /// <returns>Awaitable task.</returns>
     protected async Task ConnectAndWaitForRegistration(bool isRunningWithDebugger = false)
     {
         Connect(isRunningWithDebugger);
-        await WaitUntil(() => CallsTo(nameof(IConnectedClients.OnClientConnected)) >= 1);
+        await WaitUntil(() => KeepAlivesSent >= 1);
     }
 
     /// <summary>

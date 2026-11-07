@@ -1,9 +1,9 @@
 ---
-title: "Services"
-description: "Locate Chronicle kernel gRPC services, generate new contracts and implementations from Core artifacts, and distinguish the remaining hand-written services."
+title: "gRPC services in the Cratis Chronicle kernel"
+description: "Cratis Chronicle implements gRPC services in Source/Kernel/Grpc, with new services generated from Core and conventions for remaining hand-written services."
 ---
 
-All gRPC service implementations for our [contracts](./contracts) reside in the `Grpc` project (`Source/Kernel/Grpc`).
+All gRPC service implementations for our [contracts](./contracts.mdx) reside in the `Grpc` project (`Source/Kernel/Grpc`).
 
 :::caution[New services are generated from Core, not written here]
 You do not hand-write a new gRPC contract or its implementation. Write the operation as an Arc `[Command]` or `[ReadModel]` artifact in `Source/Kernel/Core`, attach it to a service with `[BelongsTo(WellKnownServices.<Service>)]`, and build Core. The build generates the contract interface and messages in `Source/Kernel/Contracts`, the implementation in `Source/Kernel/Grpc`, and the registrations in `Source/Kernel/Server/GeneratedGrpcServices.cs`. Never edit those generated files by hand.

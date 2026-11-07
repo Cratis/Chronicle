@@ -1,36 +1,39 @@
 ---
-description: The event source id is the key that groups related Chronicle events in a sequence; this covers the EventSourceId type, its generic form and proxies.
+title: Choose a Chronicle event source id
+description: A Chronicle event source id groups the events for one entity in a sequence. Use a stable, non-sensitive identifier and reuse it for that entity.
 ---
-# Event Source Id
+An event source id groups the events for one entity within a Chronicle event sequence. For an order, use the same order identifier when appending its placement, payment, and cancellation events. Every appended event has one event source id; changing it puts the new event in a different group.
 
-An event source identifier (`EventSourceId`) is the key that groups related events together within an event sequence. Every event you append must carry an event source identifier — it is how Chronicle knows which instance of an entity the event belongs to.
+Choose a stable, non-sensitive value. Event source ids are stored as plaintext metadata, so do not use a secret or personal data as the id. Use a surrogate identifier and keep personal values in protected event content instead; see [Personal data in events](../compliance/pii.mdx).
 
 ## How the server works
 
-Internally, Chronicle represents all event source identifiers as plain strings. This keeps the server and storage layer simple and schema-independent: the server does not need to know whether your identifier is a UUID, an integer, or a domain concept. Any type you use on the client side is serialized to its string representation before it reaches the server.
+Internally, Chronicle represents all event source identifiers as plain strings. This keeps the server and storage layer simple and schema-independent: the server does not need to know whether your identifier is a `Guid`, an integer, or a domain concept. Any type you use on the client side is serialized to its string representation before it reaches the server.
 
 ## The `EventSourceId` type
 
-Use your client's event source identifier type or string representation at the call site. In .NET, the `EventSourceId` record wraps a `string` and provides implicit conversions from both `string` and `Guid`, so either can be passed wherever an `EventSourceId` is expected.
+In .NET, the `EventSourceId` record wraps a `string` value and provides implicit conversions from both `string` and `Guid`. You can pass either directly where the API expects an `EventSourceId`:
 
 <ChronicleClientTabs snippet="events/event-source-id/conversions" />
 
-In .NET, the `Unspecified` sentinel value signals the absence of a meaningful identifier and corresponds to an empty string. Use it when an identifier is structurally required but contextually irrelevant.
+The `Unspecified` sentinel value signals the absence of a meaningful identifier and corresponds to an empty string. Use it when an identifier is structurally required but contextually irrelevant.
 
 ## The generic `EventSourceId<T>`
 
-In .NET, the generic `EventSourceId<T>` type lets you carry a strongly-typed value through the client-side API while remaining wire-compatible with the plain `EventSourceId` that the server expects.
+In .NET, `EventSourceId<T>` keeps the identifier's underlying type in your client code, then converts it to the string-backed `EventSourceId` for the server. Use it when callers should work with a domain identifier instead of passing strings through every layer:
 
 <ChronicleClientTabs snippet="events/event-source-id/typed" />
 
-Because `EventSourceId<T>` carries an implicit conversion to `EventSourceId`, you can pass a typed identifier anywhere the untyped form is expected — including directly to `IEventLog.Append` — without any manual conversion. The typed form is most useful when you want the identifier to carry its concrete type through multiple layers so that callers always see the domain concept rather than a plain string.
+The implicit conversion lets you pass the typed value directly to `IEventLog.Append` or another API expecting `EventSourceId`. The client-side type helps distinguish domain identifiers; it does not change how Chronicle groups their stored string values.
 
 ## Frontend proxy generation
 
-When a .NET application uses `EventSourceId<T>` in a command or query parameter, the Arc ProxyGenerator reads the underlying type `T` and emits a TypeScript proxy that reflects the concrete type rather than a plain string. This gives you a fully typed frontend experience that matches the domain model on the server.
+When you use `EventSourceId<T>` in a command or query parameter, the Arc ProxyGenerator uses the underlying type `T` to determine the generated TypeScript type. The generic wrapper does not become a separate frontend identifier type.
 
 See [Arc type mapping](/arc/backend/csharp/proxy-generation/type-mapping/) for details on how proxy generation works and how to configure it.
 
 ## One event source id per event
 
-Every event has exactly one event source id. That is why Chronicle records a fact about two entities as two events, one for each event source, in one atomic append, and why [tags](../concepts/tagging.mdx) cannot stand in for a second id in a consistency check. See [Dynamic Consistency Boundary in Chronicle](../dynamic-consistency-boundary/chronicle.md). To declare the kind of event source and its named streams, see [Event sources and streams](../event-sources/index.mdx).
+When one operation changes two entities, give each entity its own event and event source id, then commit the events together with [Appending many](./appending-many.mdx). A transfer, for example, records a withdrawal for one account and a deposit for the other. [Tags](../concepts/tagging.mdx) cannot stand in for a second event source id in a consistency check.
+
+[Dynamic Consistency Boundary in Chronicle](../dynamic-consistency-boundary/chronicle.md) explains how one decision can guard several event sources. To declare the kind of event source and its named streams, continue with [Event sources and streams](../event-sources/index.mdx).

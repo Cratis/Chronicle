@@ -1,11 +1,13 @@
 ---
-title: Effect receipts
-description: Use Chronicle effect receipts to deduplicate retryable work, commit events with a recorded outcome, and recover after a lost acknowledgment.
+title: Recover Chronicle effects with receipts
+description: Effect receipts deduplicate an occurrence's Chronicle events and retain its outcome and response so retries can recover after a lost acknowledgment.
 ---
 
-A worker can commit events and disappear before acknowledging its work. Running it again may produce different events or a different response. An **effect receipt** lets you recover the first committed outcome instead of appending another set of events.
+<a id="effect-receipts"></a>
 
-Use receipts for retryable work identified by an occurrence and a nonempty effect name. They live in infrastructure storage, not in the event log: projections and reactors never observe a receipt.
+An effect receipt in Cratis Chronicle records the first committed outcome of retryable work. If a worker commits events but disappears before acknowledging them, a retry can recover that outcome and its response instead of appending another set of events.
+
+An occurrence records a request to run a trigger. Pair its identity with a nonempty effect name to identify the work a receipt covers. Receipts live in infrastructure storage, not in the event log: projections and reactors never observe a receipt. Use them when a retry must recognize an earlier commit, even if running the handler again would produce different events.
 
 ## Trigger payload contracts
 
@@ -15,11 +17,11 @@ Trigger payloads are plaintext infrastructure data, not events. A schema carryin
 
 ## Record and deliver an occurrence
 
-With the kernel's `occurrences` capability, `RecordOccurrence` validates an application, startup or shutdown payload against the trigger's current schema, then inserts its identity before replying. The identity combines the trigger and your idempotency id. Repeating it with the same canonical JSON returns `AlreadyRecorded`; a different payload returns `OccurrenceIdConflict`. Invalid payloads return `OccurrencePayloadInvalid` and write nothing. Keep the same idempotency id after a lost acknowledgment.
+With the kernel's `occurrences` capability, `RecordOccurrence` validates an application, startup or shutdown payload against the trigger's current schema, then inserts its identity before replying. The identity combines the trigger and your idempotency id, a caller-supplied identifier reused across retries. Repeating it with the same canonical JSON returns `AlreadyRecorded`; a different payload returns `OccurrenceIdConflict`. Invalid payloads return `OccurrencePayloadInvalid` and write nothing. Keep the same idempotency id after a lost acknowledgment.
 
 Queues belong to an event store and namespace. Select `ApplicationScope` explicitly for one queue shared by the application, independent of namespace. Application-scoped effects still target individual namespaces, and their receipts remain in those namespaces. Scheduled materialization and lifecycle fan-out are separate capabilities, not part of this ingress API.
 
-`ClaimOccurrences` returns a bounded batch with each occurrence's payload, attempt and fencing epoch. Use the client's connection identity as `WorkerId` so disconnect expiry can find its leases. The default lease lasts 60 seconds; requested durations are capped at ten minutes. `RenewOccurrenceLease` extends ownership from the kernel's current time, never the worker's clock.
+`ClaimOccurrences` returns a bounded batch with each occurrence's payload, attempt and fencing epoch. The epoch identifies the current claim, so a replacement worker can supersede an old lease. Use the client's connection identity as `WorkerId` so disconnect expiry can find its leases. The default lease lasts 60 seconds; requested durations are capped at ten minutes. `RenewOccurrenceLease` extends ownership from the kernel's current time, never the worker's clock.
 
 `CompleteOccurrence` and `FailOccurrence` carry the occurrence id and claimed epoch. A superseded epoch returns `OccurrenceLeaseLost` and changes nothing. An expired lease can still complete or renew if no replacement claimed it. Repeating a successful completion at the same epoch returns `AlreadyCompleted`.
 
@@ -37,7 +39,7 @@ Quarantine parks only the affected occurrence. After correcting the cause, an op
 
 `ObserveOccurrences` supplies an initial snapshot and periodic durable snapshots, including when time alone makes a retry claimable. Each cycle retrieves receipts for all occurrences in view in one indexed lookup per namespace, rather than scanning receipt history for each occurrence. Workers can use it as a wake signal, then claim through the queue; a notification never grants ownership. Dispose the subscription when stopping a worker.
 
-An active queue uses a grain timer and a persistent reminder with a one-minute period. Startup also rehydrates unfinished queues, including application scope and namespaces with no event-log data. Storage decides claimability after every wake-up. InMemory loses its queues with the process, just as it loses events and receipts.
+An active queue uses an Orleans grain, the kernel object responsible for that queue, with a timer and a persistent reminder with a one-minute period. Startup also reloads unfinished queues, including application scope and namespaces with no event-log data. Storage decides claimability after every wake-up. InMemory loses its queues with the process, just as it loses events and receipts.
 
 A recorded shutdown occurrence is durable work. A process that dies before recording shutdown creates no occurrence: record essential cleanup intent while the application is running, not only during shutdown.
 
@@ -57,13 +59,13 @@ Each outcome also carries the writing lease epoch, recording time, and optional 
 
 ## Commit the receipt with the events
 
-The kernel's `AppendManyWithEffectReceipt` grain method looks up the receipt before validating the proposed batch. A hit returns `EffectAlreadyRecorded` with the stored outcome and response, and appends nothing. It also completes post-commit bookkeeping from the stored events, including observer dispatch and constraint indexes, if the original acknowledgment was lost.
+The kernel's `AppendManyWithEffectReceipt` method runs on the event-sequence grain, the kernel object responsible for writes to that sequence. It looks up the receipt before validating the proposed batch. A hit returns `EffectAlreadyRecorded` with the stored outcome and response, and appends nothing. It also completes post-commit bookkeeping from the stored events, including observer dispatch and constraint indexes, if the original acknowledgment was lost.
 
 On a miss, the normal schema, constraint and concurrency pipeline runs. The events and receipt then commit in one storage transaction. A pipeline refusal writes no receipt. A competing writer is resolved by looking up the winning receipt again; `EffectReceiptUnsettled` is a retryable failure, not a business refusal. After an unknown acknowledgment, look up the receipt or retry with the same effect key.
 
 This lookup-before-validation guarantee belongs to the **grain**. HTTP and gRPC append facades retain their request validators and conversions. A malformed request can therefore be refused before reaching the grain, even if its effect already has a receipt; that refusal writes nothing. Use the lookup query when you only need the recorded outcome.
 
-`EffectReceipt` is an optional final field on each append command, including the named-tag variants. Send it only when the kernel advertises `effect-receipts`: an older kernel could otherwise ignore the field and append without deduplication. These are kernel and wire surfaces; client enrollment is a separate integration.
+`EffectReceipt` is an optional final field on each append command, including the named-tag variants. Send it only when the kernel advertises `effect-receipts`: an older kernel could otherwise ignore the field and append without deduplication. The .NET client's receipt integration requires that advertised capability and throws `EffectReceiptsNotSupported` when it is absent or unknown. A .NET unit of work can opt in with `UseEffectReceipt`.
 
 ## An effect without events
 
@@ -81,7 +83,7 @@ Responses are plaintext and are not crypto-shredded. Do not record personal data
 
 ## What a receipt does not guarantee
 
-A receipt deduplicates Chronicle effects; it does not fence the effect against a superseded lease, and it is not atomic with occurrence completion. Redelivery reconciles those separate writes.
+A receipt deduplicates Chronicle effects, but an old lease epoch does not prevent an effect write. Lease fencing protects delivery transitions such as completion; it does not protect the effect itself. Committing an effect and completing its occurrence are separate writes, reconciled on redelivery.
 
 It also cannot make an email, payment or other external operation exactly once. Give the external endpoint a stable idempotency key and follow its own recovery contract. Ordinary appends that do not represent retryable occurrence work do not need receipts.
 

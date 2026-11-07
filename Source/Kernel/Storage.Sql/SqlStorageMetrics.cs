@@ -16,6 +16,7 @@ internal sealed class SqlStorageMetrics
     readonly MetricInstrument<double, HistogramMetricRecorder<double>> _schemaLockWait;
     readonly MetricInstrument<int, CounterMetricRecorder<int>> _liveQueryPollFailed;
     readonly MetricInstrument<int, CounterMetricRecorder<int>> _upsertCollisionRecovered;
+    readonly MetricInstrument<int, CounterMetricRecorder<int>> _encryptionKeyIdentifierRefused;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SqlStorageMetrics"/> class.
@@ -27,6 +28,7 @@ internal sealed class SqlStorageMetrics
         _schemaLockWait = instruments.Histogram<double>(WellKnownMetricNames.SqlSchemaLockWaitDuration, WellKnownMetricNames.SqlSchemaLockWaitDurationUnit, "Time spent waiting for a database schema lock", WellKnownTelemetryAttributes.SqlProvider, WellKnownTelemetryAttributes.SqlSchemaLockOutcome);
         _liveQueryPollFailed = instruments.Counter<int>(WellKnownMetricNames.SqlLiveQueryPollFailures, WellKnownMetricNames.SqlLiveQueryPollFailuresUnit, "Failed SQL live-query polls; each is retried", WellKnownTelemetryAttributes.SqlLiveQueryName, WellKnownTelemetryAttributes.SqlLiveQueryFailureKind);
         _upsertCollisionRecovered = instruments.Counter<int>(WellKnownMetricNames.SqlUpsertRecoveredCollisions, WellKnownMetricNames.SqlUpsertRecoveredCollisionsUnit, "Concurrent SQL insert collisions recovered by storage", WellKnownTelemetryAttributes.SqlUpsertOperation);
+        _encryptionKeyIdentifierRefused = instruments.Counter<int>(WellKnownMetricNames.SqlEncryptionKeyIdentifiersRefused, WellKnownMetricNames.SqlEncryptionKeyIdentifiersRefusedUnit, "Encryption key operations refused because their identifier is under review");
     }
 
     /// <summary>Records a schema lock wait.</summary>
@@ -44,4 +46,7 @@ internal sealed class SqlStorageMetrics
     /// <param name="operation">The bounded operation name.</param>
     /// <param name="count">The collision count.</param>
     internal void UpsertCollisionRecovered(string operation, int count) => _upsertCollisionRecovered.Record(count, operation);
+
+    /// <summary>Records an encryption key operation refused because its identifier is under review.</summary>
+    internal void EncryptionKeyIdentifierRefused() => _encryptionKeyIdentifierRefused.Record(1);
 }

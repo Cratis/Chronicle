@@ -1,0 +1,47 @@
+---
+uid: subscription-tag-filtering
+description: Deliver only the events of a source outbox that carry given named tags, so one event store can address many consumers, including a worked example of an operator addressing two lobbies.
+---
+
+# Filtering Subscriptions by Tags
+
+An event store's outbox is a broadcast: without a filter, every subscription gets every event of the types it subscribed to. When one service publishes for many consumers (an *operator* serving several *lobbies*, say), each consumer should only see what is addressed to it.
+
+A subscription can therefore carry a **named-tag filter**. The kernel applies it *before* forwarding: events that do not match are never copied into the target's inbox.
+
+## Declaring the filter
+
+<ChronicleClientTabs snippet="subscriptions/filtering-by-tags/named-tags" />
+
+The filter works together with the event type filter:
+
+| Rule | Effect |
+|---|---|
+| Event type filter **and** tag filter | An event must pass both. |
+| Several values for one name | Alternatives (OR): `region=eu` or `region=uk`. |
+| Several different names | All must match (AND). |
+| Untagged events | Never match a subscription that has a tag filter. |
+| No tag filter | Everything of the subscribed types, exactly as before. |
+
+Tags are immutable on the event and are kept on the event that lands in the inbox, so the receiving side can still read them.
+
+Changing the filter of a live subscription (calling `Subscribe` again with the same id and a different filter) applies going forward. Events already forwarded stay in the inbox, and events the old filter skipped are not retroactively delivered.
+
+## Audiences
+
+The tag named `audience` is the convention for "who is this event for". The builder has a shortcut:
+
+<ChronicleClientTabs snippet="subscriptions/filtering-by-tags/for-audience" />
+
+How events get their `audience` tag is covered in [Audiences](../events/audiences.mdx) and [Tag enrichers](../events/event-tag-enrichers.mdx).
+
+## Worked example: an operator addressing two lobbies
+
+The operator publishes invitations and notices to its outbox. Lobby A and lobby B each subscribe with their own audience.
+
+<ChronicleClientTabs snippet="subscriptions/filtering-by-tags/operator-addresses-two-lobbies" />
+
+- `invitation-1` carries `audience=lobby-a` from its `[Audience]` property, so only lobby A receives it.
+- `invitation-2` carries `audience=lobby-b`, so only lobby B receives it.
+- The notice is appended inside two nested audience scopes and carries both tags, so both lobbies receive it.
+- An event with no `audience` tag reaches neither lobby.

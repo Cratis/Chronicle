@@ -1,45 +1,44 @@
 ---
 uid: Chronicle.Compliance.Client
-description: Annotate your domain model for Chronicle PII encryption from the client, on the event property or on a concept, in C#, Kotlin, TypeScript and Elixir.
+title: Cratis Chronicle client PII declarations
+description: Declare personal data on event properties or reusable concepts so Cratis Chronicle encrypts new writes, then mark read models that retain those values.
 ---
 
-# Working with compliance from the client
-
-Chronicle's PII encryption is applied transparently by the kernel. From a client perspective, your responsibility is to annotate your domain model correctly so that the kernel knows which values to encrypt. There are two places to put this annotation, and you will typically use both in the same codebase.
+Cratis Chronicle uses your client declarations to identify personally identifiable information (PII) and encrypt it when events are appended. Declare personal data on an event property when the classification belongs to that field, or on a reusable concept type when the value is personal wherever it appears.
 
 :::note[Client coverage]
-Both options work in the clients listed here. C#, Kotlin/Java and TypeScript have a `ConceptAs<T>`; Elixir has `Chronicle.Concept`. All four serialize a concept as the value it wraps, so adopting one for a property already in production changes neither the wire format nor the registered schema.
+C#, Kotlin/Java and TypeScript support property and concept declarations; Elixir supports field declarations and `Chronicle.Concept`. The examples below use each client's syntax. The `IServiceCollection` registration at the end of this page applies only to .NET.
 
-The DI-container registration step is genuinely C#-specific — it is `IServiceCollection` wiring, and each other client discovers its artifacts its own way. See [Marking data as PII](./pii) for the full per-path support matrix.
+See [Marking data as PII](./pii) for the declaration paths supported by each client. Before adding a PII concept to an existing event, review the stored history: changing the classification does not encrypt earlier values.
 :::
 
 ## Option 1 — Annotate your event types
 
-Declare PII directly on event properties using your client's syntax (`[PII]` in C#). This is the simplest starting point and works well when a value is PII only in the context of one specific event.
+Annotate individual properties on your event records when a value is personal in the context of that event. In .NET, the annotation is `[PII]`:
 
 <ChronicleClientTabs snippet="compliance/client/property-annotation" />
 
-`FirstName` and `LastName` are encrypted when the event is written. `Department` and `StartDate` are stored as plaintext.
+On a new append, `FirstName` and `LastName` are encrypted. `Department` and `StartDate` remain plaintext. If you are adding annotations to an existing model, read [Adding PII to an existing event type](pii#adding-pii-to-an-existing-event-type) before relying on erasure.
 
 ### When to use this approach
 
 Use property-level annotation when:
 
-- The property type is a primitive (a string or integer) and you do not need a dedicated concept type.
+- The property type is a primitive (`string`, `int`) and you do not need a dedicated concept type.
 - The value is PII in this event but is conceptually not a PII concept elsewhere.
-- You are incrementally adding compliance to an existing model and want to make targeted changes.
+- You are classifying selected fields in an existing model and have reviewed the earlier plaintext values.
 
 ### Limitation
 
-The main drawback of property-level annotation is that you must remember to declare PII every time a new event carries the same kind of value. If a future event includes an employee's name without that declaration, it will be written as plaintext.
+You must repeat the annotation whenever another event carries the same personal value. Without a marker on the property or its type, the kernel has no PII classification to apply and stores the value as plaintext.
 
 ## Option 2 — Annotate your ConceptAs types
 
-Declare PII on the concept type (`[PII]` on `ConceptAs<T>` in C#). Chronicle then encrypts every event property that uses that type, automatically, across all events.
+A concept is a domain type that wraps a value, such as `PersonName` wrapping a string. Put the PII declaration on that type so event properties retain the classification when they reuse it. In .NET, mark the `ConceptAs<T>` type with `[PII]`:
 
 <ChronicleClientTabs snippet="compliance/client/concept-annotation" />
 
-Any event that uses `PersonName` is automatically encrypted — no further annotation is needed:
+The `PersonName` properties in these events take their classification from the type, so they need no separate PII annotation:
 
 <ChronicleClientTabs snippet="compliance/client/concept-usage" />
 
@@ -52,9 +51,9 @@ Use concept-level annotation when:
 
 - The value represents a domain concept that is inherently personal (a person's name, email address, phone number, national ID).
 - The same kind of value appears in multiple events and you want consistent protection without repeating the attribute.
-- You are building a new domain model and want compliance baked in from the start.
+- You are building a new model and want the personal-data classification to travel with the type.
 
-This is the **recommended approach** for any value that is personal by nature.
+Prefer this approach for values that are personal by nature. It still depends on retaining the concept type in the generated schema; replacing it with a plain string loses that classification.
 
 ## Combining both approaches
 
@@ -64,16 +63,18 @@ The two approaches complement each other. Use concept types for inherently perso
 
 ## EventSourceId cannot be marked PII
 
-Event source identifiers are required for key lookup and cannot be encrypted. In .NET, do not apply `[PII]` to types that inherit from `EventSourceId` or `EventSourceId<T>`; the client throws `PIINotSupportedOnEventSourceId`.
+Keep event source identifiers non-sensitive and readable because Chronicle uses them for key lookup. In .NET, applying `[PII]` to a type that inherits from `EventSourceId` or `EventSourceId<T>` throws `PIINotSupportedOnEventSourceId`. Other clients enforce this restriction differently; follow it regardless of the client.
 
 <ChronicleClientTabs snippet="compliance/client/event-source-id-restriction" />
 
-If the identifier itself is sensitive, use a non-sensitive surrogate key as the event source identifier (a randomly generated UUID works well) and store the sensitive value in an event property declared as PII.
+If the identifier itself is sensitive, use a non-sensitive surrogate key as the event source identifier (a randomly generated `Guid` works well) and store the sensitive value in a `[PII]`-marked event property.
 
 ## Registering compliance services
 
-In .NET, register compliance support with the extension method in your ASP.NET Core setup. Other clients use their own artifact and schema registration conventions:
+In a .NET ASP.NET Core application, `AddCompliance()` registers the providers that read PII annotations:
 
 <ChronicleClientTabs snippet="compliance/client/registering-compliance" />
 
-This registers `PIIMetadataProvider` and all supporting infrastructure needed for the kernel to discover and encrypt PII properties.
+This registers `PIIMetadataProvider` for property and type metadata. `AddCratisChronicle()` already includes the call. The providers supply declarations during schema generation; the kernel applies encryption using that schema.
+
+Next, mark the personal properties in any projection destination. An event annotation does not automatically protect every read-model property that receives its value; [Read models and PII](read-models) explains that separate storage and release path. These declarations do not authorize access or establish GDPR compliance by themselves.

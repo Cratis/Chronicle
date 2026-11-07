@@ -36,6 +36,7 @@ using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Registrations;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Seeding;
+using Cratis.Chronicle.Serverless;
 using Cratis.Chronicle.Transactions;
 using Cratis.Chronicle.Webhooks;
 using Cratis.Serialization;
@@ -66,6 +67,7 @@ public partial class EventStore : IEventStore
     readonly ILogger<EventStore> _logger;
     readonly IActivitySource<EventSequence> _activitySource;
     readonly ChronicleTelemetryOptions _telemetry;
+    readonly EventTagResolver _tagResolver;
     readonly ConcurrentDictionary<EventSequenceId, IEventSequence> _sequences = new();
     readonly Projections.Projections _projections;
     readonly RegistrationRetryOptions _registrationRetry;
@@ -75,6 +77,8 @@ public partial class EventStore : IEventStore
     readonly ArtifactIdentityDriftPolicy _identityDriftPolicy;
     readonly bool _autoDiscoverAndRegister;
     readonly RegistrationMode _registrationMode;
+    readonly ChronicleOptions _chronicleOptions;
+    readonly bool _serverless;
     readonly bool _nominatesClientObservers;
     readonly string? _nominatedObserverKind;
     readonly string? _nominatedObserverId;
@@ -147,6 +151,9 @@ public partial class EventStore : IEventStore
         _autoDiscoverAndRegister = autoDiscoverAndRegister;
         _preparation = new(PublishLocalPreparationFailure);
         _registrationMode = options.Value.RegistrationMode;
+        _chronicleOptions = options.Value;
+        _serverless = ServerlessActivation.IsOn(options.Value);
+        Deliveries = new ObserverDeliveries(options.Value);
         var explicitSnapshot = options.Value.ExplicitArtifacts.CreateSnapshot();
         var nominatedType = explicitSnapshot.Types.FirstOrDefault(_ => _.Kind is ExplicitArtifactKind.Reactor or ExplicitArtifactKind.Reducer);
         _nominatesClientObservers = !explicitSnapshot.Reactors.IsEmpty || nominatedType is not null;
@@ -176,12 +183,16 @@ public partial class EventStore : IEventStore
         eventTypes.UseMigrationServices(serviceProvider);
         EventTypes = eventTypes;
         EventSources = new EventSources.EventSources(this, clientArtifactsProvider);
+        _tagResolver = new EventTagResolver(new InstancesOf<IEventTagEnricher>(types, serviceProvider));
         UnitOfWorkManager = new UnitOfWorkManager(
             this,
             serviceProvider.GetKeyedService<IActivitySource<UnitOfWork>>(ClientActivity.SourceName),
             options.Value.UnitOfWorkLifecyclePolicy,
             loggerFactory.CreateLogger<UnitOfWork>(),
-            _telemetry.SpanNames);
+            _telemetry.SpanNames)
+        {
+            TagResolver = _tagResolver
+        };
         _correlationIdAccessor = correlationIdAccessor;
 
         EventSerializer = new EventSerializer(
@@ -214,7 +225,8 @@ public partial class EventStore : IEventStore
             jsonSerializerOptions,
             reactorSideEffectHandlers,
             EventSources,
-            _telemetry);
+            _telemetry,
+            _tagResolver);
         _sequences[EventLog.Id] = EventLog;
 
         Jobs = new Jobs.Jobs(this);
@@ -238,11 +250,12 @@ public partial class EventStore : IEventStore
             _telemetry.SpanNames)
         {
             GenerationDelivery = options.Value.EventGenerationDelivery,
+            Deliveries = Deliveries,
             MaxConcurrentPartitions = options.Value.Reactors.MaxConcurrentPartitions
         };
         Reactors = reactors;
         var occurrences = new Occurrences.Occurrences(this);
-        occurrences.Configure(clientArtifactsProvider, schemaGenerator, jsonSerializerOptions, serviceProvider, artifactActivator, causationManager, identityProvider, loggerFactory.CreateLogger<Occurrences.Occurrences>(), options.Value);
+        occurrences.Configure(clientArtifactsProvider, schemaGenerator, jsonSerializerOptions, serviceProvider, artifactActivator, causationManager, identityProvider, loggerFactory.CreateLogger<Occurrences.Occurrences>(), options.Value, registerAgainAfterReconnect: !autoDiscoverAndRegister);
         Occurrences = occurrences;
 
         var reducerObservers = new ReducerObservers();
@@ -263,6 +276,7 @@ public partial class EventStore : IEventStore
             _telemetry.SpanNames)
         {
             GenerationDelivery = options.Value.EventGenerationDelivery,
+            Deliveries = Deliveries,
             MaxConcurrentPartitions = options.Value.Reducers.MaxConcurrentPartitions
         };
 
@@ -444,6 +458,16 @@ public partial class EventStore : IEventStore
     public DiscoveryReport Discovery { get; private set; } = DiscoveryReport.NotRun;
 
     /// <summary>
+    /// Gets how the events of the observers of this store are delivered.
+    /// </summary>
+    internal ObserverDeliveries Deliveries { get; }
+
+    /// <summary>
+    /// Gets the delivery plan built when the artifacts were discovered, or null before that.
+    /// </summary>
+    internal ObserverDeliveryPlan? DeliveryPlan { get; private set; }
+
+    /// <summary>
     /// Gets the monitor coordinating read-model builder ownership within this store.
     /// </summary>
     internal object ReadModelOwnershipSync { get; } = new();
@@ -508,7 +532,8 @@ public partial class EventStore : IEventStore
                 state._activitySource,
                 state._reactorSideEffectHandlers,
                 state.EventSources,
-                state._telemetry),
+                state._telemetry,
+                state._tagResolver),
             this);
 
     /// <inheritdoc/>

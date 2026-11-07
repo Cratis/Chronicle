@@ -73,8 +73,34 @@ internal static class MongoDatabaseMove
             return DatabaseMoveOutcome.Kept;
         }
 
-        await source.Client.DropDatabaseAsync(source.DatabaseNamespace.DatabaseName);
+        await Drop(source);
         return DatabaseMoveOutcome.Moved;
+    }
+
+    /// <summary>
+    /// Drop a database whose content has been copied elsewhere.
+    /// </summary>
+    /// <param name="database">The <see cref="IMongoDatabase"/> to drop.</param>
+    /// <returns>Awaitable <see cref="Task"/>.</returns>
+    /// <remarks>
+    /// The readWriteAnyDatabase role, which is what Atlas hands an application user, does not grant the
+    /// dropDatabase action, but it does grant dropCollection. When the server refuses to drop the database,
+    /// its collections are dropped one by one instead, which leaves the same result: MongoDB removes a database once its last collection is gone.
+    /// </remarks>
+    internal static async Task Drop(IMongoDatabase database)
+    {
+        try
+        {
+            await database.Client.DropDatabaseAsync(database.DatabaseNamespace.DatabaseName);
+        }
+        catch (Exception exception) when (MongoDBAuthorizationErrors.IsUnauthorized(exception, out _))
+        {
+            var names = await (await database.ListCollectionNamesAsync()).ToListAsync();
+            foreach (var name in names.Where(_ => !_.StartsWith("system.", StringComparison.Ordinal)))
+            {
+                await database.DropCollectionAsync(name);
+            }
+        }
     }
 
     static async Task<bool> IsCopyConfirmed(IMongoDatabase source, IMongoDatabase target, string name, ILogger logger)

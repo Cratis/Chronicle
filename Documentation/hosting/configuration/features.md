@@ -1,8 +1,7 @@
 ---
-description: Configure Chronicle Server feature toggles in JSON to enable or disable capabilities such as the HTTP API, Workbench, and internal OAuth authority.
+title: Configure feature toggles in Cratis Chronicle Server
+description: Configure Cratis Chronicle Server feature toggles for the HTTP API, Workbench, changeset storage and built-in OAuth authority.
 ---
-# Features
-
 Feature toggles enable or disable specific Chronicle Server capabilities.
 
 ## Example configuration

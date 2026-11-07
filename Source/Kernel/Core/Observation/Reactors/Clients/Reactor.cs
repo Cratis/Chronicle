@@ -124,6 +124,26 @@ public class Reactor(
     }
 
     /// <inheritdoc/>
+    public async Task<bool> IsSubscriptionIntact()
+    {
+        // Anything that needs the definition - a registration waiting for a webhook to leave, an observer served by a
+        // webhook, a client the observer has lost - answers false, and the full check handles it.
+        if (_deferredDefinition is not null || _observerKey is null)
+        {
+            return false;
+        }
+
+        _observer ??= GrainFactory.GetGrain<IObserver>(new ReactorKey(_observerKey.ObserverId, _observerKey.EventStore, _observerKey.Namespace, _observerKey.EventSequenceId));
+        if (!await _observer.KnowsClient(_observerKey.ConnectionId))
+        {
+            return false;
+        }
+
+        _subscribed = true;
+        return true;
+    }
+
+    /// <inheritdoc/>
     public async Task KeepSubscription(ReactorDefinition definition)
     {
         if (await CompleteDeferredRegistration())
@@ -150,7 +170,9 @@ public class Reactor(
             logger.RestoringLostClientSubscription(_observerKey.ObserverId, _observerKey.ConnectionId);
             try
             {
-                await _observer.RestoreClientSubscription<IReactorObserverSubscriber>(
+                if (definition.PageDelivery is not null)
+                {
+                    await _observer.RestoreClientSubscription<IReactorPageObserverSubscriber>(
                     ObserverType.Reactor,
                     definition.EventTypes.Select(e => e.EventType).ToArray(),
                     localSiloDetails.SiloAddress,
@@ -158,6 +180,18 @@ public class Reactor(
                     definition.IsReplayable,
                     definition.Filters,
                     definition.GenerationDelivery);
+                }
+                else
+                {
+                    await _observer.RestoreClientSubscription<IReactorObserverSubscriber>(
+                    ObserverType.Reactor,
+                    definition.EventTypes.Select(e => e.EventType).ToArray(),
+                    localSiloDetails.SiloAddress,
+                    connectedClient,
+                    definition.IsReplayable,
+                    definition.Filters,
+                    definition.GenerationDelivery);
+                }
                 await RecordObserver();
             }
             catch (ObserverServedByAnotherTransport)
@@ -244,13 +278,35 @@ public class Reactor(
 
         try
         {
-            if (definition.GenerationDelivery == Concepts.Observation.EventGenerationDelivery.Pinned)
+            var deliversPages = definition.PageDelivery is not null;
+            if (definition.GenerationDelivery == Concepts.Observation.EventGenerationDelivery.Pinned && deliversPages)
+            {
+                await _observer.SubscribeWithGenerationDelivery<IReactorPageObserverSubscriber>(
+                    ObserverType.Reactor,
+                    eventTypes,
+                    localSiloDetails.SiloAddress,
+                    definition.GenerationDelivery,
+                    connectedClient,
+                    definition.IsReplayable,
+                    definition.Filters);
+            }
+            else if (definition.GenerationDelivery == Concepts.Observation.EventGenerationDelivery.Pinned)
             {
                 await _observer.SubscribeWithGenerationDelivery<IReactorObserverSubscriber>(
                     ObserverType.Reactor,
                     eventTypes,
                     localSiloDetails.SiloAddress,
                     definition.GenerationDelivery,
+                    connectedClient,
+                    definition.IsReplayable,
+                    definition.Filters);
+            }
+            else if (deliversPages)
+            {
+                await _observer.Subscribe<IReactorPageObserverSubscriber>(
+                    ObserverType.Reactor,
+                    eventTypes,
+                    localSiloDetails.SiloAddress,
                     connectedClient,
                     definition.IsReplayable,
                     definition.Filters);

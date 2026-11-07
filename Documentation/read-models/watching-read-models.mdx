@@ -1,61 +1,56 @@
 ---
-title: Watching Read Models
-description: Subscribe to Chronicle read model changes with Watch<T>() for pushed updates instead of polling, and choose between changesets and collection snapshots.
+title: Watch Chronicle Read Model Changes
+description: Watch Chronicle read model changes to receive the changed key, current state, and removal flag without replacing a complete collection.
 ---
 
-Watching a read model gives a client a stream of changes as Chronicle applies projections and reducers. Use it for live dashboards, cache invalidation, background coordination, and interfaces that should update without polling.
+Watching a Chronicle read model sends individual changesets containing the changed key, resulting state, and removal flag. Use it to refresh a cache entry or update one item on screen without replacing the complete collection.
 
-Not every Chronicle client exposes the watch API yet. The examples below show the clients that currently do.
+`Watch` does not send an initial collection. If the screen needs its current contents followed by replacement snapshots, use [Observing Read Models](observing-read-models.mdx). If application behavior should run for additions, modifications, or removals, a [read model reactor](reacting-to-changes.mdx) can own the dispatch and subscription.
 
-For a list that needs an initial snapshot and a complete replacement set after changes, use [Observing Read Models](observing-read-models.mdx) instead. `Watch` emits individual changesets, not the initial collection.
+Watch support and subscription syntax differ by client. Choose your client tab in the examples; the field names below describe the .NET changeset.
 
 ## What a change contains
 
-Each change tells you:
+A .NET `ReadModelChangeset<TReadModel>` contains:
 
 | Field | Meaning |
 | --- | --- |
-| Namespace | The Chronicle namespace where the change happened |
-| Key | The read model key that changed |
-| Read model | The current state after the change |
-| Removed | Whether the instance was removed |
+| `Namespace` | The Chronicle namespace where the change happened |
+| `ModelKey` | The read model key that changed |
+| `ReadModel` | The resulting state, which can be absent for a removal |
+| `Removed` | Whether the instance was removed |
+| `ChangeType` | The reported change type; reducer watches report non-removals as `Modified` |
+| `ChangeContext` | Causing event context for a projection watch; reducer watches supply only the model key |
 
-The change carries the current read model state, not the previous state. If you need to detect a transition, keep the last value you saw for each key or react to the domain event with a reactor.
+The changeset does not contain the previous state. Check `Removed` and whether `ReadModel` is present before reading properties. To compare two observed states, keep the last value for each key. If a reaction depends on the original business event, use an [event reactor](../reactors/) instead.
 
 ## Watch a read model
 
-The read model type must be registered before you subscribe.
+Register the read model type before subscribing. The .NET example ignores removals and absent instances before reading `Status`:
 
 <ChronicleClientTabs snippet="read-models/watching-read-models/basic" />
 
-Dispose, cancel, or break out of the subscription when the caller no longer needs updates. Long-lived subscriptions should be owned by a service with an explicit lifetime.
+Dispose the .NET subscription when its consumer closes. Other clients use their own cancellation or iterator lifetime mechanisms. Keep a long-lived watch in a service with an explicit shutdown path so it does not outlive the work that needs it.
 
 ## Filter changes
 
-Filter as close to the subscription as the client allows. This keeps application code focused on the state changes it actually cares about.
+Apply a client-side filter when the consumer only needs some changes. This example selects instances whose current amount exceeds a threshold:
 
 <ChronicleClientTabs snippet="read-models/watching-read-models/filtering" />
 
-Filtering happens client-side. If the client subscribes to a busy read model, the server still sends matching change notifications for that read model type.
+The filter does not reduce the server's notifications for that read model type. A predicate on `ReadModel` can also exclude removals, because a removed instance may have no state. If you maintain a local list, handle removals by key separately or use a [collection observation](observing-read-models.mdx).
 
 ## When to use this
 
-Use read-model watching when:
+Watch when the consumer can own a long-running subscription and needs to act on one changed key at a time. It suits cache invalidation or an interface that already has state and can apply incoming changes.
 
-- A UI needs pushed updates.
-- A cache should invalidate or refresh when state changes.
-- A background service reacts to state changes instead of raw events.
-- The consumer can manage a long-running subscription.
+For a value needed only once, [read the instance on demand](getting-single-instance). To inspect how a projection reached a value, [get its snapshots](getting-snapshots). Neither task needs a permanent subscription.
 
-Prefer current-state reads when:
-
-- The caller only needs a value once.
-- The process cannot own a long-running subscription.
-- The reaction should be based on the original event rather than derived state.
+A watch follows derived state; it is not a substitute for event-reactor processing. Use [event reactors](../reactors/) when the behavior depends on the domain event and its ordered processing rather than a read model notification.
 
 ## Related topics
 
 - [Getting a Single Instance](getting-single-instance) - Read current state on demand
-- [Getting a Collection of Instances](getting-collection-instances) - Replay all current instances
+- [Getting a Collection of Instances](getting-collection-instances) - Read all current instances
 - [Getting Snapshots](getting-snapshots) - Inspect historical state
 - [Reactors](../reactors/) - React to events directly

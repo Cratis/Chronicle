@@ -1,23 +1,15 @@
 ---
 uid: Chronicle.Compliance.PIIWithConcepts
-description: Declare PII once on a concept type so every Chronicle event property that uses it is encrypted as personally identifiable data.
+title: Cratis Chronicle PII declarations on concepts
+description: Put a PII declaration on a reusable concept type so Cratis Chronicle carries its personal-data classification into event and read-model schemas.
 ---
 
-# Declaring PII on a concept
-
-The most robust way to declare that a value is personally identifiable is to mark its concept type as PII — for example, `[PII]` on a .NET `ConceptAs<T>`. Doing so means the declaration lives exactly once — on the type — and every event property that uses that type is automatically encrypted, regardless of where or how many times it appears across your event model.
+Declare personally identifiable information (PII) on a concept type when the value is personal wherever you use it. A concept wraps a value in a domain type, such as `PersonName` wrapping a string. Cratis Chronicle carries the type's classification into event and read-model schemas, so each property using that type needs no separate PII annotation.
 
 :::note[Client coverage]
-This page covers the **property type** path — Chronicle resolves `[PII]` through four paths in total (property, declaring type, property type, constructor parameter), and marking a concept's type once is not C#-only:
+C#, Kotlin/Java and TypeScript support declarations on their `ConceptAs` types; Elixir supports them through `Chronicle.Concept`. Select your client in the examples for its declaration syntax.
 
-| Path | C# | Kotlin/Java | TypeScript | Elixir |
-|---|---|---|---|---|
-| Property | yes | yes | yes | yes |
-| Declaring type | yes | yes | yes | no |
-| Property type (concept) | yes | yes | yes | yes |
-| Constructor parameter | yes | yes | no | n/a |
-
-**The clients in this table support the pattern on this page.** C#, Kotlin/Java and TypeScript each have a `ConceptAs<T>`; Elixir has `Chronicle.Concept`, which serializes as the value it wraps in the same way. Declare the marker once on the concept and every event and read model property using that type is encrypted — see [Marking data as PII](./pii) for the full path table and the two remaining gaps.
+This page focuses on resolving PII from a property's concept type. See [Marking data as PII](./pii) for the other declaration paths and their client-specific limits.
 :::
 
 > [!TIP]
@@ -25,16 +17,15 @@ This page covers the **property type** path — Chronicle resolves `[PII]` throu
 
 ## Why concept-level declaration is preferred
 
-When you classify a property directly as PII, you must remember to repeat the declaration on every event or read model that carries that value.
-If a new event is added months later and the developer forgets the annotation, a plaintext value is written to the event log with no warning.
+A property-level declaration must be repeated on every event or read model that carries the value. If a new property uses a plain string with no PII marker, the schema does not tell Chronicle to encrypt it.
 
-A concept type solves this by making the protection part of the type's identity. You cannot use `PersonName` without the encryption — the two are inseparable.
+Putting the declaration on `PersonName` lets the schema generator find it wherever that type is used. The benefit depends on keeping the concept type: copying the value into an unmarked string property does not carry the classification with it. A projection destination needs its own PII metadata, either from the concept or a property annotation.
 
 <ChronicleClientTabs snippet="compliance/pii-with-concepts/why-concept-level" />
 
 ## Defining a PII concept type
 
-Follow your client's concept-type pattern and mark the type as PII (`[PII]` on the record in C#):
+In .NET, follow the `ConceptAs<T>` pattern and add `[PII]` to the record declaration. The client tabs show the corresponding declarations:
 
 <ChronicleClientTabs snippet="compliance/pii-with-concepts/defining-concept" />
 
@@ -69,7 +60,7 @@ Features/
 
 ## Combining with details
 
-Use the optional `details` parameter on `[PII]` to document the legal basis or purpose of the PII classification. This is stored in the event schema and can be surfaced by compliance tooling.
+Use the optional `details` parameter on `[PII]` to explain why the value is classified as personal. The text is stored in the schema as documentation; it does not enforce a retention period, establish a legal basis or authorize access.
 
 <ChronicleClientTabs snippet="compliance/pii-with-concepts/with-details" />
 
@@ -77,10 +68,12 @@ Use the optional `details` parameter on `[PII]` to document the legal basis or p
 
 ### EventSourceId types
 
-Any type inheriting from `EventSourceId` or `EventSourceId<T>` cannot be marked with `[PII]`. Chronicle throws `PIINotSupportedOnEventSourceId` if you attempt this.
+In .NET, marking a type that inherits from `EventSourceId` or `EventSourceId<T>` with `[PII]` throws `PIINotSupportedOnEventSourceId`. Chronicle needs a readable event source identifier to look up the key. Keep the identifier non-sensitive in every client, even where validation differs.
 
 <ChronicleClientTabs snippet="compliance/pii-with-concepts/event-source-id-restriction" />
 
 Use a non-sensitive surrogate key as the event source identifier and store sensitive identity values in a separate event property:
 
 <ChronicleClientTabs snippet="compliance/pii-with-concepts/surrogate-key" />
+
+Once the concept is declared, check the schemas of the events and read models that use it. Continue with [Read models and PII](read-models) to release encrypted values for queries, or [Adding PII to an existing event type](pii#adding-pii-to-an-existing-event-type) if the concept replaces a field already in production.

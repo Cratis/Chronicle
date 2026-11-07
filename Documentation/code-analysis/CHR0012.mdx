@@ -1,8 +1,7 @@
 ---
+title: "CHR0012: Event types should avoid nullable properties"
 description: Chronicle analyzer rule CHR0012 warns about nullable properties on event types and suggests modelling each distinct meaning as its own event.
 ---
-# CHR0012: Event types should avoid nullable properties
-
 ## Rule Description
 
 Event types can contain nullable properties, but this is often an anti-pattern in event sourcing. A nullable field can hide multiple meanings in one event. Prefer expressing optional facts with a dedicated event type when possible.

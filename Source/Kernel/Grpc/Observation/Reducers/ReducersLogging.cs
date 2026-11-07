@@ -18,6 +18,9 @@ internal static partial class ReducersLogMessages
     [LoggerMessage(LogLevel.Warning, "Ignoring unknown or completed reducer delivery {DeliveryId} for partition {Partition}")]
     internal static partial void UnknownDeliveryResult(this ILogger<Reducers> logger, ulong deliveryId, string partition);
 
+    [LoggerMessage(LogLevel.Warning, "The result of reducer delivery {DeliveryId} for partition {Partition} could not be read, failing the delivery so it is retried")]
+    internal static partial void UnreadableDeliveryResult(this ILogger<Reducers> logger, ulong deliveryId, string partition, Exception exception);
+
     [LoggerMessage(LogLevel.Debug, "Reducer observe method invoked")]
     internal static partial void Observe(this ILogger<Reducers> logger);
 
@@ -41,6 +44,9 @@ internal static partial class ReducersLogMessages
 
     [LoggerMessage(LogLevel.Error, "Error occurred for reducer {ReducerId} from connection {ConnectionId} - disengaging")]
     internal static partial void Disengage(this ILogger<Reducers> logger, ObserverId reducerId, ConnectionId connectionId, Exception exception);
+
+    [LoggerMessage(LogLevel.Warning, "A reducer registration for connection {ConnectionId} was refused because the connection is not available to the caller")]
+    internal static partial void ConnectionNotAvailableToCaller(this ILogger<Reducers> logger, ConnectionId connectionId);
 
     [LoggerMessage(LogLevel.Warning, "Reducer {ReducerId} sends {Size} characters of state for partition {Partition} with every reduce - a read model this large makes each batch cost memory proportional to its size; consider splitting it into smaller read models")]
     internal static partial void LargeInitialState(this ILogger<Reducers> logger, ObserverId reducerId, string partition, int size);

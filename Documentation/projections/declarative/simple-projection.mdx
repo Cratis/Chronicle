@@ -1,49 +1,41 @@
 ---
-description: A simple Chronicle projection maps event properties to read model properties with matching names, so a read model stays current without handwritten code.
+title: "Cratis Chronicle projections: create a read model from an event"
+description: "Create a Cratis Chronicle projection that maps matching event properties to a read model, keyed by event source ID, with AutoMap enabled by default."
 ---
-# Simple projection
-
-A projection in Cratis is a way to create read models from events in the event store. The simplest projection automatically maps event properties to read model properties with matching names using the default AutoMap behavior.
+A simple projection in Cratis Chronicle turns an event into a read model you can query. When the event and read model have matching property names and compatible types, AutoMap copies those values without explicit mappings. The event source ID identifies the read-model instance.
 
 ## Defining a simple projection
 
-Use your client's projection builder to declare which event feeds the read model. In .NET, the projection implements `IProjectionFor<TReadModel>` and defines its behavior in `Define`:
+In the .NET client, implement `IProjectionFor<TReadModel>` and subscribe to the event with `From<TEvent>()` inside `Define`:
 
 <ChronicleClientTabs snippet="projections/declarative/simple-projection/projection" />
 
-This projection:
-
-- Automatically maps properties from `UserCreated` event to the `User` read model (AutoMap is enabled by default)
-- Uses the event source ID as the key for the read model
-- Properties with matching names are automatically mapped
-
-> **Note:** AutoMap is enabled by default at the top level. You don't need to call `.AutoMap()` explicitly unless you want to ensure it's enabled in contexts where it might be disabled. Read more about [auto mapping](./auto-map)
+The declaration maps the creation event's `Name`, `Email`, and `CreatedAt` to the user read model. No `.AutoMap()` call is needed because automatic mapping is enabled at the top level. Child scopes inherit that setting unless they override it; see [auto mapping](./auto-map).
 
 ## Base event types in the .NET client
 
-`From<TEvent>()` also accepts a base event type or an interface. It registers every known event type assignable to `TEvent`, including the base type itself when it is an event type. The same property mappings, key, and parent key apply to each event type, whether the registration is at the root, in a children collection, or in a nested object.
+If several event types share a contract, `From<TEvent>()` also accepts a base event type or an interface. It registers every known event type assignable to `TEvent`, including the base type itself when it is an event type. Each registration uses the same property mappings, key, and parent key. This applies at the root, in a children collection, and in a nested object.
 
-When a base or interface registration overlaps an explicit `From<ConcreteEvent>()`, their property mappings are combined. The explicit registration wins on conflicting properties and supplies the key and parent key, regardless of call order. Without an explicit registration, the first matching base or interface registration supplies the keys, while later inherited mappings win on conflicting properties. This does not subscribe to unrelated event types; use [FromAll](./from-all) for that behavior.
+You can add `From<ConcreteEvent>()` for an exception to the shared mapping. When it overlaps a base or interface registration, their mappings are combined; the concrete registration wins on conflicting properties and supplies the key and parent key, regardless of call order.
+
+Without a concrete registration, the first matching base or interface registration supplies the keys, while later inherited mappings win on conflicting properties. The subscription still covers only assignable event types. To handle unrelated event types too, use [FromAll](./from-all).
 
 ## Read model definition
 
-The read model is a simple record or class representing the projected data:
+Define the shape you want to query as a record or class. Here, the user read model exposes the same three properties as the creation event:
 
 <ChronicleClientTabs snippet="projections/declarative/simple-projection/read-model" />
 
 ## Event definition
 
-The event should match the read model structure for auto-mapping to work:
+The creation event supplies those values with matching names and compatible types:
 
 <ChronicleClientTabs snippet="projections/declarative/simple-projection/event" />
 
 ## How it works
 
-When a `UserCreated` event is appended to the event log:
+After a creation event is appended, the projection's observer processes it and creates or updates the user instance identified by the event source ID. AutoMap copies the matching properties into the read model, then the projection writes the result to its configured storage destination, called a sink.
 
-1. The projection automatically creates or updates a `User` read model
-2. The event source ID becomes the key for the read model
-3. Properties with matching names are copied from event to read model
-4. The read model is stored and can be queried
+This happens asynchronously: append completion does not mean the stored read model already includes the event. When a caller needs to read back its own append, see [waiting for observer completion after append](../../events/observing-appends.mdx#waiting-for-observer-completion-after-append).
 
-Auto-mapping works when property names and types match between the event and read model. For more control over the mapping, see [projection with custom properties](./set-properties).
+If your query needs different property names or values from event metadata, continue with [projection with custom properties](./set-properties).

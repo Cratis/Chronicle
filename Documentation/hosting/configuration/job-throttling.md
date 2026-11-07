@@ -1,8 +1,7 @@
 ---
-description: Configure Chronicle Server job throttling with MaxParallelSteps, understand its default behavior, and limit parallel work to control CPU usage.
+title: Configure job throttling in Cratis Chronicle Server
+description: Configure Cratis Chronicle Server job throttling with MaxParallelSteps to limit concurrent job steps during replays and catch-up work.
 ---
-# Job Throttling
-
 Chronicle Server's job system can be configured to limit the number of parallel job steps to prevent excessive CPU usage.
 
 ## Configuration

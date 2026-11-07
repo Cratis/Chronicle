@@ -1,84 +1,67 @@
 ---
-title: Upgrading Chronicle
-description: Find Chronicle upgrade guides, understand shared package major versions, plan multi-major upgrades, and check decimal schemas and forwarded-header changes.
+title: Upgrade Cratis Chronicle
+description: Plan a Cratis Chronicle upgrade by checking version boundaries, client compatibility, deployment settings and stored-state changes before you update.
 ---
 
-Every major version of Chronicle has an upgrade guide, and every guide answers the same
-question first: **does anything change for you?**
+Upgrading Cratis Chronicle can affect client APIs, the protocol between clients and the
+kernel, deployment settings or stored state. Start with your current and target versions,
+then read the changes between them to find the work your application needs.
 
-Often the answer is no. Chronicle publishes the kernel, the .NET client and the contracts
-packages (.NET, npm, Maven and Hex) from one repository at one version, so a breaking
-change to any of them raises the major for the kernel, the .NET client and every
-contracts package. A major can therefore be driven by something you never call, on a
-surface you never touch — and upgrading is then a version bump and a rebuild.
+## Guides
 
-The Kotlin/Java, TypeScript and Elixir clients are released from their own repositories
-([Chronicle.Kotlin](https://github.com/Cratis/Chronicle.Kotlin),
+Start with [Every major version](major-versions.md) and read each row between your current
+and target versions. The table distinguishes code changes from stored-state and deployment
+changes, so you can identify what needs attention before updating packages or the kernel.
+
+| Your upgrade | Where to start |
+|---|---|
+| [Across major versions](major-versions.md) | Check the recorded boundaries from 6 → 19, including the replacement releases for 14.0.0 and 17.0.0. |
+| [18 → 19](18-to-19.mdx) | Check the .NET binary compatibility change, rebuild requirements and analyzers included from 19.4.8. |
+
+For changes within a major, review the release notes and the deployment guidance below.
+In particular, check [reverse-proxy trust](#reverse-proxies-after-the-forwarded-header-security-change)
+before upgrading a deployment behind a proxy, and [decimal mappings](#exact-decimals-and-precise-event-schemas)
+before relying on exact values in existing SQL read models.
+
+## How to read a Chronicle version
+
+Chronicle follows semantic versioning. A major version permits breaking changes to a
+published contract; it does not mean every application needs code changes. Check which
+kind of change the upgrade guide describes:
+
+- Wire-contract changes affect the gRPC messages and services clients use to communicate with the kernel.
+- Published API changes affect callers of that API, such as a .NET method whose signature changed.
+- Observable behavior changes affect how an operation works, even when its signature stays the same.
+
+The kernel, .NET client and contracts packages (.NET, npm, Maven and Hex) are published
+from this repository at one version. A breaking change to a .NET API therefore raises the
+kernel and contracts package major too, even when the wire contract is unchanged.
+
+The Kotlin/Java, TypeScript and Elixir clients have independent releases in
+[Chronicle.Kotlin](https://github.com/Cratis/Chronicle.Kotlin),
 [Chronicle.TypeScript](https://github.com/Cratis/Chronicle.TypeScript) and
-[Chronicle.Elixir](https://github.com/Cratis/Chronicle.Elixir)) with their own version
-numbers, so a language client's version does not match the kernel's and a Chronicle major
-does not raise theirs. What ties a language client to a kernel is the wire contract, which
-the client checks when it connects — see
+[Chronicle.Elixir](https://github.com/Cratis/Chronicle.Elixir). Their version numbers need
+not match the kernel's. Read the release notes in your client's repository alongside the
+Chronicle upgrade guide, and check its contracts package dependency. Compatibility with
+the kernel depends on that wire contract, not matching version numbers; see
 [the wire-compatibility handshake](../building-a-client/clustering-and-connection-lifecycle.md#the-wire-compatibility-handshake).
-Each language client depends on a specific version of the contracts package, so a Chronicle
-major reaches a language client when that client moves to the new contracts version.
-Everything below about Chronicle versions applies to the kernel, the .NET client and the
-contracts packages; to see what changed in a language client, read the release notes in its
-own repository.
 
-That is worth saying out loud rather than leaving you to work it out from release notes.
-A major version that silently changes nothing is far more common here than one that
-rewrites your code, and not knowing which you are facing is its own cost.
-
-:::note[A major is permission, not a promise]
-Raising the major grants the project permission to break something. It does not promise
-that anything was broken, and it does not mean every surface changed. Read the guide for
-the version you are moving to before planning work.
-:::
+Minor and patch releases must preserve compatibility with existing published contracts,
+but they can still change what your build reports. The .NET client's
+[code analysis rules](../code-analysis/index.md) can gain diagnostics in any release.
+They first reached consuming builds through the client package in 19.4.8.
 
 ## Exact decimals and precise event schemas
 
 Upgrade the kernel before expecting the .NET client to register precise schemas for defaulted
 concept properties. The client negotiates this support and retains its legacy event schema against
-older kernels. Adding PII or encryption metadata affects only subsequent appends; review and
-[redact historical plaintext](../events/redaction.mdx) if necessary.
+older kernels. Adding metadata for personally identifiable information (PII) or encryption affects
+only subsequent appends; review and [redact historical plaintext](../events/redaction.mdx) if necessary.
 
 Replay existing SQL read models that carry decimal properties before relying on the new decimal
 column mapping. The migrator does not alter their existing columns in place. See
 [Exact decimal values](../events/schema-representation.mdx#exact-decimal-values) for provider mappings, legacy doubles and the
 SQL Server scale limit.
-
-## Guides
-
-Start with [Every major version](major-versions.md). It has one entry per major boundary —
-what broke and what you do — so you can read only the rows between the version you are on and
-the one you are going to, including when that spans several majors at once.
-
-| From → to | What it means for you |
-|---|---|
-| [Every major version](major-versions.md) | The whole history, 6 → 19, including which two releases to step over rather than onto. |
-| [18 → 19](18-to-19.mdx) | Nothing, for almost everyone. One .NET method signature changed; rebuild and move on. |
-
-## How to read a Chronicle version
-
-Chronicle follows semantic versioning, with the major raised for a breaking change to any
-published surface:
-
-- **The wire contract** — the gRPC messages and services every language client speaks.
-  These changes affect you whichever client you use, and the upgrade guide will say so
-  plainly.
-- **A published API** — for example a public .NET method signature. These affect only
-  the clients that expose that surface, and often only at compile time.
-- **Observable behavior** — something that worked one way and now works another.
-
-The label on the pull request that cut the release records which of these applied. When a
-major was raised for a compile-time break on one client, users of the other clients are
-unaffected beyond taking the new kernel.
-
-A minor or patch release does not change a published surface, but it can still change what
-your build reports. The .NET client's [code analysis rules](../code-analysis/index.md) can
-gain new diagnostics in any release, and they reached consuming builds for the first time in
-19.4.8.
 
 ## Reverse proxies after the forwarded-header security change
 
@@ -86,13 +69,13 @@ Chronicle now trusts `X-Forwarded-For` and `X-Forwarded-Proto` only from loopbac
 proxy addresses. Previous builds accepted those headers from any peer. What you need to change
 depends on the listener:
 
-- **TLS main listener behind a non-loopback proxy:** the kernel still sees HTTPS, so HTTPS checks
+- With a TLS main listener behind a non-loopback proxy, the kernel still sees HTTPS, so HTTPS checks
   continue to pass. Without a trusted-proxy setting, `RemoteIpAddress` becomes the proxy's IP;
   this affects client-IP logs and telemetry only. Set `forwardedHeaders.knownProxies` to the
   immediate proxy IP or `forwardedHeaders.knownNetworks` to its restricted source CIDR if you
   need the original client IP.
-- **h2c main listener, or a non-exclusive cleartext health port behind an HTTPS proxy:** configure
-  trust for the immediate proxy before upgrading. Otherwise forwarded HTTPS is ignored and
+- With a cleartext HTTP/2 (h2c) main listener, or a non-exclusive cleartext health port behind an
+  HTTPS proxy, configure trust for the immediate proxy before upgrading. Otherwise forwarded HTTPS is ignored and
   Workbench cookie mutations can fail antiforgery validation because the request looks like HTTP.
 
 The proxy must overwrite incoming forwarded headers rather than pass through values supplied by
@@ -108,14 +91,17 @@ only if you later put an HTTPS endpoint in front of YARP.
 
 ## Upgrading across several majors
 
-Take them one at a time and read each guide. Chronicle's wire compatibility is verified
-within a major: every released minor of the major you are on published before the current build
-is checked to still be served by it. Crossing a major boundary is where a protocol change is
-permitted to have happened, so it is where an upgrade deserves attention.
+Read every intervening major boundary in order, even if you plan to jump directly to your
+target version. Skipping a release does not skip its stored-state changes; follow the
+instructions for each affected boundary in [Every major version](major-versions.md).
+
+Chronicle's wire-compatibility gate checks that a build still serves released minor-version
+contracts within its major's declared compatibility range. Compatibility across a major
+boundary is not covered by that check, so review the guide before changing the kernel and clients.
 
 ## Events you already stored
 
-None of this concerns your stored events. Evolving an event's own schema is a separate,
-deliberate mechanism with its own generation and migration model — see
-[Migrations](../migrations/index.md). Upgrading Chronicle does not rewrite, re-shape or
-re-interpret events you have already appended.
+Changing your application's event schemas is a separate task from upgrading Chronicle.
+Use [Migrations](../migrations/index.md) to define schema generations and the transformations
+between them. For stored-layout changes required by a Chronicle upgrade, follow the
+version-specific guide rather than treating them as application event migrations.

@@ -84,14 +84,22 @@ public class a_sql_server_database(SqlServerFixture fixture) : Specification
         await connection.OpenAsync();
         await using var command = new SqlCommand("SELECT name FROM sys.databases ORDER BY name", connection);
         await using var reader = await command.ExecuteReaderAsync();
+        var own = new SqlConnectionStringBuilder(ConnectionString).InitialCatalog;
         var names = new List<string>();
         while (await reader.ReadAsync())
         {
-            names.Add(reader.GetString(0));
+            // The fixture creates and drops pooled databases in the background; only this spec's own databases are compared.
+            var name = reader.GetString(0);
+            if (name == own || !IsPooledDatabase(name))
+            {
+                names.Add(name);
+            }
         }
 
         return [.. names];
     }
+
+    static bool IsPooledDatabase(string name) => name.Length == 37 && name.StartsWith("spec_", StringComparison.Ordinal) && name[5..].All(Uri.IsHexDigit);
 
     internal async Task<int> BindingCount()
     {

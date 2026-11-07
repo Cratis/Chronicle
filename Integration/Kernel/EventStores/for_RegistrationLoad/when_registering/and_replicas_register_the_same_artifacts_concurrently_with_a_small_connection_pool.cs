@@ -155,6 +155,7 @@ public class and_replicas_register_the_same_artifacts_concurrently_with_a_small_
                 new ConnectionLifecycle(loggerFactory.CreateLogger<ConnectionLifecycle>()),
                 Services.GetRequiredService<IGrainFactory>(),
                 Services.GetRequiredService<ILocalSiloDetails>(),
+                Services.GetRequiredService<global::Cratis.Chronicle.Clients.IConnectionOwnership>(),
                 loggerFactory);
             connection.SetServices(((IChronicleServicesAccessor)Services.GetRequiredService<IChronicleConnection>()).Services);
             var client = new ChronicleClient(

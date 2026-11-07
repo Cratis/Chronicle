@@ -1,45 +1,64 @@
 ---
-description: FromAll subscribes a declarative Chronicle projection to every event type in the sequence to create or update a read model for any event source.
+title: "Cratis Chronicle FromAll: map every event type"
+description: "FromAll in Cratis Chronicle maps every event type in a sequence, including unrelated types, to build per-source counts or retain event metadata."
 ---
-# Projection With FromAll
+<a id="projection-with-fromall"></a>
 
-`FromAll` subscribes to **every event type in the event sequence**, not just event types declared by the projection. It can create or update a read-model instance for any event source, keyed by the event source id unless you configure another key. Use [FromEvery](./from-every) instead when mappings should apply only to event types the projection already handles.
+`FromAll` in Cratis Chronicle subscribes a projection to every event type in its event sequence, including types with no explicit `From` mapping. Use it in the .NET fluent API for results such as per-source event counts. Use [FromEvery](./from-every) when only the event types your projection already handles should contribute.
 
-A declared `Join` event type is excluded from the separate all-events subscription to avoid processing a matched event twice. Its `FromAll` mapping runs through the join instead. **Known limitation:** if that join finds no read-model instance, the mapping does not fall back to creating one under the event source id. An event type that is also declared in `From` runs the mapping through `From` instead, once, and can construct its own keyed instance.
+Events handled by the all-events subscription can create or update a read model instance for any event source. The default key is the event source ID. If you configure another all-events key, those events use that key instead.
 
-Use `FromAll` in .NET for sequence-wide mappings such as per-source event counts. The root `all` block in the declaration language has the same subscription scope: it observes child-projection event types as well as unrelated event types. `FromAll` sends child inclusion as true and has no child-exclusion switch. Child-only events apply the mappings once to their containing parent, using the child's resolved parent key. Unrelated event types still use the configured all-events key. Use `FromEvery` with `ExcludeChildProjections()` (or `every` with `exclude children`) for mappings limited to one projection level.
+## Basic usage
 
-## Basic Usage
+Define the values that every event should update without listing individual event types:
 
 <ChronicleClientTabs snippet="projections/declarative/from-all/basic" />
 
-## Event Context Fields
+## Event context fields
+
+Map metadata such as `Occurred` to retain the time of the latest contributing event. Context is available even when event payloads have no properties in common.
 
 <ChronicleClientTabs snippet="projections/declarative/from-all/context-fields" />
 
-## Event Source Id
+## Event source ID
+
+Use `ToEventSourceId()` to retain the contributing event's source ID in a read model property:
 
 <ChronicleClientTabs snippet="projections/declarative/from-all/event-source-id" />
 
-## With Event-Specific Mappings
+## With event-specific mappings
 
-`FromAll` can sit beside event-specific `From` mappings, but the `FromAll` mapping also processes event types not shown in this example. Those events can create instances without the event-specific business fields. If metadata should update only for the events listed in `From`, use `FromEvery` instead.
+Combine `FromAll` with `From` to map business fields for selected event types and metadata for every type. An event declared in `From` runs the all-events mappings through that registration once and uses its configured key.
+
+Unrelated event types still contribute. They can create instances without the business fields set by the event-specific mappings. Choose `FromEvery` instead if that would leave read models your queries cannot use.
 
 <ChronicleClientTabs snippet="projections/declarative/from-all/with-specific-mappings" />
 
-## Counting Into A Dictionary With A Dynamic Key
+## Join events
 
-`FromAll` also supports `Count`, `Increment`, and `Decrement` against a dictionary-typed property, where the key is resolved per event from a value on the `EventContext` — for example, one counter per event type, keyed by the event type identifier. The dictionary's value type is always `int64` for these operations; the key is always `string`.
+A declared `Join` event type is excluded from the separate all-events subscription so a matched event is not counted twice. Its all-events mappings run through the join instead.
+
+If the join finds no read model instance, those mappings do not fall back to creating an instance under the event source ID. Keep this in mind when using `FromAll` to count events: a join-only event with no matching instance will not contribute a count.
+
+## Child events
+
+`FromAll` includes child-projection event types and has no child-exclusion switch. Child-only events apply its mappings once to their containing parent, using the child's resolved parent key. Unrelated event types use the configured all-events key. The root `all` block in the declaration language follows the same subscription scope.
+
+For mappings limited to one projection level, use `FromEvery` with `ExcludeChildProjections()`, or `every` with `exclude children` in a declaration.
+
+## Counting into a dictionary with a dynamic key
+
+Use `Count`, `Increment`, or `Decrement` on a dictionary property when you need a separate counter for each context value. The key is resolved for each event from `EventContext`; this example uses the event type identifier. Dictionary keys are strings, and the kernel uses `int64` values for these operations.
 
 <ChronicleClientTabs snippet="projections/declarative/from-all/dictionary" />
 
-The model-bound `[FromAll]` attribute does not yet support this dictionary form — use the fluent API above until it does.
+The model-bound `[FromAll]` attribute does not support this dictionary form. Use the fluent API shown above.
 
-## FromAll And FromEvery
+## FromAll and FromEvery
 
 | API | Use it when |
 | --- | --- |
-| `FromAll` | You are using the .NET declarative projection API and want to express an all-events mapping. |
+| `FromAll` | Every event type in the sequence should contribute, including types not declared by the projection. |
 | `FromEvery` | You want mappings applied to the projection's own handled event types, without subscribing to unrelated event types. |
 
-Prefer event context sources for audit fields because every event has the same context shape. Use event payload properties only when the event contracts intentionally share the same property.
+Prefer [event context](./event-context) for shared metadata fields because it has a consistent shape across event types. Use payload properties only when the contributing event contracts intentionally share those properties.

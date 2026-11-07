@@ -1,32 +1,39 @@
 ---
-title: Webhooks
-description: Register Chronicle webhooks for HTTP event delivery, configure authentication and pinned generations, and handle back-pressure, retries, and quarantine.
+title: "Chronicle webhooks: deliver events to HTTP receivers"
+description: Cratis Chronicle webhooks send events to HTTP receivers. Configure authentication, handle duplicate deliveries, and recover paused observers.
 ---
 
-A webhook forwards events Chronicle observes to an external HTTP endpoint — use it to notify another system without that system needing to connect to Chronicle itself. Webhooks are configured server-side (the Kernel makes the HTTP calls), so registering one is a one-time setup step, not something you do per request.
+Cratis Chronicle webhooks send observed events to an external HTTP endpoint so another system can react without connecting to Chronicle. The Kernel, Chronicle's server, makes the HTTP calls. Register a webhook once, then make the receiver safe to call again: delivery is at least once, so retries and replays can send an event more than once.
 
 ## Register a webhook
 
+Choose the event types your receiver handles and the credentials it expects. The .NET example registers `account-events` to send `WebhooksIndexAccountOpened` events with a bearer token and an `x-source` header. The receiver must be reachable from the Kernel, not just from the application registering it. Check the [target validation policy](#target-validation) before registering a local or private-network receiver.
+
 <ChronicleClientTabs snippet="webhooks/index/register" />
 
-An observer is served by either a webhook or connected clients, never both transports at once. Disconnect the clients before registering a webhook with the same observer identifier. Registration is refused while a connected client serves that observer in any namespace of the event store; the .NET client logs a warning and returns normally without changing the webhook registration.
+Chronicle tracks delivery through an observer. An observer uses either a webhook or connected clients, never both at once. If you reuse an observer identifier, disconnect its clients first. Registration is refused while a connected client serves that observer in any namespace of the event store. The .NET client logs a warning and returns normally, leaving the webhook registration unchanged; a completed call alone does not prove registration succeeded.
 
-A client stream waits while a webhook serves the observer and resumes through subscription recovery after the webhook is removed. Delivery does not switch transports based on registration timing.
+A client stream waits while a webhook serves the observer. After you remove the webhook, subscription recovery resumes the client stream. Registration timing does not switch delivery between the two.
 
-If no event types are configured, the webhook forwards the event types the client knows about when it registers the webhook. An event type the client does not have is not forwarded; the list is refreshed the next time the client registers the webhook.
+If you omit event types, the .NET builder uses all event types known to that client at registration time. Events of other types are not forwarded. Re-register to refresh that list when the client knows about additional types.
 
-:::caution[Failed deliveries are retried]
-Each delivery makes one HTTP attempt; the HTTP client does not sleep or retry inline. Transient failures (`5xx`, `408`, connection errors and timeouts) consume the partition's retry budget. Webhook retries use `Cratis:Chronicle:Webhooks:Retry`, independently of the global `Observers` settings. The default schedule is **1s, 5s, 30s, 2m, 10m, 30m, then hourly**, with bounded ±20% jitter capped at one hour. Chronicle persists the chosen deadline before scheduling recovery. The default elapsed retry budget is **24 hours** from the first failure in the current budget, then the partition is quarantined (parked). `MaxRetryAttempts` defaults to `0` (no attempt-count limit), not unlimited elapsed retries. Make your receiving endpoint idempotent: a retried or replayed batch can arrive more than once.
+:::caution[Make the receiver safe to call again]
+A retried or replayed batch can arrive more than once. Make the receiver idempotent: processing the same event again must not repeat its side effect. A timeout or cancellation cannot undo work the receiver has already completed.
 :::
 
-The observer's subscriber timeout cancels the webhook HTTP operation and waits for cancellation cleanup before another delivery can start. Cancelling a catch-up, replay, or partition-retry job also cancels its HTTP operation. Jobs do not immediately retry a timed-out webhook call; recovery remains the observer's responsibility. Cancellation cannot undo a request the receiver has already processed, so receivers must still be idempotent.
+## Delivery retries and timeouts
+
+The observer schedules recovery rather than making the HTTP client sleep and retry inline. The authentication handlers can resend a request once after a `401`, as described under [OAuth client credentials](#oauth-client-credentials) and [managed identity](#managed-identity).
+
+Transient failures (`5xx`, `408`, connection errors and timeouts) consume the retry budget for a partition, the group of events tracked together by the observer. Receiver back-pressure can defer delivery instead, as described below. Webhook retries use `Cratis:Chronicle:Webhooks:Retry`, independently of the global `Observers` settings.
+
+The default delays are **1s, 5s, 30s, 2m, 10m, 30m, then hourly**, with ±20% jitter (random variation) capped at one hour. Chronicle saves the chosen deadline before scheduling recovery. The default elapsed retry budget is **24 hours** from the first failure in the current budget. When that budget expires, Chronicle quarantines the partition, pausing its delivery. `MaxRetryAttempts` defaults to `0`, which removes the attempt-count limit but not the elapsed-time limit.
+
+The observer's subscriber timeout cancels the HTTP operation and waits for cancellation cleanup before another delivery starts. Cancelling a catch-up, replay, or partition-retry job also cancels its HTTP operation. The job does not immediately retry a timed-out call; the observer owns recovery.
 
 ## Circuit-open deferrals and manual retry
 
-Circuit breakers are shared by target authority (scheme, host, and port), not by path,
-observer, or event store. An open circuit defers delivery until its deadline without
-consuming a partition retry attempt. The deadline and first unhandled event are persisted,
-so restart or resubscription does not make delivery resume early.
+A circuit breaker temporarily stops requests to a failing receiver. Webhooks share a breaker by target authority (scheme, host, and port), so different paths, observers, and event stores calling that authority share its state. An open circuit defers delivery until its deadline without consuming a partition retry attempt. Chronicle saves the deadline and first unhandled event; a restart or resubscription does not resume delivery early.
 
 A manual partition retry is an explicit operator override: it clears the deferral and
 retries immediately, recording an information-level log with the overridden reason and
@@ -45,60 +52,32 @@ attempt. Both delta-seconds and HTTP-date values are accepted. Deadlines are cla
 back to the transient failure budget. A `429` without a valid deadline is also retryable.
 No receiver back-pressure response sleeps on a worker or trips the circuit breaker.
 
-Other `4xx` responses indicate a configuration problem, except `408` and `410`. Chronicle
-records the failure and pauses the entire observer using its existing quarantine state,
-rather than spending the normal retry budget on unchanged credentials or URLs. Correct the
-configuration; the quarantined observer checks for recovery at a separate low rate. An
-operator can still clear observer quarantine to resume immediately.
+After handling `408`, `429`, and `410` separately, Chronicle treats other `4xx` responses as configuration problems. It records the failure and quarantines the entire observer, pausing all its delivery rather than spending the retry budget on unchanged credentials or URLs. Correct the configuration, then let [automatic recovery](#automatic-recovery-from-quarantine) check it or clear observer quarantine to resume immediately.
 
-A `410 Gone` immediately parks the partition with no automatic retries and logs the target
-authority. It does **not** retire the webhook in this release. Operator intervention is
-required; retirement with a retained alert is a follow-up capability.
+A `410 Gone` immediately parks the partition with no automatic retries and logs the target authority. It does not retire the webhook. Correcting the receiver alone will not resume that partition; operator intervention is required.
 
-Backoff deadlines, receiver deadlines, retry counts, and the inclusive resume position
-survive reactivation. A failed automatic retry replaces its expired deadline with a fresh
-`RetryBackoff` deadline; reactivation never resamples jitter or burns another attempt.
-Structured logs distinguish configuration rejection, `410` parking, circuit-open rejection,
-receiver back-pressure, and backoff attempt/deadline. Non-webhook observer retry behavior
-is unchanged.
+After reactivation, Chronicle retains retry counts, deadlines, and the first event to deliver again, including that event. A failed automatic retry replaces its expired deadline with a new `RetryBackoff` deadline. Reactivation itself neither chooses new jitter nor consumes an attempt. Structured logs distinguish configuration rejection, `410` parking, circuit-open rejection, receiver back-pressure, and backoff attempts and deadlines. These webhook policies do not change retry behavior for other observers.
 
 Webhook observer quarantine defaults to **5 parked partitions or at least 50%** of the distinct
 partitions in its failure/resolution history, whichever is reached first. Valid throttle/circuit
 deferrals do not count as parked partitions or consume attempts. Clearing partition quarantine
 starts a fresh retry budget while retaining attempt history.
 
-Catch-up and replay steps respect an existing partition deferral: they yield without reporting
-events handled or advancing their checkpoint. The fenced recovery job owns the persisted
-inclusive resume position; unfenced completion cannot clear that episode.
+Catch-up and replay also wait for an existing partition deferral. They do not report events handled or advance their checkpoint while waiting. Only the recovery job authorized for that failure can clear it; completion from an older job cannot discard the saved resume position.
 
 ## Automatic recovery from quarantine
 
-Eligible quarantined webhooks periodically attempt **one real, pending event**, using the
-ordinary subscriber, target validation, authorization, circuit breaker, generation policy,
-and receiver back-pressure handling. There is no synthetic health request, new endpoint,
-or empty-batch probe. The observer stays quarantined until that delivery succeeds and its
-progress is durably recorded. If a bounded read finds no deliverable event, it remains paused.
+For eligible quarantined webhooks, Chronicle periodically tries to deliver one real, pending event. This recovery check, called a probe, uses the same subscriber, validation, authentication, circuit breaker, event-generation policy, and back-pressure handling as ordinary delivery. Your receiver needs no separate health endpoint. The observer stays quarantined until that event succeeds and Chronicle saves its progress. If the bounded read finds no deliverable event, delivery remains paused.
 
-Probes begin after 60 seconds by default, doubling after unsuccessful checks to a one-hour
-cap, with ±20% jitter. The chosen deadline survives restart: startup reconciliation restores
-the subscriber without clearing quarantine, resetting retry budgets, or sending early.
-Circuit-open and `Retry-After` deadlines take precedence when later than probe backoff.
-Probe failures do not add partition attempts, consume the normal retry budget, or grow the
-failure history. Only one probe may run for an observer, and cancellation must drain its
-HTTP operation before a later delivery can begin.
+Probes begin after 60 seconds by default. After an unsuccessful check, the delay doubles, with ±20% jitter capped at one hour. The chosen deadline survives restart. On startup, Chronicle restores the subscriber without clearing quarantine, resetting retry budgets, or sending early. A later circuit-open or `Retry-After` deadline takes precedence over probe backoff.
 
-Configuration failures and exhausted transient-failure budgets are eligible. `410 Gone`,
-legacy failures without an explicit receiver policy, and unrelated watchdog quarantines
-remain manual-only. A healthy probe resets the eligible partitions' retry budgets while
-retaining attempt history; `410` and manual-only partitions remain parked. Other partitions'
-durable deferral deadlines and resume positions remain in force. The successful event is
-checkpointed before normal recovery starts at the next undelivered position.
-HTTP delivery is still at least once: a crash before the success checkpoint can cause a
-redelivery, so endpoints must remain idempotent.
+Probe failures do not add partition attempts, consume the normal retry budget, or grow the failure history. Only one probe may run for an observer, and cancellation must finish cleaning up its HTTP operation before a later delivery can begin.
 
-Existing Workbench and CLI observer state continues to show **Quarantined** until recovery;
-there is no new UI or command. Structured logs record probe generation, failure episode,
-deadlines and outcomes without payloads, URLs or credentials. Counters
+Configuration failures and exhausted transient-failure budgets are eligible for probing. `410 Gone`, legacy failures without an explicit receiver policy, and unrelated watchdog quarantines still require manual recovery. A successful probe resets eligible partitions' retry budgets but retains their attempt history. It leaves `410` and manual-only partitions parked, and keeps other partitions' saved deferral deadlines and resume positions.
+
+Chronicle saves the successful event's checkpoint before normal recovery starts at the next undelivered position. This is not an exactly-once guarantee: a crash before that checkpoint can cause redelivery, so receivers must remain idempotent.
+
+To check recovery, inspect the observer state in the Workbench or CLI. It shows **Quarantined** until recovery succeeds. Structured logs identify the probe and failure, with deadlines and outcomes but no payloads, URLs or credentials. Counters
 `chronicle-webhook-probe-scheduled`, `chronicle-webhook-probe-attempts`,
 `chronicle-webhook-probe-failures`, `chronicle-webhook-probe-successes`,
 `chronicle-webhook-probe-deferred`, `chronicle-webhook-probe-skipped`,
@@ -112,24 +91,17 @@ for schedule, budget and quarantine overrides.
 
 ## OAuth client credentials
 
-The .NET webhook builder supports `WithOAuth(authority, clientId, clientSecret, scope)`;
-`scope` is optional and defaults to an empty string. The Workbench's OAuth form also accepts
-an optional scope. For Microsoft Entra client credentials, request the resource's
-`api://<application-id>/.default` scope. An empty scope is omitted from the token request.
-Existing registrations without scope continue to work unchanged; re-registering OAuth
-credentials without scope clears a previously configured scope.
+Use OAuth client credentials when the receiver requires an access token from an identity provider. Configure `WithOAuth(authority, clientId, clientSecret, scope)` on the .NET webhook builder. The Kernel obtains the token and applies it to each HTTP send.
 
-The kernel shares tokens for the same token endpoint, client, scope, and credentials,
-and refreshes shortly before expiry. Tokens without an expiry are not cached. Authorization
-is applied on each HTTP send, including sends from long-lived external-service clients.
-A `401` invalidates the rejected token and retries the same request once with a fresh token;
-other responses do not trigger an OAuth retry. Receivers should remain idempotent.
+`scope` is optional and defaults to an empty string; the Workbench's OAuth form also accepts an optional scope. For Microsoft Entra client credentials, request the resource's `api://<application-id>/.default` scope. An empty scope is omitted from the token request. Existing registrations without scope continue to work unchanged, but re-registering OAuth credentials without scope clears a previously configured scope.
+
+The Kernel shares tokens for the same token endpoint, client, scope, and credentials, and refreshes shortly before expiry. Tokens without an expiry are not cached. A `401` invalidates the rejected token and resends the same request once with a fresh token. Other responses do not trigger an OAuth retry. If the receiver still returns `401`, Chronicle treats it as a configuration failure and pauses the observer.
 
 ## Managed identity
 
-**This lends the kernel's own Azure identity to the webhook receiver**, not the identity of the client registering the webhook. Only approve receivers and scopes you trust to receive that identity's access token.
+Managed identity authenticates webhook calls with the Kernel's Azure identity, not the identity of the client registering the webhook. Approving a receiver lets it receive that identity's access token, so approve only trusted receivers and scopes.
 
-**First, the kernel operator must configure the global allow-lists.** Managed identity webhooks are disabled until scopes are allowed. In `chronicle.json`:
+Before registering the webhook, the Kernel operator must configure the global identity allow-lists. Managed identity webhooks are disabled until scopes are allowed. In `chronicle.json`:
 
 ```json
 {
@@ -168,7 +140,7 @@ identity (leave it out for the system-assigned identity only when `AllowSystemAs
 Access tokens are not stored in webhook definitions or delivery-failure details and are not shown in the Workbench. Receiver response bodies and reason phrases are not retained as managed identity delivery errors.
 
 Tokens are cached and refreshed shortly before expiry. On a `401`, Chronicle discards its cached token and the Azure credential instance that supplied it, then retries once. Azure Identity and the identity endpoint control their own caching; this does not guarantee a different access token.
-If the kernel has no managed identity, the delivery fails and is retried like any failed delivery.
+If the Kernel has no managed identity, token acquisition fails and delivery enters the webhook failure policy; registration does not provision an identity.
 See [Call Entra-protected endpoints from webhooks](../hosting/azure.md#call-entra-protected-endpoints-from-webhooks)
 for the hosting details.
 
@@ -198,12 +170,9 @@ for revision and protected-value behavior.
 
 ## Query registered webhooks
 
+After registration, list the stored definitions to check that your webhook is present with the intended configuration. A stored definition confirms registration, not successful HTTP delivery. Use observer state and the recovery logs described above to investigate delivery failures.
+
 <ChronicleClientTabs snippet="webhooks/index/query" />
-
-## Related topics
-
-- [Jobs](../jobs/) — inspecting and controlling long-running Kernel operations, the other kernel-managed background concern.
-- [Subscriptions](../subscriptions/) — forwarding events between event stores rather than to an external HTTP endpoint.
 
 ## Target validation
 
@@ -226,27 +195,23 @@ Configure the Kernel's `Webhooks` section (not client registration options). In 
 }
 ```
 
-`Validation` defaults to **Warn** in Development builds and **BlockLocalAddresses** in other builds.
-`Warn` permits violations with structured warnings. `BlockLocalAddresses` blocks loopback (including
-IPv4-mapped loopback), IPv4 `169.254/16` link-local and `0/8` unspecified addresses, and IPv6 `fe80::/10`
-link-local and `::` unspecified addresses, unless the host is explicitly approved. It warns rather than
-blocks for other private/special addresses, HTTP, and missing host approval. **BlockPrivateAddresses**
-also blocks other private/special addresses. **Enforce** rejects every violation, including HTTP and
-hosts outside the allow-list. Stored active webhooks are evaluated against
-current policy before subscription, including after restart. A rejected stored target or OAuth authority quarantines
-the observer without changing the definition or its `IsActive` flag. Warn-mode violations are logged
-at activation, not for every delivery. Inactive webhooks remain inactive and are not subscribed.
+`Validation` defaults to `Warn` in Development builds and `BlockLocalAddresses` in other builds. Choose the mode for the destinations your Kernel may call:
+
+| Mode | Effect |
+| --- | --- |
+| `Warn` | Permits violations with structured warnings, except unapproved metadata addresses. |
+| `BlockLocalAddresses` | Blocks unapproved loopback (including IPv4-mapped loopback), IPv4 `169.254/16` link-local and `0/8` unspecified addresses, and IPv6 `fe80::/10` link-local and `::` unspecified addresses. Warns for other private/special addresses, HTTP, and missing host approval. |
+| `BlockPrivateAddresses` | Also blocks other unapproved private/special addresses. |
+| `Enforce` | Rejects every policy violation, including HTTP and missing host approval, subject to the Development exceptions below. |
+
+Chronicle evaluates stored active webhooks against current policy before subscription, including after restart. A rejected stored target or OAuth authority quarantines the observer without changing the definition or its `IsActive` flag. Warn-mode violations are logged at activation, not for every delivery. Inactive webhooks remain inactive and are not subscribed.
 
 After fixing the target, approved hosts, or runtime policy, re-register the webhook or explicitly
 clear its observer quarantine. Policy is evaluated again before delivery resumes; clearing quarantine
 alone cannot bypass a still-invalid target. A policy rejection during request/connect validation
 also pauses the whole observer rather than consuming its transient retry budget.
 
-Enforce will become the default in the
-next major release. Review warnings and approve only trusted receiver and OAuth hosts. Deployments
-that intentionally use local receivers must explicitly approve them before upgrading, or explicitly
-select `Warn` as a migration setting. Review private-network approvals before selecting
-`BlockPrivateAddresses` or `Enforce`.
+Before selecting `BlockPrivateAddresses` or `Enforce`, review policy warnings and approve only trusted receiver and OAuth hosts. Include any local or private-network receivers that your deployment intentionally uses; a stricter mode can block their delivery.
 
 An exact host entry also explicitly permits that host's private addresses. `*.example.com` approves
 subdomains, not `example.com` or `notexample.com`. Entries are hosts, without a scheme, path, or port.
@@ -286,11 +251,13 @@ For a tunnel, approve its exact hostname (or a trusted wildcard) and prefer HTTP
 }
 ```
 
-`AllowInsecureHttp` is **ignored outside Development**, with a startup warning. In Enforce mode it
-cannot enable HTTP in production, even for an approved host. During the Warn rollout, HTTP outside
-Development still logs a violation rather than failing, except for the metadata rule above.
+`AllowInsecureHttp` is ignored outside Development, with a startup warning. In `Enforce` mode it cannot enable HTTP in production, even for an approved host. In `Warn` mode, HTTP outside Development logs a violation rather than failing, except for the metadata rule above.
 
 Target evaluation never activates or rewrites stored definitions. Stored targets are rechecked at
 request/connection time; a newly disallowed target fails delivery with a local policy reason. A rejected
 registration is not persisted. See the [Kernel webhook options](../configuration/chronicle-options#webhooks-kernel-only)
 for all configuration keys.
+
+## Related topics
+
+To inspect and control long-running Kernel operations, continue with [Jobs](../jobs/). If the destination is another event store rather than an HTTP receiver, use [Subscriptions](../subscriptions/) instead.

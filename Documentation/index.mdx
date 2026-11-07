@@ -1,45 +1,66 @@
 ---
-title: Chronicle
-description: Cratis Chronicle is an open-source event-sourcing database and runtime with a shared kernel and language-specific clients.
+title: "Cratis Chronicle: event-sourcing database"
+description: Cratis Chronicle is an event-sourcing database and runtime that stores application changes as events, builds read models, and runs reactions.
 ---
 
-import { CardGrid, Steps } from '@astrojs/starlight/components';
-import SimpleCard from '@components/SimpleCard.astro';
+import { Card, CardGrid, LinkCard, Steps } from '@astrojs/starlight/components';
 import TopicHero from '@components/TopicHero.astro';
 
-<TopicHero icon="seti:db" eyebrow="Chronicle" title="Event sourcing, the productive way">
-Cratis Chronicle is an open-source event sourcing database and runtime. Applications connect to its shared kernel through language-specific clients. It is built on the default architecture we recommend for information systems: store **every meaningful change as an immutable event** — the complete history of what happened — and turn those events into exactly the read models, reactions, and projections your application needs. Chronicle gives that event log a gRPC boundary, database-agnostic storage — MongoDB, PostgreSQL, Microsoft SQL Server, or SQLite — and tools you can actually operate. [Get started →](/chronicle/get-started/) · [Architecture →](/chronicle/architecture/)
+Cratis Chronicle is an open-source event-sourcing database and runtime that keeps the changes your application records, builds queryable views from them, and runs reactions when events arrive. Use it when you need to explain how an order reached its current state or build a new view from its history, rather than keep only the latest row.
+
+<TopicHero icon="seti:db" eyebrow="Cratis Chronicle" title="Store events. Declare read models.">
+
+Record a fact such as `OrderPlaced`, then declare how it changes the views your application reads. Chronicle processes the events and updates those views for you. [Start with a local kernel and your client](/chronicle/get-started/).
+
 </TopicHero>
+
+## What Chronicle takes care of
+
+An event log answers what happened. To show an order summary or a list of outstanding orders, you also need a **read model**: data shaped for a particular query. Chronicle's [declarative projections](/chronicle/projections/) describe how events map onto those models. You define the mapping; the kernel processes events and writes the resulting changes to read-model storage. The same events can feed several views without duplicating the recorded history.
+
+When a recorded change should send a notification or call another service, use a [reactor](/chronicle/reactors/). A reactor runs application code in response to events. It consumes the history alongside projections; it does not have to wait for a view to update.
+
+:::note[Read model consistency]
+Materialized read models update **after** an event is appended, not inside the append. A query immediately after a write can therefore lag behind it. See [read model consistency](/chronicle/read-models/consistency/) for when to wait for a materialized view or compute state on demand.
+:::
+
+## How do you handle personal data in event history?
+
+Keeping history also means planning for personal data. Chronicle can encrypt fields marked as **personally identifiable information (PII)** with a key tied to the person the data concerns. Erasing that key makes the encrypted values unreadable without removing the event's place in the log. Start with [compliance and PII](/chronicle/compliance/) before modeling personal data, and use [regulatory responsibilities](/chronicle/compliance/regulatory-responsibilities/) to separate these mechanisms from the obligations your application and deployment must meet.
+
+## Which clients and storage providers can you use?
+
+Chronicle's .NET kernel, built on Microsoft Orleans, connects through gRPC, a language-neutral remote-call protocol, to clients for .NET, TypeScript, Kotlin, Java, and Elixir. It offers storage providers for MongoDB, PostgreSQL, Microsoft SQL Server, and SQLite. [Architecture](/chronicle/architecture/) explains those boundaries. Client capabilities and provider behavior are not interchangeable; follow the setup and capability guidance for the client and storage you choose.
 
 ## Start here
 
+Begin with [Get started](/chronicle/get-started/) to run a local kernel, choose a client setup guide, and append your first event. If you are still deciding whether to adopt event sourcing, read [when event sourcing pays off — and when it does not](/chronicle/concepts/when-to-use-event-sourcing/).
+
 <CardGrid>
-  <SimpleCard title="Get started" icon="rocket" link="/chronicle/get-started/">
-    Start the kernel, pick a client, and follow one event through the Chronicle loop.
-  </SimpleCard>
-  <SimpleCard title="Tutorial" icon="list-format" link="/chronicle/tutorial/">
-    Build a small event-sourced library one concept at a time.
-  </SimpleCard>
-  <SimpleCard title="Why Event Sourcing" icon="puzzle" link="/chronicle/why-event-sourcing/">
-    Understand why Chronicle keeps meaningful changes instead of only current state.
-  </SimpleCard>
-  <SimpleCard title="Run Chronicle locally" icon="rocket" link="#run-chronicle-locally">
-    Start the development image, wait for readiness, and clean it up.
-  </SimpleCard>
-  <SimpleCard title="Understand the architecture" icon="puzzle" link="/chronicle/architecture/">
-    Locate the protocol surfaces, kernel, runtime scopes, and persistent subscriptions.
-  </SimpleCard>
-  <SimpleCard title="Inspect with Workbench" icon="laptop" link="/chronicle/workbench/">
-    Use the bundled local browser inspection and projection-preview boundary.
-  </SimpleCard>
+  <LinkCard title="Get started" href="/chronicle/get-started/" />
+  <LinkCard title="When event sourcing pays off — and when it does not" href="/chronicle/concepts/when-to-use-event-sourcing/" />
+</CardGrid>
+
+For a guided example, follow the library tutorial. The architecture and workbench guides help when you need to understand or inspect the running system.
+
+<CardGrid>
+  <Card title="Tutorial" icon="list-format">
+    [Build a small event-sourced library one concept at a time](/chronicle/tutorial/).
+  </Card>
+  <Card title="Why Event Sourcing" icon="puzzle">
+    [Understand why Chronicle keeps meaningful changes instead of only current state](/chronicle/why-event-sourcing/).
+  </Card>
+  <Card title="Understand the architecture" icon="puzzle">
+    [Locate the protocol surfaces, kernel, runtime scopes, and persistent subscriptions](/chronicle/architecture/).
+  </Card>
+  <Card title="Inspect with Workbench" icon="laptop">
+    [Browse runtime state and try supported projection mappings in the bundled workbench](/chronicle/workbench/).
+  </Card>
 </CardGrid>
 
 ## Run Chronicle locally
 
-For the shortest local path, use `latest-development`. It bundles Chronicle and
-MongoDB and tracks the newest published development image. When repeatability
-matters, pin a released version in your application or deployment configuration
-rather than copying an image digest into a getting-started command.
+With Docker installed, you can start the kernel before writing application code. Use `latest-development` for this local evaluation: it bundles Chronicle and MongoDB and tracks the newest published development image. For a repeatable setup, pin a released version in your application or deployment configuration rather than copying an image digest into a getting-started command.
 
 This command exposes only the kernel port, `35000`; the bundled MongoDB stays
 inside the container. For a setup that also exposes MongoDB on port `27017` so
@@ -64,8 +85,7 @@ local database tools can connect, see the [two-port host quickstart](/chronicle/
      https://localhost:35000/health
    ```
 
-   A successful response prints `Healthy`. At that point the kernel is ready for
-   the next local evaluation step.
+   A successful response prints `Healthy`. You can now [connect an application](/chronicle/get-started/#pick-a-client) or open the workbench at `https://localhost:35000`.
 
 1. Stop and remove it when the evaluation is complete.
 
@@ -75,47 +95,36 @@ local database tools can connect, see the [two-port host quickstart](/chronicle/
 
 </Steps>
 
-:::caution[What this local start proves]
-A `Healthy` response proves that this local development container started. It
-does not establish production suitability, support, scale, security, durability,
-compatibility, a managed service, client/provider parity, or support for every
-topology.
+:::caution[Keep the development setup local]
+The development image uses well-known credentials and a self-signed certificate. Keep it on this machine. `Healthy` tells you that the container started; it does not validate security, durability, scale, compatibility, or suitability for your production topology. Client and provider capabilities still need to match your application. Self-hosting does not include a managed service or a support commitment.
 :::
 
 ## Independent-use boundary
 
-The self-hosted Chronicle kernel and bundled Workbench can be started without
-Arc or Components. Applications and clients still need compatible packages,
-protocols, and configuration for the Chronicle server they connect to.
+You can run Chronicle and its bundled workbench without Studio, Arc, or Components. Start the kernel, connect your chosen client, and use the workbench to inspect it. Your application still needs packages, protocols, and configuration compatible with that Chronicle server.
 
 ## Inspection surfaces
 
-Chronicle Workbench provides a bundled local browser surface for authorized
-inspection of Chronicle runtime state and preview of supported projection
-behavior.
+Open [Chronicle Workbench](/chronicle/workbench/) to inspect the event stores and namespaces you are authorized to access, check observer state, or try the projection behavior supported by your running image. This browser tool is bundled with Chronicle; you do not need Studio to use it. For terminal inspection and diagnosis, use the [Cratis CLI](/cli/).
 
-The Cratis CLI provides terminal workflows for inspecting and diagnosing
-Chronicle.
-
-Inspection capability does not imply complete administration, production-ready
-mutation, client parity, federation, managed service, support, or an SLA.
+Permission to inspect does not grant permission to append, revise, redact, replay, or recover data. These tools do not promise complete administration or governed production mutations, nor do they establish client parity or federation. Self-hosted inspection is separate from a managed service, support, or a service-level agreement (SLA).
 
 ## Continue
 
 <CardGrid>
-  <SimpleCard title="Architecture" icon="puzzle" link="/chronicle/architecture/">
-    Understand the kernel, protocol, store, namespace, and subscription boundaries.
-  </SimpleCard>
-  <SimpleCard title="Workbench" icon="laptop" link="/chronicle/workbench/">
-    Inspect Chronicle from the bundled local browser application.
-  </SimpleCard>
-  <SimpleCard title="Cratis CLI" icon="rocket" link="/cli/">
-    Terminal inspection and diagnosis for Chronicle.
-  </SimpleCard>
-  <SimpleCard title="Operating Chronicle" icon="setting" link="/chronicle/operations/">
-    Diagnose failures and recover observers and partitions.
-  </SimpleCard>
-  <SimpleCard title="Chronicle source" icon="seti:folder" link="https://github.com/Cratis/Chronicle/tree/main/Source">
-    Owning kernel, client, Workbench, and package source.
-  </SimpleCard>
+  <Card title="Architecture" icon="puzzle">
+    [Understand the kernel, protocol, store, namespace, and subscription boundaries](/chronicle/architecture/).
+  </Card>
+  <Card title="Workbench" icon="laptop">
+    [Inspect Chronicle from the bundled local browser application](/chronicle/workbench/).
+  </Card>
+  <Card title="Cratis CLI" icon="rocket">
+    [Terminal inspection and diagnosis for Chronicle](/cli/).
+  </Card>
+  <Card title="Operating Chronicle" icon="setting">
+    [Diagnose failures and recover observers and partitions](/chronicle/operations/).
+  </Card>
+  <Card title="Chronicle source" icon="seti:folder">
+    [Owning kernel, client, Workbench, and package source](https://github.com/Cratis/Chronicle/tree/main/Source).
+  </Card>
 </CardGrid>

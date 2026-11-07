@@ -1,14 +1,17 @@
 ---
-title: Passive and inactive reducers
-description: Choose passive Chronicle reducer reads for on-demand reconstruction, distinguish inactive observation from read behavior, and understand analysis limits.
+title: Choose passive or inactive Cratis Chronicle reducers
+description: Use passive Cratis Chronicle reducers to reconstruct state on demand, or disable observation while keeping materialized reads. Understand the trade-offs.
 ---
 
-Use a passive read model when you want to reconstruct state from events on demand instead of maintaining a sink. Disabling a reducer's activity is a different choice: it stops observation, but does not change how the model is read.
+A passive Cratis Chronicle reducer reconstructs a read model by folding its events on demand:
+applying them in order to compute state rather than keeping a stored result up to date. Use it for
+occasional reads when repeating the fold is an acceptable cost. An inactive reducer is different: it stops observing events but still reads from
+its configured storage, which may be stale or empty.
 
 ## Choose the read behavior
 
-The table uses .NET declarations and read routing. Consult the client tabs for your runtime's
-configuration and read behavior.
+A sink is the storage destination for materialized state. Choose whether you want to maintain that
+state before choosing whether the observer should run:
 
 | Configuration | Active observation | Sink | By-id read |
 | --- | --- | --- | --- |
@@ -20,15 +23,23 @@ For a [self reducer](self-reducing-read-models), the read model is also the redu
 
 ### On-demand reads
 
-Declare the read model passive (`[Passive]` in .NET):
+In .NET, put `[Passive]` on the read model so normal by-ID reads fold its events on demand:
 
 <ChronicleClientTabs snippet="reducers/passive-reducers/passive-attribute" />
 
-In .NET, this disables active observation regardless of the reducer's `isActive` setting and selects on-demand reads through `IReadModels`. A sink collection cannot reconstruct passive state.
+This disables active observation regardless of the reducer's `isActive` setting and selects
+on-demand reads through `IReadModels`. Read through that API rather than querying a storage collection;
+the passive model has no materialized sink.
 
 <ChronicleClientTabs snippet="reducers/passive-reducers/retrieving-state" />
 
-No matching history, or a history whose events are all filtered out, returns absent state. A null reducer result deletes state; a later accepted event can recreate it. Source/stream filters and tag filters apply to both classic and self passive reads with the same OR-within-tags and AND-across-categories semantics as active delivery.
+No matching history means no instance. The same is true if filters reject every event. During the
+fold, returning `null` clears the computed state; a later accepted event can recreate it. Return
+`current` unchanged if you only mean to ignore an event.
+
+Both classic and self passive reads apply the same filters as active delivery. An event needs to
+match any configured tag, plus each configured event source type and event stream type. See
+[event metadata filtering](../events/filtering/index.md) when selecting the history to fold.
 
 ### Disable observation only
 
@@ -40,31 +51,43 @@ This does **not** make the model passive. Previously persisted state remains in 
 
 ## Bounded analysis, not arbitrary-date history
 
-A bounded `GetInstances(eventCount)` reconstructs from a prefix of event-type-selected events. The prefix is taken **before** tag/source/stream metadata filtering; rejected events do not cause Chronicle to read farther to find N accepted events.
+Use `GetInstances(eventCount)` to examine the state produced by a limited prefix of history. Chronicle
+first selects events of the handled types and takes the prefix, then applies metadata filters.
+Rejected events count toward the bound; they do not cause Chronicle to read farther for more
+accepted events.
 
 <ChronicleClientTabs snippet="reducers/passive-reducers/historical-snapshots" />
 
-This is not a date-based snapshot query. `GetSnapshotsById` currently returns no reducer history; current materialized snapshots and historical projection snapshots are different read surfaces.
+The argument is an event count, not a date or a count of accepted events. `GetSnapshotsById` returns
+no reducer history. Use [projection snapshots](../read-models/getting-snapshots) when you need that
+historical read surface rather than a reducer fold.
 
 ## Reports and exploratory analysis
 
-Passive models fit infrequent queries whose reconstruction cost is acceptable:
+For an infrequent revenue report, you can compute totals from the matching payment history without
+maintaining another stored view:
 
 <ChronicleClientTabs snippet="reducers/passive-reducers/on-demand-reports" />
 
-An exploratory model can declare a passive state shape such as this; supply its reducer before reading it:
+The example accumulates payments; `[Passive]` does not itself restrict them to a calendar month.
+Define any reporting-window rule in the fold or the selected history.
+
+For a new analysis, declare the state you want to examine, then supply its reducer before reading it:
 
 <ChronicleClientTabs snippet="reducers/passive-reducers/temporary-analysis" />
 
-A large event-source history is folded again on each on-demand read. Prefer a materialized reducer for frequent reads, consider application caching where appropriate, and measure reconstruction cost rather than assuming on-demand is cheaper.
+Each on-demand read repeats the fold over the selected history. If the same report is read often,
+compare that work with maintaining a materialized reducer. Measure with the history size you expect;
+passive reads trade ongoing maintenance for work at read time, not a guaranteed reduction in cost.
 
 ## Changing activity
 
-For development, disable observation without promising on-demand reads:
+To stop observation only in debug builds, conditionally apply the inactive configuration:
 
 <ChronicleClientTabs snippet="reducers/passive-reducers/development-testing" />
 
-The following declarations illustrate alternative activity settings; choose the one your deployment needs:
+For an unconditional change, put the inactive setting directly on the reducer. This declaration
+shows the setting only; add the event handlers your model needs:
 
 <ChronicleClientTabs snippet="reducers/passive-reducers/switching-active-passive" />
 
@@ -72,6 +95,18 @@ Changing `isActive` updates observer activity, not the model's read strategy. Ad
 
 ## Passive reads are not guards
 
-A passive read is fresh when you read it, but it does not note a position in the log and does not guard the append that follows. Another writer can append between your read and your write. To make a rule hold, use a [constraint](../constraints/index.md) or a [decision read](../read-models/decision-reads.mdx). A decision read can fold a reducer that has no filters and no constructor dependencies other than `ILogger<T>`, or a flat projection. See [Decision reads](../read-models/decision-reads.mdx#reducers). See [Choosing how a rule holds](../dynamic-consistency-boundary/choosing.mdx).
+An on-demand fold does not protect a later write. Another writer can append between your read and
+your append, so a balance reconstructed for display is not enough to enforce a spending rule. Use a
+[constraint](../constraints/index.md) or a [decision read](../read-models/decision-reads.mdx) when the
+rule must hold at append time. [Choosing how a rule holds](../dynamic-consistency-boundary/choosing.mdx)
+helps you choose that boundary.
 
-Neither passive nor inactive reducers enable stream-id subscription filtering or exactly-once delivery. A passive or inactive reducer can still be read as a [decision read](../read-models/decision-reads.mdx#reducers) under the same admission rules as any reducer. See [self-reducer limits](self-reducing-read-models#reads-filters-and-preserved-limits) for the shared boundaries.
+Passive and inactive reducers can both participate in
+[decision reads](../read-models/decision-reads.mdx#reducers), but activity settings do not bypass
+admission checks. Reducer decision reads require the event log, no metadata filters, one generation
+per event type, and no constructor dependencies other than `ILogger<T>` for an instance reducer.
+[Decision reads for reducers](../read-models/decision-reads.mdx#reducers) covers the remaining checks.
+
+Neither passive nor inactive reducers add stream-ID subscription filtering or exactly-once delivery.
+Keep the [shared reducer limits](self-reducing-read-models#reads-filters-and-preserved-limits) in mind
+when changing a model from active maintenance to on-demand reads.

@@ -1,99 +1,89 @@
 ---
-title: "Event Type Migrations"
-description: "Evolve Chronicle event schemas with generations, upcasters, and downcasters, using migration operations, chained transformations, and pinned delivery."
+title: "Evolve Chronicle event types with migrations"
+description: "Chronicle event type migrations transform payloads between schema generations so consumers can read the shape they expect as event types change."
 ---
 
-Event type migrations enable you to evolve your event schemas over time while maintaining
-compatibility with existing events. When an event type changes, you can define **upcasters**
-and **downcasters** that automatically transform events between different generations.
+<a id="event-type-migrations"></a>
 
-## Why Migrations?
+Event type migrations in Cratis Chronicle describe how to transform an event payload between schema generations. Use them when you rename a property, add a field, or change a value's representation and consumers still need to read an older shape.
 
-In evolving systems, event schemas naturally change:
-- Properties are added or removed
-- Properties are renamed
-- Complex properties are split or combined
+## Why migrations?
 
-Chronicle's migration system allows you to:
-1. Define declarative transformation rules
-2. Automatically store all generations of an event when appending
-3. Read events in any generation format
+Changing an event class does not explain how its new properties relate to events already stored. A migration supplies that relationship: an **upcast** builds the newer generation from the older one, and a **downcast** builds the older generation from the newer one.
 
-## Defining Migrations
+Chronicle applies these declarations when appending an event and stores the registered generations together. Consumers can then read the generation they expect. A migration can lose information, so compatibility depends on what your transformations preserve, not just on having a complete generation chain.
 
-To define a migration, you declare a migrator for one pair of generations: the newer generation and the one before it. The migrator states an **upcast** (how to build the newer generation from the older one) and a **downcast** (how to build the older generation from the newer one). Chronicle reads the generation numbers from the two event types, so you do not repeat them in the migrator.
+## Defining migrations
+
+Declare a migrator for the newer generation and the one immediately before it. It supplies the upcast and downcast for that pair. Chronicle reads the generation numbers from the event types, so you do not repeat them in the migrator.
 
 <ChronicleClientTabs snippet="concepts/event-type-migrations/defining-migrations" />
 
-The previous generation takes its event type id from the current generation rather than carrying an id of its own, so the two generations cannot drift apart through a hand-typed, mismatched id.
+In the .NET example, the previous generation takes its event type id from the current generation rather than carrying a separately typed id. Both generations therefore resolve to the same identity.
 
 :::note[Give every generation the same event type id]
-Chronicle treats two generations as one event type only when they resolve to the same event type id. A previous generation that ends up with a different id is an unrelated event type: the migration never applies, and registration fails at kernel startup with an `EventTypeSchemaChanged` error. For the C# attributes that make this impossible by construction, and for the older explicit-id style, see [Marking event types with generations](../migrations/dotnet-client.mdx#marking-event-types-with-generations).
+Chronicle treats two generations as one event type only when they resolve to the same event type id. A different id identifies an unrelated event type and cannot form the migration chain; the C# client checks this mismatch before registration. `EventTypeSchemaChanged` instead reports an incompatible change to an already stored generation's schema. For the C# attributes that keep the identity shared, and for the older explicit-id style, see [Marking event types with generations](../migrations/dotnet-client.mdx#marking-event-types-with-generations).
 :::
 
 ## Generations of one event type
 
 A generation is one version of an event type's shape. Generation 1 is the first. Each later generation has its own schema, and consecutive generations differ by exactly one step: the number of a migrated generation is always the previous number plus one. A migrator bridges one such step, so an event type at generation 3 needs a migrator for 1→2 and another for 2→3.
 
-Every generation of an event type shares one event type id. Only the generation number varies. The [generation validation rules](../migrations/validation.md) describe what the kernel rejects when this chain is incomplete.
+Every generation of an event type shares one event type id. Only the generation number varies. The [generation validation rules](../migrations/validation.mdx) describe what the kernel rejects when this chain is incomplete.
 
 For the C# syntax, see [C# client usage](../migrations/dotnet-client.mdx#marking-event-types-with-generations).
 
-## Migration Operations
+## Migration operations
 
-The migration builder supports the following operations:
+Choose an operation based on what changed between the two shapes. The examples below show how each declaration relates a target property to its source.
 
 ### Split
 
-Splits a source property into parts using a separator:
+Use a separator to split one source property into parts. The defining-migrations example uses this to turn a full name into separate name properties:
 
 <ChronicleClientTabs snippet="concepts/event-type-migrations/split" />
 
 ### Combine
 
-Combines multiple source properties into a single value using a separator:
+Combine source properties with a separator when the target generation needs one value, such as a full name built from separate name properties:
 
 <ChronicleClientTabs snippet="concepts/event-type-migrations/combine" />
 
 ### Rename
 
-Renames a property from a previous name using `RenamedFrom`:
+Use `RenamedFrom` when a property's name changes but its value should carry across:
 
 <ChronicleClientTabs snippet="concepts/event-type-migrations/rename" />
 
-### Default Value
+### Default value
 
-Sets a default value for a new property:
+Supply a default when older payloads lack a new property and absence is not the value you want:
 
 <ChronicleClientTabs snippet="concepts/event-type-migrations/default-value" />
 
 ### Value map
 
-The operations above move values between properties. A **value map** changes the values themselves — it states which value in one generation is which value in the other. This is what you reach for when an enum is renumbered, or a status code takes on a new set of values, and the old numbers now mean something the new generation spells differently.
+A value map translates the values themselves. Use it when an enum is renumbered or a status code changes: each pair states which old value corresponds to which new value.
 
 You declare a value map on the migration itself rather than inside the upcast or the downcast:
 
 <ChronicleClientTabs snippet="concepts/event-type-migrations/map-values" />
 
-A map declared this way is applied **in both directions**: forward when upcasting, inverted when downcasting. The pair of values is one fact about the two generations, so you state it once and the two directions cannot drift apart.
+A map declared this way applies in both directions: forward when upcasting and inverted when downcasting. Values the map does not mention carry across unchanged, so you only need to declare values that changed.
 
-Three things are worth knowing:
+If several old values map to one new value, there is no single inverse. Chronicle uses the first declared pair for that target value when downcasting. The two property expressions may also name different properties, allowing one map to handle both a rename and a value change.
 
-- **Values the map does not mention are carried across unchanged.** A map says what changed meaning; it is not an exhaustive listing of an enum that is free to grow.
-- **Two values collapsing onto one have no single inverse**, so the first pair declared for a target value is the one that represents it going back.
-- **The map does not have to stay on the same property.** The two property expressions may name different properties, in which case the map also carries the value across — covering a rename and a re-valuing in one statement.
-
-The value map is applied *before* the upcast and the downcast run, so a direction that states its own transformation for the same property keeps it.
+The migration-level map runs before the upcast and downcast declarations. A direction's explicit transformation for the same property takes precedence.
 
 ### Value maps in one direction
 
-A single map assumes the translation is symmetric. When it is not, for example several old values collapse onto one new value and the way back has to make a choice the forward map cannot state, declare the value map for one direction only, inside the upcast or the downcast. Because the value map on the migration runs first and the direction's own statement keeps its result, each direction can then carry its own translation for the same property.
+Declare a map inside the upcast or downcast when the two directions need different translations. For example, if several old values collapse onto one new value, an explicit downcast map can choose which old value to return instead of using the first declared pair. Each direction can override the migration-level map for that property.
 
 For the C# syntax, see [C# client usage](../migrations/dotnet-client.mdx#mapvalues).
 
 ## Properties inside a nested object
 
-An event's payload is rarely flat. A value object groups related values, and that inner object evolves on its own schedule. Every operation above addresses a nested property by the same path you would use for a top-level one, and Chronicle resolves the path one segment at a time: reading walks into the object, and writing creates the objects along the way when the stored payload does not carry them yet. That also lets a migration restructure a payload, for example by renaming a value that used to sit at the top level into the object it now belongs to.
+The same operations work on properties inside nested objects. Chronicle follows the property path one segment at a time when reading and creates missing objects along the path when writing. A rename can therefore move a top-level value into a nested object as well as change its name.
 
 A path that leads nowhere is rejected at registration with `InvalidMigrationPropertyForEventType`, which names the path so you can see which segment is wrong. Separators, default values and mapped values are literals and are never renamed. These operations describe property paths. They are not arbitrary custom-converter transformations.
 
@@ -103,7 +93,7 @@ For the C# syntax, including how typed expressions resolve to JSON names, see [C
 
 Adding or removing an **optional** property, at any depth, needs a migrator for the generation pair but no operations inside it. Chronicle converts a payload by walking the *target* generation's schema. Upcasting leaves a property the older payload never carried absent, and downcasting drops a property the older generation does not declare. The migrator only has to exist so the generation chain is complete.
 
-Reach for a default value when absent is the wrong answer and you want a specific value instead.
+Use a default value when absence would give the wrong result and you need a specific value instead.
 
 For the C# syntax, see [C# client usage](../migrations/dotnet-client.mdx#when-you-need-no-operations-at-all).
 
@@ -113,20 +103,13 @@ When an event type spans more than two generations, declare one migrator per con
 
 For the C# syntax, see [C# client usage](../migrations/dotnet-client.mdx#multi-generation-migrations).
 
-## How Migrations Work
+## How migrations work
 
-When an event is appended to the event store:
+On append, Chronicle starts with the generation supplied by the writer and loads the registered migrations for that event type. It upcasts through any higher generations and downcasts through any lower ones, storing all generations in the event sequence.
 
-1. Chronicle identifies the event's current generation
-2. The migration system retrieves all registered migrations for the event type
-3. **Upcasting**: If there are higher generations, the event is transformed upward (1→2→3)
-4. **Downcasting**: If there are lower generations, the event is transformed downward (3→2→1)
-5. All generations are stored in the event sequence
+The appended generation is stored as written. The other generations contain only what the migrations produce. For example, the name split above turns "Mary Ann Smith" into "Mary" and "Ann" in generation 2, dropping "Smith". Check both directions against the information each consumer needs.
 
-This ensures that:
-- Older consumers can still read events in their expected format
-- Newer consumers can read events with the latest schema
-- The generation an event was appended as is stored as written. Current backfills only add missing generations; they do not overwrite stored ones. Earlier backfills may already have overwritten content, and SQL revisions still replace content in place. The other generations hold only what the migrations produce: the example above splits a name on spaces, so for "Mary Ann Smith" the upcast generation 2 keeps "Mary" and "Ann" and drops "Smith". Write migrations that keep every part a consumer needs.
+A backfill adds missing generations to previously stored events; current backfills do not overwrite stored generations. Earlier backfills may already have overwritten content, and SQL revisions still replace content in place. The protection and backfill boundaries below matter when upgrading an existing store.
 
 ## Opt in to pinned observer delivery
 
@@ -134,7 +117,7 @@ Client reactors and reducers can request the generation their handlers subscribe
 receiving the appended generation live and the highest stored generation on replay. In the .NET
 client, set `ChronicleOptions.EventGenerationDelivery` to `EventGenerationDelivery.Pinned` before
 connecting; see [the .NET client option](../clients/dotnet/getting-started.md#pin-reactor-and-reducer-generations).
-The default remains `Compatibility` in this major version. Upgrade every kernel silo before opting in.
+The default remains `Compatibility` in this major version. Upgrade every kernel silo, meaning every running kernel node, before opting in.
 
 For pinned observers, the kernel selects the subscribed generation's content and hash and releases
 protected values with that generation's schema on live, catch-up, replay, and partition-retry delivery.
@@ -167,7 +150,7 @@ snapshots and previews) use the same generation selection and release as its obs
 a read fails when its pinned generation is unavailable.
 Live, catch-up, and replay use the same generation-selection and release boundary.
 
-For a PDL definition saved with `GenerationDelivery = Pinned`, a bare `from PersonRegistered` resolves
+For a Projection Declaration Language (PDL) definition saved with `GenerationDelivery = Pinned`, a bare `from PersonRegistered` resolves
 to the latest registered generation when you save it. That resolved generation is persisted as the
 pin; registering a newer generation later does not move it. The same rule applies to join and removal
 references, including those in children and nested objects. Saving the declaration again resolves its
@@ -175,7 +158,7 @@ names against the generations registered at that time.
 
 PDL, which is owned by Screenplay, does not have generation-qualified event references. Use the
 [.NET projection builders](../projections/declarative/simple-projection.mdx) or model-bound attributes
-with the CLR event type for the generation you want when a clause must pin an explicit generation.
+with the .NET event type for the generation you want when a clause must pin an explicit generation.
 Compatibility definitions keep the existing bare-name and identifier-only dispatch behavior.
 
 Webhooks opt in separately, per registration, with the .NET builder's
@@ -249,26 +232,26 @@ You declare the migrators, and the client then:
 
 1. Discovers all migrators in the application
 2. Captures the upcast and downcast declarations from each one
-3. Converts the declarations into JmesPath transformations
+3. Converts the declarations into JMESPath transformations
 4. Sends the definitions to the kernel during event type registration
 
 For the C# discovery details, see [How registration works](../migrations/dotnet-client.mdx#how-registration-works).
 
-## Catching Misuse Early
+## Catching misuse early
 
-The checks below are C# items: two runtime checks and two [code analysis](../code-analysis/index.md) rules exist specifically to stop a broken migration before it ever reaches a real event log. The kernel enforces the [generation validation rules](../migrations/validation.md) for every client.
+The C# client checks migration identities and duplicate transitions at startup. Its [code analysis](../code-analysis/index.md) rules also catch invalid generation references at compile time. The kernel enforces the [generation validation rules](../migrations/validation.mdx) for every client.
 
+| Check | What it rejects |
+| --- | --- |
+| `MigrationGenerationsMustShareEventTypeId` | `EventTypeMigration<TUpgrade, TPrevious>` throws during construction if its types resolve to different event type ids. |
+| `MultipleMigratorsForSameEventTypeGeneration` | `EventTypeMigrators.GetMigratorsFor` rejects two migrator classes claiming the same generation transition. |
+| [CHR0037](../code-analysis/CHR0037) | A migration's types do not resolve to the same event type, or `[EventTypeGenerationFor<T>]` does not reference the migration's `TUpgrade`. |
+| [CHR0049](../code-analysis/CHR0049) | `[EventTypeGenerationFor<T>]` references a type without its own `[EventType]` identity, including another generation marker. |
 
-- **`MigrationGenerationsMustShareEventTypeId`** — thrown from `EventTypeMigration<TUpgrade, TPrevious>`'s constructor the moment `TUpgrade` and `TPrevious` resolve to different event type ids. This turns the old style's classic mistake — an omitted or mismatched id on the previous generation — into a loud failure at application startup instead of a confusing, silent rejection at the kernel.
-- **`MultipleMigratorsForSameEventTypeGeneration`** — thrown by `EventTypeMigrators.GetMigratorsFor` when two different migrator classes both claim to bridge the same generation pair for one event type. Exactly one migrator may own a generation transition.
-- **[CHR0037](../code-analysis/CHR0037)** flags a migration whose two generations don't resolve to the same event type at compile time — including validating, for the new attribute, that `[EventTypeGenerationFor<T>]`'s `T` really is the migration's `TUpgrade`.
-- **[CHR0049](../code-analysis/CHR0049)** flags `[EventTypeGenerationFor<T>]` when `T` isn't itself marked with `[EventType]` — the referenced type must carry the real identity directly, not another generation marker.
+## Best practices
 
-## Best Practices
+Keep one migrator for each consecutive pair of generations. In C#, derive the previous generation's id with `[EventTypeGenerationFor<T>]` so it stays tied to the current generation's `[EventType]` identity.
 
-1. **Derive the previous generation's id from the current one (C#: `[EventTypeGenerationFor<T>]`)**: it resolves the event type id from the current generation's own `[EventType]`, so the two can never drift apart the way a hand-typed id on both generations can
-2. **Incremental generations**: Always migrate between consecutive generations (1→2, 2→3, not 1→3)
-3. **Reversible transformations**: Ensure downcast can recreate the original structure where possible
-4. **Default values**: Use a default value operation for new properties that didn't exist in older generations
-5. **Test migrations**: Verify both upcast and downcast transformations work correctly
-6. **Document changes**: Keep track of what changed between generations in your event types
+Test both directions with representative payloads, especially values that cannot be recovered after a split or a many-to-one map. Use defaults deliberately: an optional property may need no operation at all. Record what changed between generations so the next migration author can distinguish an intentional loss from a missing mapping.
+
+To implement these declarations in C#, continue with [C# client usage](../migrations/dotnet-client.mdx). Use the [generation validation rules](../migrations/validation.mdx) to diagnose registration failures.

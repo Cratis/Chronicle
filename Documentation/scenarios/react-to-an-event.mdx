@@ -1,50 +1,50 @@
 ---
-title: React to an event
-description: Write a Chronicle reactor for notifications, external calls, or follow-up events, make side effects idempotent, and choose the right state consistency.
+title: "Cratis Chronicle: react to an event"
+description: Use a Cratis Chronicle reactor to notify another system or append a follow-up event, with repeat-safe effects and an explicit choice of read consistency.
 ---
 
-**Goal:** when something happens — a book is returned, an order ships — you need to *do* something: notify a member, call an external API, or record a follow-up fact. That's a [reactor](../reactors/).
+A [reactor](../reactors/) in Cratis Chronicle runs a side effect in response to a recorded event. Use one when returning a book should notify the next member on the waitlist, or when a reservation should produce a follow-up stock event. Unlike a projection that builds state, a reactor does work because a fact has happened.
 
 ## Write the reactor
 
-A reactor is a class implementing the marker interface `IReactor`. You don't implement a method from it — you write a method whose **first parameter is the event type** you want to handle, and Chronicle routes matching events to it:
+With a Chronicle client configured in your C# application, define a class implementing `IReactor`. This marker interface has no methods to implement. Instead, write a handler whose first parameter is the event type you want to handle:
 
 <ChronicleClientTabs snippet="scenarios/react-to-an-event/basic-reactor" />
 
-Chronicle discovers it by convention — no registration.
+Chronicle discovers the reactor among the application types configured for its client and routes matching events to the handler. Here `context.EventSourceId` identifies the returned book, so the notification service can find its waitlist. Provide that service through your application's dependency injection setup.
 
 ## Be safe to repeat
 
-A reactor may run more than once for the same event (replay, recovery, redeploy). Make the side effect idempotent — record that it happened and skip if it already did. For a side effect that must never run again during a replay — a welcome email, a payment call — mark the handler (or the whole class) with `[OnceOnly]` and Chronicle excludes it from replays. See [OnceOnly](../reactors/once-only).
+A reactor may handle the same event again during replay or recovery. Make external effects idempotent: repeating the request must not send a second notification or charge a payment twice. Use the [delivery identity](../reactors/delivery-identity) as a stable key for the remote system or for your own effect receipts. A local receipt alone does not make a remote call atomic with recording that receipt.
 
-In C#, events a handler *returns* are already protected on redelivery: Chronicle keys them from the delivery, so recovery and catch-up do not append them twice. External side effects (an email, a payment call) are not protected that way and still need a receipt under the [delivery identity](../reactors/delivery-identity). If you change what a handler returns and want replays to append the new shape, raise the reactor's [effect epoch](../reactors/delivery-identity#when-to-bump-the-effect-epoch).
+If an effect should be skipped during replay, mark its handler or the whole class with `[OnceOnly]`. This excludes it from replays, not from every possible redelivery. See [OnceOnly](../reactors/once-only) before using it for a payment or notification.
+
+In C#, Chronicle gives returned events idempotency keys when the connected kernel supports idempotent appends. Those keys prevent the same delivery's output from being appended again during recovery or catch-up. An older kernel without that capability appends the returned events without keys. If you change the returned output and deliberately want replay to append the new shape, raise the reactor's [effect epoch](../reactors/delivery-identity#when-to-bump-the-effect-epoch), the version number included in its returned-event keys. Do not raise it just to retry unchanged output.
 
 ## Need state? Pick the right consistency
 
-Reach for the event first — it carries the truth of what happened, and `context.EventSourceId` tells you what it happened *to*. But some reactions genuinely need more state. Say the notification should include the book's title — that lives in the read model, not the event.
+Use the event's data first. If the notification also needs the book's title, read the model that holds it, using `context.EventSourceId` as the key.
 
-:::tip
-You *can* read state from a reactor — just mind the consistency level. A **materialized** read model (what the projection writes to the sink, and the default) is [eventually consistent](../read-models/consistency.md) and may not have caught up with the very event you're reacting to — whether you read it through `IReadModels.GetInstanceById` or take it as a handler parameter. Mark the read model `[Passive]` when the reaction needs it to include the event in your hand: Chronicle then computes it from the event log on every read.
-:::
+A materialized read model is stored state maintained by a projection or reducer. It is the default and is [eventually consistent](../read-models/consistency.md), so it may not yet include the event being handled. Calling `IReadModels.GetInstanceById` or accepting the model as a handler parameter does not change that consistency.
+
+When the reaction needs state that includes the triggering event, mark the read model `[Passive]`. Chronicle then computes it from the event log on demand rather than relying on the stored model. Make that choice on the read model definition before using the lookup below; the lookup alone does not request a strongly consistent read.
 
 <ChronicleClientTabs snippet="scenarios/react-to-an-event/reading-state" />
 
-The full menu of read APIs — single, all, paged, observed — is in [Get read models](./real-time-query).
+For collection reads or live changes instead of one book's state, continue with [Get read models](./real-time-query).
 
 ## Appending an event
 
-The common "translation" pattern — react to one slice's event by recording a new fact. The simplest way is to **return the event**: Chronicle appends it to the event log for you, against the triggering event's `EventSourceId`:
+To translate a reservation into a stock change in C#, return the follow-up event from the handler. Chronicle appends it to the event log against the triggering event's `EventSourceId`:
 
 <ChronicleClientTabs snippet="scenarios/react-to-an-event/return-event" />
 
-`Task<StockDecreased>` and collections of events work too, and you can control the target event source — see [Returning side effects](../reactors/side-effects). Auto-appending a returned event is C#-only — every other client appends explicitly instead, shown next. In C# the returned events are appended with idempotency keys, see [Duplicate protection](../reactors/side-effects#duplicate-protection-for-returned-events); a `ReactorScenario` records returned events by default, and with the real side-effect handlers the in-process testing package appends them with keys too.
+`Task<StockDecreased>` and collections of events work too. [Returning side effects](../reactors/side-effects) explains the supported return shapes and how to choose a different target event source. The example's `[OnceOnly]` skips the handler during replay; [Duplicate protection](../reactors/side-effects#duplicate-protection-for-returned-events) explains the separate key-based protection for returned output. A `ReactorScenario` records returned events by default; configuring it with the real side-effect handlers also exercises their keyed appends.
 
-When you want to inspect the outcome yourself, append explicitly and handle the `AppendResult` — and **throw if it failed**, so the partition pauses instead of the fact being silently lost:
+Use an explicit append when you need to inspect the result yourself, or when following a client's explicit-append example. Check the `AppendResult` and throw if it failed, so the reactor partition pauses rather than treating a missing follow-up fact as success:
 
 <ChronicleClientTabs snippet="scenarios/react-to-an-event/explicit-append" />
 
 ## See also
 
-- [Reactors](../reactors/) — the full reactor model, filtering, and once-only handling.
-- [Returning side effects](../reactors/side-effects) — every supported return shape and metadata control.
-- [Projections, reducers, and reactors](../concepts/observer-patterns.md) — when a reactor is the right tool vs. building state.
+Use [Reactors](../reactors/) to configure filtering and inspect reactor behavior. If you are deciding whether this work belongs in a reactor at all, [Projections, reducers, and reactors](../concepts/observer-patterns.md) compares reacting to a fact with building state from it.

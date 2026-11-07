@@ -1,17 +1,17 @@
 ---
-title: Understanding constraints
-description: How Chronicle enforces uniqueness without a unique index, with [Unique] or an IConstraint class checked in the kernel before anything commits.
+title: Cratis Chronicle constraints for uniqueness and stream closure
+description: Cratis Chronicle checks declared constraints before appending events. Learn how to prevent duplicate values and choose guards for state-based rules.
 ---
 
-One question stops a lot of teams at the door of event sourcing, and it's a good one: **"If state is derived from events, how do I stop two users registering the same email?"** There's no table to put a `UNIQUE` index on.
+Cratis Chronicle constraints check declared rules in the server kernel before an event is appended. Use a uniqueness constraint when two event sources must not claim the same value, such as a registration email. The check belongs with the append, not in a read model that may be behind the event log.
 
-Chronicle's answer is **constraints** — rules you declare next to your events, enforced in the **kernel** before an event is committed. This page is the mental model: why the check has to live server-side, the two ways to declare a rule, and how a violation surfaces. The exhaustive options live in the [Constraints reference](/chronicle/constraints/).
+This page explains how to choose and declare that rule, handle a rejection, and distinguish uniqueness from a decision that depends on current state. The [Constraints reference](/chronicle/constraints/) covers the options and operational limits.
 
 ## Why the check belongs in the kernel
 
-The worry is real: in a classic CRUD app you lean on a database `UNIQUE` constraint, but here the "current state" is a projection, built *after* the fact. By the time a read model notices a duplicate email, the duplicate event is already in the log. Checking the read model *before* appending doesn't save you either — two requests can both pass the check and both append.
+In a CRUD application, a database `UNIQUE` constraint can reject a duplicate during the write. A materialized projection cannot do that job: it processes events after they are stored. Checking the projection before appending also leaves a race, because two requests can both see the email as available.
 
-Chronicle closes that gap by checking the rule **before the event is committed**, inside the kernel:
+A Chronicle constraint moves the check into the append path:
 
 ```mermaid
 flowchart LR
@@ -20,72 +20,70 @@ flowchart LR
     C -->|already used| R["Append rejected"]
 ```
 
-An append that would introduce a duplicate is *rejected at the source* — it never reaches the log. Because the check lives in the kernel, it's consistent across every client and every entry point: a .NET client, a REST call, or a future integration you haven't written yet. No constraint logic runs in your application code.
+When the kernel finds a conflicting claim, it rejects the append without storing the event. The registered rule applies to writers in its configured scope regardless of which client sent the append. Your application declares the rule and handles the result; it does not run a separate uniqueness query.
+
+A constraint is checked within one namespace and event sequence, not across them. The event is made durable before the constraint index is updated, so those writes are not crash-atomic. Account for index recovery when operating the store; a pre-append check is not a promise that the event and its index share one storage transaction.
 
 ## Declare it on the event
 
-The simplest way to declare a rule is right where the value lives — adorn the event property with `[Unique]`:
+In .NET, a property-level `[Unique]` attribute declares the rule beside the value it protects. Declaration support differs by client; the model-bound reference below identifies the available forms.
 
 <ChronicleClientTabs snippet="understanding-constraints/property-attribute" />
 
-That one attribute is the whole client-side story. When your application starts, Chronicle scans for `[Unique]`-adorned types, registers the constraint with the kernel, and the kernel builds the indexes it needs to enforce it on every subsequent append.
+The .NET client's convention-based discovery collects the attributes and registers the constraint with the kernel at startup. Give the same `name` to `[Unique]` on `UserRegistered.Email` and `UserEmailChanged.NewEmail` to check registrations and email changes against the same claims. By default, a property constraint retains one value per event source: claiming a new value releases that source's previous value. Choose a retention mode deliberately if earlier values must stay claimed.
 
-A few things make this practical:
-
-- **One rule can span several events.** Give the same `name` to `[Unique]` on `UserRegistered.Email` and `UserEmailChanged.NewEmail`, and a changed email is checked against registered ones too — the rule follows the *value*, not a single event type.
-- **Some events are one-of-a-kind.** Put `[Unique]` on the event *type* instead of a property, and only one event of that type can ever be appended per event source — registering the same user twice becomes impossible by declaration:
+Put `[Unique]` on the event type instead when the rule is one occurrence per event source, such as preventing a second `UserRegistered`:
 
 <ChronicleClientTabs snippet="understanding-constraints/event-type-attribute" />
 
-- **Values can be released.** When the thing that held the value goes away, mark that event with `[RemoveConstraint]` so the value can be claimed again. A lifecycle that ends in more than one way marks each of those events — every one of them releases the value:
+To release a claim when its owner is removed, declare the removal event with `[RemoveConstraint]`. If several events can end that lifecycle, mark each applicable event so each path releases the claim:
 
 <ChronicleClientTabs snippet="understanding-constraints/remove-constraint" />
 
-The reference calls this attribute style [model-bound constraints](/chronicle/constraints/model-bound/) — every parameter and combination is documented there.
+The [model-bound constraints reference](/chronicle/constraints/model-bound/) covers names, retention modes, removal, and client declaration support.
 
 ## When the rule outgrows an attribute
 
-Attributes shine when the rule belongs to one event type. Some rules don't: the same logical value appears under *different property names* in different events, the comparison should ignore casing, or the violation message needs to be composed from context. For those, declare the rule in a dedicated class — implement `IConstraint` and describe it with the builder:
+Use a dedicated definition when the rule is easier to read in one place, particularly when several event types contribute values or the violation message needs a callback. In .NET, implement `IConstraint` and describe the rule with its builder:
 
 <ChronicleClientTabs snippet="understanding-constraints/dedicated-class" />
 
-Read it top to bottom and it says exactly what the rule is: one named constraint, fed by two events with differently named properties, case-insensitive, released when the user is removed, with a friendly message when it fires. The one-of-a-kind variant has a builder form too — `builder.Unique<UserRegistered>()` enforces a single `UserRegistered` per event source.
+The .NET example brings two differently named properties under one constraint, ignores casing, and releases the claim when the user is removed. Its message callback lets the application supply a useful response. The event-type variant has a builder form too: `builder.Unique<UserRegistered>()` declares one `UserRegistered` per event source.
 
-Like the attributes, `IConstraint` implementations are **discovered automatically** when the client starts — no registration call. And crucially, both styles compile down to the *same* kernel-side constraint; which one you pick is purely about where the rule reads best. The full builder surface — names, messages, message callbacks, removal — is in the [declarative constraints reference](/chronicle/constraints/declarative/).
+The .NET client's convention-based discovery also finds `IConstraint` implementations. Both forms produce kernel-side definitions; moving the declaration into a class does not move enforcement into the application. Consult the [declarative constraints reference](/chronicle/constraints/declarative/) for builder options and the capabilities of your chosen client.
 
 ## Constraints that close streams
 
-Uniqueness is not the only rule the kernel can hold for you. A **closing constraint** declares that appending a particular event type ends a stream scope: the event is committed, the scope is closed in the same step, and every later append inside it is rejected with a `StreamClosed` violation. A fact such as `BooksClosed` can then end a period without a second call that another append could slip in front of. See [Closing events](/chronicle/closing-streams/closing-events/) and, for the attribute and builder forms, the [model-bound](/chronicle/constraints/model-bound/closing-stream/) and [declarative](/chronicle/constraints/declarative/closing-stream/) references.
+A closing constraint lets a fact such as `BooksClosed` end a selected stream scope. The kernel commits the event and records the closure without allowing another append between those steps. Once closed, appends inside that scope are rejected with a `StreamClosed` violation.
+
+The two writes are not crash-atomic: a stop after the event is stored but before the closure is recorded requires index recovery or reindexing. Choose the scope and recovery procedure using [Closing events](/chronicle/closing-streams/closing-events/). The [model-bound](/chronicle/constraints/model-bound/closing-stream/) and [declarative](/chronicle/constraints/declarative/closing-stream/) references show the declaration forms.
 
 ## What a violation looks like
 
-A violated constraint surfaces as a **failed append** — the result tells you which constraint fired and carries the message you declared. A command turns that into a friendly "that email's taken" on the form, instead of a 500. The step-by-step recipe, including handling the failure, is [Enforce a unique value](/chronicle/scenarios/enforce-a-unique-value/).
+A constraint violation is a failed append whose result identifies the constraint and provides violation details. Handle that result as an expected command outcome, for example by telling the user that the email is taken. Do not treat every failed append as a duplicate; inspect the reported failure. [Enforce a unique value](/chronicle/scenarios/enforce-a-unique-value/) walks through declaration and failure handling.
 
 ## Privacy and PII protection
 
-Chronicle protects sensitive information in constraint indexes by **hashing all constraint values** before storage. When you declare a unique constraint on an email address, phone number, or other potentially sensitive data, Chronicle:
+A uniqueness rule may cover personally identifiable information (PII), such as an email address. Property uniqueness checks use a SHA-256 hash rather than storing that raw value in the index. The kernel joins the participating values with hyphens, lowercases the result when `IgnoreCasing()` is enabled, and hashes it. Equal normalized values therefore produce equal index keys.
 
-1. Concatenates the property values (if the constraint spans multiple properties).
-2. Normalizes the value (lowercases it if `IgnoreCasing()` is enabled).
-3. Computes a **SHA-256 hash** of the result.
-4. Stores only the hash in the constraint index, never the raw value.
+You still declare the rule on ordinary properties. Hashing is not encryption or proof that an index is anonymous: predictable values can be guessed and hashed for comparison. Configure event-data protection separately for sensitive properties.
 
-This means the kernel can still enforce uniqueness — two identical values produce the same hash — but the constraint index itself contains no PII. The actual property values remain visible only in the events themselves, where Chronicle's encryption and compliance features already protect them.
-
-**Note:** The hash transformation is transparent to your code — you declare constraints on plain properties, and storage uses hashes under the hood. The same instinct shapes what a violation says: Chronicle's own message names the constraint and the offending *property*, never the value it collided on. A protected value is therefore never echoed back by a message Chronicle composed — and the caller doesn't need it echoed, because it is the value it just tried to append.
+Chronicle's generated uniqueness message names the constraint and property, not the conflicting value. Keep custom messages equally careful; hashing an index does not prevent application code from exposing a value in a response.
 
 ## Constraints and concurrency
 
-Constraints are one half of data integrity; the other half is **concurrency**. They guard against different things:
+Choose the guard from the rule you need to hold. Uniqueness is about claims to a value; concurrency is about whether the state used for a decision has changed:
 
 | Mechanism | Protects | Example |
 |---|---|---|
-| **Constraint** | A *value* across every event source in an event sequence. The check is scoped to one namespace and one event sequence, so two tenants in different namespaces can hold the same value | No two users hold the same email, no matter who appends or when |
-| **Concurrency scope** | A *moment*: when two requests race to append to the same event source, the one that acted on stale state is rejected | Two people save the same record |
-| **Decision read** | A *rule over state*. It folds the state, notes the log position before it does, and rejects the append if a relevant event arrived since | At most three loans per member, or no more than the seats available |
+| Constraint | A value claim within the configured scope of one namespace and event sequence | Two users must not claim the same email |
+| Concurrency scope | An append carrying an expected position, checked against intervening events in the scope | Reject a save based on an outdated version |
+| Decision read | An append guarded by the position captured when deriving state for one key | At most three loans per member |
 
-A constraint cannot count, so a decision read is the tool for those rules, and a decision read guards one key's history, so a constraint is the tool for a value across keys. All three checks run in the kernel at append time, and all surface as a failed append you can handle. When you find yourself worried about "two requests at once" rather than "the same value twice," reach for [concurrency scopes](/chronicle/events/concurrency/) or [decision reads](/chronicle/read-models/decision-reads/). [Choosing how a rule holds](/chronicle/dynamic-consistency-boundary/choosing/) compares them.
+A uniqueness constraint cannot count a member's loans. For that rule, a decision read derives state from the relevant events and supplies a guard for the append that follows. It does not make an email unique across different member keys. [Concurrency scopes](/chronicle/events/concurrency/) and [decision reads](/chronicle/read-models/decision-reads/) explain how to carry those guards; an ordinary fresh read does not add one automatically. Use [Choosing how a rule holds](/chronicle/dynamic-consistency-boundary/choosing/) to compare the options for your command.
 
 ## The pattern to take with you
 
-Notice the shape of the answer: the hard part lives in the **kernel**, is declared close to the **event**, and applies to **every** client with no coordination. That's the same principle as the rest of Chronicle — the event log is the source of truth, and the rules that protect it live *with* it, not scattered through application code. The same shape answers the other question that makes people nervous about event sourcing — changing an event's shape after it's written — in [Understanding event evolution](./understanding-event-evolution.md).
+Declare uniqueness where the relationship between events is clear, let the kernel check it during append, and make rejection part of your command's normal response. Then plan for the index's scope and recovery rather than treating it as a cross-store transaction.
+
+If your next adoption question is how those event types can change after they are stored, continue to [Understanding event evolution](./understanding-event-evolution.md). That page explains how the kernel keeps multiple representations of an event for readers on different schema generations.

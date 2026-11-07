@@ -1,11 +1,11 @@
 ---
-title: Run Chronicle on Azure with Microsoft Entra ID
-description: Deploy Chronicle on Azure with SQL or PostgreSQL, managed identities, tenant database resolution, health checks, and Microsoft Entra-protected webhooks.
+title: Run Cratis Chronicle on Azure with Microsoft Entra ID
+description: Connect Chronicle to Azure SQL or PostgreSQL with Microsoft Entra ID, resolve tenant databases and configure health probes and authenticated webhooks.
 ---
 
-This guide shows a platform engineer how to run the Chronicle kernel on Azure without database passwords: storage on Azure SQL or Azure Database for PostgreSQL, a managed identity for the kernel, per-tenant database placement resolved over HTTP, and webhooks that call Entra-protected endpoints. You finish with one set of environment variables that fits Azure Container Apps or AKS.
+Run the Cratis Chronicle kernel on Azure with Microsoft Entra ID to connect to Azure SQL or Azure Database for PostgreSQL without database passwords. Start with the storage configuration for your database, then add an HTTP connection resolver if your platform places tenants in separate databases.
 
-Each step links to the reference page that lists every option. This page only shows how they fit together.
+The later sections cover health probes, authenticated webhooks and multi-node availability. The combined environment-variable example gives you a starting configuration for Azure Container Apps or Azure Kubernetes Service (AKS); each section links to its full configuration reference.
 
 ## Prerequisites
 
@@ -94,7 +94,7 @@ See [Health endpoint](configuration/health-endpoint.md) for the dedicated port o
 
 ## Call Entra-protected endpoints from webhooks
 
-A webhook the kernel calls can authenticate with OAuth client credentials. In the .NET client, register it with `WithOAuth(authority, clientId, clientSecret, scope)`, as in the [webhook registration example](../webhooks/index.md#register-a-webhook):
+A webhook the kernel calls can authenticate with OAuth client credentials. In the .NET client, register it with `WithOAuth(authority, clientId, clientSecret, scope)`, as in the [webhook registration example](../webhooks/index.mdx#register-a-webhook):
 
 | Argument | Entra value |
 | --- | --- |
@@ -103,11 +103,11 @@ A webhook the kernel calls can authenticate with OAuth client credentials. In th
 | `clientSecret` | Its client secret, read from your secret store |
 | `scope` | `api://<receiver-application-id>/.default` |
 
-Chronicle discovers the token endpoint from `<authority>/.well-known/openid-configuration`, requests a token with the `client_credentials` grant and the scope, and refreshes it shortly before expiry. A `401` triggers one refresh and retry. Keep the secret in your secret store. See [OAuth client credentials](../webhooks/index.md#oauth-client-credentials) for the details, and [external services](../clients/dotnet/external-services.md) for the same scope on external service registrations.
+Chronicle discovers the token endpoint from `<authority>/.well-known/openid-configuration`, requests a token with the `client_credentials` grant and the scope, and refreshes it shortly before expiry. A `401` triggers one refresh and retry. Keep the secret in your secret store. See [OAuth client credentials](../webhooks/index.mdx#oauth-client-credentials) for the details, and [external services](../clients/dotnet/external-services.md) for the same scope on external service registrations.
 
 ### Use the kernel's managed identity instead of a secret
 
-This lends the kernel's own Azure identity to the webhook receiver, not the registering client's identity. **First configure the operator allow-lists**, before registering a webhook:
+Use managed identity when the receiver should accept the kernel's Azure identity instead of a client secret. The identity belongs to the kernel, not the client registering the webhook, so configure the operator allow-lists before registering it:
 
 ```bash
 Cratis__Chronicle__Webhooks__AllowedHosts__0=receiver.example
@@ -145,7 +145,7 @@ Cratis__Chronicle__Clustering__ServiceId=chronicle
 - Membership uses the same connection resolution as storage, so the managed identity needs no extra setup.
 - The silo (11111) and gateway (30000) ports must be reachable between nodes. Set `advertisedIP` when the default address is not.
 
-Clustering gives you more than one node. It does not by itself make a deployment zero-downtime, and this guide makes no such promise. Test how your rollout behaves before relying on it, and follow the [rolling-deploy runbook](rolling-deploy.md) when you replace nodes. See [Clustering](configuration/clustering.md) for the full set of options, limits and defunct-silo cleanup.
+Clustering lets remaining nodes take over work when a node stops, but it does not guarantee uninterrupted service during a deployment. Test your rollout before relying on it, and follow the [rolling-deploy runbook](rolling-deploy.md) when replacing nodes. The [clustering reference](configuration/clustering.md) covers the remaining options, limits and defunct-silo cleanup.
 
 ## Put it together
 

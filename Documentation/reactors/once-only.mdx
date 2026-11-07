@@ -1,53 +1,34 @@
 ---
-description: Mark a Chronicle reactor handler as once-only to exclude it from replay, and understand what that guarantees for side effects such as emails and payments.
+title: Reactor OnceOnly behavior during replay and recovery
+description: OnceOnly skips a Cratis Chronicle reactor handler during replay, but recovery and initial catch-up can still invoke it. Protect side effects separately.
 ---
-# OnceOnly
-
-A once-only declaration marks a reactor handler that must not run again when its observer is replayed.
-The tabs show each client's declaration; C# uses `[OnceOnly]`.
-
-There are scenarios where you need side effects to occur only on the initial event processing,
-such as sending notifications, triggering external integrations, or performing non-idempotent operations.
+The `OnceOnly` attribute skips a reactor handler during replay in Cratis Chronicle. Use it when replaying history should not resend a notification or repeat an external integration call. It does not limit the handler to one invocation: initial catch-up and recovery of a failed partition can still call it.
 
 <ChronicleClientTabs snippet="reactors/once-only/basic" />
 
-`OnceOnly` gives you a clean way to separate one-time operations from normal reactor behavior.
+In this example, replay skips the marked handler. Ordinary event delivery still invokes it.
 
 ## What it does and does not guarantee
 
-`OnceOnly` takes the handler out of **replay** — the deliberate re-delivery you trigger by rewinding an
-observer, or that a redaction or revision triggers for you. That is the whole of it.
+Replay re-delivers historical events after an observer rewind, redaction or revision. `OnceOnly` suppresses the marked handler for those replay deliveries.
 
-Renaming a reactor or moving its namespace changes its default id. The new observer catches up from
-the beginning as **ordinary observation**, so `OnceOnly` handlers run and side effects repeat. Preserve
-the existing id explicitly before refactoring; see [Reactor identity and renaming](identity.mdx). To keep a
-new reactor from acting on history at all, mark it with [StartAtTail](start-at-tail).
+In C#, renaming a reactor or moving its namespace changes its default id. A new observer catches up from the beginning as ordinary observation by default, so `OnceOnly` handlers can repeat side effects. Preserve the existing id explicitly before refactoring; see [Reactor identity and renaming](identity.mdx). For a new reactor that should skip history on its first registration, use [StartAtTail](start-at-tail).
 
-It is not an exactly-once delivery guarantee. In particular, **recovering a failed partition re-delivers the
-event as an ordinary observation, so a `OnceOnly` handler runs again** — which is the point of a retry: the
-handler failed before its side effect ran, and recovery exists to run it. Keep designing for the handler
-being invoked more than once when it fails partway through.
+Recovery re-delivers a failed partition's event as ordinary observation, so a `OnceOnly` handler can run again. The previous attempt may have failed before or after its side effect completed. The attribute cannot tell which happened and is not an exactly-once guarantee.
 
-When the side effect must survive that retry too, take a [delivery identity](delivery-identity) alongside this
-attribute: it gives you a key that is stable across the failure and the recovery, so a record you keep under it
-lets the handler recognize the redelivery. The two compose — `OnceOnly` keeps replay out for free, the identity
-covers what is left.
+Use a [delivery identity](delivery-identity) to recognize that repeated delivery. It supplies a stable key for an application-owned receipt or a receiver's idempotency key. The receipt must be atomic with the effect, or the receiver must deduplicate requests; checking and recording a key around an external call still leaves a failure window.
 
 ## Relationship to returned-event keys
 
-In C#, the events a handler returns are also appended with [idempotency keys derived from the delivery](side-effects#duplicate-protection-for-returned-events), so a retry after a failed partition does not append them twice even without `OnceOnly`. The two answer different questions. The keys make the *append* safe to repeat. `[OnceOnly]` keeps the *handler* from running during replay, which is what protects anything the handler does outside the event log. If you changed what a handler returns and want replays to append the new shape, bump the [effect epoch](delivery-identity#when-to-bump-the-effect-epoch) instead; if the handler must not run again at all, keep `[OnceOnly]`.
+In C#, the built-in handlers derive [idempotency keys for returned events](side-effects#duplicate-protection-for-returned-events). On a kernel that supports idempotent appends, repeating the same keys and output does not append another copy. This protects the append, while `[OnceOnly]` skips the handler during replay. Neither prevents an external call from repeating during ordinary recovery.
+
+If replay should deliberately append changed output, review the [effect epoch](delivery-identity#when-to-bump-the-effect-epoch). Raising it permits new appends for the same input. If replay should do no work for this handler, keep `[OnceOnly]`.
 
 ## Where you put it
 
-In C#, `[OnceOnly]` goes on a handler method or on the reactor class, and the two mean different things:
+Put `OnceOnly` on a method when only that handler should be skipped during replay. The reactor remains replayable, and its other handlers can process replayed events.
 
-- **On a method** — that handler is skipped for every event that arrives as part of a replay. The rest of the
-  reactor still replays, which is what you want when only one of its handlers has a non-idempotent side effect.
-- **On the class** — the whole reactor registers as non-replayable, so a replay of its observer never starts
-  and none of its handlers run again. This is strictly coarser: it takes every handler out of replay, not
-  just the one with the side effect.
-
-Reach for the method placement unless the entire reactor exists to do something that must not happen twice.
+Put it on the class when none of the reactor's handlers should replay. The whole reactor registers as non-replayable. This does not stop ordinary recovery or initial catch-up, so choose the placement by what replay should do, not by an expectation of one-time execution.
 
 :::note[Client coverage]
 TypeScript supports `@onceOnly()` on a handler method or on the reactor class from `@cratis/chronicle` 6.9.0, with the same meaning as `OnceOnly`. Elixir sets `once_only: true` on `use Chronicle.Reactors.Reactor` to register the reactor as not replayable, or `once_only: [EventModule]` to skip the listed events' handlers while replaying. As in every client, this is not exactly-once delivery: design side effects to be idempotent (see [Getting started with reactors](getting-started)).

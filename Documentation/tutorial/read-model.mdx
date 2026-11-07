@@ -1,11 +1,13 @@
 ---
-title: "2. Building a read model"
-description: Build a queryable Chronicle Books catalog from library events with a declarative projection, map state changes, and remove a view when a book leaves.
+title: "2. Build a read model with Cratis Chronicle"
+description: Build a queryable library catalog from events in Cratis Chronicle, track which books are on loan, and remove returned books from a second view.
 ---
 
-We can record that a book arrived, but the librarian can't *see* the catalog yet — the books live only as history in the log. In this chapter we'll fix that: we'll build a `Books` read model that always reflects the current state of every book, and — here's the part that surprises people coming from CRUD — we'll do it **without writing a single line that updates anything**.
+A read model in Cratis Chronicle turns recorded events into data your application can query. Here you'll build a library catalog that shows which books are on loan, then a second view containing only borrowed books. Chronicle applies your event mappings to maintain both views.
 
-In [event-modeling](/event-modeling/) terms that's the **view pattern** — events fold into a read model the UI can query. It's the slice of the model we build in this chapter:
+Continue with the connected client and book ID from the previous chapter. Keep that ID: `BookAdded`, `BookBorrowed`, and `BookReturned` must belong to the same book for these views to describe its history.
+
+In [event-modeling](/event-modeling/), this is the **view pattern**: events feed a read model that a UI can query. This chapter builds that part of the library:
 
 ```mermaid
 eventmodeling
@@ -18,63 +20,68 @@ tf 04 readmodel Library.Book ->> 01 ->> 02 ->> 03
 
 ## First, a couple more facts
 
-A book doesn't just arrive; it gets borrowed and brought back. Those are facts too, so they're events:
+Add two event types alongside `BookAdded`: `BookBorrowed` records the member's name, and `BookReturned` records that the book came back. Include them in your client's event-type discovery or registration, as you did for `BookAdded`:
 
 <ChronicleClientTabs snippet="tutorial/read-model/a-events" />
 
-Notice `BookReturned` has no data at all — and that's fine. The fact that it *happened*, on a particular book's stream, at a particular time, is the whole story. Not every event needs a payload.
+`BookReturned` has no payload fields. The event's context supplies the book's event-source ID and when it happened, so the event does not need to repeat that information.
 
 ## Declare what you want to read
 
-Here's the shift. In a database you'd write code to keep a `Books` table in sync — insert on add, update a flag on borrow, update it back on return. In Chronicle you instead **declare the shape you want** and tell it which events feed it. Chronicle does the keeping-in-sync for you. That declaration is a [projection](/chronicle/concepts/projection/):
+Define a `Book` read model and map the three events onto its properties. The mapping is a [projection](/chronicle/concepts/projection/): instructions for deriving state from events, including how to rebuild it from history.
+
+Follow the catalog example below in C#, TypeScript, or Elixir. The Kotlin and Java tabs have no catalog implementation; use their borrowed-book view later in this chapter.
 
 <ChronicleClientTabs snippet="tutorial/read-model/book" />
 
-Read the mapping as a sentence: a book is *made from* `BookAdded` — its `Title` and `Isbn` come straight off the event; `OnLoan` is `false` when the book is added, `true` when it's borrowed, and `false` again when it's returned; `BorrowedBy` is set to whoever borrowed it. You're *declaring* how each fact maps onto the view — not writing imperative updates, not worrying about ordering. Chronicle replays the events in order and applies your mapping.
+In the C# example, `BookAdded` supplies `Title` and `Isbn` and sets `OnLoan` to `false`. `BookBorrowed` sets `OnLoan` to `true` and copies `MemberName` into `BorrowedBy`. `BookReturned` sets `OnLoan` back to `false`. Chronicle applies these mappings in event order, including when it rebuilds the view.
+
+This mapping does not clear `BorrowedBy` on return. It retains the last borrower's name, so use `OnLoan` to decide whether that name describes a current loan.
 
 :::note[FromEvent maps by convention]
-A creation mapping can copy event properties to read model properties **by naming convention** — the book's title and ISBN keep the same names. An explicit property mapping handles names that *don't* line up, like the borrowing member's name feeding `BorrowedBy`. In C#, these are `[FromEvent<BookAdded>]` and `[SetFrom<T>]`; the other tabs show their client's declaration.
+In C#, the class-level `[FromEvent<BookAdded>]` maps matching property names: `BookAdded.Title` supplies `Book.Title`, and `BookAdded.Isbn` supplies `Book.Isbn`. `[SetFrom<T>]` makes a mapping explicit, as with `BookBorrowed.MemberName` supplying `BorrowedBy`. The TypeScript and Elixir examples spell out their field mappings.
 :::
 
 :::tip[Reach for the declarative path first]
-For mappings like this — "events map onto fields" — model-bound declarations express it with almost no code. Only when a view genuinely needs hand-written, imperative folding should you drop to a [reducer](/chronicle/reducers/). Try the projection first; you'll rarely need more.
+This projection keeps the mapping beside the read model, using model-bound attributes in C#. `[SetValue<T>]` assigns constants such as `true` and `false` when an event arrives. If deriving a view needs application logic that these mappings cannot express, use a [reducer](/chronicle/reducers/) to compute the next state in code.
 :::
-
-Kotlin and Java's model-bound projections don't currently have an equivalent to `[SetValue<T>]` — setting a literal value per event type — so this particular projection isn't available in those two clients yet.
 
 ## Query it
 
-By default Chronicle **materializes** the projection into its configured **sink** storage — MongoDB unless you change it — so the `Book` read model is just a collection you query, exactly what you're used to. The examples query `Books` in the database named after your event store. Configure your language's MongoDB driver for that database; [.NET's MongoDB setup](/chronicle/get-started/console/#configure-the-mongodb-client) shows that host's configuration:
+Chronicle **materializes** this projection: an observer processes events and stores the resulting state in a **sink**, the projection's storage destination. The C# default is MongoDB. With the default naming, `Book` instances live in the `Books` collection in the database named after your event store.
+
+For the C# query below, use [the MongoDB setup in Get started](/chronicle/get-started/console/#configure-the-mongodb-client) to supply an `IMongoCollection<Book>` for that collection. `Books` is the query class; each document it reads is a `Book` instance. Its `OnLoan()` method returns only books whose `OnLoan` flag is `true`:
 
 <ChronicleClientTabs snippet="tutorial/read-model/query" />
 
-Now exercise it. Append a `BookBorrowed` for your book and query again — `OnLoan` is `true`, and `BorrowedBy` has the member's name. Append a `BookReturned` and it flips back. You never wrote an `UPDATE`. The projection did it, by re-deriving the book from its events.
+Restart or reconnect your client with the new event types and projection included in its discovery or registration. Then exercise the mapping using the append pattern from the first chapter:
 
-:::note[A heartbeat of delay]
-The read model updates *just after* the event is appended, not in the same instant — it's [eventually consistent](/chronicle/read-models/). For a UI that's usually imperceptible (and you can subscribe to live updates). It only matters when you need to make a decision based on current state — which is what constraints and the next chapter's tools are for.
+1. Query the on-loan view after `BookAdded` has been projected. The book is not in this result because `OnLoan` is `false`.
+2. Append `BookBorrowed` with a member's name under the saved book ID. Once the projection catches up, query again: the book appears with `OnLoan` set to `true` and `BorrowedBy` set to that name.
+3. Append `BookReturned` under the same ID. After processing, the book disappears from the on-loan result. Its `Book` instance still exists in the catalog with `OnLoan` set to `false`.
+
+:::note[An append completes before the view catches up]
+The stored view is [eventually consistent](/chronicle/read-models/): a successful append does not mean the projection has processed it yet. If a query still shows the previous state, allow processing to catch up before checking again. Do not use this unguarded stored view alone to decide whether another borrow is allowed.
 :::
 
 ## A view that removes itself
 
-The catalog answers "what books do we have?" — but the librarian's most common question at the desk is sharper: *what's out on loan right now?* You could filter `Book` on `OnLoan`, and we just did. But there's a more direct way to model it: a read model whose instances **exist only while the book is out**. A `BorrowedBook` appears when a book is borrowed, and disappears when it comes back:
+The catalog retains every book, while its query filters for current loans. You can also make membership in a view represent the loan itself: create a `BorrowedBook` when a book is borrowed and remove it when the book comes back. Then querying all instances answers "what's out on loan?" without a flag filter:
 
 <ChronicleClientTabs snippet="tutorial/read-model/borrowed-book" />
 
-Kotlin and Java don't currently have an equivalent to `[RemovedWith<T>]` either, so this one is C#/Elixir/TypeScript only for now.
+This example includes Kotlin and Java implementations using `@FromEvent` and `@RemovedWith`. In C#, `[FromEvent<BookBorrowed>]` creates the instance, mapping `MemberName` by convention and using the book's event-source ID as its key. `[RemovedWith<BookReturned>]` removes that instance when a return event arrives for the same book.
 
-And its own query, just as plain as the last one:
+Query all instances of this view:
 
 <ChronicleClientTabs snippet="tutorial/read-model/borrowed-books-query" />
 
-Two mappings carry the whole lifecycle. The creation mapping makes an instance when the borrow happens — the member's name mapped by convention, keyed by the book's id. The removal mapping is the new move: when a `BookReturned` arrives on that same book's stream, Chronicle **deletes the instance from the sink**. In C#, these mappings are `[FromEvent<BookBorrowed>]` and `[RemovedWith<BookReturned>]`. No `IsActive` flag, no soft-delete column, no cleanup job — the collection *is* the answer to "what's out right now", because instances that no longer apply simply aren't in it.
+After registering this projection, append another borrow and return for the same book ID. Once each event is processed, the `BorrowedBooks` query first includes the book and then excludes it. Unlike the first view, the returned book no longer has an instance in this sink. Removing that instance does not delete its events from the log.
 
-Notice what just happened to your modeling instincts, too: instead of bending one `Books` table to answer every question, you built a second, purpose-shaped view over the *same events*. Read models are cheap in Chronicle — they're derived, so you can have as many as you have questions.
+Both views use the same history. One retains the catalog entry and its loan flag; the other retains only current loans. Choose a view's shape around the question its caller needs to answer.
 
 ## What you did
 
-- Added the events that make up a book's life (`BookBorrowed`, `BookReturned`).
-- **Declared** a `Books` read model and how events map onto it — no update code anywhere.
-- **Queried** it like ordinary data, and watched it stay correct on its own.
-- Built a second view, `BorrowedBook`, whose instances are **removed** when the book comes back — two questions, two read models, one stream of facts.
+You mapped borrow and return events onto queryable state. The catalog keeps the book after a return; the `BorrowedBook` view removes it. Both depend on processing recorded events, so their stored results can lag an append.
 
-You can now see the catalog. The last piece is to make the library *do* something when the world changes — when a book comes back, tell the next person waiting for it. That's a job for a reactor, and it's the [final chapter](./reacting). [Let's finish the tour →](./reacting)
+The application can now show loans. In the [final chapter](./reacting), you'll react to a return by calling a notification service for the next member waiting. [Continue to reactors →](./reacting)

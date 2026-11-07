@@ -1,62 +1,54 @@
 ---
-title: "Projection with custom properties"
-description: "Map Chronicle event properties explicitly with Set(), combine custom mappings with AutoMap, and handle differing names across events and read models."
+title: "Cratis Chronicle projections: map properties with Set"
+description: "Use Set() in Cratis Chronicle projections to map event properties, constants, event context, or event source IDs when automatic mapping does not fit."
 ---
 
-When auto-mapping isn't sufficient, you can explicitly map properties from events to your read model. This gives you full control over how data is transformed and mapped.
+Use `Set()` in a Cratis Chronicle projection when a read-model property needs a different source than its matching event property. You can select an event property, a constant, or event metadata while leaving automatic mapping enabled for the rest.
 
 ## Explicit property mapping
 
-Use `Set()` to map a property explicitly — typically because the event and the read model name it differently:
+Choose the read-model property with `Set()`, then its source with `To()`. In this account example, `AccountNumber` comes from `Number`, and `CustomerName` comes from the nested event property `Owner.Name`:
 
 <ChronicleClientTabs snippet="projections/declarative/set-properties/explicit" />
 
 ## Combining AutoMap with explicit mapping
 
-AutoMap is on by default, so you never call `.AutoMap()` yourself: every property whose name matches is already mapped. Add explicit mappings only for the properties that need a transformation or a different source:
+AutoMap, Chronicle's automatic property mapping, is enabled by default at the projection root. You do not need to call `.AutoMap()` there. Add explicit mappings for exceptions; they take precedence over automatic mappings for the same target property:
 
 <ChronicleClientTabs snippet="projections/declarative/set-properties/combined-automap" />
 
-AutoMap works recursively, automatically mapping:
+AutoMap copies matching properties with compatible types, including nested structures and collections. It does not infer that `Amount` means `Balance` or that `Timestamp` means `LastTransaction`, so the parameterless deposit subscription above does not map those values to those targets. Use the explicit mappings from the first example for that behavior.
 
-- Properties with matching names and compatible types
-- Nested objects and their properties
-- Collections and arrays
-
-`NoAutoMap()` turns it off for the projection (and `.AutoMap()` turns it back on inside a child scope) — there is no per-event-type toggle. Add explicit `.Set()` calls inside a specific `.From<TEvent>()` block for the properties that need custom mapping; AutoMap still fills in every other matching property for that event.
+`NoAutoMap()` disables automatic mapping at the scope where it is called. Child scopes inherit the parent's setting unless they override it with `.AutoMap()` or `NoAutoMap()`. There is no per-event-type toggle; put event-specific `.Set()` calls inside that event's `.From<TEvent>()` block. See [auto mapping](./auto-map) for the matching rules.
 
 ## Read model definition
 
-The read model can have different property names and types than the events:
+The read model uses names suited to the query rather than copying the event's structure. Each selected value must still be compatible with its target property:
 
 <ChronicleClientTabs snippet="projections/declarative/set-properties/read-model" />
 
 ## Event definitions
 
-Events can have different structures than the read model:
+The account-opened event nests customer details under `Owner`, while the deposit event supplies an amount and timestamp:
 
 <ChronicleClientTabs snippet="projections/declarative/set-properties/events" />
 
 ## Property mapping options
 
-You can map properties in several ways:
+Choose the source that represents the fact you want to store. Event context is the metadata accompanying an event, such as its occurrence time.
 
-- **From event property**: `.Set(m => m.CustomerName).To(e => e.Owner.Name)`
-- **From constant value**: `.Set(m => m.IsActive).ToValue(true)`
-- **From event context**: `.Set(m => m.OpenedAt).ToEventContextProperty(c => c.Occurred)`
-- **From event source ID**: `.Set(m => m.Id).ToEventSourceId()`
+| Source | Mapping |
+| --- | --- |
+| Event property | `.Set(m => m.CustomerName).To(e => e.Owner.Name)` |
+| Constant value | `.Set(m => m.IsActive).ToValue(true)` |
+| Event context | `.Set(m => m.OpenedAt).ToEventContextProperty(c => c.Occurred)` |
+| Event source ID | `.Set(m => m.Id).ToEventSourceId()` |
 
 > [!NOTE]
 > `.To(...)` maps a single **event property** — it reads the value straight off the event, it does not run code. It cannot produce a *computed* value: `.To(e => $"{e.FirstName} {e.LastName}")`, `.To(_ => DateTimeOffset.UtcNow)` and similar expressions are not supported, because the builder extracts a property path from the expression rather than executing it. To derive a value, either record it on the event as a fact (compute it in the command's `Handle()` before appending) or use a [reducer](/chronicle/reducers/), which can run arbitrary logic over the current state and the event.
 
 ## Multiple events
 
-A single projection can handle multiple event types, each with its own property mappings. Properties are updated incrementally as events are processed.
+Each `From<TEvent>()` block defines the changes for that event type. In the first example, opening the account sets its number, customer name, balance, active flag, and opening time. A deposit replaces `Balance` with the event's `Amount` and updates `LastTransaction`; properties not mapped by that event retain their previous values.
 
-In the example above:
-
-- `AccountOpened` sets initial values for all properties
-- `MoneyDeposited` only updates `Balance` and `LastTransaction`
-- Other properties retain their previous values
-
-This approach gives you precise control over how your read models are built from events.
+`Set()` assigns a value; it does not add a deposit to the existing balance. For accumulation, use the operations described in [projection functions](./functions).

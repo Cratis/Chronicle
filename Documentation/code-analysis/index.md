@@ -1,23 +1,25 @@
 ---
-title: "Code Analysis Rules"
-description: "Browse Chronicle .NET CHR analyzer rules and severities, installation details, quick fixes, and the explicit registration evidence recognized at build time."
+title: "Cratis Chronicle analyzer rule reference"
+description: "Cratis Chronicle's .NET analyzers report CHR diagnostics in C# builds. Look up documented rules, their severities, fixes, and installation requirements."
 ---
 
-This section documents the code analysis rules provided by the Chronicle Code Analyzer for the .NET client.
+Cratis Chronicle's .NET analyzers check C# code for Chronicle usage mistakes during compilation. Each finding has a `CHR####` diagnostic ID that identifies the rule behind the build or editor message.
 
-All rules follow the identifier format `CHR####`. Numbers are assigned sequentially; an occasional id is reserved for a rule still in progress, so a gap in the published set is expected.
+To resolve a diagnostic, find its ID in the [rules overview](#rules-overview) and open the linked rule page for the cause and correction. If you're adding the analyzers or upgrading the client, start with [installation](#installation). The [quick fixes](#quick-fixes) section lists automated corrections.
+
+Rule IDs are not a continuous sequence. The table includes the retired CHR0047 rule so you can still look up an older diagnostic or suppression.
 
 ## Rules Overview
 
 | Rule ID | Title | Severity | Description |
 |---------|-------|----------|-------------|
-| [CHR0001](CHR0001) | Event type must have [EventType] attribute | Error | Types appended to event sequences must be marked with [EventType] attribute |
-| [CHR0002](CHR0002) | Declarative projection event type must have [EventType] attribute | Error | Declarative projection generic arguments must reference types with [EventType] attribute |
-| [CHR0003](CHR0003) | Model bound projection attribute must reference event type with [EventType] attribute | Error | Model bound projection attributes must reference types with [EventType] attribute |
+| [CHR0001](CHR0001) | Event type must have [EventType] attribute | Error | Appended event types need `[EventType]`, `[EventTypeGenerationFor<T>]`, or explicit registration |
+| [CHR0002](CHR0002) | Declarative projection event type must have [EventType] attribute | Error | Declarative projection generic arguments must reference attributed or explicitly registered event types |
+| [CHR0003](CHR0003) | Model bound projection attribute must reference event type with [EventType] attribute | Error | Model-bound projection attributes must reference attributed or explicitly registered event types |
 | [CHR0004](CHR0004) | Reactor method has a parameter that cannot be resolved | Warning | Reactor method dependencies must be resolvable from event context, read models, or services |
-| [CHR0005](CHR0005) | Reactor event parameter must have [EventType] attribute | Error | Event parameters in reactor methods must be marked with [EventType] attribute |
+| [CHR0005](CHR0005) | Reactor event parameter must have [EventType] attribute | Error | Reactor event parameters must be recognized as event types through attributes or explicit registration |
 | [CHR0006](CHR0006) | Reducer method signature must match allowed signatures | Warning | Reducer methods must follow allowed signatures |
-| [CHR0007](CHR0007) | Reducer event parameter must have [EventType] attribute | Error | Event parameters in reducer methods must be marked with [EventType] attribute |
+| [CHR0007](CHR0007) | Reducer event parameter must have [EventType] attribute | Error | Reducer event parameters must be recognized as event types through attributes or explicit registration |
 | [CHR0008](CHR0008) | Reactor event types must be from the same event store | Error | Reactor event types must all originate from the same event store |
 | [CHR0009](CHR0009) | Reducer event types must be from the same event store | Error | Reducer event types must all originate from the same event store |
 | [CHR0010](CHR0010) | Model-bound projection event types must be from the same event store | Error | Model-bound projection event types must all originate from the same event store |
@@ -75,36 +77,34 @@ All rules follow the identifier format `CHR####`. Numbers are assigned sequentia
 
 ## Explicit registration evidence
 
-CHR0001, CHR0002, CHR0003, CHR0005 and CHR0007 accept event types nominated by semantically bound `ExplicitArtifacts.RegisterEventType<T>()` or `RegisterEventType(typeof(T), ...)` calls anywhere in the same compilation, including another source file. Their existing diagnostic ids, severities and messages remain unchanged. Reactor return types and event sequences also use that evidence. Explicit `RegisterReactor` and `RegisterReducer` calls opt plain observers into the existing method-signature checks.
+If you register event types explicitly instead of adding `[EventType]`, CHR0001, CHR0002, CHR0003, CHR0005 and CHR0007 can recognize that registration. They inspect `ExplicitArtifacts.RegisterEventType<T>()` and `RegisterEventType(typeof(T), ...)` calls across all source files in the same compilation, checking that C# resolves each call to the actual registration method. The diagnostic IDs, severities and messages stay the same. Reactor return types and event sequences also use this evidence. Explicit `RegisterReactor` and `RegisterReducer` calls bring observers without markers into the method-signature checks.
 
-This is **possible-registration evidence**, not whole-program verification:
+Finding a registration call does not prove that it runs or registers the type on the client that uses it. Dead or conditional calls still count. The analyzers recognize closed generic type arguments and literal `typeof` arguments, but do not evaluate a variable containing a `Type`. They cannot establish registrations hidden in a referenced library, reflection, a plugin, configuration or an open-generic wrapper.
 
-- Dead or conditional calls count even if never executed. A registration on one client does not prove membership on another client.
-- Calls hidden in a referenced library, reflection, plugin, configuration or open-generic wrapper are not proven. A literal closed generic or `typeof` call in source is the supported evidence shape; a variable containing a Type is not evaluated.
-- Callbacks, supplied ids, generations, store ownership and control flow are not interpreted. Other analyzer families remain marker-based; this does not make every rule aware of explicit metadata.
-- Plain migration method roles and endpoint relationships are validated at runtime; the migration-id analyzer does not prove them.
+Registration callbacks, supplied IDs, generations, store ownership and control flow are not interpreted. Other analyzer families still rely on attributes or marker interfaces; explicit registration does not make every rule aware of explicit metadata. Plain migration method roles and endpoint relationships are validated at runtime, not by the migration-ID analyzer.
 
-Validate the actual store configuration at runtime. If registration is correct but invisible to these analyzers, suppress only the relevant CHR0001/2/3/5/7 diagnostic at that use site rather than disabling the analyzers globally. See [explicit artifact registration](../clients/dotnet/explicit-artifacts) for the registration and snapshot contract.
+Validate the actual store configuration at runtime. If registration is correct but invisible to these analyzers, suppress only the relevant CHR0001/2/3/5/7 diagnostic at that use site rather than disabling the analyzers globally. Follow [explicit artifact registration](../clients/dotnet/explicit-artifacts) to configure registration and understand when the client takes its registration snapshot.
 
 ## Quick Fixes
 
-- CHR0001, CHR0002, CHR0003, CHR0005, and CHR0007 provide a code fix that adds the missing `[EventType]` attribute to the referenced type.
-- CHR0026 provides a code fix that removes the redundant `[Key]` attribute and preserves `[Subject]`.
-- CHR0028 provides a code fix that removes the redundant `.AutoMap()` call.
-- CHR0029 provides a code fix that removes the redundant `.Set(...).To(...)` mapping.
+These rules offer code fixes:
+
+- [CHR0001](CHR0001), [CHR0002](CHR0002), [CHR0003](CHR0003), [CHR0005](CHR0005), and [CHR0007](CHR0007) add the missing `[EventType]` attribute to the referenced type.
+- [CHR0026](CHR0026) removes the redundant `[Key]` attribute and preserves `[Subject]`.
+- [CHR0028](CHR0028) removes the redundant `.AutoMap()` call.
+- [CHR0029](CHR0029) removes the redundant `.Set(...).To(...)` mapping.
+- [CHR0062](CHR0062) adds `EventSourceId` to the concurrency dimensions. Use this fix when the condition should apply to one event source rather than across sources.
 
 ## Installation
 
-The rules ship in the `Cratis.Chronicle.CodeAnalysis` package. From **19.4.8**, `Cratis.Chronicle` depends on it, so referencing `Cratis.Chronicle` — or a package that depends on it, such as `Cratis.Chronicle.AspNetCore` — runs the rules in your build with nothing else to add.
+The analyzers ship in the `Cratis.Chronicle.CodeAnalysis` package. In **19.4.8 and later**, `Cratis.Chronicle` depends on it, so referencing `Cratis.Chronicle` or a package that depends on it, such as `Cratis.Chronicle.AspNetCore`, brings the rules into your build without a separate analyzer reference. This package analyzes C# code, not code written for Chronicle's other clients.
 
-Before 19.4.8, `Cratis.Chronicle` did not carry that dependency, and no rule ran in a consuming build unless the project referenced the analyzer package itself. On an older version, add it at the same version as the client:
+:::caution[Upgrading to 19.4.8 or later can fail a build that used to pass]
+The upgrade can introduce diagnostics even when your application code has not changed. An **Error** rule fails the build; a **Warning** rule also fails it when `TreatWarningsAsErrors` is enabled. Open the reported rule's page to understand the correction. Suppress a rule only when you have checked that the code is correct.
+:::
+
+Before 19.4.8, `Cratis.Chronicle` did not carry the analyzer dependency. Projects on those versions only run the rules if they reference the analyzer package directly. If you're using an older client, add the package at the same version as the client:
 
 ```shell
 dotnet add package Cratis.Chronicle.CodeAnalysis --version <your Cratis.Chronicle version>
 ```
-
-The analyzers inspect C# only; the other Chronicle clients have no equivalent.
-
-:::caution[Upgrading to 19.4.8 or later can fail a build that used to pass]
-From 19.4.8, code that violates an **Error** rule no longer compiles, and under `TreatWarningsAsErrors` neither does code that violates a **Warning** rule. The code did not change; the rules had simply never run against it. Fix what the build reports — each rule page says how. Suppress a rule only when you have checked that the code is correct.
-:::

@@ -1,15 +1,15 @@
 ---
-title: Add Chronicle to an ASP.NET Core app
-description: Wire Chronicle into an ASP.NET Core web application — the DI container registers and discovers everything, and a minimal API endpoint appends events directly.
+title: Add Cratis Chronicle to an ASP.NET Core app
+description: Add Cratis Chronicle to an ASP.NET Core API, append a book-borrowing event from an HTTP endpoint, and check the resulting event and read models.
 ---
 
-When your app is a web API, Chronicle fits the way you already build: it plugs into the `WebApplicationBuilder`, registers itself in the dependency-injection container, and lets your endpoints append events by taking `IEventLog` as a dependency. There's almost no glue — a couple of calls in `Program.cs` and your routes can start recording facts.
+Use Cratis Chronicle in an ASP.NET Core app when an HTTP request needs to record a business event. Register the client with `WebApplicationBuilder`, then inject `IEventLog` into a route handler to append the event to the separately running kernel.
 
-We'll build a small library domain and expose an endpoint that borrows a book. If you're not building a web app — a background processor or scheduled host — the [Worker Service guide](./worker) covers that host instead, and the [console guide](./console) shows the bare-bones version with no container at all.
+This guide builds a library API that records a book being borrowed. You'll check the event in the workbench and see how projections turn it into queryable loan state. For background processing, use the [Worker Service guide](./worker); to work without a host or dependency-injection container, use the [console guide](./console).
 
 ## Before you start
 
-Have the Chronicle kernel running locally. [Run Chronicle locally](./choose-hosting-model#run-chronicle-locally) brings it up with a single `docker run` and lists the prerequisites (.NET 8+, Docker); this guide assumes it's listening on `chronicle://localhost:35000`.
+You need .NET 8 or higher and a local Chronicle kernel. Follow [Run Chronicle locally](./choose-hosting-model#run-chronicle-locally) to start the development image with Docker and check its health. This guide uses `chronicle://localhost:35000` and the image's bundled MongoDB at `mongodb://localhost:27017`.
 
 You can also find the [complete ASP.NET Core quickstart sample](https://github.com/Cratis/Samples/tree/main/Chronicle/Quickstart/AspNetCore) on GitHub.
 
@@ -29,11 +29,15 @@ dotnet add package Cratis.Chronicle.AspNetCore
 
 ## Register Chronicle on the host
 
-ASP.NET Core builds your app through the `WebApplicationBuilder`, which already has a dependency-injection container. Chronicle hooks straight into it — two calls in `Program.cs` are the entire integration:
+Register Chronicle before building the app, then configure its startup on the built application:
 
 <ChronicleClientTabs snippet="get-started/aspnetcore/register" />
 
-`AddCratisChronicle` registers Chronicle's services and names the event store to use; `UseCratisChronicle` hooks it into the request pipeline. Unlike the bare-bones [console](./console) version, all discovery and registration of your artifacts happens automatically — the container finds your reactors, reducers, and projections for you.
+`AddCratisChronicle` registers client services in ASP.NET Core's dependency-injection (DI) container and selects the `Quickstart` event store. The client discovers your event types and processing definitions, called artifacts. These include projections that build read models and reactors that run code in response to events.
+
+`UseCratisChronicle` configures client startup. Request middleware is installed automatically by default; the authentication section below explains explicit placement. Discovery also happens in the [console](./console) client. The host integration adds service resolution and request handling, not discovery alone.
+
+The registration snippet is an excerpt, not a complete `Program.cs`. Keep its builder and app setup in `Program.cs`. After defining the endpoint below, call `AspNetCoreBookEndpoint.MapEndpoints(app)` before `app.Run()` so the route is mapped and the web host keeps running.
 
 ```mermaid
 flowchart LR
@@ -47,9 +51,13 @@ flowchart LR
 
 ## Authentication and tenant namespaces
 
-Chronicle installs its unit of work and causation middleware automatically through startup filters. These wrap your application's middleware, including authentication. Starting the request unit of work does **not** resolve its event store or namespace: it binds on the first operation that needs the store. Resolving the scoped `IEventStore`, `IEventLog`, or read models also resolves the namespace at that point. A successful resolution is reused for the rest of the request, including the unit of work's commit.
+Chronicle installs middleware for units of work and causation automatically through startup filters. A unit of work groups the request's appends for commit; causation tracks what caused the operation. This middleware wraps your application's middleware, including authentication.
 
-For a claim-based [namespace resolver](../namespaces/aspnetcore), run authentication before any middleware or endpoint that uses Chronicle. Read the tenant claim from `IHttpContextAccessor.HttpContext.User` in the resolver. For HTTP requests, reject missing or invalid tenant claims rather than falling back to a shared namespace. Handle off-request resolution separately: client startup and background work have no HTTP principal. Unauthenticated requests rejected by authorization, and requests that never use Chronicle, do not need a namespace merely to start or complete their request unit of work. Using Chronicle inside an authentication handler still requires a namespace to be available at that point.
+Starting a request unit of work does not resolve an event store or namespace. That happens on the first operation that needs the store, including resolving scoped `IEventStore`, `IEventLog`, or read models. A successful resolution is reused for the rest of the request and its commit.
+
+For a claim-based [namespace resolver](../namespaces/aspnetcore), run authentication before any middleware or endpoint that uses Chronicle. Read the tenant claim from `IHttpContextAccessor.HttpContext.User` in the resolver. Reject missing or invalid tenant claims on HTTP requests rather than falling back to a shared namespace.
+
+Client startup and background work have no HTTP principal, so handle those resolutions separately. A request rejected by authorization, or one that never uses Chronicle, does not need a namespace just to start or complete its unit of work. If an authentication handler itself uses Chronicle, a namespace must already be available when it does.
 
 If you need explicit control over ordering, set `UseAutomaticMiddleware = false` in the options passed to `builder.AddCratisChronicle(...)`. Then configure the pipeline in this order:
 
@@ -59,15 +67,21 @@ If you need explicit control over ordering, set `UseAutomaticMiddleware = false`
 4. `app.UseCratisChronicle()`
 5. Map your endpoints.
 
-In this mode, `UseCratisChronicle()` installs both the unit of work and causation middleware at that position, in addition to its normal client startup configuration. Leave automatic middleware enabled for existing applications that do not need explicit placement. Calling `UseCratisChronicle()` more than once on the same application builder does not install duplicate middleware. Automatic and explicit placement retain the same commit-on-success, rollback-on-failure, and request completion-feature behavior.
+With automatic middleware disabled, `UseCratisChronicle()` installs the unit of work and causation middleware at that position and configures client startup. Leave automatic placement enabled when you do not need to control ordering.
+
+Calling `UseCratisChronicle()` more than once on the same application builder does not install duplicate middleware. Both placement modes use the same commit-on-success, rollback-on-failure, and request completion-feature behavior.
 
 ## Append from an endpoint
 
-In a web app you usually append events from a route handler rather than inline. Take `IEventLog` as a dependency and append — the container injects it:
+The borrowing route takes `IEventLog` from the container, the book id from the route, and the member name from the query string:
 
 <ChronicleClientTabs snippet="get-started/aspnetcore/endpoint" />
 
-The `bookId` from the route is the [event source](../concepts/event-source.md) — the book this fact is about — and `memberName` is the event's payload. That one `Append` is all it takes; the projections pick it up from there — `GetStartedBook` flips to on loan and a `GetStartedBorrowedBook` instance appears — along with any reactors. The append returns once the event is in the log; the materialized read models catch up a moment later.
+The `bookId` is the [event source](../concepts/event-source.md): the book this fact belongs to. `memberName` is the event's payload. The request unit of work collects the append and commits it after the handler completes; returning from `Append` inside the handler is not itself confirmation of that commit. Projections update stored read models asynchronously after the event is recorded.
+
+To check the endpoint, first add a book using `GetStartedBookService.AddBook()` from the earlier example and keep its returned id. Start the web app and send a POST request to `/api/books/{bookId}/borrow?memberName=Alex`, replacing `{bookId}` with that id and using the app's listening address, not the kernel's port. In the workbench, select `Quickstart`, then **Sequences**, and find `GetStartedBookBorrowed` for the same book.
+
+Once projection processing catches up, `GetStartedBook.OnLoan` is `true`, `BorrowedBy` is `Alex`, and a `GetStartedBorrowedBook` instance exists. Those are the two checks that matter: the event was recorded, and the read models reflect it. A read immediately after the request can still show the earlier state.
 
 ## Register your artifacts
 
@@ -79,7 +93,7 @@ What you must register is everything an artifact depends on, such as the notific
 
 <ChronicleClientTabs snippet="get-started/aspnetcore/register-by-convention" />
 
-`AddBindingsByConvention` registers any service that implements an interface of the same name prefixed with `I` (`IFoo` → `Foo`); `AddSelfBindings` registers concrete classes as themselves, so you can depend on them directly without registering each one.
+`AddBindingsByConvention` binds an interface to its matching implementation when they share a namespace and names such as `IFoo` and `Foo`. `AddSelfBindings` registers eligible concrete types as themselves. Existing registrations are kept, so you can still register a service explicitly when you need a particular lifetime or implementation.
 
 ## Configure the MongoDB client
 
@@ -95,10 +109,8 @@ Now the `GetStartedBooks` query from the querying section above resolves its col
 
 ## Recap
 
-You added Chronicle to an ASP.NET Core app with two lines in `Program.cs` — `AddCratisChronicle` to register and discover everything, `UseCratisChronicle` to hook into the pipeline — then appended events straight from a minimal API endpoint and read them back through MongoDB collections injected by the container. Because you're in a DI world, your reactors, projections, and collections are all just registered services.
+The API now has a route that records borrowing as an event rather than updating a loan row directly. Chronicle's request middleware commits the event, projections build the loan views, and the DI container supplies the services your endpoints and processing code need.
 
 ## Where to go next
 
-- **Put a typed UI on top** — [Arc](/arc/) adds commands, queries, and generated TypeScript proxies so React stays in lockstep with your C#. See [Build a full-stack feature](/build-a-full-app/).
-- **Build the domain step by step** — the [tutorial](/chronicle/tutorial/) walks the library model one concept at a time.
-- **A different host** — the same artifacts run unchanged in a [Worker Service](./worker) or a bare [console](./console) app.
+For a UI over this API, [Arc](/arc/) adds commands, queries, and generated TypeScript proxies; [Build a full-stack feature](/build-a-full-app/) shows how those pieces fit together. Continue with the [tutorial](/chronicle/tutorial/) to develop the library model, or use the [Worker Service](./worker) and [console](./console) guides to change the host while keeping the domain definitions.

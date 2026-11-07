@@ -1,11 +1,15 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts;
+using Orleans.CodeGeneration;
+
 namespace Cratis.Chronicle.Compliance.GDPR;
 
 /// <summary>
 /// Represents a manager of PII in the system.
 /// </summary>
+[Version(1)]
 public interface IPIIManager : IGrainWithGuidCompoundKey
 {
     /// <summary>
@@ -38,4 +42,20 @@ public interface IPIIManager : IGrainWithGuidCompoundKey
     /// another cannot have their events forwarded between the two.
     /// </remarks>
     Task AllowNewEncryptionKeyFor(EncryptionKeyIdentifier identifier);
+
+    /// <summary>
+    /// Erase a subject's key in exactly the authorized event stores of this manager's namespace.
+    /// </summary>
+    /// <param name="identifier">The key identifier.</param>
+    /// <param name="eventStores">The authorized event stores.</param>
+    /// <returns>Awaitable task.</returns>
+    Task DeleteEncryptionKeyIn(EncryptionKeyIdentifier identifier, EventStoreName[] eventStores);
+
+    /// <summary>
+    /// Authorize a fresh key in exactly the authorized event stores of this manager's namespace.
+    /// </summary>
+    /// <param name="identifier">The key identifier.</param>
+    /// <param name="eventStores">The authorized event stores.</param>
+    /// <returns>Awaitable task.</returns>
+    Task AllowNewEncryptionKeyIn(EncryptionKeyIdentifier identifier, EventStoreName[] eventStores);
 }

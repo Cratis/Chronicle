@@ -75,6 +75,7 @@ Every convention suffix in this table has the prefix `cratis.chronicle.`. Legacy
 | `sql.schema_lock.wait_duration` | `s` | `chronicle-sql-schema-lock-wait` |
 | `sql.live_query.poll_failures` | `{poll}` | `chronicle-sql-live-query-poll-failures` |
 | `sql.upsert.recovered_collisions` | `{collision}` | `chronicle-sql-upsert-collisions-recovered` |
+| `sql.encryption_key.refused_identifiers` | `{operation}` | `chronicle-sql-encryption-key-identifiers-refused` |
 | `sql.composite_key.stamp_failures` | `{failure}` | `chronicle.sql.composite_key.stamp_failures` |
 | `sql.composite_key.collisions` | `{collision}` | `chronicle.sql.composite_key.collisions` |
 

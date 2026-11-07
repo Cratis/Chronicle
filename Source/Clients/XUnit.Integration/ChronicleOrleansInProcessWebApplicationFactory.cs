@@ -88,6 +88,13 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
                 config.AddInMemoryCollection(storageHostConfiguration));
         }
 
+        var additionalHostConfiguration = _fixture.AdditionalHostConfiguration;
+        if (additionalHostConfiguration is not null)
+        {
+            builder.ConfigureAppConfiguration((_, config) =>
+                config.AddInMemoryCollection(additionalHostConfiguration));
+        }
+
         builder.AddCratisMongoDB(
             mongo =>
             {
@@ -174,7 +181,7 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
 
                 silo.AddActivityPropagation();
 
-                if (storageHostConfiguration is not null)
+                if (storageHostConfiguration is not null || additionalHostConfiguration is not null)
                 {
                     silo.ConfigureServices(services =>
                         services
@@ -216,6 +223,7 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
                     // A default, not an override: a host that configures its own naming policy gets PascalCase
                     // collection and element names in its specs otherwise, so a spec asserting on stored
                     // documents stops being portable and name-shape defects fall out of the tier's reach.
+                    _fixture.ConfigureHostServices?.Invoke(services);
                     services.TryAddSingleton<INamingPolicy>(new DefaultNamingPolicy());
                     services.AddSingleton<IIdentityProvider>(sp => new IdentityProvider(
                         sp.GetRequiredService<IHttpContextAccessor>(),
@@ -254,12 +262,12 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
                         var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
 
                         var connectionLifecycle = new ConnectionLifecycle(loggerFactory.CreateLogger<ConnectionLifecycle>());
-                        var connection = new ChronicleConnection(connectionLifecycle, grainFactory, sp.GetRequiredService<ILocalSiloDetails>(), loggerFactory);
+                        var connection = new ChronicleConnection(connectionLifecycle, grainFactory, sp.GetRequiredService<ILocalSiloDetails>(), sp.GetRequiredService<KernelCore::Cratis.Chronicle.Clients.IConnectionOwnership>(), loggerFactory);
                         connection.SetServices(chronicleServices);
 
                         var registry = sp.GetRequiredService<MutableServiceRegistry>();
                         var wrappedSp = new FallbackServiceProvider(sp, registry);
-                        return new ChronicleClient(connection, options, artifactsProvider, wrappedSp, identityProvider, loggerFactory: loggerFactory);
+                        return new ChronicleClient(connection, options, artifactsProvider, wrappedSp, identityProvider, loggerFactory: loggerFactory, namingPolicy: sp.GetService<INamingPolicy>());
                     });
 
                     services.AddSingleton(sp =>

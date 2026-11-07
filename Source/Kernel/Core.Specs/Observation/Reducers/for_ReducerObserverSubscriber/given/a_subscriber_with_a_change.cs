@@ -25,7 +25,7 @@ public class a_subscriber_with_a_change : a_subscriber_with_a_cached_pipeline
         _mediator.ClearSubstitute();
         _mediator.When(mediator => mediator.OnNext(Arg.Any<ReducerId>(), Arg.Any<ConnectionId>(), Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<ReduceOperation>(), Arg.Any<TaskCompletionSource<ReducerSubscriberResult>>()))
             .Do(call => call.Arg<TaskCompletionSource<ReducerSubscriberResult>>().SetResult(new(new(ResultState, 42, [], string.Empty), null)));
-        _firstPipeline.Reduce(Arg.Any<ReducerContext>(), Arg.Any<ReducerDelegate>()).Returns<Task<ReadModelChangeNotification?>>(async call =>
+        _firstPipeline.Reduce(Arg.Any<ReducerContext>(), Arg.Any<ReducerDelegate>(), Arg.Any<bool>()).Returns<Task<ReadModelChangeNotification?>>(async call =>
         {
             await call.Arg<ReducerDelegate>()([], null);
             _sinkReached = true;

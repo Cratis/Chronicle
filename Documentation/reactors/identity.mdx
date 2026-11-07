@@ -1,29 +1,29 @@
 ---
-title: Reactor identity and renaming
-description: Keep Chronicle reactor identities stable across renames and namespace moves, preserve processing positions, and find and remove abandoned observers safely.
+title: Reactor identity when renaming or moving code
+description: Keep a Cratis Chronicle reactor's stored id when renaming or moving code to retain its processing position and avoid a new observer catching up.
 ---
 
-A reactor's id identifies its observer and processing position. By default, the id is the full type name, including its namespace. Moving a reactor to another namespace or renaming its class therefore creates a different observer unless you preserve the id explicitly.
+Keep a reactor's stored id when renaming or moving its code so Cratis Chronicle retains the same observer and processing position. In C#, the default id is the full type name, including its namespace. Renaming the class or changing that namespace creates a different observer unless you pin the existing id explicitly.
 
 ## Keep identity stable
 
-For a side-effecting reactor, choose an explicit id before its first deployment. That lets you reorganize code without changing its processing identity. This declaration excerpt leaves your existing handlers unchanged:
+Choose an explicit id before deploying a reactor that performs side effects. You can then reorganize its code without changing the observer identity. The declaration below leaves your existing handlers unchanged:
 
 <ChronicleClientTabs snippet="reactors/identity/explicit-id" />
 
-For a reactor that is already deployed, **use its current stored id**, not a new friendly name. If its default id was `MyApp.Orders.SendWelcomeEmail`, pin that exact value before moving or renaming the class. Adding an explicit id with a different value is itself an identity change.
+For a reactor that is already deployed, use its current stored id. If that id is `MyApp.Orders.SendWelcomeEmail`, pin that exact value before moving or renaming the class. Replacing it with a friendlier name creates a new identity, even though the declaration is now explicit.
 
 ## Why side effects run again
 
-A new observer catches up from the beginning of the event sequence as ordinary observation, not replay. Its handlers can send every historical notification or repeat every external write. `OnceOnly` excludes replay; it does not suppress this initial catch-up. Mark the reactor with [StartAtTail](start-at-tail) to skip history on its first registration, and see [What OnceOnly guarantees](once-only.mdx#what-it-does-and-does-not-guarantee).
+By default, a new observer catches up from the beginning of its event sequence as ordinary observation, not replay. Its handlers can repeat historical notifications or external writes. `OnceOnly` excludes replay, so it does not suppress this initial catch-up. If a genuinely new reactor should ignore history, use [StartAtTail](start-at-tail) for its first registration. See [What OnceOnly guarantees](once-only.mdx#what-it-does-and-does-not-guarantee) before relying on either marker.
 
-Preserving the old id keeps its processing position. It does not provide exactly-once execution: recovery can still re-deliver an event, so keep side effects [idempotent](delivery-identity.mdx).
+Preserving the old id retains its processing position, but does not provide exactly-once execution. Recovery can still re-deliver an event. Use [delivery-keyed duplicate protection](delivery-identity.mdx) for side effects that must not repeat; a stable id also keeps existing delivery receipts recognizable.
 
 ## Find and remove abandoned observers
 
-Use the Workbench's **Observers** page or `cratis chronicle observers list` to compare stored ids with the ids your application declares. Inspect the old observer before deleting anything: another service or namespace may still use it.
+Use the Workbench's **Observers** page or `cratis chronicle observers list` to compare stored ids with the ids your application declares. Inspect an apparently abandoned observer before removing it: another service or namespace may still use it.
 
-If the identity change was accidental, restore the old id in the reactor declaration. Removing the old observer does **not** transfer its position to the new one or undo side effects the new one has already performed.
+If the identity change was accidental, put the old id back in the reactor declaration. Removing the old observer does not transfer its position to the new one or undo side effects the new one has already performed.
 
 If the old observer is genuinely abandoned, stop all clients that subscribe to it, then remove it by its stored id:
 
@@ -31,4 +31,4 @@ If the old observer is genuinely abandoned, stop all clients that subscribe to i
 
 Removal affects the whole event store, across namespaces, and refuses while the observer is running or subscribed anywhere. See [Removing an observer](../concepts/observers.mdx#removing-an-observer).
 
-The [.NET discovery diagnostics](../clients/dotnet/discovery-report.md) report likely identity changes before registration. Treat findings as evidence to investigate, not proof: a rolling deployment can hide a rename while the old instance is still subscribed.
+For a C# deployment, check the [.NET discovery diagnostics](../clients/dotnet/discovery-report.md) before registration for likely identity changes. Investigate each finding against the stored observer: a rolling deployment can hide a rename while the old instance is still subscribed.

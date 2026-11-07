@@ -1,56 +1,62 @@
 ---
-title: Reducers
-description: Fold Chronicle events into read model state with reducer code, choose self-reducing models or separate classes, and retrieve the resulting derived state.
+title: Cratis Chronicle reducers for state-dependent read models
+description: Use Cratis Chronicle reducers when a read model needs state-dependent logic. Choose static model transitions or a separate class, then read the result.
 ---
 
-A Chronicle reducer is an observer that folds events into read-model state using code you write.
+A Cratis Chronicle reducer builds a read model by applying events to its previous state. Use one when
+a view's rules are clearer as state transitions in code than as property mappings, such as updating
+a displayed total only while an account is active.
 
-When a view depends on the previous state, writing its transitions as code can be clearer than
-mapping properties. A reducer folds events one at a time, receiving the state the previous event
-produced and returning the next state for that event source.
-
-Start with model-bound projection declarations, use fluent mappings when the definition needs structure,
-and choose a reducer when state-transition code is clearer. Authoring and registration conventions
-vary by client; in .NET, a self-reducing model is the default for new reducer code. [Choose how to build a read model](../projections/choosing-a-read-model-style.mdx)
-compares the forms and shows when a separate instance reducer is useful.
+For direct mappings, start with model-bound projection attributes; use fluent mappings when the
+definition needs more structure. Counters and sums alone do not require reducer code. If you are
+still choosing, [compare the read-model styles](../projections/choosing-a-read-model-style.mdx)
+before writing a fold, the function that combines each event with the state so far.
 
 ## Key Concepts
 
-A reducer is a specialized observer that:
+A reducer observes events for each event source, such as an order or account, and keeps that source's
+state separate. In the per-event form, Chronicle calls the selected method for each event in sequence
+order. Its return value becomes `current` for the next event, even when several events arrive in one
+batch. A [batch reducer](batches) instead receives the partition's events in one call.
 
-- **Processes events one at a time, in order** - Chronicle may deliver several events for an event source in one batch, but it calls your reducer method once per event, passing the state the previous event produced
-- **Computes derived state** - The reducer method receives the event and the current state, and returns the new state
-- **Maintains temporal consistency** - All events for a given event source are processed in order
-- **Maintains materialized state** - Read the currently stored state; historical reducer snapshots are not provided by `GetSnapshotsById`
+Active reducers maintain materialized state: a stored result you can query without folding the history
+again. A passive reducer computes state when you ask for it. Neither form gives you historical reducer
+snapshots through `GetSnapshotsById`.
 
 ## When to Use Reducers
 
-Reducers are ideal when you need to:
+Choose a reducer when the next result depends on the previous result and a rule. An account balance
+can ignore deposits after closure; an order summary can calculate a value differently depending on its
+status. These transitions are explicit in your code and can be tested with an event history.
 
-- **Aggregate data across multiple events** - Calculate sums, averages, or other metrics from a series of events
-- **Build temporal models** - Track how state changes over time
-- **Express state-dependent logic** - Branch on previous state or calculate values with guards
-- **Reconstruct state** - Fold a history on demand or rebuild materialized state during replay
+Reducers fold one event source at a time. If your view needs joins across sources or a total shared by
+many sources, consider a projection rather than adding that coordination to a reducer.
 
 ## Start with transitions on the model
 
+In .NET, put public static `Reduce` methods on the model so Chronicle can discover its fold without
+a marker or separate class. This balance model defines addition and clearing transitions:
+
 <ChronicleClientTabs snippet="reducers/self-reducing-read-models/basic" />
 
-In .NET, the static `Reduce` shape lets Chronicle discover the model's fold without a marker or separate class.
-Continue with [self-reducing read models](self-reducing-read-models.mdx) to register, test, and configure it.
+An addition creates or updates the balance; clearing it returns `null`, removing the state. Start with this form for new reducer code, then follow
+[self-reducing read models](self-reducing-read-models.mdx) to register and test it.
 
-Use a separate reducer when the fold needs dependencies or must live apart from a shared model
-contract. In .NET, this is `IReducerFor<T>`; the other tabs show each client's equivalent. See the [separate-reducer guide](getting-started.mdx).
+Use `IReducerFor<T>` when the fold needs injected services, instance behavior during replay, or must
+live apart from a shared model contract. See the [separate-reducer guide](getting-started.mdx).
 
 <ChronicleClientTabs snippet="reducers/index/basic-example" />
 
 In .NET, a reducer class must target only one read model. Implementing two closed `IReducerFor<TReadModel>` interfaces, including through inheritance, throws `TypeMustImplementOnlyOneReducer` during default artifact discovery. Split the class into one reducer per read model. [CHR0057](../code-analysis/CHR0057) reports this before runtime.
 
-The .NET client can also explicitly nominate a plain classic reducer and infer its single read model from supported instance-method signatures. Alternatively, a concrete model with the exact public static `Reduce(event, nullable current[, EventContext])` shape is discovered as a [self reducer](self-reducing-read-models), without a marker. The existing `RegisterReducer` APIs accept either form; see [explicit artifact registration](../clients/dotnet/explicit-artifacts).
+If a contract assembly cannot reference Chronicle, the .NET client can explicitly nominate a plain
+instance reducer and infer its single read model from supported method signatures. The existing
+`RegisterReducer` APIs accept that form and a [self reducer](self-reducing-read-models); follow
+[explicit artifact registration](../clients/dotnet/explicit-artifacts) for setup.
 
 ## Topics
 
-- [Getting Started](getting-started) - Learn how to create your first reducer
+- [Getting Started](getting-started) - Build a separate reducer when you need injected services or separation from the model
 - [Self-reducing read models](self-reducing-read-models) - Keep static transitions on the read model
 - [Choose how to build a read model](../projections/choosing-a-read-model-style.mdx) - One decision path with worked examples and switching costs
 - [Subscribe to External Event Stores](external-event-store-subscriptions) - Configure outbox-to-inbox subscriptions for reducers
@@ -63,9 +69,12 @@ The .NET client can also explicitly nominate a plain classic reducer and infer i
 
 ## Reading Your Reducer-Based Read Models
 
-Once you've defined a reducer, you can retrieve and observe the resulting read models using the `IReadModels` API:
+Use `IReadModels` to read the result by event source ID or retrieve a collection. Active maintenance
+is asynchronous, so a stored result may lag the latest append. Choose passive reads when you need to
+fold on demand, or [decision reads](../read-models/decision-reads.mdx#reducers) when an admitted reducer
+must participate in guarding a later append.
 
 - [Getting a Single Instance](../read-models/getting-single-instance) - Retrieve a specific instance by key
 - [Getting a Collection of Instances](../read-models/getting-collection-instances) - Retrieve all instances for reporting and analysis
 - [Getting Snapshots](../read-models/getting-snapshots) - Historical projection snapshots; `GetSnapshotsById` currently returns no reducer history
-- [Watching Read Models](../read-models/watching-read-models) - Observe real-time changes as events are applied
+- [Watching Read Models](../read-models/watching-read-models) - Use `Watch` for reducer changes; `GetWatcherFor` is projection-only

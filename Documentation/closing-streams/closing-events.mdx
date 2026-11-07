@@ -1,27 +1,29 @@
 ---
-title: Closing events
-description: Declare Chronicle closing events that commit a stream closure with the event append, choose the scope, configure reopening events, and test the behavior.
+title: Declare closing events in Cratis Chronicle
+description: Declare a Cratis Chronicle event that closes a stream scope after append, choose the scope it closes, and name the events allowed to reopen it.
 ---
 
-A manual `CompleteStream` call writes nothing to the log, cannot be rebuilt from events and is a second step after the final append. A closing event removes all three problems. You declare that appending a particular event type closes a scope. The kernel then writes the event and the closure together, and the closure can be rebuilt from the log.
+A closing event in Cratis Chronicle is a domain fact that tells the kernel to close a stream scope after storing the event. Use one when the fact itself ends a reporting period or another part of an entity's history, so the log records why further appends are refused.
 
-Use it when a domain fact ends something: `ReportDelivered`, `BooksClosed`, `VersionSuperseded`.
+For example, `ReportDelivered` can close a report's stream. Unlike a separate `CompleteStream` call, the declaration leaves no opportunity for another append between the closing fact and its closure. The event and closure are separate durable writes, though; [Guarantees and limits](index.mdx#guarantees-and-limits) explains recovery after a kernel stop.
 
 ## Declare a closing event
 
-With the attribute, the declaration sits on the event:
+Place `[ClosesStream]` on the event type to keep the closing rule with the fact it describes:
 
 <ChronicleClientTabs snippet="closing-streams/closing-events/declare-attribute" />
 
-With the builder, the declaration is a constraint class:
+This declaration selects the event source id and stream type. Delivery therefore closes every stream id of that type for the event source that received the event.
+
+Use the builder when you keep constraints in a separate class. This example closes a version identified by the event's payload and allows a reinstatement event to reopen it:
 
 <ChronicleClientTabs snippet="closing-streams/closing-events/declare-builder" />
 
-Both forms compile to the same constraint. Details of each style are in the [model-bound](../constraints/model-bound/closing-stream.mdx) and [declarative](../constraints/declarative/closing-stream.mdx) reference pages.
+Both .NET styles declare closing constraints. Use the [model-bound](../constraints/model-bound/closing-stream.mdx) reference for attribute options or the [declarative](../constraints/declarative/closing-stream.mdx) reference for builder options.
 
 ## Choose the scope
 
-By default the closed scope is the appended event's event source id, stream type and stream id, taken from the append. To close something else, choose dimensions. The attribute takes a `Dimensions` value and the builder has `PerEventSourceId()`, `PerEventSourceType()`, `PerEventStreamType()` and `PerEventStreamId()`.
+By default, the closure matches the event source id, stream type and stream id supplied with the append. All three must match for a later append to be blocked. To close a different [scope](index.mdx#choose-a-scope), select the dimensions with the attribute's `Dimensions` value or the builder's `PerEventSourceId()`, `PerEventSourceType()`, `PerEventStreamType()` and `PerEventStreamId()` methods.
 
 To take the stream id from the event's payload instead of the append, use `EventStreamIdFrom` (attribute) or `EventStreamIdFrom(@event => @event.Period)` (builder). That implies the stream id dimension. This is useful when the closing fact names the period it closes while it is appended somewhere else:
 
@@ -33,24 +35,21 @@ A property-sourced value must be present. If it is missing, null or empty, the k
 
 ## What happens on append
 
-The closing event is accepted. Every later event inside the closed scope is refused with `StreamClosed`, and events elsewhere are not affected:
+Once the closing event is accepted, later appends inside its scope fail with `StreamClosed`. The closure does not affect appends outside that scope:
 
 <ChronicleClientTabs snippet="closing-streams/closing-events/append-after-close" />
 
-Inside one `AppendMany`, events after the closing event that fall inside the scope are refused, and the batch result names them. A batch that closes, reopens and then appends a covered event succeeds for the covered event, because the batch is evaluated in order.
+`AppendMany` evaluates events in order. Events after a closing event are refused if they fall inside its scope, and the batch result identifies them. If the batch closes, reopens and then appends to that scope, the closure no longer blocks the final event.
 
 A closing event cannot be appended into a scope that is already closed. The closed-stream check applies to it like to any other event.
 
 ## Reopen with an event
 
-Name the event types that lift the closure with `ReopenedBy` (attribute) or `ReopenedBy<T>()` (builder). The reopening fact records who reopened and why in the log, which is the reason to prefer it over a kernel call.
+Name the event types that lift the closure with `ReopenedBy` (attribute) or `ReopenedBy<T>()` (builder). This keeps reopening in the domain history; choose an event whose payload expresses the reason when that matters to the business.
 
-A `ReopenedBy` event:
+A `ReopenedBy` event removes only its own constraint's closure for the exact scope it resolves to. It is exempt from that constraint's closure, so it can be appended inside the scope it reopens. Manual closures and other constraints' closures still apply. If an operator also closed the scope with `CompleteStream`, that manual closure blocks the reopening event.
 
-- removes only the closure owned by its own constraint, for the exact scope it resolves to;
-- is accepted inside the scope it reopens, because it is exempt from its own constraint's closure;
-- is not exempt from a manual closure or from another constraint's closure. If an operator also closed the scope with `CompleteStream`, the reopening event is refused;
-- must carry the same `EventStreamIdFrom` property as the closing event. The client throws `PropertyDoesNotExistOnEventType` when it discovers the constraint if the property is missing.
+When the declaration uses `EventStreamIdFrom`, every reopening event type must have that property too. The .NET client throws `PropertyDoesNotExistOnEventType` during constraint discovery if it is missing.
 
 ## Ownership and names
 
@@ -60,11 +59,13 @@ Set `EventSequences` on the attribute to restrict a declaration to specific even
 
 ## Not retroactive
 
-Registering or changing a declaration closes nothing in history. Only events appended afterwards close scopes. A reindex that names the constraint rebuilds its closures from the log, see [Closing streams](index.mdx#guarantees-and-limits) for the guarantees, the crash window and the redaction limit. Appends may remain in flight during a rebuild: the job hands its progress back to the event sequence, which restores later claims and closures that the rebuild overwrote. Closing commits write differences instead of removing all of an owner's closures first. The unique-constraint scope-clear window remains while the job runs.
+Registering or changing a declaration applies it to future appends; it does not close scopes based on events already stored. To rebuild closures from history, run a reindex that names the closing constraint. Read the [rebuild and redaction limits](index.mdx#guarantees-and-limits) before relying on it for recovery.
+
+Appends can continue during a rebuild. The job hands its progress back to the event sequence, which restores later claims and closures overwritten by the rebuild. Closing-constraint commits write only differences instead of first deleting every closure owned by the constraint. Rebuilding unique constraints still has a window between clearing a scope's values and restoring its claims.
 
 ## Streams of an event source definition
 
-When the stream belongs to an [event source definition](../event-sources/index.mdx), append the closing event through the definition to that stream. See [Close a stream of a definition](../event-sources/closing.mdx). A closed stream also settles a [Dynamic Consistency Boundary](../dynamic-consistency-boundary/chronicle.md) decision about it: nothing appended later can invalidate it.
+When the stream belongs to an [event source definition](../event-sources/index.mdx), append the closing event through the definition to that stream. [Close a stream of a definition](../event-sources/closing.mdx) shows that path. For decisions based on the closed scope, see how closure relates to a [Dynamic Consistency Boundary](../dynamic-consistency-boundary/chronicle.md).
 
 ## Test it
 

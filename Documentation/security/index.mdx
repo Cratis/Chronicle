@@ -1,20 +1,21 @@
 ---
-title: Security
-description: Choose Chronicle [Encrypted] for operational secrets such as API keys and webhook tokens, distinguishing plain confidentiality from GDPR PII erasure.
+title: Cratis Chronicle security for non-personal secrets
+description: Use [Encrypted] in Cratis Chronicle to protect non-personal secrets at rest with separate keys, so PII erasure does not destroy those secrets.
 ---
 
-Some values in an event log are sensitive without being personal data — an API key exchanged with a partner, a webhook signing secret, a third-party access token. They need to be unreadable in storage. They have no data subject, and there is no lawful erasure request that could ever be about them.
+Cratis Chronicle uses `[Encrypted]` to protect non-personal operational secrets at rest while keeping them outside the personal-data erasure workflow. Use it for values such as a partner credential or webhook signing secret when they are not personal data.
+
+For personally identifiable information (PII), use `[PII]` instead. That marker encrypts the value and includes it in Chronicle's erasure mechanism for the General Data Protection Regulation (GDPR). Chronicle uses a subject identity to select the key for a person's data. Encryption and erasure solve different problems: a secret needs confidentiality, while personal data may also need to become unreadable when that key is erased.
 
 ## Without `[Encrypted]`
 
-Without a dedicated mechanism, a team reaches for one of two wrong tools:
-
-- **Store it in plaintext**, and it sits in the event log — and every backup, replica, and read model built from it — readable by anyone with database access, forever, because the event log is immutable.
-- **Mark it `[PII]`**, because that is the encryption mechanism Chronicle already has. This is worse than it looks: `[PII]` enrolls the value in GDPR right-to-erasure. A secret that was never personal data becomes destroyable by a request that was never about it — and if the same subject also has real personal data, the two would share one stored key, so erasing the subject's PII would destroy the secret too.
+Storing an unprotected secret leaves its value readable in the event log. Using `[PII]` encrypts it, but also ties its lifetime to personal-data erasure. If the secret and a person's email address are both marked `[PII]` under the same subject, they share the subject's key. Erasing that key makes both unreadable, even though the request concerned the person's data.
 
 ## With `[Encrypted]`
 
-`[Encrypted]` is a security measure, not a compliance one. It encrypts a value at rest exactly like `[PII]` does — same shared key-provisioning and value-encoding machinery under the hood — but it is provisioned under a **deliberately disjoint key identity**, and there is no erasure path for it at all: nothing reachable from `[Encrypted]`'s key can delete it. A subject that carries both a `[PII]` value and an `[Encrypted]` value has the two protected under genuinely different keys, and erasing the subject's PII leaves the `[Encrypted]` value fully readable.
+Mark the non-personal secret `[Encrypted]` to give it a separate encryption key. Chronicle keeps that key separate even when the secret and a `[PII]` value belong to the same subject. PII erasure leaves the secret's key untouched, so the secret can still be decrypted.
+
+The example marks the API key's concept type, a dedicated type for that value, so events using it carry the encryption marker:
 
 <ChronicleClientTabs snippet="confidentiality/encrypted/with-encrypted-overview" />
 
@@ -22,17 +23,47 @@ Without a dedicated mechanism, a team reaches for one of two wrong tools:
 
 | | `[PII]` | `[Encrypted]` |
 |---|---|---|
-| Protects | Personal data about a natural person | An operational secret with no data subject |
-| Erasable | Yes — GDPR right-to-erasure | **No** — there is no lawful basis for erasure, and no API exposes a way to delete the key |
-| Key identity | The compliance subject (or event source id when none is set) | Disjoint from PII, even for the same subject |
-| Lives under | `Cratis.Chronicle.Compliance.GDPR` | `Cratis.Chronicle.ProtectedValues` |
+| Protects | Personal data about a natural person | A non-personal operational secret |
+| PII erasure | Deletes the subject's key | Does not delete the secret's key; no equivalent erasure operation is exposed |
+| Key identity | The compliance subject (or event source id when none is set) | Separate from PII, even for the same subject |
+| .NET namespace | `Cratis.Chronicle.Compliance.GDPR` | `Cratis.Chronicle.ProtectedValues` |
 
-The two attributes cannot both apply to the same value — see [Encrypting operational secrets](encrypted-values) and [CHR0053](/chronicle/code-analysis/CHR0053/).
+Choose one marker per value. Combining them is invalid; .NET reports [CHR0053](/chronicle/code-analysis/CHR0053/) for directly visible combinations. Follow [Encrypting operational secrets](encrypted-values) to mark a type or property and choose its key scope.
+
+## Trust model
+
+Chronicle trusts every authenticated application with every event store on the same kernel, except the System store, which is reserved. Namespaces separate data, but Chronicle does not check whether a caller may use a given namespace or event store. Your application is responsible for that today.
+
+This matters for:
+
+- A shared kernel that serves applications that do not trust each other.
+- Workbench users who have access to a shared kernel.
+- Multi-tenant setups where tenants hold their own credentials.
+
+It does not matter when every application that can authenticate to the kernel belongs to the same trust boundary.
+
+On such a kernel, any authenticated application can:
+
+- Append events to any non-System event store.
+- Read events from any non-System event store, including releasing protected and encrypted values through compliance.
+- Register deployments.
+- Create namespaces.
+- Set up subscriptions across event stores.
+
+### Mitigations available today
+
+- **Run a separate kernel per trust boundary.** Applications that must not see each other's data should not share a kernel.
+- **Isolate the network.** Use network rules and mutual TLS so that only trusted applications can reach the kernel. See [Production hosting](../hosting/production.md#security-considerations) and [TLS](../hosting/configuration/tls.md).
+- **Enforce the administrator policy for operations.** Set `enforceAdministratorPolicyForOperations` to `true` in the `authentication` configuration so that only administrators can run operations on the System store. This protects the System store; it does not restrict access to other event stores. During a rolling deploy, follow [Rolling deploy](../hosting/rolling-deploy.md) before switching it on. See [Authentication](../hosting/configuration/authentication.md).
+
+Per-application event store entitlement is planned.
+
+For how tenants map to namespaces, see [Tenancy](../tenancy/index.md).
 
 ## Related topics
 
 | Topic | Description |
 |---|---|
-| [Encrypting operational secrets](encrypted-values) | The `[Encrypted]` attribute — rules, usage, and constraints |
-| [Releasing PII and encrypted values](/chronicle/read-models/releasing-pii/) | How an `[Encrypted]` value is decrypted for you automatically, and how to release one manually |
-| [Compliance](/chronicle/compliance/) | `[PII]` and GDPR right-to-erasure — the mechanism `[Encrypted]` deliberately does not share |
+| [Encrypting operational secrets](encrypted-values) | Apply the encryption marker and choose which values share a key |
+| [Releasing PII and encrypted values](/chronicle/read-models/releasing-pii/) | Understand automatic decryption and release values outside that read path |
+| [Compliance](/chronicle/compliance/) | Handle personal data with `[PII]` and understand the scope of erasure |

@@ -1,42 +1,30 @@
 ---
 uid: Chronicle.ReadModels.Materialized
-description: Use the Materialized API to get and page through Chronicle read model instances persisted in a sink by projections and reducers.
+title: Page Through Chronicle Materialized Read Models
+description: Read pages of stored Chronicle read models without replaying events, and observe a page as it changes using the Materialized API.
 ---
 
-# Materialized Read Models
+<a id="materialized-read-models"></a>
 
-When a projection or reducer processes an event, Chronicle persists the resulting read model instance in a *sink* — a database-backed store that holds the materialized state. The `Materialized` API gives you direct, paginated access to that stored state without replaying the event log.
+Chronicle's `Materialized` API reads pages of read model instances from their configured storage without replaying events. Use it when a list or data grid needs a window of current stored state rather than every instance at once.
 
-Client APIs express paging differently: Elixir's `Chronicle.ReadModels.query/2` uses page/page-size;
-TypeScript's materialized API uses skip/take and an `AsyncIterable` for page observations; Kotlin uses
-skip/take and `Flow`, and Java exposes blocking reads and callback or publisher observations through
-`ReadModelsJavaBridge`. Use each example's client tab for its API shape. The named paging concepts
-and ASP.NET endpoint below illustrate .NET host code.
+That stored state is called *materialized* because a projection or reducer has already built it and written it to a *sink*, Chronicle's read model storage. It is eventually consistent: an appended event may not have reached the sink when you read. Passive read models have no materialized sink.
 
-> [!IMPORTANT]
-> The `Materialized` API is **not** a substitute for working directly with the underlying database. It provides a simple, database-agnostic way to retrieve and observe stored read model instances using skip/take pagination. For advanced queries — filtering, sorting, aggregation, full-text search, joins — use the sink's native query capabilities (MongoDB queries, SQL queries, etc.) directly.
+Client APIs express paging differently. Elixir's `Chronicle.ReadModels.query/2` uses page/page-size. TypeScript uses skip/take and an `AsyncIterable` for page observations; Kotlin uses skip/take and `Flow`. Java exposes blocking reads and callback or publisher observations through `ReadModelsJavaBridge`. Follow your example's client tab; the named paging concepts and ASP.NET endpoint below are .NET host code.
+
+:::note
+The .NET `Materialized` API retrieves or observes a window; it does not provide field filters, custom sorting, aggregation, counts, full-text search, or joins. For those queries, use the sink's native query capabilities. Elixir's `query/2` also returns paging metadata, including a total count.
+:::
 
 ## What Materialized Access Covers
 
-The `Materialized` API is intentionally narrow. It answers one question well: *give me a page of instances I already know are stored in a sink*. This keeps it:
+`GetInstances` reads a window once; `ObserveInstances` keeps sending replacement snapshots of that window. Both use the registered read model's sink, so you do not need to open its MongoDB collection or SQL table just to page through instances.
 
-- **Database-agnostic** — the same call works regardless of whether the sink is MongoDB, SQL, or any future backend
-- **Simple to use** — two methods, optional skip/take, and sensible defaults
-- **Safe for large datasets** — only the requested page is loaded, never the full collection
-
-What it does **not** cover:
-
-- Filtering by field value
-- Sorting by any property
-- Aggregation or count queries
-- Full-text or range searches
-- Complex joins or projections across collections
-
-For those needs, use the sink's native driver or query library in your language. In .NET, for example, use `IMongoCollection<TReadModel>` for MongoDB or your `DbContext` for an EF-backed SQL query. Those tools are purpose-built for complex queries and Chronicle does not try to replace them.
+The window limits what your consumer receives, but it is not a guarantee about query cost. In .NET, an offset that is not a multiple of the page size can fetch a larger covering range and slice it locally. `InstanceCount.Unlimited` explicitly requests all instances. Choose a bounded page size for a list that may grow.
 
 ## Accessing the API
 
-Use your client's materialized read API. In .NET, `IMaterializedReadModels` is exposed through `IReadModels.Materialized`:
+In .NET, reach `IMaterializedReadModels` through `IReadModels.Materialized`. The read model must be known to a projection or reducer in the client and have stored instances to retrieve:
 
 <ChronicleClientTabs snippet="read-models/materialized-pagination/accessing-api" />
 
@@ -44,19 +32,19 @@ Use your client's materialized read API. In .NET, `IMaterializedReadModels` is e
 
 ### Basic Usage
 
-Retrieve the first page of stored instances using the defaults (skip: 0, take: 50):
+The .NET call defaults to `skip: 0` and `take: 50`, returning up to the first 50 stored instances:
 
 <ChronicleClientTabs snippet="read-models/materialized-pagination/basic-usage" />
 
 ### Pagination
 
-Both `skip` and `take` are optional with sensible defaults. Use them for page-based or offset-based navigation:
+For .NET page-based navigation, keep `take` fixed and increase `skip` by that amount. These calls read successive windows of 20 instances:
 
 <ChronicleClientTabs snippet="read-models/materialized-pagination/pagination" />
 
 ### Pagination Parameters
 
-In .NET, the parameters use strongly-typed concepts that convert implicitly from `int`:
+The .NET parameters use strongly typed concepts that convert implicitly from `int`:
 
 | Parameter | Type | Default | Named Constants |
 |---|---|---|---|
@@ -67,59 +55,55 @@ In .NET, the parameters use strongly-typed concepts that convert implicitly from
 
 ### Building a Paged API Endpoint
 
+The ASP.NET endpoint translates a zero-based page number into an offset with `page * pageSize`. Validate those inputs at your application's boundary before passing them to the read API.
+
 <ChronicleClientTabs snippet="read-models/materialized-pagination/paged-endpoint" />
 
 ## Observing Changes
 
 For a complete live collection with optional client-side filtering, use [Observing Read Models](observing-read-models.mdx). `IReadModels.Observe<T>()` has no 50-instance default window; `Materialized.ObserveInstances` below observes only the requested page.
 
-In .NET, `ObserveInstances` returns an `IObservable<IEnumerable<TReadModel>>` that emits a new page snapshot whenever the underlying stored data changes. This is useful for live-updating UIs, dashboards, and monitoring tools.
+In .NET, `ObserveInstances` returns an `IObservable<IEnumerable<TReadModel>>`. A subscription receives the current page, then replacement page snapshots as the sink reports changes. Replace the displayed window with each emission rather than appending the items to it.
 
 <ChronicleClientTabs snippet="read-models/materialized-pagination/observing" />
 
-Observation relies on the sink's change stream mechanism:
+Observation follows the sink's notification mechanism:
 
-- **MongoDB** — uses native MongoDB change streams
-- **SQL (PostgreSQL, SQL Server, SQLite)** — reads the current page on subscription, then polls the stored rows and total count for changes. Pages are ordered by the read model key. Set `Cratis:Chronicle:Sql:LiveQueryPollIntervalSeconds` to change the polling interval (default: 2 seconds). Several writes between polls can appear as one updated snapshot; for projection-backed read models, use `IReadModels.Watch<T>()` if you need each projection changeset. A failed poll is retried with backoff, and the subscription keeps receiving updates once the database answers again.
+- MongoDB uses native change streams.
+- SQL (PostgreSQL, SQL Server, SQLite) reads the current page on subscription, then polls the stored rows and total count for changes. Pages are ordered by the read model key. Set `Cratis:Chronicle:Sql:LiveQueryPollIntervalSeconds` to change the polling interval (default: 2 seconds). Failed polls are retried with backoff.
 
-> [!NOTE]
-> Always dispose observation subscriptions when the consumer is torn down to close change streams or stop SQL polling.
+Several writes between SQL polls can appear as one updated snapshot. Snapshot delivery can also coalesce updates while a slower consumer catches up. Use [read model watching](watching-read-models) when you need projection changesets rather than replacement pages.
+
+Dispose the subscription when its consumer closes. For coroutine or iterator-based clients, cancel or end the observation using that client's lifetime mechanism.
 
 ### Observing in a Service
+
+Let the service that uses the page own the subscription. In this .NET example, disposing the dashboard also disposes its observation:
 
 <ChronicleClientTabs snippet="read-models/materialized-pagination/observing-in-service" />
 
 ## When to Use the Materialized API
 
-Use `Materialized.GetInstances` and `ObserveInstances` when:
+Choose a materialized read when the screen needs a bounded window of stored state. Choose a materialized observation when that window should update without the application repeatedly issuing reads; the sink may still poll internally.
 
-- You need a page of stored read model instances for a list view, data grid, or infinite scroll UI
-- You want real-time updates pushed to a connected UI without polling
-- The dataset is large and loading everything into memory via event replay would be too slow or too expensive
-
-Do **not** use the `Materialized` API when:
-
-- You need to filter by a specific field — query the sink directly
-- You need instances sorted by a property — query the sink directly
-- You need a count of matching records — query the sink directly
-- You need to run an aggregation — query the sink directly
+For a small list that needs every instance, [observe the complete collection](observing-read-models.mdx). If the screen needs a field filter or a user-selected sort order, query the sink directly instead of fetching pages and filtering each page afterward. Filtering after paging does not produce a page of matching results.
 
 ## Comparison with On-Demand GetInstances
 
+In .NET, the difference is whether you need the complete collection or a stored window:
+
 | | `ReadModels.GetInstances<T>()` | `ReadModels.Materialized.GetInstances<T>()` |
 |---|---|---|
-| **Data source** | The sink for a materialized read model; an event log replay for a passive one, or when you pass an event count | Materialized sink (database) |
-| **Consistency** | Eventual for a materialized read model; strong for a passive one | Eventual — milliseconds behind |
-| **Performance** | Reads every stored instance, or replays every event for a passive one | O(1) — direct database lookup |
-| **Pagination** | No | Yes — skip/take |
-| **Large datasets** | Slow — returns everything in one call | Fast — loads only the requested page |
-| **Filtering/sorting** | Post-fetch with LINQ | Not supported — query the sink directly |
+| Data source | The sink for a materialized read model; event replay for a passive one or when you pass an event count | Materialized sink |
+| Consistency | Eventual for stored state; passive reads fold the event log on demand | Eventual; no fixed delay is guaranteed |
+| Result size | All instances from the read | A skip/take window |
+| Filtering/sorting | Client-side after retrieval | No query parameters for either; use the sink directly |
 
 ## Related Topics
 
 - [Consistency Models](consistency.md) — Understanding strong vs. eventual consistency
-- [Getting a Single Instance](getting-single-instance) — On-demand computation for a single instance
-- [Getting a Collection of Instances](getting-collection-instances) — On-demand collection retrieval via event replay
+- [Getting a Single Instance](getting-single-instance) — Read current state for one key
+- [Getting a Collection of Instances](getting-collection-instances) — Retrieve all instances, from stored state or event replay
 - [Watching Read Models](watching-read-models) — Observe event-log-sourced read model changesets
 - [Projections](../projections/index.md) — How read models are produced from events
 - [Reducers](../reducers/) — Imperative state-building from events

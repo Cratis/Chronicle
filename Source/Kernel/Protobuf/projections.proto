@@ -71,6 +71,7 @@ message GraphEdgeFromDefinition {
    string TargetKey = 2;
    string Identity = 3;
    map<string,string> Properties = 4;
+   string ForEach = 5;
 }
 message GraphEdgeProjectionDefinition {
    map<string,GraphEdgeFromDefinition> From = 1;
@@ -80,11 +81,13 @@ message GraphEdgeRemovedWithDefinition {
    string SourceKey = 1;
    string TargetKey = 2;
    string Identity = 3;
+   string ForEach = 4;
 }
 message GraphNodeFromDefinition {
    string Key = 1;
    map<string,string> Properties = 2;
    bool UpdateOnly = 3;
+   string ForEach = 4;
 }
 message GraphNodeProjectionDefinition {
    map<string,GraphNodeFromDefinition> From = 1;
@@ -93,6 +96,7 @@ message GraphNodeProjectionDefinition {
 message GraphNodeRemovedWithDefinition {
    string Key = 1;
    bool Detach = 2;
+   string ForEach = 3;
 }
 message GraphProjectionDefinition {
    map<string,GraphNodeProjectionDefinition> Nodes = 1;

@@ -1,69 +1,65 @@
 ---
-description: Label Chronicle projections with descriptive tags to organize and find them; these tags do not filter the events a projection observes.
+title: Cratis Chronicle projection tags
+description: Label Chronicle projection definitions with tags in C# or TypeScript to describe their purpose or domain, without filtering the events they observe.
 ---
-# Tagging Projections
+Projection tags in Cratis Chronicle label a projection definition with its purpose or domain, such as `Analytics` or `Inventory`. Use them to describe what a projection is for. They do not filter the events it observes or select projections for operations such as rebuilds.
 
-Tags provide a way to organize and tag your projections for better discoverability and management. Where supported, use your client's tag declarations to assign labels that describe the projection's purpose or domain.
-
-Descriptive tags label the projection definition (`[Tag]` and `[Tags]` in .NET). They do not filter which appended events the projection observes. Use projection event declarations and event sequence selection to control projection input, and use reducer or reactor filters when you need metadata-based filtering for appended events. See [Filter reducers and reactors by appended event metadata](../events/filtering/index.md).
+To control projection input, declare the event types and select the event sequence. If you need a reducer or reactor to process only events with particular metadata, use [appended event metadata filters](../events/filtering/index.md) instead of projection tags.
 
 :::note[Client coverage]
-C# supports `[Tag]`/`[Tags]`, and TypeScript supports `@tag`/`@tags` on projection classes and model-bound read models. Kotlin and Elixir do not support projection tags yet. The kernel stores and returns these tags with the projection definition; changing only tags does not trigger a replay or replay recommendation.
+C# supports `[Tag]` and `[Tags]`; TypeScript supports `@tag` and `@tags`. Apply them to the projection class, or to the read model for a model-bound projection. Kotlin and Elixir do not support projection tags. The kernel stores and returns tags with the projection definition. Changing only tags does not trigger a replay or replay recommendation.
 :::
 
 ## Adding Tags
 
-You can tag projections in multiple ways:
+Choose the form that keeps the labels readable beside the projection. A single tag, several tags in one attribute or decorator, and repeated attributes or decorators all label the same definition.
 
 ### Single Tag
 
-Apply a single tag to your projection:
+Place a tag on the projection class. In this example, `Analytics` describes the projection's purpose:
 
 <ChronicleClientTabs snippet="projections/tagging-projections/single-tag" />
 
 ### Multiple Tags (Single Attribute)
 
-Pass several labels in one declaration using your client's syntax:
+Pass several names to label a projection for more than one purpose. The C# attribute uses `params`; the TypeScript decorator accepts multiple names too:
 
 <ChronicleClientTabs snippet="projections/tagging-projections/multiple-tags-single-attribute" />
 
 ### Multiple Tags (Multiple Attributes)
 
-Repeat the tag declaration where your client supports it:
+You can put each tag on its own line with repeated `[Tag]` attributes or `@tag` decorators:
 
 <ChronicleClientTabs snippet="projections/tagging-projections/multiple-tags-multiple-attributes" />
 
 ### Mixed Approach
 
-Combine both approaches:
+You can also combine multi-name and repeated annotations on the same class:
 
 <ChronicleClientTabs snippet="projections/tagging-projections/mixed-approach" />
 
 ## Model-Bound Projections
 
-Tags also work with model-bound projections:
+A model-bound projection declares its mappings on the read model itself, so put the tags on that type. The `Inventory` and `Operations` labels below become metadata on its projection definition; they do not change the event mapping:
 
 <ChronicleClientTabs snippet="projections/tagging-projections/model-bound" />
 
 ## Best Practices
 
-- **Use meaningful names**: Choose tag names that clearly describe the purpose or domain
-- **Be consistent**: Establish tag naming conventions across your organization
-- **Don't over-tag**: Apply only relevant tags; too many can reduce their usefulness
-- **Group related projections**: Use tags to group projections that serve similar purposes
+Choose names a teammate can recognize without opening the projection's mappings. Reuse the same spelling for the same domain or purpose across projections, and add a tag only when it helps describe the projection. This gives related definitions a shared vocabulary without implying that Chronicle groups them for execution.
 
 ## Common Tag Examples
 
-Here are some common patterns for tagging projections:
+The following examples label projections by purpose, business domain, and stakeholder. Pick the categories that help someone understand your application's read models:
 
 <ChronicleClientTabs snippet="projections/tagging-projections/tag-categories" />
 
 ## Querying by Tag
 
-Projection tags describe the projection and are stored with its definition. Chronicle does not use them to select or group projections, for example for rebuilds.
+Projection tags are stored metadata, not a query or rebuild selector. Adding `Analytics` to several projections does not make Chronicle select or rebuild them as a group. To change which events build a read model, edit the projection's event declarations or event sequence selection.
 
 ## See Also
 
-- [Tagging](../concepts/tagging) - Comprehensive guide to tagging in Chronicle
-- [Reactors Tagging](../concepts/tagging-reactors) - Tagging reactors
-- [Reducers Tagging](../reducers/tagging-reducers) - Tagging reducers
+For the distinction between event tags and observer labels, read [Tagging](../concepts/tagging).
+If you are labeling other observers, continue with [Reactors Tagging](../concepts/tagging-reactors)
+or [Reducers Tagging](../reducers/tagging-reducers).

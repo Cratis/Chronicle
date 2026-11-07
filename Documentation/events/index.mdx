@@ -1,13 +1,15 @@
 ---
-title: Events
-description: Define, append, read, and manage Chronicle events as immutable facts, and understand how event types, sequences, and the event log relate.
+title: "Chronicle events: define and append facts"
+description: Chronicle events record facts in ordered event sequences. Define event types, choose an event source, and append one event or an atomic batch.
 ---
 
-A Chronicle event is an immutable fact, stored in an event sequence, that records something that happened in your system. Chronicle identifies events by their event type rather than a client-language type, which makes the language type a convenient vessel for expressing intent and structure.
+A Chronicle event records a fact about something that happened in your system, such as an order being placed. Append it to an event sequence to keep that fact in an ordered history that projections, reducers, and reactors can process.
+
+In .NET, mark the record with `[EventType]` to identify it as an event. Chronicle uses the event type identity, rather than the .NET runtime type, to identify the stored event. The record describes the event's content, while appending adds it to the sequence for observers to process:
 
 ```mermaid
 flowchart LR
-    T["Registered event type"] --> A[Append]
+    T["[EventType] record"] --> A[Append]
     A --> S["Event sequence (immutable, ordered)"]
     S --> O["Observers (projections · reducers · reactors)"]
 ```
@@ -18,23 +20,21 @@ flowchart LR
 
 Events live in event sequences, which are ordered, append-only streams. Each event receives a monotonically increasing sequence number that makes it possible to replay events, resume processing, and reason about how far consumers have progressed.
 
-Chronicle includes a specialized event sequence called the event log. It is the default sequence used throughout the system and is exposed through each client's event-log API (`IEventLog` in .NET).
+Chronicle includes a specialized event sequence called the event log. It is the default sequence used throughout the system and is exposed through the `IEventLog` API.
 
 <ChronicleClientTabs snippet="events/index/event-log" />
 
 ## Working with Events
 
-Use these topics to append, read, and manage events:
+Start by choosing an [event source id](event-source-id.mdx), the identifier that groups one entity's events. Then [append a single event](appending) and check its result. If one decision produces several events that must be stored together, use [Appending many](appending-many). A [unit of work](transactions.mdx) lets a workflow stage events before committing them as a batch.
 
-- [Appending](appending)
-- [Appending with tags](appending-with-tags)
-- [Filtering reducers and reactors](filtering/index.md)
-- [Appending many](appending-many)
-- [Observing appends](observing-appends)
-- [Getting events](getting-events)
-- [Getting state](getting-state)
-- [Concurrency](concurrency)
-- [Cross-cutting properties](cross-cutting-properties)
-- [Revision](revision.md)
-- [Compensation](compensation.md)
-- [Redaction](redaction)
+When the decision depends on state you read, add [concurrency protection](concurrency) so a competing append can invalidate that decision. Atomic storage keeps a batch together; it does not by itself protect the facts used to decide what to write.
+
+For the rest of the event lifecycle:
+
+- [Appending with tags](appending-with-tags) attaches metadata for grouping and filtering.
+- [Cross-cutting properties](cross-cutting-properties) adds shared content to events in the .NET client.
+- [Getting events](getting-events) reads stored facts; [Getting state](getting-state) folds events into state.
+- [Observing appends](observing-appends) receives client-side append notifications.
+- [Filtering reducers and reactors](filtering/index.md) selects which events an observer processes.
+- [Revision](revision.md), [Compensation](compensation.md), and [Redaction](redaction) address corrections and removal. Choose the operation that matches what needs to change.

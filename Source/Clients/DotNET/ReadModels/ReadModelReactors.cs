@@ -4,6 +4,7 @@
 using System.Reflection;
 using System.Text.Json;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Observation;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -193,6 +194,9 @@ public class ReadModelReactors(
     {
         try
         {
+            using var delivery = ObserverDeliveryScope.Enter(
+                serviceProvider,
+                new(eventStore.Name, eventStore.Namespace, ObserverId.Unspecified, ObserverDeliveryKind.ReadModelReactor, reactorType));
             await using var scope = serviceProvider.CreateAsyncScope();
             var activated = artifactActivator.Activate(scope.ServiceProvider, reactorType);
             if (activated.TryGetException(out var activationException))

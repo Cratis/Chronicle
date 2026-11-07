@@ -122,6 +122,7 @@ public partial class Database
                 // Only a complete migration history proves the concurrent migration succeeded.
             }
 
+            await ReportIdentifiersAwaitingReview(context, target);
             _migratedKeys[cacheKey] = migrationLock.Generation;
         }
         finally

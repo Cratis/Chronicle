@@ -27,7 +27,7 @@ public class Sinks(
     readonly Dictionary<SinkTypeId, ISinkFactory> _factories = sinkFactories.Where(_ => _ is not null).ToDictionary(_ => _.TypeId, _ => _);
     readonly ConcurrentDictionary<SinkKey, SinkEntry> _sinks = new();
     readonly ConcurrentDictionary<SinkKey, SemaphoreSlim> _gates = new();
-    readonly ConcurrentDictionary<SinkKey, Lazy<Task<IGraphSink>>> _graphSinks = new();
+    readonly ConcurrentDictionary<SinkKey, GraphSinkEntry> _graphSinks = new();
 
     /// <inheritdoc/>
     public Task<ISink> GetFor(ReadModelDefinition readModel) => Get(readModel, initialize: true);
@@ -49,21 +49,18 @@ public class Sinks(
         }
 
         var key = new SinkKey(readModel.Sink.Type, readModel.Sink.Configuration, readModel.ContainerName, readModel.Sink.EventSequence);
-        return _graphSinks.GetOrAdd(
+
+        // A graph sink is built from the graph the read model declares, so a read model whose declaration changed - a node or an edge added, say -
+        // needs a sink that knows the new graph. Serving the sink of the old one refuses every element the old graph did not have.
+        return _graphSinks.AddOrUpdate(
             key,
-            static (_, state) => new Lazy<Task<IGraphSink>>(() => CreateGraphSink(state.Factory, state.EventStore, state.Namespace, state.ReadModel)),
-            (Factory: factory, EventStore: eventStoreName, Namespace: eventStoreNamespaceName, ReadModel: readModel)).Value;
+            static (_, state) => GraphSinkEntry.For(state.Factory, state.EventStore, state.Namespace, state.ReadModel),
+            static (_, existing, state) => SameDefinition(existing.Definition, state.ReadModel) ? existing : GraphSinkEntry.For(state.Factory, state.EventStore, state.Namespace, state.ReadModel),
+            (Factory: factory, EventStore: eventStoreName, Namespace: eventStoreNamespaceName, ReadModel: readModel)).Sink.Value;
     }
 
     /// <inheritdoc/>
     public bool HasType(SinkTypeId typeId) => _factories.ContainsKey(typeId);
-
-    static async Task<IGraphSink> CreateGraphSink(IGraphSinkFactory factory, EventStoreName eventStore, EventStoreNamespaceName @namespace, ReadModelDefinition readModel)
-    {
-        var sink = factory.CreateGraphFor(eventStore, @namespace, readModel);
-        await sink.EnsureSchema();
-        return sink;
-    }
 
     static async Task Initialize(ISink sink, bool changed)
     {
@@ -129,6 +126,19 @@ public class Sinks(
     }
 
     sealed record SinkEntry(ISink Sink, ReadModelDefinition Definition, bool Initialized);
+
+    sealed record GraphSinkEntry(Lazy<Task<IGraphSink>> Sink, ReadModelDefinition Definition)
+    {
+        internal static GraphSinkEntry For(IGraphSinkFactory factory, EventStoreName eventStore, EventStoreNamespaceName @namespace, ReadModelDefinition readModel) =>
+            new(new(() => Create(factory, eventStore, @namespace, readModel)), readModel);
+
+        static async Task<IGraphSink> Create(IGraphSinkFactory factory, EventStoreName eventStore, EventStoreNamespaceName @namespace, ReadModelDefinition readModel)
+        {
+            var sink = factory.CreateGraphFor(eventStore, @namespace, readModel);
+            await sink.EnsureSchema();
+            return sink;
+        }
+    }
 
     sealed record SinkKey(SinkTypeId TypeId, SinkConfigurationId ConfigurationId, ReadModelContainerName ContainerName, EventSequenceSinkConfiguration? EventSequence);
 }

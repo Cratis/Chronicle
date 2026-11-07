@@ -1,6 +1,6 @@
 ---
-title: Glossary
-description: Look up Chronicle event-sourcing terminology, including aggregates, event sources, observers, projections, and namespaces, with links to detailed guides.
+title: Cratis Chronicle terminology glossary
+description: Cratis Chronicle's glossary defines events, event sources, streams, observers, projections, reducers, and other core event-sourcing terms.
 ---
 
 Event sourcing comes with its own vocabulary, and the same word can mean subtly different things in different products. This page is the single source of truth for what each term means in Chronicle. Where a term has a fuller treatment, the definition links to it.
@@ -19,7 +19,7 @@ A consistency boundary defined by the *decision being made* rather than by a fix
 
 ## Event
 
-An immutable record of something that *happened* — a fact, in the past tense (`OrderPlaced`, `AddressChanged`). Events are never updated or deleted; new facts supersede old ones. An event carries only the data that was true at the moment it occurred. See [Event](./event.md).
+A record of something that *happened* — a fact, in the past tense (`OrderPlaced`, `AddressChanged`). Business changes add new facts rather than overwrite history. Chronicle also supports explicit [redaction](../events/redaction.mdx), which replaces stored event content with a marker while retaining its sequence number and audit metadata. See [Event](./event.md).
 
 ## Event Log
 
@@ -55,7 +55,7 @@ A named part of an event source, such as the transactions of one month. It is id
 
 ## Event Type
 
-The schema and identity of a kind of event, declared with `[EventType]`. Chronicle validates appended events against their registered type and supports evolving them over time. See [Event Type](./event-type.md) and [Event Type Migrations](./event-type-migrations).
+The schema and identity of a kind of event, declared with `[EventType]`. Chronicle validates appended events against their registered type and supports evolving them over time. See [Event Type](./event-type.md) and [Event Type Migrations](./event-type-migrations.mdx).
 
 ## Namespace
 
@@ -91,7 +91,7 @@ The destination a [projection](./projection.md) writes its [read model](../read-
 
 ## Subject
 
-An observable stream you can subscribe to for real-time updates — the mechanism behind reactive queries that push new data to clients as events arrive. See [Subject](./subject).
+The target an event is about, used to select the encryption key for personally identifiable information (PII). The subject defaults to the event source identifier when no subject is supplied. For example, an order event can use the customer's identifier as its subject when it contains that customer's PII. See [Subject](./subject.mdx).
 
 ## Tail Sequence Number
 

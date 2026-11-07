@@ -18,6 +18,12 @@ internal static partial class WebhookSigningKeyRingLogging
     [LoggerMessage(LogLevel.Information, "Webhook signing key '{KeyId}' for event store '{EventStore}' superseded, valid until {OverlapEndsAt}")]
     internal static partial void Superseded(this ILogger<WebhookSigningKeyRing> logger, EventStoreName eventStore, string keyId, DateTimeOffset overlapEndsAt);
 
+    [LoggerMessage(LogLevel.Information, "Generated HMAC secret '{KeyId}' for webhook '{Webhook}' in event store '{EventStore}'")]
+    internal static partial void GeneratedWebhookSecret(this ILogger<WebhookSigningKeyRing> logger, EventStoreName eventStore, string keyId, WebhookId webhook);
+
+    [LoggerMessage(LogLevel.Information, "Retired {Count} secrets for webhook '{Webhook}' in event store '{EventStore}'")]
+    internal static partial void RetiredWebhookSecrets(this ILogger<WebhookSigningKeyRing> logger, EventStoreName eventStore, WebhookId webhook, int count);
+
     [LoggerMessage(LogLevel.Information, "Webhook signing key '{KeyId}' for event store '{EventStore}' retired")]
     internal static partial void Retired(this ILogger<WebhookSigningKeyRing> logger, EventStoreName eventStore, string keyId);
 }

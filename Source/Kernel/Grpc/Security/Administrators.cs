@@ -25,10 +25,23 @@ internal sealed class Administrators(
             new global::Cratis.Chronicle.Security.GrantAdministrator((global::Cratis.Chronicle.Concepts.Security.UserId)request.UserId));
 
     /// <inheritdoc/>
+    public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> GrantEventStoreAccess(global::Cratis.Chronicle.Contracts.Security.GrantEventStoreAccessRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
+        CommandExecutor.Execute(
+            commandPipeline,
+            new global::Cratis.Chronicle.Security.GrantEventStoreAccess(request.Holder.ToApi(), (request.EventStore is null ? null : (global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore), request.AllEventStores, (request.Namespace is null ? null : (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace), (global::Cratis.Chronicle.Security.StoreAccess)request.Access));
+
+    /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> RevokeAdministrator(global::Cratis.Chronicle.Contracts.Security.RevokeAdministratorRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         CommandExecutor.Execute(
             commandPipeline,
             new global::Cratis.Chronicle.Security.RevokeAdministrator((global::Cratis.Chronicle.Concepts.Security.UserId)request.UserId, request.Reason));
+
+    /// <inheritdoc/>
+    public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult<bool>> RevokeEventStoreAccess(global::Cratis.Chronicle.Contracts.Security.RevokeEventStoreAccessRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
+        CommandExecutor.Execute<bool, bool>(
+            commandPipeline,
+            new global::Cratis.Chronicle.Security.RevokeEventStoreAccess(request.Holder.ToApi(), (request.EventStore is null ? null : (global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore), request.AllEventStores, (request.Namespace is null ? null : (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace)),
+            response => response);
 
     /// <inheritdoc/>
     [global::Microsoft.AspNetCore.Authorization.Authorize(Policy = "Chronicle.Administrator")]
@@ -41,10 +54,54 @@ internal sealed class Administrators(
             },
             exception => logger.QueryFailed(exception, "Administrators", "AllAdministrators"));
 
+    /// <inheritdoc/>
+    [global::Microsoft.AspNetCore.Authorization.Authorize(Policy = "Chronicle.Administrator")]
+    public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.Security.EventStoreAccessGrantsResponse>>> All(global::ProtoBuf.Grpc.CallContext callContext = default) =>
+        QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Security.EventStoreAccessGrantsResponse>>(
+            async () =>
+            {
+                var result = await global::Cratis.Chronicle.Security.EventStoreAccessGrants.All(grainFactory);
+                return result.Select(ToEventStoreAccessGrantsResponse).ToList();
+            },
+            exception => logger.QueryFailed(exception, "Administrators", "All"));
+
+    /// <inheritdoc/>
+    [global::Microsoft.AspNetCore.Authorization.Authorize(Policy = "Chronicle.Administrator")]
+    public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.Security.EventStoreAccessPreflightResponse>>> Uncovered(global::ProtoBuf.Grpc.CallContext callContext = default) =>
+        QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Security.EventStoreAccessPreflightResponse>>(
+            async () =>
+            {
+                var result = await global::Cratis.Chronicle.Security.EventStoreAccessPreflight.Uncovered(grainFactory);
+                return result.Select(ToEventStoreAccessPreflightResponse).ToList();
+            },
+            exception => logger.QueryFailed(exception, "Administrators", "Uncovered"));
+
     static global::Cratis.Chronicle.Contracts.Security.AdministratorResponse ToAdministratorResponse(global::Cratis.Chronicle.Security.Administrator source) =>
         new()
         {
             UserId = (global::System.Guid)source.UserId,
             Username = source.Username
+        };
+
+    static global::Cratis.Chronicle.Contracts.Security.EventStoreAccessGrantsResponse ToEventStoreAccessGrantsResponse(global::Cratis.Chronicle.Security.EventStoreAccessGrants source) =>
+        new()
+        {
+            Holder = source.Holder.ToContract(),
+            EventStore = source.EventStore is null ? null : (string)source.EventStore,
+            Namespace = source.Namespace is null ? null : (string)source.Namespace,
+            Access = (global::Cratis.Chronicle.Contracts.Security.StoreAccess)source.Access,
+            Source = (global::Cratis.Chronicle.Contracts.Security.EventStoreAccessGrantSource)source.Source
+        };
+
+    static global::Cratis.Chronicle.Contracts.Security.EventStoreAccessPreflightResponse ToEventStoreAccessPreflightResponse(global::Cratis.Chronicle.Security.EventStoreAccessPreflight source) =>
+        new()
+        {
+            Holder = source.Holder.ToContract(),
+            EventStore = (string)source.EventStore,
+            Namespace = source.Namespace is null ? null : (string)source.Namespace,
+            Access = (global::Cratis.Chronicle.Contracts.Security.StoreAccess)source.Access,
+            FirstSeen = (global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset)source.FirstSeen,
+            LastSeen = (global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset)source.LastSeen,
+            Count = source.Count
         };
 }

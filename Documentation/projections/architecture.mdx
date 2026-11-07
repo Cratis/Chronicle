@@ -1,13 +1,15 @@
 ---
-title: "Projection Architecture"
-description: "Follow Chronicle model-bound attributes, fluent projections, and PDL through shared compilation and runtime layers to read model materialization."
+title: "Chronicle projection architecture"
+description: "Chronicle turns attributes, fluent mappings, and PDL into a shared projection definition. Learn where definitions run and how read models update."
 ---
 
-Model-bound declarations, fluent definitions, and PDL all become projection definitions that the kernel executes.
-For application code, start with model-bound declarations, then fluent mappings when you need structure,
-then reducer code when state transitions read better. In .NET, start new reducers as self-reducing models.
-[Choose how to build a read model](choosing-a-read-model-style.mdx) explains that decision. This page
-follows the three projection inputs through their common engine.
+Chronicle projections turn events into read models through a mapping definition executed by the
+kernel. Attributes, fluent definitions, and Projection Declaration Language (PDL) produce that shared
+definition; they change where you author the mapping, not where it runs.
+
+If you are choosing a style for a screen or query, start with
+[choosing a read-model style](choosing-a-read-model-style.mdx). This page follows a projection from
+its authored form to the engine and the storage sink that holds the resulting read model.
 
 ## Three Projection Approaches
 
@@ -48,10 +50,9 @@ graph TB
 
 ### 1. Projection Declaration Language
 
-The Projection Declaration Language provides a concise, indentation-based syntax optimized for readability and quick authoring.
-Typically available from the tooling like Workbench.
-
-**Example:**
+PDL is an indentation-based text format for definitions authored outside application code, such as
+in the Workbench or Screenplay. The compiler resolves the declaration into the same definition that
+code-based mappings produce.
 
 
 ```pdl
@@ -61,39 +62,21 @@ projection MyProjection => MyApp.ReadModels.MyModel
     count eventCount
 ```
 
-**Benefits:**
-- Minimal syntax and ceremony
-- Easy to read and understand
-- Fast iteration with live preview
-- Context-sensitive auto-completion in editors
-
-**Use when:**
-- Authoring a definition outside application code
-- Prototyping and ad-hoc querying
-- Working with Workbench or Screenplay
+The declaration names the destination read model and the event that supplies its fields. Choose
+[PDL](projection-declaration-language/index.md) when text is the artifact your workflow owns, including
+[ad-hoc queries](projection-declaration-language/adhoc-querying.mdx). Its supported expressions and
+save settings determine what that definition can do.
 
 ### 2. Model-Bound Projections
 
-
-
-Model-bound projections use attributes or annotations on your read model classes, keeping the projection logic close to the data structure.
-
-**Example:**
+Model-bound projections put mapping attributes or annotations on the read model. Start here when a
+reader can understand how a field is populated by looking at the model itself.
 
 <ChronicleClientTabs snippet="projections/architecture/model-bound" />
 
-**Benefits:**
-- Type-safe at compile time
-- Co-located with read model definition
-- Leverages your language's tooling and IntelliSense
-- Natural for developers already using attributes/annotations elsewhere
-
-**Use when:**
-- Strong type safety is required
-- Using an attribute/annotation-first development workflow
-- Read model and projection logic should be together
-- Refactoring tools are important
-
+The client discovers the metadata and builds a definition for registration. The attributes describe
+mappings; they are not event handlers on a model instance. See
+[model-bound projections](model-bound/index.mdx) for the available mappings.
 
 
 ### 3. Declarative Projections
@@ -101,22 +84,15 @@ Model-bound projections use attributes or annotations on your read model classes
 Fluent projections use code to construct a mapping definition. The kernel executes that definition;
 it does not call `Define` or its builder lambdas for each event.
 
-**Example:**
-
 <ChronicleClientTabs snippet="projections/architecture/declarative" />
 
-**Benefits:**
-- Explicit keys, context mappings, joins, children, and nested objects
-- Separation of model and mapping
-- Programmatic construction of supported mapping expressions
+Use the [fluent builder](declarative/index.mdx) when attributes make a mapping hard to scan or the
+model should remain free of mapping metadata. Keys, joins across event sources, and child collections
+can be easier to follow in a separate definition.
 
-**Use when:**
-- Attributes make the mapping hard to scan
-- The model must remain free of mapping attributes
-- You need specialized builder operations
-
-Constructor dependencies can help construct the definition, but they are not injected into a
-per-event fold. Use a reducer for arbitrary branching over previous state.
+Constructor dependencies can help construct that definition, but they are not injected into a
+per-event calculation. If the next state needs arbitrary branching over previous state, choose a
+[reducer](../reducers/index.mdx) instead.
 
 ## Architecture Components
 
@@ -165,50 +141,39 @@ graph LR
 
 ### Frontend Layer
 
-**Workbench UI**: Web-based interface for creating, editing, and testing projections.
-
-**Monaco Editor with Language Service**: Provides rich editing experience with:
-- Syntax highlighting for all declaration keywords
-- Context-sensitive auto-completion
-- Real-time validation with schema awareness
-- Hover documentation
-- Error markers
+The Workbench hosts the projection editor. Its Monaco language service provides syntax highlighting,
+completion, hover information, and error markers while you edit. These checks help you correct a
+declaration before saving; they do not mean its read model has caught up with the event log.
 
 ### Compilation Layer
 
-**Screenplay Compiler**: The projection language is part of the [Cratis Screenplay language](/screenplay/projections/), and parsing is owned by the `Cratis.Screenplay` package:
-- Indentation-based structure with 1-based line and column tracking
-- Keywords, identifiers, string literals and expressions
-- Nested blocks (children, nested objects, joins, composite keys)
-- Syntax errors reported as diagnostics with precise locations
+The projection language is part of [Cratis Screenplay](/screenplay/projections/). The
+`Cratis.Screenplay` package parses the declaration into a syntax tree and reports syntax errors with
+line and column locations. Chronicle validates the supported projection syntax against event types
+and schemas, then its implementation of `IProjectionSyntaxVisitor<T>` produces a
+`ProjectionDefinition`.
 
-**Semantic Validator**: Performs semantic validation over the parsed syntax:
-- Checks event types exist
-- Validates property names against schemas
-- Ensures composite key types are objects
-- Verifies expression syntax
-
-**ProjectionDefinition Visitor**: Chronicle's implementation of Screenplay's `IProjectionSyntaxVisitor<T>` that turns the syntax tree into the final `ProjectionDefinition` object all three approaches produce.
+A declaration that parses as Screenplay can still use an expression Chronicle does not support. Fix
+the reported projection diagnostics before treating the definition as ready to register.
 
 ### Core Layer
 
-**ProjectionDefinition**: Unified representation of projection logic, regardless of source (Projection Declaration, Model-Bound, or Declarative).
-
-**Projection Registry**: Manages all registered projections in the system.
-
-**Projection Engine**: Coordinates projection execution, handles event replay, and manages state.
+The registry holds the `ProjectionDefinition` independently of its authoring form. The engine uses
+that definition to construct the processing pipeline. When a client registers a changed mapping,
+Chronicle compares it with the stored definition and determines whether existing history must be
+replayed. [Registration lifecycle](registration-lifecycle.md) explains that decision and the policy
+that controls automatic rebuilds.
 
 ### Runtime Layer
 
-**Event Stream**: Source of events to be projected.
+The projector consumes events selected by the definition, resolves the read-model key, and applies
+mappings, joins, and child operations. For a materialized projection, a storage sink persists the
+result so queries can read it without replaying history.
 
-**Projector**: Executes projection logic for each event:
-- Applies transformations
-- Manages read model instances
-- Handles keys and lookups
-- Performs joins and child operations
-
-**Storage Sink**: Persists read models (typically MongoDB or another database).
+That processing is asynchronous: a successful append does not wait for the sink update. A
+[passive projection](declarative/passive.mdx) instead computes an instance when it is read, without a
+materialized sink. It replays the selected event source, so it cannot generally reproduce a view
+built from cross-source joins or custom aggregation keys.
 
 ## Data Flow
 
@@ -258,3 +223,6 @@ Regardless of which approach you choose, all projections share these concepts:
 
 All three inputs produce the same `ProjectionDefinition` format. Their authoring and configuration
 surfaces differ: sharing an engine does not mean that PDL has every option exposed by the code builders.
+
+Next, choose the [consistency behavior](../read-models/consistency.md) your query needs. Authoring a
+projection differently does not make its materialized read model update inside an append.

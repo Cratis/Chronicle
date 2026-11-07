@@ -1,35 +1,34 @@
 ---
-description: Filter a Chronicle reducer or reactor to events that carry specific tags, using one or several filter tags, and see how tag filters combine with others.
+title: Filter Chronicle events by tag
+description: Use FilterEventsByTag on a Chronicle reducer or reactor to select events by plain tags, matching either static event tags or tags added at append.
 ---
-# Filter reducers and reactors by tag
-
-Configure a tag filter when a reducer or reactor should only handle events that carry specific tags. In C#, use `[FilterEventsByTag]`; the tabs show each client's syntax.
+Add `[FilterEventsByTag]` to a Chronicle reducer or reactor to select events by a plain tag, such as `vip` or `priority`. This keeps events without a matching tag out of that observer's handler.
 
 ## What counts as a matching tag
 
-Chronicle compares the filter tag against the tags on the appended event. Those tags can come from:
+Chronicle compares the filter value exactly against the plain tags stored with the appended event. Those tags can come from:
 
-- Static tags declared on the event type (`[Tag]` or `[Tags]` in C#)
-- Tags supplied when appending the event
+- `[Tag]` or `[Tags]` on the event type
+- The `tags:` argument when you append the event
 
-Descriptive tags on the reducer or reactor do not filter anything. They only label the observer itself.
+Place `[FilterEventsByTag]` on the observer to filter delivery. `[Tag]` and `[Tags]` on a reducer or reactor only label the observer itself; they do not filter incoming events. [Named tags](../../concepts/tagging.mdx#named-tags) are separate name/value metadata and do not participate in this match.
 
 ## Filter a reactor by tag
 
 <ChronicleClientTabs snippet="events/filtering/by-tag/reactor" />
 
-The reactor receives the event because the append call added the `vip` tag.
+The append adds `vip` and `onboarding` to the event type's static `customer-lifecycle` tag. The reactor's `"vip"` filter matches one of those stored tags, so the event passes the filter.
 
 ## Filter a reducer by tag
 
 <ChronicleClientTabs snippet="events/filtering/by-tag/reducer" />
 
-The reducer only updates when the appended event carries the `priority` tag.
+The checkout service adds `priority` when appending an order. That tag lets the event reach this reducer and contribute to the total; an order without it does not.
 
 ## Use multiple filter tags
 
-Multiple tag filters widen the match (in C#, apply `[FilterEventsByTag]` more than once):
+Add another `[FilterEventsByTag]` attribute when either tag should qualify an event:
 
 <ChronicleClientTabs snippet="events/filtering/by-tag/multiple-filters" />
 
-Chronicle dispatches the event if it has either `vip` or `priority`.
+An event with either `vip` or `priority` passes this tag filter; it does not need both. If you also configure an [event source type](by-event-source-type.mdx) or [event stream type](by-event-stream-type.mdx) filter, the event must satisfy those categories too.

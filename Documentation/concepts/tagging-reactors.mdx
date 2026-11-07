@@ -1,64 +1,63 @@
 ---
-description: Label Chronicle reactors with descriptive tags to organize and find them; these tags do not filter the events a reactor handles.
+title: Label Chronicle reactors with tags
+description: Descriptive tags label Chronicle reactors by purpose, domain or owner. They are stored with the reactor definition and do not filter its events.
 ---
-# Tagging Reactors
 
-Tags provide a way to organize and categorize your reactors for better discoverability and management. Where your client supports descriptive reactor tags, assign labels that describe the reactor's purpose or domain.
+<a id="tagging-reactors"></a>
 
-Descriptive tags label the reactor itself (`[Tag]` and `[Tags]` in .NET). They do not filter which appended events the reactor handles. For event filtering based on appended metadata, see [Filter reducers and reactors by tag](../events/filtering/by-tag), [Filter reducers and reactors by event source type](../events/filtering/by-event-source-type), and [Filter reducers and reactors by event stream type](../events/filtering/by-event-stream-type).
+Descriptive tags in Cratis Chronicle label a reactor by its purpose, domain or owner. Use them to identify related reactors in their definitions; they do not change which events a reactor handles.
+
+In .NET, apply `[Tag]` or `[Tags]` to the reactor class. If your task is to restrict delivery instead, filter the appended event metadata by [tag](../events/filtering/by-tag), [event source type](../events/filtering/by-event-source-type), or [event stream type](../events/filtering/by-event-stream-type).
 
 :::note[Client coverage]
 Kotlin and Java tag a reactor with `@Tag`, which is repeatable and takes any number of tags. Elixir's `use Chronicle.Reactors.Reactor` and TypeScript's `reactor()` expose no way to attach descriptive tags to the reactor itself.
 :::
 
-## Adding Tags
+## Adding tags
 
-You can tag reactors in multiple ways:
+The examples below attach the same kind of descriptive metadata using one or several attributes. Choose the form that is easiest to read alongside the reactor declaration.
 
-### Single Tag
+### Single tag
 
-Apply a single tag to your reactor:
+Start with one label that describes the reactor's responsibility:
 
 <ChronicleClientTabs snippet="concepts/tagging-reactors/single-tag" />
 
-### Multiple Tags (Single Attribute)
+### Multiple tags (single attribute)
 
-In C# and Kotlin/Java, one tag attribute or annotation accepts several labels:
+Pass several labels to one attribute when the reactor belongs to more than one category:
 
 <ChronicleClientTabs snippet="concepts/tagging-reactors/multiple-tags-single-attribute" />
 
-### Multiple Tags (Multiple Attributes)
+### Multiple tags (multiple attributes)
 
-In C# and Kotlin/Java, repeat the tag attribute or annotation:
+Repeated `[Tag]` attributes produce the same combined set of labels:
 
 <ChronicleClientTabs snippet="concepts/tagging-reactors/multiple-tags-multiple-attributes" />
 
-### Mixed Approach
+### Mixed approach
 
-Combine both approaches:
+You can also combine repeated attributes with multiple labels on each:
 
 <ChronicleClientTabs snippet="concepts/tagging-reactors/mixed-approach" />
 
-## Best Practices
+## Best practices
 
-- **Use meaningful names**: Choose tag names that clearly describe the purpose or domain
-- **Be consistent**: Establish tag naming conventions across your organization
-- **Don't over-tag**: Apply only relevant tags; too many can reduce their usefulness
-- **Group related reactors**: Use tags to group reactors that serve similar purposes
+Choose names a maintainer will recognize, such as a business domain or the team responsible for the reactor. Use the same spelling on related reactors so the labels remain useful when reading definitions. Add a tag only when it helps someone distinguish or find the reactor.
 
-## Common Tag Examples
+## Common tag examples
 
-Here are some common patterns for tagging reactors:
+These examples label reactors by categories such as domain and purpose:
 
 <ChronicleClientTabs snippet="concepts/tagging-reactors/tag-categories" />
 
-## Querying by Tag
+## Querying by tag
 
-Reactor tags describe the reactor and are stored with its definition. Chronicle does not use them to activate or select reactors.
+Reactor tags are stored with the reactor definition. Chronicle does not use them to activate or select reactors, so labeling a reactor `analytics` does not subscribe it to events tagged `analytics`.
 
-A reactor can filter on **event** tags to receive only events that carry a given tag. See [Filtering by tag](../events/filtering/by-tag.mdx).
+To receive only events that carry a given tag, continue with [event-tag filtering](../events/filtering/by-tag.mdx). That configuration is separate from the descriptive attributes shown here.
 
-## See Also
+## See also
 
-- [Tagging](tagging) - Comprehensive guide to tagging in Chronicle
-- [Reducers Tagging](../reducers/tagging-reducers) - Tagging reducers
+- [Tagging](tagging): plain and named event tags alongside observer labels
+- [Tagging reducers](../reducers/tagging-reducers): labels on reducer definitions

@@ -1,17 +1,15 @@
 ---
-title: Getting Snapshots
-description: Inspect Chronicle projection snapshots for one read model key, grouped by correlation ID, to trace historical state changes and understand replay cost.
+title: Inspect Chronicle Read Model Snapshots
+description: Chronicle read model snapshots reconstruct one instance's state after each correlation group, so you can inspect the events behind a projection result.
 ---
 
-Snapshots let you inspect how a read model reached its current state. Chronicle groups events by correlation ID, replays the read model after each group, and returns the state produced by each step.
+Chronicle read model snapshots reconstruct how one instance reached its state by replaying events grouped by correlation ID, the identifier linking them to an operation. Use them to investigate an unexpected projection result: each snapshot puts the resulting state beside the events that produced it.
 
-This is useful when a projection produced a surprising result and you need to see the path as well as
-the final state. `GetSnapshotsById` returns historical projection states; reducer-backed models return
-an empty history. For reducers, test the event fold with a [read-model scenario](../testing/read-models/scenario.mdx).
+`GetSnapshotsById` returns reconstructed projection states, not saved copies of earlier database rows. Reducer-backed models return an empty history because the server does not run their client-side fold. For reducers, test that fold with a [read-model scenario](../testing/read-models/scenario.mdx).
 
 ## How snapshots are grouped
 
-Each snapshot represents the cumulative read model state after one correlation group. In practice, a correlation group often maps to one user request, command, import batch, scheduled job, or other operation that appended related events.
+Each snapshot represents the cumulative read model state after one correlation group. A correlation ID ties related events to an operation, such as a command or import batch. It is not proof that those events formed a database transaction; the grouping depends on the IDs recorded with the events.
 
 Every snapshot includes:
 
@@ -24,13 +22,13 @@ Every snapshot includes:
 
 ## Read snapshots
 
-The read model type must be registered, and the key must identify the read model instance you want to inspect.
+The read model type must be registered. Pass the read model instance's key, which is not necessarily the event source ID if the projection uses a custom key.
 
 <ChronicleClientTabs snippet="read-models/getting-snapshots/basic" />
 
 ## Analyze the timeline
 
-Snapshot data is usually most useful when you print or inspect the correlation ID, event count, timestamp, and resulting state together.
+Inspect the correlation ID, event count, timestamp, and resulting state together to find the group where the value changed:
 
 <ChronicleClientTabs snippet="read-models/getting-snapshots/analyze" />
 
@@ -38,23 +36,14 @@ If you need to compare two states, materialize the snapshot list and compare nei
 
 ## Cost and limits
 
-Snapshot retrieval has to read the relevant history, group events by correlation ID, and replay the read model through each group. That can be expensive for keys with long histories or many correlation groups.
+Snapshot retrieval reads the relevant history and replays the projection through each correlation group. Long histories cost more to reconstruct; a custom projection key can also require reading the event sequence before selecting the events for that key.
 
-Use snapshots when:
+Use snapshots for diagnosis, not as the normal read path for a list or frequently requested value. A snapshot explains the state produced by replaying recorded events through the registered projection. It does not establish an access audit trail or recover every earlier version of the projection's logic.
 
-- You are debugging a projection.
-- You need an audit trail for how one instance evolved.
-- You need to understand transaction or request boundaries.
-- The key has a reasonable event history.
-
-Prefer current-state or materialized reads when:
-
-- You only need the latest state.
-- You need to query many instances.
-- You are serving a hot user-facing path.
+If you only need the latest value, [read a single instance](getting-single-instance). For a page of stored instances without replay, use [materialized reads](materialized-pagination.mdx).
 
 ## Related topics
 
 - [Getting a Single Instance](getting-single-instance) - Read the latest state for one key
-- [Getting a Collection of Instances](getting-collection-instances) - Replay all current instances
+- [Getting a Collection of Instances](getting-collection-instances) - Read all current instances
 - [Watching Read Models](watching-read-models) - Subscribe to changes as they happen

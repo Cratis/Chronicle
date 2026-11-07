@@ -38,4 +38,10 @@ public class RegisterReducer
     /// </summary>
     [ProtoMember(5)]
     public PageDelivery? PageDelivery { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the client caches the state it last returned per partition, allowing the kernel to leave the state out of a delivery when it is unchanged.
+    /// </summary>
+    [ProtoMember(6)]
+    public StateCaching? StateCaching { get; set; }
 }

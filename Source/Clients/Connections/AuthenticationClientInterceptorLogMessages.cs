@@ -13,8 +13,8 @@ internal static partial class AuthenticationClientInterceptorLogMessages
     [LoggerMessage(LogLevel.Trace, "No authentication token available, skipping authentication header for: {Method}")]
     internal static partial void NoTokenAvailable(this ILogger<AuthenticationClientInterceptor> logger, string method);
 
-    [LoggerMessage(LogLevel.Debug, "Failed to obtain authentication token for gRPC call: {Method}")]
-    internal static partial void FailedToObtainToken(this ILogger<AuthenticationClientInterceptor> logger, string method, Exception ex);
+    [LoggerMessage(LogLevel.Debug, "Failed to obtain authentication token for gRPC call: {Method} ({Category})")]
+    internal static partial void FailedToObtainToken(this ILogger<AuthenticationClientInterceptor> logger, string method, string category);
 
     [LoggerMessage(LogLevel.Warning, "Authentication failed (Unauthenticated) for {Method}, retrying with token refresh")]
     internal static partial void AuthenticationFailedRetryingWithTokenRefresh(this ILogger<AuthenticationClientInterceptor> logger, string method);
@@ -22,6 +22,6 @@ internal static partial class AuthenticationClientInterceptorLogMessages
     [LoggerMessage(LogLevel.Debug, "Retrying gRPC call {Method} after token refresh")]
     internal static partial void RetryingCallAfterTokenRefresh(this ILogger<AuthenticationClientInterceptor> logger, string method);
 
-    [LoggerMessage(LogLevel.Error, "Retry failed after token refresh for {Method}")]
-    internal static partial void RetryAfterTokenRefreshFailed(this ILogger<AuthenticationClientInterceptor> logger, string method, Exception ex);
+    [LoggerMessage(LogLevel.Error, "Retry failed after token refresh for {Method} ({Category})")]
+    internal static partial void RetryAfterTokenRefreshFailed(this ILogger<AuthenticationClientInterceptor> logger, string method, string category);
 }

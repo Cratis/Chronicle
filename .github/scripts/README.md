@@ -85,9 +85,8 @@ The gRPC compatibility check is integrated into:
    - Surfaces any breaking changes through the workflow's `has-breaking-changes` and `breaking-changes` outputs
 
 2. **Publish Workflow** (`publish.yml`):
-   - Runs on releases, before anything is published
-   - Does not use this schema comparison: it calls `wire-compatibility.yml` with the version being released, which checks that the wire contract still serves every released minor of the current major up to the version being released
-   - A release that fails that check is not published
+   - Does not run this check or the wire and grain compatibility gates. Publishing only publishes: the pull request that is being merged has already passed them, so repeating them only added their runtime to every release.
+   - The wire contract is checked against every released minor of the current major by `wire-compatibility.yml`, called from the pull request build (`dotnet-build.yml`).
 
 ## Breaking Changes Detection
 

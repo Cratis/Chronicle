@@ -40,7 +40,7 @@ public class GraphProjectionPlanFactory(
         {
             var nodeDefinition = Find(projection, () => graph.GetNode(label));
             foreach (var (eventType, from) in node.From) For(eventType).Nodes.Add(NodeMapping(projection, nodeDefinition, from));
-            foreach (var (eventType, removal) in node.RemovedWith) For(eventType).NodeRemovals.Add(new(label, Key(nodeDefinition.Schema, nodeDefinition.KeyProperty, removal.Key), removal.Detach));
+            foreach (var (eventType, removal) in node.RemovedWith) For(eventType).NodeRemovals.Add(new(label, Key(nodeDefinition.Schema, nodeDefinition.KeyProperty, removal.Key), removal.Detach, ForEach(removal.ForEach)));
         }
 
         foreach (var (type, edge) in definition.Edges)
@@ -62,6 +62,8 @@ public class GraphProjectionPlanFactory(
         expression == WellKnownExpressions.Increment ||
         expression == WellKnownExpressions.Decrement);
 
+    static string? ForEach(PropertyExpression? expression) => expression?.IsSet() == true ? expression.Value : null;
+
     static T Find<T>(ProjectionId projection, Func<T> find)
     {
         try
@@ -77,7 +79,7 @@ public class GraphProjectionPlanFactory(
     GraphNodeMapping NodeMapping(ProjectionId projection, GraphNodeDefinition node, GraphNodeFromDefinition from)
     {
         var (names, mappers) = Properties(projection, node.Label, node.Schema, node.KeyProperty, from.Properties);
-        return new(node.Label, node.KeyProperty, Key(node.Schema, node.KeyProperty, from.Key), names, mappers, from.UpdateOnly, ReadsCurrentState(from.Properties));
+        return new(node.Label, node.KeyProperty, Key(node.Schema, node.KeyProperty, from.Key), names, mappers, from.UpdateOnly, ReadsCurrentState(from.Properties), ForEach(from.ForEach));
     }
 
     GraphEdgeMapping EdgeMapping(ProjectionId projection, GraphEdgeDefinition edge, GraphNodeDefinition source, GraphNodeDefinition target, GraphEdgeFromDefinition from)
@@ -93,7 +95,8 @@ public class GraphProjectionPlanFactory(
             Identity(projection, edge, from.Identity),
             names,
             mappers,
-            ReadsCurrentState(from.Properties));
+            ReadsCurrentState(from.Properties),
+            ForEach(from.ForEach));
     }
 
     GraphEdgeRemoval EdgeRemoval(ProjectionId projection, GraphEdgeDefinition edge, GraphNodeDefinition source, GraphNodeDefinition target, GraphEdgeRemovedWithDefinition removal) =>
@@ -103,7 +106,8 @@ public class GraphProjectionPlanFactory(
             edge.TargetLabel,
             Key(source.Schema, source.KeyProperty, removal.SourceKey),
             Key(target.Schema, target.KeyProperty, removal.TargetKey),
-            Identity(projection, edge, removal.Identity));
+            Identity(projection, edge, removal.Identity),
+            ForEach(removal.ForEach));
 
     ValueProvider<AppendedEvent>? Identity(ProjectionId projection, GraphEdgeDefinition edge, PropertyExpression? expression)
     {

@@ -36,6 +36,8 @@ internal sealed class ReducerDispatcher(
     IActivitySource<Reducers> activitySource,
     ILogger<Reducers> logger)
 {
+    readonly ReducerStateCache _stateCache = new();
+
     /// <summary>Gets or sets the client span naming convention.</summary>
     internal ClientSpanNames SpanNames { get; set; }
 
@@ -55,7 +57,16 @@ internal sealed class ReducerDispatcher(
     {
         if (operation.ReplayState != ReplayState.None)
         {
-            await HandleReplayNotification(handler, operation.ReplayState, operation.Partition);
+            if (string.IsNullOrEmpty(operation.Partition))
+            {
+                _stateCache.ForgetAll(handler.Id);
+            }
+            else
+            {
+                _stateCache.Forget(handler.Id, operation.Partition);
+            }
+
+            await HandleReplayNotification(handler, @namespace, operation.ReplayState, operation.Partition);
             return;
         }
 
@@ -96,25 +107,42 @@ internal sealed class ReducerDispatcher(
             try
             {
                 var appendedEvents = partition.Events.Select(ToAppendedEvent).ToList();
+                using var delivery = ObserverDeliveryScope.Enter(serviceProvider, DeliveryContextFor(handler, @namespace));
                 await using var serviceProviderScope = serviceProvider.CreateAsyncScope();
                 identityProvider.SetCurrentIdentity(Identity.System);
-                var initialState = partition.InitialState is null ? null : JsonSerializer.Deserialize(partition.InitialState, handler.ReadModelType, jsonSerializerOptions);
+                var initialStateJson = partition.InitialState;
+                if (partition.InitialStateUnchanged && !_stateCache.TryGet(handler.Id, partitionKey, out initialStateJson))
+                {
+                    // The kernel believes we hold the state, but we do not (evicted, restarted or never cached). Failing clears
+                    // the kernel's record of it, so the redelivery carries the full state.
+                    _stateCache.Forget(handler.Id, partitionKey);
+                    return PartitionOutcome.Failed(partitionKey, new InvalidOperationException($"The kernel sent the state of partition '{partitionKey}' as unchanged, but reducer '{handler.Id}' has no cached state for it. The state is requested in full on redelivery."));
+                }
+
+                var initialState = initialStateJson is null ? null : JsonSerializer.Deserialize(initialStateJson, handler.ReadModelType, jsonSerializerOptions);
                 var reduceResult = handler is ReducerHandler reducerHandler
                     ? await reducerHandler.OnNext(appendedEvents, initialState, serviceProviderScope.ServiceProvider, batchContext)
                     : await handler.OnNext(appendedEvents, initialState, serviceProviderScope.ServiceProvider);
 
                 if (reduceResult.RetryAfter is { } retryAfter)
                 {
+                    _stateCache.Forget(handler.Id, partitionKey);
                     return new(partitionKey, ObservationState.Deferred, EventSequenceNumber.Unavailable, [], string.Empty) { RetryAfter = retryAfter };
                 }
 
                 if (reduceResult.IsSuccess)
                 {
+                    var readModelState = reduceResult.ReadModelState is null ? null : JsonSerializer.Serialize(reduceResult.ReadModelState, jsonSerializerOptions);
+
+                    // Remember exactly what the kernel is told, so an unchanged marker resolves to the state the kernel fingerprinted.
+                    _stateCache.Set(handler.Id, partitionKey, readModelState);
                     return new(partitionKey, ObservationState.Success, reduceResult.LastSuccessfullyObservedEvent, [], string.Empty)
                     {
-                        ReadModelState = reduceResult.ReadModelState is null ? null : JsonSerializer.Serialize(reduceResult.ReadModelState, jsonSerializerOptions)
+                        ReadModelState = readModelState
                     };
                 }
+
+                _stateCache.Forget(handler.Id, partitionKey);
 
                 span?.Activity?.RecordFailure(reduceResult.ExceptionType ?? "reducer_error");
                 logger.ReducerFailed(handler.Id, firstEvent, lastEvent, string.Join(Environment.NewLine, reduceResult.ErrorMessages));
@@ -122,6 +150,7 @@ internal sealed class ReducerDispatcher(
             }
             catch (Exception ex)
             {
+                _stateCache.Forget(handler.Id, partitionKey);
                 span?.Activity?.RecordFailure(ex);
                 logger.ErrorWhileHandlingEvents(ex, firstEvent, lastEvent, handler.Id);
                 return PartitionOutcome.Failed(partitionKey, ex);
@@ -172,14 +201,29 @@ internal sealed class ReducerDispatcher(
         }
     }
 
-    async Task HandleReplayNotification(IReducerHandler handler, ReplayState replayState, string partition)
+    ObserverDeliveryContext DeliveryContextFor(IReducerHandler handler, EventStoreNamespaceName @namespace) =>
+        new(eventStore.Name, @namespace, new(handler.Id.Value), ObserverDeliveryKind.Reducer, handler.ReducerType);
+
+    async Task HandleReplayNotification(IReducerHandler handler, EventStoreNamespaceName @namespace, ReplayState replayState, string partition)
     {
         if (handler.Invoker is SelfReducerInvoker self)
         {
-            await self.ReplayHooks.Invoke(serviceProvider, replayState, partition);
+            await self.ReplayHooks.Invoke(serviceProvider, DeliveryContextFor(handler, @namespace), replayState, partition);
             return;
         }
 
+        ObserverDeliveryScope delivery;
+        try
+        {
+            delivery = ObserverDeliveryScope.Enter(serviceProvider, DeliveryContextFor(handler, @namespace));
+        }
+        catch (Exception enterException)
+        {
+            logger.FailedEnteringDeliveryScopeForReducerReplayNotification(enterException, handler.Id, replayState);
+            return;
+        }
+
+        using var deliveryScope = delivery;
         await using var serviceProviderScope = serviceProvider.CreateAsyncScope();
         var activatedReducerResult = artifactActivator.Activate(serviceProviderScope.ServiceProvider, handler.ReducerType);
         if (activatedReducerResult.TryGetException(out var ex))

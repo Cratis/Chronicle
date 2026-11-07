@@ -1,62 +1,66 @@
 ---
-title: Encrypting operational secrets
-description: Protect Chronicle secrets at rest with [Encrypted] concepts or event properties, separate from PII erasure, and check constraints and client coverage.
+title: Encrypt operational secrets in Cratis Chronicle
+description: Mark non-personal secrets with [Encrypted] in Cratis Chronicle to encrypt them at rest, choose their key scope, and keep them separate from PII erasure.
 ---
 
-Marking a value `[Encrypted]` tells Chronicle to encrypt it at rest — the same way `[PII]` does — but as a security measure with no data subject and no lawful basis for erasure, rather than a GDPR compliance mechanism. See [Security](/chronicle/security/) for when to reach for this instead of `[PII]`.
+Use `[Encrypted]` in Cratis Chronicle to encrypt a non-personal operational secret at rest without including it in personal-data erasure. A partner credential or webhook signing secret can need this protection even though it is not data about a person.
+
+If the value is personally identifiable information (PII), use `[PII]` instead. That marker encrypts personal data and includes it in Chronicle's erasure mechanism for the General Data Protection Regulation (GDPR). The [Security overview](/chronicle/security/) explains how choosing the wrong marker can make a non-personal secret unreadable when a person's key is erased.
 
 ## The marker
 
 <ChronicleClientTabs snippet="confidentiality/encrypted/marker" />
 
-`EncryptedAttribute` lives in `Cratis.Chronicle.ProtectedValues` — a namespace of its own, deliberately not nested under `Compliance`. The optional `details` parameter records why the value needs encryption, exactly like `[PII]`'s `details` parameter.
+In .NET, import `EncryptedAttribute` from `Cratis.Chronicle.ProtectedValues`. The optional `details` parameter records why the value needs encryption; it does not change the encryption behavior.
 
 <ChronicleClientTabs snippet="confidentiality/encrypted/import" />
 
 ## Applying to a concept
 
-The preferred approach, exactly as with `[PII]`: mark the concept type itself. Every event using this type is then automatically encrypted.
+When a secret has a dedicated concept type, a type that names that domain value, mark the type itself. Each event property using that type is then encrypted, so you do not have to repeat the marker on every event.
 
 <ChronicleClientTabs snippet="confidentiality/encrypted/concept-level" />
 
 ## Applying to an event property
 
-You can mark a single property directly when the value has no dedicated concept type:
+Mark a single property directly when the value has no dedicated concept type. In this example, Chronicle encrypts `ApiKey` and leaves `PartnerName` as plaintext:
 
 <ChronicleClientTabs snippet="confidentiality/encrypted/property-level" />
 
 ## `[PII]` and `[Encrypted]` never mix
 
-A property cannot resolve both `[PII]` and `[Encrypted]` metadata. Chronicle applies every matching compliance handler for a property in sequence, so a value marked both ways would be encrypted first under the PII key and then again under the `[Encrypted]` key — releasing it would decrypt with the wrong key against ciphertext, which fails loudly rather than returning a wrong value.
+Choose one marker for each value. `[PII]` and `[Encrypted]` select different keys and erasure behavior; combining them is invalid, not extra protection. Schema generation rejects a property that resolves both markers. In .NET, it throws `PIIAndEncryptedCombinedNotSupported`:
 
 <ChronicleClientTabs snippet="confidentiality/encrypted/pii-and-encrypted-restriction" />
 
-Choose exactly one: `[PII]` for personal data with a lawful basis for erasure, `[Encrypted]` for an operational secret with none. In .NET, [CHR0053](/chronicle/code-analysis/CHR0053/) catches the two directly-visible combinations at compile time; the check shown above is the backstop every client applies at schema-generation time.
+Use `[PII]` for personal data and `[Encrypted]` for non-personal operational secrets. In .NET, [CHR0053](/chronicle/code-analysis/CHR0053/) catches directly visible combinations at compile time. Schema generation also catches combinations inherited through a marked concept type.
 
 ## Why the two keys are never the same
 
-A subject can carry both a `[PII]` value and an `[Encrypted]` value — a customer record with a `[PII]` email address and an `[Encrypted]` API key issued to that customer, for example. The two are provisioned under deliberately disjoint key identities, even though they resolve to the same compliance identity (the subject, or the event source id when none is set). Erasing the subject's PII — a lawful, routine GDPR right-to-erasure request — destroys only the PII key. The `[Encrypted]` key, and the value it protects, is untouched and remains fully readable.
+A record can contain both a personal email address marked `[PII]` and a non-personal partner credential marked `[Encrypted]`. A subject identity tells Chronicle who a protected value belongs to. Even when both values resolve to the same subject, Chronicle stores their keys under different identifiers. Erasing the person's PII leaves the credential's key untouched, so the credential can still be decrypted.
 
-This is enforced two ways:
+The kernel keeps these operations separate:
 
-- The key identities are disjoint by construction — nothing on the PII path ever constructs an identifier that could collide with an `[Encrypted]` value's key identity.
-- `DeleteEncryptionKeyFor` and `AllowNewEncryptionKeyFor` — the two operations behind GDPR erasure — refuse an identifier that belongs to an `[Encrypted]` value, as defense in depth for the one entry point (the compliance gRPC surface) that accepts a caller-supplied identifier directly.
+- `[Encrypted]` key identifiers use a reserved prefix that the PII path does not produce.
+- The compliance entry points `DeleteEncryptionKeyFor` and `AllowNewEncryptionKeyFor` refuse identifiers with that prefix.
 
-There is no operation anywhere that deletes an `[Encrypted]` value's key. A key protecting a secret with no data subject has no lawful basis to be destroyed on request.
+The confidentiality API exposes no equivalent erasure operation. Use `[PII]` for personal data that needs to participate in erasure; `[Encrypted]` does not provide that behavior.
 
 ## Scope
 
-`EncryptionScope` controls the identity a value's key is provisioned under:
+`EncryptionScope` determines which values share an encryption key. It does not change the encryption algorithm:
 
 <ChronicleClientTabs snippet="confidentiality/encrypted/scope-enum" />
 
-`EncryptionScope.Subject` (the default) provisions a key per compliance identity, the same way `[PII]` resolves its identity (the subject, or the event source id when none is set) — but always under a disjoint key from any `[PII]` value on the same subject.
+Choose the scope that matches the secret's ownership:
 
-`EncryptionScope.Namespace` provisions one key shared by every value marked that way in a given event store namespace, regardless of which document it came from — useful for a secret that belongs to the deployment rather than to any one entity, such as a webhook signing secret shared across every partner integration.
+| Scope | Values that share a key |
+| --- | --- |
+| `EncryptionScope.Subject` (default) | Values with the same compliance identity in the event store namespace. This is the subject, or the event source id when none is set, but the key remains separate from any `[PII]` key for that identity. |
+| `EncryptionScope.Namespace` | Every value marked with this scope in a given event store namespace, regardless of the document's subject. |
+| `EncryptionScope.Global` | Every value marked with this scope across the whole Chronicle installation, including every event store and namespace. |
 
-`EncryptionScope.Global` provisions one key shared by every value marked that way across the whole installation — every event store, every namespace.
-
-Widening the scope is safe for `[Encrypted]` in a way it is never safe for `[PII]`: an operational secret has no data subject, so there is no erasure request a shared key could ever need to honor separately for one subject and not another. `[PII]` always resolves to a compliance identity and never gains a wider scope — see [Compliance](/chronicle/compliance/).
+For example, use `Namespace` for a webhook signing secret shared across the partner integrations in that namespace. `Global` shares a key more broadly, across event stores as well as namespaces. Neither scope is available for `[PII]`: personal-data erasure remains tied to the compliance identity. See [Compliance](/chronicle/compliance/) for that workflow.
 
 <ChronicleClientTabs snippet="confidentiality/encrypted/scope-examples" />
 
@@ -64,12 +68,16 @@ Widening the scope is safe for `[Encrypted]` in a way it is never safe for `[PII
 
 ### EventSourceId is not supported
 
-Applying `[Encrypted]` to an event source identifier throws `EncryptedNotSupportedOnEventSourceId` at runtime, and in .NET is flagged at compile time by [CHR0052](/chronicle/code-analysis/CHR0052/):
+Keep the event source identifier in plaintext: Chronicle needs it to correlate events and locate subject-scoped keys when no subject is set. In .NET, schema generation throws `EncryptedNotSupportedOnEventSourceId` for identifier types derived from `EventSourceId` / `EventSourceId<T>` that themselves carry `[Encrypted]`.
+
+Applying `[Encrypted]` directly to an event source identifier property or record parameter is also prohibited. [CHR0052](/chronicle/code-analysis/CHR0052/) catches directly marked members whose types derive from `EventSourceId<T>` at compile time. The example below triggers that diagnostic, not `EncryptedNotSupportedOnEventSourceId` during schema generation. Do not rely on schema generation to reject directly marked members:
 
 <ChronicleClientTabs snippet="confidentiality/encrypted/event-source-id-restriction" />
 
-Event source identifiers are used to correlate events. If the identifier itself is a secret, use a non-sensitive surrogate as the event source id and store the secret in a separate `[Encrypted]` property.
+If the identifier itself is a secret, use a non-sensitive surrogate as the event source id and store the secret in a separate `[Encrypted]` property.
 
 ## Client coverage
 
-`[Encrypted]` is available in the .NET, TypeScript, Kotlin/Java, and Elixir clients.
+Use `[Encrypted]` in .NET, `@encrypted()` in TypeScript, `@Encrypted` in Kotlin/Java, or the `encrypted` macro in Elixir. The examples above show each client's syntax. These clients emit security metadata for the kernel to apply encryption and reject a value that resolves both PII and encryption metadata during schema generation.
+
+For read model decryption, continue to [Releasing PII and encrypted values](/chronicle/read-models/releasing-pii/). It explains which reads decrypt values automatically and how to release an instance outside that path.

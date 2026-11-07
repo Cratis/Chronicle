@@ -5,7 +5,9 @@ using System.Reactive.Linq;
 using System.Text.Json;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Contracts.ReadModels;
+using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.ReadModels;
+using Cratis.Chronicle.Security;
 using Microsoft.Extensions.Logging;
 using ProtoBuf.Grpc;
 
@@ -18,16 +20,19 @@ namespace Cratis.Chronicle.Services.ReadModels;
 /// <param name="readBindings">The bindings for resolving materialized read destinations.</param>
 /// <param name="complianceHelper">The <see cref="IReadModelsCompliance"/> for decrypting compliance and security fields.</param>
 /// <param name="logger">The <see cref="ILogger{T}"/> for logging.</param>
+/// <param name="namespaceCasing">The namespace casing resolver.</param>
 internal sealed class MaterializedReadModels(
     IGrainFactory grainFactory,
     IReadModelReadBindings readBindings,
     IReadModelsCompliance complianceHelper,
-    ILogger<MaterializedReadModels> logger) : IMaterializedReadModels
+    ILogger<MaterializedReadModels> logger,
+    INamespaceCasing namespaceCasing) : IMaterializedReadModels
 {
     /// <inheritdoc/>
     public async Task<GetInstancesResponse> GetInstances(GetInstancesRequest request, CallContext context = default)
     {
-        await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.ReadModel, request.Occurrence));
+        await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.ReadModel, request.Occurrence), StoreAccess.Read);
+        request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
         var readModel = grainFactory.GetReadModel(request.ReadModel, request.EventStore);
         var definition = await readModel.GetKnownDefinition(request.ReadModel);
         var occurrence = string.IsNullOrEmpty(request.Occurrence) ? null : (ReadModelContainerName)request.Occurrence;
@@ -56,13 +61,14 @@ internal sealed class MaterializedReadModels(
     /// <inheritdoc/>
     public IObservable<ObserveInstancesResponse> ObserveInstances(ObserveInstancesRequest request, CallContext context = default)
     {
-        return SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.ReadModel, request.Occurrence), () => ObserveGuardedInstances(request));
+        return SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.ReadModel, request.Occurrence), StoreAccess.Read, () => ObserveGuardedInstances(request));
     }
 
     IObservable<ObserveInstancesResponse> ObserveGuardedInstances(ObserveInstancesRequest request)
     {
         return Observable.FromAsync(async () =>
         {
+            request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
             var readModel = grainFactory.GetReadModel(request.ReadModel, request.EventStore);
             var definition = await readModel.GetKnownDefinition(request.ReadModel);
             var occurrence = string.IsNullOrEmpty(request.Occurrence) ? null : (ReadModelContainerName)request.Occurrence;

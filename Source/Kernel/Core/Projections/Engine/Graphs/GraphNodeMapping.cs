@@ -17,6 +17,7 @@ namespace Cratis.Chronicle.Projections.Engine.Graphs;
 /// <param name="Properties">The <see cref="PropertyMapper{TSource, TTarget}"/> for each property, including counters.</param>
 /// <param name="UpdateOnly">Whether the mapping only sets properties on a node that exists.</param>
 /// <param name="ReadsCurrentState">Whether a property is a counter, which needs the current value of the node from the sink.</param>
+/// <param name="ForEach">The collection property of the event the mapping runs once per item of, if any.</param>
 public record GraphNodeMapping(
     string Label,
     string KeyProperty,
@@ -24,4 +25,5 @@ public record GraphNodeMapping(
     IReadOnlyList<string> PropertyNames,
     IReadOnlyList<PropertyMapper<AppendedEvent, ExpandoObject>> Properties,
     bool UpdateOnly,
-    bool ReadsCurrentState);
+    bool ReadsCurrentState,
+    string? ForEach = null);

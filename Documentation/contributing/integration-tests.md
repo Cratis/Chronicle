@@ -1,6 +1,6 @@
 ---
 title: "Running Integration Tests"
-description: "Run Chronicle client integration tests with Docker, select in-process or out-of-process suites and storage backends, and inspect optional test backups."
+description: "Cratis Chronicle client integration tests run in-process or against a container, with selectable databases and reusable xUnit fixtures."
 ---
 
 Integration tests run from the `Integration/Client` project and can execute in either in-process or out-of-process mode. They require Docker to be running on your machine.
@@ -53,7 +53,16 @@ Also remove `cratis/chronicle:latest` if you ever ran `dockerize.sh`.
 | Suite | Project | Description |
 | ----- | ------- | ----------- |
 | Client | `Integration/Client` | Runs the shared .NET integration specifications in either `inprocess` or `outofprocess` mode, with runtime storage selected through command-line arguments. |
+| Graph projections | `Integration/Client/GraphProjections` | Projects events onto a real Neo4j server and reads the graph back with Cypher. See [Graph projection specifications](#graph-projection-specifications). |
 | API (out-of-process) | `Integration/Api` | Runs a full Chronicle server via Docker and tests the HTTP/gRPC client against it. |
+
+## Graph projection specifications
+
+The `GraphProjections` namespace of the Client suite starts `neo4j:5-community` beside the other containers, with a password generated for every run, and connects the silo of the client to it through `Cratis:Chronicle:Neo4j`. Every specification starts on an empty graph and reads the result back from Neo4j with Cypher of its own, never through the sink under test.
+
+The Community edition has one user database, so the sink runs in single database mode and stamps the namespace on every node and edge. Set `CHRONICLE_NEO4J_DATABASE_MODE=PerNamespace` and `CHRONICLE_NEO4J_IMAGE` to run the same specifications against a server with multiple databases; this repository does not ship an Enterprise image.
+
+The same organization is declared with model-bound attributes, with the fluent builder and in the projection declaration language, and each declaration must leave the same graph behind. CI runs the namespace in process against MongoDB and out of process against every other storage backend the run selects.
 
 ## Checking packed test-package startup
 

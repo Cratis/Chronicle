@@ -1,77 +1,61 @@
 ---
-title: "Projection with FromEventSequence"
-description: "Use FromEventSequence() in Chronicle fluent projections to select a named event sequence instead of the default event log and build a read model from it."
+title: "Cratis Chronicle FromEventSequence: select a sequence"
+description: "Use FromEventSequence in Cratis Chronicle to read a named event sequence instead of event-log. Only matching events in that sequence feed the projection."
 ---
+<a id="projection-with-fromeventsequence"></a>
 
-The `FromEventSequence()` method allows you to specify which event sequence a projection should source events from. This is useful when you have multiple event sequences in your system and want to create projections that only process events from specific sequences.
+`FromEventSequence()` in Cratis Chronicle selects the event sequence a projection reads. Use it when the events you need are stored outside the default `event-log` sequence. Event type mappings still decide which events contribute, but matching events in other sequences do not feed this projection.
 
 ## Defining a projection with specific event sequence
 
-Use `FromEventSequence()` to specify the event sequence to source events from:
+Call `FromEventSequence()` on the projection builder, then declare the event types to handle. This example reads order events from `"order-management"`:
 
 <ChronicleClientTabs snippet="projections/declarative/from-event-sequence/basic" />
 
-This projection:
-
-- Only processes events from the "order-management" event sequence
-- Ignores events from other sequences like "user-management" or "inventory-management"
-- Uses the specified sequence for all event handling
+The projection handles the declared order event types only within `"order-management"`. An event of the same type appended to another sequence will not update this read model.
 
 ## Event sequence identification
 
-Event sequences can be identified using string names or EventSequenceId:
+The method accepts an `EventSequenceId`; a string name can be converted to that type. Use a shared constant when several projections or append paths must refer to the same sequence:
 
 <ChronicleClientTabs snippet="projections/declarative/from-event-sequence/using-constant" />
 
 ## Read model definition
 
-The read model remains the same regardless of the event sequence:
+Selecting a sequence does not require a special read model shape. Declare the properties needed by the order query:
 
 <ChronicleClientTabs snippet="projections/declarative/from-event-sequence/read-model" />
 
 ## Event definitions
 
-Events should be designed to work within the specific sequence context:
+These are the event contracts handled by the order projection. Their mappings work as usual; the sequence selection determines where Chronicle reads them from.
 
 <ChronicleClientTabs snippet="projections/declarative/from-event-sequence/events" />
 
 ## How it works
 
-When using `FromEventSequence()`:
+A projection reads from one selected sequence. Its observer tracks progress using sequence numbers from that sequence, and matching event types elsewhere are outside that subscription.
 
-1. The projection subscribes only to the specified event sequence
-2. Events from other sequences are ignored, even if they match the event types
-3. The projection processes events in the order they appear in the specified sequence
-4. Event sequence numbers and ordering are maintained within that specific sequence
+Sequence order is append order, not necessarily occurrence-time order. Sequence numbers identify positions within one sequence; they do not establish an order across several sequences. See [event sequences and observer offsets](../../concepts/event-sequence.md) for how reading resumes.
 
 ## Multiple event sequences
 
-You can create different projections for different event sequences:
+Define separate projections when order management and shipping read from different sequences. Each builder selects its own source and maps the events relevant to its read model:
 
 <ChronicleClientTabs snippet="projections/declarative/from-event-sequence/multiple-sequences" />
 
 ## When to use FromEventSequence
 
-Use `FromEventSequence()` when:
+Choose the sequence used by the code that appends the events your query needs. For example, a shipping projection should read the shipping sequence if that is where shipment events are recorded.
 
-- **Bounded contexts**: You have separate domains with their own event sequences
-- **Data partitioning**: Events are logically separated by business area or tenant
-- **Security boundaries**: Different sequences have different access requirements
-- **Performance optimization**: You want to reduce the number of events a projection processes
-- **Legacy integration**: You need to process events from specific legacy systems
-- **Multi-tenant scenarios**: Each tenant has their own event sequence
+Selecting a sequence does not configure tenant isolation or authorization, and it does not merge events from several sequences.
 
 ## Default behavior
 
-If you don't specify `FromEventSequence()`:
-
-- The projection uses the default `event-log` event sequence.
-- Only matching events in the event log are processed; events in other event sequences are not
-- This is suitable for most single-sequence scenarios
+For local event mappings without an explicit sequence selection, the projection uses `event-log`. Leave that default when your application appends the required events to the event log. Adding more `From` mappings does not make the projection read other sequences.
 
 ## Performance considerations
 
-- Specifying an event sequence can improve performance by reducing the number of events processed
-- Each sequence maintains its own ordering and sequence numbers
-- Consider the volume and frequency of events in each sequence when designing projections
-- Event sequence isolation can help with parallel processing and scaling
+Sequence selection defines the input to the projection; it is not a performance guarantee. Consider the selected sequence's event volume and the work performed by the mappings when evaluating processing cost.
+
+Once the source is selected, use [FromEvery](./from-every) for mappings shared by the event types the projection handles, or [FromAll](./from-all) when every event type in that sequence should contribute.

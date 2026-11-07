@@ -256,7 +256,7 @@ public partial class Observer
             (_subscription.EventTypes.Any() || State.SubscribesToAllEvents || State.RunningState == ObserverRunningState.Replaying))
         {
             // Removing jobs still drain and own their work (#5378).
-            var replayJobs = await _jobsManager.GetOutstandingJobs();
+            var replayJobs = await _jobsManager.GetOutstandingJobsOf<IReplayObserver>();
             if (IsQuarantined)
             {
                 return false;

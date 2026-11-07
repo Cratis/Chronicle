@@ -23,6 +23,12 @@ internal class DelegatingClientArtifactsProvider(IClientArtifactsProvider initia
     public IEnumerable<Type> ModelBoundProjections => _current.ModelBoundProjections;
 
     /// <inheritdoc/>
+    public IEnumerable<Type> GraphElements => _current.GraphElements;
+
+    /// <inheritdoc/>
+    public IEnumerable<Type> GraphProjections => _current.GraphProjections;
+
+    /// <inheritdoc/>
     public IEnumerable<Type> Reactors => _current.Reactors;
 
     /// <inheritdoc/>

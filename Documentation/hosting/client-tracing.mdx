@@ -1,13 +1,13 @@
 ---
 title: Trace Chronicle .NET client operations with OpenTelemetry
-description: Register the Chronicle .NET client activity source so appends, unit-of-work commits and reactor and reducer handling show up as spans in your tracing backend.
+description: Register Chronicle's .NET client activity source to trace event appends, unit-of-work commits and observer handling in your OpenTelemetry backend.
 ---
 
-The Chronicle .NET client creates spans for the work it does inside your application: appending events, committing a unit of work, and handling an event in a reactor or a reducer. Those spans are emitted on an activity source named `Cratis.Chronicle.Client`, and an OpenTelemetry tracer provider only records a source it has been told about. If you never register it, nothing is recorded, nothing fails, and the spans are simply missing from your traces.
+Register `AddCratisChronicleInstrumentation()` to trace Chronicle .NET client operations inside your application with OpenTelemetry. The client creates spans, timed records of operations, for event appends, unit-of-work commits and event handling in reactors and reducers.
 
-One call registers it: `AddCratisChronicleInstrumentation()`.
+These spans come from the activity source `Cratis.Chronicle.Client`. OpenTelemetry only records sources registered with its tracer provider; omitting this source produces no warning, just missing client spans.
 
-This page covers .NET client instrumentation in your application, not a shared configuration API for all clients. The Chronicle server exports its own telemetry; see [Open Telemetry](/chronicle/hosting/configuration/open-telemetry/) for that.
+Configure this instrumentation in your application host. To collect the kernel's telemetry as well, configure [server OpenTelemetry](/chronicle/hosting/configuration/open-telemetry/) separately.
 
 ## Register the instrumentation
 
@@ -54,7 +54,7 @@ Read the key from your secret store or deployment configuration. Do not commit i
 
 ### Try it locally with the Aspire Dashboard
 
-The [.NET Aspire Dashboard](https://learn.microsoft.com/en-us/dotnet/aspire/fundamentals/dashboard/overview) is a single container that receives OTLP and shows traces, which makes it the quickest way to see these spans:
+For a local check, run the [.NET Aspire Dashboard](https://learn.microsoft.com/en-us/dotnet/aspire/fundamentals/dashboard/overview). This container receives OTLP traces and lets you inspect them in a browser:
 
 ```shell
 docker run --rm -d --name aspire-dashboard \
@@ -75,12 +75,12 @@ The dashboard allows anonymous access in this setup. Use it on your own machine 
 
 ## When no spans appear
 
-Chronicle gives no warning when the source is not registered, so check these in order:
+If client spans are missing, check the path from registration to export in this order:
 
-- **The source is not registered.** `AddCratisChronicleInstrumentation()` or `AddSource("Cratis.Chronicle.Client")` must be part of the same `WithTracing` configuration that adds the exporter. Registering other Chronicle names, such as the server's `Cratis.Chronicle` source, does not enable the client's spans.
-- **Nothing has happened yet.** Spans exist only for work the client has done. Append an event, then look.
-- **The exporter is not configured.** Without an endpoint the exporter sends to its default, `http://localhost:4317`, which is only right when something is listening there.
-- **A sampler drops them.** A sampler that records nothing, or a parent that was not sampled, hides these spans along with the rest.
+1. Confirm that `AddCratisChronicleInstrumentation()` or `AddSource("Cratis.Chronicle.Client")` is in the same `WithTracing` configuration as the exporter. The server's `Cratis.Chronicle` source does not enable client spans.
+2. Append an event so there is an operation to record, then look again.
+3. Check the exporter endpoint. Its default is `http://localhost:4317`, which only works when a collector or backend is listening there.
+4. Check sampling. A sampler that records nothing, or a parent span that was not sampled, can exclude these spans along with the rest.
 
 ## Keep sensitive data out of traces
 
@@ -89,7 +89,7 @@ The spans Chronicle creates identify what happened and where, not what the event
 - `event_source_id` is the client event source id exactly as you appended it by default (`Raw`). Kernel spans use `cratis.eventsource.id`. If you use an email address, a national id or another personal value, that value reaches your tracing backend unless you opt into `Hashed` or `Omitted`.
 - `correlation_id` is the correlation id of the unit of work. It is meant to be searched for, so do not derive it from anything private.
 
-When you add your own tags or enrich these spans, do the same: ids and counts are fine, while credentials, tokens and event or read model content are not.
+Apply the same checks when adding your own tags: include only identifiers and counts that your tracing backend is allowed to hold. Keep credentials, tokens, event content and read model content out of traces.
 
 ## Choose how event source ids appear
 

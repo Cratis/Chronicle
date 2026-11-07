@@ -1,23 +1,23 @@
 ---
-title: Closing stream constraint
-description: Apply [ClosesStream] to a Chronicle event type to close a stream scope on append, select scope dimensions, and configure names and reopening events.
+title: Cratis Chronicle closing stream constraints
+description: Use Cratis Chronicle's ClosesStream attribute to stop appends after a closing event, choose the closed scope, and declare events that reopen it.
 ---
 
-Adorn the event type class with `[ClosesStream]` to close a stream scope whenever an event of that type is appended. The closure is written in the same step as the event, and later appends inside the scope are rejected with a `StreamClosed` violation. For the concept, the guarantees and when to prefer it over `CompleteStream`, see [Closing events](../../closing-streams/closing-events.mdx).
+A Cratis Chronicle closing stream constraint stops further appends within a chosen scope after a domain event closes it. In .NET, apply `[ClosesStream]` to the closing event type; later appends inside that scope receive a `StreamClosed` violation.
 
-Chronicle discovers `[ClosesStream]`-adorned types automatically and registers the constraints with the Kernel when the client starts.
+The client discovers the attribute on registered event types and registers the constraint with the Kernel. Closure follows the durable append in the same Kernel grain turn, but the two writes are not crash-atomic. An explicit reindex can repair a missing closure update. See [Closing events](../../closing-streams/closing-events.mdx) for the guarantees and when to prefer this workflow over `CompleteStream`.
 
 ## Defining a closing constraint
 
-Choose the dimensions that make up the closed scope:
+Choose which events the closure should stop. A scope is the combination of identifiers that must match a later append for the closure to reject it:
 
 <ChronicleClientTabs snippet="constraints/model-bound/closing-stream/basic" />
 
-`Dimensions` is a `ClosedStreamDimensions` flags value: `EventSourceId`, `EventSourceType`, `EventStreamType` and `EventStreamId`. Without it the scope is event source id, stream type and stream id of the append.
+`Dimensions` combines `ClosedStreamDimensions` flags: `EventSourceId`, `EventSourceType`, `EventStreamType`, and `EventStreamId`. If you leave it unset, the closure covers the append's event source id, stream type, and stream id. Appends outside that combination remain unaffected.
 
 ## Take the stream id from a property
 
-Set `EventStreamIdFrom` to the name of an event property to use its value as the stream id. This implies the `EventStreamId` dimension:
+When the closing event carries the stream id in its payload, set `EventStreamIdFrom` to that property name. The closure uses the property's value instead of the append's stream id, and includes the `EventStreamId` dimension automatically:
 
 <ChronicleClientTabs snippet="constraints/model-bound/closing-stream/event-stream-id-from" />
 
@@ -25,11 +25,13 @@ The property must have a non-empty value on every append. The kernel refuses an 
 
 ## Name and reopening events
 
-`Name` sets the owner of the closure and defaults to the event type name. `ReopenedBy` lists the event types that remove this constraint's closure for the exact scope they resolve to:
+Set `Name` to identify which constraint owns the closure; it defaults to the event type name. Add event types to `ReopenedBy` when the domain allows that scope to open again. Each reopening event removes only this constraint's closure for the exact scope it resolves to:
 
 <ChronicleClientTabs snippet="constraints/model-bound/closing-stream/reopened-by" />
 
-A reopening event type must carry the `EventStreamIdFrom` property too, or the client throws `PropertyDoesNotExistOnEventType` when it discovers the constraint.
+If you set `EventStreamIdFrom`, every reopening event type must carry that property too. Otherwise, the client throws `PropertyDoesNotExistOnEventType` when it discovers the constraint. The property must also have a non-empty value when you append the reopening event.
+
+Reopening does not remove an operator's manual closure or another constraint's closure. Those closures can still prevent the reopening event from being appended.
 
 ## Attribute reference
 
@@ -43,4 +45,4 @@ A reopening event type must carry the `EventStreamIdFrom` property too, or the c
 
 Declarations that share a `Name` merge into one constraint and must use the same dimensions and stream id property, otherwise the client throws `ConflictingClosesStreamDeclarations`.
 
-Registering or changing the declaration does not close anything that is already in the log.
+Registering or changing the declaration does not close scopes for events already in the log. Only later appends apply the declaration unless you explicitly reindex the history.

@@ -57,7 +57,7 @@ internal sealed class Captures(
     public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.Captures.CaptureDetailsResponse>>> GetCaptures(global::Cratis.Chronicle.Contracts.Captures.GetCapturesRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Captures.CaptureDetailsResponse>>(
             callContext,
-            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore),
+            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: null),
             async () =>
             {
                 var result = await global::Cratis.Chronicle.Captures.CaptureDetails.GetCaptures((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, storage);
@@ -69,7 +69,7 @@ internal sealed class Captures(
     public IObservable<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.Captures.CaptureDetailsResponse>>> ObserveCaptures(global::Cratis.Chronicle.Contracts.Captures.ObserveCapturesRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Captures.CaptureDetailsResponse>>(
             callContext,
-            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore),
+            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: null),
             () => global::Cratis.Chronicle.Captures.CaptureDetails.ObserveCaptures((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, storage)
                 .CompletedBy(callContext.CancellationToken)
                 .Select(_ => (IEnumerable<global::Cratis.Chronicle.Contracts.Captures.CaptureDetailsResponse>)_.Select(ToCaptureDetailsResponse).ToList()),
@@ -79,7 +79,7 @@ internal sealed class Captures(
     public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.Captures.CapturedEventResponse>>> CapturedEvents(global::Cratis.Chronicle.Contracts.Captures.CapturedEventsRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Captures.CapturedEventResponse>>(
             callContext,
-            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, request.Namespace),
+            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: request.Namespace),
             async () =>
             {
                 var result = await global::Cratis.Chronicle.Captures.CapturedEvent.CapturedEvents((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, request.CaptureName, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, request.MaxEvents, storage, jsonSerializerOptions);

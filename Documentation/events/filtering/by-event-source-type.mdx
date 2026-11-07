@@ -1,30 +1,31 @@
 ---
-description: Filter Chronicle reducers and reactors to events appended with a matching event source type, and combine source-type filters with other event filters.
+title: Filter Chronicle events by event source type
+description: Apply EventSourceType to a Chronicle reducer or reactor to handle only events whose appended source category matches, such as customer or supplier.
 ---
-# Filter reducers and reactors by event source type
-
-Configure an event source type filter on a reducer or reactor when it should only handle events appended with that source type. In C#, use `[EventSourceType]`; the tabs show each client's syntax.
+Use `[EventSourceType]` to limit a Chronicle reducer or reactor to a category of event sources, such as customers. This lets the observer handle events for that category even when other source types append the same event type.
 
 ## How the match works
 
-Chronicle compares the observer's filter to the event source type supplied when appending the event (`eventSourceType:` in C#). If the values do not match, the reducer or reactor is skipped.
+Put the attribute on the reducer or reactor and supply the matching `eventSourceType:` when appending. Chronicle compares the values exactly. A different value, or an append that leaves the source type unspecified, does not match a filter for `"customer"`.
 
 ## Filter a reactor by event source type
 
 <ChronicleClientTabs snippet="events/filtering/by-event-source-type/reactor" />
 
-The reactor is only invoked for events appended with `eventSourceType: "customer"`.
+The registration service appends with `eventSourceType: "customer"`, matching the reactor's attribute. The reactor can therefore receive the event; appending the same event with `eventSourceType: "supplier"` excludes it.
 
 ## Filter a reducer by event source type
 
 <ChronicleClientTabs snippet="events/filtering/by-event-source-type/reducer" />
 
-If you append the same event with `eventSourceType: "supplier"`, this reducer does not receive it.
+The reducer uses the same match to select which events contribute to its read model. An event appended with `eventSourceType: "supplier"` does not reach this reducer.
 
 ## Combine with other filters
 
-You can combine the source type filter with tag or stream type filters. When you do, Chronicle requires all configured filter categories to match.
+Add a [tag filter](by-tag.mdx) or an [event stream type filter](by-event-stream-type.mdx) when the source category alone is too broad. Chronicle requires every configured category to match before it dispatches the event.
 
 ## Filter by a declared event source
 
-In .NET, to get the event source type from an [event source definition](../../event-sources/defining.mdx) instead of a string, use `[FromEventSource<TSource>("Stream")]`. See [Filter observers by event source and stream](../../event-sources/filtering.mdx). The event source type is one of the values a concurrency scope can narrow to, which makes it part of a [Dynamic Consistency Boundary](../../dynamic-consistency-boundary/chronicle.md) guard. A filter on an observer is not.
+If you already have an [event source definition](../../event-sources/defining.mdx), use `[FromEventSource<TSource>("Stream")]` to get the source type from that definition instead of repeating a string. Continue with [Filter observers by event source and stream](../../event-sources/filtering.mdx).
+
+An observer filter selects deliveries; it does not protect a write from concurrent changes. Event source type can also narrow a concurrency scope, but that separate configuration supplies the [Dynamic Consistency Boundary](../../dynamic-consistency-boundary/chronicle.md) guard.

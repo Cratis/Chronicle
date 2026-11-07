@@ -1,65 +1,53 @@
 ---
 uid: Chronicle.Testing.EventAppendCollection
-description: IEventAppendCollection is a scoped collector that captures every event your Chronicle client appends to the event log, for use in tests.
+title: Cratis Chronicle append collection for integration tests
+description: Use IEventAppendCollection in Cratis Chronicle integration tests to capture client event-log append outcomes and wait for reactor follow-up events.
 ---
-# Event Append Collection
+<a id="event-append-collection"></a>
 
-`IEventAppendCollection` is a scoped collector that captures every event appended through your client's
-event log while it is active. It sees the appends this client makes, not appends made by another
-process or client against the same event store. It is the primary tool for asserting on appended events in integration tests.
+Cratis Chronicle's `IEventAppendCollection` captures event-log append outcomes from the client under test, so you can assert on both the events your operation produces and their results. Use it with the .NET integration fixtures when a test needs a running kernel. It does not observe appends made by another client or process, even against the same event store.
 
 ## How It Works
 
-Calling `StartCollectingAppends()` on the fixture subscribes a new `IEventAppendCollection` to the
-`AppendOperations` observable on the event log. Every subsequent call to `EventStore.EventLog.Append`
-or `EventStore.EventLog.AppendMany` is captured automatically and stored in the collection as an
-`AppendedEventWithResult`. This includes events appended by reactors that use
-`ICommandPipeline.Execute()` — because the command pipeline commits its unit of work through the
-same `AppendMany` path, those appends are captured just like direct ones.
+Call `StartCollectingAppends()` on the fixture before the operation you want to test. The collector subscribes to the event log's `AppendOperations` notifications and keeps each event and its append result together as an `AppendedEventWithResult`. Direct calls to `EventStore.EventLog.Append` and `EventStore.EventLog.AppendMany` use this path. So do reactors that call `ICommandPipeline.Execute()`, because the command pipeline commits its unit of work through `AppendMany` on the same client.
 
-Because `Append` is awaited, the append operation is complete and the event is recorded in the
-collection by the time the `await` returns. When testing reactors that append follow-up events
-asynchronously, use `WaitForCount()` to wait for the expected number of events to arrive.
+The collection includes rejected appends as well as successful ones. An idempotent retry that returns an already-appended result does not emit a new append notification, so it does not add another entry.
+
+For a direct `Append`, the entry is available when the awaited call returns. A reactor's follow-up append can arrive later: use `WaitForCount()` before asserting on that event. Waiting for a count confirms that append outcomes arrived; it does not by itself confirm other observer work.
 
 ## One-Time Test Project Setup
 
-`IEventAppendCollection` and `ChronicleInProcessFixture` come from the `Cratis.Chronicle.XUnit.Integration`
-package. Every test project using them needs two small, one-time pieces of boilerplate: an xUnit
-collection definition so every test class in the project shares one `ChronicleInProcessFixture`
-(starting the underlying MongoDB container once, not per test class), and a project-local
-`Specification` convenience base that closes the generic `Specification<TChronicleFixture>` over
-your fixture type:
+Add the `Cratis.Chronicle.XUnit.Integration` package for `IEventAppendCollection` and `ChronicleInProcessFixture`. The in-process fixture runs the kernel in the test process and MongoDB through Testcontainers, so this setup needs a container runtime.
+
+Define an xUnit collection to share the fixture among test classes marked with that collection. The project-local `Specification` base below binds `Specification<TChronicleFixture>` to `ChronicleInProcessFixture`, so each context can use the same base. Its `AutoDiscoverArtifacts = false` setting means the examples nominate their event types and reactors explicitly:
 
 <ChronicleClientTabs snippet="testing/event-append-collection/scope-lifetime" />
 
-Every other example on this page builds on this same setup.
+The `ChronicleCollection.Name` used by the later test classes refers to this collection definition. Keep the definition and convenience base in your test project; the remaining examples build on them.
 
 ## Scope Lifetime
 
-Create a scope immediately before the operation under test so no earlier events are captured. Dispose
-it when the operation is done. The recommended pattern, on a `given` context class:
+Start collecting in `Because()`, immediately before the operation under test. That keeps setup events out of the assertions. Store the collector on the `given` context so the facts can inspect it, then dispose it in `Destroy()`:
 
 <ChronicleClientTabs snippet="testing/event-append-collection/scope-lifetime" />
 
-Disposal unsubscribes the collection immediately. Any appends that occur after disposal are not
-captured, which prevents tests sharing a fixture from interfering with each other.
+Disposal unsubscribes the collector, so later appends no longer accumulate in it. While a scope is active, it captures notifications from the subscribed event log, not only events for one event source. Filter by event type or context when other activity on that client could be present.
 
 ## AppendedEventWithResult Members
 
-Each entry in `All` is an `AppendedEventWithResult` record that pairs the appended event with the
-full outcome of the operation:
+Each entry in `All` pairs the event passed to the append with the operation's outcome. Check `Result` before treating the event as successfully stored:
 
 | Member | Type | Description |
 |---|---|---|
-| `Event` | `AppendedEvent` | The appended event, including its context and deserialized content |
-| `Event.Content` | `object` | The deserialized event object (cast to your event type for assertions) |
+| `Event` | `AppendedEvent` | The event submitted for append, including its context and content |
+| `Event.Content` | `object` | The event object supplied to the append (cast to your event type for assertions) |
 | `Event.Context` | `EventContext` | Metadata: event source, sequence number, correlation ID, causation chain, etc. |
 | `Event.Context.EventSourceId` | `EventSourceId` | The event source the event was appended for |
-| `Event.Context.SequenceNumber` | `EventSequenceNumber` | Assigned sequence number |
-| `Event.Context.CorrelationId` | `CorrelationId` | Correlation ID active at the time of the append |
+| `Event.Context.SequenceNumber` | `EventSequenceNumber` | Assigned position, or unavailable for a failed append |
+| `Event.Context.CorrelationId` | `CorrelationId` | The append's correlation ID |
 | `Event.Context.Causation` | `IEnumerable<Causation>` | The causation chain active at the time of the append |
 | `Result` | `AppendResult` | The outcome of the append operation |
-| `Result.IsSuccess` | `bool` | `true` when the sequence number is valid and there are no violations or errors |
+| `Result.IsSuccess` | `bool` | `true` when there are no constraint violations, concurrency violations, or errors |
 | `Result.SequenceNumber` | `EventSequenceNumber` | Assigned sequence number; `EventSequenceNumber.Unavailable` when the append failed |
 | `Result.HasConstraintViolations` | `bool` | `true` when at least one constraint violation was returned |
 | `Result.HasConcurrencyViolations` | `bool` | `true` when at least one concurrency violation was returned |
@@ -80,30 +68,29 @@ full outcome of the operation:
 
 ### Single event
 
-Pairing the `given` context above with a `Given<TSetup>`-derived spec class gives you access to the
-collected events through `Context`:
+The setup context appends `ItemRegistered` after starting the collector. A spec derived from `Given<TSetup>` can inspect it through `Context`. These facts check that one entry arrived with the expected event type and a successful result:
 
 <ChronicleClientTabs snippet="testing/event-append-collection/single-event" />
 
 ### Multiple events
 
-When several events land in the same collection scope, use LINQ to locate the one you want:
+When an operation produces several events, select the one your assertion concerns. This example finds `SecondItemAdded` by type and checks its name instead of relying on its position in the collection:
 
 <ChronicleClientTabs snippet="testing/event-append-collection/multiple-events" />
 
 ## Waiting for Asynchronous Appends
 
-When a reactor appends events after handling an incoming event, those appends happen asynchronously
-on the server. Use `WaitForCount()` to wait for the expected number of events to arrive before
-asserting. The events and reactor:
+To prove that placing an order schedules a shipment, collect both the original `OrderPlaced` event and the reactor's `ShipmentScheduled` follow-up. The test waits for the reactor to become active before appending the order, then waits for two collected entries before asserting on the shipment.
+
+The reactor appends a shipment event for the same event source as the order:
 
 <ChronicleClientTabs snippet="testing/event-append-collection/shipment-events-and-reactor" />
 
-The shared `given` context:
+The context nominates both event types and the reactor, then registers the reactor's service:
 
 <ChronicleClientTabs snippet="testing/event-append-collection/shipment-given-context" />
 
-The spec, waiting for both the original event and the reactor's follow-up to be captured:
+The spec starts collecting only after the reactor is active:
 
 <ChronicleClientTabs snippet="testing/event-append-collection/shipment-spec" />
 
@@ -113,8 +100,9 @@ reactor is registered and listening on the server before the test appends the tr
 
 ## Checking Violations
 
-When a reactor appends directly and the append is rejected by a constraint, the violation is captured
-on the `AppendedEventWithResult.Result` instead of throwing. The events, constraint, and reactor:
+A collected event does not necessarily mean an event was stored. When a reactor's direct append is rejected by a constraint, the collector records the violation in `AppendedEventWithResult.Result`. The append returns that result instead of throwing.
+
+Here, `UniqueValueReactor` directly appends `UniqueValueFollowUp` without `ICommandPipeline`. A constraint requires the follow-up's value to be unique:
 
 <ChronicleClientTabs snippet="testing/event-append-collection/violation-events-and-reactor" />
 
@@ -122,15 +110,10 @@ The shared `given` context:
 
 <ChronicleClientTabs snippet="testing/event-append-collection/violation-given-context" />
 
-The spec appends the same unique value from two different event sources — the reactor's second
-follow-up violates the uniqueness constraint, so `HasConstraintViolations` is `true` and `IsSuccess`
-is `false` for that entry, while the append itself still completes and is captured in the collection:
+The spec appends the same unique value from two event sources. It waits for four entries: two input appends and two follow-up attempts. One follow-up succeeds; the duplicate violates the constraint. The assertion selects the rejected result, where `HasConstraintViolations` is `true` and `IsSuccess` is `false`, and checks which event was refused:
 
 <ChronicleClientTabs snippet="testing/event-append-collection/violation-spec" />
 
 ## Full Example
 
-The `Waiting for Asynchronous Appends` example above is itself a complete, runnable integration test
-that verifies a reactor that listens for `OrderPlaced` and appends a `ShipmentScheduled` follow-up
-event — the three tabs together (events and reactor, `given` context, and spec) are everything you
-need in a real test project.
+Use the [shipment example](#waiting-for-asynchronous-appends) with the [test project setup](#one-time-test-project-setup) to check a reactor against the running kernel. If you only need to specify the reactor's handling logic, use [ReactorScenario](reactors/index.md) to test that behavior in process without containers.

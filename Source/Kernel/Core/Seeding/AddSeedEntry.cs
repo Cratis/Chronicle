@@ -6,6 +6,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Seeding;
 using Cratis.Chronicle.Grpc;
+using Cratis.Chronicle.Security;
 
 namespace Cratis.Chronicle.Seeding;
 
@@ -21,6 +22,7 @@ namespace Cratis.Chronicle.Seeding;
 /// <param name="EventSourceType">The optional event source type.</param>
 /// <param name="EventStreamType">The optional event stream type.</param>
 /// <param name="EventStreamId">The optional event stream identifier.</param>
+[StoreAccess(StoreAccess.Append)]
 [Command]
 [BelongsTo(WellKnownServices.EventSeeding)]
 public record AddSeedEntry(

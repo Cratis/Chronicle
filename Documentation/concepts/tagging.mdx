@@ -1,37 +1,31 @@
 ---
-description: Chronicle tags organize and identify events and observers such as reactors, reducers and projections, so you can group, find and filter them by meaning.
+title: Tag Chronicle events and observer definitions
+description: Chronicle event tags support filtering, named tags identify runtime work, and descriptive tags label reactors, reducers, projections and read models.
 ---
-# Tagging
 
-Tags provide a flexible way to organize, categorize, and identify events and observers (reactors, reducers, projections, read models) within Chronicle. Assign tags that describe the purpose, domain, or context of your artifacts using your client's supported declarations or append options. The tabs show each client's syntax or explain where a declaration is unavailable.
+<a id="tagging"></a>
 
-> **Note**: In .NET, `[Tag]` and `[Tags]` are interchangeable. Use either or mix them — all tags will be merged together.
+Tags in Cratis Chronicle serve two different tasks: event tags help you select stored events or filter delivery, while descriptive tags label observer and read-model definitions. Use named event tags when you need to find the events from a particular batch, run or session.
 
 ## Overview
 
-Tags are strings that can be attached to:
+Plain tags are strings such as `analytics` or `customer.registration`. Event types can declare them through attributes, and an append can add more at runtime. Reactors, reducers and projections are observers: they process appended events. Tags on their definitions describe their responsibility; they do not select the events they process. Read-model definitions can carry descriptive tags too.
 
-- **Events** - both statically (in the event declaration) and dynamically (when appending)
-- **Reactors** - for organizing reactive behaviors; descriptive tags are not event filters
-- **Reducers** - for categorizing state aggregation logic
-- **Projections** - for organizing view models and read models
-- **Read Models** - for categorizing data models
+In .NET, `[Tag]` and `[Tags]` are interchangeable ways to declare plain tags. You can mix the two attributes; Chronicle merges their tags.
 
-Tags are stored with event metadata and observer definitions, enabling powerful filtering, querying, and organizational capabilities.
+A [named tag](#named-tags) keeps a name and value separate, such as `import-batch` = `4711`. Use this form for a runtime identifier rather than encoding it into a plain tag.
 
-Events can also carry [named tags](#named-tags): a name paired with a value, such as `import-batch` = `4711`. Use them for runtime identifiers you want to find events by later.
+## Tagging events
 
-## Tagging Events
+Choose static tags for categories that belong to every event of a type. Add dynamic tags when the category depends on the operation appending the event.
 
-Events can be tagged in two ways: statically in the event declaration where supported, or dynamically when appending events.
+### Static event tags
 
-### Static Event Tags
-
-Declare static tags on the event type using your client's syntax — for example, `[Tag]` or `[Tags]` in .NET:
+Declare tags on the event type so appends include them without repeating them at each call site:
 
 <ChronicleClientTabs snippet="concepts/tagging/static-event-tags" />
 
-### Dynamic Event Tags
+### Dynamic event tags
 
 When appending events, you can provide additional tags that will be merged with any static tags:
 
@@ -39,30 +33,29 @@ When appending events, you can provide additional tags that will be merged with 
 
 In this example, the event will have four tags: `["analytics", "user-action", "production", "critical"]`.
 
-### Tags in Event Context
+### Tags in event context
 
-All tags (both static and dynamic) are available on the `EventContext` when processing events:
+A handler can read the combined static and dynamic tags from `EventContext`, which carries the event's metadata:
 
 <ChronicleClientTabs snippet="concepts/tagging/tags-in-event-context" />
 
 ## Named tags
 
-A plain tag says what kind of event you have: `"checkout"`, `"audit"`. Sometimes you also need to record *which* import batch, workflow run, or checkout session produced an event, and find those events again later. Packing that into a string such as `"import-batch:4711"` gives you a tag you can't query by name, and it breaks as soon as a value contains the separator. A named tag keeps the name and the value apart.
+A plain tag such as `checkout` or `audit` identifies a category. A named tag identifies which import batch, workflow run or checkout session produced an event. Keeping `import-batch` and `4711` separate lets you query the name with any value, or just the values you need, without parsing a string such as `import-batch:4711`.
 
 ### Appending named tags
 
-Supply named tags when appending. In .NET, use `AppendWithNamedTags` (or `AppendManyWithNamedTags` for a batch). Unlike plain tags, named tags are not declared as event-type metadata.
+You supply named tags with `AppendWithNamedTags` (or `AppendManyWithNamedTags` for a batch). Unlike plain tags, there is no attribute that declares them on an event type.
 
 <ChronicleClientTabs snippet="concepts/tagging/named-tags" />
 
-Named tags and plain tags are stored separately. Static tags and the append-time `tags` values above still produce plain tags, and a named tag never appears in the plain tag list. [Appending with Tags](../events/appending-with-tags.mdx#named-tags) covers batch appends and how per-event and call-level named tags combine.
+Named tags and plain tags are stored separately. The `[Tag]` attribute and the `tags` values above still produce plain tags, and a named tag never appears in the plain tag list. [Appending with Tags](../events/appending-with-tags.mdx#named-tags) covers batch appends and how per-event and call-level named tags combine.
 
 ### Names and values
 
-- **Matching is exact.** Names and values compare ordinally and case-sensitively, so `Import-Batch` and `import-batch` are two different names.
-- **Values are opaque.** Chronicle never parses a value. It can contain `:`, `.`, `,` or any other character, and it can be empty.
-- **Names can't be blank.** Chronicle rejects a named tag whose name is empty or whitespace.
-- **One name, several values.** The same name with different values gives you separate tags. An exact duplicate of a name and value pair is kept once.
+Names and values compare exactly, using ordinal, case-sensitive matching. `Import-Batch` and `import-batch` are different names. A name cannot be empty or whitespace; a value can be empty and can contain separators such as `:`, `.` or `,` because Chronicle does not parse it.
+
+One name can have several values on the same event. Each distinct name/value pair is a separate tag, and exact duplicates are kept once.
 
 ### Reading named tags
 
@@ -94,76 +87,76 @@ MongoDB, SQL (SQLite, PostgreSQL, and SQL Server), and in-memory storage support
 Named tags are plaintext, indexed metadata. [PII encryption](../compliance/pii.mdx) and the other compliance features protect event content, not tags, so a named tag is never encrypted. Event exports include named tags too. Use identifiers that are safe to show to anyone who can read the event sequence.
 :::
 
-## Tagging Observers
+## Tagging observers
 
-Where supported by the client, observers (reactors, reducers, and projections) can carry descriptive tags to organize and categorize them. These do not filter their incoming events.
+Label an observer definition when you want to describe its domain, purpose or owner. These labels stay on the definition rather than becoming event metadata.
 
-### Single Tag
+### Single tag
+
+Apply one label to the observer:
 
 <ChronicleClientTabs snippet="concepts/tagging/observer-single-tag" />
 
-### Multiple Tags (Single Attribute)
+### Multiple tags (single attribute)
 
-In .NET, either `[Tag]` or `[Tags]` accepts multiple labels. Kotlin/Java uses `@Tag`:
+Both `[Tag]` and `[Tags]` accept several labels:
 
 <ChronicleClientTabs snippet="concepts/tagging/observer-multiple-tags-single-attribute" />
 
-### Multiple Tags (Multiple Attributes)
+### Multiple tags (multiple attributes)
+
+Repeat the attribute when separate lines make the labels easier to read:
 
 <ChronicleClientTabs snippet="concepts/tagging/observer-multiple-tags-multiple-attributes" />
 
-### Mixed Approach
+### Mixed approach
 
-In .NET, you can mix `[Tag]` and `[Tags]` — all tags will be merged:
+Mixing `[Tag]` and `[Tags]` still produces one combined set of labels:
 
 <ChronicleClientTabs snippet="concepts/tagging/observer-mixed-approach" />
 
-## Tagging Read Models
+## Tagging read models
 
-Read models and projections can also be tagged:
+Put labels on a read-model definition to describe the data it holds:
 
 <ChronicleClientTabs snippet="concepts/tagging/read-model-tags" />
 
-## Best Practices
+## Best practices
 
-- **Use meaningful names**: Choose tag names that clearly describe the purpose or domain
-- **Be consistent**: Establish tag naming conventions across your organization
-- **Don't over-tag**: Apply only relevant tags; too many can reduce their usefulness
-- **Group related artifacts**: Use tags to group events and observers that serve similar purposes
-- **Consider hierarchies**: Use dot notation for fixed, hierarchical categories (e.g., `"customer.registration"`, `"customer.profile"`)
-- **Don't encode runtime values in plain tags**: A batch number, run ID, or session ID belongs in a [named tag](#named-tags), not in a string such as `"batch:4711"` or `"batch.4711"`
+Choose stable names that describe a category someone will search for, and use the same spelling for related events or definitions. Dot notation, such as `customer.registration` and `customer.profile`, can make a naming convention readable; it does not turn a plain tag into a structured query.
 
-## Common Tagging Patterns
+Keep runtime identifiers in [named tags](#named-tags). A batch number or session ID is a value to match, not a new category. Add labels only when they help a reader distinguish the event or definition.
 
-Here are some common patterns for organizing tags:
+## Common tagging patterns
 
-### By Domain
+The following examples organize plain tags by different responsibilities. Choose the categories that match how your team finds and maintains its events and definitions.
+
+### By domain
 
 <ChronicleClientTabs snippet="concepts/tagging/by-domain" />
 
-### By Purpose
+### By purpose
 
 <ChronicleClientTabs snippet="concepts/tagging/by-purpose" />
 
-### By Integration Type
+### By integration type
 
 <ChronicleClientTabs snippet="concepts/tagging/by-integration-type" />
 
-### By Communication Channel
+### By communication channel
 
 <ChronicleClientTabs snippet="concepts/tagging/by-communication-channel" />
 
-### By Stakeholder
+### By stakeholder
 
 <ChronicleClientTabs snippet="concepts/tagging/by-stakeholder" />
 
-### By Environment or Context
+### By environment or context
 
 <ChronicleClientTabs snippet="concepts/tagging/dynamic-tags-patterns" />
 
-## Using Tags
+## Using tags
 
-Tags on events and on observer definitions do different things:
+To restrict which events a reducer or reactor receives, configure [event-tag filtering](../events/filtering/by-tag.mdx). The filter reads tags stored with each event, not the labels on the observer definition.
 
-- **Event tags** are stored with each event. A reducer or reactor can filter on them so it only receives events that carry a given tag. See [Filtering by tag](../events/filtering/by-tag.mdx).
-- **Observer tags** (on reactors, reducers and projections) describe the artifact and are stored with its definition. Chronicle does not use them to activate, select or group observers.
+Chronicle does not use observer labels to activate, select or group observers. For examples focused on reactor definitions, continue with [tagging reactors](tagging-reactors.mdx). To carry a batch or session identifier into an append, see [appending with named tags](../events/appending-with-tags.mdx#named-tags).

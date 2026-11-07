@@ -1,25 +1,19 @@
 ---
-description: Append many events to a Chronicle event sequence in one call for imports, migrations and multi-step operations, preserving order and cutting overhead.
+title: Chronicle batch appends with AppendMany
+description: AppendMany stores an ordered batch of Chronicle events atomically. Use it when one operation produces several events that must commit together.
 ---
-# Appending many
-
-Appending many events in a single call is useful for batch workflows such as imports, migrations, or multi-step business operations.
+`AppendMany` stores several events in one atomic batch: either all are committed or none are. Use it when one decision produces several facts that must stay together, or when an import has a batch ready to write. Events in the batch can belong to different event sources.
 
 > [!NOTE]
-> With Cratis Arc and the Chronicle extension, you can append events as state changes coming out of a command using a more functional approach. See [Arc Chronicle commands](/arc/backend/csharp/chronicle/commands/).
+> With Cratis Arc and the Chronicle extension, a command handler can return events for Chronicle to append. See [Arc Chronicle commands](/arc/backend/csharp/chronicle/commands/).
 
-Batch appends preserve ordering and reduce per-event overhead compared to appending each event individually.
-
-AppendMany is transactional all the way to storage. Either all events in the batch are committed, or none are. Chronicle assigns sequence numbers in order, persists the events and metadata atomically, and updates the sequence state once the batch succeeds.
+If your workflow produces events across several calls and is not ready to send them yet, stage them in a [unit of work](./transactions.mdx) instead.
 
 ## How it works
 
-- Each item in the batch pairs an event with the event source it belongs to.
-- In the .NET client, each `EventForEventSourceId` can supply its own `Causation`. The current ambient causation chain is kept first, followed by that event's explicit cause. Events without an explicit cause keep only the ambient chain; they do not inherit another event's cause.
-- Per-event causation requires an updated Chronicle kernel. Older kernels ignore the per-event field and store only the batch's ambient causation chain.
-- The batch is validated as a unit and written atomically.
-- Sequence numbers are assigned in the order provided.
-- The event sequence state is updated once the batch commits.
+Each item pairs an event with its event source id. Chronicle validates the batch before writing it, assigns sequence numbers in the order you supplied, and persists the events and their metadata atomically. It updates the event sequence state after the batch commits.
+
+In the .NET client, each `EventForEventSourceId` can supply its own `Causation`, which records why that event happened. Chronicle keeps the current ambient causation chain first, then adds that event's explicit cause. An event without an explicit cause keeps only the ambient chain; it does not inherit another event's cause. Older kernels that do not support per-event causation ignore that field and store only the batch's ambient chain.
 
 ## Appending a batch once
 
@@ -39,8 +33,12 @@ Keyed batches follow the same rules as a single keyed append: an older kernel th
 
 ## When to use
 
-Use this approach when you already have a set of events that should be appended together. Each event can still target different event sources, and you can include concurrency scopes to validate the boundary across streams. See [Concurrency](concurrency) for details.
+Use a batch when you already have the events to commit together. If they depend on state you read, include [concurrency scopes](concurrency) captured before that read. Atomicity keeps the writes together; the scopes check whether a competing append changed the facts behind your decision.
 
 ## Example
 
+This transfer pairs a withdrawal with a deposit for a different account. Returning the `AppendManyResult` lets the caller check whether the batch succeeded:
+
 <ChronicleClientTabs snippet="events/appending-many/transfer" />
+
+The example keeps the two events together, but it does not read a balance or guard against concurrent withdrawals. Add those decision checks before using this shape for a balance-dependent transfer. If the append times out or its outcome is uncertain, follow [When the outcome is unknown](./appending#when-the-outcome-is-unknown) before retrying.

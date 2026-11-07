@@ -1,14 +1,15 @@
 ---
-title: Declarative captures
-description: Fluent C# builder API for defining CDC captures in code — ICapturer, ICaptureBuilder, source configuration, mapping, and append rules.
+title: Cratis Chronicle captures with C# builders
+description: Describe Cratis Chronicle captures with C# builders, connect an API source to event append rules, and understand authoring and execution limits.
 ---
 
-Declarative captures use fluent C# builder APIs to define CDC behavior in code.
+The Cratis Chronicle .NET capture builder describes how changes in external data become events. Use it to keep the source, identity key, and event append rules together in a C# class.
 
 ## Entry points
 
-- Implement `ICapturer`
-- Configure the capture in `Define(ICaptureBuilder builder)`
+Implement `ICapturer` and define the capture in `Define(ICaptureBuilder builder)`. `CaptureBuilder.Build()` produces a `CaptureDefinition`, but implementing `ICapturer` does not register or start a capture. `IEventStore` does not expose capture management; the kernel's management contract accepts [Capture Declaration Language (CDL)](/chronicle/captures/capture-declaration-language/) text.
+
+The example below describes a status-change event for invoices keyed by `id`. The `$context.occurred` assignment illustrates syntax the API-polling engine does not accept; executable API declarations must use supported item paths or literals.
 
 ```csharp
 public class InvoiceCapture : ICapturer
@@ -27,26 +28,30 @@ public class InvoiceCapture : ICapturer
 
 ## Source configuration
 
+Choose a source with one of these methods:
+
 - `FromApi(api, configure?)`
 - `FromWebhook(path, configure?)`
 - `FromMessageTopic(topic)`
 
-API source options:
+The engine runs API-polling captures. It rejects webhook and message-topic sources during validation, so those builder methods describe sources the engine cannot run.
+
+For an API source, configure the route and polling interval:
 
 - `OnRoute(route)`
 - `PollEvery(interval)`
 
-`FromApi(api, ...)` references a configured [External Service](/chronicle/external-services/) by name. The External Service holds the base URL and authentication, so no authentication is configured on the API source. If no route is configured, the External Service base URL is used directly.
+Register the HTTP [External Service](/chronicle/external-services/) before using its name in `FromApi(api, ...)`. In the example, `InvoicingApi` identifies that service, `/invoices` selects the data to poll, and `10m` sets a ten-minute polling interval. The service holds the base URL and authentication. If you omit the route, the capture uses the base URL directly. See the [.NET registration example](../external-services.md) to configure the service.
 
 Webhook sources take no options today. The former `WithBasicAuth`, `WithBearerToken` and `WithOAuth` methods are obsolete. Webhook sources are not read, and the capture contract carries only the declaration text, so the kernel never received, stored or enforced these settings. Remove those calls. Authentication is never part of the capture declaration text, so that secrets and tokens do not live in capture definitions.
 
 ## Defining identity
 
-Use `Key(propertyPath)` to define the identity property used when comparing current vs. previous payload.
+Use `Key(propertyPath)` to identify the same item across observations. With `Key("id")`, Chronicle compares an invoice's current payload with the previous payload for that invoice, rather than comparing unrelated invoices.
 
 ## Mapping operations
 
-Use `Map(...)` on root, nested, or children scopes:
+The builder can describe `Map(...)` operations on root, nested, or children scopes. The engine rejects map operations during validation; these methods describe authoring syntax only:
 
 - `Rename(source, target)`
 - `Template(target, template)`
@@ -55,7 +60,7 @@ Use `Map(...)` on root, nested, or children scopes:
 
 ## Append rules
 
-Use `Append<TEvent>(...)` with one condition and one or more field assignments:
+Use `Append<TEvent>(...)` to name the event to emit, choose a condition, and assign its fields. In the invoice example, a change to `status` selects `InvoiceStatusChanged`, and `$.status` supplies its `Status` value.
 
 Condition methods:
 
@@ -67,17 +72,17 @@ Condition methods:
 - `WhenRemoved()`
 - `WhenExpression(expression)`
 
-Assignment method:
+The engine rejects expression-based conditions declared with `WhenExpression(expression)`. The other condition methods describe property changes, value transitions, additions, and removals.
 
-- `Set(targetPropertyExpression, sourceExpression)`
+Assign fields with `Set(targetPropertyExpression, sourceExpression)`. API captures support item-property paths such as `$.status` and literal values, not `$context` or template expressions. See the [CDL execution limits](/chronicle/captures/capture-declaration-language/#execution-scope-and-limitations) before choosing expressions.
 
 ## Scoped capture sections
 
 - `Nested(objectPath, configure)` for nested object rules
 - `Children(collectionPath, identifiedBy, configure)` for child collection rules
 
-Both support local `Map(...)` and `Append<TEvent>(...)` blocks.
+Both builders expose local `Map(...)` and `Append<TEvent>(...)` blocks. The engine rejects nested and children scopes during validation; only root-level append rules execute.
 
 ## Optional capture metadata
 
-You can set an explicit capture ID using `[Capture("guid")]` on the `ICapturer` type.
+The `[Capture("guid")]` attribute carries an explicit capture ID on an `ICapturer` type. The attribute does not register the capture.

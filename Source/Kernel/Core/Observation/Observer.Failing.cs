@@ -33,6 +33,18 @@ public partial class Observer
         RecordPartitionFailure(partition, sequenceNumber, exceptionMessages, exceptionStackTrace, kind, episodeId, deferralId, new(failurePolicy));
 
     /// <inheritdoc/>
+    public Task PartitionFailed(
+        Key partition,
+        EventSequenceNumber sequenceNumber,
+        IEnumerable<string> exceptionMessages,
+        string exceptionStackTrace,
+        FailureKind kind,
+        FailedPartitionId? episodeId,
+        Guid? deferralId,
+        PartitionFailureContext context) =>
+        RecordPartitionFailure(partition, sequenceNumber, exceptionMessages, exceptionStackTrace, kind, episodeId, deferralId, context);
+
+    /// <inheritdoc/>
     public Task PartitionFailedWithDeliveryFence(
         Key partition,
         EventSequenceNumber sequenceNumber,
@@ -309,6 +321,9 @@ public partial class Observer
             _metrics?.PartitionFailed();
             var partitionWasAlreadyFailed = Failures.IsFailed(partition);
             var failure = failures.State.RegisterAttempt(partition, sequenceNumber, exceptionMessages, exceptionStackTrace, kind);
+
+            // The epoch is an identity tag: a failure from a non-replay delivery never clears it.
+            if (context.ReplayEpoch is { } replayEpoch) failure.ReplayEpoch = replayEpoch;
             if (partitionWasAlreadyFailed)
             {
                 logger.PartitionFailedAgain(partition, sequenceNumber, failure.AttemptsInCurrentBudget);
@@ -498,6 +513,7 @@ public partial class Observer
         failure.ObserverId = _observerId;
         var onlyThisPartition = new FailedPartitions { Partitions = [failure] };
         await storage.GetEventStore(_observerKey.EventStore).GetNamespace(_observerKey.Namespace).FailedPartitions.Save(_observerId, onlyThisPartition);
+        Failures.MarkPersisted(onlyThisPartition);
     }
 
     async Task RegisterRetryReminder(FailedPartition failure)
@@ -617,7 +633,8 @@ public partial class Observer
         {
             ReaderScope = ReaderScope,
             EpisodeId = usesDeferrals ? failedPartition.Id : null,
-            DeferralId = failedPartition.Deferral?.Id
+            DeferralId = failedPartition.Deferral?.Id,
+            ReplayEpoch = failedPartition.ReplayEpoch
         };
 
     async Task<JobId> StartRecoveryJob(FailedPartition failedPartition, RetryFailedPartitionRequest request, Action? onStartAttempted = null)

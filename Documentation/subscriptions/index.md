@@ -1,32 +1,28 @@
 ---
-title: Subscriptions
-description: Move Chronicle events between stores through persistent outbox and inbox subscriptions, and choose implicit discovery or explicit access control.
+title: Chronicle subscriptions between event stores
+description: Chronicle subscriptions forward published events between event stores so services can react to changes while keeping their own event history.
 ---
 
-A Chronicle subscription is a persistent link that moves events from one event store's outbox into another's inbox.
-
-Chronicle supports subscriptions between event stores, allowing events to flow between them in a controlled, persistent, and observable way. This is particularly useful in distributed systems where different services own separate event stores but need to react to each other's events.
+A Cratis Chronicle subscription forwards events from one event store's outbox into another's inbox. Use subscriptions when a service needs to react to events published by another service without sharing its event store.
 
 ## Core Concepts
 
-Subscriptions in Chronicle are built around the **outbox/inbox pattern** and two complementary subscription modes:
+The source service publishes events to its outbox, an event sequence intended for other stores to consume. Chronicle forwards matching events into a separate inbox sequence in the target store for each source. Reactors, projections, and reducers can then process those inbox events in the consuming service.
 
-- **Outbox** — an event store publishes events to a well-known sequence so other stores can subscribe
-- **Inbox** — an event store maintains one inbox sequence per source it subscribes to, receiving forwarded events automatically
-- **Implicit Subscriptions** — automatic routing based on `[EventStore]` attributes on event types
-- **Explicit Subscriptions** — manual subscription setup using the `Subscribe()` API
-
-Chronicle manages the subscription lifecycle on the Kernel side. Subscriptions survive client disconnections and are automatically re-established when the Kernel starts.
+The kernel owns the forwarding subscription, not the client connection. A registered subscription survives client disconnections and is re-established when the kernel starts. Consumer processing is a separate step: an event can be present in the inbox even if a projection has not yet updated its view.
 
 ### Choosing Between Implicit and Explicit Subscriptions
 
-**Implicit subscriptions** are best when event types are published in a NuGet package. The source service annotates events with `[EventStore("service-name")]`, and consuming services simply reference the package and observe the events—Chronicle handles routing automatically.
+Use [implicit subscriptions](implicit-subscriptions) when a C# consumer shares event contracts annotated with `[EventStore("service-name")]`, often through a NuGet package. Chronicle infers the source from the event types handled by its observers and registers the forwarding subscription.
 
-**Explicit subscriptions** give you fine-grained control. Use them when you need to filter specific event types, when events are not in a shared package, or when subscription configuration must be dynamic.
+Use [explicit subscriptions](explicit-subscriptions) when you want to choose a subscription ID, select event types, or manage the relationship at runtime. The consuming service registers the subscription through the client API rather than relying on C# attributes.
+
+Both approaches use the same outbox-to-inbox flow. Start with [Outbox and Inbox](outbox-inbox) if you need to decide what to publish or where the consumer should observe it.
 
 ## Topics
 
-- [Implicit Event Store Subscriptions](implicit-subscriptions) — automatic routing via `[EventStore]` attributes in shared NuGet packages
-- [Explicit Event Store Subscriptions](explicit-subscriptions) — manual subscription setup using the `Subscribe()` API
-- [Outbox and Inbox](outbox-inbox) — the outbox/inbox pattern and how events flow between stores
-- [Compliance and PII](compliance-and-pii.md) — preserving subject identity and encryption key availability across forwarded events
+- [Implicit Event Store Subscriptions](implicit-subscriptions) — route C# observers using source-store attributes on shared event contracts
+- [Explicit Event Store Subscriptions](explicit-subscriptions) — register and remove subscriptions with the client API
+- [Outbox and Inbox](outbox-inbox) — follow an event from publication to consumer processing
+- [Compliance and PII](compliance-and-pii.md) — understand subject identity, key propagation, and erasure during forwarding
+- [Subscription recovery](recovery.mdx) — distinguish a forwarding failure from a consumer-processing failure before replaying events

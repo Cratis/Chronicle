@@ -32,4 +32,10 @@ public class GraphEdgeFromDefinition
     /// </summary>
     [ProtoMember(4, IsRequired = true)]
     public IDictionary<string, string> Properties { get; set; } = new Dictionary<string, string>();
+
+    /// <summary>
+    /// Gets or sets the optional collection property of the event to run the mapping for, once per item. Expressions address the item's properties as <c language="csharp">collection.property</c>.
+    /// </summary>
+    [ProtoMember(5)]
+    public string? ForEach { get; set; }
 }

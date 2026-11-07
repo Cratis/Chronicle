@@ -1,9 +1,9 @@
 ---
-title: Chronicle Workbench
-description: Start Chronicle Workbench locally to inspect events, observers, read models, and failed attempts, and understand the supported projection-preview boundaries.
+title: Chronicle Workbench runtime inspection
+description: Use Chronicle Workbench to inspect local events, observer failures, and read models in your browser, with projection previews supported by your image.
 ---
 
-import { Card, CardGrid, Steps } from '@astrojs/starlight/components';
+import { CardGrid, Steps } from '@astrojs/starlight/components';
 import SimpleCard from '@components/SimpleCard.astro';
 import TopicHero from '@components/TopicHero.astro';
 
@@ -12,14 +12,16 @@ import TopicHero from '@components/TopicHero.astro';
   eyebrow="Chronicle Workbench"
   title="Inspect Chronicle from a local browser"
 >
-  Chronicle Workbench provides a bundled local browser surface for authorized
-  inspection of Chronicle runtime state and preview of supported projection
-  behavior.
-
-  Chronicle and its bundled local Workbench are available as MIT-licensed
-  self-hosted software; authorized local use is separate from paid Cratis
-  support, hosted coordination, or managed operational responsibility.
+  Chronicle Workbench is the browser interface bundled with Chronicle's
+  development images. Use it to inspect stored events, investigate observer
+  failures, and view read models in your local instance. You can also preview
+  the projection behavior supported by the running image.
 </TopicHero>
+
+Workbench inspects a running Chronicle instance. [Cratis Studio](/studio/) is a
+separate, optional commercial workspace where teams collaboratively model
+commands, events, read models, specifications, and screens. You do not need
+Studio to use Workbench or build with Chronicle.
 
 ## Start locally
 
@@ -45,14 +47,17 @@ import TopicHero from '@components/TopicHero.astro';
 
    Continue when the response prints `Healthy`.
 
-1. Open `https://localhost:35000` in a browser and follow the authentication
-   flow shown by the local development image. Browser handling of its self-signed
-   certificate varies by environment.
+1. Open `https://localhost:35000` in a browser and sign in. The
+   [local access guide](development.md) explains the development certificate
+   warning and built-in administrator account.
 
-1. Select the event store and namespace you are authorized to inspect.
+1. Select the event store and namespace you are authorized to inspect before
+   opening their events or read-model instances.
 
-1. Review only the runtime state and projection-preview paths needed for the
-   evaluation.
+1. Start with the observer or read model you are investigating. An observer
+   processes events from an event sequence; its state and failed partitions
+   help you find where processing stopped. A projection builds a read model
+   from events, giving you a view of the resulting data.
 
 1. Stop and remove the container when finished.
 
@@ -64,56 +69,61 @@ import TopicHero from '@components/TopicHero.astro';
 
 ## What to inspect
 
-<CardGrid>
-  <Card title="Connected clients" icon="node">
-    Review the clients currently represented by the selected local runtime scope.
-  </Card>
-  <Card title="Stores and namespaces" icon="seti:db">
-    Confirm the exact event store and namespace before interpreting runtime state.
-  </Card>
-  <Card title="Observer state" icon="list-format">
-    Inspect the status presented for observers and recorded failed partitions, including a read-only view that groups current failed partitions by observer and failure kind.
-  </Card>
-  <Card title="Read models" icon="laptop">
-    Inspect the read-model instances exposed by the selected runtime scope.
-  </Card>
-  <Card title="Projection preview" icon="puzzle">
-    Preview the projection behavior supported by the running Chronicle image.
-  </Card>
-</CardGrid>
+Confirm the selected event store and namespace before interpreting read-model
+instances: they belong to that selection. The connected-clients view instead
+shows clients across the connected Chronicle cluster, regardless of the
+selected event store or namespace. Workbench does not combine separate
+Chronicle deployments.
+
+When event processing fails, inspect the observer's state and its recorded
+failed partitions. Each failed partition identifies an event source the
+observer stopped processing and records its attempts. The read-only grouped
+view organizes current failures by observer and failure kind so you can
+see which failures belong together. To understand a particular attempt, open
+its event as described below. For a projection change, use the preview behavior
+supported by your running image rather than assuming every projection can be
+previewed.
 
 :::danger[Inspection does not authorize mutation]
-Do not infer authority to append, revise, redact, replay, recover, control jobs,
-or perform another mutation from the ability to inspect runtime state. Complete
-administration, governed/production-ready mutation, federation, managed service,
-support, SLA, security, compatibility, and production suitability are outside
-this page's claim scope.
+Being able to inspect state does not grant permission to append, revise,
+redact, replay, recover, control jobs, or otherwise change it. Keep the
+development image and its default credentials out of staging and production
+environments. For production, assess security and compatibility against your
+deployment's requirements. This walkthrough covers local inspection, not full
+administration, federation between instances, managed operations, or support
+and SLA commitments.
 :::
 
 ### Inspect an event from a failed attempt
 
 In **Failed partitions**, select a partition and follow an attempt's sequence
-number to inspect that exact event in the observer's event sequence. The inspector
-shows the selected store, namespace, sequence and number, and reuses the event
-details view. It does not offer compensation, revision or recovery actions.
+number to inspect that exact event in the observer's event sequence. The
+sequence number identifies the event's position within that sequence. The
+inspector shows the selected store, namespace, sequence, and number alongside
+the event details. This inspector does not offer compensation, revision, or
+recovery actions.
 
-Use **Return to failed partitions** to return to the same scope and select the
-originating failure if it still exists. A later user selection or deselection
-cancels pending return selection. Missing observers, events or failures are
-reported rather than replaced with a different event or partition. Inspection is
-limited to whole sequence numbers from 0 through 2147483647.
+Use **Return to failed partitions** to go back to the same scope and select the
+originating failure if it still exists. If you select another partition or
+clear the selection before the return selection finishes loading, your choice
+takes precedence. Missing observers, events, or failures are reported rather
+than replaced with a different event or partition. Event inspection accepts
+only whole sequence numbers from 0 through 2147483647.
+
+If you need to retry processing after investigating the event, follow
+[Operating Chronicle](/chronicle/operations/) for recovery guidance.
 
 ## Continue
 
 <CardGrid>
   <SimpleCard title="Chronicle overview" icon="seti:db" link="/chronicle/">
-    Start Chronicle locally and understand the product boundary.
+    Understand Chronicle's role before connecting an application.
   </SimpleCard>
   <SimpleCard title="Architecture" icon="puzzle" link="/chronicle/architecture/">
-    Locate the kernel, protocol surfaces, stores, namespaces, and subscriptions.
+    Trace how the kernel, stores, namespaces, and subscriptions fit together.
   </SimpleCard>
   <SimpleCard title="Cratis CLI" icon="rocket" link="/cli/">
-    Use terminal inspection and diagnostic workflows.
+    Continue inspection and diagnosis from a terminal.
   </SimpleCard>
   <SimpleCard title="Operating Chronicle" icon="setting" link="/chronicle/operations/">
     Diagnose and recover failed observers and partitions.

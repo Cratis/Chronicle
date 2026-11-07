@@ -1,20 +1,39 @@
 ---
-title: Immediate projections
-description: Understand why Chronicle has no synchronous projection mode and choose passive reads or observer catch-up to read a model after appending an event.
+title: Chronicle immediate projections — read after an append
+description: Chronicle has no synchronous projection mode. Read passive state on demand or wait for materialized observers when a caller needs its own write.
 ---
 
-You may have been told that an *immediate projection* updates its read model synchronously, inside the append, so the read model is current before the append returns. **Chronicle has no such mode.** Every append returns once the event is in the log, and materialized read models catch up afterwards.
+An immediate projection in Chronicle computes a passive read model on demand; it does not update a
+stored read model inside an append. A successful append confirms that the event is in the log, while
+materialized projections process it asynchronously. Reading the stored instance immediately can
+therefore return its previous state.
 
-"Immediate projection" is the name of the kernel component that computes a read model on demand when you read a **passive** read model. You never declare or configure it yourself.
+The kernel manages the immediate-projection component. You choose passive behavior on the projection,
+not a separate immediate mode.
 
 ## Getting a read model that includes the latest event
 
-You have two tools, and neither makes the append slower for anyone else:
+Choose between computing the instance from history and waiting for its stored view.
 
-- **Mark the read model passive.** It is not stored; Chronicle computes it from its events when you read it, so each read includes everything appended up to that call. Each read replays the instance's history from the start, so it also reflects redactions, revisions and erased personal data. This works for a read model keyed by its event source id: reading a passive instance only replays events from that event source, so a projection that joins other event sources or uses a custom key misses their events — keep that one materialized. See [Passive projections](declarative/passive.mdx) and [Getting a single instance](../read-models/getting-single-instance.mdx).
-- **Keep it materialized, and wait after the append.** The caller that needs its own write back waits for the append's observers to catch up, then reads the stored instance. In the .NET client this is `WaitForCompletion()` on the append result — see [Observing appends](../events/observing-appends.mdx#waiting-for-observer-completion-after-append). With the .NET client and an updated server, the wait includes observers that handle the appended event types, plus observers subscribed to all events. Other clients and older servers still wait for every observer on the sequence.
+For a passive read model, Chronicle replays the instance's history from the start on each read, so
+the result reflects revisions, redactions, and personal-data erasure. It is not stored in a sink. A
+passive by-ID read selects events from that event source only: cross-source joins or custom
+aggregation keys can need events outside that selection. Keep those views materialized. See
+[passive projections](declarative/passive.mdx) and
+[getting a single instance](../read-models/getting-single-instance.mdx) for setup and read behavior.
 
-Neither tool stops two writers from both succeeding: a read, however fresh, is taken before the append and guards nothing. To stop that race, use a [constraint](../constraints/index.md) for a unique value or a create-once rule, or a [decision read](../read-models/decision-reads.mdx) for a rule over state. [Choosing how a rule holds](../dynamic-consistency-boundary/choosing.mdx) compares them.
+For a materialized view, the caller can wait after its append and then query the stored instance.
+The .NET client exposes `WaitForCompletion()` on the append result. Check whether the wait succeeded,
+timed out, or reported observer failures before treating the view as caught up. With the .NET client
+and an updated server, it waits for observers handling the appended event types and observers
+subscribed to all events. Other clients and older servers wait for every observer on the sequence.
+[Observing appends](../events/observing-appends.mdx#waiting-for-observer-completion-after-append)
+explains the result and timeout behavior.
+
+Neither option protects a decision made before an append. Two writers can both read valid state and
+then make conflicting changes. Use a [constraint](../constraints/index.md) for a unique value or a
+create-once rule, or a [decision read](../read-models/decision-reads.mdx) for a rule over state.
+[Choosing how a rule holds](../dynamic-consistency-boundary/choosing.mdx) compares those protections.
 
 ## See also
 

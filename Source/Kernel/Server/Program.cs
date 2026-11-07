@@ -7,6 +7,7 @@ using System.Security.Cryptography.X509Certificates;
 using Cratis.Arc.MongoDB;
 using Cratis.Chronicle.Clients;
 using Cratis.Chronicle.Configuration;
+using Cratis.Chronicle.Diagnostics;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry;
 using Cratis.Chronicle.Observation.Webhooks;
 using Cratis.Chronicle.Server;
@@ -36,12 +37,39 @@ AppDomain.CurrentDomain.UnhandledException += (_, args) =>
     {
         LogCrash(log => log.UnhandledException(exception, args.IsTerminating), exception);
     }
+    else
+    {
+        Console.WriteLine(args.ExceptionObject);
+    }
+
+    if (args.IsTerminating)
+    {
+        // Leave an exit code that says what happened, instead of the runtime's abort code (reported as 139).
+        Console.Out.Flush();
+        Environment.Exit(BackgroundFaults.UnhandledExceptionExitCode);
+    }
 };
 
+var unobservedFailures = new RepeatedFailureLog(RepeatedFailureLog.DefaultWindow, 1, TimeProvider.System);
 TaskScheduler.UnobservedTaskException += (_, args) =>
 {
-    LogCrash(log => log.UnobservedTaskException(args.Exception), args.Exception);
     args.SetObserved();
+    var owner = BackgroundFaults.DescribeOwner(args.Exception);
+
+    // One entry per owner in each window: thousands of the same unobserved failure are one fact.
+    if (!unobservedFailures.ShouldWrite(owner, LogLevel.Error, args.Exception))
+    {
+        return;
+    }
+
+    if (BackgroundFaults.IsTransient(args.Exception))
+    {
+        LogCrash(log => log.UnobservedTransientTaskException(args.Exception, owner), args.Exception);
+    }
+    else
+    {
+        LogCrash(log => log.UnobservedTaskException(args.Exception, owner), args.Exception);
+    }
 };
 
 // Force invariant culture for the Kernel
@@ -51,9 +79,15 @@ CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
 CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
 
 SchemaCommand schemaCommand;
+EncryptionKeyCommand encryptionKeyCommand;
 try
 {
     schemaCommand = SchemaCommand.Parse(args);
+    encryptionKeyCommand = EncryptionKeyCommand.Parse(schemaCommand.RemainingArgs);
+    if (encryptionKeyCommand.Verify && schemaCommand.Action != SchemaAction.None)
+    {
+        throw new ArgumentException($"{EncryptionKeyCommand.VerifyFlag} cannot be combined with schema actions.");
+    }
 }
 catch (ArgumentException exception)
 {
@@ -61,7 +95,7 @@ catch (ArgumentException exception)
     return 4;
 }
 
-var builder = WebApplication.CreateBuilder(schemaCommand.RemainingArgs);
+var builder = WebApplication.CreateBuilder(encryptionKeyCommand.RemainingArgs);
 
 #pragma warning disable ASP0000 // Do not call 'IServiceCollection.BuildServiceProvider' in 'ConfigureServices'
 logger = builder.Logging.Services
@@ -333,6 +367,18 @@ _ = app.Services.GetRequiredService<IShutdownDrainBudget>();
 
 logger = app.Services.GetRequiredService<ILogger<Kernel>>();
 logger.ServerConfigured();
+
+// Look for encryption keys stored under earlier names before anything starts. A layout that cannot be used, or
+// --verify-encryption-keys, ends the process here; otherwise the counts are logged and startup continues.
+var encryptionKeyExit = await EncryptionKeyCommandRunner.Run(
+    app.Services.GetService<Cratis.Chronicle.Storage.Compliance.IEncryptionKeyStoreUpgradeCheck>(),
+    logger,
+    encryptionKeyCommand,
+    Console.Out);
+if (encryptionKeyExit is { } exitCode)
+{
+    return exitCode;
+}
 
 // State the certificate ring at every boot. A rotation is carried out by restarting nodes with a changed
 // ring, so this is the record of what each node actually loaded - the thing that has to match across the

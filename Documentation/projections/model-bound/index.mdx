@@ -1,31 +1,23 @@
 ---
-title: "Model-Bound Projections"
-description: "Build Chronicle read models by declaring projection mappings on the model itself, combining convention-based mapping with explicit metadata and stable identity."
+title: "Model-bound projections: define mappings on a read model"
+description: "Model-bound Chronicle projections keep event mappings on the read model type, so you can build a queryable view without a separate projection class."
 ---
 
-Model-bound projections let the read model describe how it is built. Instead of creating a separate projection class, you put projection metadata on the model and Chronicle builds the definition from it. Depending on the client, that metadata uses attributes, decorators, annotations, or module declarations.
+A model-bound Chronicle projection defines how events build a read model on the read model type itself. In .NET, attributes describe the event mappings, so you can keep the view's shape and update rules together without a separate `IProjectionFor<T>` class.
 
 ## Overview
 
-Start with convention-based mapping and add explicit mappings only where the event and read model use different names. That keeps the common case small while still making the exceptions visible.
+Start with convention-based mapping and add explicit attributes only where the event and read model use different names. That keeps the common case small while still making the exceptions visible.
 
 ## Basic Example
 
 <ChronicleClientTabs snippet="projections/model-bound/index/basic" />
 
-In this example:
-
-- The creation mapping makes or updates an `AccountInfo` instance when `AccountOpened` is processed
-- The key declaration identifies the read model instance
-- `Name` maps by convention because both the event and the read model use the same property name
-- `Balance` is mapped explicitly because the event property is called `InitialBalance`
-
-The C# tab expresses these with `[FromEvent<AccountOpened>]`, `[Key]`, and `[SetFrom<TEvent>]`.
-Other tabs show the corresponding client declarations.
+When Chronicle processes `AccountOpened`, `[FromEvent<AccountOpened>]` creates or updates an `AccountInfo` instance. `[Key]` marks its identifier. `Name` maps by convention because the event and read model use the same property name; `Balance` needs `[SetFrom<TEvent>]` because the event calls the value `InitialBalance`.
 
 ## Discovery
 
-In .NET, types are automatically discovered by the presence of:
+The .NET client discovers model-bound projection types from their annotations:
 
 - Class/record-level projection annotations such as `FromEvent` or `NotRewindable`, or event-sequence selection
 - Member mapping attributes such as `SetFrom`, `AddFrom`, or `Join`
@@ -35,7 +27,7 @@ how an already-defined model is read, and can also configure a reducer model.
 
 ## Stable Projection Identity
 
-By default, a .NET model-bound projection uses the read model's fully qualified CLR type name as its identifier.
+By default, a model-bound projection uses the read model's fully qualified CLR type name as its identifier.
 Use `[Projection(id: "...")]` from `Cratis.Chronicle.Projections` on a class, record, or record struct to
 keep that projection identity when renaming the type or moving its namespace. When adding the attribute
 to an existing projection, use its previous identifier:
@@ -47,9 +39,9 @@ Discovery, `RegisterReadModel<T>()` in client options, and runtime `Projections.
 the same identifier. Callback-defined projections use it as their default too; an explicitly supplied
 callback ID takes precedence.
 
-`[Projection]` is identity metadata, not a discovery marker or a mapping annotation. Keep the real
-model-bound annotations such as `[FromEvent<TEvent>]`. `[Projection]` alone, or with only `[Passive]`,
-does not make a model a projection. Its `eventSequence` argument configures fluent projections only;
+Keep model-bound annotations such as `[FromEvent<TEvent>]` when adding `[Projection]`. The latter
+supplies identity metadata; it does not define mappings or trigger discovery. `[Projection]` alone,
+or with only `[Passive]`, does not make a model a projection. Its `eventSequence` argument configures fluent projections only;
 model-bound event-sequence routing still uses `[EventSequence]` and the existing event-store rules.
 
 Different local projection owners cannot share an ID. Chronicle rejects competing fluent, model-bound,
@@ -63,30 +55,22 @@ identifier or storage container name; a type rename can still change those defau
 
 ## Key Features
 
-Model-bound projections cover the common projection operations below. Names and availability vary
-by client; the examples on each page show the available declarations. Specialized builder features,
-such as fluent dynamic dictionary counters, do not all have model-bound equivalents.
+Start with the fields your query needs, then choose how events should populate them. Use direct
+mappings for values on the entity, joins for facts about related entities, and children or nested
+objects for structure inside the read model. Specialized builder features, such as fluent dynamic
+dictionary counters, do not all have attribute equivalents.
 
-- **Property Mapping**: SetFrom, AddFrom, SubtractFrom, SetFromContext
-- **FromEvery**: Set properties from all events
-- **Counters**: Increment, Decrement, Count
-- **Relationships**: Join, Children (with unlimited nesting depth)
-- **Removal**: RemovedWith, RemovedWithJoin
-- **Convention-based**: FromEvent for automatic property matching
-- **Configuration**: EventSequence, NotRewindable, Passive
-- **Variants**: Mutually exclusive read model shapes for the same logical entity
-- **Recursive Structure**: Supported mappings can be nested through children and nested objects; see the generation limits below
-
-See the following pages for detailed information on each feature:
+Choose the next page by the mapping you need:
 
 - [Basic Mapping](./basic-mapping) - SetFrom, AddFrom, SubtractFrom, SetFromContext
 - [Set Constant Value](./set-value) - Set a property to a fixed value with SetValue
 - [Clearing Values](./clearing) - Take a value away with ClearWith or a null SetValue
 - [Convention-Based](./convention-based) - Automatic property mapping with FromEvent (equivalent to AutoMap)
-- [FromEvery](./from-every) - Update properties from all events
+- [FromEvery](./from-every) - Update shared fields from handled events
 - [FromAll](./from-all) - Subscribe to all event types without filtering
 - [Counters](./counters) - Increment, Decrement, Count
-- [Children](./children) - Managing child collections
+- [Children](./children) - Manage child collections
+- [Nested Objects](./nested.mdx) - Populate or clear a single object inside the model
 - [Removal](./removal) - Removing read models and children with RemovedWith, RemovedWithJoin
 - [Joins](./joins) - Joining with other events
 - [Event Sequence Source](./event-sequence-source) - Reading from specific event sequences
@@ -94,13 +78,50 @@ See the following pages for detailed information on each feature:
 - [Passive](./passive) - On-demand projections
 - [Variants](./variants) - Mutually exclusive read model shapes for the same logical entity
 
+## Limitations
+
+Use a declarative `IProjectionFor<T>` when a mapping needs projection-specific scope that attributes
+on CLR members cannot describe. These independent examples focus on the mappings that need that scope.
+
+### Child or Nested Every-Mappings on Join-Only Events
+
+Attributes on a child or nested CLR member cannot preserve an every-mapping for events handled only
+by a join in that scope. Model-bound generation expands those context mappings over local `from`
+events, so the join-only event's timestamp mapping is lost.
+
+<ChronicleClientTabs snippet="projections/model-bound/index/limitations-child-every" />
+
+Here `LastUpdated` belongs to each line and tracks both `ChildAuditItemAddedToOrder` and
+`ChildAuditProductRenamed`. See [declarative FromEvery](../declarative/from-every.mdx)
+and [joining children](../declarative/joins.mdx#joining-children).
+
+### Join-Context Values
+
+A `[Join<TEvent>]` on a CLR member selects an event payload property, not a value from the joined
+event's context. `[SetFromContext<TEvent>]` defines a local event mapping, not a join-context mapping.
+
+<ChronicleClientTabs snippet="projections/model-bound/index/limitations-join-context" />
+
+The join maps both the product name and the joined event's occurrence time. See
+[event context in children and joins](../declarative/event-context.mdx#event-context-in-children-and-joins).
+
+### One CLR Type With Different Mappings
+
+Attributes bind to the CLR type's members, not to each use of that type. One address type cannot
+carry different mappings for its billing and shipping roles; use separately scoped declarative mappings.
+
+<ChronicleClientTabs snippet="projections/model-bound/index/limitations-reused-type" />
+
+Both properties use the same address type, but each nested scope selects its own event and source
+property. See [multiple nested objects](../declarative/nested.mdx#multiple-nested-objects).
+
 ## Generated Model-Bound Code: Representability Limits
 
-Generating model-bound C# from a projection declaration does not guarantee that attributes can
-represent every mapping. The generator keeps supported mappings and writes a
-`Not expressible with model-bound attributes` comment where it cannot preserve the declaration's
-meaning. **Generated code can compile without being behaviorally equivalent.** Keep the declaration
-or the generated declarative projection as the authoritative version when one of these comments appears.
+If you generate model-bound C# from a projection declaration, check the generated comments before
+switching to it. The generator keeps supported mappings and writes a
+`Not expressible with model-bound attributes` comment where attributes cannot preserve the declaration's
+meaning. Compiling that code does not prove equivalent behavior. Keep the declaration or the generated
+declarative projection as the authoritative version when one of these comments appears.
 
 | Declaration feature | Model-bound generation limit |
 | --- | --- |
@@ -170,9 +191,11 @@ requirements on the same type, including incompatible descendant scopes.
 
 ## When to Use
 
-Start with model-bound attributes, use fluent mappings when the definition needs structure, and use
-reducer code when state transitions are clearer; a self-reducing model is the default for new reducers.
-[Choose how to build a read model](../choosing-a-read-model-style.mdx) works through the trade-offs.
+Use model-bound attributes when keeping mappings beside the read model makes the update rules easy
+to follow. Move to fluent mappings when the definition needs more structure, or reducer code when
+state transitions are clearer in code. A self-reducing model is the default for new reducers.
+[Choose how to build a read model](../choosing-a-read-model-style.mdx) works through these trade-offs
+before you commit to a style.
 
 ## Comparison with Fluent Projections
 
@@ -196,11 +219,11 @@ reducer code when state transitions are clearer; a self-reducing model is the de
 
 <ChronicleClientTabs snippet="projections/model-bound/index/automap-model-bound" />
 
-Both approaches produce the same result. Model-bound projections with `FromEvent` are particularly concise when property names match between events and read models, providing the same automatic mapping that fluent projections get by default.
+In these examples, both approaches produce the same result. `FromEvent` gives the model-bound version automatic matching of event and read model property names, just as the fluent projection does by default.
 
 ## Reading Your Model-Bound Projections
 
-Once you've defined a model-bound projection, you can retrieve and observe the resulting read models using the `IReadModels` API:
+Once the projection is defined, use `IReadModels` to read the view your application needs:
 
 - [Getting a Single Instance](../../read-models/getting-single-instance) - Retrieve a specific instance by key
 - [Getting a Collection of Instances](../../read-models/getting-collection-instances) - Retrieve all instances for reporting and analysis

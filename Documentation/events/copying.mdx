@@ -1,29 +1,29 @@
 ---
-description: Copy all or selected Chronicle events to another event source with a durable job, leaving the original stream intact and appending new sequence numbers.
+title: Cratis Chronicle event copying to another event source
+description: Copy event history to another event source in Cratis Chronicle with a durable job that appends new events and leaves the source history unchanged.
 ---
-# Copying events
+Copying in Cratis Chronicle seeds one event source with history from another event source in the same event sequence. Use it to create a variant of an entity under a different identifier without changing the source history.
 
-Copying appends new events to a target event source that carry the same content as the events of a source event source. Use it when a stream has to be seeded from another one — splitting an aggregate, creating a variant of an entity, or restoring an identity under a new key.
-
-The source events are left untouched. Each copy is a new event with a new sequence number, so observers see the copies like any other append.
+Each copy is a new event with a new sequence number. Observers process these appends, so review their effects before starting: copying history can trigger application actions as well as build state. The source and target identifiers must differ.
 
 ## Copying every event
 
-Pass the source and the target event source identifiers. Events of every type are copied:
+Pass the source and target event source identifiers to copy all event types for the source:
 
 <ChronicleClientTabs snippet="events/copying/by-event-source" />
 
 ## Copying specific event types
 
-Provide the event types to copy only those and leave the rest of the source events behind:
+Provide an event type filter when the target needs only part of the history. Events of other types remain in the source and are not copied:
 
 <ChronicleClientTabs snippet="events/copying/by-event-source-and-types" />
 
 ## How it works
 
-Copying is a durable job. The call returns the identifier of the job straight away, and the job reads the matching source events in order and appends them to the target in batches. You can follow it on the Jobs page of the Workbench, or through the jobs service.
+The call starts a durable job and returns its identifier, not a completed copy. The job reads matching source events in sequence order and appends them to the target in batches. Follow progress on the Workbench's Jobs page or through the jobs service.
 
-- Each copy is appended with a key derived from the job and the source event, so a job that is resumed after a restart never appends a copy twice.
-- A copy keeps the event type, its generation, the tags, the stream, and the original occurred time.
-- Personal data is released from the source and protected again for the target. An event whose subject was the source event source gets the target as its subject, while an explicit subject is kept.
-- If the target refuses an append — for example because a unique constraint is violated — the job fails and reports it. Copies appended before that point stay in the target.
+Each copy uses an idempotency key derived from the job identifier and the source event's sequence number. Resuming that job reuses those keys to avoid duplicate appends. Starting a new copy job creates different keys; it does not deduplicate against an earlier job.
+
+A copy keeps the event type and generation, tags, stream, and original occurred time. Its new audit context identifies the copy operation. Personal data is released from the source and protected again for the target. When the subject was the source event source, the target becomes the subject; an explicitly assigned subject stays unchanged.
+
+Copying is not atomic across the whole history. If a target append fails, for example because of a unique constraint, the job reports the failure and earlier batches remain in the target. Inspect the job and target history before deciding how to recover. Use [Getting events](getting-events.mdx) to read the resulting history.
