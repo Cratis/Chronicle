@@ -1,9 +1,9 @@
 ---
-title: How event sources work
-description: How the Chronicle client discovers and registers event source definitions, what each event records, and how a definition yields a concurrency scope.
+title: How Chronicle event source definitions work
+description: Chronicle discovers event source definitions in the .NET client, registers their names in the kernel, and derives routing and concurrency scopes.
 ---
 
-Use this page to understand what Chronicle does with a definition. You do not need it to use one. Read it when something behaves in a way the guides do not explain.
+Cratis Chronicle turns an event source definition into routing names and a default concurrency scope: the condition checked before an append is accepted. The .NET client discovers the definition, registers it with the kernel, and uses it to resolve typed appends and observer filters. This explains why a name change affects stored-event matching and why a stream's dimensions change which writers can conflict.
 
 ## Discovery and registration
 
@@ -20,14 +20,14 @@ sequenceDiagram
     App->>K: Register constraints, reactors, reducers, projections
 ```
 
-1. **Find.** The client artifacts provider returns every non-abstract, non-generic class that implements `IEventSource`. With explicit registration it returns the nominated ones.
-2. **Discover.** Discovery runs after event types are discovered and before constraints, reactors, reducers and projections. It reads `[EventSource]` and every `[EventStream]`, derives the name, and throws `DuplicateEventSourceName` or `DuplicateEventStreamName` when names collide. The result is the table of definitions that `Append<TSource>`, `ForEventSource<TSource>` and `[FromEventSource<TSource>]` use.
-3. **Register.** When the event store connects, the client sends all definitions in one `RegisterEventSources` call. It does this together with event types and read models, before it registers constraints and observers. A store with no definitions sends nothing.
-4. **Save.** The kernel saves each definition under its name for the event store, replacing any definition with the same name. A definition that is no longer in your code is not removed, because stored events refer to it.
+1. The client artifacts provider finds non-abstract, non-generic classes that implement `IEventSource`. With explicit registration it returns the nominated ones.
+2. After discovering event types, the client reads `[EventSource]` and every `[EventStream]` and derives their names. It throws `DuplicateEventSourceName` or `DuplicateEventStreamName` when names collide. This happens before discovering constraints and observers, so `Append<TSource>`, `ForEventSource<TSource>` and `[FromEventSource<TSource>]` can use the resulting table of definitions.
+3. When the event store connects, the client sends all definitions in one `RegisterEventSources` call. It registers them together with event types and read models, before constraints and observers. A store with no definitions sends nothing.
+4. The kernel saves each definition under its name for the event store, replacing any definition with the same name. It keeps definitions that are no longer in your code because stored events refer to them.
 
 The registered definitions are available from the kernel's `EventSources` service, which the Workbench uses for its **Event Sources** page. Each carries an owner. Definitions an application registers are owned by the `Client`.
 
-Because registration replaces by name, two application versions that declare the same name differently take turns overwriting each other. During a rolling deployment, add streams in a version that is rolled out everywhere before another version appends to them.
+Registration replaces by name, so two application versions with different declarations for the same name overwrite each other's definition when they register. During a rolling deployment, first roll out a version that declares the new streams everywhere. Only then deploy code that appends to them.
 
 ## What each event records
 
@@ -69,7 +69,7 @@ flowchart TD
     G --> K["Kernel: any matching event after the expected tail rejects the append"]
 ```
 
-The tail is read with the same narrowing the scope carries. That is what keeps the client's position and the kernel's check answering the same question. When nothing matches the narrowing yet, there is no tail: the scope carries no expectation and the kernel skips it unless the first-append check is turned on.
+The tail is the sequence number of the latest event matching the scope's routing values. The client reads it with the same filters the kernel will check. An append guarded by one account's monthly stream therefore compares against that stream's history, not another month's activity. When no event matches yet, the scope carries no expectation and the kernel skips it unless the first-append check is turned on.
 
 For an `AppendMany` the .NET client resolves every distinct route for each event source id, including routes without definitions. Equal predicates share the earliest expected position; different predicates remain separate atomic conditions. An explicit scope list for an id takes precedence and is not recomputed. Repeated labels require the kernel's `concurrency-scope-conjunctions` capability; without it, `IncompatibleConcurrencyScopesForEventSource` is thrown before the request is sent.
 
@@ -77,9 +77,11 @@ The kernel checks every scope against the state before the batch and writes noth
 
 ## Tags and constraints
 
-- **Tags** are metadata on an event that you can filter by. A definition does not assign tags, and tags take no part in concurrency scopes. See [Appending with tags](../events/appending-with-tags.mdx).
-- **Constraints** are evaluated by the kernel for every append, whether or not it went through a definition. A unique constraint compares property values across event sources. A [closing event](./closing.mdx) closes the scope formed from the event's stored event source id, stream type and stream id, so appending it through a definition to its stream closes that stream.
-- **Order.** In one append the kernel evaluates constraints, then concurrency scopes, and writes nothing if either fails.
+Tags are event metadata used for filtering. A definition does not assign them, and they take no part in concurrency scopes. See [Appending with tags](../events/appending-with-tags.mdx).
+
+Constraints apply to every append, whether or not it uses a definition. A unique constraint compares property values across event sources. By default, a [closing event](./closing.mdx) closes the scope formed from the event's stored event source id, stream type and stream id. Custom closing dimensions can select a different scope; the event source definition does not choose them.
+
+The kernel evaluates constraints before concurrency scopes and writes nothing if either fails.
 
 ## What definitions do not do
 
@@ -90,7 +92,4 @@ The kernel checks every scope against the state before the batch and writes noth
 
 ## Next steps
 
-- [Concurrency](./concurrency.mdx)
-- [Questions and pitfalls](./faq.mdx)
-- [Dynamic Consistency Boundary](./dcb.mdx), and [Dynamic Consistency Boundary in Chronicle](../dynamic-consistency-boundary/chronicle.md)
-- [Event source](../concepts/event-source.md)
+Use [Concurrency](./concurrency.mdx) to choose the dimensions for your appends, or [Questions and pitfalls](./faq.mdx) to diagnose a routing or registration mismatch. When a guard must reflect state you read before writing, continue with [Dynamic Consistency Boundary](./dcb.mdx) and [Dynamic Consistency Boundary in Chronicle](../dynamic-consistency-boundary/chronicle.md). The [Event source concept](../concepts/event-source.md) explains the underlying grouping.

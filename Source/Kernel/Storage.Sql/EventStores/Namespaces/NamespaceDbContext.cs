@@ -238,6 +238,12 @@ public class NamespaceDbContext(DbContextOptions<NamespaceDbContext> options) : 
             incidentCollation = "BINARY";
         }
 
+        if (Database.IsSqlServer())
+        {
+            modelBuilder.Entity<Encryption.EncryptionKey>().Property(e => e.Identifier).UseCollation(Encryption.EncryptionKeyIdentifierColumn.Collation);
+            modelBuilder.Entity<Encryption.EncryptionKeyErasure>().Property(e => e.Identifier).UseCollation(Encryption.EncryptionKeyIdentifierColumn.Collation);
+        }
+
         modelBuilder.Entity<Alerts.AlertIncidentEntity>(entity =>
         {
             entity.ToTable(WellKnownTableNames.AlertIncidents);

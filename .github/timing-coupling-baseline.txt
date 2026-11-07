@@ -49,6 +49,7 @@
 1 Integration/Client/for_EventSequence/when_revising/SomeReducer.cs
 1 Integration/Client/for_EventSequence/when_server_restarts/and_events_are_appended_before_restart.cs  # readiness
 1 Integration/Client/for_EventStoreSubscriptions/given/a_subscription_with_retained_outbox_history.cs  # readiness: persisted forwarder state visibility, bounded by cancellation
+1 Integration/Client/for_EventStoreSubscriptions/given/an_operator_addressing_two_lobbies.cs  # readiness: persisted forwarder state visibility, bounded by cancellation
 1 Integration/Client/for_EventStoreSubscriptions/given/multi_event_store_subscription_setup.cs
 1 Integration/Client/for_EventStoreSubscriptions/given/subscription_states_after_subscribing.cs
 1 Integration/Client/for_EventStoreSubscriptions/when_registering_implicit_subscriptions/and_reactor_infers_external_inbox_subscription.cs
@@ -96,6 +97,7 @@
 1 Integration/Clustering/for_Clustering/when_replaying_a_collapsing_projection.cs
 1 Integration/Clustering/for_ScaledOutClients/ReactorInvocationSignal.cs
 1 Integration/Clustering/for_ScaledOutClients/when_the_kernel_drops_a_client_instance.cs
+1 Integration/Kernel/EventStores/for_RegistrationLoad/when_registering/and_replicas_register_the_same_artifacts_concurrently_with_a_small_connection_pool.cs  # Task.Yield widens an interleaving window so replicas register concurrently
 1 Integration/Kernel/for_JobsManager/given/TheJobStep.cs  # knob
 1 Integration/Kernel/for_JobsManager/when_starting/job_with_single_step/and_job_step_fails.cs
 2 Integration/MongoDB/Generations/for_ReleasedKernelGenerationFloor/ReleasedFloorKernel.cs  # readiness: bounded poll of a released kernel container (populated store, container exit); a released binary exposes no completion signal

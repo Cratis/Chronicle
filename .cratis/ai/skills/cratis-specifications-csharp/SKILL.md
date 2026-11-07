@@ -1,6 +1,6 @@
 ---
 name: cratis-specifications-csharp
-description: Write C# specifications with Cratis.Specifications using the Establish/Because/should_ pattern and the for_/when_/and_ folder hierarchy. Use when adding or restructuring C# specs in any Cratis repository, choosing between an isolated unit spec and an in-process scenario spec, or building reusable given/ contexts. Do not use for TypeScript or React specs, and do not use it to decide what a command, projection, or reactor should do.
+description: Use when adding or restructuring C# specifications, choosing their fixture surface or extracting reusable contexts in a Cratis repository. Not for TypeScript tests or deciding production behavior.
 license: MIT
 metadata:
   cratis-hint-paths: "**/for_*/**/*.cs"
@@ -14,10 +14,10 @@ of contents, and each file states one setup, one action, and one or more
 focused assertions.
 
 Read [query and decision scenarios](../cratis-application-slice-specifications/references/query-and-decision-scenarios.md)
-when specifying query emissions, routed conflicts or protected projection reads.
-Seed actual events for a guarded command; pinned models cannot supply a guard.
-`new CommandScenario<T>()` selects the in-process decision log from the command's
-read-protection mode and dependencies, so `UseDecisionReads()` is not called. `Perform`/`Observe` need configured services/principal, and
+when specifying query emissions.
+Follow the [scenario selection and cost rule](../../rules/specs.scenarios.csharp.md):
+application specs supply read-model state and test business decisions, never
+read-protection plumbing. `Perform`/`Observe` need configured services/principal;
 MongoDB observations still need real infrastructure.
 
 ## Verified product sources
@@ -26,8 +26,8 @@ Sources:
 
 | Package | Purpose |
 | --- | --- |
-| `Cratis.Specifications.XUnit` | `Specification` base, lifecycle discovery, `ShouldXxx` assertions, optional shared lifecycle |
-| `Cratis.Specifications` | `Catch.Exception`, `SpecificationMethods` (dependency of the XUnit package) |
+| `Cratis.Specifications.XUnit.v3` | `Specification` base, lifecycle discovery, `ShouldXxx` assertions, shared lifecycle by default (house default; `.XUnit` is the xUnit v2 equivalent) |
+| `Cratis.Specifications` | `Catch.Exception`, `SpecificationMethods` (dependency of the XUnit packages) |
 | `Cratis.Arc.Testing` | `CommandScenario<TCommand>` preserves explicit principal/override/policy services; see application-scenarios |
 | `Cratis.Chronicle.Testing` | `EventScenario`, `ReadModelScenario<T>`, `ReactorScenario<T>` |
 
@@ -44,6 +44,17 @@ Requires `Cratis.Arc.Testing` 22.67.0 for generated-value scenario pinning.
 
 Check the owning product repository before claiming support for
 another version. Never translate an assertion or helper name from memory.
+
+Requires Specifications 4.4.0 for Given/When lifecycle aliases across framework packages; check `dotnet list package`, or keep Establish/Because on older packages.
+
+`Given`/`When` are lifecycle aliases, but house style remains `Establish`/`Because`;
+declaring both forms of a phase produces CRSPEC0009. Inherited phases execute
+once and preserve the original exception; `ValueTask` is awaited. The native
+runner remains experimental: CRSPEC0010 rejects `async void`, CRSPEC0011 warns
+about trim/AOT-unsafe reflective lifecycle calls. Shared resources/leases, phase
+timings, runtime defaults and parallel NUnit fixtures are opt-ins, not blanket
+recommendations to parallelize a stateful suite. Read the product upgrade guide
+before changing runner or package family.
 
 ## Route near misses
 
@@ -67,20 +78,21 @@ another version. Never translate an assertion or helper name from memory.
 
 | Situation | Surface |
 | --- | --- |
-| Pure `Handle()` / `Handle(providedValue)`, reducer logic or reactor decision (default) | Plain method call with `Specification` |
+| Pure `Handle()` / `Handle(providedValue)`, validator, reducer or reactor decision (default) | Plain method call with `Specification`, supplying read-model state |
 | Isolated class, collaborators can be substituted | `Specification` + NSubstitute |
 | Arc command pipeline (validators, `Provide()`, `Handle()`, appended events) | `CommandScenario<TCommand>` |
 | Arc query conversion, validation, authorization and interceptors | `QueryScenario<TReadModel>` (`Cratis.Arc.Testing.Queries`) |
-| Chronicle append semantics, constraints, concurrency | `EventScenario` |
-| Projection or reducer state from a sequence of events | `ReadModelScenario<TReadModel>` |
+| Append-time domain constraints | `EventScenario` |
+| Declarative mapping or reducer wiring | One `ReadModelScenario<TReadModel>` class per read model, many read-only assertions on shared setup |
 | Reactor invocation and its side effects | `ReactorScenario<TReactor>` |
 | Host, transport, or real-infrastructure boundary | Out-of-process Chronicle integration specification |
 | Setup shared by many specifications | Reusable context under `given/` |
 
 The plain `Specification` base is the universal foundation and the dominant mode
 in library and framework code. In applications, start pure decisions with a
-plain call and add the scenario helpers where the pipeline, validation,
-constraints or declarative projections contribute proof; read
+plain call, including direct validator calls, and add the scenarios the
+per-artifact decision table in `specs.scenarios.csharp.md` obligates. Keep shared lifecycle on; measure scenario cost using
+[running-specs.md](references/running-specs.md). Read
 [application-scenarios.md](references/application-scenarios.md) before using
 one. Out-of-process integration specifications are an advanced case reserved for
 boundaries the scenario helpers cannot reach — see
@@ -89,8 +101,12 @@ boundaries the scenario helpers cannot reach — see
 ⚠️ `EventScenario` wires a strategy that always answers `ConcurrencyScope.None`,
 which the validator skips, so an append that lets the strategy choose the scope
 never produces a concurrency violation. `ShouldHaveConcurrencyViolations()`
-cannot pass for such an append and its negation passes vacuously — specify concurrency against the
-real kernel with an out-of-process integration specification instead.
+cannot pass for such an append and its negation passes vacuously. Arc/Chronicle
+alone prove the platform concurrency, conflict-refusal and isolation matrix,
+with real-kernel integration where required. The application's only decision-read
+spec obligation is one cheap assembly-level shape-admission check from the
+[scenario rule](../../rules/specs.scenarios.csharp.md); business decisions take
+supplied state in direct `Handle()`/validator calls.
 
 For a class-based `ReactorScenario<TReactor>` on a recent Chronicle (Requires Chronicle 19.46.0), seed each
 handler read-model parameter with `Given.ForEventSourceId(id).ReadModel(instance)`
@@ -101,10 +117,14 @@ resolved read-model key. See the ReactorScenario reference for diagnostics,
 exception capture and UTC occurrence-time defaults.
 
 Specification projects are named `<Source>.Specs`. Add a `PackageReference` to
-`Cratis.Specifications.XUnit`, not just `Cratis.Specifications`; the C#
-namespace stays `Cratis.Specifications`. The house runner is xUnit **2.x**
-not xUnit v3. Supported targets are net8.0/net9.0/net10.0;
-net48 was dropped (retain 3.x for that target).
+`Cratis.Specifications.XUnit.v3`, not just `Cratis.Specifications`; the C#
+namespace stays `Cratis.Specifications`. The house default is Specifications 5
+on xUnit v3 with `xunit.v3.mtp-off` and `<OutputType>Exe</OutputType>`, run as
+the built executable. 5.0 targets net10.0 only; net8.0/net9.0 projects stay on
+4.x and net48 on 3.x. A project that stays on xUnit v2 references
+`Cratis.Specifications.XUnit`. Read [running-specs.md](references/running-specs.md)
+for the project shape, the executable loop, filters, mixed solutions and the
+4.x → 5.0 checklist; the `run-tests` and `filter-syntax` skills own command choice.
 `Cratis.Specifications.NUnit` is an alternative with the same base pattern,
 `[Test]` instead of `[Fact]`, and **public** test methods.
 
@@ -199,16 +219,20 @@ public class when_<behavior> : Specification
   leave no blank line between `should_` methods.
 - Fields are `private` in a concrete specification and `protected` in a `given/`
   context, named `_camelCase`.
-- Any phase may be `async Task`. `void Destroy()` is optional teardown, after
-  each fact by default; once per eligible class with the shared lifecycle opt-in.
+- Any phase may return `Task` or `ValueTask`; both are awaited. Never use `async void`.
+  `void Destroy()` is optional teardown, once per eligible class by default
+  (shared lifecycle); after each fact in a
+  `[PerFactSpecificationLifecycle]` class.
 
-`Cratis.Specifications.XUnit` discovers `Establish`, `Because`, and `Destroy` by
+`Cratis.Specifications.XUnit.v3` discovers `Establish`, `Because`, and `Destroy` by
 convention — there are no attributes on them.
 
-Keep the stock per-fact lifecycle by default. Read
-[shared-lifecycle.md](references/shared-lifecycle.md) when deliberately opting
-into one instance and one Establish/Because execution per specification class.
-Facts must not mutate that shared context.
+The shared lifecycle is the default: one instance and one Establish/Because
+execution per specification class. Facts must not mutate that shared context;
+`CRSPEC0008` is an error when one does. Read
+[shared-lifecycle.md](references/shared-lifecycle.md) for eligibility, auditing
+mutation, class-only `[PerFactSpecificationLifecycle]` exceptions and fixing
+`CRSPEC0008`. Do not opt the assembly or project out.
 
 ## Step 4 — Extract a reusable context
 
@@ -298,7 +322,7 @@ between collaborators. That is where defects hide.
 Requires `Cratis.Specifications` 4.0.0 for the analyzers.
 
 CRSPEC0001–CRSPEC0007 ship as **warnings** in `Cratis.Specifications`, `.XUnit`,
-and `.NUnit`. A warnings-as-errors build enforces them: `should_` names,
+`.XUnit.v3` and `.NUnit`; `CRSPEC0008` is an error. A warnings-as-errors build enforces them: `should_` names,
 one specification per file (given contexts exempt), no facts on given contexts,
 test attributes on `should_` methods, no explicit base lifecycle calls, public
 specification classes, and no `Because` on given contexts. See

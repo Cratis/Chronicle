@@ -11,6 +11,7 @@ using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.Projections.Engine.Graphs;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
 
@@ -94,6 +95,9 @@ public class Projection : IProjection, IDisposable
 
     /// <inheritdoc/>
     public string DefinitionFingerprint { get; internal set; } = string.Empty;
+
+    /// <inheritdoc/>
+    public GraphProjectionPlan? Graph { get; init; }
 
     /// <inheritdoc/>
     public ExpandoObject InitialModelState { get; }

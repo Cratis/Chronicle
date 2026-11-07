@@ -33,6 +33,7 @@ public class and_the_event_occurred_before_it_is_forwarded : Specification
     async Task Establish()
     {
         _silo = new TestKitSilo();
+        _silo.AddNamespaceCasing();
         _silo.AddService(Substitute.For<IStorage>());
         _silo.AddService(Substitute.For<IEventGenerationRelease>());
         _silo.AddService(new JsonSerializerOptions());

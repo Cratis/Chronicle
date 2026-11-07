@@ -15,6 +15,7 @@ using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Reactors.SideEffects;
+using Cratis.Chronicle.Serverless;
 using Cratis.Traces;
 using Microsoft.Extensions.Logging;
 
@@ -80,6 +81,46 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
         IReactorMethodArgumentsResolver argumentsResolver,
         ILogger<Reactors> logger,
         ILoggerFactory loggerFactory)
+        : this(eventStore, eventTypes, clientArtifactsProvider, serviceProvider, artifactActivator, middlewaresActivator, eventSerializer, causationManager, identityProvider, activitySource, sideEffectHandlers, reactorContextValuesBuilder, argumentsResolver, logger, loggerFactory, ClientSpanNames.Legacy)
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Reactors"/> class with the selected client span names.
+    /// </summary>
+    /// <param name="eventStore">The <see cref="IEventStore"/> the reactors belong to.</param>
+    /// <param name="eventTypes">The <see cref="IEventTypes"/>.</param>
+    /// <param name="clientArtifactsProvider">The <see cref="IClientArtifactsProvider"/>.</param>
+    /// <param name="serviceProvider">The <see cref="IServiceProvider"/>.</param>
+    /// <param name="artifactActivator">The <see cref="IClientArtifactsActivator"/>.</param>
+    /// <param name="middlewaresActivator">The <see cref="IActivateReactorMiddlewares"/>.</param>
+    /// <param name="eventSerializer">The <see cref="IEventSerializer"/>.</param>
+    /// <param name="causationManager">The <see cref="ICausationManager"/>.</param>
+    /// <param name="identityProvider">The <see cref="IIdentityProvider"/>.</param>
+    /// <param name="activitySource">The <see cref="IActivitySource{T}"/> for tracing.</param>
+    /// <param name="sideEffectHandlers">The <see cref="IReactorSideEffectHandlers"/>.</param>
+    /// <param name="reactorContextValuesBuilder">The <see cref="IReactorContextValuesBuilder"/>.</param>
+    /// <param name="argumentsResolver">The <see cref="IReactorMethodArgumentsResolver"/>.</param>
+    /// <param name="logger">The logger.</param>
+    /// <param name="loggerFactory">The <see cref="ILoggerFactory"/>.</param>
+    /// <param name="spanNames">The <see cref="ClientSpanNames"/> to use for client spans.</param>
+    internal Reactors(
+        IEventStore eventStore,
+        IEventTypes eventTypes,
+        IClientArtifactsProvider clientArtifactsProvider,
+        IServiceProvider serviceProvider,
+        IClientArtifactsActivator artifactActivator,
+        IActivateReactorMiddlewares middlewaresActivator,
+        IEventSerializer eventSerializer,
+        ICausationManager causationManager,
+        IIdentityProvider identityProvider,
+        IActivitySource<Reactors> activitySource,
+        IReactorSideEffectHandlers sideEffectHandlers,
+        IReactorContextValuesBuilder reactorContextValuesBuilder,
+        IReactorMethodArgumentsResolver argumentsResolver,
+        ILogger<Reactors> logger,
+        ILoggerFactory loggerFactory,
+        ClientSpanNames spanNames)
     {
         _eventStore = eventStore;
         _servicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
@@ -102,7 +143,10 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
             reactorContextValuesBuilder,
             argumentsResolver,
             logger,
-            loggerFactory);
+            loggerFactory)
+        {
+            SpanNames = spanNames
+        };
         _eventStore.Connection.Lifecycle.OnDisconnected += ConnectionDisconnected;
     }
 
@@ -110,6 +154,11 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
     /// Gets the generation delivery policy supplied by the event store.
     /// </summary>
     internal Observation.EventGenerationDelivery GenerationDelivery { get; init; }
+
+    /// <summary>
+    /// Gets how the events of reactors are delivered, when supplied by the event store.
+    /// </summary>
+    internal ObserverDeliveries? Deliveries { get; init; }
 
     /// <summary>
     /// Gets how many partitions of one reactor are handled at the same time.
@@ -124,7 +173,7 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
     /// <summary>
     /// Gets how the re-registration work is started. Specs replace this to run the work deterministically.
     /// </summary>
-    internal Func<Func<Task>, Task> ScheduleReconnectWork { get; init; } = work => Task.Run(work);
+    internal Func<Func<Task>, Task> ScheduleReconnectWork { get; init; } = Observation.ObserverDeliveryScope.RunDetached;
 
     /// <summary>
     /// Gets the current discovered and runtime reactor handlers.
@@ -583,6 +632,19 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
         };
     }
 
+    /// <summary>
+    /// Refuses a reactor that resolves to HTTP delivery, which is not available yet.
+    /// </summary>
+    /// <param name="handler">The <see cref="ReactorHandler"/> being registered.</param>
+    /// <exception cref="HttpDeliveryNotAvailable">Thrown when the reactor resolves to HTTP delivery.</exception>
+    void ThrowIfDeliveredOverHttp(ReactorHandler handler)
+    {
+        if (Deliveries?.Resolve(handler.Id.Value, handler.ReactorType) == ObserverDelivery.Http)
+        {
+            throw new HttpDeliveryNotAvailable([handler.Id.Value]);
+        }
+    }
+
     bool IsCurrentHandler(ReactorHandler handler) =>
         _handlers.TryGetValue(handler.Id, out var current) && ReferenceEquals(current.Handler, handler);
 
@@ -609,6 +671,7 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
     void RegisterReactor(ReactorRegistration registration, IServices services)
     {
         var handler = registration.Handler;
+        ThrowIfDeliveredOverHttp(handler);
         ClientObserverHosting.ThrowIfUnavailable(_eventStore.Connection, "Reactor", () => handler.Id.Value);
         if (GenerationDelivery == Observation.EventGenerationDelivery.Pinned)
         {

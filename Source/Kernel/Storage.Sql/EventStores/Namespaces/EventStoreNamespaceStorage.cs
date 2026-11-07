@@ -50,7 +50,7 @@ public class EventStoreNamespaceStorage(
     Json.IExpandoObjectConverter converter,
     IEventSequenceMutationDigestKeys? mutationDigestKeys = null) : IEventStoreNamespaceStorage
 {
-    readonly Sql.EventStores.Occurrences.OccurrencesStorage<NamespaceDbContext> _occurrences = new(() => database.Namespace(eventStore, @namespace));
+    readonly Sql.EventStores.Occurrences.OccurrencesStorage<NamespaceDbContext> _occurrences = new(() => database.Namespace(eventStore, @namespace), database);
 
     /// <inheritdoc/>
     public Chronicle.Storage.Occurrences.IOccurrencesStorage Occurrences => _occurrences;
@@ -81,10 +81,10 @@ public class EventStoreNamespaceStorage(
 
     /// <inheritdoc/>
     public ObserverDefinitionChangeStorage ObserverDefinitionChanges { get; } = new(
-        new Observers.ObserverDefinitionChangeRows<ObserverProgressRecord>(() => database.Namespace(eventStore, @namespace)),
-        new Observers.ObserverDefinitionChangeRows<ObserverContinuation>(() => database.Namespace(eventStore, @namespace)),
-        new Observers.ObserverDefinitionChangeRows<ObserverRestartPlan>(() => database.Namespace(eventStore, @namespace)),
-        new Observers.ObserverDefinitionChangeRows<ObserverJobInventory>(() => database.Namespace(eventStore, @namespace)));
+        new Observers.ObserverDefinitionChangeRows<ObserverProgressRecord>(() => database.Namespace(eventStore, @namespace), database),
+        new Observers.ObserverDefinitionChangeRows<ObserverContinuation>(() => database.Namespace(eventStore, @namespace), database),
+        new Observers.ObserverDefinitionChangeRows<ObserverRestartPlan>(() => database.Namespace(eventStore, @namespace), database),
+        new Observers.ObserverDefinitionChangeRows<ObserverJobInventory>(() => database.Namespace(eventStore, @namespace), database));
 
     /// <inheritdoc/>
     public IAlertIncidentsStorage AlertIncidents { get; } = new Alerts.AlertIncidentsStorage(eventStore, @namespace, database);

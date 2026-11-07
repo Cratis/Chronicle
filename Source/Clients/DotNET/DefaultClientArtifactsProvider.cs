@@ -9,6 +9,7 @@ using Cratis.Chronicle.Events.Migrations;
 using Cratis.Chronicle.EventSources;
 using Cratis.Chronicle.Occurrences;
 using Cratis.Chronicle.Projections;
+using Cratis.Chronicle.Projections.Graphs;
 using Cratis.Chronicle.Projections.ModelBound;
 using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.ReadModels;
@@ -50,6 +51,8 @@ public class DefaultClientArtifactsProvider(ICanProvideAssembliesForDiscovery as
     IEnumerable<Type> _eventTypes = [];
     IEnumerable<Type> _projections = [];
     IEnumerable<Type> _modelBoundProjections = [];
+    IEnumerable<Type> _graphElements = [];
+    IEnumerable<Type> _graphProjections = [];
     IEnumerable<Type> _reactors = [];
     IEnumerable<Type> _readModelReactors = [];
     IEnumerable<Type> _reducers = [];
@@ -117,6 +120,26 @@ public class DefaultClientArtifactsProvider(ICanProvideAssembliesForDiscovery as
         {
             EnsureInitialized();
             return _modelBoundProjections;
+        }
+    }
+
+    /// <inheritdoc/>
+    public virtual IEnumerable<Type> GraphElements
+    {
+        get
+        {
+            EnsureInitialized();
+            return _graphElements;
+        }
+    }
+
+    /// <inheritdoc/>
+    public virtual IEnumerable<Type> GraphProjections
+    {
+        get
+        {
+            EnsureInitialized();
+            return _graphProjections;
         }
     }
 
@@ -336,6 +359,8 @@ public class DefaultClientArtifactsProvider(ICanProvideAssembliesForDiscovery as
                 _securityForPropertiesProviders = assembliesProvider.DefinedTypes.Where(_ => _ != typeof(ICanProvideSecurityMetadataForProperty) && _.IsAssignableTo(typeof(ICanProvideSecurityMetadataForProperty))).ToArray();
                 _projections = FindArtifacts(assembliesProvider.DefinedTypes, typeof(IProjectionFor<>), (type, models) => new TypeImplementsMultipleProjectionInterfaces(type, models));
                 _modelBoundProjections = assembliesProvider.DefinedTypes.Where(_ => _.HasModelBoundProjectionAttributes()).ToArray();
+                _graphElements = assembliesProvider.DefinedTypes.Where(_ => _.IsDefined(typeof(NodeAttribute), false) || _.IsDefined(typeof(EdgeAttribute), false)).ToArray();
+                _graphProjections = assembliesProvider.DefinedTypes.Where(_ => _ != typeof(IGraphProjection) && !_.IsAbstract && !_.IsInterface && _.HasInterface<IGraphProjection>()).ToArray();
                 _reactors = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface<IReactor>() && !_.IsGenericType).ToArray();
                 _readModelReactors = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface<IReadModelReactor>() && !_.IsGenericType).ToArray();
                 _reactorMiddlewares = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface<IReactorMiddleware>()).ToArray();

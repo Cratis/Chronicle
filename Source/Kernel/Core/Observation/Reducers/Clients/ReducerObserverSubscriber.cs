@@ -7,9 +7,12 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Reducers;
 using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.Configuration;
+using Cratis.Chronicle.Diagnostics;
 using Cratis.Chronicle.Observation.Placement;
 using Cratis.Chronicle.Projections;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Orleans.Providers;
 
 namespace Cratis.Chronicle.Observation.Reducers.Clients;
@@ -28,13 +31,15 @@ namespace Cratis.Chronicle.Observation.Reducers.Clients;
 /// <param name="reducerMediator"><see cref="IReducerMediator"/> for notifying actual clients.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 /// <param name="timeProvider"><see cref="TimeProvider"/> for deciding when the cached pipeline is due for a refresh.</param>
+/// <param name="options">The telemetry configuration.</param>
 [ConnectedObserverPlacement]
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.Reducers)]
 public class ReducerObserverSubscriber(
     IReducerPipelineFactory reducerPipelineFactory,
     IReducerMediator reducerMediator,
     ILogger<ReducerObserverSubscriber> logger,
-    TimeProvider? timeProvider = null) : Grain<ReducerDefinition>, IReducerObserverSubscriber
+    TimeProvider? timeProvider = null,
+    IOptions<ChronicleOptions>? options = null) : Grain<ReducerDefinition>, IReducerObserverSubscriber
 {
     /// <summary>
     /// How long a built pipeline - and the sink it resolved the target read model's definition to - is
@@ -54,6 +59,7 @@ public class ReducerObserverSubscriber(
     /// </remarks>
     internal static readonly TimeSpan PipelineRefreshInterval = TimeSpan.FromMinutes(1);
 
+    readonly ClientObserverSubscriberMetrics _metrics = new(options?.Value?.Telemetry.MetricNames ?? MetricNames.Legacy);
     readonly TimeProvider _clock = timeProvider ?? TimeProvider.System;
     ObserverKey _key = ObserverKey.NotSet;
     IReducerPipeline? _pipeline;
@@ -74,7 +80,7 @@ public class ReducerObserverSubscriber(
     /// <inheritdoc/>
     public async Task<ObserverSubscriberResult> OnNext(Key partition, IEnumerable<AppendedEvent> events, ObserverSubscriberContext context)
     {
-        var deliveryWait = new ClientDeliveryWait(_clock, logger, _key, partition);
+        var deliveryWait = new ClientDeliveryWait(_clock, logger, _key, partition, _metrics);
         if (!await PrepareDelivery(deliveryWait, context))
         {
             return ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, "Delivery expired before dispatch");
@@ -103,7 +109,7 @@ public class ReducerObserverSubscriber(
                 events,
                 partition);
 
-            var notification = _pipeline is null ? null : await _pipeline.Reduce(reducerContext, CreateReducerDelegate(reducerContext, connectedClient, context, tcs));
+            var notification = _pipeline is null ? null : await _pipeline.Reduce(reducerContext, CreateReducerDelegate(reducerContext, connectedClient, context, tcs), await IsWatched());
             return await NotifyChange(await tcs.Task, notification);
         }
         catch (AbandonedDeliveryDiscarded)
@@ -148,6 +154,19 @@ public class ReducerObserverSubscriber(
             _ => result
         };
 
+    async Task<bool> IsWatched()
+    {
+        try
+        {
+            return await _changesetNotifier.HasSubscribers();
+        }
+        catch (Exception)
+        {
+            // Not knowing is not a reason to drop a notification somebody may be waiting for.
+            return true;
+        }
+    }
+
     async Task<ObserverSubscriberResult> NotifyChange(ObserverSubscriberResult result, ReadModelChangeNotification? notification)
     {
         if (result.State != ObserverSubscriberState.Ok || notification is null) return result;
@@ -177,7 +196,7 @@ public class ReducerObserverSubscriber(
     ReducerDelegate CreateReducerDelegate(ReducerContext reduction, ConnectedClient client, ObserverSubscriberContext context, TaskCompletionSource<ObserverSubscriberResult> completion) =>
         async (events, initialState) =>
         {
-            var deliveryWait = new ClientDeliveryWait(_clock, logger, _key, reduction.Key);
+            var deliveryWait = new ClientDeliveryWait(_clock, logger, _key, reduction.Key, _metrics);
 
             // Pipeline setup can itself outlive the caller's deadline. Never dispatch a queued ghost.
             if (deliveryWait.Expired(context))

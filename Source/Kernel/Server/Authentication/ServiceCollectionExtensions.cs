@@ -175,7 +175,9 @@ public static class ServiceCollectionExtensions
     {
         services.AddChronicleAdministratorAuthorization();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IValidateOptions<Configuration.ChronicleOptions>, ExternalAdministratorClaimValidation>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IValidateOptions<Configuration.ChronicleOptions>, EventStoreAccessConfigurationValidation>());
         services.AddHostedService<AdministratorPolicyStartupWarning>();
+        services.AddHostedService<StoreEntitlementsStartupNotice>();
     }
 
     static AuthorizationBuilder AddAdministratorPolicies(this AuthorizationBuilder builder, params string[] authenticationSchemes) => builder

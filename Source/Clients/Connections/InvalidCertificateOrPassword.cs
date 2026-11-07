@@ -7,4 +7,4 @@ namespace Cratis.Chronicle.Connections;
 /// Exception that is thrown when a specified TLS certificate file is invalid or the password is incorrect.
 /// </summary>
 /// <param name="file">The file path.</param>
-public class InvalidCertificateOrPassword(string file) : Exception($"The specified TLS certificate file '{file}' is invalid or the password is incorrect.");
+public class InvalidCertificateOrPassword(string file) : Exception($"The specified TLS certificate file '{ConnectionStringDiagnostics.Hide(file)}' is invalid or the password is incorrect.");

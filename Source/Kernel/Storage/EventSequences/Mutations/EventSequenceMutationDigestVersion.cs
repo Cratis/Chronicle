@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Storage.EventSequences.Mutations;
 /// </summary>
 /// <remarks>
 /// The version is persisted with every receipt so that a later change of construction stays readable. Version
-/// <see cref="Sha256DomainSeparated"/> is the unkeyed construction first accepted by decision 0025 and is still read;
+/// <see cref="Sha256DomainSeparated"/> is the unkeyed construction first accepted by decision 0026 and is still read;
 /// <see cref="HmacSha256PerEventStore"/> is the keyed construction new digests are written with.
 /// </remarks>
 public enum EventSequenceMutationDigestVersion

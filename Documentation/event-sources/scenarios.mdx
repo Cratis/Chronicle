@@ -1,11 +1,11 @@
 ---
-title: Event source scenarios
-description: Worked examples of event source definitions, with the append, the concurrency scope it produces and what conflicts and what does not.
+title: Choose Chronicle event source concurrency scopes
+description: Choose Chronicle event source scopes for monthly account streams, per-author notes and transfers, with examples of which concurrent writes conflict.
 ---
 
-Use this page to see how a definition behaves in a realistic domain. Each scenario shows the definition, the appends, the scope Chronicle produces and what that scope does to concurrent writers. The scenarios assume the default settings, where [the first append into a scope is not checked](../events/concurrency.mdx#the-first-append-into-a-scope-is-not-checked-by-default). For the rules behind them, read [Concurrency](./concurrency.mdx).
+An event source definition in Cratis Chronicle lets you choose which concurrent writes should conflict. These .NET examples show how monthly account streams, per-author notes and transfers turn that choice into an append guard. A guard is the condition the kernel checks before accepting the write.
 
-Each scenario names one recommended way and the reason, then the alternatives. Definition-derived guards cover a whole event source or stream, whatever the event type, so they suit cases where the stream is the consistency boundary. For a narrower condition, use a [decision read](../read-models/decision-reads.mdx).
+Use a definition-derived guard when the rule covers a whole event source or stream, regardless of event type. For a condition based on particular events or state, use a [decision read](../read-models/decision-reads.mdx). The examples assume the default settings, where [the first append into a scope is not checked](../events/concurrency.mdx#the-first-append-into-a-scope-is-not-checked-by-default). [Concurrency](./concurrency.mdx) explains the dimension rules behind these choices.
 
 | Scenario | Shows |
 |---|---|
@@ -17,9 +17,9 @@ Each scenario names one recommended way and the reason, then the alternatives. D
 
 ## A bank account with monthly streams
 
-An account has an `Onboarding` stream that exists once, and a `Transactions` stream with one stream id per month. Customers deposit all the time, so deposits in different months must not interfere. Changes to the account's onboarding data must see everything that happened to the account.
+An account has one `Onboarding` stream and a `Transactions` stream with one stream id per month. In this example, deposits in different months should not conflict. Changes to onboarding data need a wider guard that notices any concurrent write to the account.
 
-**Recommended:** declare the dimensions on the definition, with the stream's own dimensions on `Transactions`. The month is the consistency boundary: deposits in one month must see each other, and nothing else needs to. **Alternatives:** build an explicit scope per call, which repeats the dimension choice at every call site, or use a decision read when the rule depends on state, such as a balance or a limit. See [Dynamic Consistency Boundary](./dcb.mdx).
+Declare `EventSourceId` on the definition for that account-wide guard, then give `Transactions` its own dimensions to narrow deposits to one month. An explicit scope on every call would repeat this choice at each call site. If the rule depends on a balance or a limit, use a decision read instead; see [Dynamic Consistency Boundary](./dcb.mdx).
 
 <ChronicleClientTabs snippet="event-sources/scenarios/bank-account" variants="csharp" />
 
@@ -41,9 +41,9 @@ The first deposit of each new month is not checked by default. Two writers that 
 
 ## A monthly limit on one stream
 
-The bank account allows at most 5000 withdrawn a month. A declared dimension guards the whole month, whatever the event type, so it would reject a deposit that races a withdrawal. The rule only cares about withdrawals, so read them with a decision read scoped to the month's stream, and append through the same definition. This scenario uses the definition and events from the first scenario.
+The bank account allows at most 5000 withdrawn a month. This rule depends on the withdrawals already recorded, so use a decision read to total them in the month's stream before appending. Reuse the account definition and events from the first scenario.
 
-**Recommended:** a stream-scoped decision read whose stream type and event source type come from the definition. The guard is as narrow as the rule. **Alternatives:** rely on the declared dimensions alone, which guard the month but do not capture what you read, or read the whole account, which makes every month conflict with every other.
+Take the stream type and event source type from the definition so that the read and append use the same names. Declared dimensions alone guard every event in the month, including deposits, and do not capture what you read. Reading the whole account would also bring other months into the guard.
 
 <ChronicleClientTabs snippet="event-sources/scenarios/monthly-limit" variants="csharp" />
 
@@ -60,31 +60,33 @@ A count version of this rule is explained step by step in [Event sources and the
 
 ## A stream per owner
 
-A project collects notes from several authors. Authors write at the same time and should not wait for each other. The notes of one author are ordered and must not interleave with themselves.
+A project collects notes from several authors. Different authors should be able to write without conflicting, while simultaneous writes from one author should be detected.
 
-**Recommended:** one stream per author, with the stream id as the author id and all three stream dimensions declared. Authors then cannot conflict with each other, and one author's notes stay ordered. **Alternatives:** one stream for all notes, which makes every author conflict with every other, or one event source per author, which loses the project as the common key.
+Use one `Notes` stream per author, with the author id as the stream id. Include the project id, stream type and stream id in the concurrency dimensions so the guard distinguishes both projects and authors. A single stream for all notes would make authors conflict with each other; a separate event source per author would lose the project as the common key.
 
 <ChronicleClientTabs snippet="event-sources/scenarios/per-owner" variants="csharp" />
 
 The stream id is the author id. The `Notes` stream declares the event source id, the stream type and the stream id, so the scope narrows to one author's notes on one project.
 
 - Two authors adding notes to the same project do not conflict.
-- The same author adding notes from two devices at once conflicts on the second append. Read the new tail and append again.
+- The same author adding notes from two devices at once conflicts on the second append when both read the same existing tail. Read the new tail and append again.
 - Appends to the project's other streams, or to other projects, are not affected.
 
-The project's own event source declares `EventSourceId`, so an append that carries no stream is guarded against every event of the project, including every author's notes. Put project-wide facts in a stream of their own if they should not conflict with note-taking.
+The project's own event source declares `EventSourceId`, so an append that carries no stream is guarded against every event of the project, including every author's notes. If project-wide facts should not conflict with note-taking, give them a separate stream with its own stream-level dimensions. Merely naming a new stream still inherits `EventSourceId`.
 
 ## A process stream
 
-A money transfer is a process with several steps. Each transfer is one event source, and its steps are events in one `Process` stream. A reactor drives the process, and a closing event ends it.
+A money transfer is a process with several steps. Give each transfer one event source and record its steps in a `Process` stream. A reactor handles those steps after they are written, while a closing event prevents further appends to the finished stream.
 
-**Recommended:** one event source per transfer with a `Process` stream, a typed observer filter, and a closing event. The process is the consistency boundary, so the coarse guard is what you want, and the closing event makes the end final for every writer. **Alternatives:** string filters with `[EventSourceType]` and `[EventStreamType]`, which the analyzer cannot check, or a manual `CompleteStream` call, which is a second step after the final append.
+Use an event-source-wide guard because concurrent attempts to advance the same transfer should conflict. A typed observer filter keeps the reactor on the declared `Process` stream and lets the analyzer check that the stream exists. Closing it with the final event avoids a separate `CompleteStream` call after that append.
 
 <ChronicleClientTabs snippet="event-sources/scenarios/process" variants="csharp" />
 
-- The reactor uses `[FromEventSource<TransferEventSource>("Process")]`. It receives the steps of transfer processes and nothing else.
-- Every append declares the event source id only. The scope narrows to the one transfer, so transfers do not conflict with each other, and two writers advancing the same transfer at the same moment do.
-- `TransferCompleted` carries `[ClosesStream]`. Appended to the `Process` stream, it closes that transfer's process stream. A step appended afterwards is refused with `StreamClosed`, so a late or duplicated message cannot reopen a finished transfer.
+- The reactor uses `[FromEventSource<TransferEventSource>("Process")]`. Its handlers receive matching events from transfer process streams, not other streams.
+- The definition declares only the event source id as a concurrency dimension. The scope covers one transfer, so different transfers do not conflict. Two writers advancing the same transfer conflict when they read the same existing tail.
+- `TransferCompleted` carries `[ClosesStream]`. Appended to the `Process` stream, it closes that transfer's process stream. Once the closure is recorded, later steps are refused with `StreamClosed`.
+
+The closing event and closure index are not crash-atomic: a crash can leave the event stored without its closure. Reindex the closing constraint to repair a missing closure; see [Close a stream](./closing.mdx).
 
 A reactor reacts after the event is written. It is not a guard, and it can be given an event again after a recovery. Make each step safe to repeat, and see [once only](../reactors/once-only.mdx) for what that attribute does and does not promise.
 
@@ -92,7 +94,7 @@ A reactor reacts after the event is written. It is not a guard, and it can be gi
 
 Moving money between two accounts writes one event to each account. It is one logical operation, so both events are written together or not at all. This scenario uses the definition and events from the first scenario.
 
-**Recommended:** one atomic `AppendMany` with one event per account, routed through the definition, so each account gets its own month guard. **Alternatives:** two separate appends, which can leave one side written, or a decision read per account when the transfer depends on a balance. See [A rule across two keys](../dynamic-consistency-boundary/scenarios.mdx#a-rule-across-two-keys).
+Use one atomic `AppendMany` with one event per account, routed through the definition. Each account gets its own month guard, and the kernel checks both before writing either event. Two separate appends could leave one side written. When the transfer depends on a balance, use a decision read per account as shown in [A rule across two keys](../dynamic-consistency-boundary/scenarios.mdx#a-rule-across-two-keys).
 
 <ChronicleClientTabs snippet="event-sources/scenarios/transfer" variants="csharp" />
 
@@ -105,6 +107,4 @@ This records the transfer as two events, one on each account, because every even
 
 ## Next steps
 
-- [How it works](./how-it-works.mdx)
-- [Dynamic Consistency Boundary](./dcb.mdx): a guarded decision on top of a stream.
-- [Questions and pitfalls](./faq.mdx)
+Continue with [Dynamic Consistency Boundary](./dcb.mdx) to build a guarded decision on one stream. [How it works](./how-it-works.mdx) traces how Chronicle resolves a definition into routing and scopes; [Questions and pitfalls](./faq.mdx) covers unexpected conflicts and missed events.

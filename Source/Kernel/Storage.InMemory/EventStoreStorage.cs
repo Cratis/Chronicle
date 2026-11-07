@@ -127,6 +127,9 @@ public sealed class EventStoreStorage(
     public IWebhookDefinitionsStorage Webhooks { get; } = new WebhookDefinitionsStorage();
 
     /// <inheritdoc/>
+    public IWebhookSigningKeysStorage WebhookSigningKeys { get; } = new WebhookSigningKeysStorage();
+
+    /// <inheritdoc/>
     public IEventStoreSubscriptionDefinitionsStorage EventStoreSubscriptions { get; } = new EventStoreSubscriptionDefinitionsStorage();
 
     /// <inheritdoc/>
@@ -163,6 +166,9 @@ public sealed class EventStoreStorage(
         _initialized = true;
         return Task.CompletedTask;
     }
+
+    /// <inheritdoc/>
+    public Task<bool> HasOwnNamespaceData(EventStoreNamespaceName @namespace) => Task.FromResult(_namespaces.ContainsKey(@namespace));
 
     /// <inheritdoc/>
     public IEventStoreNamespaceStorage GetNamespace(EventStoreNamespaceName @namespace)

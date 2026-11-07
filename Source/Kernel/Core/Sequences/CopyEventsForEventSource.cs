@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.EventSequences.Copy;
 using Cratis.Chronicle.Grpc;
+using Cratis.Chronicle.Security;
 
 namespace Cratis.Chronicle.Sequences;
 
@@ -19,6 +20,7 @@ namespace Cratis.Chronicle.Sequences;
 /// <param name="SourceId">The event source to copy events from.</param>
 /// <param name="TargetId">The event source to append the copies to.</param>
 /// <param name="EventTypes">The identifiers of the event types to copy. When empty, every event type is copied.</param>
+[StoreAccess(StoreAccess.Read | StoreAccess.Append)]
 [Command]
 [BelongsTo(WellKnownServices.EventSequences)]
 public record CopyEventsForEventSource(

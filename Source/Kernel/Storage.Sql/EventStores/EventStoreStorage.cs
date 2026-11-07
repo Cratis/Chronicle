@@ -48,19 +48,19 @@ public class EventStoreStorage(
     ILoggerFactory? loggerFactory = null,
     IEventSequenceMutationDigestKeys? mutationDigestKeys = null) : IEventStoreStorage
 {
-    readonly Occurrences.OccurrencesStorage<EventStoreDbContext> _occurrences = new(() => database.EventStore(eventStore));
+    readonly Occurrences.OccurrencesStorage<EventStoreDbContext> _occurrences = new(() => database.EventStore(eventStore), database);
 
     /// <inheritdoc/>
     public Chronicle.Storage.Generations.IGenerationInitializationStorage GenerationInitialization { get; } = new Generations.GenerationInitializationStorage(() => database.EventStore(eventStore));
 
     /// <inheritdoc/>
-    public Chronicle.Storage.Occurrences.ITriggerDefinitionsStorage TriggerDefinitions { get; } = new Occurrences.TriggerDefinitionsStorage(() => database.EventStore(eventStore));
+    public Chronicle.Storage.Occurrences.ITriggerDefinitionsStorage TriggerDefinitions { get; } = new Occurrences.TriggerDefinitionsStorage(() => database.EventStore(eventStore), database);
 
     /// <inheritdoc/>
     public Chronicle.Storage.Occurrences.IOccurrencesStorage Occurrences => _occurrences;
 
     /// <inheritdoc/>
-    public Chronicle.Storage.Occurrences.ILifecycleFanOutStorage LifecycleFanOut { get; } = new Occurrences.LifecycleFanOutStorage(() => database.EventStore(eventStore));
+    public Chronicle.Storage.Occurrences.ILifecycleFanOutStorage LifecycleFanOut { get; } = new Occurrences.LifecycleFanOutStorage(() => database.EventStore(eventStore), database);
 
     /// <inheritdoc/>
     public Chronicle.Storage.Occurrences.IScheduleStorage Schedules => _occurrences;
@@ -100,6 +100,9 @@ public class EventStoreStorage(
 
     /// <inheritdoc/>
     public IWebhookDefinitionsStorage Webhooks { get; } = new Webhooks.WebhookDefinitionsStorage(eventStore, database);
+
+    /// <inheritdoc/>
+    public IWebhookSigningKeysStorage WebhookSigningKeys { get; } = new Webhooks.WebhookSigningKeysStorage(eventStore, database);
 
     /// <inheritdoc/>
     public IExternalServiceDefinitionsStorage ExternalServices { get; } = new ExternalServices.ExternalServiceDefinitionsStorage(eventStore, database);
@@ -145,6 +148,13 @@ public class EventStoreStorage(
     {
         await using var scope = await database.EventStore(eventStore);
         await scope.DbContext.EventStoreInitialization.Upsert(new EventStoreInitialization { Id = 2 });
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> HasOwnNamespaceData(EventStoreNamespaceName @namespace)
+    {
+        await using var scope = await database.ExistingNamespace(eventStore, @namespace);
+        return scope is not null;
     }
 
     /// <inheritdoc/>

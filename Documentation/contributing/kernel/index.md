@@ -1,5 +1,5 @@
 ---
-title: Kernel
+title: Contributing to the Cratis Chronicle kernel
 description: How the Chronicle kernel is organised, how to build and test it locally, and where to start with contracts, services and patches.
 ---
 

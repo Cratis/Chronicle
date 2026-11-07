@@ -1,6 +1,6 @@
 ---
 name: cratis-arc-hosting
-description: Bootstrap and configure a Cratis Arc .NET host — choose AddCratis versus AddCratisArc or ArcApplication, activate Chronicle and storage integrations, disable controllers for trimming/NativeAOT, supply JSON metadata, and check identity/discovery and embedded viewer exposure. Use when creating a host, diagnosing missing endpoints, or preparing a trimmed publish. Do not use for command/query design, running a Chronicle server, or Kotlin/TypeScript hosting.
+description: Use when creating an Arc .NET host, diagnosing missing endpoints or preparing a trimmed publish. Not for command design, running a Chronicle server or Kotlin and TypeScript hosting.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-arc-hosting/SKILL.md -->

@@ -102,7 +102,7 @@ public partial class EventSequence(
     IClosedStreamsConstraintStorage? _closedStreamsStorage;
     EventSequenceId _eventSequenceId = EventSequenceId.Unspecified;
     EventSequenceKey _eventSequenceKey = EventSequenceKey.NotSet;
-    IMeterScope<EventSequence>? _metrics;
+    EventSequenceMetrics? _metrics;
     IAppendedEventsQueues? _appendedEventsQueues;
     IConstraintValidation? _constraints;
     ConstraintsVersion _constraintsVersion = ConstraintsVersion.NotSet;
@@ -132,7 +132,7 @@ public partial class EventSequence(
         {
             _mayWriteSequence = await ReservedEventSequenceRules.Exists(storage, _eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId);
         }
-        _metrics = meter.BeginEventSequenceScope(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace);
+        _metrics = meter.BeginEventSequenceScope(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, options.Value.Telemetry.MetricNames);
         if (!_mayWriteSequence)
         {
             await base.OnActivateAsync(cancellationToken);
@@ -145,7 +145,12 @@ public partial class EventSequence(
         if (_eventSequenceKey.EventStore != EventStoreName.System || _eventSequenceKey.Namespace != EventStoreNamespaceName.Default || _eventSequenceId != EventSequenceId.System)
         {
             var namespaces = GrainFactory.GetGrain<INamespaces>(_eventSequenceKey.EventStore);
-            await namespaces.Ensure(_eventSequenceKey.Namespace);
+            var canonical = await namespaces.EnsureCanonical(_eventSequenceKey.Namespace);
+            if (!string.Equals(canonical.Value, _eventSequenceKey.Namespace.Value, StringComparison.Ordinal))
+            {
+                logger.RefusedCaseVariant(_eventSequenceKey.Namespace.Value, _eventSequenceKey.EventStore.Value, canonical.Value);
+                throw new NamespaceIsCaseVariant(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, canonical);
+            }
         }
 
         _appendedEventsQueues = GrainFactory.GetGrain<IAppendedEventsQueues>(_eventSequenceKey);

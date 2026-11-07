@@ -20,6 +20,7 @@ public class ReactorMediator : IReactorMediator
 {
     readonly ConcurrentDictionary<ReactorMediatorKey, ReactorEventsObserver> _observers = new();
     readonly ConcurrentDictionary<ReactorMediatorKey, ReactorReplayObserver> _replayObservers = new();
+    readonly ConcurrentDictionary<ReactorMediatorKey, ReactorPageObserver> _pageObservers = new();
 
     /// <inheritdoc/>
     public void Subscribe(
@@ -29,7 +30,47 @@ public class ReactorMediator : IReactorMediator
         EventStoreNamespaceName @namespace,
         ReactorEventsObserver target)
     {
-        _observers[new(reactorId, connectionId, eventStore, @namespace)] = target;
+        var key = new ReactorMediatorKey(reactorId, connectionId, eventStore, @namespace);
+        _observers[key] = target;
+
+        // A stream that replaces an earlier one starts without that stream's page delegate; it subscribes to pages itself if it wants them.
+        _pageObservers.TryRemove(key, out _);
+    }
+
+    /// <inheritdoc/>
+    public void SubscribePages(
+        ReactorId reactorId,
+        ConnectionId connectionId,
+        EventStoreName eventStore,
+        EventStoreNamespaceName @namespace,
+        ReactorPageObserver target)
+    {
+        _pageObservers[new(reactorId, connectionId, eventStore, @namespace)] = target;
+    }
+
+    /// <inheritdoc/>
+    public void OnNextPage(
+        ReactorId reactorId,
+        ConnectionId connectionId,
+        EventStoreName eventStore,
+        EventStoreNamespaceName @namespace,
+        IReadOnlyList<ObserverPartitionBatch> batches,
+        IReadOnlyDictionary<Key, TaskCompletionSource<ObserverSubscriberResult>> completions,
+        TimeSpan? deliverWithin = null,
+        ObservationOrigin origin = ObservationOrigin.Unknown)
+    {
+        var key = new ReactorMediatorKey(reactorId, connectionId, eventStore, @namespace);
+        if (_pageObservers.TryGetValue(key, out var pageObserver))
+        {
+            pageObserver(batches, completions, deliverWithin, origin);
+            return;
+        }
+
+        // The client did not declare pages, so it gets one partition at a time.
+        foreach (var batch in batches)
+        {
+            OnNext(reactorId, connectionId, eventStore, @namespace, batch.Partition, batch.Events, completions[batch.Partition], deliverWithin, origin);
+        }
     }
 
     /// <inheritdoc/>
@@ -92,6 +133,11 @@ public class ReactorMediator : IReactorMediator
     {
         var key = new ReactorMediatorKey(reactorId, connectionId, eventStore, @namespace);
         var ownsEvents = RemoveIfOwned(_observers, key, target);
+        if (ownsEvents)
+        {
+            _pageObservers.TryRemove(key, out _);
+        }
+
         RemoveIfOwned(_replayObservers, key, replayTarget);
         return ownsEvents;
     }

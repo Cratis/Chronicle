@@ -36,7 +36,14 @@ internal sealed class SqlServerDatabaseSchemaLock : IDatabaseSchemaLock
         // 0 granted at once, 1 granted after waiting, -1 timed out, -2 canceled, -3 deadlock victim, -999 error.
         if (result < 0)
         {
-            throw new DatabaseSchemaLockNotAcquired(connection.Database, resource, result == -1 ? $"timed out after {timeout}" : $"sp_getapplock returned {result}");
+            var outcome = result switch
+            {
+                -1 => DatabaseSchemaLockOutcome.Timeout,
+                -3 => DatabaseSchemaLockOutcome.Deadlock,
+                -2 => DatabaseSchemaLockOutcome.Canceled,
+                _ => DatabaseSchemaLockOutcome.Error
+            };
+            throw new DatabaseSchemaLockNotAcquired(connection.Database, resource, result == -1 ? $"timed out after {timeout}" : $"sp_getapplock returned {result}", outcome);
         }
     }
 

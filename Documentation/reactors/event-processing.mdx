@@ -1,79 +1,77 @@
 ---
-title: "Event Processing"
-description: "How Chronicle dispatches events to reactor handlers and resolves the dependencies a handler asks for."
+title: "Cratis Chronicle reactors: handle events and resolve dependencies"
+description: "Choose a Cratis Chronicle reactor handler signature, use event context, and resolve .NET services or read models while keeping partition ordering in mind."
 ---
 
-This guide explains how reactors discover methods, which signatures are supported, and how event context and errors are handled.
+A Cratis Chronicle reactor handler receives an event and runs the work that follows it. Choose a signature that supplies the context and dependencies that work needs, then account for how Chronicle orders delivery and reports failures.
+
+The discovery and parameter-resolution rules below describe the .NET client. The examples include other clients where their handler APIs differ.
 
 ## Event Method Discovery
 
-Reactors use convention-based method discovery. Chronicle finds and invokes public methods that:
+In .NET, Chronicle matches a method to the event type of its first parameter, not to its name. Make the handler public so its purpose is clear. It can request further parameters, such as `EventContext`, read models, or services, and return `void`, `Task`, `Task<T>`, or a synchronous side-effect type.
 
-- Accept the event type as the first parameter
-- Optionally accept further dependency parameters (the `EventContext`, read models, or services)
-- Return `void`, `Task`, `Task<T>`, or a synchronous side-effect type (see below)
-
-Event parameter types must be marked with `[EventType]`.
+For attribute-based event discovery, mark the event parameter's type with `[EventType]`. Types nominated through [explicit artifact registration](../clients/dotnet/explicit-artifacts) do not need that attribute.
 
 ## When more than one method matches
 
-Discovery matches on the first parameter type, so a helper you extract out of a handler for readability — say a `Task<string> Enrich(OrderPlaced @event)` that the handler awaits — matches the same event type the handler does. When that happens, Chronicle picks one method per event type, in this order:
+A helper such as `Task<string> Enrich(OrderPlaced @event)` can match the same event as the handler that calls it. The .NET client chooses one method per event type using this precedence:
 
-1. **A public method beats a non-public one.** Handlers are public by convention; anything else is an implementation detail, so a private helper never displaces the handler that calls it.
-2. **The richest signature wins.** Between two methods of the same accessibility, the one taking the most parameters asked for the most context, so it is the more specific handler.
-3. **Method name, ordinal**, so a genuine tie resolves the same way on every run rather than being left to reflection order.
+1. Public methods before non-public methods.
+2. Methods with more parameters before methods with fewer parameters.
+3. Method name in ordinal order to break a remaining tie.
 
-A private method is still a valid handler when nothing else handles that event type — the precedence only decides between candidates, it does not disqualify any of them. If a helper is not meant to take part in dispatch at all, give it a first parameter that is not an event type.
+A private method can still become the handler when no higher-priority method matches. To keep a helper out of dispatch entirely, give it a first parameter that is not an event type. Do not rely on a private modifier alone.
 
 ## Supported Signatures
 
 <ChronicleClientTabs snippet="reactors/event-processing/supported-signatures" />
 
-`TResult` can be an event type or a sequence of known events: `IEnumerable<TEvent>`, `TEvent[]`, `List<TEvent>`, or `IReadOnlyList<TEvent>`. See [Returning Side Effects](side-effects) for the full list of supported return types and metadata resolution.
+In .NET, `TResult` can be an event type or a sequence of known events: `IEnumerable<TEvent>`, `TEvent[]`, `List<TEvent>`, or `IReadOnlyList<TEvent>`. See [Returning Side Effects](side-effects) for supported return types and metadata resolution.
 
-This overload table is specific to C#'s method-overload-based dispatch. Kotlin, Elixir, and TypeScript each use one canonical handler shape instead of a family of overloads — see [Getting started with reactors](getting-started) for what that shape looks like in each client. None of them auto-append a handler's return value the way C# does (see [Returning side effects](side-effects)).
+Do not carry C# overload conventions into another client. Kotlin and Java support event-typed handlers with optional context and resolvable arguments. TypeScript uses event-name conventions or explicit `@handles` mappings, and Elixir dispatches through `@handles` and `handle/2`. Returned-event handling also varies by client; [Returning side effects](side-effects) covers those differences.
 
 ## Event Context
 
-The optional `EventContext` parameter provides metadata about the event, including the event source ID, sequence number, timestamps, and correlation identifiers.
+Use `EventContext` when the handler needs to identify the event's source or delivery. It includes the event source ID, sequence number, timestamps, and correlation identifiers:
 
 <ChronicleClientTabs snippet="reactors/event-processing/event-context" />
 
 ## Taking Dependencies
 
-Beyond the event and `EventContext`, a handler method can take additional parameters that Chronicle resolves when the method runs. Only the first parameter is fixed; it is the event that drives dispatch.
+In .NET, keep the event first and add parameters for the data or services the handler needs. Chronicle resolves them when it invokes the method, so the event determines dispatch while the remaining parameters support the work:
 
 <ChronicleClientTabs snippet="reactors/event-processing/dependencies" />
 
-This is currently a C#-only capability. Kotlin, Elixir, and TypeScript reactor handlers accept only the event and, optionally, the event context — there's no mechanism to have Chronicle resolve and inject further parameters (services or read models) into the handler call.
+For .NET parameter resolution, a type counts as a read model only when a projection or reducer builds it. An `EventContext` parameter receives the context wherever it appears after the event, and `ReactorDelivery` receives the current delivery. A read model parameter is resolved by Chronicle; other types, including a plain record, come from the service provider.
 
-Each parameter after the event resolves as follows. A type counts as a read model only when a projection or reducer builds it; any other type, including a plain record, is requested from the service provider:
+A materialized read model is read from its sink, the storage the projection or reducer writes to. That read is eventually consistent and may not include the event being handled yet. Mark the read model `[Passive]` to compute it from event history when requested instead. Passive reads are scoped by event source ID: a projection that joins other sources or uses a custom key can miss events through this path.
 
-- An `EventContext` parameter receives the event context; its position does not matter.
-- A read model — a type with a reducer or projection — is resolved directly by Chronicle, never through the service provider. A materialized read model (the default) is read from its sink, so it is **eventually consistent** and may not yet include the event being handled. Mark it `[Passive]` when the handler needs it **strongly consistent**: Chronicle then computes it from the events when the reactor runs. That suits a read model keyed by its event source id; a passive read of a projection that joins other event sources or uses a custom key misses their events.
-- Any other type is resolved from the service provider.
+Other clients have their own dependency APIs. Kotlin and Java support argument resolvers, while TypeScript can receive a services argument containing the owning event store and its read models. Elixir's handler receives the event and context. Select the matching client example rather than applying .NET parameter-resolution rules to all clients.
 
 ### Resolving the read model key
 
-By default the read model is materialized using the `EventSourceId` from the event context. When the key differs, implement `ICanResolveReadModelKey` on the reactor to return the `ReadModelKey` to use:
+By default, .NET resolves read model parameters using the event context's `EventSourceId` as the key. If the read model uses another key, implement `ICanResolveReadModelKey` on the reactor and return the `ReadModelKey` to use:
 
 <ChronicleClientTabs snippet="reactors/event-processing/read-model-key" />
 
-The resolved key applies to every read model parameter across all of the reactor's handler methods. This is also currently C#-only, since it exists to customize the read-model-parameter resolution described above.
+The resolved key applies to every read model parameter across all of that reactor's handler methods. Use this .NET interface only when those read models share the same key selection.
 
 ## Event Source Isolation
 
-Events are delivered per event source and in sequence order. Each reactor method is called for the specific event source that produced the event.
+Events for one event source form a partition and are delivered in sequence order. Each handler invocation belongs to the source that produced the event. This ordering does not extend to events from other sources.
 
 ## Concurrency Across Partitions (.NET client)
 
-Within one partition the .NET client runs batches strictly in arrival order. Different partitions of the same reactor can now be handled **at the same time**, up to a bound. Handlers for different event sources can therefore overlap, so shared state that is not thread-safe (for example a singleton service) must be safe for concurrent use. There is no ordering across partitions. Replay begin and end notifications wait for work in flight, and partition replay notifications run in order with that partition's events. Results are still reported to the Kernel one at a time.
+Within one partition, the .NET client runs batches in arrival order. Different partitions of the same reactor can run at the same time, so shared services must be safe for concurrent use. There is no ordering across partitions.
 
-The bound is `Reactors.MaxConcurrentPartitions` in [`ChronicleOptions`](../configuration/chronicle-options#reactors) and defaults to the processor count, at most 8. Set it to `1` to restore the previous behavior of handling one batch at a time.
+Replay begin and end notifications wait for work in flight. Partition replay notifications run in order with that partition's events, and results are reported to the kernel one at a time.
+
+The concurrency bound is `Reactors.MaxConcurrentPartitions` in [`ChronicleOptions`](../configuration/chronicle-options#reactors). It defaults to the processor count, capped at 8. Set it to `1` if the handler must process only one batch at a time.
 
 ## Error Handling
 
-If a reactor method throws an exception, the failing event source partition is marked as failed and processing for that partition is paused. Once the underlying issue is resolved, processing resumes from the last successful event.
+If a reactor method throws, its event source partition is marked as failed and pauses without advancing past that event. Fix the cause, then retry the failed partition so processing can resume from its last successful position. See [Replay](replay) for the recovery APIs, and use [Delivery Identity](delivery-identity) when an external effect might have succeeded before the handler failed.
 
 ## Related Rules
 

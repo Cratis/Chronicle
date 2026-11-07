@@ -35,6 +35,17 @@ public interface IStorage
     Task MoveSystemEventStoreTo(SystemEventStoreLocation location) => Task.CompletedTask;
 
     /// <summary>
+    /// Finds System event store data that sits where this kernel is not looking.
+    /// </summary>
+    /// <returns>A description of where the data is and where the kernel looks, or null when nothing is misplaced.</returns>
+    /// <remarks>
+    /// A kernel configured to look at one set of System databases while the data sits in the other (an environment
+    /// variable that pins the old name after the databases moved, or an older release) would otherwise start against an
+    /// empty store and fail somewhere unrelated. A provider that keeps the System event store in one place has nothing to find.
+    /// </remarks>
+    Task<string?> FindMisplacedSystemEventStoreData() => Task.FromResult<string?>(null);
+
+    /// <summary>
     /// Get all the <see cref="EventStoreName">event stores</see> available.
     /// </summary>
     /// <returns>Collection of <see cref="EventStoreName"/>.</returns>

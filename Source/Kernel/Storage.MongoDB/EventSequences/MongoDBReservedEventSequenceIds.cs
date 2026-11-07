@@ -8,7 +8,7 @@ using Cratis.Chronicle.Storage.EventSequences;
 namespace Cratis.Chronicle.Storage.MongoDB.EventSequences;
 
 /// <summary>
-/// Represents the MongoDB implementation of <see cref="IReservedEventSequenceIds"/>.
+/// Derives reserved event sequence names from the MongoDB storage catalog.
 /// </summary>
 public class MongoDBReservedEventSequenceIds : IReservedEventSequenceIds
 {

@@ -65,8 +65,8 @@ test('only strict paired two-shard arguments are admitted; no arguments stays co
 test('source proof covers actual source including Benchmarks, not just the registry', async () => {
     const root = await fixture();
     const discovered = await validateSourceProjects(root);
-    assert.equal(discovered.executable.length, 31);
-    assert.equal(discovered.ordinary.length, 24);
+    assert.equal(discovered.executable.length, 32);
+    assert.equal(discovered.ordinary.length, 25);
     assert.equal(discovered.integration.length, 6);
     assert.equal(discovered.sql.length, 1);
     assert.equal(discovered.shipping.length, 3);

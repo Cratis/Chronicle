@@ -7,6 +7,7 @@ using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Storage.Observation;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Orleans.Storage;
 using Polly;
 using Polly.Registry;
@@ -58,6 +59,8 @@ public static class StorageProviderExtensions
 
         builder.ConfigureServices(services =>
         {
+            services.AddSingleton(serviceProvider => new StorageConcurrencyGate(
+                serviceProvider.GetRequiredService<IOptionsMonitor<ResilientStorageOptions>>().Get(ResilientGrainStorage.ResiliencePipelineKey).MaxConcurrentOperations));
             services.AddKeyedSingleton(WellKnownGrainStorageProviders.Namespaces, CreateResilientStorageFor<Cratis.Chronicle.Namespaces.NamespacesStateStorageProvider>);
             services.AddKeyedSingleton(WellKnownGrainStorageProviders.EventSequences, CreateResilientStorageFor<Cratis.Chronicle.EventSequences.EventSequencesStorageProvider>);
             services.AddKeyedSingleton(WellKnownGrainStorageProviders.ObserverDefinitions, CreateResilientStorageFor<Cratis.Chronicle.Observation.ObserverDefinitionGrainStorageProvider>);
@@ -70,6 +73,7 @@ public static class StorageProviderExtensions
             services.AddKeyedSingleton(WellKnownGrainStorageProviders.ProjectionsManager, CreateResilientStorageFor<Cratis.Chronicle.Projections.ProjectionsManagerStorageProvider>);
             services.AddKeyedSingleton(WellKnownGrainStorageProviders.Webhooks, CreateResilientStorageFor<Cratis.Chronicle.Observation.Webhooks.WebhookDefinitionStorageProvider>);
             services.AddKeyedSingleton(WellKnownGrainStorageProviders.WebhooksManager, CreateResilientStorageFor<Cratis.Chronicle.Observation.Webhooks.WebhooksStorageProvider>);
+            services.AddKeyedSingleton(WellKnownGrainStorageProviders.WebhookSigningKeys, CreateResilientStorageFor<Cratis.Chronicle.Observation.Webhooks.Signing.WebhookSigningKeyRingStorageProvider>);
             services.AddKeyedSingleton(WellKnownGrainStorageProviders.EventStoreSubscriptionsManager, CreateResilientStorageFor<Cratis.Chronicle.Observation.EventStoreSubscriptions.EventStoreSubscriptionsManagerStorageProvider>);
             services.AddKeyedSingleton(WellKnownGrainStorageProviders.ProjectionFutures, CreateResilientStorageFor<Cratis.Chronicle.Projections.ProjectionFuturesStorageProvider>);
             services.AddKeyedSingleton(WellKnownGrainStorageProviders.Reactors, CreateResilientStorageFor<Cratis.Chronicle.Observation.Reactors.ReactorDefinitionStorageProvider>);
@@ -91,5 +95,5 @@ public static class StorageProviderExtensions
     static IGrainStorage CreateResilientStorageFor<TStorage>(IServiceProvider serviceProvider, object? context)
 #pragma warning restore CA1859
         where TStorage : class, IGrainStorage
-        => new ResilientGrainStorage(serviceProvider.GetRequiredService<TStorage>(), serviceProvider.GetRequiredService<ResiliencePipelineProvider<string>>());
+        => new ResilientGrainStorage(serviceProvider.GetRequiredService<TStorage>(), serviceProvider.GetRequiredService<ResiliencePipelineProvider<string>>(), serviceProvider.GetRequiredService<StorageConcurrencyGate>());
 }

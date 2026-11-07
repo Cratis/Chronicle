@@ -1,6 +1,6 @@
 ---
 name: cratis-components-stepper-command-dialog
-description: Build a multi-step wizard dialog for a single Cratis Arc command with StepperCommandDialog and StepperPanel from Cratis Components — named steps, per-step validation, linear navigation, vertical or horizontal orientation, and pre-populated edit wizards. Use when one command gathers information across several stages or a form has too many fields to show at once. Do not use for an ordinary single-page command dialog or for a page shell.
+description: Use when one Arc command needs a multi-step wizard or a form has too many fields for one dialog page. Not for ordinary single-page command dialogs or a page shell; use cratis-arc-react-page.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-components-stepper-command-dialog/SKILL.md -->
@@ -10,6 +10,17 @@ license: MIT
 `StepperCommandDialog` splits **one** command's form across named steps. The
 user moves with Previous and Next; Submit appears on the last step once every
 field across every step is valid.
+
+## Dialog dismissal and refusal
+
+Requires Components 4.36.0 for independent dismissal controls; check `yarn why @cratis/components`, or use the older `dismissable` contract.
+
+`Dialog` and `CommandDialog` accept independent `dismissOnOutsideClick`,
+`closeOnEscape` and `showCloseButton`; each falls back to `dismissable`. Busy
+dialogs cannot be dismissed. The busy confirm remains focusable as
+`aria-disabled` and ignores duplicate activation; a refused confirm restores
+focus and announces the provider's `refused` message. Do not replace it with a
+disabled button that loses focus or close the dialog on validation refusal.
 
 ## Verified product sources
 

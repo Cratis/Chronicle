@@ -26,7 +26,7 @@ jobs:
   requested-integration:
     name: requested-integration-${{ (github.event.action == 'labeled' && github.event.label.name || contains(github.event.pull_request.labels.*.name, 'run-integration') && 'run-integration' || 'none') }}
     needs: [requested-detect-hot-core]
-    if: (github.event.action == 'labeled' && github.event.label.name || contains(github.event.pull_request.labels.*.name, 'run-integration') && 'run-integration' || 'none') == 'run-integration' && github.event.pull_request.head.repo.full_name == github.repository
+    if: (github.event.action == 'labeled' && github.event.label.name || contains(github.event.pull_request.labels.*.name, 'run-integration') && 'run-integration' || 'none') == 'run-integration' && github.event.pull_request.head.repo.full_name == github.repository && needs.requested-detect-hot-core.outputs.mode != 'skip'
     # The called build pushes the image consumed by its shards. Pass package write permission
     # and inherit secrets into the called workflow (which forwards them to integration.yml).
     permissions:
@@ -40,14 +40,21 @@ jobs:
     with:
       integration_requested: true
       all_providers: ${{ needs.requested-detect-hot-core.outputs.touched == 'true' }}
+      integration_selection: ${{ needs.requested-detect-hot-core.outputs.selection }}
 
   requested-detect-hot-core:
     name: requested-detect-hot-core-${{ (github.event.action == 'labeled' && github.event.label.name || contains(github.event.pull_request.labels.*.name, 'run-integration') && 'run-integration' || 'none') }}
     if: (github.event.action == 'labeled' && github.event.label.name || contains(github.event.pull_request.labels.*.name, 'run-integration') && 'run-integration' || 'none') == 'run-integration' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: read
+      # Reads earlier Requested Integration runs of this pull request to reuse a green one.
+      actions: read
     outputs:
       touched: ${{ steps.detect.outputs.touched }}
+      mode: ${{ steps.select.outputs.mode }}
+      selection: ${{ steps.select.outputs.selection }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -65,6 +72,22 @@ jobs:
           RUN_INTEGRATION: "true"
         run: python3 .github/scripts/detect-hot-core-changes.py --base "$BASE_SHA" --head "$HEAD_SHA"
 
+      # Decides how much of the matrix this push needs: nothing (an earlier run of this pull request already
+      # passed and only ignorable files changed since), only the lanes the changed paths map to, or everything.
+      # Any doubt - hot core, an unmapped path, an unreadable history - means everything.
+      - name: Select the integration lanes this push needs
+        id: select
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TOUCHED: ${{ steps.detect.outputs.touched }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          python3 .github/scripts/test-select-integration.py
+          python3 .github/scripts/select-integration.py --base "$BASE_SHA" --head "$HEAD_SHA" --touched "$TOUCHED" \
+            --repo "$GITHUB_REPOSITORY" --pull-request "$PR_NUMBER"
+
   hot-core-gate-requested:
     name: hot-core-gate-requested-${{ (github.event.action == 'labeled' && github.event.label.name || contains(github.event.pull_request.labels.*.name, 'run-integration') && 'run-integration' || 'none') }}
     needs: [requested-integration, requested-detect-hot-core]
@@ -77,6 +100,7 @@ jobs:
         env:
           DETECT: ${{ needs.requested-detect-hot-core.result }}
           TOUCHED: ${{ needs.requested-detect-hot-core.outputs.touched }}
+          MODE: ${{ needs.requested-detect-hot-core.outputs.mode }}
           INTEGRATION: ${{ needs.requested-integration.result }}
           ALL_PROVIDERS: ${{ needs.requested-integration.outputs.all_providers }}
           FORK: ${{ github.event.pull_request.head.repo.full_name != github.repository }}
@@ -96,6 +120,13 @@ jobs:
             exit 1
           fi
 
+          # Selection decided no lane needed to run again: an earlier run of this pull request passed and only
+          # files no integration lane exercises changed since (or the whole change is such files). The matrix
+          # job is skipped on purpose; the selection step's summary names the evidence.
+          if [ "$MODE" = "skip" ] && [ "$INTEGRATION" = "skipped" ]; then
+            echo "No integration-relevant file changed since the last passing requested run; its result stands for $HEAD_SHA."
+            exit 0
+          fi
           if [ "$INTEGRATION" != "success" ]; then
             echo "::error::Requested integration did not pass ($INTEGRATION)."
             exit 1

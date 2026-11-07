@@ -6,6 +6,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Grpc;
 using Cratis.Chronicle.Projections.Engine.DeclarationLanguage;
 using Cratis.Chronicle.Projections.Engine.DeclarationLanguage.CodeGeneration;
+using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Storage;
 using ProjectionCodeLanguage = Cratis.Chronicle.Concepts.Projections.ProjectionCodeLanguage;
 
@@ -19,6 +20,7 @@ namespace Cratis.Chronicle.ProjectionEditor;
 /// <param name="Declaration">The projection declaration language representation of the projection.</param>
 /// <param name="DraftReadModel">Optional draft read model definition to use for code generation.</param>
 /// <param name="Language">The language to generate for - one of the <see cref="ProjectionCodeLanguage"/> names. Defaults to C#.</param>
+[StoreAccess(StoreAccess.Read)]
 [Command]
 [BelongsTo(WellKnownServices.ProjectionEditor)]
 public record GenerateModelBoundCode(EventStoreName EventStore, EventStoreNamespaceName Namespace, string Declaration, DraftReadModel? DraftReadModel = null, string Language = nameof(ProjectionCodeLanguage.CSharp))

@@ -2,6 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.ComponentModel;
+using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Cratis.Chronicle.Connections;
 
@@ -30,6 +32,7 @@ namespace Cratis.Chronicle.Connections;
 /// ]]>
 /// </remarks>
 [TypeConverter(typeof(ChronicleConnectionStringConverter))]
+[DebuggerDisplay("{Redacted,nq}")]
 public class ChronicleConnectionString
 {
     /// <summary>
@@ -41,6 +44,11 @@ public class ChronicleConnectionString
     /// The default client secret for development purposes.
     /// </summary>
     public const string DevelopmentClientSecret = "chronicle-dev-secret";
+
+    /// <summary>
+    /// Gets the text used in place of connection details that cannot be parsed.
+    /// </summary>
+    public const string HiddenConnectionString = "(connection details hidden)";
 
     /// <summary>
     /// The default <see cref="ChronicleConnectionString"/> pointing to localhost.
@@ -57,6 +65,7 @@ public class ChronicleConnectionString
     public static readonly ChronicleConnectionString Development = new($"chronicle://{DevelopmentClient}:{DevelopmentClientSecret}@localhost:35000");
 
     readonly ChronicleConnectionStringBuilder _builder;
+    string? _redacted;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ChronicleConnectionString"/> class.
@@ -154,6 +163,15 @@ public class ChronicleConnectionString
     public bool SkipKeepAlive => _builder.SkipKeepAlive;
 
     /// <summary>
+    /// Gets whether the .NET client runs in serverless mode.
+    /// </summary>
+    /// <remarks>
+    /// See <see cref="ChronicleConnectionStringBuilder.Serverless"/> for what this does.
+    /// </remarks>
+    [Experimental("CHRX0001", UrlFormat = "https://www.cratis.io/docs/chronicle/clients/dotnet/serverless-mode")]
+    public bool Serverless => _builder.Serverless;
+
+    /// <summary>
     /// Gets the path to the certificate file for TLS.
     /// </summary>
     public string? CertificatePath => _builder.CertificatePath;
@@ -170,16 +188,35 @@ public class ChronicleConnectionString
     /// <see cref="ToString"/> renders the connection string in full, credentials included — never log
     /// that. Use this instead everywhere a connection string is written to a log, an error message or
     /// any other diagnostic output: scheme, host, port and the non-sensitive options are preserved, while
-    /// the password, the API key, the certificate password and any option whose name looks like a
-    /// credential are replaced by <c language="csharp">REDACTED</c>.
+    /// the user name, the password, the API key, the certificate password and any option whose name
+    /// looks like a credential are replaced by <c language="csharp">REDACTED</c>.
     /// </remarks>
-    public string Redacted => _builder.BuildRedacted();
+    public string Redacted => _redacted ??= _builder.BuildRedacted();
 
     /// <summary>
     /// Implicitly convert from <see cref="string"/> to <see cref="ChronicleConnectionString"/>.
     /// </summary>
     /// <param name="connectionString">String connection string to convert from.</param>
     public static implicit operator ChronicleConnectionString(string connectionString) => new(connectionString);
+
+    /// <summary>
+    /// Renders connection string text in a form that is safe to log, with the user name and every credential masked.
+    /// </summary>
+    /// <param name="connectionString">The connection string text.</param>
+    /// <returns>The redacted text, or an opaque REDACTED when details cannot be safely attributed.</returns>
+    public static string Redact(string connectionString)
+    {
+        try
+        {
+            return new ChronicleConnectionStringBuilder(connectionString).BuildRedacted();
+        }
+#pragma warning disable CA1031 // A diagnostics path must never throw
+        catch
+#pragma warning restore CA1031
+        {
+            return ConnectionStringDiagnostics.Redacted;
+        }
+    }
 
     /// <summary>
     /// Creates a new <see cref="ChronicleConnectionString"/> with the specified username and password (Client Credentials).
@@ -189,7 +226,7 @@ public class ChronicleConnectionString
     /// <returns>A new <see cref="ChronicleConnectionString"/> with the username and password set.</returns>
     public ChronicleConnectionString WithCredentials(string username, string password)
     {
-        var newBuilder = new ChronicleConnectionStringBuilder(_builder.Build())
+        var newBuilder = new ChronicleConnectionStringBuilder(_builder)
         {
             Username = username,
             Password = password
@@ -204,7 +241,7 @@ public class ChronicleConnectionString
     /// <returns>A new <see cref="ChronicleConnectionString"/> with API key authentication configured.</returns>
     public ChronicleConnectionString WithApiKey(string apiKey)
     {
-        var newBuilder = new ChronicleConnectionStringBuilder(_builder.Build())
+        var newBuilder = new ChronicleConnectionStringBuilder(_builder)
         {
             ApiKey = apiKey
         };

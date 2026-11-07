@@ -5,6 +5,8 @@ using Azure.Identity;
 using Azure.Security.KeyVault.Secrets;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage.Compliance;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Setup;
 
@@ -40,14 +42,16 @@ public static class AzureKeyVaultChronicleBuilderExtensions
             return builder;
         }
 
-        return builder.WithComplianceEncryptionKeyStorage(options, _ =>
-        {
-            var secretClient = new SecretClient(
-                new Uri(complianceStorage.ConnectionDetails),
-                new DefaultAzureCredential());
+        builder.Services.AddSingleton<IEncryptionKeyStoreUpgradeCheck>(_ =>
+            new Storage.AzureKeyVault.AzureKeyVaultKeyStoreUpgradeCheck(CreateSecretClient(complianceStorage.ConnectionDetails)));
 
-            return new CacheEncryptionKeyStorage(
-                new Storage.AzureKeyVault.AzureKeyVaultEncryptionKeyStorage(secretClient));
-        });
+        return builder.WithComplianceEncryptionKeyStorage(options, serviceProvider =>
+            new CacheEncryptionKeyStorage(
+                new Storage.AzureKeyVault.AzureKeyVaultEncryptionKeyStorage(
+                    CreateSecretClient(complianceStorage.ConnectionDetails),
+                    serviceProvider.GetRequiredService<ILoggerFactory>().CreateLogger<Storage.AzureKeyVault.AzureKeyVaultEncryptionKeyStorage>())));
     }
+
+    static SecretClient CreateSecretClient(string connectionDetails) =>
+        new(new Uri(connectionDetails), new DefaultAzureCredential());
 }

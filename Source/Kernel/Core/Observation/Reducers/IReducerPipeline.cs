@@ -53,6 +53,7 @@ public interface IReducerPipeline
     /// </summary>
     /// <param name="context">The <see cref="ReducerContext"/> being reduced.</param>
     /// <param name="reducer"><see cref="ReducerDelegate"/> delegate.</param>
+    /// <param name="createNotification">Whether to build the notification of the change, a whole new copy of the state; false when nothing is watching.</param>
     /// <returns>The committed change to notify watchers of, or null if there was no change.</returns>
-    Task<ReadModelChangeNotification?> Reduce(ReducerContext context, ReducerDelegate reducer);
+    Task<ReadModelChangeNotification?> Reduce(ReducerContext context, ReducerDelegate reducer, bool createNotification = true);
 }

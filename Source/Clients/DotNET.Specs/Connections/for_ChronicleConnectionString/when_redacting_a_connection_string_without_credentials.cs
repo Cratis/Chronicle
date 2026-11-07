@@ -12,6 +12,6 @@ public class when_redacting_a_connection_string_without_credentials : Specificat
 
     void Because() => _result = _connectionString.Redacted;
 
-    [Fact] void should_leave_the_connection_string_unchanged() => _result.ShouldEqual("chronicle://localhost:35000?loadBalancer=RoundRobin");
-    [Fact] void should_be_identical_to_the_unredacted_connection_string() => _result.ShouldEqual(_connectionString.ToString());
+    [Fact] void should_leave_the_connection_string_unchanged() => _connectionString.ToString().ShouldEqual("chronicle://localhost:35000?loadBalancer=RoundRobin");
+    [Fact] void should_use_opaque_diagnostics_for_query_settings() => _result.ShouldEqual("REDACTED");
 }

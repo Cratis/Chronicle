@@ -1,31 +1,28 @@
 ---
-description: Choose which event sequence a model-bound Chronicle projection reads from with [EventSequence] instead of the default event log.
+title: "Model-bound projections: choose an event sequence"
+description: "Choose the event sequence a Chronicle model-bound projection reads, or let .NET infer the event log or inbox from its event types."
 ---
-# Event Sequence Source
-
-By default, model-bound projections read from the event log. Use `[EventSequence]` to specify a different event sequence:
+A model-bound projection reads events from one event sequence. In .NET, Chronicle uses the event log unless the model selects another sequence or its event types imply an inbox. Set `[EventSequence]` on the read model when you need to choose the source explicitly:
 
 <ChronicleClientTabs snippet="projections/model-bound/event-sequence-source/model-bound" />
 
-This corresponds to the fluent API for declarative projections:
+The model-bound attribute selects `custom-sequence` for the read model. A separate fluent projection makes the same choice with `FromEventSequence`:
 
 <ChronicleClientTabs snippet="projections/model-bound/event-sequence-source/fluent" />
 
-:::note[Client coverage]
-Explicitly overriding the event sequence a projection reads from is a .NET, TypeScript, and Elixir mechanism today (Elixir takes `event_sequence:` on `use Chronicle.ReadModels.ReadModel`) — Kotlin and Java client projections always register against the event log and do not yet expose an `[EventSequence]`-equivalent override.
-:::
+The examples use .NET attributes. For TypeScript model-bound models, use `@eventSequence('custom-sequence')`; the event-sequence argument on `@projection` applies to fluent projections. Elixir takes `event_sequence:` on `use Chronicle.ReadModels.ReadModel`; Kotlin and Java accept `eventSequence` on `@Projection`.
 
 ## Convenience: `[EventLog]`
 
-Use `[EventLog]` when you want to be explicit that the projection reads from the default event log, even when other event types in the assembly carry a `[EventStore]` attribute:
+Use `[EventLog]` to select the event log explicitly and bypass automatic inbox routing:
 
 <ChronicleClientTabs snippet="projections/model-bound/event-sequence-source/event-log" />
 
 ## Automatic Inbox Routing
 
-When the event types used in a model-bound projection carry a `[EventStore]` attribute pointing to a **different** event store than the one the projection is registered in, Chronicle automatically routes the projection to the corresponding inbox sequence — no `[EventSequence]` annotation needed.
+Without an explicit sequence, the .NET client checks the event types in the projection's `From` mappings. If their `[EventStore]` metadata names a different event store, Chronicle selects that store's inbox sequence. You do not need an `[EventSequence]` annotation for this routing.
 
-When the `[EventStore]` attribute points to the **same** event store as the current one, Chronicle routes to the event log instead.
+If the metadata names the current event store, or no store is specified, Chronicle selects the event log. The client rejects a model whose source event types name more than one event store.
 
 ## When to use `[EventSequence]` explicitly
 
@@ -33,4 +30,4 @@ When the `[EventStore]` attribute points to the **same** event store as the curr
 - To suppress automatic inbox routing for a projection that handles foreign events
 - For projections that target a specialized or partitioned event stream
 
-> **Note:** The old `[FromEventSequence]` attribute has been removed. Use `[EventSequence]` instead.
+The old `[FromEventSequence]` attribute has been removed. Use `[EventSequence]` instead. Once the source is selected, use [From Every Event](./from-every.mdx) for mappings across handled events or [From All](./from-all.mdx) to subscribe to every event type in that sequence.

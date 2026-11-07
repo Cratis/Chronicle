@@ -4,7 +4,7 @@
         <RootNamespace>Cratis.Chronicle</RootNamespace>
         <IsTestProject>true</IsTestProject>
         <IsPackable>false</IsPackable>
-        <NoWarn>$(NoWarn);MA0182</NoWarn>
+        <NoWarn>$(NoWarn);MA0182;CHRX0001</NoWarn>
     </PropertyGroup>
 
     <ItemGroup>
@@ -29,6 +29,12 @@
         <PackageReference Include="Testcontainers" />
         <!-- Pulls Testcontainers' vulnerable SSH.NET forward — see Directory.Packages.props. -->
         <PackageReference Include="SSH.NET" />
+    </ItemGroup>
+
+    <!-- Keep the client diagnostics convention specification independent of the runtime checkout location. -->
+    <ItemGroup>
+        <EmbeddedResource Include="../Connections/**/*.cs" Exclude="../Connections/obj/**;../Connections/bin/**" LogicalName="ClientDiagnostics.Connections.%(RecursiveDir)%(Filename)%(Extension)" />
+        <EmbeddedResource Include="../DotNET/TokenProviderFactory*.cs" LogicalName="ClientDiagnostics.DotNET.%(Filename)%(Extension)" />
     </ItemGroup>
 
     <!-- Keep the projection-path architecture specification independent of the runtime checkout location. -->

@@ -121,7 +121,7 @@ public static class DatabaseNames
         {
             databaseName = databaseName.Replace(EncryptedValueKeyIdentifiers.GlobalEventStore.Value, ReservedPhysicalMarker, StringComparison.Ordinal);
         }
-        else if (databaseName.Contains(ReservedPhysicalMarker, StringComparison.Ordinal))
+        else if (databaseName.Contains(ReservedPhysicalMarker, StringComparison.OrdinalIgnoreCase))
         {
             throw new InvalidDatabaseName(databaseName, "it uses the physical name space reserved for confidentiality keys", eventStore, @namespace?.Value);
         }

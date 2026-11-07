@@ -8,6 +8,7 @@ using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.Projections.Engine.Graphs;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
 
@@ -37,6 +38,11 @@ public interface IProjection
     /// Gets the normalized definition fingerprint used to validate process-local pipelines.
     /// </summary>
     string DefinitionFingerprint { get; }
+
+    /// <summary>
+    /// Gets the graph mappings when the projection targets a graph instead of a document or relational read model.
+    /// </summary>
+    GraphProjectionPlan? Graph => null;
 
     /// <summary>
     /// Gets the initial state used for each model instance.

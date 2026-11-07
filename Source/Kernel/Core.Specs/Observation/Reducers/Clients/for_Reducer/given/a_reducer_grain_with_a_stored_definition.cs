@@ -48,9 +48,12 @@ public class a_reducer_grain_with_a_stored_definition : Specification
 
         _client = new ConnectedClient { ConnectionId = "the-connection", Version = "1.0.0" };
         _connectedClients = Substitute.For<IConnectedClients>();
-        _connectedClients.GetConnectedClient(_client.ConnectionId).Returns(_client);
-        _connectedClients.IsConnected(_client.ConnectionId).Returns(true);
+        _connectedClients.GetConnectedClient(Arg.Any<ConnectionId>()).Returns(_client);
+        _connectedClients.IsConnected(Arg.Any<ConnectionId>()).Returns(true);
         _silo.AddProbe(_ => _connectedClients);
+        var management = Substitute.For<IManagementGrain>();
+        management.GetHosts(true).Returns(new Dictionary<SiloAddress, SiloStatus>());
+        _silo.AddProbe(_ => management);
 
         _observer = Substitute.For<IObserver>();
         _observer.GetSubscription().Returns(ObserverSubscription.Unsubscribed);

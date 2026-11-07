@@ -5,9 +5,10 @@ using System.Net;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage.Compliance;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using VaultSharp;
 using VaultSharp.Core;
-using VaultSharp.V1.AuthMethods.Token;
 
 namespace Cratis.Chronicle.Storage.Vault;
 
@@ -24,6 +25,13 @@ namespace Cratis.Chronicle.Storage.Vault;
 /// taken from the <c language="csharp">connectionDetails</c> constructor parameter.
 /// </para>
 /// <para>
+/// Each part of an address becomes one path segment, encoded by <see cref="VaultPathSegments"/>, and every path
+/// written by this version lives under <see cref="VaultPathSegments.Root"/>, so every distinct address has its own
+/// directory whatever characters it contains. Keys stored by earlier versions are still read, and removed together
+/// with the key, for the addresses <see cref="VaultPathSegments.LegacyDirectory"/> accepts: those made of characters
+/// that can belong to one address only. Earlier paths are never written.
+/// </para>
+/// <para>
 /// Kernel-internal secrets are not supported yet: <see cref="IEncryptionKeyStorage.GetOrAddInternalSecretFor"/> keeps its
 /// default and throws <see cref="InternalSecretsNotSupported"/>, so features that depend on one fail closed.
 /// </para>
@@ -36,16 +44,7 @@ public class VaultEncryptionKeyStorage : IEncryptionKeyStorage
     const string ErasedThroughField = "erasedThrough";
     const string ErasedKeyFingerprintsField = "erasedKeyFingerprints";
     const string NewKeyAllowedField = "newKeyAllowed";
-
-    /// <summary>
-    /// The leaf an erasure is written under, beside the numbered revisions.
-    /// </summary>
-    /// <remarks>
-    /// Revisions are numbered, so a non-numeric leaf can never collide with one, and the revision enumeration
-    /// already skips anything that does not parse as a number - which is what keeps the fence out of it and lets
-    /// a deletion of every revision leave the fence standing.
-    /// </remarks>
-    const string ErasureLeaf = "erasure";
+    const string LayoutField = "layout";
 
     /// <summary>
     /// The error Vault answers a check-and-set write with when the path already has a version.
@@ -54,14 +53,18 @@ public class VaultEncryptionKeyStorage : IEncryptionKeyStorage
 
     readonly IVaultClient _vaultClient;
     readonly string _mountPoint;
+    readonly ILogger<VaultEncryptionKeyStorage> _logger;
+    readonly VaultKeyStoreUpgradeCheck _layoutCheck;
+    volatile bool _layoutProven;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="VaultEncryptionKeyStorage"/> class.
     /// </summary>
     /// <param name="connectionDetails">The Vault server address (for example <c language="csharp">http://vault:8200</c>).</param>
     /// <param name="mountPoint">KV v2 mount point. Defaults to <c language="csharp">secret</c> when <see langword="null"/> or empty.</param>
-    public VaultEncryptionKeyStorage(string connectionDetails, string? mountPoint = null)
-        : this(CreateVaultClient(connectionDetails), mountPoint)
+    /// <param name="logger">Optional <see cref="ILogger{TCategoryName}"/>.</param>
+    public VaultEncryptionKeyStorage(string connectionDetails, string? mountPoint = null, ILogger<VaultEncryptionKeyStorage>? logger = null)
+        : this(CreateVaultClient(connectionDetails), mountPoint, logger)
     {
     }
 
@@ -70,10 +73,13 @@ public class VaultEncryptionKeyStorage : IEncryptionKeyStorage
     /// </summary>
     /// <param name="vaultClient">The <see cref="IVaultClient"/> to talk to Vault through.</param>
     /// <param name="mountPoint">KV v2 mount point. Defaults to <c language="csharp">secret</c> when <see langword="null"/> or empty.</param>
-    internal VaultEncryptionKeyStorage(IVaultClient vaultClient, string? mountPoint = null)
+    /// <param name="logger">Optional <see cref="ILogger{TCategoryName}"/>.</param>
+    internal VaultEncryptionKeyStorage(IVaultClient vaultClient, string? mountPoint = null, ILogger<VaultEncryptionKeyStorage>? logger = null)
     {
+        _logger = logger ?? NullLogger<VaultEncryptionKeyStorage>.Instance;
         _vaultClient = vaultClient;
         _mountPoint = string.IsNullOrEmpty(mountPoint) ? DefaultMountPoint : mountPoint;
+        _layoutCheck = new VaultKeyStoreUpgradeCheck(vaultClient, mountPoint);
     }
 
     /// <inheritdoc/>
@@ -84,14 +90,15 @@ public class VaultEncryptionKeyStorage : IEncryptionKeyStorage
         EncryptionKey key,
         EncryptionKeyRevision? revision = null)
     {
+        var locations = await Resolve(eventStore, eventStoreNamespace, identifier);
         var actualRevision = IsLatest(revision)
-            ? await GetNextRevision(eventStore, eventStoreNamespace, identifier)
+            ? await GetNextRevision(locations)
             : revision!;
 
-        (await GetErasureFor(eventStore, eventStoreNamespace, identifier)).EnsureCanSave(identifier, actualRevision, key);
+        (await GetErasureFor(locations)).EnsureCanSave(identifier, actualRevision, key);
 
-        var path = BuildPath(eventStore, eventStoreNamespace, identifier, actualRevision);
-        await _vaultClient.V1.Secrets.KeyValue.V2.WriteSecretAsync(path, KeyData(key), mountPoint: _mountPoint);
+        await EnsureLayoutProven();
+        await _vaultClient.V1.Secrets.KeyValue.V2.WriteSecretAsync(locations.Path(actualRevision), KeyData(key), mountPoint: _mountPoint);
     }
 
     /// <inheritdoc/>
@@ -107,38 +114,30 @@ public class VaultEncryptionKeyStorage : IEncryptionKeyStorage
         (await GetOrAddWithRevisionFor(eventStore, eventStoreNamespace, identifier, key)).Key;
 
     /// <inheritdoc/>
-    public async Task<EncryptionKeyAtRevision?> TryGetLatestFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
-    {
-        var revision = await GetHighestRevision(eventStore, eventStoreNamespace, identifier);
-        if (revision is null)
-        {
-            return null;
-        }
-
-        var key = await TryGetFor(eventStore, eventStoreNamespace, identifier, revision);
-        return key is null ? null : new(key, revision);
-    }
+    public async Task<EncryptionKeyAtRevision?> TryGetLatestFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier) =>
+        await TryGetLatest(await Resolve(eventStore, eventStoreNamespace, identifier));
 
     /// <inheritdoc/>
     public async Task<EncryptionKeyAtRevision> GetOrAddWithRevisionFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKey key)
     {
-        if (await TryGetLatestFor(eventStore, eventStoreNamespace, identifier) is { } existing)
+        var locations = await Resolve(eventStore, eventStoreNamespace, identifier);
+        if (await TryGetLatest(locations) is { } existing)
         {
             return existing;
         }
 
-        var revision = (await GetErasureFor(eventStore, eventStoreNamespace, identifier)).RevisionForNewKey(identifier, key);
-        var path = BuildPath(eventStore, eventStoreNamespace, identifier, revision);
+        var revision = (await GetErasureFor(locations)).RevisionForNewKey(identifier, key);
+        await EnsureLayoutProven();
         try
         {
-            await _vaultClient.V1.Secrets.KeyValue.V2.WriteSecretAsync(path, KeyData(key), checkAndSet: 0, mountPoint: _mountPoint);
+            await _vaultClient.V1.Secrets.KeyValue.V2.WriteSecretAsync(locations.Path(revision), KeyData(key), checkAndSet: 0, mountPoint: _mountPoint);
             return new(key, revision);
         }
         catch (VaultApiException ex) when (IsCheckAndSetMismatch(ex))
         {
             // Another provisioner wrote this revision first. Converge on its key; never hand back the candidate,
             // which was not written. A winner that cannot be read back was removed concurrently.
-            var winner = await TryGetFor(eventStore, eventStoreNamespace, identifier, revision)
+            var winner = await ReadKey(locations.Path(revision))
                 ?? throw new EncryptionKeyProvisioningConflict(identifier, revision);
             return new(winner, revision);
         }
@@ -151,12 +150,14 @@ public class VaultEncryptionKeyStorage : IEncryptionKeyStorage
         EncryptionKeyIdentifier identifier,
         EncryptionKeyRevision? revision = null)
     {
+        var locations = await Resolve(eventStore, eventStoreNamespace, identifier);
         if (IsLatest(revision))
         {
-            return await GetHighestRevision(eventStore, eventStoreNamespace, identifier) is not null;
+            return (await ListRevisions(locations)).Count > 0;
         }
 
-        return await SecretExists(BuildPath(eventStore, eventStoreNamespace, identifier, revision!));
+        return await SecretExists(locations.Path(revision!)) ||
+            (locations.LegacyPath(revision!) is { } legacyPath && await SecretExists(legacyPath));
     }
 
     /// <inheritdoc/>
@@ -166,16 +167,166 @@ public class VaultEncryptionKeyStorage : IEncryptionKeyStorage
         EncryptionKeyIdentifier identifier,
         EncryptionKeyRevision? revision = null)
     {
-        var targetRevision = IsLatest(revision)
-            ? await GetHighestRevision(eventStore, eventStoreNamespace, identifier)
-            : revision;
+        var locations = await Resolve(eventStore, eventStoreNamespace, identifier);
+        if (IsLatest(revision))
+        {
+            return (await TryGetLatest(locations))?.Key;
+        }
 
-        if (targetRevision is null)
+        return await ReadKey(locations.Path(revision!)) ??
+            (locations.LegacyPath(revision!) is { } legacyPath ? await ReadKey(legacyPath) : null);
+    }
+
+    /// <inheritdoc/>
+    public async Task<EncryptionKey> GetFor(
+        EventStoreName eventStore,
+        EventStoreNamespaceName eventStoreNamespace,
+        EncryptionKeyIdentifier identifier,
+        EncryptionKeyRevision? revision = null) =>
+        await TryGetFor(eventStore, eventStoreNamespace, identifier, revision)
+            ?? throw new MissingEncryptionKey(identifier);
+
+    /// <inheritdoc/>
+    public async Task DeleteFor(
+        EventStoreName eventStore,
+        EventStoreNamespaceName eventStoreNamespace,
+        EncryptionKeyIdentifier identifier,
+        EncryptionKeyRevision? revision = null)
+    {
+        var locations = VaultKeyLocations.For(eventStore, eventStoreNamespace, identifier);
+        if (IsLatest(revision))
+        {
+            foreach (var path in (await ListRevisions(locations)).Values)
+            {
+                await _vaultClient.V1.Secrets.KeyValue.V2.DeleteMetadataAsync(path, mountPoint: _mountPoint);
+            }
+
+            // A revision present under both directories is only listed under the current one.
+            if (locations.LegacyDirectory is not null)
+            {
+                foreach (var legacyRevision in await ListRevisionsIn(locations.LegacyDirectory))
+                {
+                    await _vaultClient.V1.Secrets.KeyValue.V2.DeleteMetadataAsync($"{locations.LegacyDirectory}/{legacyRevision}", mountPoint: _mountPoint);
+                }
+            }
+        }
+        else
+        {
+            await _vaultClient.V1.Secrets.KeyValue.V2.DeleteMetadataAsync(locations.Path(revision!), mountPoint: _mountPoint);
+            if (locations.LegacyPath(revision!) is { } legacyPath)
+            {
+                await _vaultClient.V1.Secrets.KeyValue.V2.DeleteMetadataAsync(legacyPath, mountPoint: _mountPoint);
+            }
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task<EncryptionKeyErasure?> GetErasureFor(
+        EventStoreName eventStore,
+        EventStoreNamespaceName eventStoreNamespace,
+        EncryptionKeyIdentifier identifier) =>
+        await GetErasureFor(await Resolve(eventStore, eventStoreNamespace, identifier));
+
+    /// <inheritdoc/>
+    public async Task RecordErasureFor(
+        EventStoreName eventStore,
+        EventStoreNamespaceName eventStoreNamespace,
+        EncryptionKeyIdentifier identifier)
+    {
+        var locations = VaultKeyLocations.For(eventStore, eventStoreNamespace, identifier);
+        var present = new List<(EncryptionKeyRevision Revision, EncryptionKey Key)>();
+        foreach (var (revision, path) in await ListRevisions(locations))
+        {
+            if (await ReadKey(path) is { } key)
+            {
+                present.Add((revision, key));
+            }
+        }
+
+        var erasure = EncryptionKeyErasure.Covering(await GetErasureFor(locations), present);
+        await WriteErasure(locations, erasure);
+    }
+
+    /// <inheritdoc/>
+    public async Task AllowNewKeyFor(
+        EventStoreName eventStore,
+        EventStoreNamespaceName eventStoreNamespace,
+        EncryptionKeyIdentifier identifier)
+    {
+        var locations = await Resolve(eventStore, eventStoreNamespace, identifier);
+        if (await GetErasureFor(locations) is not { } erasure)
+        {
+            return;
+        }
+
+        await WriteErasure(locations, erasure with { NewKeyAllowed = true });
+    }
+
+    /// <summary>
+    /// Gets whether an exception is the answer Vault gives to a check-and-set write that lost.
+    /// </summary>
+    /// <param name="exception">The <see cref="VaultApiException"/>.</param>
+    /// <returns>True when the write lost, false otherwise.</returns>
+    internal static bool IsCheckAndSetMismatch(VaultApiException exception) =>
+        exception.HttpStatusCode == HttpStatusCode.BadRequest &&
+        ((exception.ApiErrors?.Any(error => error.Contains(CheckAndSetMismatch, StringComparison.OrdinalIgnoreCase)) ?? false) ||
+         exception.Message.Contains(CheckAndSetMismatch, StringComparison.OrdinalIgnoreCase));
+
+    static bool IsLatest(EncryptionKeyRevision? revision) => revision is null || revision == EncryptionKeyRevision.Latest;
+
+    static Dictionary<string, object> KeyData(EncryptionKey key) => new()
+    {
+        [PublicKeyField] = Convert.ToBase64String(key.Public),
+        [PrivateKeyField] = Convert.ToBase64String(key.Private),
+        [LayoutField] = VaultPathSegments.Root
+    };
+
+    static VaultClient CreateVaultClient(string address) => VaultClients.Create(address);
+
+    async Task<VaultKeyLocations> Resolve(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
+    {
+        var locations = VaultKeyLocations.For(eventStore, eventStoreNamespace, identifier);
+        if (locations.UnresolvedLegacyDirectory is null || await IsStoredAtNewLocation(locations) || !await HoldsEarlierMaterial(locations))
+        {
+            return locations;
+        }
+
+        EncryptionKeyUpgradeMetrics.Refused();
+        _logger.KeyNeedsUpgrade();
+        throw new EncryptionKeyNeedsUpgrade();
+    }
+
+    async Task<bool> IsStoredAtNewLocation(VaultKeyLocations locations) =>
+        (await ListRevisionsIn(locations.Directory)).Count > 0 || (await ReadErasure(locations.ErasurePath)).Found;
+
+    async Task<bool> HoldsEarlierMaterial(VaultKeyLocations locations)
+    {
+        try
+        {
+            return (await ListRevisionsIn(locations.UnresolvedLegacyDirectory!)).Count > 0 || (await ReadErasure(locations.UnresolvedLegacyErasurePath!)).Found;
+        }
+        catch (VaultApiException)
+        {
+            // The earlier location cannot be inspected, so it cannot be ruled out. Refuse rather than mint a key over it.
+            return true;
+        }
+    }
+
+    async Task<EncryptionKeyAtRevision?> TryGetLatest(VaultKeyLocations locations)
+    {
+        var revisions = await ListRevisions(locations);
+        if (revisions.Count == 0)
         {
             return null;
         }
 
-        var path = BuildPath(eventStore, eventStoreNamespace, identifier, targetRevision);
+        var (revision, path) = revisions.MaxBy(pair => pair.Key.Value);
+        var key = await ReadKey(path);
+        return key is null ? null : new(key, revision);
+    }
+
+    async Task<EncryptionKey?> ReadKey(string path)
+    {
         try
         {
             var secret = await _vaultClient.V1.Secrets.KeyValue.V2.ReadSecretAsync(path, mountPoint: _mountPoint);
@@ -195,51 +346,25 @@ public class VaultEncryptionKeyStorage : IEncryptionKeyStorage
         }
     }
 
-    /// <inheritdoc/>
-    public async Task<EncryptionKey> GetFor(
-        EventStoreName eventStore,
-        EventStoreNamespaceName eventStoreNamespace,
-        EncryptionKeyIdentifier identifier,
-        EncryptionKeyRevision? revision = null) =>
-        await TryGetFor(eventStore, eventStoreNamespace, identifier, revision)
-            ?? throw new MissingEncryptionKey(identifier);
-
-    /// <inheritdoc/>
-    public async Task DeleteFor(
-        EventStoreName eventStore,
-        EventStoreNamespaceName eventStoreNamespace,
-        EncryptionKeyIdentifier identifier,
-        EncryptionKeyRevision? revision = null)
+    async Task<EncryptionKeyErasure?> GetErasureFor(VaultKeyLocations locations)
     {
-        if (IsLatest(revision))
+        var (found, erasure) = await ReadErasure(locations.ErasurePath);
+        if (found || locations.LegacyErasurePath is not { } legacyPath)
         {
-            var revisions = await ListRevisions(eventStore, eventStoreNamespace, identifier);
-            foreach (var rev in revisions)
-            {
-                var path = BuildPath(eventStore, eventStoreNamespace, identifier, rev);
-                await _vaultClient.V1.Secrets.KeyValue.V2.DeleteMetadataAsync(path, mountPoint: _mountPoint);
-            }
+            return erasure;
         }
-        else
-        {
-            var path = BuildPath(eventStore, eventStoreNamespace, identifier, revision!);
-            await _vaultClient.V1.Secrets.KeyValue.V2.DeleteMetadataAsync(path, mountPoint: _mountPoint);
-        }
+
+        return (await ReadErasure(legacyPath)).Erasure;
     }
 
-    /// <inheritdoc/>
-    public async Task<EncryptionKeyErasure?> GetErasureFor(
-        EventStoreName eventStore,
-        EventStoreNamespaceName eventStoreNamespace,
-        EncryptionKeyIdentifier identifier)
+    async Task<(bool Found, EncryptionKeyErasure? Erasure)> ReadErasure(string path)
     {
-        var path = BuildErasurePath(eventStore, eventStoreNamespace, identifier);
         try
         {
             var secret = await _vaultClient.V1.Secrets.KeyValue.V2.ReadSecretAsync(path, mountPoint: _mountPoint);
             if (!secret.Data.Data.TryGetValue(ErasedThroughField, out var erasedThrough) || erasedThrough is null)
             {
-                return null;
+                return (true, null);
             }
 
             var fingerprints = secret.Data.Data.TryGetValue(ErasedKeyFingerprintsField, out var raw) && raw is not null
@@ -248,141 +373,90 @@ public class VaultEncryptionKeyStorage : IEncryptionKeyStorage
             var newKeyAllowed = secret.Data.Data.TryGetValue(NewKeyAllowedField, out var allowed) && allowed is not null &&
                 bool.TryParse(allowed.ToString(), out var parsed) && parsed;
 
-            return new EncryptionKeyErasure(uint.Parse(erasedThrough.ToString()!), fingerprints, newKeyAllowed);
+            return (true, new EncryptionKeyErasure(uint.Parse(erasedThrough.ToString()!), fingerprints, newKeyAllowed));
         }
         catch (VaultApiException ex) when (ex.HttpStatusCode == HttpStatusCode.NotFound)
         {
-            return null;
+            return (false, null);
         }
     }
 
-    /// <inheritdoc/>
-    public async Task RecordErasureFor(
-        EventStoreName eventStore,
-        EventStoreNamespaceName eventStoreNamespace,
-        EncryptionKeyIdentifier identifier)
+    /// <summary>
+    /// Makes sure the layout of the key store is proven free for the paths under <see cref="VaultPathSegments.Root"/>
+    /// before anything is written there. Only a proven layout is remembered; every other outcome - a conflict, a refusal,
+    /// a timeout, a server error, a network failure - leaves the next write to prove it again.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> for continuation.</returns>
+    /// <exception cref="EncryptionKeyLayoutUnusable">The layout is in conflict or could not be verified.</exception>
+    async Task EnsureLayoutProven()
     {
-        var present = new List<(EncryptionKeyRevision Revision, EncryptionKey Key)>();
-        foreach (var revision in await ListRevisions(eventStore, eventStoreNamespace, identifier))
-        {
-            if (await TryGetFor(eventStore, eventStoreNamespace, identifier, revision) is { } key)
-            {
-                present.Add((revision, key));
-            }
-        }
-
-        var erasure = EncryptionKeyErasure.Covering(await GetErasureFor(eventStore, eventStoreNamespace, identifier), present);
-        await WriteErasure(eventStore, eventStoreNamespace, identifier, erasure);
-    }
-
-    /// <inheritdoc/>
-    public async Task AllowNewKeyFor(
-        EventStoreName eventStore,
-        EventStoreNamespaceName eventStoreNamespace,
-        EncryptionKeyIdentifier identifier)
-    {
-        if (await GetErasureFor(eventStore, eventStoreNamespace, identifier) is not { } erasure)
+        if (_layoutProven)
         {
             return;
         }
 
-        await WriteErasure(eventStore, eventStoreNamespace, identifier, erasure with { NewKeyAllowed = true });
-    }
-
-    static bool IsLatest(EncryptionKeyRevision? revision) => revision is null || revision == EncryptionKeyRevision.Latest;
-
-    static Dictionary<string, object> KeyData(EncryptionKey key) => new()
-    {
-        [PublicKeyField] = Convert.ToBase64String(key.Public),
-        [PrivateKeyField] = Convert.ToBase64String(key.Private)
-    };
-
-    static bool IsCheckAndSetMismatch(VaultApiException exception) =>
-        exception.HttpStatusCode == HttpStatusCode.BadRequest &&
-        ((exception.ApiErrors?.Any(error => error.Contains(CheckAndSetMismatch, StringComparison.OrdinalIgnoreCase)) ?? false) ||
-         exception.Message.Contains(CheckAndSetMismatch, StringComparison.OrdinalIgnoreCase));
-
-    static VaultClient CreateVaultClient(string address)
-    {
-        var token = Environment.GetEnvironmentVariable("VAULT_TOKEN");
-        if (string.IsNullOrEmpty(token))
+        var status = await _layoutCheck.EnsureLayout();
+        if (status.LayoutUnusable)
         {
-            throw new InvalidOperationException(
-                "VAULT_TOKEN environment variable is required for HashiCorp Vault authentication. " +
-                "Set this variable to a valid Vault token before starting Chronicle.");
+            throw new EncryptionKeyLayoutUnusable();
         }
 
-        var authMethod = new TokenAuthMethodInfo(token);
-        var settings = new VaultClientSettings(address, authMethod);
-        return new VaultClient(settings);
+        _layoutProven = true;
     }
 
-    string BuildPath(
-        EventStoreName eventStore,
-        EventStoreNamespaceName eventStoreNamespace,
-        EncryptionKeyIdentifier identifier,
-        EncryptionKeyRevision revision) =>
-        $"{eventStore}/{eventStoreNamespace}/{identifier}/{revision}";
-
-    string BuildDirectoryPath(
-        EventStoreName eventStore,
-        EventStoreNamespaceName eventStoreNamespace,
-        EncryptionKeyIdentifier identifier) =>
-        $"{eventStore}/{eventStoreNamespace}/{identifier}";
-
-    string BuildErasurePath(
-        EventStoreName eventStore,
-        EventStoreNamespaceName eventStoreNamespace,
-        EncryptionKeyIdentifier identifier) =>
-        $"{BuildDirectoryPath(eventStore, eventStoreNamespace, identifier)}/{ErasureLeaf}";
-
-    async Task WriteErasure(
-        EventStoreName eventStore,
-        EventStoreNamespaceName eventStoreNamespace,
-        EncryptionKeyIdentifier identifier,
-        EncryptionKeyErasure erasure)
+    async Task WriteErasure(VaultKeyLocations locations, EncryptionKeyErasure erasure)
     {
+        await EnsureLayoutProven();
         var data = new Dictionary<string, object>
         {
             [ErasedThroughField] = erasure.ErasedThrough.Value.ToString(),
             [ErasedKeyFingerprintsField] = string.Join(',', erasure.ErasedKeyFingerprints),
-            [NewKeyAllowedField] = erasure.NewKeyAllowed.ToString()
+            [NewKeyAllowedField] = erasure.NewKeyAllowed.ToString(),
+            [LayoutField] = VaultPathSegments.Root
         };
 
-        await _vaultClient.V1.Secrets.KeyValue.V2.WriteSecretAsync(BuildErasurePath(eventStore, eventStoreNamespace, identifier), data, mountPoint: _mountPoint);
+        await _vaultClient.V1.Secrets.KeyValue.V2.WriteSecretAsync(locations.ErasurePath, data, mountPoint: _mountPoint);
     }
 
-    async Task<EncryptionKeyRevision> GetNextRevision(
-        EventStoreName eventStore,
-        EventStoreNamespaceName eventStoreNamespace,
-        EncryptionKeyIdentifier identifier)
+    async Task<EncryptionKeyRevision> GetNextRevision(VaultKeyLocations locations)
     {
-        var highest = await GetHighestRevision(eventStore, eventStoreNamespace, identifier);
-        return highest is null ? (EncryptionKeyRevision)1u : highest.Value + 1u;
+        var revisions = await ListRevisions(locations);
+        return revisions.Count == 0 ? (EncryptionKeyRevision)1u : revisions.Keys.Max()!.Value + 1u;
     }
 
-    async Task<EncryptionKeyRevision?> GetHighestRevision(
-        EventStoreName eventStore,
-        EventStoreNamespaceName eventStoreNamespace,
-        EncryptionKeyIdentifier identifier)
+    /// <summary>
+    /// Lists the revisions present, mapped to the path each is read from: the current path when a revision exists
+    /// under both directories, otherwise the earlier one.
+    /// </summary>
+    /// <param name="locations">The <see cref="VaultKeyLocations"/> of the address.</param>
+    /// <returns>The revisions and their paths.</returns>
+    async Task<Dictionary<EncryptionKeyRevision, string>> ListRevisions(VaultKeyLocations locations)
     {
-        var revisions = await ListRevisions(eventStore, eventStoreNamespace, identifier);
-        return revisions.Count == 0 ? null : revisions.Max();
+        var revisions = new Dictionary<EncryptionKeyRevision, string>();
+        foreach (var revision in await ListRevisionsIn(locations.Directory))
+        {
+            revisions[revision] = $"{locations.Directory}/{revision}";
+        }
+
+        if (locations.LegacyDirectory is not null)
+        {
+            foreach (var revision in await ListRevisionsIn(locations.LegacyDirectory))
+            {
+                revisions.TryAdd(revision, $"{locations.LegacyDirectory}/{revision}");
+            }
+        }
+
+        return revisions;
     }
 
-    async Task<List<EncryptionKeyRevision>> ListRevisions(
-        EventStoreName eventStore,
-        EventStoreNamespaceName eventStoreNamespace,
-        EncryptionKeyIdentifier identifier)
+    async Task<List<EncryptionKeyRevision>> ListRevisionsIn(string directory)
     {
-        var directory = BuildDirectoryPath(eventStore, eventStoreNamespace, identifier);
         try
         {
             var list = await _vaultClient.V1.Secrets.KeyValue.V2.ReadSecretPathsAsync(directory, mountPoint: _mountPoint);
             return list.Data.Keys
-                .Select(key => key.TrimEnd('/'))
-                .Where(trimmed => uint.TryParse(trimmed, out _))
-                .Select(trimmed => (EncryptionKeyRevision)uint.Parse(trimmed))
+                .Where(key => !key.EndsWith('/') && uint.TryParse(key, out _))
+                .Select(key => (EncryptionKeyRevision)uint.Parse(key))
                 .ToList();
         }
         catch (VaultApiException ex) when (ex.HttpStatusCode == HttpStatusCode.NotFound)

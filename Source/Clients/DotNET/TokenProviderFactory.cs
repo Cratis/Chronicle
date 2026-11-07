@@ -47,8 +47,7 @@ static class TokenProviderFactory
                 password = ChronicleConnectionString.DevelopmentClientSecret;
             }
 
-            var defaultAddress = options.ConnectionString.ServerAddress;
-            sourceLogger.UsingServerDefaultTokenEndpoint($"https://{defaultAddress.Host}:{defaultAddress.Port}/connect/token");
+            sourceLogger.UsingTokenEndpoint(TokenDiagnostics.Label(TokenEndpointSource.DefaultServer));
             return new OAuthTokenProvider(
                 serverAddress,
                 username!,
@@ -65,8 +64,8 @@ static class TokenProviderFactory
         var scope = options.Authentication.Scope;
         if (hasTokenEndpoint)
         {
-            var tokenEndpoint = ParseOrThrow(options.Authentication.TokenEndpoint!);
-            sourceLogger.UsingConfiguredTokenEndpoint(ExternalTokenEndpoints.Describe(tokenEndpoint));
+            var tokenEndpoint = ParseOrThrow(options.Authentication.TokenEndpoint!, TokenEndpointSource.Configured);
+            sourceLogger.UsingTokenEndpoint(TokenDiagnostics.Label(TokenEndpointSource.Configured));
 #pragma warning disable CA2000 // The handler is owned and disposed by the token provider
             return new OAuthTokenProvider(
                 tokenEndpoint,
@@ -79,8 +78,8 @@ static class TokenProviderFactory
 #pragma warning restore CA2000
         }
 
-        var authority = ParseOrThrow(options.Authentication.Authority!);
-        sourceLogger.UsingAuthorityDiscovery(ExternalTokenEndpoints.Describe(authority));
+        var authority = ParseOrThrow(options.Authentication.Authority!, TokenEndpointSource.Authority);
+        sourceLogger.UsingTokenEndpoint(TokenDiagnostics.Label(TokenEndpointSource.Authority));
         return new ExternalAuthorityTokenProvider(
             authority,
             username!,
@@ -100,6 +99,6 @@ static class TokenProviderFactory
         (connectionString.Username == ChronicleConnectionString.DevelopmentClient &&
          connectionString.Password == ChronicleConnectionString.DevelopmentClientSecret);
 
-    static Uri ParseOrThrow(string value) =>
-        ExternalTokenEndpoints.Require(Uri.TryCreate(value, UriKind.Absolute, out var uri) ? uri : new Uri("invalid:///", UriKind.Absolute));
+    static Uri ParseOrThrow(string value, TokenEndpointSource source) =>
+        ExternalTokenEndpoints.Require(Uri.TryCreate(value, UriKind.Absolute, out var uri) ? uri : new Uri("invalid:///", UriKind.Absolute), source);
 }

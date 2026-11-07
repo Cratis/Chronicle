@@ -58,6 +58,25 @@ internal sealed class ContainerFallbackPolicy
     }
 
     /// <summary>
+    /// Creates the error for a service missing from the current shared-host context.
+    /// </summary>
+    /// <param name="serviceType">The requested service type.</param>
+    /// <returns>The actionable registration error.</returns>
+    public static InvalidOperationException CreateRejection(Type serviceType) =>
+        new($"Service '{serviceType.FullName}' is not registered for the current test context and would be constructed by the shared test host with dependencies from the first context. " +
+            $"Register it explicitly in the current context's ConfigureServices, for example services.AddSingleton(new {serviceType.Name}(...)).");
+
+    /// <summary>
+    /// Determines whether a captured context registration requires a current registration.
+    /// </summary>
+    /// <param name="descriptor">The captured context registration.</param>
+    /// <param name="testAssembly">The assembly defining test services.</param>
+    /// <returns>Whether the service or its known implementation belongs to the test assembly.</returns>
+    public static bool RequiresCurrentRegistration(ServiceDescriptor descriptor, Assembly testAssembly) =>
+        !descriptor.IsKeyedService &&
+        (IsProtected(descriptor, testAssembly) || descriptor.ImplementationInstance?.GetType().Assembly == testAssembly);
+
+    /// <summary>
     /// Determines whether the built container must not resolve a wrapper-visible request.
     /// </summary>
     /// <param name="serviceType">The requested service type.</param>

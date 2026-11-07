@@ -1,0 +1,26 @@
+---
+uid: event-audiences
+description: Address events to an audience with the audience tag, the [Audience] attribute and ambient audience scopes, and make an audience mandatory for an event type.
+---
+
+# Audiences
+
+An **audience** is the named tag `audience`. It says who an event is addressed to, and it is what a [subscription tag filter](../subscriptions/filtering-by-tags.mdx) matches on. The name is available as `WellKnownTags.Audience`.
+
+## Stamping the audience from a property
+
+Mark a property of the event with `[Audience]`. Its value, or the underlying value of a concept, becomes the `audience` tag.
+
+<ChronicleClientTabs snippet="events/audiences/audience-property" />
+
+## Stamping the audience from the surroundings
+
+`EventTags.Audience(value)` opens an ambient scope; events appended inside it are addressed to that audience. Open it twice (nested) to address two audiences. The ambient audience is only stamped on events appended to the **outbox**, or on events whose type is marked `[Audience]`, so it never leaks onto ordinary event log events.
+
+## Requiring an audience
+
+Mark the event *type* with `[Audience]` to make an audience mandatory. Appending it without an `audience` tag, from whatever source, fails with `MissingAudience`. In a unit of work the failure happens when the event is added, not at commit.
+
+<ChronicleClientTabs snippet="events/audiences/required-audience" />
+
+Without the attribute on the type, an audience is optional; nothing in Chronicle forces events to have one.

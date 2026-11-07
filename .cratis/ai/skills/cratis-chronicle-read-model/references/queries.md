@@ -33,9 +33,11 @@ Chronicle extensions — Chronicle declares no `Observe` on `IMongoCollection<T>
 
 ## Discovery rules
 
-Arc discovers eligible **public and internal static** methods on `[ReadModel]`
-types. Internal visibility is not an endpoint privacy boundary. Keep helpers
-outside the read model, regardless of their visibility. Use
+Arc discovers eligible **public static** methods on `[ReadModel]` types.
+Requires Arc 22.121.0: non-public methods are excluded even with `[Query]`, and
+ARC0029 warns on a non-public query-shaped method. A public query on an internal
+read-model type still works. On older Arc, internal statics are exposed too;
+keep helpers outside the read model when supporting those versions. Use
 `[ReadModel(RequireQueryAttribute = true)]` and `[Query]` on intended endpoints
 when the type also has folds (`Create`/`Reduce`); `[Query]` alone does not hide
 siblings. Requires Arc 22.27.1 for exclusion of private, protected, special-name

@@ -1,6 +1,6 @@
 ---
 name: cratis-release-notes
-description: Draft or review developer-facing release notes and migration guidance from verified changes for a specific Cratis product version. Use for GitHub releases, upgrade guides, and release announcements; not for deciding release authority, publishing, or selecting a version label.
+description: Use when drafting or reviewing release notes, upgrade guidance or announcements for a specific verified Cratis version. Not for deciding release authority, publishing or selecting a version label.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-release-notes/SKILL.md -->
@@ -94,6 +94,14 @@ boundary that makes a change safe to adopt. One item can follow this shape:
 That is a checklist for facts, not a template to repeat word-for-word across
 items. Use descriptive headings, meaningful links, and natural sentence rhythm.
 
+A `no-release` PR body still follows this contract. Its `(#n)` closes nothing
+because no release runs, so the issue is closed separately, and only when the
+request includes that effect; never imply automatic closing (see the issue
+section of [pull-requests.md](../../rules/pull-requests.md)).
+
+For every pull request, write the body file in a step of its own before
+`gh pr create --body-file`.
+
 ## Repair an already-published release
 
 Only when asked to fix a release that violates the contract:
@@ -111,6 +119,37 @@ Only when asked to fix a release that violates the contract:
    actually delivered it. Close it by hand with a comment naming the release
    only when the request covers closing issues; otherwise list the issues as a
    proposal. Leave an issue open when the release only partly delivered it.
+
+## Release-action batching and recovery
+
+Requires release-action 1.5.1 for corrected pending-major hotfix handling; check the workflow's `uses` pin, or keep immediate releases on the older contract.
+
+`release-window` defaults to `0` (one
+release per PR); a positive minute window batches pending merges once the oldest
+is old enough. The highest intent wins, notes merge by section with one combined
+`## Summary`, and delivered `(#n)` issues still close. Reference definitions are
+preserved; duplicate labels keep the first definition and warn. Missing intent
+labels warn but are not permission to omit required PR labels.
+
+`hotfix-labels` defaults to `hotfix` and bypasses the window. With a pending major,
+only the merge run for the hotfix fails; scheduled/other merge runs warn and leave
+the batch pending. A manual run without a version releases everything pending;
+obtain the required human major confirmation first. Inspect `pull-requests` and
+`reason` (`batched` or `nothing-pending`) rather than assuming every successful
+run released. Never turn on batching just to clear a queue without authorization.
+
+A release-creation 403 caused by workflow drift names the recovery:
+dispatch the publish workflow from the current default branch with the PR's
+release notes. Re-running the stale commit does not fix this. Other 403s keep
+their original cause; do not treat every permission failure as workflow drift.
+
+Before re-running a cancelled publish, check
+`git merge-base --is-ancestor <merge-commit> <latest-release-tag>`. If it is an
+ancestor, a release already contains the change, so do not cut another version.
+The tag alone does not prove it shipped: a release can be created before its
+publishing jobs run. Confirm that the containing release's publish run completed
+every publishing job and its packages exist before reporting it shipped;
+otherwise recover that version's publishing rather than releasing again.
 
 ## Verify before handing over
 

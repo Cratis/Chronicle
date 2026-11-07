@@ -1,44 +1,61 @@
 ---
-title: Troubleshooting
-description: Answers to the questions that come up most often when something isn't behaving the way you expected.
+title: "Chronicle troubleshooting: diagnose processing failures"
+description: Diagnose Cratis Chronicle connection problems, stale read models, reactor failures, and schema errors, then follow the matching recovery procedure.
 ---
 
-Most "it's not working" moments with Chronicle come down to a handful of causes. This page collects them. If your issue isn't here, the [Glossary](/chronicle/concepts/glossary/) and the feature guides go deeper.
+To troubleshoot Cratis Chronicle, start with the symptom you can observe: a missing read model, a failed handler, an append rejection, or a connection error. The checks below help you narrow down the cause and choose a recovery procedure. Before retrying or replaying events, check whether their side effects already happened.
+
+- For missing or stale data, [check the read model](#my-read-model-is-empty-or-out-of-date) or [check a projection change](#my-projection-isnt-picking-up-a-change-i-made).
+- For duplicate external work, [check repeated reactor deliveries](#my-reactor-ran-twice-or-sent-a-duplicate-notification) or [check a reactor rename](#my-reactor-re-ran-all-its-side-effects-after-a-rename).
+- For stopped processing, [inspect a failed partition](#my-reactor-throws-and-the-stream-seems-stuck) or [investigate suspected skipped events](#an-observer-may-have-skipped-events).
+- For rejected or unreadable events, [check the constraint](#a-constraint-is-rejecting-an-append-i-expected-to-succeed) or [check the schema change](#events-look-wrong-after-a-schema-change).
+- For connection failures, [check the kernel and client address](#i-cant-connect-to-the-chronicle-kernel).
+- For missing telemetry, [register Chronicle's tracing source](#my-traces-have-no-chronicle-spans).
+
+If a term is unfamiliar, the [Glossary](/chronicle/concepts/glossary/) explains it. Each symptom below links to the guide for the next step.
 
 ## My read model is empty or out of date
 
-A read model is built by a [projection](/chronicle/concepts/projection/) that runs *after* events are appended — it is [eventually consistent](/chronicle/read-models/), not instant. A few things to check, in order:
+A [projection](/chronicle/concepts/projection/) builds a read model after events are appended. The read model is [eventually consistent](/chronicle/read-models/): a successful append does not mean the projection has already processed the event. Check these in order:
 
-- **Did the events actually get appended?** Look at the event sequence. No events in, no read model out.
-- **Did you give the projection time?** Immediately after appending, the projection may not have processed yet. For tests, wait for the read model rather than asserting instantly.
-- **Does the projection map the events you appended?** If the read model only handles `BookAdded` but you appended `BookBorrowed`, that event won't change it.
-- **Is the property mapping right?** AutoMap matches by name. A `Title` on the event maps to `Title` on the read model; a mismatch means the value silently doesn't flow.
+1. Look for the expected events in the event sequence. If they were not appended, investigate the append before changing the projection.
+2. Wait for the projection to process them. In a test, wait for the expected read-model state before asserting it.
+3. Compare the appended event types with the projection's mappings. If the projection only handles `BookAdded`, appending `BookBorrowed` will not update it.
+4. Check the property names. AutoMap matches by name: an event's `Title` maps to the read model's `Title`. A property with a different name needs an explicit mapping.
+
+If the events and mappings are correct but processing has stopped, follow [Recover a failed partition](/chronicle/operations/recover-a-failed-partition/).
 
 ## My read model's child collection is null
 
-A child collection with no children is stored as an absent field rather than as `[]` — deliberately, so that a parallel replay cannot erase a child a sibling event already added. Chronicle fills that absence in for you when the property is declared non-nullable, and leaves it as `null` when you declared it nullable to keep "no children yet" distinguishable. Two things do not close the gap: [initial values](/chronicle/projections/declarative/initial-values/) are dropped for a children collection, and reading the document with the MongoDB driver instead of through Chronicle bypasses the rule entirely. See [Empty child collections](/chronicle/read-models/empty-child-collections/).
+A child collection with no children is stored as an absent field rather than as `[]`. This prevents a parallel replay from erasing a child that another event already added.
+
+When the .NET client reads the model, it fills an absent non-nullable collection with an empty collection. A nullable declaration keeps `null`, so the application can distinguish absence from an empty collection. Reading the document directly with the MongoDB driver bypasses that handling.
+
+Setting [initial values](/chronicle/projections/declarative/initial-values/) will not change the stored shape: initial values for a children collection are dropped. Use [Empty child collections](/chronicle/read-models/empty-child-collections/) to choose the declaration and read path that match your application.
 
 ## My projection isn't picking up a change I made
 
-After you change a projection, the existing read model still reflects the *old* logic. Rebuild it by **replaying** — re-running the projection over historical events. Because events are the source of truth, read models are disposable and safe to rebuild at any time. See [Rebuild a read model](/chronicle/scenarios/rebuild-a-read-model/) for the workflow.
+If a read model still reflects the old projection logic, check how Chronicle handled the definition change before starting another rebuild. Some changes trigger historical processing automatically; the configured definition-evolution policy controls that behavior.
+
+When a rebuild is needed, replay runs the projection over historical events to produce the read model again. Plan for the processing work and verify the rebuilt output; replay is not a guarantee that the new logic is correct. Follow [Rebuild a read model](/chronicle/scenarios/rebuild-a-read-model/) to inspect the change and choose the rebuild.
 
 To inspect or replay observers, see [Recovering from failures](/chronicle/operations/recovering-from-failures/), which links each action to its [Cratis CLI](/cli/) page, including [`observers replay`](/cli/chronicle/observers/#replay).
 
 ## My reactor ran twice (or sent a duplicate notification)
 
-That's expected — reactors can run more than once for the same event during replay or recovery. The fix is not to prevent it but to make the reactor **idempotent**: record that the side effect happened and skip it if it already did. Chronicle gives you the key to record it under — see [Delivery identity](/chronicle/reactors/delivery-identity/), and [Reacting to events](/chronicle/tutorial/reacting/) for the wider pattern.
+A reactor can receive the same event more than once during replay or recovery. Make its external work idempotent, meaning that repeating the delivery does not repeat the effect. Record that the effect completed and skip it on a later delivery with the same identity. [Delivery identity](/chronicle/reactors/delivery-identity/) explains which key to use; [Reacting to events](/chronicle/tutorial/reacting/) shows the wider pattern.
 
 ## My reactor re-ran all its side effects after a rename
 
-The default reactor id is its full type name. A class rename or namespace move creates a new observer, which catches up from the beginning as ordinary observation. `OnceOnly` does not skip that catch-up.
+In the .NET client, the default reactor id is its full type name. A class rename or namespace move therefore creates a new observer, the processing identity that tracks the reactor's position. That observer catches up from the beginning as ordinary observation. `OnceOnly` does not skip that catch-up.
 
 Preserve the previous stored id explicitly to retain its processing position. Inspect any abandoned observer before removing it; removal does not transfer a position or undo duplicate side effects. See [Reactor identity and renaming](/chronicle/reactors/identity/). The [.NET discovery report](/chronicle/clients/dotnet/discovery-report/) exposes likely identity changes before registration, but a still-subscribed old instance during a rolling deployment can hide them.
 
 ## My reactor throws and the stream seems stuck
 
-When a reactor throws, the failing event source partition pauses — by design, so it doesn't silently skip events. Chronicle retries it on its own, with an exponential backoff, and tries again whenever the observer subscribes, for example after you redeploy. A partition that keeps failing is **quarantined** once it has used up its retry attempts (10 by default), and a quarantined partition is not retried automatically. The limits are set in [observer configuration](/chronicle/hosting/configuration/observers/).
+When a reactor throws, Chronicle pauses processing for the failing event source partition, the group of events held back by that failure. It retries with exponential backoff and requests recovery when the observer subscribes again, for example after a redeployment. A partition that exhausts its retry attempts (10 by default) is quarantined: automatic retries stop. The limits are set in [observer configuration](/chronicle/hosting/configuration/observers/).
 
-So fix the underlying error (and make the reactor resilient), and redeploy. Then follow [Recover a failed partition](/chronicle/operations/recover-a-failed-partition/), which uses the [Cratis CLI](/cli/) runbook [Fix a stuck observer](/cli/scenarios/fix-a-stuck-observer/) to see where each partition stands and resume what did not recover on its own.
+Inspect the recorded error and fix its cause before requesting another attempt. If the fix requires a deployment, deploy it, then check whether processing resumed. [Recover a failed partition](/chronicle/operations/recover-a-failed-partition/) explains how to choose retry or replay and verify the result. For terminal inspection and recovery, use the [Cratis CLI](/cli/) runbook [Fix a stuck observer](/cli/scenarios/fix-a-stuck-observer/).
 
 ### Retry one reactor partition from a client
 
@@ -50,7 +67,9 @@ A retry request is not proof that recovery finished. Inspect the partition befor
 
 To find out about a stuck partition when it happens rather than when someone notices, see [Get alerted when observers stop processing](/chronicle/hosting/alerting-on-observer-failures/).
 
-A partition that ran out of retries before your fix was deployed is quarantined, and does **not** resume on its own. Inspect it with `failed-partitions show` first. An ordinary retry is refused for a quarantined partition, so recover it by clearing the quarantine of that one partition. Clearing starts a new retry budget for the partition, keeps its attempt history, and — when you ask for it — retries it straight away. A quarantined *observer* is a different state: it needs `observers clear-quarantine` first, and clearing a partition while the observer is quarantined reports that the retry was not started.
+If the partition exhausted its retries before the fix was deployed, inspect it with `failed-partitions show`. An ordinary retry is refused while the partition is quarantined. Clear that partition's quarantine to start a new retry budget while keeping its attempt history; the operation can also request an immediate retry.
+
+Observer quarantine is separate from partition quarantine. If the observer is quarantined, use `observers clear-quarantine` first. Clearing a partition while its observer is quarantined reports that the retry was not started.
 
 `replay-partition` is not a way out for a reactor handler marked [`[OnceOnly]`](/chronicle/reactors/once-only/): the client skips those handlers for replayed events, so a replay never runs the handler that failed. Remember that every retry runs the handler again, so a side effect the handler completed before it failed happens again unless you guard it; see [Delivery identity](/chronicle/reactors/delivery-identity/).
 
@@ -58,11 +77,11 @@ A partition that ran out of retries before your fix was deployed is quarantined,
 
 <ChronicleClientTabs snippet="troubleshooting/clear-reactor-partition-quarantine" />
 
-Every refusal has its own outcome, so nothing reports success when it changed nothing. The same operation is available on the `Observers` service as `ClearPartitionQuarantine`.
+Read the returned outcome before continuing: it distinguishes clearing the quarantine from starting a retry, and reports refusals separately. The same operation is available on the `Observers` service as `ClearPartitionQuarantine`.
 
 ## An observer may have skipped events
 
-Chronicle counts and logs a **suspected** skip when an observer's position moves past a live event and no delivery path the observer saw covers it. It is a warning to investigate, not proof that the event was lost: a catch-up job may have delivered it without reporting it. The counters `chronicle-observer-events-suspected-skipped` and `chronicle-appended-events-queue-suspected-undelivered-events` are described in [Open Telemetry](/chronicle/hosting/configuration/open-telemetry/#suspected-skipped-events).
+Chronicle counts and logs a **suspected** skip when an observer's position moves past a live event and no delivery path the observer saw covers it. It is a warning to investigate, not proof that the event was lost: a catch-up job may have delivered it without reporting it. The counters `chronicle-observer-events-suspected-skipped` and `chronicle-appended-events-queue-suspected-undelivered-events` (published as `cratis.chronicle.observer.suspected_skipped_events` and `cratis.chronicle.appended_events_queue.suspected_undelivered_events` when you opt in to `Telemetry:MetricNames=Convention`; see [telemetry names](/chronicle/hosting/configuration/telemetry-names/)) are described in [Open Telemetry](/chronicle/hosting/configuration/open-telemetry/#suspected-skipped-events).
 
 The observer writes this warning, inside the scope of the observer it concerns:
 
@@ -83,42 +102,48 @@ The appended-events queue writes a different warning when handing events to an o
 
 Warnings are rate-limited to 10 per observer, or per queue, per minute. When more were suspected, a further warning says how many were not logged. The counters are never limited.
 
-A suspicion is also raised for an event that a catch-up round delivered when the live copy of that event only reached the observer after the round had finished, because the appended-events queue lagged behind a whole round. The event was handled, so there is nothing to replay.
+A warning can also describe an event that was already handled. If the appended-events queue lags behind an entire catch-up round, the live copy can reach the observer after the round delivered it. Check the resulting state before deciding to replay.
 
 Investigate whether the partition's read model or side effects reflect the event. If they do not, consider replaying the partition with [`cratis chronicle observers replay-partition`](/cli/chronicle/observers/#replay-partition). For a reactor, remember that a replay skips handlers marked [`[OnceOnly]`](/chronicle/reactors/once-only/). To retry a partition that failed, see [My reactor throws and the stream seems stuck](#my-reactor-throws-and-the-stream-seems-stuck).
 
 ## A constraint is rejecting an append I expected to succeed
 
-[Constraints](/chronicle/constraints/) are enforced as events are appended — a uniqueness constraint, for example, rejects a second event that would violate it. Check which constraint fired and whether the value really is a duplicate within its scope (remember [namespaces](/chronicle/concepts/namespaces/) isolate data per tenant).
+[Constraints](/chronicle/constraints/) are checked during append. A uniqueness constraint rejects an event whose value would violate that constraint. Read the rejection to identify the constraint, then check the value within its scope. In a multi-tenant application, confirm the [namespace](/chronicle/concepts/namespaces/) too: each namespace isolates its data.
 
 ## A projection stalls with "the schema does not declare it"
 
-The full message names the property, the subject, and what the schema does declare:
+Compare the property named in the error with the schema's declared properties. A message using the compliance wording looks like this:
 
 ```text
 Could not apply compliance metadata for property 'address.postCode' of 'person-42'
 because the schema does not declare it. The schema declares: 'street', 'city'.
 ```
 
-Compliance handling walks the whole document — one `[PII]` marker anywhere switches it on for every value — and looks each property up in the schema to find the classification that applies. This message means the document and its schema have drifted apart: the stored payload carries a property the schema has never heard of. The usual cause is an event type that gained or renamed a property without an [event type migration](/chronicle/concepts/event-type-migrations/), so old events no longer match the shape the schema now describes. Add the migration and replay.
+Compliance handling uses the schema to decide how values marked as personal data with `[PII]` must be protected. A classification can require inspecting other properties in the document too. This error means a property in the payload has no matching declaration or additional-properties schema.
 
-On the write side the append fails outright; on the read side the failing partition pauses and retries, so the read model stops advancing at that event.
+If an event type gained or renamed a property, check whether old events still match the current schema. Add the necessary [event type migration](/chronicle/concepts/event-type-migrations/) before replaying the affected history.
 
-A [geospatial](/chronicle/concepts/geospatial/) `Point`, `LineString` or `Polygon` is never the cause — the walk stops at those by design and never reads their GeoJSON members as properties.
+If this error occurs during append, the append fails. If it occurs while the projection applies an event, the failing partition pauses and retries, leaving the read model stuck at that event.
 
-Two shapes *are* a cause, deliberately: a polymorphic base type and a dictionary both hold members the schema does not declare, and Chronicle would rather fail here than write a value it was told is personal into the store unprotected. Model the data as a value object with declared properties. See [Geospatial values are not looked inside](/chronicle/compliance/pii#geospatial-values-are-not-looked-inside).
+Chronicle treats a [geospatial](/chronicle/concepts/geospatial/) `Point`, `LineString` or `Polygon` as a value. It does not inspect their GeoJSON members as separate properties during this walk.
+
+For a polymorphic value or dictionary, check whether the schema describes the runtime members, including any additional-properties schema. Undeclared members can cause this error; using a value object with declared properties makes that shape explicit. See [Geospatial values are not looked inside](/chronicle/compliance/pii#geospatial-values-are-not-looked-inside).
 
 ## My traces have no Chronicle spans
 
-The Chronicle client emits its spans on an activity source named `Cratis.Chronicle.Client`, and OpenTelemetry records a source only after it has been registered. Without the registration nothing fails, the spans are just missing. Add `AddCratisChronicleInstrumentation()` to your tracer provider configuration. See [Trace Chronicle client operations with OpenTelemetry](/chronicle/hosting/client-tracing/).
+The .NET Chronicle client emits spans, the records of individual traced operations, on the activity source `Cratis.Chronicle.Client`. OpenTelemetry needs that source registered to collect them. Add `AddCratisChronicleInstrumentation()` to your tracer provider configuration, then check a new client operation. [Trace Chronicle client operations with OpenTelemetry](/chronicle/hosting/client-tracing/) shows the configuration.
 
 ## I can't connect to the Chronicle kernel
 
-- **Confirm the kernel is running** — `curl --insecure https://localhost:35000/health` prints `Healthy` when a local kernel is up. For local development, the quickest path is `docker run -d --name chronicle -p 127.0.0.1:35000:35000 -p 127.0.0.1:27017:27017 cratis/chronicle:latest-development`, which publishes the ports on this machine only. For other setups (Docker Compose, Aspire, or production), see [Choose an application host model](/chronicle/get-started/choose-hosting-model/).
-- **Confirm the client URL matches the kernel's address and port** — the default is `chronicle://localhost:35000`.
-- **Confirm your storage is reachable** — the development image bundles MongoDB on port 27017; if you're using separate storage, verify the kernel can reach it.
+Check the kernel, client address, and storage separately:
 
-See [Connection strings](/chronicle/connection-strings/) and [Get started](/chronicle/get-started/).
+1. Check the local kernel's health. `curl --insecure https://localhost:35000/health` prints `Healthy` when the health check passes. The `--insecure` option bypasses certificate verification for this local development check.
+2. Compare the client URL with the kernel's address and port. The default is `chronicle://localhost:35000`; a kernel on another host or port needs a matching connection string.
+3. Check that the kernel can reach storage. The development image bundles MongoDB on port 27017. With separate storage, verify the address from the kernel's environment.
+
+If you still need a local development kernel, `docker run -d --name chronicle -p 127.0.0.1:35000:35000 -p 127.0.0.1:27017:27017 cratis/chronicle:latest-development` publishes its ports on this machine only. For Docker Compose, Aspire, or production, follow [Choose an application host model](/chronicle/get-started/choose-hosting-model/).
+
+Use [Connection strings](/chronicle/connection-strings/) to correct the client address, or [Get started](/chronicle/get-started/) to work through a local setup.
 
 ## Events look wrong after a schema change
 

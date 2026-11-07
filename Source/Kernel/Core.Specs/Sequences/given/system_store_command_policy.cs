@@ -98,6 +98,8 @@ public static class system_store_command_policy
         ["Cratis.Chronicle.Security.AddUser"] = SecurityReason,
         ["Cratis.Chronicle.Security.GrantAdministrator"] = "administrator management through the guarded authoritative roster; Tier A policy",
         ["Cratis.Chronicle.Security.RevokeAdministrator"] = "administrator management through the guarded authoritative roster; Tier A policy",
+        ["Cratis.Chronicle.Security.GrantEventStoreAccess"] = "explicit grant administration through the authoritative grant grain; administrator-only policy",
+        ["Cratis.Chronicle.Security.RevokeEventStoreAccess"] = "explicit grant administration through the authoritative grant grain; administrator-only policy",
         ["Cratis.Chronicle.Security.ChangeApplicationSecret"] = SecurityReason,
         ["Cratis.Chronicle.Security.ChangeUserPassword"] = SecurityReason,
         ["Cratis.Chronicle.Security.RemoveApplication"] = SecurityReason,

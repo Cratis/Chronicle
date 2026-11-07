@@ -1,0 +1,14 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+namespace Cratis.Chronicle.Concepts.Projections.Graphs;
+
+/// <summary>
+/// Represents how an event creates or updates an edge.
+/// </summary>
+/// <param name="SourceKey"><see cref="PropertyExpression"/> resolving the key of the source node.</param>
+/// <param name="TargetKey"><see cref="PropertyExpression"/> resolving the key of the target node.</param>
+/// <param name="Identity">Optional <see cref="PropertyExpression"/> resolving the value of the identifying property of the edge.</param>
+/// <param name="Properties">Property name to expression, including counter expressions such as "$increment".</param>
+/// <param name="ForEach">Optional collection property of the event; the mapping runs once per item and expressions address the item as <c language="csharp">collection.property</c>.</param>
+public record GraphEdgeFromDefinition(PropertyExpression SourceKey, PropertyExpression TargetKey, PropertyExpression? Identity, IDictionary<string, string> Properties, PropertyExpression? ForEach = null);

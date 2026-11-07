@@ -20,6 +20,8 @@ public class and_subject_names_are_built_from_adversarial_input : Specification
         "-internal-",
         "chronicle-internal",
         "chronicle-internal--event-store",
+        "chronicle-k1",
+        "chronicle-k1--",
         "--internal",
         "internal--event-store",
         "internal--event-store--mutation-receipt-digest-v2",
@@ -48,15 +50,23 @@ public class and_subject_names_are_built_from_adversarial_input : Specification
         _internalNames = [.. _crafted.Select(store => AzureKeyVaultEncryptionKeyStorage.BuildInternalSecretName(store, InternalSecretPurpose.MutationReceiptDigest))];
         _subjectNames = [];
         _subjectPrefixes = [];
-        foreach (var store in _crafted)
+        var subjectComponents = _crafted.Where(component => component.Length > 0).ToArray();
+        foreach (var store in subjectComponents)
         {
-            foreach (var @namespace in _crafted)
+            foreach (var @namespace in subjectComponents)
             {
-                foreach (var identifier in _crafted)
+                foreach (var identifier in subjectComponents)
                 {
-                    _subjectPrefixes.Add(AzureKeyVaultEncryptionKeyStorage.BuildSecretPrefix(store, @namespace, identifier));
-                    _subjectNames.Add(AzureKeyVaultEncryptionKeyStorage.BuildErasureSecretName(store, @namespace, identifier));
-                    _subjectNames.AddRange(_revisions.Select(revision => AzureKeyVaultEncryptionKeyStorage.BuildSecretName(store, @namespace, identifier, revision)));
+                    var locations = SecretLocations.For(store, @namespace, identifier);
+                    _subjectPrefixes.Add(locations.Prefix);
+                    _subjectNames.Add(locations.ErasureName);
+                    _subjectNames.AddRange(_revisions.Select(locations.Name));
+                    if ((locations.LegacyPrefix ?? locations.UnresolvedLegacyPrefix) is { } earlierPrefix)
+                    {
+                        _subjectPrefixes.Add(earlierPrefix);
+                        _subjectNames.Add($"{earlierPrefix}{SecretLocations.ErasureSuffix}");
+                        _subjectNames.AddRange(_revisions.Select(revision => $"{earlierPrefix}{revision.Value}"));
+                    }
                 }
             }
         }
@@ -65,6 +75,7 @@ public class and_subject_names_are_built_from_adversarial_input : Specification
     [Fact] void should_never_build_a_subject_name_equal_to_an_internal_name() => _subjectNames.Intersect(_internalNames, StringComparer.OrdinalIgnoreCase).ShouldBeEmpty();
     [Fact] void should_never_build_a_subject_prefix_that_enumerates_an_internal_name() =>
         _subjectPrefixes.Exists(prefix => _internalNames.Exists(name => name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))).ShouldBeFalse();
-    [Fact] void should_start_every_subject_name_with_the_subject_separator() => _subjectNames.TrueForAll(name => name.StartsWith("chronicle--", StringComparison.Ordinal)).ShouldBeTrue();
+    [Fact] void should_start_every_subject_name_with_a_subject_separator() => _subjectNames.TrueForAll(name => name.StartsWith("chronicle-k1--", StringComparison.Ordinal) || name.StartsWith("chronicle--", StringComparison.Ordinal)).ShouldBeTrue();
+    [Fact] void should_never_start_an_internal_name_with_the_hashed_subject_prefix() => _internalNames.Exists(name => name.StartsWith("chronicle-k1--", StringComparison.OrdinalIgnoreCase)).ShouldBeFalse();
     [Fact] void should_start_every_internal_name_with_the_internal_segment() => _internalNames.TrueForAll(name => name.StartsWith("chronicle-internal--", StringComparison.Ordinal)).ShouldBeTrue();
 }

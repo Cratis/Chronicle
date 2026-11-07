@@ -1,37 +1,32 @@
 ---
 uid: Chronicle.Testing.Reactors.Scenario
-description: ReactorScenario<TReactor> is an in-process test utility that verifies Chronicle reactor side effects without a server, gRPC transport or observer registration.
+title: "ReactorScenario: test Chronicle handler wiring"
+description: Use Chronicle ReactorScenario to check handler dispatch, seeded read-model lookup, and returned side effects in-process without a running server.
 ---
-# ReactorScenario
 
-`ReactorScenario<TReactor>` is a lightweight, in-process test utility that lets you verify reactor side-effects without a running Chronicle server, gRPC transport, or observer registration.
+<a id="reactorscenario"></a>
 
-It activates a fresh instance of `TReactor` from the provided service provider and routes events directly through the `ReactorInvoker` — the same execution path used in production.
+`ReactorScenario<TReactor>` checks how a .NET Chronicle reactor handles an event: which handler runs, which seeded read model it receives, and what side effects it returns. It uses the production `ReactorInvoker` in-process, without a Chronicle server or observer registration.
 
-In a [Cratis Specification](/testing-with-cratis/), the event delivered to the reactor is the **when**, and the side effect captured by a mock, fake, or test double is the **then**. The scenario keeps that test in-process while still using the production reactor invocation path.
+In a [Cratis Specification](/testing-with-cratis/), delivering the event is the action in `Because()`. The assertions describe what the reactor produced or what a test double received. Returned side effects are recorded by default, not executed, so the test checks the reactor's decision rather than the downstream outcome.
 
 ## Start with a pure function
 
-A reactor that returns its side effects — the command or event that should follow — is a pure function of `(event, read model)`. Test that logic by constructing the reactor and calling the handler directly: no Chronicle server, no service provider, no mocks.
+If a handler's decision depends only on its event and read-model arguments, test it as a pure function. Construct the reactor, call the handler, and inspect the command or event it returns:
 
 <ChronicleClientTabs snippet="testing/reactors/pure-function" />
 
-Keep these as your default. They are the fastest specs, and because they assert your reactor's contract rather than Chronicle's internals, they keep passing as the framework evolves. A reactor that instead injects `IEventLog`/`ICommandPipeline` and acts in the method body cannot be tested this way — returning side effects is what makes the pure-function test possible.
+The example passes the host's name in a read model and checks the returned notification command. No framework dispatch is involved. Returning a side effect does not by itself make a handler pure: it may still read services or perform other work. A handler that calls `IEventLog` or `ICommandPipeline` directly can also be called in a unit test, but you need test doubles to check those calls.
 
 ## Reach for ReactorScenario to prove the wiring
 
-Some behavior is the framework's contract, not your logic, and a direct call cannot reach it:
+A direct handler call cannot tell you whether Chronicle selects that handler or resolves its arguments correctly. Use `ReactorScenario<TReactor>` for those questions. It activates the reactor from a service provider, dispatches the event through `ReactorInvoker`, and resolves read-model parameters from state you seed explicitly, including keys supplied by `ICanResolveReadModelKey`.
 
-- Chronicle materializes the right read model for a handler-method parameter (including a custom `ICanResolveReadModelKey`);
-- a constructor or method-parameter dependency resolves as expected;
-- the right handler dispatches for a given event type;
-- the produced side effect flows through the real invoker.
-
-For those, `ReactorScenario<TReactor>` drives your reactor through the same in-process invocation path as production — accurate, but without a live Chronicle server, so specs stay fast. Its `ShouldHaveProduced<T>` assertion uses the same "then" as the pure-function test, so a spec graduates from one to the other without relearning how to assert.
+The boundary matters when the test passes: you have checked invocation and the resulting decision, not projection of the read model, server delivery, or execution of the side effect. Keep a kernel-backed integration test for observer registration, retries, and persistence. `ShouldHaveProduced<T>` lets the scenario assert the same returned command or event that a direct-call test inspects.
 
 ## Installation
 
-`ReactorScenario<TReactor>` is in the `Cratis.Chronicle.Testing` NuGet package:
+For .NET, add `Cratis.Chronicle.Testing` and the specification framework to your test project:
 
 ```bash
 dotnet add package Cratis.Specifications.XUnit
@@ -42,7 +37,7 @@ dotnet add package Cratis.Chronicle.Testing
 
 <ChronicleClientTabs snippet="testing/reactors/scenario/basic" />
 
-`Given` is a fluent builder: call `ForEventSource(id)` to specify the event source, then `Events(...)` to route events through the reactor in order.
+In .NET, `Given.ForEventSource(id)` assigns the event source identifier, and awaiting `Events(...)` delivers the events in order. Assert after that call completes. If the handler needs a read model, [seed it before delivery](#seeding-read-models); the events supplied here do not build one. Client tabs show their own APIs rather than interchangeable versions of the .NET harness.
 
 ## Routed givens
 
@@ -62,7 +57,7 @@ A class-based reactor with an `[EventSourceType]` or `[EventStreamType]` filter 
 
 The first two givens are ignored; only the matching payment produces a side effect. A reactor without these filters receives events on any route. `EventSourceType.Unspecified` and `EventStreamType.All` do not narrow delivery; an explicit `EventSourceType.Default` filter matches only that literal source type. Stream identifiers do not narrow these filters.
 
-Every given event advances the sequence number, even if the filter skips it, matching the kernel's append-time numbering. Tag filters (`FilterEventsByTag`) are not applied: scenario givens do not carry tags. Use a kernel-backed integration specification to verify tag-based delivery.
+Every given event advances the scenario's sequence number, even if the filter skips it. Tag filters (`FilterEventsByTag`) are not applied by the reactor scenario. Use a kernel-backed integration specification to verify tag-based delivery.
 
 ## Redeliver a recorded occurrence
 
@@ -88,7 +83,7 @@ You can also pass a pre-built `IServiceProvider` to the constructor when you nee
 
 <ChronicleClientTabs snippet="testing/reactors/scenario/injecting-dependencies" />
 
-When neither is used, the scenario builds a provider from `Services` (with logging registered).
+With a pre-built provider, registrations in `Services` are ignored. Without one, the scenario builds its provider from `Services`, including the logging registration.
 
 ## Per-run artifacts
 
@@ -139,7 +134,7 @@ When a reactor returns a built-in event side effect or an asynchronous command, 
 
 <ChronicleClientTabs snippet="testing/reactors/scenario/produced-side-effects" />
 
-The scenario records everything the reactor returns — flattening collections and unwrapping cross-stream event wrappers — so `ShouldHaveProduced<T>()`, its predicate overload, and `ShouldNotHaveProduced<T>()` all work against events and commands alike. The raw list is available on `Produced`.
+The default recorder flattens returned collections and unwraps cross-stream event wrappers. `ShouldHaveProduced<T>()`, its predicate overload, and `ShouldNotHaveProduced<T>()` therefore inspect events and commands alike. Use `Produced` when you need the raw list. A recorded notification command means the reactor requested a notification; it does not mean a notification was sent.
 
 For a custom synchronous return type, register an `IReactorSideEffectHandler` in `scenario.Services` whose `CanHandleReturnType(Type)` claims that type, as you would in the host. The scenario records the result rather than executing the handler. Unclaimed synchronous types are rejected, just as they are in production; built-in event return types need no extra registration.
 
@@ -159,12 +154,18 @@ The scenario records these events without appending them. If you supply explicit
 
 <ChronicleClientTabs snippet="testing/reactors/scenario/email-example" />
 
+The .NET test double captures the shipping-confirmation request. Assert on the order identifier and carrier here; test the real email service separately when delivery is the behavior you need to verify.
+
 ## Example: multiple events across event sources
 
 <ChronicleClientTabs snippet="testing/reactors/scenario/multiple-sources" />
 
+The .NET example delivers events for two tenants through one scenario and checks that both request a sync. It does not test isolation or scheduling of server-managed observer partitions.
+
 ## Notes
 
-- A fresh instance of `TReactor` is activated from the service provider for each `Events(...)` call, matching the production behavior where a new scope is created per event batch.
-- Event handling uses the same `ReactorInvoker` as in production, so convention-based dispatch — where each handler method is matched by its event parameter type — works identically.
-- The `.Received()` assertions in the examples come from [NSubstitute](https://nsubstitute.github.io/). Any mocking framework works.
+The .NET scenario activates the reactor for each `Events(...)` or `Redeliver(...)` call. Events within one `Events(...)` call share that activated instance. This does not exercise the application's complete service-scope or middleware setup.
+
+The `.Received()` assertions in the examples come from [NSubstitute](https://nsubstitute.github.io/). You can use another mocking framework with the same scenario services.
+
+If your next question is whether the reactor receives the right projected state, test that projection with [ReadModelScenario](../read-models/scenario.mdx). Seed its expected result into the reactor scenario to keep projection failures separate from reactor decisions.

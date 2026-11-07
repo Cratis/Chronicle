@@ -1,8 +1,7 @@
 ---
+title: Configure compliance storage in Cratis Chronicle
 description: Store Chronicle's encryption keys in a separate, independently secured compliance storage instead of alongside application data.
 ---
-# Compliance Storage
-
 Chronicle stores encryption keys alongside the rest of your application data by default. When you configure a dedicated compliance storage, those keys are stored in a separate, independently secured backend — such as HashiCorp Vault — so that key material never resides in the same database as the encrypted events.
 
 If no compliance storage is explicitly configured, Chronicle uses the general [storage](storage) backend for encryption keys.
@@ -68,6 +67,33 @@ As an environment variable:
 ```shell
 export Cratis__Chronicle__Compliance__Encryption__MigrateFromDefaultStorage=true
 ```
+
+## Encryption key identifiers on SQL Server
+
+When the keys live in SQL Server, identifiers are compared exactly: letter case, character width, accents and trailing spaces are all significant, so `Alice` and `alice` name two different keys. Identifiers can be up to 256 characters long.
+
+The upgrade that introduces this behavior keeps every stored row and records each stored spelling in the `EncryptionKeyIdentifierReviews` table, together with the collation the column had before. While a spelling differs from a stored one only in case, width, accents or trailing spaces, Chronicle refuses to read, create, delete or erase a key for it and throws `EncryptionKeyIdentifierUnderReview`. The message never contains the identifier. One warning with the number of rows awaiting review is logged for every SQL Server namespace database when its schema has been migrated, including with `--migrate-only`, and the `chronicle-sql-encryption-key-identifiers-refused` counter (`sql.encryption_key.refused_identifiers` under the convention names, see [Telemetry names](telemetry-names.md)) increases for every refused operation.
+
+List the spellings that need a decision:
+
+```sql
+SELECT r.[Identifier], r.[LegacyIdentifier]
+FROM [EncryptionKeyIdentifierReviews] r
+WHERE EXISTS (
+    SELECT 1 FROM [EncryptionKeyIdentifierReviews] o
+    WHERE o.[LegacyIdentifier] = r.[LegacyIdentifier] AND o.[Identifier] <> r.[Identifier])
+ORDER BY r.[LegacyIdentifier], r.[Identifier];
+```
+
+To look at one identifier, filter on `[LegacyIdentifier] = N'<identifier>'`. The comparison uses the collation the column had before the upgrade, so it finds the spellings that used to be treated as one.
+
+Resolve each group in one of two ways:
+
+- The spellings belong to different subjects. Delete that group's rows from `EncryptionKeyIdentifierReviews`. Values written earlier for the other spelling stay bound to the key of the spelling that was stored.
+- The spellings belong to the same subject. Make the application use the stored spelling and leave the rows in place.
+
+> [!WARNING]
+> Do not copy key rows between spellings. A copy is not removed when the other spelling's key is erased.
 
 ## Backup and restore ordering
 
@@ -136,10 +162,29 @@ Chronicle uses the `secret` KV v2 mount point by default. Encryption keys are or
 Encryption keys are stored at:
 
 ```text
-secret/<event-store>/<namespace>/<identifier>/<revision>
+secret/k1/<event-store>/<namespace>/<identifier>/<revision>
 ```
 
+Every path written by this version starts with the root `k1`, so it can never be the same as a path written by an earlier version. Before the root is used for the first time, Chronicle checks that nothing from an earlier version sits there and writes a small marker secret, `secret/~layout`, that records the layout in use. If something from an earlier version occupies the root, or the marker cannot be written or read, the server does not start and says so in the log.
+
 Each revision is an independent secret, which means individual revisions can be deleted without affecting others (for example, when rotating keys or when the full key history is required for a limited time).
+
+Each of `<event-store>`, `<namespace>` and `<identifier>` is a single path segment. Letters, digits and `- _ . @ + = , : $` are kept as they are. Every other character, including `/`, `~` and every non-ASCII character, is written as `~XX` for each of its UTF-8 bytes in uppercase hexadecimal, and so is a trailing `.`. Ordinary identifiers such as GUIDs are therefore unchanged. A segment must not be empty and is at most 1,024 bytes of UTF-8.
+
+Keys stored by earlier versions, at `secret/<event-store>/<namespace>/<identifier>/<revision>`, are still read, and removed together with the key, when each of the three parts is made of the characters that are kept as they are, `~`, and letters, marks and digits outside ASCII, and does not end in `.`. A path of that kind has exactly three segments, so it belongs to one address only. For any other address, an earlier key is not read: see [Upgrading keys stored under earlier names](#upgrading-keys-stored-under-earlier-names). New keys are always written under `k1`.
+
+### Vault policy
+
+The token needs these capabilities on the mount:
+
+```hcl
+path "secret/data/k1/*"     { capabilities = ["create", "read", "update"] }
+path "secret/metadata/k1/*" { capabilities = ["read", "list", "delete"] }
+path "secret/data/~layout"  { capabilities = ["create", "read"] }
+path "secret/metadata/"     { capabilities = ["list"] }
+```
+
+Reading keys stored by earlier versions, and the check described below, also need read, list and delete on the earlier paths.
 
 | Property | Type | Required | Description |
 | --- | --- | --- | --- |
@@ -185,9 +230,36 @@ Encryption keys are stored as individual secrets. Secret names follow this patte
 chronicle--{event-store}--{namespace}--{identifier}--{revision}
 ```
 
-Each component is sanitized to lowercase alphanumeric characters with single hyphens replacing any other character sequences. Double hyphens (`--`) serve as unambiguous separators between components.
+The names are derived from the address in this way:
+
+```text
+chronicle-k1--{hash}--{revision}
+```
+
+`{hash}` is the lowercase hexadecimal SHA-256 of the event store, namespace and identifier, each taken with its length. Every address has its own names, whatever characters it contains, and the names do not contain the identifiers.
+
+Keys stored under the earlier `chronicle--{event-store}--{namespace}--{identifier}--{revision}` names are still read, and erasing such a key also removes the earlier secret, for identifiers made of lowercase letters, digits and single hyphens, and for the identifiers Chronicle builds for encrypted values. New keys are always written under the `chronicle-k1--` names. Keys under the earlier names for any other identifier are not read: see [Upgrading keys stored under earlier names](#upgrading-keys-stored-under-earlier-names).
 
 | Property | Type | Required | Description |
 | --- | --- | --- | --- |
 | type | string | Yes | Must be `azure-key-vault` |
 | connectionDetails | string | Yes | The Azure Key Vault URI, for example `https://my-vault.vault.azure.net` |
+
+## Upgrading keys stored under earlier names
+
+When the key store is HashiCorp Vault or Azure Key Vault, an earlier version may have stored keys under names that this version does not use for the same address. For most addresses nothing changes. For an address whose earlier name cannot be tied to that address alone, Chronicle does not guess:
+
+- Reading, provisioning, saving and rotating keys for that address throws `EncryptionKeyNeedsUpgrade`, and does not create a new key. Recording or repeating an erasure is never refused.
+- Each refusal is counted by the metric `chronicle-encryption-key-upgrade-refused` and written to the log as one warning that carries no identifier, event store or namespace.
+- At startup Chronicle logs one line with the number of keys and erasure records stored under earlier names, and carries on. The count at startup is a lower bound.
+
+To see the full picture without starting the server, run it with `--verify-encryption-keys`. It prints the counts and exits:
+
+| Exit code | Meaning |
+| --- | --- |
+| 0 | Nothing is stored under earlier names |
+| 1 | The key store could not be inspected |
+| 2 | Keys stored under earlier names need the upgrade |
+| 4 | The key layout conflicts with earlier material, or could not be verified |
+
+The option cannot be combined with the schema options. Commands that move keys to their new names are not part of this version.

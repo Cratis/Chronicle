@@ -1,6 +1,6 @@
 ---
 name: including-generated-files
-description: 'Owns MSBuild generated-artifact integration: a target that creates source, Content, None, or another physical file that is missing from compilation or output, target timing, evaluation-time glob misses, IntermediateOutputPath placement, and FileWrites clean tracking. Use when a generated file is missing from the build even if the prompt does not name the producing task. Not for general Include/Remove/Update semantics, item metadata or batching, duplicate declarations, Roslyn source-generator internals, or non-MSBuild systems.'
+description: Use when a file generated during MSBuild is missing from compilation or output because of target timing, globs or item registration. Not for general item semantics, duplicate declarations or Roslyn generator internals.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/including-generated-files/SKILL.md -->

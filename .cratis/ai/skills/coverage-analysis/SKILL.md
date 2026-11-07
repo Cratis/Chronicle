@@ -1,6 +1,6 @@
 ---
 name: coverage-analysis
-description: 'Interprets supplied .NET coverage reports (Cobertura, line, branch, condition metrics) or collects coverage on request: partial conditions, plateaus, target arithmetic, project-wide coverage-backed CRAP, and refactoring safety. Use when coverage reports, percentages, or an explicit coverage-collection request are present. Analyzes supplied reports directly without rerunning tests or installing tools. Not for requests with no coverage evidence, hypothetical change-survival questions, CRAP for one named target, writing tests (use cratis-specifications-csharp), or running tests (use run-tests).'
+description: Use when interpreting supplied .NET coverage evidence or an explicit coverage-collection request. Not for hypothetical change-survival questions, CRAP for one target, writing tests or running tests without a coverage request.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/coverage-analysis/SKILL.md -->

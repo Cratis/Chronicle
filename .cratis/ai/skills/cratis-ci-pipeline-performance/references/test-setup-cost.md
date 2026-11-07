@@ -12,6 +12,7 @@ a suite re-tests a dependency, or when compile errors surface late.
 - Test each guarantee where it can break
 - Surface compile errors early
 - Count compiles per push
+- Analyzer cost
 
 ## Time hidden outside per-test timing
 
@@ -32,7 +33,7 @@ Measure before guessing, with the language's profiler on the test process:
 
 ```bash
 dotnet tool install --global dotnet-trace
-dotnet-trace collect --format speedscope -- dotnet test Project.Specs --no-build --configuration Release
+dotnet-trace collect --format speedscope -- ./<project-dir>/bin/Release/<TFM>/<AssemblyName>
 ```
 
 Read the inclusive time of the setup methods. Pass means the profile names the
@@ -81,3 +82,17 @@ Each extra compile is avoidable: build once, reuse the output (see
 `build-once-and-shard.md`). Analyzers can roughly double compile time; run them once
 in a parallel lint job and disable them in the shared build, while keeping the
 strictest configuration that consumers enforce somewhere on the required path.
+
+## Analyzer cost
+
+Analyzers that run in the spec path stall every build. Take per-analyzer timings
+from a binlog of the slow project, with the same inputs and concurrency before and
+after. Rank by cumulative time per rule, not by assembly. Three results are
+typical: rules that cannot apply to the repository (switch them off; a bulk
+severity setting can run an analyzer whose own rules are `none`), an analyzer that
+rebinds the whole compilation (fix it upstream: syntactic prefilter, evidence
+computed once per compilation, touched only after cheap relevance checks), and
+generators, which are rarely the cost. In one measured application, compiling with
+analyzers took 395 s, 180 s after removing inapplicable rules, and 90 s with
+analyzers off. Pass means the spec-path build skips analyzers, the parallel
+required job still fails on any analyzer warning, and both timings are recorded.

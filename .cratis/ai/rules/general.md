@@ -14,7 +14,7 @@ Profile-specific rules declare a **`profile:`** in their frontmatter (`applicati
 
 > **Arc is a standalone CQRS framework — not bound to event sourcing.** Even within the application profile, Arc provides model-bound commands/queries, validation, authorization, and full-stack proxy generation, and works **without** Chronicle (Arc.Core does not depend on Chronicle). A `[Command]` `Handle()` does not *have* to append events — it can return a response, return `void`, or work through injected services. The event-sourcing behavior (a returned event gets appended; `EventForEventSourceId`; "never inject `IEventLog`") comes from the **Arc + Chronicle** integration. This application is event-sourced, so the slice guidance assumes event-sourced commands — read the event-centric rules as the *house default for this app*, not universal Arc laws.
 
-The framework is convention-over-configuration. **Idiomatic Cratis is the goal — not custom abstractions over it.** When something is unclear, prefer the Cratis convention; do not invent. The rules and skills under `.cratis/ai/` are the authoritative answer — if your question is not answered there, ask rather than inferring framework behavior from package internals.
+The framework is convention-over-configuration. **Idiomatic Cratis is the goal — not custom abstractions over it.** Always recommend the idiomatic way unless explicitly needed otherwise. When something is unclear, prefer the Cratis convention; do not invent. The rules and skills under `.cratis/ai/` are the authoritative answer — if your question is not answered there, ask rather than inferring framework behavior from package internals.
 
 ## Project Philosophy
 
@@ -53,17 +53,20 @@ obtaining credentials, and other local conventions ("Product policy" above).
 - Project context may explain which approved secret mechanism or local setup to
   use, but it must never contain credential values, tokens, keys, passwords, or
   other secrets.
+- A repository's accepted decision records (`decisions/`) and project rules bind AI work: read those matching your paths, follow them, never work around one.
 - Project-specific guidance wins when it deliberately narrows shared behavior,
   but it may not weaken organization security, authorization, or required
   quality gates.
+- Scope project file concerns with `paths`; put operational workflows in
+  `.agents/skills/`, not global `applyTo: "**/*"` rules.
 
 ## Collaboration Default
 
 Default to agentic behavior: inspect local rules, skills, code, tests, and generated patterns; make conservative assumptions supported by that context; implement and verify end to end when feasible. A user's direct request authorizes every clearly named in-scope action, including external effects such as pushing, opening or merging a pull request, applying the requested label, deployment, issue mutation, and operations against a named environment. The user is the authority for their request; do not require them to identify another approver, decision record, or formal operation profile.
 
-Don't interrupt with questions the repository can answer. Make reversible implementation choices and report them rather than asking the user to approve an implementation plan they already asked you to carry out. Once the user authorizes an action, do not ask them to authorize it again unless the target or consequence materially changes. Ask only when the answer can't be found locally, reasonable product or domain choices have meaningfully different consequences, a consequential effect was not included in the request, the change is hard to reverse and its scope is unclear, or the user asked for checkpoints.
+Decide what the repository or research can answer, record the evidence, and get a cross-provider check when the decision is risky. Report reversible choices instead of asking approval for a plan the user requested; do not re-ask for an authorized action unless its target or consequence materially changes. Deciding never widens the task's authorization ([capability-is-not-authority.md](./capability-is-not-authority.md)). Ask only about human-only matters (credentials, money, production access, legal, merging majors), undecided product choices with different consequences, an effect the request did not include, a hard-to-reverse change with unclear scope, or requested checkpoints.
 
-When a question is necessary, write it for the person doing the work, not for the governance system: explain the concrete choice, why it matters now, the consequence of each option, and the recommended option in plain language. Never present unexplained internal labels such as "execution authority," "capability contract," "delegation architecture," "operation profile," or "decider." Do not bundle unrelated verdicts. Ask who should be named in a durable decision record only after explaining that a significant decision has been made and why preserving it is warranted; a decision record is never a prerequisite for carrying out the user's direct request.
+Write a necessary question plainly: the choice, why now, each option's consequence, your recommendation. No unexplained internal labels ("execution authority," "operation profile," "decider"); do not bundle verdicts. A decision record never gates a direct request; offer one only after explaining the decision.
 
 ## Destructive operations
 
@@ -126,18 +129,18 @@ A claim is only as good as the signal behind it — a build result, a test run, 
 
 | For | Location |
 | --- | --- |
-| **AI Corpus Profiles** — what profiles exist and how to configure them | `profiles.md` |
+| Corpus profiles and configuration | `profiles.md` |
 | **Contributing to a Cratis framework repo** (framework profile) | `framework.md`; creating a repository in the Cratis organization: `new-repository-intake.md` |
 | Slice anatomy (commands, `Provide()`, validators, events, projections, read models, reactors, constraints, compliance, cross-slice) | `vertical-slices.md` |
 | C# / TypeScript style and code-quality principles | `csharp.md`, `typescript.md`, `code-quality.md`, `code-quality.csharp.md`, `code-quality.typescript.md` |
 | Kotlin / Java / Elixir style; Orleans grains; reactors; GitHub Actions workflows | `kotlin.md`, `java.md`, `elixir.md`, `orleans.md`, `reactors.md`, `github-actions.md` |
-| Documentation pages (`Documentation/`): structure, voice, examples, editing | `documentation.md`, `documentation-structure-and-formatting.md`, `writing-cratis-docs.md`, `editing-cratis-docs.md`, `writing-correct-examples.md` |
+| Documentation structure, voice and examples | `documentation.md`, `documentation-structure-and-formatting.md`, `writing-cratis-docs.md`, `editing-cratis-docs.md`, `writing-correct-examples.md` |
 | Findability of published pages, READMEs and package metadata | `discoverability.md` |
-| Go style, source and module files | `go.md`; framework contributors also read `go-engineering.md`; product APIs use `cratis-chronicle-client-go`, `cratis-arc-go` and `cratis-fundamentals-concept-go` |
-| Service lifetimes — why anything taking a scoped dependency is scoped or transient, never a singleton | `csharp.md` |
+| Go | `go.md`; framework: `go-engineering.md`; product APIs: `cratis-chronicle-client-go`, `cratis-arc-go` and `cratis-fundamentals-concept-go` |
 | React + Arc + Cratis Components + MVVM + dialogs | `react.md`, `components.md`, `dialogs.md` |
 | Frontend engineering quality & testing | `frontend-quality.md`, `frontend-testing.md`, `storybook.md` |
 | Spec patterns — universal `Specification` base (both profiles) | `specs.md`, `specs.csharp.md`, `specs.typescript.md` |
+| Build and spec-run speed: parallel-safe specs, no per-spec startup, cheap analyzers | `fast-feedback.md` |
 | Spec patterns — the four `*Scenario` helpers (application only) | `specs.scenarios.csharp.md` |
 | Strongly-typed values (`ConceptAs<T>`, `EventSourceId<T>`) | `concepts.md` |
 | Shared term definitions (event, projection, reducer, reactor, observer, DCB, …) | `glossary.md` |
@@ -145,16 +148,16 @@ A claim is only as good as the signal behind it — a build result, a test run, 
 | Inspecting or operating a **running** Chronicle store (failed partitions, replays, browsing events) with the `cratis` CLI | the **cratis-chronicle-cli-operations** and **cratis-cli-terminal-workbench** skills |
 | EF Core read models / migrations | `efcore.md`, `efcore.specs.md` |
 | MongoDB queries — native driver API over LINQ; paging and sorting belong to Arc | `mongodb.md` |
-| Before writing a commit message, committing, pushing or opening/editing a PR: read both | `git-commits.md`, `pull-requests.md` |
+| Before commit messages, commits, pushes or PRs | `git-commits.md`, `pull-requests.md`, then **cratis-commits-and-pull-requests** |
 | Reading, citing and superseding a decision record | the **cratis-engineering-decision-record** skill |
 | Before any browser call: production permit, handoff, artifact paths, evidence | `browser.md` |
 | Whether you are allowed to do the thing you are able to do | `capability-is-not-authority.md` |
 | Before running a command that could print a credential, or when a secret value appears in output | `secrets.md` |
-| What must stop and ask a human | `capability-is-not-authority.md` (absent authority for a consequential effect: stop and ask) |
-| What counts as evidence that something works | `verification-discipline.md` |
-| Before writing a session note, plan or handover: where they may live (`.ai-work/` only) | `local-work-artifacts.md` |
-| What may be written into the `.cratis/` folder (configuration and the corpus only, never deliverables) | `cratis-folder-is-configuration.md` |
-| Exit-code meaning, scripts and wrappers that lose a verdict | `exit-codes-and-wrappers.md` |
+| Session notes, plans and handovers (`.ai-work/` only) | `local-work-artifacts.md` |
+| Command wrappers, exact output and exit codes | `rtk.md`, then **cratis-rtk** |
+| Before issue-linked edits | `issue-assignment.md`, then **cratis-engineering-issue-hygiene** |
+| `.cratis/` is configuration, not deliverables | `cratis-folder-is-configuration.md` |
+| Exit codes, wrappers and scripting | `exit-codes-and-wrappers.md`, `scripting.md` |
 | Writing a scan, allowlist, script or CI check, or a destructive pass, that cannot pass vacuously | `guards-and-fuses.md` |
 | How the shared corpus is installed, updated and rolled back | `ai-distribution.md` |
 | Code-level event modeling / schema migration / calling commands from code / paging / cross-cutting metadata / multi-tenancy | the matching skills |

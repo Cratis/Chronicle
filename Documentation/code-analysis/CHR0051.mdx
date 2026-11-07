@@ -1,8 +1,7 @@
 ---
+title: "CHR0051: Reducer current read model parameter must be nullable"
 description: Chronicle analyzer rule CHR0051 reports reducer methods whose current read model parameter is not nullable, though Chronicle passes null for the first event.
 ---
-# CHR0051: Reducer current read model parameter must be nullable
-
 ## Rule Description
 
 Chronicle passes `null` as the current read model for the event that brings an instance into existence, so a reducer method cannot promise the parameter is never null. Declare the parameter as nullable and handle the null case as the creation of the instance.

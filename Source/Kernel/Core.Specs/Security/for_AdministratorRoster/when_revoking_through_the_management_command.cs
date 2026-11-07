@@ -26,7 +26,7 @@ public class when_revoking_through_the_management_command : given.an_administrat
 
     async Task Because()
     {
-        await new RevokeAdministrator(_first, "no longer on call").Handle(_grainFactory, _principalAccessor);
+        await new RevokeAdministrator(_first, "no longer on call").Handle(_grainFactory, _principalAccessor, Microsoft.Extensions.Options.Options.Create(new Cratis.Chronicle.Configuration.ChronicleOptions()));
         _revocation = Recorded<UserRevokedAdministrator>().Single();
         _administrator = await _roster.IsActiveAdministrator(_first);
     }
@@ -36,7 +36,7 @@ public class when_revoking_through_the_management_command : given.an_administrat
     void should_audit_the_actor()
     {
         using var evidence = JsonDocument.Parse(_revocation.RevokeReason);
-        evidence.RootElement.GetProperty("Actor").GetString().ShouldEqual(_second.ToString());
+        evidence.RootElement.GetProperty("Actor").GetString().ShouldEqual($"chronicle:local|{_second}");
     }
 
     [Fact]

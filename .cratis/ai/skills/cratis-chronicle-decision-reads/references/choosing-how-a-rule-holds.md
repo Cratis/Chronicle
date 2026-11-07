@@ -13,7 +13,7 @@
 - Arc traps
 - Chronicle-only traps
 - Roll out with Measure
-- Test the race
+- Specify the business decision
 - Costs
 - Checklist for generated code
 
@@ -83,7 +83,7 @@ published scenario catalogue.
     of the same source in one command are refused.
 11. **Moving an existing app to `On`** (S12): `Measure` first.
 12. **A command failed under protection** (S13): the [refusals](#refusals).
-13. **Prove it** (S14): [test the race](#test-the-race).
+13. **Prove it** (S14): [specify the business decision](#specify-the-business-decision).
 
 ## The matrix
 
@@ -159,10 +159,14 @@ A constraint binds every writer, whichever client or service appends, per namesp
 and per event sequence. It cannot count, sum or test a predicate; it expresses
 uniqueness (with release on a removal event), create-once and closed streams.
 
-- The claim is settled after the durable append (not yet implemented in every
-  store). A failed index update is logged and a later duplicate may pass until a
-  reindex. SQL and InMemory stores do not yet settle claims. A constraint is the
-  right mechanism, not an unconditional proof.
+- From Chronicle 19.82.2, a failed index update after a durable append marks a
+  gap. A later governed append repairs that gap from the event log or refuses
+  with a `ConstraintIndexUnavailable` error value before writing. Do not treat
+  that retryable refusal as a duplicate or remove the constraint. Verified at
+  **v19.110.1**, `Source/Kernel/Core/EventSequences/EventSequence.AppendSettlement.cs`
+  and `EventSequence.Validation.cs`; see
+  [append outcomes](../../cratis-chronicle-client-dotnet/references/append-outcomes.md)
+  for the distinct unknown-outcome case.
 - Tenants in different namespaces can claim the same value.
 - `[RemoveConstraint]` releases attribute constraints (`[Unique]` on a property or
   on the event type); on a fluent `IConstraint` it compiles and does nothing, so
@@ -253,7 +257,7 @@ return `Commit()` last), `ReadOfSourceWithStagedEvents`, `ExplicitScopeDoesNotCo
 | Injected `IEventLog.Append` in `Handle` | immediate write that survives a conflict rollback | return events |
 | Aggregate `Commit()` whose result is ignored, or `Failed()` without `Commit()` | staged events still commit | return `await aggregate.Commit()` |
 | `[Unprotected]` command taking `DecisionRead<T>` | resolves to an unguarded read | remove `[Unprotected]` |
-| Tests without `AppendConcurrently`, or a scenario left in legacy mode | the race is never exercised | [test the race](#test-the-race) |
+| Per-decision specs rebuild the platform guard matrix | repeated infrastructure proof, not business coverage | [specify the business decision](#specify-the-business-decision) |
 
 ## Chronicle-only traps
 
@@ -301,31 +305,23 @@ then set `On` per project. Behaviour for callers does not change under `Measure`
   or annotate `[Unprotected("why")]`. Under `On`, `ARCCHR0011` no longer applies;
   fix `ARCCHR0024`, `0028` and `0033`.
 
-## Test the race
+## Specify the business decision
 
-`new CommandScenario<T>()` selects the in-process decision log from the command's
-read-protection mode and dependencies (for example under `On`); do not call
-`UseDecisionReads()` (it is hidden and unnecessary). An `Off` command with no
-protected dependency stays in legacy mode with pinned read models, which cannot
-prove a race. Seed with
-`scenario.Given.ForEventSource(id).Events(...)` (for a routed stream
-`.OnRoute(route).Events(...)`). Guarded state needs events: protected reads fold the
-event log and ignore a pinned model, and `DecisionRead<T>` parameters reject one.
-`.ReadModel(m)` only pins an advisory (plain) read. Then queue a competing event with
-`scenario.AppendConcurrently(id, events...)` and execute:
+Start with a plain `Handle()` or validator call supplied with read-model state.
+Follow the [scenario rule](../../../rules/specs.scenarios.csharp.md): read-protection
+plumbing is invisible to application spec authors. They never configure modes,
+call `UseDecisionReads`, seed events solely for infrastructure or re-prove platform
+concurrency, conflict-refusal or isolation guards. Arc/Chronicle specs own that
+matrix. The application's only decision-read spec obligation is one cheap
+assembly-level `DecisionReadAdmissions.ShouldAdmitDecisionReadsIn(assembly)`
+check of its own models/projections, not per-decision scenarios. Production
+protection stays unchanged regardless of spec cost.
 
-```csharp
-await using var scenario = new CommandScenario<BorrowBook>();
-scenario.Given.ForEventSource(isbn).Events(new BookAdded(Copies: 1));
-scenario.AppendConcurrently(isbn, new BookBorrowed(other));
-var result = await scenario.Execute(new BorrowBook(isbn, me));
-result.ShouldHaveValidationErrorBecauseOf(ValidationResultReason.ConcurrencyViolation);
-```
-
-There is no `scenario.AppendConditions`. A pure decision test builds the command
-and the validator with a hand-made read model. Chronicle-direct code asserts
-`unitOfWork.GetAppendConditions()`. A default `EventScenario` scope strategy
-returning `None` is not concurrency evidence.
+Do not simulate competing appends in an application spec, even for a rule such as
+two borrowers competing for the last copy. Give the state (no copies left) and assert
+the domain outcome (rejected); the guarantee that only one wins is proven by Arc and
+Chronicle. If the harness cannot accept required state, report the upstream gap
+rather than adding infrastructure setup to application specs.
 
 ## Costs
 
@@ -346,7 +342,8 @@ append. Decision reads exist in the .NET and Elixir clients.
   an explicit scope, enrolled **before** the events are staged.
 - The model is admitted (source-keyed projection or admitted reducer, `Id`).
 - Cross-key rules append one event per source atomically, with distinct event types.
-- A specification interleaves a competing append and asserts
-  `ConcurrencyViolation`.
+- Business decisions have direct `Handle()`/validator specs with supplied state;
+  one cheap assembly-level spec checks application-shape admission. Arc/Chronicle,
+  not application specs, interleave appends to prove the platform guard matrix.
 - What stays unguarded (an unguarded writer's own decision, external state,
   revisions, `[Unprotected]` reads, `Off` mode) is stated.

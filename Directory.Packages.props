@@ -33,7 +33,7 @@
     <PackageVersion Include="Cratis.Arc.ProxyGenerator.Build" Version="22.156.4" />
     <PackageVersion Include="Cratis.Arc.Swagger" Version="22.156.4" />
     <PackageVersion Include="Cratis.Arc.Testing" Version="22.156.4" />
-    <PackageVersion Include="Cratis.Screenplay" Version="4.249.2" />
+    <PackageVersion Include="Cratis.Screenplay" Version="5.7.0" />
     <!-- Microsoft -->
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.403" />
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.14" />
@@ -126,6 +126,8 @@
         the transitive dependency forward. Remove both once Testcontainers ships a version that does it itself.
     -->
     <PackageVersion Include="SSH.NET" Version="2026.0.0" />
+    <!-- Ed25519 for Standard Webhooks v1a (decision 0020); managed, no native binaries -->
+    <PackageVersion Include="BouncyCastle.Cryptography" Version="2.7.0" />
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.v3.mtp-off" Version="4.0.2" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.1" />
@@ -136,6 +138,7 @@
     <!-- Not categorized -->
     <PackageVersion Include="DnsClient" Version="1.8.0" />
     <PackageVersion Include="MongoDB.Driver" Version="3.13.0" />
+    <PackageVersion Include="Neo4j.Driver" Version="6.5.1" />
     <PackageVersion Include="protobuf-net.Grpc.AspNetCore.Reflection" Version="1.3.14" />
     <PackageVersion Include="protobuf-net.Grpc.Reflection" Version="1.3.14" />
     <PackageVersion Include="OpenIddict.AspNetCore" Version="7.7.2" />
@@ -156,6 +159,9 @@
     <PackageVersion Include="protobuf-net" Version="3.4.40" />
     <PackageVersion Include="protobuf-net.Grpc" Version="1.3.14" />
     <PackageVersion Include="protobuf-net.Grpc.AspNetCore" Version="1.3.14" />
+    <!-- The version protobuf-net.Grpc.AspNetCore already brings to the server. Declared for the kernel gRPC layer,
+         which reads the request of a call through its GetHttpContext extension. -->
+    <PackageVersion Include="Grpc.AspNetCore.Server" Version="2.80.0" />
     <PackageVersion Include="Grpc.Net.Client" Version="2.84.0" />
     <PackageVersion Include="AspNetCore.HealthChecks.MongoDb" Version="9.0.0" />
     <PackageVersion Include="Swashbuckle.AspNetCore" Version="10.2.3" />

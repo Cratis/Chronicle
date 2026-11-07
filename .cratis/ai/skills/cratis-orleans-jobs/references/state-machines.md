@@ -45,7 +45,9 @@ public class Finished : State<ProcessState>;
 
 Split types into their house-style files in the consumer; the block collects declarations to show the API. Do not copy the `processes` provider name into Chronicle's kernel; use its registered constants.
 
-A refused transition is a **no-op**, not an exception or a successful change. An unknown target throws `UnknownStateTypeInStateMachine`. The machine runs leaving hooks, `OnLeave`, entering hooks, `OnEnter`, then persistence (`StateMachine.cs`). Transitions requested while entering are scheduled; transitions while leaving throw `TransitioningDuringOnLeaveIsNotSupported`.
+A refused transition is a **no-op**, not an exception or a successful change. An unknown target throws `UnknownStateTypeInStateMachine`. The machine runs leaving hooks, `OnLeave`, entering hooks, `OnEnter`, then persistence (`StateMachine.cs`).
+
+Requires 1.22.3 for transitions admitted during entry to queue FIFO rather than be dropped. Their request tasks complete on admission, **before** the queued transition executes. If another state has been entered, the target is rechecked and silently skipped when refused; a failed drain discards pending targets and fails its owning task. Transitions while leaving still throw `TransitioningDuringOnLeaveIsNotSupported`.
 
 When stored state derives `StateMachineState`, `CurrentState` stores the state's full type name; activation resolves it, enters it again, and can repeat enter effects. Renames need a stored-value migration; an unknown recorded name throws `UnknownCurrentState` (`StateMachine.cs`). A self-transition with the **same state instance** skips persistence: return a new stored-state instance when a self-transition must write.
 

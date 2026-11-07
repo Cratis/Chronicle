@@ -21,11 +21,11 @@ namespace Cratis.Chronicle.Projections.Engine.Pipelines.Steps;
 /// <param name="objectComparer">The <see cref="IObjectComparer"/> for computing property differences.</param>
 /// <param name="eventStore">The <see cref="EventStoreName"/> this step belongs to.</param>
 /// <param name="eventStoreNamespace">The <see cref="EventStoreNamespaceName"/> this step belongs to.</param>
-public class EncryptChangeset(
+public partial class EncryptChangeset(
     IReadModelsCompliance readModelsCompliance,
     IObjectComparer objectComparer,
     EventStoreName eventStore,
-    EventStoreNamespaceName eventStoreNamespace) : ICanPerformProjectionPipelineStep
+    EventStoreNamespaceName eventStoreNamespace) : ICanPerformProjectionPipelineStep, ICanProtectFutureChangesets
 {
     /// <inheritdoc/>
     public async ValueTask<ProjectionEventContext> Perform(IProjection projection, ProjectionEventContext context)
@@ -112,20 +112,7 @@ public class EncryptChangeset(
 
         if (subjectsChanged)
         {
-            foreach (var property in currentSubjects.Keys.Concat(updatedSubjects.Keys).Distinct(StringComparer.Ordinal))
-            {
-                currentSubjects.TryGetValue(property, out var currentPropertySubject);
-                updatedSubjects.TryGetValue(property, out var updatedPropertySubject);
-                if (currentPropertySubject == updatedPropertySubject)
-                {
-                    continue;
-                }
-
-                propertyDifferences.Add(new PropertyDifference(
-                    new PropertyPath($"{WellKnownProperties.Subjects}.{property}"),
-                    currentPropertySubject,
-                    updatedPropertySubject));
-            }
+            AddSubjectDifferences(currentSubjects, updatedSubjects, propertyDifferences);
         }
 
         var encryptedStateAsDictionary = (IDictionary<string, object?>)encrypted;
@@ -151,6 +138,27 @@ public class EncryptChangeset(
         await EncryptProtectedValuesForChildren(schema, identifier, context.Changeset.Changes);
 
         return context;
+    }
+
+    static void AddSubjectDifferences(
+        Dictionary<string, string> currentSubjects,
+        Dictionary<string, string> updatedSubjects,
+        List<PropertyDifference> propertyDifferences)
+    {
+        foreach (var property in currentSubjects.Keys.Concat(updatedSubjects.Keys).Distinct(StringComparer.Ordinal))
+        {
+            currentSubjects.TryGetValue(property, out var currentPropertySubject);
+            updatedSubjects.TryGetValue(property, out var updatedPropertySubject);
+            if (currentPropertySubject == updatedPropertySubject)
+            {
+                continue;
+            }
+
+            propertyDifferences.Add(new PropertyDifference(
+                new PropertyPath($"{WellKnownProperties.Subjects}.{property}"),
+                currentPropertySubject,
+                updatedPropertySubject));
+        }
     }
 
     static void UpdateSubjectsForChanges(

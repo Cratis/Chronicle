@@ -42,6 +42,8 @@ public partial class EventSequenceStorage(
     Chronicle.Storage.EventTypes.IEventTypesStorage eventTypesStorage,
     Json.IExpandoObjectConverter converter) : IEventSequenceStorage, IEventPublicationStorage
 {
+    readonly SqlStorageTelemetry _telemetry = SqlStorageTelemetry.For(database);
+
     /// <inheritdoc/>
     public bool SupportsRevisionTracking => false;
 
@@ -215,7 +217,8 @@ public partial class EventSequenceStorage(
                 await identityStorage.GetFor(causedByChain),
                 tags,
                 eventHash,
-                Subject: resolvedSubject) { NamedTags = namedTags, AppendedGeneration = eventType.Generation };
+                Subject: resolvedSubject)
+            { NamedTags = namedTags, AppendedGeneration = eventType.Generation };
 
             var generationalContent = EventEntryConverter.BuildGenerationalContent(content);
             return new AppendedEvent(eventContext, returnContent)

@@ -1,6 +1,6 @@
 ---
 name: directory-build-organization
-description: 'Organizes shared MSBuild policy across Directory.Build.props, Directory.Build.targets, Directory.Build.rsp, and Directory.Packages.props: centralizing repeated properties, targets, and package versions, hierarchy and import structure, props-versus-targets placement, and folder or project exceptions. Use when two or more projects repeat MSBuild policy, or an existing Directory.Build hierarchy has an import, placement, or layering defect, even if only one project is affected. Not for a one-project repo without a Directory.Build file, property value or condition semantics, legacy-to-SDK migration, or non-MSBuild systems.'
+description: Use when projects repeat MSBuild policy or an existing Directory.Build hierarchy has import, placement or layering defects. Not for isolated property semantics, legacy migration or a lone project without shared build files.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/directory-build-organization/SKILL.md -->
