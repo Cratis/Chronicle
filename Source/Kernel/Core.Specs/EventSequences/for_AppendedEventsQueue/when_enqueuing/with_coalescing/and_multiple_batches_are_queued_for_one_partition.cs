@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Observation;
 using Cratis.Metrics;
+using Cratis.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -20,17 +21,30 @@ namespace Cratis.Chronicle.EventSequences.for_AppendedEventsQueue.when_enqueuing
 public class and_multiple_batches_are_queued_for_one_partition : given.all_dependencies
 {
     readonly EventType _eventType = new("coalesce-event", 1);
-    readonly TaskCompletionSource _firstHandleEntered = new();
-    readonly TaskCompletionSource _releaseFirstHandle = new();
+    readonly TaskCompletionSource _startWorker = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    readonly TaskCompletionSource _delivered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    readonly List<Task> _workers = [];
     readonly List<IReadOnlyList<AppendedEvent>> _handleCalls = [];
     ObserverKey _observerKey;
     IObserver _observer;
     AppendedEventsQueue _queue;
     EventSourceId _partition;
-    int _handleInvocations;
 
     async Task Establish()
     {
+        // Replace the base substitute so its eager Run callback cannot start an ungated worker.
+        _taskFactory = Substitute.For<ITaskFactory>();
+        _taskFactory.Run(Arg.Any<Func<Task>>()).Returns(callInfo =>
+        {
+            var worker = RunWorker(callInfo.Arg<Func<Task>>());
+            lock (_workers)
+            {
+                _workers.Add(worker);
+            }
+
+            return worker;
+        });
+
         _partition = new EventSourceId("coalesce-partition");
         _observerKey = new ObserverKey("coalesce-observer", "store", "ns", "seq");
         _observer = Substitute.For<IObserver>();
@@ -42,14 +56,7 @@ public class and_multiple_batches_are_queued_for_one_partition : given.all_depen
                 lock (_handleCalls)
                 {
                     _handleCalls.Add(events);
-                }
-
-                // The first dispatch blocks here so the follow-up batches accumulate in the channel; the handler
-                // then drains and coalesces them into a single second dispatch once released.
-                if (Interlocked.Increment(ref _handleInvocations) == 1)
-                {
-                    _firstHandleEntered.SetResult();
-                    _releaseFirstHandle.Task.GetAwaiter().GetResult();
+                    _delivered.TrySetResult();
                 }
             });
         _grainFactory.GetGrain<IObserver>(_observerKey).Returns(_observer);
@@ -66,18 +73,43 @@ public class and_multiple_batches_are_queued_for_one_partition : given.all_depen
 
     async Task Because()
     {
-        // Batch 1 is dispatched alone and blocks the handler inside Handle.
-        await _queue.Enqueue([Event(0)]);
-        await _firstHandleEntered.Task;
+        try
+        {
+            // Hold the queue reader, not Handle: all four batches must be present before draining starts.
+            await _queue.Enqueue([Event(0)]);
+            await _queue.Enqueue([Event(1)]);
+            await _queue.Enqueue([Event(2)]);
+            await _queue.Enqueue([Event(3)]);
 
-        // While the handler is blocked, three more batches pile up in the channel.
-        await _queue.Enqueue([Event(1)]);
-        await _queue.Enqueue([Event(2)]);
-        await _queue.Enqueue([Event(3)]);
+            _startWorker.TrySetResult();
+            await _delivered.Task.WaitAsync(TimeSpan.FromSeconds(10), TimeProvider.System);
+            await _queue.AwaitQueueDepletion().WaitAsync(TimeSpan.FromSeconds(10), TimeProvider.System);
+        }
+        finally
+        {
+            await StopWorkers();
+        }
+    }
 
-        // Releasing the first Handle lets the handler drain and coalesce batches for seq 1..3 into one dispatch.
-        _releaseFirstHandle.SetResult();
-        await _queue.AwaitQueueDepletion();
+    Task Destroy() => StopWorkers();
+
+    async Task RunWorker(Func<Task> worker)
+    {
+        await _startWorker.Task;
+        await worker();
+    }
+
+    async Task StopWorkers()
+    {
+        _startWorker.TrySetResult();
+        _queue?.Dispose();
+        Task[] workers;
+        lock (_workers)
+        {
+            workers = [.. _workers];
+        }
+
+        await Task.WhenAll(workers).WaitAsync(TimeSpan.FromSeconds(10), TimeProvider.System);
     }
 
     AppendedEvent Event(ulong sequenceNumber) => AppendedEvent.Empty() with
@@ -105,9 +137,12 @@ public class and_multiple_batches_are_queued_for_one_partition : given.all_depen
 
     [Fact]
     void should_coalesce_the_queued_batches_into_a_single_dispatch() =>
-        _handleCalls.Count.ShouldEqual(2);
+        _handleCalls.Count.ShouldEqual(1);
 
     [Fact]
     void should_deliver_the_coalesced_events_in_one_call() =>
-        _handleCalls[1].Select(@event => (ulong)@event.Context.SequenceNumber).ShouldContainOnly([1UL, 2UL, 3UL]);
+        _handleCalls.Single()
+            .Select(@event => (ulong)@event.Context.SequenceNumber)
+            .SequenceEqual([0UL, 1UL, 2UL, 3UL])
+            .ShouldBeTrue();
 }
