@@ -8,32 +8,32 @@ namespace Cratis.Chronicle.Services.Compliance.for_ComplianceService;
 public class when_using_legacy_key_rpcs : given.a_compliance_boundary
 {
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task should_complete_authorized_work_but_refuse_partial_success(bool allowNew)
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task should_refuse_partial_coverage_before_any_mutation(bool allowNew, bool lookupFails)
     {
-        Deny(OtherEventStore);
-        var exception = await Catch.Exception(() => allowNew
-            ? _service.AllowNewEncryptionKey(new() { EventStore = EventStore, Namespace = EventStoreNamespace, Identifier = Identifier }, _context)
-            : _service.DeleteEncryptionKey(new() { EventStore = EventStore, Namespace = EventStoreNamespace, Identifier = Identifier }, _context));
+        Deny(OtherEventStore, throws: lookupFails);
+        var exception = await Catch.Exception(() => OperateLegacy(allowNew));
         ((RpcException)exception).StatusCode.ShouldEqual(StatusCode.PermissionDenied);
+        ShouldNotHaveTouched(EventStore);
         ShouldNotHaveTouched(OtherEventStore);
-        if (allowNew) await _keyStore.Received(1).AllowNewKeyFor(EventStore, EventStoreNamespace, Identifier);
-        else await _keyStore.Received(1).DeleteFor(EventStore, EventStoreNamespace, Identifier);
+        ShouldNotHaveTouched(ThirdEventStore);
     }
 
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task should_apply_the_requested_store_operation_before_reporting_a_listing_failure(bool allowNew)
+    public async Task should_report_a_listing_failure_before_any_mutation(bool allowNew)
     {
         _storage.GetEventStores().Returns(Task.FromException<IEnumerable<Concepts.EventStoreName>>(new InvalidOperationException("listing unavailable")));
-        var exception = await Catch.Exception(() => Operate(allowNew));
+        var exception = await Catch.Exception(() => OperateLegacy(allowNew));
         exception.ShouldBeOfExactType<RpcException>();
         ((RpcException)exception).StatusCode.ShouldEqual(StatusCode.Unavailable);
-        if (allowNew) await _keyStore.Received(1).AllowNewKeyFor(EventStore, EventStoreNamespace, Identifier);
-        else await _keyStore.Received(1).DeleteFor(EventStore, EventStoreNamespace, Identifier);
+        ShouldNotHaveTouched(EventStore);
         ShouldNotHaveTouched(OtherEventStore);
+        ShouldNotHaveTouched(ThirdEventStore);
         _audit.Entries.ShouldEqual(1);
         string.Join(' ', _audit.Values).ShouldNotContain("listing unavailable");
     }
@@ -44,9 +44,23 @@ public class when_using_legacy_key_rpcs : given.a_compliance_boundary
     public async Task should_cover_the_requested_store_even_when_the_listing_omits_it(bool allowNew)
     {
         _storage.GetEventStores().Returns([OtherEventStore]);
-        (await Operate(allowNew)).ShouldBeEmpty();
+        await OperateLegacy(allowNew);
         if (allowNew) await _keyStore.Received(1).AllowNewKeyFor(EventStore, EventStoreNamespace, Identifier);
         else await _keyStore.Received(1).DeleteFor(EventStore, EventStoreNamespace, Identifier);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task should_mutate_all_targets_when_fully_covered(bool allowNew)
+    {
+        await OperateLegacy(allowNew);
+        foreach (var store in new[] { EventStore, OtherEventStore, ThirdEventStore })
+        {
+            if (allowNew) await _keyStore.Received(1).AllowNewKeyFor(store, EventStoreNamespace, Identifier);
+            else await _keyStore.Received(1).DeleteFor(store, EventStoreNamespace, Identifier);
+        }
+        ShouldNotHaveTouched(Concepts.EventStoreName.System);
     }
 
     [Theory]
@@ -80,4 +94,8 @@ public class when_using_legacy_key_rpcs : given.a_compliance_boundary
         rpc.Status.Detail.ShouldContain(OtherEventStore.Value);
         rpc.Status.Detail.ShouldNotContain(Identifier.Value);
     }
+
+    Task OperateLegacy(bool allowNew) => allowNew
+        ? _service.AllowNewEncryptionKey(new() { EventStore = EventStore, Namespace = EventStoreNamespace, Identifier = Identifier }, _context)
+        : _service.DeleteEncryptionKey(new() { EventStore = EventStore, Namespace = EventStoreNamespace, Identifier = Identifier }, _context);
 }

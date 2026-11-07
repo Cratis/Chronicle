@@ -63,7 +63,15 @@ internal static class StoreCapabilityGuard
 
         var time = services.GetService<TimeProvider>() ?? TimeProvider.System;
         var expiry = cache.Changes.StartWith(Unit.Default).Select(_ => LeaseExpiry(cache, time).Repeat()).Switch();
-        var revoked = cache.Changes.Merge(expiry)
+        var checks = Observable.Create<Unit>(observer =>
+        {
+            var subscription = cache.Changes.Merge(expiry).Subscribe(observer);
+
+            // Subscribe first so a withdrawal between admission and monitoring cannot be missed.
+            observer.OnNext(Unit.Default);
+            return subscription;
+        });
+        var revoked = checks
             .SelectMany(_ => Observable.FromAsync(() => Permits(callContext, store, @namespace, access)))
             .Where(permitted => !permitted)
             .SelectMany(_ => Observable.Throw<Unit>(SystemStoreGuard.RefusedException()));

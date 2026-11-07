@@ -20,9 +20,9 @@ public class when_the_legacy_rpc_has_incomplete_coverage : given.a_compliance_bo
         var error = await Catch.Exception(() => OperateLegacy(allowNew));
         ((RpcException)error).StatusCode.ShouldEqual(StatusCode.PermissionDenied);
         ((RpcException)error).Status.Detail.ShouldContain(OtherEventStore.Value);
+        ShouldNotHaveTouched(EventStore);
         ShouldNotHaveTouched(OtherEventStore);
-        if (allowNew) await _keyStore.Received(1).AllowNewKeyFor(EventStore, EventStoreNamespace, Identifier);
-        else await _keyStore.Received(1).DeleteFor(EventStore, EventStoreNamespace, Identifier);
+        ShouldNotHaveTouched(ThirdEventStore);
     }
 
     [Theory]
@@ -34,6 +34,9 @@ public class when_the_legacy_rpc_has_incomplete_coverage : given.a_compliance_bo
         _storage.GetEventStores().Returns(Task.FromException<IEnumerable<Concepts.EventStoreName>>(new InvalidOperationException("unavailable")));
         var error = await Catch.Exception(() => OperateLegacy(allowNew));
         ((RpcException)error).StatusCode.ShouldEqual(StatusCode.Unavailable);
+        ShouldNotHaveTouched(EventStore);
+        ShouldNotHaveTouched(OtherEventStore);
+        ShouldNotHaveTouched(ThirdEventStore);
     }
 
     Task OperateLegacy(bool allowNew) => allowNew

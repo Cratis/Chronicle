@@ -23,10 +23,10 @@ public sealed class an_entitled_caller : IDisposable
     {
         Clock = new EntitlementClock();
         var grain = Substitute.For<IStoreEntitlements>();
-        grain.GetVersion().Returns(1L);
         var grains = Substitute.For<IGrainFactory>();
         grains.GetGrain<IStoreEntitlements>(IStoreEntitlements.Key).Returns(grain);
         _cache = new(grains, NullLogger<StoreEntitlementsCache>.Instance, Clock);
+        grain.GetVersion().Returns(_ => _cache.Snapshot.Version);
         _cache.Publish(new(1, [new(new(PrincipalKey.LocalIssuer, "app"), "store", ns is null ? null : new Concepts.EventStoreNamespaceName(ns), access, EventStoreAccessGrantSource.Command)]));
         var options = Options.Create(new ChronicleOptions { Authentication = new Authentication { Enabled = true, EnforceStoreEntitlements = enforce } });
         var accessor = new HttpContextAccessor();

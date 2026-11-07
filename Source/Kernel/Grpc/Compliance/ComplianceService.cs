@@ -63,15 +63,29 @@ internal sealed class ComplianceService(IGrainFactory grainFactory, IJsonSchemaM
     /// <inheritdoc/>
     public async Task DeleteEncryptionKey(DeleteEncryptionKeyRequest request, CallContext context = default)
     {
-        var coverage = await DeleteEncryptionKeyWithCoverage(request, context);
-        EnsureComplete(coverage.NotCoveredEventStores);
+        await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace));
+        var coverage = await authorization.KeyLifecycle("delete-key", request.EventStore, request.Namespace, request.Identifier, ComplianceKeyOperation.Delete, context);
+        EnsureRequestedStoreAllowed(coverage);
+        EnsureListed(coverage);
+        EnsureComplete(coverage.NotCovered.Select(store => store.Value).ToArray());
+        if (coverage.Allowed.Count > 0)
+        {
+            await GetPIIManager(request.EventStore, request.Namespace).DeleteEncryptionKeyIn(request.Identifier, coverage.Allowed.ToArray());
+        }
     }
 
     /// <inheritdoc/>
     public async Task AllowNewEncryptionKey(AllowNewEncryptionKeyRequest request, CallContext context = default)
     {
-        var coverage = await AllowNewEncryptionKeyWithCoverage(request, context);
-        EnsureComplete(coverage.NotCoveredEventStores);
+        await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace));
+        var coverage = await authorization.KeyLifecycle("allow-new-key", request.EventStore, request.Namespace, request.Identifier, ComplianceKeyOperation.AllowNew, context);
+        EnsureRequestedStoreAllowed(coverage);
+        EnsureListed(coverage);
+        EnsureComplete(coverage.NotCovered.Select(store => store.Value).ToArray());
+        if (coverage.Allowed.Count > 0)
+        {
+            await GetPIIManager(request.EventStore, request.Namespace).AllowNewEncryptionKeyIn(request.Identifier, coverage.Allowed.ToArray());
+        }
     }
 
     /// <inheritdoc/>
@@ -104,9 +118,9 @@ internal sealed class ComplianceService(IGrainFactory grainFactory, IJsonSchemaM
         return new() { NotCoveredEventStores = coverage.NotCovered.Select(store => store.Value).ToArray() };
     }
 
-    static void EnsureComplete(IList<string> notCovered)
+    static void EnsureComplete(string[] notCovered)
     {
-        if (notCovered.Count > 0)
+        if (notCovered.Length > 0)
         {
             throw new RpcException(new Status(StatusCode.PermissionDenied, $"Compliance operation did not cover event stores: {string.Join(", ", notCovered)}."));
         }
