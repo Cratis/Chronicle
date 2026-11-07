@@ -31,6 +31,7 @@ public record ProjectionEventContext(
     readonly List<ProjectionFuture> _deferredFutures = [];
     readonly List<FailedPartition> _failedPartitions = [];
     readonly List<PendingFutureSave> _pendingFutureSaves = [];
+    List<Key>? _affectedParentKeys;
     readonly Dictionary<KeyResolver, KeyResolverResult> _resolvedKeys = [];
     bool _isKeyUnresolvable;
 
@@ -70,6 +71,11 @@ public record ProjectionEventContext(
     /// Gets the collection of pending future saves that must be applied after the main changeset save.
     /// </summary>
     public IEnumerable<PendingFutureSave> PendingFutureSaves => _pendingFutureSaves;
+
+    /// <summary>
+    /// Gets the keys of the parents that held a child this event removed from every parent. Recorded only while the projection is watched.
+    /// </summary>
+    public IReadOnlyList<Key> AffectedParentKeys => _affectedParentKeys ?? (IReadOnlyList<Key>)[];
 
     /// <summary>
     /// Gets the <see cref="EventType"/> of the <see cref="Event"/>.
@@ -156,6 +162,22 @@ public record ProjectionEventContext(
     /// </summary>
     /// <param name="failedPartition">The <see cref="FailedPartition"/> to add.</param>
     public void AddFailedPartition(FailedPartition failedPartition) => _failedPartitions.Add(failedPartition);
+
+    /// <summary>
+    /// Records parents that held a child this event removed from every parent.
+    /// </summary>
+    /// <param name="keys">The keys of the affected parents.</param>
+    public void AddAffectedParentKeys(IEnumerable<Key> keys)
+    {
+        _affectedParentKeys ??= [];
+        foreach (var key in keys)
+        {
+            if (!_affectedParentKeys.Contains(key))
+            {
+                _affectedParentKeys.Add(key);
+            }
+        }
+    }
 
     /// <summary>
     /// Adds a pending future save that will be applied after the main changeset is saved.

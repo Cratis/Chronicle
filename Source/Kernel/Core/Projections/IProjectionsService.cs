@@ -2,10 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Projections.Engine;
 using Cratis.Monads;
+using Orleans.CodeGeneration;
 using Orleans.Services;
 
 namespace Cratis.Chronicle.Projections;
@@ -13,6 +15,7 @@ namespace Cratis.Chronicle.Projections;
 /// <summary>
 /// Defines a service that is responsible for projection registration on the silo.
 /// </summary>
+[Version(1)]
 public interface IProjectionsService : IGrainService
 {
     /// <summary>
@@ -38,4 +41,14 @@ public interface IProjectionsService : IGrainService
     /// <param name="namespace">Name of the namespace.</param>
     /// <returns>Awaitable task.</returns>
     Task NamespaceAdded(EventStoreName eventStore, EventStoreNamespaceName @namespace);
+
+    /// <summary>
+    /// Sets whether a projection is being watched in an event store namespace, which decides whether the pipelines on this silo do the extra work that only watchers need.
+    /// </summary>
+    /// <param name="eventStore">Name of the event store.</param>
+    /// <param name="namespace">Name of the namespace.</param>
+    /// <param name="projection">The <see cref="ObserverId"/> of the projection.</param>
+    /// <param name="isWatched">Whether the projection is watched.</param>
+    /// <returns>Awaitable task.</returns>
+    Task SetWatchState(EventStoreName eventStore, EventStoreNamespaceName @namespace, ObserverId projection, bool isWatched);
 }

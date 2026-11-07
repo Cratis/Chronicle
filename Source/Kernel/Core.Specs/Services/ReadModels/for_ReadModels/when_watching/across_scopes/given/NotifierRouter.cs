@@ -85,6 +85,8 @@ public class NotifierRouter
         // Each activation lives in its own silo so a replacement never collides with the activation it replaces.
         var silo = new TestKitSilo();
         silo.AddService(Substitute.For<ILogger<ProjectionChangesetNotifier>>());
+        silo.AddService(Substitute.For<IProjectionsServiceClient>());
+        silo.AddService(TimeProvider.System);
         return silo.CreateGrainAsync<ProjectionChangesetNotifier>(key);
     }
 

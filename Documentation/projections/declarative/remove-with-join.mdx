@@ -26,6 +26,8 @@ When the projection processes the removal event, Chronicle resolves its key from
 
 This is a child-collection operation, not a search through every projection in the system. Root-level `RemovedWithJoin` removal is not supported.
 
+Watchers of the read model are notified once for each parent that held the child. See [When a join removes children](../../read-models/watching-read-models.mdx#when-a-join-removes-children).
+
 ## RemoveWithJoin with explicit keys
 
 Here, the assignment and cancellation events both carry `ProjectId`. `UsingKey(e => e.ProjectId)` makes each event resolve to the same child identifier, even if their event source IDs differ:
