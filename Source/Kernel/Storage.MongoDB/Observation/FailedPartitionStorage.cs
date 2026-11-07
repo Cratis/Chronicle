@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage.Observation;
+using MongoDB.Bson;
 using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Observation;
@@ -18,8 +19,11 @@ namespace Cratis.Chronicle.Storage.MongoDB.Observation;
 /// <param name="database">Provider for <see cref="IEventStoreNamespaceDatabase"/>.</param>
 public class FailedPartitionStorage(IEventStoreNamespaceDatabase database) : IFailedPartitionsStorage
 {
+    const long Deleted = long.MinValue;
+
     readonly IMongoCollection<FailedPartition> _collection = database.GetCollection<FailedPartition>(WellKnownCollectionNames.FailedPartitions);
     readonly ConcurrentDictionary<string, byte> _ensuredIndexes = new();
+    readonly ConcurrentDictionary<FailedPartitionId, (ObserverId Observer, long Fingerprint)> _written = new();
 
     /// <summary>
     /// Gets the failed partition indexes.
@@ -40,17 +44,56 @@ public class FailedPartitionStorage(IEventStoreNamespaceDatabase database) : IFa
     public async Task Save(ObserverId observerId, FailedPartitions failedPartitions)
     {
         await EnsureIndexes().ConfigureAwait(false);
+
+        // Everything the observer holds is handed over on every save, and a recovery saves several times per partition,
+        // so with hundreds of failed partitions writing it all one round trip at a time is quadratic. Only what differs
+        // from what was last written is sent, and all of it in one request.
+        var writes = new List<WriteModel<FailedPartition>>();
+        var pending = new List<(FailedPartitionId Id, long Fingerprint)>();
+        var current = new HashSet<FailedPartitionId>();
+
         foreach (var failedPartition in failedPartitions.ResolvedPartitions)
         {
-            await _collection.DeleteOneAsync(_ => _.Id == failedPartition.Id).ConfigureAwait(false);
+            current.Add(failedPartition.Id);
+            if (_written.TryGetValue(failedPartition.Id, out var written) && written.Fingerprint == Deleted)
+            {
+                continue;
+            }
+
+            writes.Add(new DeleteOneModel<FailedPartition>(Builders<FailedPartition>.Filter.Eq(_ => _.Id, failedPartition.Id)));
+            pending.Add((failedPartition.Id, Deleted));
         }
 
         foreach (var failedPartition in failedPartitions.Partitions)
         {
-            await _collection.ReplaceOneAsync(
-                _ => _.Id == failedPartition.Id,
-                failedPartition,
-                new ReplaceOptions { IsUpsert = true }).ConfigureAwait(false);
+            current.Add(failedPartition.Id);
+            var fingerprint = FingerprintOf(failedPartition);
+            if (_written.TryGetValue(failedPartition.Id, out var written) && written.Fingerprint == fingerprint)
+            {
+                continue;
+            }
+
+            writes.Add(new ReplaceOneModel<FailedPartition>(Builders<FailedPartition>.Filter.Eq(_ => _.Id, failedPartition.Id), failedPartition) { IsUpsert = true });
+            pending.Add((failedPartition.Id, fingerprint));
+        }
+
+        if (writes.Count > 0)
+        {
+            await _collection.BulkWriteAsync(writes, new BulkWriteOptions { IsOrdered = false }).ConfigureAwait(false);
+        }
+
+        foreach (var (id, fingerprint) in pending)
+        {
+            _written[id] = (observerId, fingerprint);
+        }
+
+        // What the observer no longer holds in either list is not going to be written again.
+        foreach (var (id, written) in _written)
+        {
+            if (written.Observer == observerId && !current.Contains(id))
+            {
+                _written.TryRemove(id, out _);
+            }
         }
     }
 
@@ -59,6 +102,13 @@ public class FailedPartitionStorage(IEventStoreNamespaceDatabase database) : IFa
     {
         await EnsureIndexes().ConfigureAwait(false);
         await _collection.DeleteManyAsync(_ => _.ObserverId == observerId).ConfigureAwait(false);
+        foreach (var (id, written) in _written)
+        {
+            if (written.Observer == observerId)
+            {
+                _written.TryRemove(id, out _);
+            }
+        }
     }
 
     /// <inheritdoc/>
@@ -91,6 +141,13 @@ public class FailedPartitionStorage(IEventStoreNamespaceDatabase database) : IFa
         {
             Partitions = await cursor.ToListAsync()
         };
+    }
+
+    static long FingerprintOf(FailedPartition failedPartition)
+    {
+        var bytes = failedPartition.ToBson();
+        var hash = System.IO.Hashing.XxHash3.HashToUInt64(bytes);
+        return (long)hash == Deleted ? 0 : (long)hash;
     }
 
     Task EnsureIndexes() => _collection.EnsureIndexesOnceAsync(_ensuredIndexes, Indexes.ToArray());
