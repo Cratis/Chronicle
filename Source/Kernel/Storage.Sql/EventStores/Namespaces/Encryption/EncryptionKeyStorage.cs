@@ -18,7 +18,9 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.Encryption;
 /// </summary>
 /// <param name="database">The <see cref="IDatabase"/> to use for storage operations.</param>
 /// <param name="logger">Optional <see cref="ILogger{EncryptionKeyStorage}"/> for logging.</param>
-public class EncryptionKeyStorage(IDatabase database, ILogger<EncryptionKeyStorage>? logger = null) : IEncryptionKeyStorage
+/// <param name="random">Optional <see cref="Random"/> used for retry jitter; defaults to <see cref="Random.Shared"/>.</param>
+/// <param name="delay">Optional delay function used between retries; defaults to <see cref="Task.Delay(TimeSpan)"/>.</param>
+public class EncryptionKeyStorage(IDatabase database, ILogger<EncryptionKeyStorage>? logger = null, Random? random = null, Func<TimeSpan, Task>? delay = null) : IEncryptionKeyStorage
 {
     const int MaximumAttempts = 8;
     const int MaximumRequests = 1024;
@@ -281,6 +283,18 @@ public class EncryptionKeyStorage(IDatabase database, ILogger<EncryptionKeyStora
         throw new EncryptionKeyFenceUnavailable(identifier);
     }
 
+    /// <summary>
+    /// Gets the bounded, jittered delay for a retry attempt: between the exponential base and twice the base (exclusive).
+    /// </summary>
+    /// <param name="attempt">The zero-based attempt.</param>
+    /// <param name="random">The <see cref="Random"/> providing jitter.</param>
+    /// <returns>The <see cref="TimeSpan"/> to wait.</returns>
+    internal static TimeSpan BackoffDelay(int attempt, Random random)
+    {
+        var baseMilliseconds = Math.Min(1 << Math.Clamp(attempt, 0, 5), 32);
+        return TimeSpan.FromMilliseconds(baseMilliseconds + random.Next(0, baseMilliseconds));
+    }
+
     static EncryptionKeyErasureRequest Request(Fence fence, EncryptionKeyIdentifier identifier, string requestId) =>
         fence.Requests?.SingleOrDefault(_ => _.RequestId == requestId) ?? throw new EncryptionKeyFenceChanged(identifier);
 
@@ -302,7 +316,8 @@ public class EncryptionKeyStorage(IDatabase database, ILogger<EncryptionKeyStora
 
     static StoredEncryptionKey Key(EncryptionKey key) => new(key.PublicKey, key.PrivateKey);
     static bool IsLatest(EncryptionKeyRevision? revision) => revision is null || revision == EncryptionKeyRevision.Latest;
-    static Task Backoff(int attempt) => Task.Delay(Math.Min(1 << attempt, 32));
+
+    Task Backoff(int attempt) => (delay ?? (_ => Task.Delay(_))).Invoke(BackoffDelay(attempt, random ?? Random.Shared));
 
     async Task<EncryptionKeyAtRevision> StageAndPublish(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, StoredEncryptionKey key, EncryptionKeyRevision revision, Fence initial, bool replacePublished = false)
     {
