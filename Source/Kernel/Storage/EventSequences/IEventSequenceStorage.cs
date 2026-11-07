@@ -336,6 +336,21 @@ public interface IEventSequenceStorage
     Task<IEventCursor> GetFromSequenceNumber(EventSequenceNumber sequenceNumber, EventSourceId? eventSourceId = default, EventSourceType? eventSourceType = default, EventStreamType? eventStreamType = default, EventStreamId? eventStreamId = default, IEnumerable<EventType>? eventTypes = default, IEnumerable<Tag>? tags = default, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Get events from a sequence number, including original content and revisions.
+    /// </summary>
+    /// <param name="sequenceNumber">The inclusive starting sequence number.</param>
+    /// <param name="eventSourceId">Optional event source identity.</param>
+    /// <param name="eventSourceType">Optional event source type.</param>
+    /// <param name="eventStreamType">Optional event stream type.</param>
+    /// <param name="eventStreamId">Optional event stream identity.</param>
+    /// <param name="eventTypes">Optional event types.</param>
+    /// <param name="tags">Optional tags.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A history-bearing event cursor.</returns>
+    Task<IEventCursor> GetFromSequenceNumberWithHistory(EventSequenceNumber sequenceNumber, EventSourceId? eventSourceId = default, EventSourceType? eventSourceType = default, EventStreamType? eventStreamType = default, EventStreamId? eventStreamId = default, IEnumerable<EventType>? eventTypes = default, IEnumerable<Tag>? tags = default, CancellationToken cancellationToken = default) =>
+        GetFromSequenceNumber(sequenceNumber, eventSourceId, eventSourceType, eventStreamType, eventStreamId, eventTypes, tags, cancellationToken);
+
+    /// <summary>
     /// Reads a bounded keyset window, ordered by sequence number without offset paging or counting.
     /// </summary>
     /// <param name="from">Inclusive lower bound, regardless of read direction.</param>
@@ -364,6 +379,19 @@ public interface IEventSequenceStorage
     /// <param name="cancellationToken">Optional <see cref="CancellationToken"/>.</param>
     /// <returns><see cref="IEventCursor"/>.</returns>
     Task<IEventCursor> GetRange(EventSequenceNumber start, EventSequenceNumber end, EventSourceId? eventSourceId = default, IEnumerable<EventType>? eventTypes = default, IEnumerable<Tag>? tags = default, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Get events within a sequence number range, including original content and revisions.
+    /// </summary>
+    /// <param name="start">Inclusive start of the range.</param>
+    /// <param name="end">Inclusive end of the range.</param>
+    /// <param name="eventSourceId">Optional event source identity.</param>
+    /// <param name="eventTypes">Optional event types.</param>
+    /// <param name="tags">Optional tags.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A history-bearing event cursor.</returns>
+    Task<IEventCursor> GetRangeWithHistory(EventSequenceNumber start, EventSequenceNumber end, EventSourceId? eventSourceId = default, IEnumerable<EventType>? eventTypes = default, IEnumerable<Tag>? tags = default, CancellationToken cancellationToken = default) =>
+        GetRange(start, end, eventSourceId, eventTypes, tags, cancellationToken);
 
     /// <summary>
     /// Read attempted append slots from committed storage to settle an uncertain outcome.

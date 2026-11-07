@@ -182,7 +182,7 @@ internal static class EventSequenceQuerying
         }
 
         var appendedEvents = new List<Concepts.Events.AppendedEvent>();
-        using (var cursor = await eventSequence.GetFromSequenceNumber(
+        using (var cursor = await eventSequence.GetFromSequenceNumberWithHistory(
             fromEventSequenceNumber,
             resolvedEventSourceId,
             resolvedEventSourceType,

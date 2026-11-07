@@ -42,6 +42,11 @@ public class EventCursor(
     public IEnumerable<AppendedEvent> Current { get; private set; } = [];
 
     /// <summary>
+    /// Gets whether to load original content and revisions.
+    /// </summary>
+    internal bool IncludeHistory { get; init; }
+
+    /// <summary>
     /// Gets the generation-aware content conversion supplied by storage.
     /// </summary>
     internal Func<EventEntry, IReadOnlyCollection<NamedTag>, Task<AppendedEvent>>? ConvertEntry { get; init; }
@@ -54,11 +59,11 @@ public class EventCursor(
             return false;
         }
 
-        var eventEntries = await _query
+        var batchQuery = _query
             .OrderBy(e => e.SequenceNumber)
             .Skip(_currentOffset)
-            .Take(_batchSize)
-            .WithoutHistory()
+            .Take(_batchSize);
+        var eventEntries = await (IncludeHistory ? batchQuery : batchQuery.WithoutHistory())
             .ToListAsync(_cancellationToken);
 
         if (eventEntries.Count == 0)
