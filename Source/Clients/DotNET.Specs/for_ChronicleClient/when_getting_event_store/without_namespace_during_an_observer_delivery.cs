@@ -22,7 +22,7 @@ public class without_namespace_during_an_observer_delivery : Specification
 
     void Because()
     {
-        using var delivery = ObserverDelivery.Enter(new DefaultServiceProvider(), new("TestStore", "namespace-x", new("observer"), ObserverDeliveryKind.Reactor, typeof(object)));
+        using var delivery = ObserverDeliveryScope.Enter(new DefaultServiceProvider(), new("TestStore", "namespace-x", new("observer"), ObserverDeliveryKind.Reactor, typeof(object)));
         _ = _client.GetEventStore("TestStore");
         _resolutionsAfterTheDeliveredStore = _namespaceResolver.ReceivedCalls().Count();
         _ = _client.GetEventStore("TestStore", "namespace-z");

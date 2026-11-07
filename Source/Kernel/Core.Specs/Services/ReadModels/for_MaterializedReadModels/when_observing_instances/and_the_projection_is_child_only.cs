@@ -22,7 +22,7 @@ public class and_the_projection_is_child_only : for_ReadModels.given.all_depende
 
     async Task Because()
     {
-        var service = new MaterializedReadModels(_grainFactory, _readBindings, _complianceHelper, NullLogger<MaterializedReadModels>.Instance);
+        var service = new MaterializedReadModels(_grainFactory, _readBindings, _complianceHelper, NullLogger<MaterializedReadModels>.Instance, NamespaceCasingContext.Create());
         await service.ObserveInstances(new()
         {
             EventStore = "test-store",

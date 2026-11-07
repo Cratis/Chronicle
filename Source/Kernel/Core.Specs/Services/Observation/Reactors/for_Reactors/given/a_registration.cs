@@ -49,7 +49,8 @@ public class a_registration : Specification
             Options.Create(new ChronicleOptions()),
             AllowingConnectionOwnership.Create(),
             NullLogger<Reactors>.Instance,
-            _gate);
+            _gate,
+            NamespaceCasingContext.Create());
         _grainFactory.ClearReceivedCalls();
         _client.ClearReceivedCalls();
         _gate.ClearReceivedCalls();

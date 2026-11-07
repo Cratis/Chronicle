@@ -37,6 +37,18 @@ public static class BsonValueExtensions
             return new BsonBinaryData(byteArrayValue);
         }
 
+        // The common case - an ExpandoObject, or any string-keyed dictionary - needs no reflection. Going through
+        // PropertyInfo for every document of a large collection is what makes converting one expensive.
+        if (input is IDictionary<string, object?> stringKeyed)
+        {
+            var stringKeyedDocument = new BsonDocument();
+            foreach (var (key, value) in stringKeyed)
+            {
+                stringKeyedDocument[key] = ToBsonValue(value);
+            }
+            return stringKeyedDocument;
+        }
+
         if (inputType.IsDictionary())
         {
             var dictionaryType = input.GetType();

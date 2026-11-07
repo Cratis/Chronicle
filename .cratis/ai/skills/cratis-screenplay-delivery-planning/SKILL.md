@@ -1,6 +1,6 @@
 ---
 name: cratis-screenplay-delivery-planning
-description: "Plan and estimate the delivery of an accepted Screenplay model by slices: count slices by type (StateChange, StateView, Automation, Translate), derive the slice dependency table from the model, split work in parallel along event contracts, track slice groups as GitHub issues with a closed status vocabulary, and turn the team's own completed-slice history into ranged estimates, capacity math and retrospective metrics. Use when asked how long a modeled scope will take, how to split it across people or agents, what to build first, or how to track and re-plan delivery. Not for: deciding what to model (use `cratis-screenplay-event-modeling`), rendering or gap-filling a slice (use `cratis-screenplay-render-and-gap-fill`), or reviewing the model (use `cratis-screenplay-model-review`)."
+description: Use when estimating an accepted Screenplay scope, ordering slice dependencies or dividing and tracking delivery across people or agents. Not for deciding model behavior, reviewing the model or rendering individual slices.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-screenplay-delivery-planning/SKILL.md -->

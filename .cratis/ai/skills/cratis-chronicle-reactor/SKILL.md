@@ -1,6 +1,6 @@
 ---
 name: cratis-chronicle-reactor
-description: Implement a Chronicle IReactor - an automation that causes an external side effect or appends a follow-up event or command, or the adapter side of a translation of outside data into our own facts. Covers handler dispatch and parameter resolution, every supported return type, targeting another event source, replay handling with [OnceOnly] and [Replay], event filtering, failure and quarantine behavior, and the analyzer rules. Use for event-driven side effects; do not use to populate a read model.
+description: Use when Chronicle events must trigger external effects, follow-up commands or translated facts, or a reactor's replay and failure behavior needs diagnosis. Not for populating a queryable read model.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-chronicle-reactor/SKILL.md -->
@@ -239,6 +239,18 @@ Read [references/domain-failures.md](references/domain-failures.md) when handlin
 
 Inject through the primary constructor; hold no mutable state (CHR0031 warning).
 Keep one automation concern per reactor; several related handlers are fine.
+
+Requires Chronicle 19.90.0 for concurrent .NET reactor partitions.
+
+Different partitions of one .NET reactor run concurrently;
+batches for one partition retain arrival order. Shared collaborators must be
+thread-safe. Set `ChronicleOptions.Reactors.MaxConcurrentPartitions = 1` when
+one-at-a-time handling is required; the default is processor count capped at 8,
+and values below 1 are refused. This is not ordering across different observers.
+Verified in the tagged sources listed in
+[connection options](../cratis-chronicle-client-dotnet/references/connection-options.md):
+`Source/Clients/DotNET/Reactors/ReactorOptions.cs`,
+`Reactors.cs` and `Observation/PartitionedDeliveryScheduler.cs`.
 
 ## Specifications
 

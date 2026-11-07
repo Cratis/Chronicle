@@ -11,7 +11,7 @@ public class when_resolving_the_event_store_during_an_observer_delivery : given.
 
     void Because()
     {
-        using var delivery = ObserverDelivery.Enter(_provider, new("store", "namespace-x", new("observer"), ObserverDeliveryKind.Reactor, typeof(object)));
+        using var delivery = ObserverDeliveryScope.Enter(_provider, new("store", "namespace-x", new("observer"), ObserverDeliveryKind.Reactor, typeof(object)));
         _result = ResolveNamespace();
     }
 

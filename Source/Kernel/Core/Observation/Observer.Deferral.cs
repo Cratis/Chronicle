@@ -9,34 +9,12 @@ namespace Cratis.Chronicle.Observation;
 public partial class Observer
 {
     /// <inheritdoc/>
-    public async Task PartitionDeferred(Key partition, PartitionDeferral deferral, FailedPartitionId? episodeId = null, Guid? expectedDeferralId = null)
-    {
-        await _alertMutationLock.WaitAsync();
-        try
-        {
-            if (IsRetired || _removed || IsQuarantined || !IsCurrentRecovery(partition, episodeId, expectedDeferralId)) return;
-            var exists = Failures.TryGet(partition, out var failure);
-            failure ??= new() { Partition = partition };
+    public Task PartitionDeferred(Key partition, PartitionDeferral deferral, FailedPartitionId? episodeId = null, Guid? expectedDeferralId = null) =>
+        RecordPartitionDeferral(partition, deferral, episodeId, expectedDeferralId, null);
 
-            // A crash here leaves at worst a harmless wake-up. Never commit a deadline without its wake-up.
-            await RegisterDeferralReminder(failure, deferral);
-            if (!exists)
-            {
-                Failures.Partitions = Failures.Partitions.Append(failure).ToArray();
-                State = State with { FailedPartitionCount = State.FailedPartitionCount + 1 };
-            }
-
-            _pendingRetryReminders.Remove(failure.Id);
-            Failures.Defer(partition, deferral);
-            ChangeAlertState();
-            await WriteFailedPartitions();
-            await WriteStateAsync();
-        }
-        finally
-        {
-            _alertMutationLock.Release();
-        }
-    }
+    /// <inheritdoc/>
+    public Task PartitionDeferred(Key partition, PartitionDeferral deferral, FailedPartitionId? episodeId, Guid? expectedDeferralId, ReplayEpoch? replayEpoch) =>
+        RecordPartitionDeferral(partition, deferral, episodeId, expectedDeferralId, replayEpoch);
 
     /// <inheritdoc/>
     public async Task<bool> CanResumeFailedPartition(Key partition, FailedPartitionId? episodeId = null, Guid? deferralId = null)
@@ -85,6 +63,36 @@ public partial class Observer
         foreach (var failure in Failures.Partitions.Where(_ => _.Deferral is not null && !_.IsQuarantined).ToArray())
         {
             await RegisterDeferralReminder(failure, failure.Deferral!);
+        }
+    }
+
+    async Task RecordPartitionDeferral(Key partition, PartitionDeferral deferral, FailedPartitionId? episodeId, Guid? expectedDeferralId, ReplayEpoch? replayEpoch)
+    {
+        await _alertMutationLock.WaitAsync();
+        try
+        {
+            if (IsRetired || _removed || IsQuarantined || !IsCurrentRecovery(partition, episodeId, expectedDeferralId)) return;
+            var exists = Failures.TryGet(partition, out var failure);
+            failure ??= new() { Partition = partition };
+
+            // A crash here leaves at worst a harmless wake-up. Never commit a deadline without its wake-up.
+            await RegisterDeferralReminder(failure, deferral);
+            if (!exists)
+            {
+                Failures.Partitions = Failures.Partitions.Append(failure).ToArray();
+                State = State with { FailedPartitionCount = State.FailedPartitionCount + 1 };
+            }
+
+            _pendingRetryReminders.Remove(failure.Id);
+            var deferred = Failures.Defer(partition, deferral);
+            if (replayEpoch is not null) deferred.ReplayEpoch = replayEpoch;
+            ChangeAlertState();
+            await WriteFailedPartitions();
+            await WriteStateAsync();
+        }
+        finally
+        {
+            _alertMutationLock.Release();
         }
     }
 }

@@ -36,12 +36,14 @@ function readBodyFile(value) {
         return readFileSync(resolved, 'utf8');
     } catch (error) {
         const parent = dirname(resolved);
+        const fileExists = existsSync(resolved);
         const details = [`--body-file value: ${value}`, `path tried: ${resolved}`,
-            `parent directory exists: ${existsSync(parent)}`, `file exists now: ${existsSync(resolved)}`,
+            `parent directory exists: ${existsSync(parent)}`, `file exists now: ${fileExists}`,
             `checker working directory: ${process.cwd()}`,
             ...Object.entries(invocation).map(([name, detail]) => `${name}: ${detail}`),
             `checker script: ${fileURLToPath(import.meta.url)}`];
-        throw new Error(`cannot read the pull-request body file (${error.code || error.message}); ${details.join('; ')}`, { cause: error });
+        const hint = fileExists ? '' : ' If the file is written in the same batch of parallel tool calls as this command, write it in a separate, earlier step; the check runs before a concurrent write completes.';
+        throw new Error(`cannot read the pull-request body file (${error.code || error.message}); ${details.join('; ')}${hint}`, { cause: error });
     }
 }
 const gh = (args, options = {}) => {
@@ -336,6 +338,32 @@ function executableWords(words) {
     return { words: result, environmentRepository };
 }
 
+function isPrMutation(words, index) {
+    return words[index] === 'pr' && ['create', 'edit'].includes(words[index + 1]);
+}
+
+function normalizeGlobalOptions(words) {
+    if (words[0] !== 'gh') return words;
+    const options = [];
+    let index = 1;
+    while (words[index]?.startsWith('-')) {
+        const option = words[index++];
+        if (['-R', '--repo'].includes(option)) {
+            options.push(option, words[index++]);
+            continue;
+        }
+        if (/^(?:-R.|--repo=)/.test(option)) {
+            options.push(option);
+            continue;
+        }
+        // The caller refuses this only where the release-note checks apply.
+        if (words.slice(index).some((_, offset) => isPrMutation(words, index + offset))) return null;
+        return words;
+    }
+    if (!isPrMutation(words, index)) return words;
+    return ['gh', words[index], words[index + 1], ...options, ...words.slice(index + 2)];
+}
+
 function effectiveRepository(words, cwd, environmentRepository) {
     // gh selects an edit's PR URL before --repo, then GH_REPO, then the checkout origin.
     let repository, target;
@@ -374,7 +402,7 @@ function hook() {
     try { payload = JSON.parse(readFileSync(0, 'utf8')); } catch { return 0; }
     claudeHook = payload?.hook_event_name === 'PreToolUse';
     const text = payload?.tool_input?.command;
-    if (typeof text !== 'string' || !/\bgh\s+pr\s+(create|edit)\b/.test(text.replace(/\\\r?\n/g, ''))) return 0;
+    if (typeof text !== 'string' || !/\bgh(?:\s+\S+)*\s+pr\s+(create|edit)\b/.test(text.replace(/\\\r?\n/g, ''))) return 0;
     // Match each simple command, never the same text inside an echo/grep argument.
     let cwd = payload.cwd || process.cwd();
     invocation = { 'hook payload directory': payload.cwd || '(none)' };
@@ -383,7 +411,13 @@ function hook() {
     try { parsed = commands(text); } catch (error) { if (!optedIn(cwd)) return 0; throw error; }
     const written = new Set();
     for (const command of parsed) {
-        const { words, environmentRepository } = executableWords(command.words);
+        const executable = executableWords(command.words);
+        const words = normalizeGlobalOptions(executable.words);
+        if (!words) {
+            if (!optedIn(cwd)) continue;
+            throw new Error('Put options after gh pr create/edit; only -R/--repo is supported before the subcommand.');
+        }
+        const { environmentRepository } = executable;
         const writes = [...command.writes];
         if (words[0] === 'tee') writes.push(...words.slice(1).filter(word => !word.startsWith('-')));
         if (knownDirectory) for (const file of writes) written.add(resolve(cwd, file));

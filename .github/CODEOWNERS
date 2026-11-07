@@ -68,3 +68,5 @@
 /.github/scripts/detect-hot-core-changes.py @Cratis/core
 /.github/workflows/hot-core-gate-refresh.yml @Cratis/core
 /.github/scripts/evaluate-hot-core-gate.py @Cratis/core
+/.github/integration-selection.json @Cratis/core
+/.github/scripts/select-integration.py @Cratis/core

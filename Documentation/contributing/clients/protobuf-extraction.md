@@ -1,8 +1,7 @@
 ---
+title: Extracting Protobuf contracts for Cratis Chronicle
 description: How Chronicle's ProtoGenerator tool extracts .proto files from its code-first C# gRPC contracts so clients in other languages can use them.
 ---
-# Protobuf Extraction from C# Contracts
-
 This document explains how to extract `.proto` files from C# gRPC service definitions using the ProtoGenerator tool.
 
 ## Overview
@@ -101,7 +100,7 @@ protoc \
 
 ### TypeScript Example
 
-See [TypeScript gRPC Package](typescript-grpc-package) for details on the TypeScript client generation.
+See [TypeScript gRPC Package](typescript-grpc-package.mdx) for details on the TypeScript client generation.
 
 ## Maintenance
 

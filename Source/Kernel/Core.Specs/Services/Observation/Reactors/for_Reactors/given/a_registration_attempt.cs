@@ -34,7 +34,7 @@ public class a_registration_attempt : Specification
     {
         using var messages = new Subject<ReactorMessage>();
         var reactors = new Reactors(
-            _grainFactory, _mediator, Substitute.For<IStorage>(), new JsonSerializerOptions(), new ActivitySource<Reactors>(), Options.Create(new ChronicleOptions()), _ownership, NullLogger<Reactors>.Instance, Substitute.For<IObserverRegistrationGate>());
+            _grainFactory, _mediator, Substitute.For<IStorage>(), new JsonSerializerOptions(), new ActivitySource<Reactors>(), Options.Create(new ChronicleOptions()), _ownership, NullLogger<Reactors>.Instance, Substitute.For<IObserverRegistrationGate>(), NamespaceCasingContext.Create());
         var observed = reactors.Observe(messages, context).ToTask();
         messages.OnNext(new ReactorMessage(new Contracts.Primitives.OneOf<RegisterReactor, ReactorResult>(new RegisterReactor
         {

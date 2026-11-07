@@ -1,8 +1,7 @@
 ---
+title: "CHR0052: [Encrypted] cannot be applied to an EventSourceId<T>"
 description: Chronicle analyzer rule CHR0052 reports [Encrypted] applied to an EventSourceId<T>, which Chronicle uses to correlate events and cannot encrypt.
 ---
-# CHR0052: [Encrypted] cannot be applied to an EventSourceId&lt;T&gt;
-
 ## Rule Description
 
 A property or record parameter whose type derives from `EventSourceId<T>` is marked with `[Encrypted]`. The event source id is used to correlate events, so it cannot itself be encrypted. Applying `[Encrypted]` to it throws `EncryptedNotSupportedOnEventSourceId` at runtime.

@@ -46,7 +46,8 @@ public class and_the_registration_is_the_full_set : Specification
             Substitute.For<ILocalSiloDetails>(),
             AllowingConnectionOwnership.Create(),
             Microsoft.Extensions.Options.Options.Create(new Cratis.Chronicle.Configuration.ChronicleOptions()),
-            Microsoft.Extensions.Logging.Abstractions.NullLogger<Projections>.Instance);
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<Projections>.Instance,
+            NamespaceCasingContext.Create());
     }
 
     async Task Because() => await _service.Register(new RegisterRequest

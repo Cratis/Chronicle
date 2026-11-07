@@ -24,7 +24,7 @@ namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage;
 /// <param name="owner">The <see cref="ProjectionOwner"/> for the resulting definition.</param>
 /// <param name="eventTypeSchemas">The registered generations used to resolve bare event references.</param>
 /// <param name="generationDelivery">The generation delivery policy.</param>
-public class ProjectionDefinitionSyntaxVisitor(ProjectionOwner owner, IEnumerable<EventTypeSchema>? eventTypeSchemas = null, EventGenerationDelivery generationDelivery = EventGenerationDelivery.Compatibility) : IProjectionSyntaxVisitor<ProjectionDefinition>
+public partial class ProjectionDefinitionSyntaxVisitor(ProjectionOwner owner, IEnumerable<EventTypeSchema>? eventTypeSchemas = null, EventGenerationDelivery generationDelivery = EventGenerationDelivery.Compatibility) : IProjectionSyntaxVisitor<ProjectionDefinition>
 {
     bool _noAutoMap;
 

@@ -1,0 +1,51 @@
+name: Pack integration build output
+description: >-
+  Packs the build output of each integration test project into its own artifact, so a shard downloads only the
+  project it runs instead of every project's output. The Client, Kernel and Clustering projects each carry a full
+  copy of the kernel in their own bin directory, which is all their shards need once restored.
+
+inputs:
+  prefix:
+    description: Artifact name prefix. The artifacts are named <prefix>-client, <prefix>-kernel and <prefix>-clustering.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Pack the per-project build output
+      shell: bash
+      env:
+        PREFIX: ${{ inputs.prefix }}
+      run: |
+        set -euo pipefail
+        for project in Client Kernel Clustering; do
+          test -d "Integration/$project/bin/Release/net10.0" || { echo "Missing build output for Integration/$project" >&2; exit 1; }
+          tar -I 'zstd -T0' -cf "${PREFIX}-${project,,}.tar.zst" "Integration/$project/bin"
+        done
+
+    - name: Upload the Client build output
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.prefix }}-client
+        path: ${{ inputs.prefix }}-client.tar.zst
+        retention-days: 1
+        compression-level: 0
+        if-no-files-found: error
+
+    - name: Upload the Kernel build output
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.prefix }}-kernel
+        path: ${{ inputs.prefix }}-kernel.tar.zst
+        retention-days: 1
+        compression-level: 0
+        if-no-files-found: error
+
+    - name: Upload the Clustering build output
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.prefix }}-clustering
+        path: ${{ inputs.prefix }}-clustering.tar.zst
+        retention-days: 1
+        compression-level: 0
+        if-no-files-found: error

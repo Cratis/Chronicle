@@ -10,12 +10,12 @@ public class when_entering_without_any_scope_registered : given.a_delivery_conte
 
     void Because()
     {
-        using (ObserverDelivery.Enter(new DefaultServiceProvider(), _context))
+        using (ObserverDeliveryScope.Enter(new DefaultServiceProvider(), _context))
         {
             _withDefaultProvider = ObserverDeliveryContext.Current;
         }
 
-        using (ObserverDelivery.Enter(Substitute.For<IServiceProvider>(), _context))
+        using (ObserverDeliveryScope.Enter(Substitute.For<IServiceProvider>(), _context))
         {
             _withNullProvider = ObserverDeliveryContext.Current;
         }

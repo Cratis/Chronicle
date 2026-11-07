@@ -7,11 +7,11 @@ public class when_entering : given.a_delivery_context
 {
     ObserverDeliveryContext _seenByScope;
     ObserverDeliveryContext _current;
-    ObserverDelivery _delivery;
+    ObserverDeliveryScope _delivery;
 
     void Because()
     {
-        _delivery = ObserverDelivery.Enter(ProviderOf(RecordingScope("a", c => _seenByScope = c)), _context);
+        _delivery = ObserverDeliveryScope.Enter(ProviderOf(RecordingScope("a", c => _seenByScope = c)), _context);
         _current = ObserverDeliveryContext.Current;
     }
 

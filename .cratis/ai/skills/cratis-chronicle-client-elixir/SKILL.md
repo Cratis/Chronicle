@@ -1,6 +1,6 @@
 ---
 name: cratis-chronicle-client-elixir
-description: Connect Elixir applications to Chronicle with the cratis_chronicle Hex client, including events, projections, reactors, concepts, protected values, decision reads, constraints, captures and testing. Use when wiring Chronicle.Client into an Elixir OTP supervision tree, defining EventType structs, or handling append outcomes with cratis_chronicle. Do not use for JVM clients (use cratis-chronicle-client-kotlin) or Node.js clients (use cratis-chronicle-client-typescript); .NET belongs to cratis-chronicle-client-dotnet.
+description: Use when adding Chronicle to an Elixir OTP application, defining its event structs or handling client append outcomes. Not for JVM or Node.js clients; use the corresponding Chronicle client sibling.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-chronicle-client-elixir/SKILL.md -->
@@ -104,6 +104,12 @@ channel exists return `{:error, :not_connected}`.
 
 ## Authentication and TLS
 
+Requires Chronicle.Elixir 3.14.1 for client crash-report redaction; check `mix deps`, or treat older crash reports as potentially secret-bearing and upgrade before sharing them.
+
+The client Logger filter redacts authentication secrets and gRPC/Mint request-header
+state from crash reports; no application-level filter is needed for those client
+reports. This does not authorize logging credentials in your own code.
+
 Use `ConnectionString.development()` locally: `default()` supplies **no
 credentials**, so an authentication-required development kernel never lets it
 reach `:registered`. Production uses URL userinfo `client-id:secret@host` or
@@ -196,6 +202,12 @@ failure.
 ## Observing
 
 ### Reactors
+
+Requires Chronicle.Elixir 3.14.0, contracts 19.70 and kernel 19.70.0 for start_at_tail; check `mix deps` and the server version, or retain initial catch-up until upgraded.
+
+`use Chronicle.Reactors.Reactor, start_at_tail: true` skips history only on first
+registration; an existing reactor keeps its position. `once_only` does not skip
+initial catch-up. An older server ignores the flag and catches up from the beginning.
 
 Read [references/reactor-example.md](references/reactor-example.md) when you need a worked reactor module.
 

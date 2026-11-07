@@ -37,7 +37,7 @@ public class when_a_reactor_registers_on_a_connection_another_caller_owns : Spec
     {
         using var messages = new Subject<ReactorMessage>();
         var reactors = new global::Cratis.Chronicle.Services.Observation.Reactors.Reactors(
-            _grainFactory, _mediator, Substitute.For<IStorage>(), new JsonSerializerOptions(), new ActivitySource<Reactors>(), Options.Create(new ChronicleOptions()), _ownership, NullLogger<Reactors>.Instance, Substitute.For<IObserverRegistrationGate>());
+            _grainFactory, _mediator, Substitute.For<IStorage>(), new JsonSerializerOptions(), new ActivitySource<Reactors>(), Options.Create(new ChronicleOptions()), _ownership, NullLogger<Reactors>.Instance, Substitute.For<IObserverRegistrationGate>(), NamespaceCasingContext.Create());
         var observed = reactors.Observe(messages).ToTask();
         messages.OnNext(new ReactorMessage(new Contracts.Primitives.OneOf<Contracts.Observation.Reactors.RegisterReactor, ReactorResult>(new Contracts.Observation.Reactors.RegisterReactor
         {

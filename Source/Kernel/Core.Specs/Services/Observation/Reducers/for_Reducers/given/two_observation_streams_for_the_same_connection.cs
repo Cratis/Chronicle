@@ -72,7 +72,8 @@ public class two_observation_streams_for_the_same_connection : Specification
             Options.Create(new ChronicleOptions()),
             AllowingConnectionOwnership.Create(),
             _logger,
-            Substitute.For<IObserverRegistrationGate>());
+            Substitute.For<IObserverRegistrationGate>(),
+            NamespaceCasingContext.Create());
 
         _earlierSubscription = _reducers.Observe(_earlierMessages).Subscribe(_earlierDeliveries.Add);
         _earlierMessages.OnNext(Register());

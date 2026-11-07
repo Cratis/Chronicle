@@ -194,7 +194,7 @@ public class ReadModelReactors(
     {
         try
         {
-            using var delivery = ObserverDelivery.Enter(
+            using var delivery = ObserverDeliveryScope.Enter(
                 serviceProvider,
                 new(eventStore.Name, eventStore.Namespace, ObserverId.Unspecified, ObserverDeliveryKind.ReadModelReactor, reactorType));
             await using var scope = serviceProvider.CreateAsyncScope();

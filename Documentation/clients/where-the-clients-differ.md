@@ -8,7 +8,7 @@ description: Differences in appending, concurrency, PII, reactor delivery, and s
 
 One kernel contract does not make the client APIs interchangeable. This reference covers appending and concurrency, compliance, reactor delivery, and event seeding. It does not claim parity for other features.
 
-The comparisons below describe the client source inspected on September 23, 2026. The TypeScript rows were checked again on September 30, 2026 against Chronicle.TypeScript v6.31.2, and the Elixir rows on October 15, 2026 against Chronicle.Elixir v3.13.0. Java uses Java-callable interfaces, blocking facades, and bridges that delegate to the Kotlin implementation. Source links identify the implementation behind each comparison. These are source-level comparisons, not cross-client runtime conformance results.
+The comparisons below describe the linked client implementations. Java uses Java-callable interfaces, blocking facades, and bridges that delegate to the Kotlin implementation. Source links identify the implementation behind each comparison. These are source-level comparisons, not cross-client runtime conformance results.
 
 ## Appending and concurrency
 
@@ -50,7 +50,7 @@ Sources: [.NET results](https://github.com/Cratis/Chronicle/tree/main/Source/Cli
 
 ### Keyed appends
 
-Only the .NET client has a keyed append API: `AppendOnce`, `AppendManyOnce`, and `IdempotencyKey`. See [Appending](../events/appending#appending-once). The Kotlin, TypeScript, and Elixir clients generate the kernel's keyed RPCs from the shared contracts, but they expose no keyed append method yet. A caller in those clients cannot make an append idempotent through the client API.
+Only the .NET client has a keyed append API: `AppendOnce`, `AppendManyOnce`, and `IdempotencyKey`. See [Appending](../events/appending.mdx#appending-once). The Kotlin, TypeScript, and Elixir clients generate the kernel's keyed RPCs from the shared contracts, but they expose no keyed append method yet. A caller in those clients cannot make an append idempotent through the client API.
 
 ## Compliance and PII
 
@@ -60,7 +60,7 @@ Only the .NET client has a keyed append API: `AppendOnce`, `AppendManyOnce`, and
 | --- | --- |
 | .NET | Resolves an event's `[Subject]` property before appending. The kernel falls back to the event source id when no subject is set. |
 | Kotlin and Java | Default to the event source id. The append path does not resolve event-side `@Subject` metadata. |
-| TypeScript | Uses `options.subject ?? eventSourceId`; the append path does not resolve an event's `@subject` property. |
+| TypeScript | An explicit `options.subject` wins. Otherwise resolves the event's `@subject` property, falling back to the event source id when no subject is resolved. |
 | Elixir | An explicit `:subject` option wins. Otherwise the field named by the event type's `subject:` declaration supplies it; with neither, the client sends an empty subject and the kernel falls back to the event source id. |
 
 Read-model subject metadata and append subject resolution are separate capabilities. When the person whose PII you store differs from the event source, pass the subject explicitly rather than assuming an annotation selects it in every client. Choosing the wrong subject changes whose erasure key protects the data.
@@ -83,7 +83,7 @@ Sources: [.NET PII API](https://github.com/Cratis/Chronicle/blob/main/Source/Cli
 | --- | --- |
 | .NET | Reactors are replayable unless the class has `[OnceOnly]`. Method-level `[OnceOnly]` skips that handler during replay; `[Replay]` selects a replay handler. |
 | Kotlin and Java | Kotlin registration and dispatch use `@OnceOnly` and `@Replay`; Java reactors go through the same JVM registration. |
-| TypeScript | Method-level `@onceOnly()` skips that handler during replay; `@replay()` selects a replay handler. Class-level `@onceOnly()` sets `IsReplayable: false` at registration, but the proto3 encoder leaves a `false` value out, so the kernel registers the reactor as replayable and still replays it. The kernel honors class-level `@onceOnly()` only once the client also sends `IsNotReplayable: true`, tracked in [Chronicle.TypeScript#236](https://github.com/Cratis/Chronicle.TypeScript/issues/236). |
+| TypeScript | Reactors are replayable unless the class has `@onceOnly()`, which sends `IsReplayable: false` and `IsNotReplayable: true` at registration (see [Chronicle.TypeScript#236](https://github.com/Cratis/Chronicle.TypeScript/issues/236)). Method-level `@onceOnly()` skips that handler during replay; `@replay()` selects a replay handler. |
 | Elixir | Reactors are replayable unless the module sets `once_only: true`, which registers `IsNotReplayable: true`. `once_only: [EventModule, ...]` skips those events during replay. The event context carries `replaying?`, and an optional `handle_replay/2` is called instead of `handle/2` for replayed events. Optional replay-begin/end and partition-replay callbacks report lifecycle transitions. |
 
 These differences follow from registration and dispatch code, together with the kernel's replay guards. Do not treat an available lifecycle callback as proof that the client's registered reactors are replayable.
@@ -94,11 +94,11 @@ Sources: [.NET registration](https://github.com/Cratis/Chronicle/blob/main/Sourc
 
 ### Delivery identity
 
-.NET supplies a `ReactorDelivery` handler parameter with a stable `Id` (of type `DeliveryId`) suitable for an application's receipt key. Elixir supplies an equivalent on the event context: `delivery_id`, built from the reactor id, event store, namespace, event sequence id, event source id, and sequence number, and identical on every redelivery. Kotlin, Java, and TypeScript have no equivalent client-provided delivery identity.
+.NET supplies a `ReactorDelivery` handler parameter with a stable `Id` (of type `DeliveryId`) suitable for an application's receipt key. TypeScript supplies `ReactorDelivery` as the fourth handler argument; its `id` is stable across retries and replay and can serve as an application's receipt key. Elixir supplies an equivalent on the event context: `delivery_id`, built from the reactor id, event store, namespace, event sequence id, event source id, and sequence number, and identical on every redelivery. Kotlin and Java have no equivalent client-provided delivery identity.
 
-In those three clients, define an idempotency key that distinguishes the event store, namespace, event sequence, reactor, and event position; do not use a sequence number alone across stores or sequences. A key identifies the delivery—it does not make the external effect atomic with recording a receipt.
+In Kotlin and Java, define an idempotency key that distinguishes the event store, namespace, event sequence, reactor, and event position; do not use a sequence number alone across stores or sequences. A key identifies the delivery—it does not make the external effect atomic with recording a receipt.
 
-Sources: [.NET delivery identity](https://github.com/Cratis/Chronicle/blob/main/Source/Clients/DotNET/Reactors/ReactorDelivery.cs), [JVM event context](https://github.com/Cratis/Chronicle.Kotlin/blob/main/Source/src/main/kotlin/io/cratis/chronicle/events/EventContext.kt), [TypeScript event context](https://github.com/Cratis/Chronicle.TypeScript/blob/main/Source/events/EventContext.ts), and the [Elixir event context](https://github.com/Cratis/Chronicle.Elixir/blob/main/Source/chronicle/lib/chronicle/events/event_context.ex).
+Sources: [.NET delivery identity](https://github.com/Cratis/Chronicle/blob/main/Source/Clients/DotNET/Reactors/ReactorDelivery.cs), [JVM event context](https://github.com/Cratis/Chronicle.Kotlin/blob/main/Source/src/main/kotlin/io/cratis/chronicle/events/EventContext.kt), [TypeScript delivery identity](https://github.com/Cratis/Chronicle.TypeScript/blob/main/Source/reactors/ReactorDelivery.ts), [TypeScript event context](https://github.com/Cratis/Chronicle.TypeScript/blob/main/Source/events/EventContext.ts), and the [Elixir event context](https://github.com/Cratis/Chronicle.Elixir/blob/main/Source/chronicle/lib/chronicle/events/event_context.ex).
 
 ## Event seeding
 
@@ -106,8 +106,8 @@ Sources: [.NET delivery identity](https://github.com/Cratis/Chronicle/blob/main/
 | --- | --- | --- |
 | .NET | `For`/`ForEventSource` entries are stored globally per event store and applied once to every existing namespace and to each namespace created later. Each client declares discovered globals authoritatively per program identifier, once per event store name per connection lifetime, including empty sets. Explicitly queued globals remain append-only. `ForNamespace(...)` targets only the named namespace. The kernel tracks entry occurrences by source, event type, content, tags, and routing. | Activation and callback failures are logged. If any seeder fails, no discovered global declaration is sent, preserving the previous declaration. Namespace-scoped and manually queued entries still register; the next registration retries discovery. |
 | TypeScript | `for`/`forEventSource` entries use the kernel's append-only global seeding path and entry tracking. Authoritative declarations are tracked in [#4871](https://github.com/Cratis/Chronicle/issues/4871). | Logged as a warning and discovery continues; entries added before the failure are not removed. |
-| Kotlin and Java | Entries target the selected namespace, defaulting to the client's namespace. Uses kernel entry tracking, but does not send seed tags. | A callback exception propagates. |
-| Elixir | Entries without an explicit `for_namespace` target the client's namespace; global entries are applied by the kernel to every namespace it knows about. Entries go to the kernel seeding service, with event type tags, and use its entry tracking, so a new entry added to an already seeded source is applied. There is no authoritative per-program declaration. | A seeder that raises is logged and contributes none of its entries; other seeders still run. A rejected request is retried every five seconds. |
+| Kotlin and Java | Entries without `forNamespace(...)` are global to the event store and apply to every namespace, including namespaces created later. `forNamespace(...)` targets only the named namespace. Uses kernel entry tracking, but does not send seed tags. | A callback exception propagates. |
+| Elixir | Entries without an explicit `for_namespace` are global to the event store and apply to every namespace, including namespaces created later. `for_namespace` targets only the named namespace. Entries go to the kernel seeding service, with event type tags, and use its entry tracking, so a new entry added to an already seeded source is applied. There is no authoritative per-program declaration. | A seeder that raises is logged and contributes none of its entries; other seeders still run. A rejected request is retried every five seconds. |
 
 A seed callback completing is not the same as successful registration; check the owning client's registration outcome separately.
 

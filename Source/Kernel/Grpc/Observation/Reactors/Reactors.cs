@@ -12,6 +12,7 @@ using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Contracts.Observation.Reactors;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
+using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Observation.Reactors.Clients;
 using Cratis.Chronicle.Services.Events;
@@ -41,6 +42,7 @@ namespace Cratis.Chronicle.Services.Observation.Reactors;
 /// <param name="connectionOwnership"><see cref="IConnectionOwnership"/> telling which caller opened each connection.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 /// <param name="registrationGate">The silo-wide gate for observer registrations.</param>
+/// <param name="namespaceCasing">The namespace casing resolver.</param>
 internal sealed class Reactors(
     IGrainFactory grainFactory,
     IReactorMediator reactorMediator,
@@ -50,7 +52,8 @@ internal sealed class Reactors(
     IOptions<ChronicleOptions> options,
     IConnectionOwnership connectionOwnership,
     ILogger<Reactors> logger,
-    IObserverRegistrationGate registrationGate) : IReactors
+    IObserverRegistrationGate registrationGate,
+    INamespaceCasing namespaceCasing) : IReactors
 {
     /// <inheritdoc/>
     public IObservable<EventsToObserve> Observe(IObservable<ReactorMessage> messages, CallContext context = default)
@@ -109,6 +112,7 @@ internal sealed class Reactors(
         var namespaceName = EventStoreNamespaceName.NotSet;
         IObserver<EventsToObserve>? observableObserver = null;
         (ReactorEventsObserver? deliver, ReactorReplayObserver? replay) = (null, null);
+        ReactorPageObserver? deliverPage = null;
         var observable = Observable.Create<EventsToObserve>(async (observer, cancellationToken) =>
         {
             observableObserver = observer;
@@ -117,6 +121,7 @@ internal sealed class Reactors(
             try
             {
                 var registration = await registrationTcs.Task.WaitAsync(cancellation.Token);
+                registration.Namespace = (await namespaceCasing.Canonicalize(registration.EventStore, registration.Namespace)).Value;
                 connectionId = registration.ConnectionId;
                 observerId = registration.Reactor.ReactorId;
                 eventStoreName = registration.EventStore;
@@ -160,6 +165,28 @@ internal sealed class Reactors(
 
                     observer.OnNext(message);
                 };
+                if (deliversPages)
+                {
+                    deliverPage = (batches, completions, deliverWithin, origin) =>
+                    {
+                        var deliveryId = pendingDeliveries.AddPage(completions.ToDictionary(_ => (Cratis.Chronicle.Concepts.Events.EventSourceId)_.Key, _ => _.Value));
+                        observer.OnNext(new EventsToObserve
+                        {
+                            DeliveryId = deliveryId,
+                            DeliverWithinMilliseconds = DeliveryDeadlines.ToMilliseconds(deliverWithin),
+                            Origin = origin.ToContract(),
+                            Partitions =
+                            [
+                                .. batches.Select(batch => new PartitionEvents
+                                {
+                                    Partition = batch.Partition.Value.ToString()!,
+                                    Events = batch.Events.Select(_ => _.ToContract(jsonSerializerOptions)).ToArray()
+                                })
+                            ]
+                        });
+                    };
+                }
+
                 replay = (replayState, partition) => observer.OnNext(new EventsToObserve { Partition = partition, ReplayState = (Contracts.Observation.ReplayState)replayState });
 
                 reactorMediator.Subscribe(
@@ -169,6 +196,16 @@ internal sealed class Reactors(
                     registration.Namespace,
                     deliver);
 
+                if (deliverPage is not null)
+                {
+                    reactorMediator.SubscribePages(
+                        registration.Reactor.ReactorId,
+                        registration.ConnectionId,
+                        registration.EventStore,
+                        registration.Namespace,
+                        deliverPage);
+                }
+
                 reactorMediator.SubscribeReplayNotifications(
                     registration.Reactor.ReactorId,
                     registration.ConnectionId,
@@ -176,7 +213,7 @@ internal sealed class Reactors(
                     registration.Namespace,
                     replay);
 
-                var definition = registration.Reactor.ToChronicle();
+                var definition = registration.Reactor.ToChronicle() with { PageDelivery = registration.PageDelivery.ToChronicle() };
                 using (await registrationGate.Enter(cancellation.Token))
                 {
                     // The parent is the long-lived Observe request, which the server deliberately does not trace.

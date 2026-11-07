@@ -20,7 +20,7 @@ public class and_the_previous_work_entered_a_delivery : Specification
 
         await _scheduler.Schedule("partition", () =>
         {
-            var delivery = ObserverDelivery.Enter(provider, new("store", "namespace-x", new("observer"), ObserverDeliveryKind.Reactor, typeof(object)));
+            var delivery = ObserverDeliveryScope.Enter(provider, new("store", "namespace-x", new("observer"), ObserverDeliveryKind.Reactor, typeof(object)));
             delivery.Dispose();
             return Task.CompletedTask;
         }).WaitAsync(TimeSpan.FromSeconds(10));

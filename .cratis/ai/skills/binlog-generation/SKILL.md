@@ -1,6 +1,6 @@
 ---
 name: binlog-generation
-description: 'Generates MSBuild binary logs (binlogs) by adding /bl:{} to dotnet build, test, pack, publish, or restore commands, capturing a full build trace for later investigation. Use when a build error or build-performance problem needs a binlog and none exists. The {} placeholder needs a recent MSBuild; PowerShell must quote the switch as ''-bl:{}''. Not for analyzing an existing binlog or measuring build performance (use the msbuild skill) or for non-MSBuild build systems such as npm, Maven, or CMake.'
+description: Use when an MSBuild failure or performance investigation needs a binary log and none exists. Not for analyzing existing logs, timing builds or non-MSBuild systems; use msbuild for analysis.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/binlog-generation/SKILL.md -->
@@ -17,7 +17,7 @@ Cratis rules in `.cratis/ai/rules/` (including `csharp.md`, `specs.csharp.md`, a
 
 You MUST add the `/bl:{}` flag to:
 - `dotnet build`
-- `dotnet test`
+- `dotnet test` when it is the selected VSTest runner; built spec executables do not produce MSBuild binlogs
 - `dotnet pack`
 - `dotnet publish`
 - `dotnet restore`

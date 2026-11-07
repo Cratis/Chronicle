@@ -68,7 +68,7 @@ internal sealed class SelfReducerReplayHooks
             return;
         }
 
-        using var delivery = ObserverDelivery.Enter(serviceProvider, context);
+        using var delivery = ObserverDeliveryScope.Enter(serviceProvider, context);
         await using var scope = serviceProvider.CreateAsyncScope();
         var provider = scope.ServiceProvider;
         var availability = provider.GetService<IServiceProviderIsService>();

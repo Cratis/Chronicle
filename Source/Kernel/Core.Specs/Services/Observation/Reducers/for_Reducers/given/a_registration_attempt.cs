@@ -39,7 +39,7 @@ public class a_registration_attempt : Specification
     {
         using var messages = new Subject<ReducerMessage>();
         var reducers = new Reducers(
-            _grainFactory, _mediator, Substitute.For<IExpandoObjectConverter>(), new JsonSerializerOptions(), new ActivitySource<Reducers>(), Options.Create(new ChronicleOptions()), _ownership, NullLogger<Reducers>.Instance, Substitute.For<IObserverRegistrationGate>());
+            _grainFactory, _mediator, Substitute.For<IExpandoObjectConverter>(), new JsonSerializerOptions(), new ActivitySource<Reducers>(), Options.Create(new ChronicleOptions()), _ownership, NullLogger<Reducers>.Instance, Substitute.For<IObserverRegistrationGate>(), NamespaceCasingContext.Create());
         var observed = reducers.Observe(messages, context).ToTask();
         messages.OnNext(new ReducerMessage(new Contracts.Primitives.OneOf<RegisterReducer, ReducerResult>(new RegisterReducer
         {

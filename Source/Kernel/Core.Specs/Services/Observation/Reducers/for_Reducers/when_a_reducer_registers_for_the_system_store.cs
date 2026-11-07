@@ -37,7 +37,8 @@ public class when_a_reducer_registers_for_the_system_store : Specification
             Options.Create(new ChronicleOptions()),
             AllowingConnectionOwnership.Create(),
             NullLogger<Reducers>.Instance,
-            Substitute.For<IObserverRegistrationGate>());
+            Substitute.For<IObserverRegistrationGate>(),
+            NamespaceCasingContext.Create());
         using var messages = new Subject<ReducerMessage>();
         var observed = reducers.Observe(messages).ToTask();
 

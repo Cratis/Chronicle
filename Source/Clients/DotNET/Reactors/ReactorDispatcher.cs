@@ -131,10 +131,10 @@ internal sealed class ReactorDispatcher(
             return;
         }
 
-        ObserverDelivery delivery;
+        ObserverDeliveryScope delivery;
         try
         {
-            delivery = ObserverDelivery.Enter(serviceProvider, DeliveryContextFor(handler, @namespace));
+            delivery = ObserverDeliveryScope.Enter(serviceProvider, DeliveryContextFor(handler, @namespace));
         }
         catch (Exception enterException)
         {
@@ -445,10 +445,10 @@ internal sealed class ReactorDispatcher(
 
     async Task HandleReplayNotification(ReactorHandler handler, EventStoreNamespaceName @namespace, ReplayState replayState, string partition)
     {
-        ObserverDelivery delivery;
+        ObserverDeliveryScope delivery;
         try
         {
-            delivery = ObserverDelivery.Enter(serviceProvider, DeliveryContextFor(handler, @namespace));
+            delivery = ObserverDeliveryScope.Enter(serviceProvider, DeliveryContextFor(handler, @namespace));
         }
         catch (Exception enterException)
         {

@@ -1,6 +1,6 @@
 ---
 name: cratis-arc-observable-query-http
-description: Inspect a Cratis Arc observable query from a terminal with curl or another plain HTTP client — snapshot GET, waiting for the first result, Server-Sent Events streaming, and long polling, plus the exact query-string keys, status codes, and payload shape. Use when debugging or exploring an observable query without writing frontend code. Do not use to implement the query itself.
+description: Use when inspecting or debugging an existing Arc observable query with curl or another plain HTTP client. Not for implementing the query or its frontend consumer.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-arc-observable-query-http/SKILL.md -->

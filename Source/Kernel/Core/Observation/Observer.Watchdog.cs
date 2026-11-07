@@ -203,15 +203,16 @@ public partial class Observer
             return;
         }
 
-        // Clients are tracked on the silo terminating their connection - the silo their target
-        // names. If that silo is gone, the placement director gives a fresh, empty activation that
-        // correctly reports the client as disconnected.
+        // Clients are tracked on the silo terminating their connection, which is not necessarily the silo their
+        // target names, because the streams of a client's observers reach whichever silo the load balancer picks.
+        // The target's silo is looked at first and the others after it (#5665). If the silo that terminated the
+        // connection is gone, the placement director gives a fresh, empty activation that correctly reports the
+        // client as disconnected.
         if (_subscription.Targets.Count > 0)
         {
             foreach (var target in _subscription.Targets.ToArray())
             {
-                var connectedClientsForTarget = GrainFactory.GetConnectedClients(target.SiloAddress);
-                if (!await connectedClientsForTarget.IsConnected(target.ConnectedClient!.ConnectionId))
+                if (await ConnectedClientsLocator.Find(GrainFactory, target.SiloAddress, target.ConnectedClient!.ConnectionId) is null)
                 {
                     logger.WatchdogClientInstanceDisconnected(target.ConnectedClient.ConnectionId);
                     RemoveSubscriberTarget(target);
@@ -231,8 +232,7 @@ public partial class Observer
             return;
         }
 
-        var connectedClients = GrainFactory.GetConnectedClients(_subscription.SiloAddress);
-        if (!await connectedClients.IsConnected(connectedClient.ConnectionId))
+        if (await ConnectedClientsLocator.Find(GrainFactory, _subscription.SiloAddress, connectedClient.ConnectionId) is null)
         {
             logger.WatchdogClientDisconnected(connectedClient.ConnectionId);
             await PromoteSupersededRegistrationOrUnsubscribe();
@@ -268,9 +268,21 @@ public partial class Observer
                 req.ObserverKey == _observerKey &&
                 job.IsLive(now));
 
-            if (!hasRunningReplayJob)
+            if (hasRunningReplayJob)
             {
+                _replayRestarts.Reset();
+            }
+            else if (_replayRestarts.IsDue(StalledJobsTimeProvider.GetUtcNow()))
+            {
+                // Each restart starts a new replay job. A replay that keeps failing must not be restarted on every tick,
+                // so the next restart is held back by a growing delay (#5667).
                 logger.WatchdogReplayJobMissing();
+                var attempt = _replayRestarts.Record(StalledJobsTimeProvider.GetUtcNow());
+                if (attempt > 1)
+                {
+                    logger.WatchdogRestartingReplayWithBackoff(attempt, _replayRestarts.NextDelay);
+                }
+
                 await TransitionTo<Routing>();
                 return true;
             }

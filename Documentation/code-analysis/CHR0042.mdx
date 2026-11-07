@@ -1,8 +1,7 @@
 ---
+title: "CHR0042: A joined property is also written locally"
 description: Chronicle analyzer rule CHR0042 reports read model properties written both by a local mapping and a join, where the joined value always wins.
 ---
-# CHR0042: A joined property is also written locally
-
 ## Rule Description
 
 A read model property is written by both a local mapping and a join. The joined value always wins — a local write cannot reset the property, in whichever order the events arrive.

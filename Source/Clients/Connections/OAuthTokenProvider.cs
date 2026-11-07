@@ -258,6 +258,8 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
         }
     };
 
+    static bool IsTransportFailure(Exception exception) => exception is HttpRequestException { StatusCode: null };
+
     static bool IsTransientStatus(HttpStatusCode statusCode) =>
         (int)statusCode >= 500 || statusCode is HttpStatusCode.RequestTimeout or HttpStatusCode.TooManyRequests;
 
@@ -311,6 +313,12 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
             }
 
             LogTokenFetchFailure(loggedEndpoint, ex);
+            if (IsTransportFailure(ex))
+            {
+                // The original transport failure can name the remote host; surface the category only.
+                throw new HttpRequestException(TokenDiagnostics.Describe(TokenDiagnostics.Categorize(ex)));
+            }
+
             throw;
         }
     }

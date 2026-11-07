@@ -1,6 +1,6 @@
 ---
 name: cratis-arc-identity-and-tenancy-kotlin
-description: Wire Kotlin or Java Arc authentication, application identity details and tenant resolution — AuthenticationHandler, IdentityDetailsProvider, tenancy.required, resolver precedence, ambient coroutine tenancy and the opt-in trusted platform-header bridge. Use for JVM Arc identity endpoints, tenant isolation or security ingress setup. Do not use for C# Arc identity, command input validation, or standalone Chronicle namespace resolution.
+description: Use when configuring Kotlin or Java Arc identity endpoints, tenant resolution or trusted ingress. Not for C# Arc identity, command input validation or standalone Chronicle namespaces.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-arc-identity-and-tenancy-kotlin/SKILL.md -->

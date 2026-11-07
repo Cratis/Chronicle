@@ -60,6 +60,7 @@ internal static class InProcessCommandPipeline
         services.AddKernelSideCommandExtensionPoints();
         services.AddSingleton(grainFactory);
         services.AddSingleton(storage);
+        services.AddSingleton<KernelCore::Cratis.Chronicle.Namespaces.INamespaceCasing>(new InProcessNamespaceCasing(storage));
         services.AddSingleton(jsonSerializerOptions);
         services.AddSingleton<IExpandoObjectConverter>(new ExpandoObjectConverter(new TypeFormats()));
 

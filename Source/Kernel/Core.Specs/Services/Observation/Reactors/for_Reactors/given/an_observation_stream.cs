@@ -48,7 +48,8 @@ public class an_observation_stream : Specification
             Options.Create(new ChronicleOptions()),
             AllowingConnectionOwnership.Create(),
             NullLogger<Reactors>.Instance,
-            Substitute.For<IObserverRegistrationGate>());
+            Substitute.For<IObserverRegistrationGate>(),
+            NamespaceCasingContext.Create());
         _subscription = reactors.Observe(_messages).Subscribe(_deliveries.Add);
         _messages.OnNext(new(new(new RegisterReactor
         {

@@ -44,7 +44,7 @@ internal sealed class SingleFlightRegistration(Func<Task> action, RegistrationBa
         await Task.Yield();
 
         // A background retry outlives the delivery that may have started it and must not keep that delivery's context.
-        using var detached = Observation.ObserverDelivery.EnterCleared();
+        using var detached = Observation.ObserverDeliveryScope.EnterCleared();
 
         try
         {

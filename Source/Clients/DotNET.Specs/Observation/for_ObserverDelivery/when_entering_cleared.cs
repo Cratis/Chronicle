@@ -10,9 +10,9 @@ public class when_entering_cleared : given.a_delivery_context
 
     void Because()
     {
-        using (ObserverDelivery.Enter(ProviderOf(), _context))
+        using (ObserverDeliveryScope.Enter(ProviderOf(), _context))
         {
-            using (ObserverDelivery.EnterCleared())
+            using (ObserverDeliveryScope.EnterCleared())
             {
                 _cleared = ObserverDeliveryContext.Current;
             }

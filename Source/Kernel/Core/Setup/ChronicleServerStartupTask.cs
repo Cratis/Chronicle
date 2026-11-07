@@ -92,7 +92,23 @@ internal sealed class ChronicleServerStartupTask(
     /// </remarks>
     const int MaxAttempts = 5;
 
+    /// <summary>
+    /// How many rounds of <see cref="MaxAttempts"/> a required step is tried before the host is failed.
+    /// </summary>
+    /// <remarks>
+    /// A silo restarted into a backlog - thousands of overdue reminders activating grains at once - answers its own
+    /// calls late. Stopping the process then only restarts the same backlog, so a required step waits for the silo to catch up,
+    /// unready, for a long while before it is believed to be broken (#5676, #4068).
+    /// </remarks>
+    const int MaxRounds = 10;
+
+    /// <summary>
+    /// How many observers are activated at once while startup rehydrates them.
+    /// </summary>
+    const int MaxConcurrentObserverActivations = 32;
+
     static readonly TimeSpan _initialRetryDelay = TimeSpan.FromSeconds(2);
+    static readonly TimeSpan _busyRetryDelay = TimeSpan.FromMinutes(1);
 
     readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
 
@@ -123,6 +139,8 @@ internal sealed class ChronicleServerStartupTask(
 
     async Task Execute(CancellationToken cancellationToken)
     {
+        RefuseIncompatibleCluster();
+        await RefuseMisplacedSystemData();
         await (generationFloorAdmission ?? new GenerationFloorAdmission(storage)).Admit(cancellationToken);
 
         Task Step(string step, Func<Task> action) => RunStep(step, action, cancellationToken);
@@ -197,7 +215,7 @@ internal sealed class ChronicleServerStartupTask(
                 // There will be no new NamespaceAdded broadcast for an already registered namespace.
                 try
                 {
-                    await Step("SubscribePatternCapture", () => patternCapture.Subscribe(eventStore, namespaceName));
+                    await RunStep("SubscribePatternCapture", () => patternCapture.Subscribe(eventStore, namespaceName), cancellationToken, maxRounds: 1);
                 }
                 catch (Exception exception) when (!cancellationToken.IsCancellationRequested)
                 {
@@ -229,6 +247,53 @@ internal sealed class ChronicleServerStartupTask(
 #if DEVELOPMENT
         await Step(nameof(IAuthenticationService.EnsureDefaultClientCredentials), authenticationService.EnsureDefaultClientCredentials);
 #endif
+    }
+
+    /// <summary>
+    /// Stops the silo when the cluster holds a release it can never exchange grain calls with.
+    /// </summary>
+    /// <remarks>
+    /// Without this the silo goes on to call grains on the other release, and the failure shows up as a crash loop and
+    /// thousands of grain errors on both sides instead of a reason (#5666).
+    /// </remarks>
+    /// <exception cref="IncompatibleClusterRelease">The cluster holds a release across a boundary.</exception>
+    void RefuseIncompatibleCluster()
+    {
+        var local = Cratis.Chronicle.Sys.KernelVersion.Current;
+        if (!Cratis.Chronicle.Sys.KernelVersion.IsKnown(local))
+        {
+            return;
+        }
+
+        var incompatible = clusterReleases.FindIncompatible(local);
+        if (incompatible.Count == 0)
+        {
+            return;
+        }
+
+        logger.StartupRefusedBecauseOfIncompatibleRelease(local.ToString(), clusterReleases.Summarize().ToString());
+        throw new IncompatibleClusterRelease(local, incompatible);
+    }
+
+    /// <summary>
+    /// Refuses to start when the System event store's data sits under the name this kernel is not configured to use.
+    /// </summary>
+    /// <remarks>
+    /// Starting anyway would create a fresh administrator roster in an empty store and fail with a message that
+    /// does not say the databases were renamed (#5690).
+    /// </remarks>
+    /// <returns>Awaitable task.</returns>
+    /// <exception cref="SystemEventStoreDataMisplaced">The data is under the other name.</exception>
+    async Task RefuseMisplacedSystemData()
+    {
+        var misplaced = await storage.FindMisplacedSystemEventStoreData();
+        if (string.IsNullOrWhiteSpace(misplaced))
+        {
+            return;
+        }
+
+        logger.StartupRefusedBecauseSystemDataIsMisplaced(misplaced);
+        throw new SystemEventStoreDataMisplaced(misplaced);
     }
 
     async Task RegisterKernelProjections(EventStoreName eventStore, CancellationToken cancellationToken)
@@ -265,6 +330,7 @@ internal sealed class ChronicleServerStartupTask(
     /// <param name="step">The name of the step, for the operator reading the log.</param>
     /// <param name="action">The work to perform.</param>
     /// <param name="cancellationToken">Token for cancelling startup and retry backoff.</param>
+    /// <param name="maxRounds">How many rounds of attempts are made before the host is failed.</param>
     /// <returns>Awaitable task.</returns>
     /// <remarks>
     /// Only the failures <see cref="SiblingSiloInstability.IsTransient"/> or the registered
@@ -272,12 +338,13 @@ internal sealed class ChronicleServerStartupTask(
     /// still failing once the budget is spent - propagates, so a genuine defect still fails the
     /// host on startup rather than being started around.
     /// </remarks>
-    async Task RunStep(string step, Func<Task> action, CancellationToken cancellationToken) =>
-        await TryRunStep(step, action, cancellationToken, failOnExhaustion: true);
+    async Task RunStep(string step, Func<Task> action, CancellationToken cancellationToken, int maxRounds = MaxRounds) =>
+        await TryRunStep(step, action, cancellationToken, failOnExhaustion: true, maxRounds);
 
-    async Task<bool> TryRunStep(string step, Func<Task> action, CancellationToken cancellationToken, bool failOnExhaustion = false)
+    async Task<bool> TryRunStep(string step, Func<Task> action, CancellationToken cancellationToken, bool failOnExhaustion = false, int maxRounds = MaxRounds)
     {
         var delay = _initialRetryDelay;
+        var round = 1;
         for (var attempt = 1; ; attempt++)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -295,7 +362,17 @@ internal sealed class ChronicleServerStartupTask(
             catch (Exception exception) when (IsTransient(exception))
             {
                 if (!failOnExhaustion) return false;
-                logger.StartupStepExhaustedRetries(exception, step, MaxAttempts);
+                if (round < maxRounds)
+                {
+                    logger.StartupStepStillBusy(exception, step, MaxAttempts, _busyRetryDelay, round, maxRounds);
+                    await Task.Delay(_busyRetryDelay, _timeProvider, cancellationToken);
+                    round++;
+                    attempt = 0;
+                    delay = _initialRetryDelay;
+                    continue;
+                }
+
+                logger.StartupStepExhaustedRetries(exception, step, MaxAttempts, maxRounds);
                 throw;
             }
             catch (Exception exception) when (IncompatibleSiloRelease.IsLikely(exception))
@@ -397,6 +474,11 @@ internal sealed class ChronicleServerStartupTask(
             .Select(_ => new ObserverKey(_.Identifier, eventStore, namespaceName, _.EventSequenceId));
         var observerKeys = reducerObserverKeys.Concat(reactorObserverKeys).Distinct().ToArray();
 
-        await Task.WhenAll(observerKeys.Select(_ => grainFactory.GetGrain<IObserver>(_).Ensure()));
+        // A store can hold thousands of observers, and activating them all at once starves the silo's own calls (#4068, #5676).
+        // The failure of any one still fails the step, as it did when they were awaited together.
+        await Parallel.ForEachAsync(
+            observerKeys,
+            new ParallelOptions { MaxDegreeOfParallelism = MaxConcurrentObserverActivations },
+            async (key, _) => await grainFactory.GetGrain<IObserver>(key).Ensure());
     }
 }

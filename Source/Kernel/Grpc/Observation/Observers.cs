@@ -6,6 +6,7 @@ using Cratis.Chronicle.Clients;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Contracts.Observation;
+using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Services.Events;
 using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Options;
@@ -25,12 +26,14 @@ namespace Cratis.Chronicle.Services.Observation;
 /// <param name="observerRemover">The <see cref="IObserverRemover"/> for removing observers.</param>
 /// <param name="visibility">The <see cref="IConnectedClientsVisibility"/> limiting which connected clients a caller sees.</param>
 /// <param name="options">The <see cref="IOptions{ChronicleOptions}"/> for configuration.</param>
+/// <param name="namespaceCasing">The namespace casing resolver.</param>
 internal sealed class Observers(
     IGrainFactory grainFactory,
     IStorage storage,
     IObserverRemover observerRemover,
     IConnectedClientsVisibility visibility,
-    IOptions<ChronicleOptions> options) : IObservers
+    IOptions<ChronicleOptions> options,
+    INamespaceCasing namespaceCasing) : IObservers
 {
     const int ObserverCompletionPollingDelayMs = 50;
     const ulong MaximumObserverCompletionRange = 10_000;
@@ -44,7 +47,7 @@ internal sealed class Observers(
     public async Task<RetryPartitionResponse> RetryPartition(RetryPartition command, CallContext context = default)
     {
         await SystemStoreGuard.Ensure(context, new(command.EventStore, command.Namespace, command.ObserverId, command.EventSequenceId));
-        var outcome = await (await grainFactory.GetObserver(command, storage)).TryStartRecoverJobForFailedPartition(command.Partition);
+        var outcome = await (await grainFactory.GetObserver(command, storage, namespaceCasing)).TryStartRecoverJobForFailedPartition(command.Partition);
         return new RetryPartitionResponse { Outcome = (PartitionRecoveryOutcome)(int)outcome };
     }
 
@@ -52,7 +55,7 @@ internal sealed class Observers(
     public async Task<ClearPartitionQuarantineResponse> ClearPartitionQuarantine(ClearPartitionQuarantine command, CallContext context = default)
     {
         await SystemStoreGuard.Ensure(context, new(command.EventStore, command.Namespace, command.ObserverId, command.EventSequenceId));
-        var result = await (await grainFactory.GetObserver(command, storage)).ClearPartitionQuarantine(command.Partition, command.RetryImmediately);
+        var result = await (await grainFactory.GetObserver(command, storage, namespaceCasing)).ClearPartitionQuarantine(command.Partition, command.RetryImmediately);
         return new ClearPartitionQuarantineResponse
         {
             Outcome = (ClearPartitionQuarantineOutcome)(int)result.Outcome,
@@ -64,7 +67,7 @@ internal sealed class Observers(
     public async Task<FastForwardResponse> FastForward(FastForward command, CallContext context = default)
     {
         await SystemStoreGuard.Ensure(context, new(command.EventStore, command.Namespace, command.ObserverId, command.EventSequenceId));
-        var result = await (await grainFactory.GetObserver(command, storage)).FastForward();
+        var result = await (await grainFactory.GetObserver(command, storage, namespaceCasing)).FastForward();
         return new FastForwardResponse
         {
             Outcome = (FastForwardOutcome)(int)result.Outcome,
@@ -79,7 +82,7 @@ internal sealed class Observers(
         await SystemStoreGuard.Ensure(context, new(command.EventStore, command.Namespace, command.ObserverId, command.EventSequenceId));
 
         // Clients read an empty job id as JobId.NotSet (not replayable, disconnected or quarantined), so keep reporting it rather than throwing.
-        var jobId = await (await grainFactory.GetObserver(command, storage)).Replay();
+        var jobId = await (await grainFactory.GetObserver(command, storage, namespaceCasing)).Replay();
         return new ReplayResponse { JobId = jobId.Value.ToString() };
     }
 
@@ -87,13 +90,14 @@ internal sealed class Observers(
     public async Task ReplayPartition(ReplayPartition command, CallContext context = default)
     {
         await SystemStoreGuard.Ensure(context, new(command.EventStore, command.Namespace, command.ObserverId, command.EventSequenceId));
-        await (await grainFactory.GetObserver(command, storage)).ReplayPartition(command.Partition);
+        await (await grainFactory.GetObserver(command, storage, namespaceCasing)).ReplayPartition(command.Partition);
     }
 
     /// <inheritdoc/>
     public async Task<WaitForObserverCompletionResponse> WaitForCompletion(WaitForObserverCompletionRequest request, CallContext context = default)
     {
         await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.EventSequenceId));
+        request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
         var eventTypeTails = request.EventTypeTails
             .GroupBy(_ => _.EventType.Id, StringComparer.Ordinal)
             .ToDictionary(_ => _.Key, _ => _.Max(tail => tail.SequenceNumber), StringComparer.Ordinal);
@@ -240,21 +244,21 @@ internal sealed class Observers(
     public async Task ClearObserverQuarantine(ClearObserverQuarantine command, CallContext context = default)
     {
         await SystemStoreGuard.Ensure(context, new(command.EventStore, command.Namespace, command.ObserverId, command.EventSequenceId));
-        await (await grainFactory.GetObserver(command, storage)).ClearObserverQuarantine();
+        await (await grainFactory.GetObserver(command, storage, namespaceCasing)).ClearObserverQuarantine();
     }
 
     /// <inheritdoc/>
     public async Task ClearFailedPartitions(ClearFailedPartitions command, CallContext context = default)
     {
         await SystemStoreGuard.Ensure(context, new(command.EventStore, command.Namespace, command.ObserverId, command.EventSequenceId));
-        await (await grainFactory.GetObserver(command, storage)).ClearFailedPartitions();
+        await (await grainFactory.GetObserver(command, storage, namespaceCasing)).ClearFailedPartitions();
     }
 
     /// <inheritdoc/>
     public async Task<RetryFailedPartitionsResponse> RetryFailedPartitions(RetryFailedPartitions command, CallContext context = default)
     {
         await SystemStoreGuard.Ensure(context, new(command.EventStore, command.Namespace, command.ObserverId, command.EventSequenceId));
-        var observer = await grainFactory.GetObserver(command, storage);
+        var observer = await grainFactory.GetObserver(command, storage, namespaceCasing);
         var failedPartitions = (await observer.GetFailedPartitionKeys()).Count();
         await observer.TryRecoverAllFailedPartitions();
         return new RetryFailedPartitionsResponse { FailedPartitions = failedPartitions };
@@ -285,7 +289,7 @@ internal sealed class Observers(
     public async Task<ObserverInformation> GetObserverInformation(GetObserverInformationRequest request, CallContext context = default)
     {
         await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.ObserverId, request.EventSequenceId));
-        var observer = await grainFactory.GetObserver(request, storage);
+        var observer = await grainFactory.GetObserver(request, storage, namespaceCasing);
         var definition = await observer.GetDefinition();
         var state = await observer.GetState();
         var runningStateChangedAt = await storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).Observers.GetRunningStateChangedAt(request.ObserverId);
@@ -313,7 +317,7 @@ internal sealed class Observers(
     {
         await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.ObserverId, request.EventSequenceId));
         var caller = ConnectionCallers.From(context, options.Value);
-        var subscription = await (await grainFactory.GetObserver(request, storage)).GetSubscription();
+        var subscription = await (await grainFactory.GetObserver(request, storage, namespaceCasing)).GetSubscription();
         var clients = new List<Contracts.Clients.ConnectedClient>();
         foreach (var target in subscription.Targets.Where(_ => _.ConnectedClient is not null))
         {

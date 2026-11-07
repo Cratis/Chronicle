@@ -96,6 +96,13 @@ internal sealed class ConnectionService(
         {
             var connectedClients = grainFactory.GetConnectedClients(localSiloDetails.SiloAddress);
             var registryKnowsClient = await connectedClients.OnClientPing(keepAlive.ConnectionId);
+            if (!registryKnowsClient && !openConnections.IsOpen(keepAlive.ConnectionId))
+            {
+                // The connection was opened on another silo, and the load balancer sent this keep-alive here. Its own
+                // silo has to see it, or the client is dropped as stale while it is alive (#5665).
+                await PingOwningSilo(keepAlive.ConnectionId);
+                return;
+            }
 
             if (openConnections.Responded(keepAlive.ConnectionId, registryKnowsClient, respondedAt, _lapse, out var request))
             {
@@ -210,6 +217,15 @@ internal sealed class ConnectionService(
             request.ProcessPath,
             request.MachineName,
             request.ClientType);
+
+    async Task PingOwningSilo(Cratis.Chronicle.Concepts.Clients.ConnectionId connectionId)
+    {
+        var owner = await ConnectedClientsLocator.Find(grainFactory, localSiloDetails.SiloAddress, connectionId);
+        if (owner is not null)
+        {
+            await owner.OnClientPing(connectionId);
+        }
+    }
 
     async Task Produce(
         ReplaySubject<ConnectionKeepAlive> subject,

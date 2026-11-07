@@ -13,8 +13,8 @@ public class when_leaving : given.a_delivery_context
     {
         var provider = ProviderOf();
         var inner = _context with { ObserverId = new("inner") };
-        var outer = ObserverDelivery.Enter(provider, _context);
-        var nested = ObserverDelivery.Enter(provider, inner);
+        var outer = ObserverDeliveryScope.Enter(provider, _context);
+        var nested = ObserverDeliveryScope.Enter(provider, inner);
         _innerCurrent = ObserverDeliveryContext.Current;
         nested.Dispose();
         _afterInner = ObserverDeliveryContext.Current;

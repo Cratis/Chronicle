@@ -7,6 +7,7 @@ using System.Security.Cryptography.X509Certificates;
 using Cratis.Arc.MongoDB;
 using Cratis.Chronicle.Clients;
 using Cratis.Chronicle.Configuration;
+using Cratis.Chronicle.Diagnostics;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry;
 using Cratis.Chronicle.Observation.Webhooks;
 using Cratis.Chronicle.Server;
@@ -36,12 +37,39 @@ AppDomain.CurrentDomain.UnhandledException += (_, args) =>
     {
         LogCrash(log => log.UnhandledException(exception, args.IsTerminating), exception);
     }
+    else
+    {
+        Console.WriteLine(args.ExceptionObject);
+    }
+
+    if (args.IsTerminating)
+    {
+        // Leave an exit code that says what happened, instead of the runtime's abort code (reported as 139).
+        Console.Out.Flush();
+        Environment.Exit(BackgroundFaults.UnhandledExceptionExitCode);
+    }
 };
 
+var unobservedFailures = new RepeatedFailureLog(RepeatedFailureLog.DefaultWindow, 1, TimeProvider.System);
 TaskScheduler.UnobservedTaskException += (_, args) =>
 {
-    LogCrash(log => log.UnobservedTaskException(args.Exception), args.Exception);
     args.SetObserved();
+    var owner = BackgroundFaults.DescribeOwner(args.Exception);
+
+    // One entry per owner in each window: thousands of the same unobserved failure are one fact.
+    if (!unobservedFailures.ShouldWrite(owner, LogLevel.Error, args.Exception))
+    {
+        return;
+    }
+
+    if (BackgroundFaults.IsTransient(args.Exception))
+    {
+        LogCrash(log => log.UnobservedTransientTaskException(args.Exception, owner), args.Exception);
+    }
+    else
+    {
+        LogCrash(log => log.UnobservedTaskException(args.Exception, owner), args.Exception);
+    }
 };
 
 // Force invariant culture for the Kernel
@@ -332,6 +360,8 @@ hostBuilder
        services.AddStorageAuthorizationHealthCheck();
    });
 
+// A repeated failure is written a few times and then counted, see RepeatedFailureLog.
+Cratis.Chronicle.Diagnostics.RepeatedFailureLoggerProvider.ThrottleRepeatedFailures(builder.Services);
 var app = builder.Build();
 _ = app.Services.GetRequiredService<IShutdownDrainBudget>();
 

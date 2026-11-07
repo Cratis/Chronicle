@@ -11,7 +11,7 @@ public class when_a_scope_fails_to_enter : given.a_delivery_context
     {
         var failing = Substitute.For<IObserverDeliveryScope>();
         failing.Enter(Arg.Any<ObserverDeliveryContext>()).Returns(_ => throw new InvalidOperationException("refused"));
-        _exception = Catch.Exception(() => ObserverDelivery.Enter(ProviderOf(RecordingScope("a"), failing, RecordingScope("c")), _context));
+        _exception = Catch.Exception(() => ObserverDeliveryScope.Enter(ProviderOf(RecordingScope("a"), failing, RecordingScope("c")), _context));
     }
 
     [Fact] void should_surface_the_original_exception() => _exception.ShouldBeOfExactType<InvalidOperationException>();

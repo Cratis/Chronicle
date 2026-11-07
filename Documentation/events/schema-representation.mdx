@@ -1,81 +1,77 @@
 ---
-description: Override how a type appears in the JSON schema Chronicle generates for events and read models, including concept defaults and exact decimals.
+title: Cratis Chronicle schema representation for events and read models
+description: Match Cratis Chronicle's generated JSON schema to custom .NET serialization, and understand null values, concept defaults, and decimal storage limits.
 ---
-# Overriding how a type appears in the schema
+<a id="overriding-how-a-type-appears-in-the-schema"></a>
 
-Chronicle generates a JSON schema for every event and read model, and that schema is what the kernel stores
-against the event type and uses to materialize values back out. Most types map on their own — primitives
-directly, and `ConceptAs<T>` types as their underlying primitive.
+Cratis Chronicle uses JSON schemas to describe stored events and read models and to materialize their
+values when reading them. In the .NET client, use `JsonSchemaType` when a custom JSON converter writes
+a different shape from the type's .NET structure. The attribute makes the schema describe that JSON
+representation; it does not change serialization.
 
-A type that serializes to something other than its shape needs to say so, or the generated schema describes
-the CLR structure while the stored JSON holds whatever the converter wrote. Annotate the type with
-`JsonSchemaType` to declare what it is really represented as:
+Primitives map directly. A `ConceptAs<T>` type, which wraps a primitive in a domain-specific type,
+normally maps to its underlying primitive. For another converter-backed type, declare the
+representation explicitly:
 
 <ChronicleClientTabs snippet="events/schema-representation/basic" />
 
-The schema then describes a string, matching what the converter actually writes.
+The example's `PostalCodeJsonConverter` writes a string rather than an object with a `Value`
+property. `[JsonSchemaType(typeof(string))]` makes the schema describe that string too, so the
+kernel can read it back using the right representation.
 
-Two things are preserved through the override:
-
-- **Compliance metadata.** A type marked `[PII]` keeps its compliance metadata after the redirect, so it is
-  still encrypted per subject.
-- **Nullability.** A nullable use of the type is still marked nullable in the schema.
-
-An explicit `JsonSchemaType` always wins over what Chronicle would otherwise infer, including the `ConceptAs<T>`
-handling.
-
-:::note[Client coverage]
-`JsonSchemaType` is currently C#-only.
-:::
+The override preserves the original type's compliance metadata and nullability. A type marked
+`[PII]` for personally identifiable information keeps the metadata used for per-subject encryption,
+and a nullable use remains nullable in the schema. An explicit `JsonSchemaType` takes precedence over inferred mappings, including
+`ConceptAs<T>` handling. This attribute is a .NET client API.
 
 ## Null, absent, and default values
 
-For a nullable property, explicit `null` and an absent property are equivalent: reading either
-back into the event type gives `null`. Chronicle can omit nullable nulls from stored content.
-A non-null value is retained, including a nullable value type holding its type default, such as
-`decimal?` with `0` or `int?` with `0`. Missing non-nullable values materialize as their type defaults
-where the schema permits them; omission does not make a value nullable.
+Chronicle can omit nullable nulls from stored content. For a nullable property, explicit `null`
+and an absent property are equivalent: both read back as `null`. A supplied non-null value is
+retained, even when it is the underlying type's default, such as `decimal?` holding `0` or `int?`
+holding `0`. Missing non-nullable values materialize as their type defaults where the schema
+permits them; leaving a property out does not make it nullable.
 
-Compare appended and stored content through Chronicle's schema-aware `ContentComparison` /
-`VerifyContent` path, not raw JSON equality. That path accounts for schema defaults and the
-stored representation. Property presence in raw JSON is not a separate event fact.
+When verifying stored content, use Chronicle's schema-aware `ContentComparison` / `VerifyContent`
+path rather than raw JSON equality. It accounts for schema defaults and storage representation.
+The presence or absence of a property in raw JSON does not establish a separate event fact.
 
 ## Defaulted concept properties
 
-The .NET schema generator describes a defaulted concept property with its underlying type, format
-and protection metadata, as well as its default. Older generators could emit only `{"default":null}`
-for an optional concept constructor parameter. Values supplied for that property are still preserved
-when the kernel encounters the older untyped schema.
+The .NET schema generator includes a defaulted concept property's underlying type, format, and
+protection metadata alongside its default. Older generators could emit only `{"default":null}`
+for an optional concept constructor parameter. That default-only schema does not discard supplied
+values: the kernel preserves them even though the property has no declared type.
 
-A default-only property may gain its generated representation within an existing event generation,
-without changing its default. This includes type, format, array items, enum members, string patterns
-and lengths, nested object properties, and compliance or security metadata. Registration tolerates
-the corresponding legacy shape in the opposite direction and retains the more precise stored schema,
-including its protection metadata. A changed default or a changed already-typed property still
-requires a new generation.
+A default-only property can gain its generated representation within the same event generation,
+provided its default does not change. The refinement can add type, format, array items, enum members,
+string patterns and lengths, nested object properties, and compliance or security metadata.
+During a rolling upgrade, a legacy client can still submit the default-only shape; registration
+retains the more precise stored schema and its protection metadata. Changing the default or making
+an incompatible change to an already-typed property requires a new generation.
 
-The .NET client sends the precise event schema only when the kernel advertises
-`precise-event-type-schemas` during connection. Against an older kernel it registers the legacy
-shape instead. Event-sequence sink definitions use the same capability gate; ordinary read-model
-schemas always use the precise shape.
+The .NET client sends the precise event schema when the kernel advertises
+`precise-event-type-schemas` during connection. With an older kernel, it registers the legacy
+shape instead. Event-sequence sink definitions make the same capability check; ordinary read-model
+schemas always use the precise shape. Registrations that supply only `Schema`, without a
+`Generations` list, must also be compatible with the stored generation and cannot overwrite an
+incompatible schema.
 
-Registrations that supply only `Schema`, without a `Generations` list, are also checked for
-compatibility with the stored generation. They can no longer overwrite an incompatible schema.
-
-If you implement a custom `IJsonSchemaGenerator`, implement `GenerateLegacyEventType` as well as
-`Generate`. The client calls it for kernels without the capability and for connections that do not
-implement `IKernelCapabilities`, including testing or wrapped connections. Its default implementation
-throws `LegacyEventTypeSchemasNotSupported`; it does not silently reuse the precise schema.
+If you provide a custom `IJsonSchemaGenerator`, implement `GenerateLegacyEventType` as well as
+`Generate`. The client calls the legacy method when the kernel lacks the capability or the
+connection does not implement `IKernelCapabilities`, as can happen with testing or wrapped
+connections. The default implementation throws `LegacyEventTypeSchemasNotSupported` rather than
+reusing the precise schema.
 
 Adding protection metadata affects future appends, not historical plaintext; see
 [Adding PII to an existing event type](../compliance/pii#adding-pii-to-an-existing-event-type).
 
 ## Exact decimal values
 
-Use a decimal-formatted event property for amounts and other values that must retain decimal digits.
-Chronicle carries these values as decimals through event storage, projections and read-model sinks;
-it does not route them through a binary floating-point value. A concept wrapping a decimal has the
-same representation as the decimal itself.
+Use a decimal-formatted event property for amounts and other values that need decimal precision.
+Chronicle carries these values as decimals through event storage, projections, and read-model sinks,
+without converting them to binary floating point. A concept wrapping a decimal uses the same
+representation. The storage provider still determines the range and scale a read-model column can hold.
 
 ### Storage representation
 
@@ -103,15 +99,16 @@ doubles are replaced with Decimal128 when the replay writes the decimal-formatte
 
 ### SQL Server limits
 
-A SQL Server scalar decimal column supports at most 20 integer digits and 18 fractional digits.
-Chronicle rounds scalar read-model values to 18 fractional digits, with midpoints rounded away
-from zero, matching SQL Server's rounding. Computed values such as `1m / 3m` therefore project
-successfully. Only values whose integer part exceeds 20 digits are refused. Event content retains
-its original decimal precision. Existing DECIMAL(18,2) columns round the value further to their
-own scale until replay replaces the table.
-SQL Server returns decimals at its column's fixed scale; Chronicle removes redundant trailing zeros
-when reading them. Numerical precision is retained, but arbitrary input trailing-zero scale is not:
-`193.580` reads back as `193.58`, so `decimal.GetBits` can differ even though the values are equal.
+A SQL Server `DECIMAL(38,18)` scalar column supports at most 20 integer digits and 18 fractional
+digits. Chronicle rounds scalar read-model values to 18 fractional digits, with midpoints rounded
+away from zero, matching SQL Server's rounding. Computed values such as `1m / 3m` therefore project
+successfully. Values outside the column's 20-integer-digit range are refused. Event content retains
+its original decimal precision.
+
+Existing `DECIMAL(18,2)` columns round values further to their own scale until replay replaces the
+table. SQL Server also returns decimals at the column's fixed scale. Chronicle removes redundant
+trailing zeros on read: `193.580` reads back as `193.58`. The values are numerically equal, but their
+`decimal.GetBits` results can differ because the input scale is not preserved.
 
 ### Upgrading existing SQL read models
 
@@ -122,9 +119,10 @@ REAL columns and SQL Server's former DECIMAL(18,2) columns.
 
 ### Kernel shadow columns
 
-SQL shadow columns are registered centrally, outside the projected columns and the EF model. They
-are nullable without a default, are never materialized or released, and do not change the original
-read-model properties. The current registry contains:
+SQLite needs a numeric ordering key because its decimal read-model values are stored as text.
+Chronicle supplies that key in an internal shadow column, outside the projected properties and
+the Entity Framework (EF) model. Shadow columns are nullable without a default and do not become
+properties on the read model. The decimal ordering shadow is:
 
 | Name pattern | Provider | Storage | Index |
 | --- | --- | --- | --- |
@@ -134,14 +132,14 @@ If a schema property collides with a shadow name (case-insensitively), the schem
 the shadow is skipped and the kernel logs a warning. Registration still succeeds, but an operation
 requiring that shadow refuses explicitly rather than using the schema property's value.
 
-Existing tables gain missing shadows additively, without rewriting data. The registry also owns
-indexes under `chronicle_shx_`, independently of declared `chronicle_idx_` indexes. Declared-index
-reconciliation and table-renaming logic ignore shadow indexes, so old kernels cannot remove them.
-After an old kernel promotes a replay table without shadows, ordinary EF reads and writes remain
-unaffected. A shadow-specific operation repairs missing columns and indexes and retries once.
-SQLite catalog probes include generated columns, so a restart does not attempt to add them again.
+The kernel adds missing shadows to existing tables without rewriting data. It manages their
+`chronicle_shx_` indexes separately from declared `chronicle_idx_` indexes, so declared-index
+reconciliation and table-renaming logic leave shadow indexes alone. If an old kernel promotes a
+replay table without shadows, ordinary EF reads and writes remain unaffected. A shadow-specific
+operation repairs missing columns and indexes and retries once. SQLite catalog probes include
+generated columns, so a restart does not attempt to add them again.
 
-SQLite's original TEXT decimal columns preserve digits but still sort lexicographically in ad-hoc
+SQLite's original TEXT decimal columns preserve digits but still sort as strings in ad-hoc
 SQL (`"10"` precedes `"9"`). Existing REAL-affinity tables still require replay for exact values;
 non-text legacy values have NULL ordering keys. No floating-point conversion recovers lost precision.
 
@@ -153,5 +151,6 @@ scales without materializing unrelated parents. Ad-hoc numeric ranges must compa
 not ordinary decimal strings. Arbitrary EF decimal expressions over the original property do not
 use this encoding automatically.
 
-Replay cannot undo precision already lost from the original event content. Check the source events
-before assuming that a replay will recover an amount.
+Before replaying a decimal read model, check the source events: replay cannot recover precision
+already lost from the original event content. [Projection registration lifecycle](../projections/registration-lifecycle.md)
+explains when definition changes trigger replay and where to follow the rebuild.

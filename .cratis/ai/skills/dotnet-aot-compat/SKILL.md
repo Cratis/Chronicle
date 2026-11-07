@@ -1,6 +1,6 @@
 ---
 name: dotnet-aot-compat
-description: 'Makes .NET projects compatible with Native AOT and trimming by resolving IL trim and AOT analyzer warnings. Use when making a project AOT-compatible, fixing trimming warnings, resolving IL2026, IL2067, IL2070, IL2072, or IL3050, adding DynamicallyAccessedMembers annotations, or enabling IsAotCompatible. Not for publishing native AOT binaries, optimizing binary size, replacing reflection-heavy libraries, or .NET Framework projects.'
+description: Use when resolving .NET trim or AOT analyzer warnings, annotating reflection or enabling IsAotCompatible. Not for native binary publication, size optimization, library replacement or .NET Framework.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/dotnet-aot-compat/SKILL.md -->

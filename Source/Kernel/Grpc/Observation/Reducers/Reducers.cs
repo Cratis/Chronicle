@@ -16,6 +16,7 @@ using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Contracts.Observation.Reducers;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Cratis.Chronicle.Json;
+using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Observation.Reducers.Clients;
 using Cratis.Chronicle.Properties;
@@ -47,6 +48,7 @@ namespace Cratis.Chronicle.Services.Observation.Reducers;
 /// <param name="connectionOwnership"><see cref="IConnectionOwnership"/> telling which caller opened each connection.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 /// <param name="registrationGate">The silo-wide gate for observer registrations.</param>
+/// <param name="namespaceCasing">The namespace casing resolver.</param>
 internal sealed class Reducers(
     IGrainFactory grainFactory,
     IReducerMediator reducerMediator,
@@ -56,8 +58,23 @@ internal sealed class Reducers(
     IOptions<ChronicleOptions> options,
     IConnectionOwnership connectionOwnership,
     ILogger<Reducers> logger,
-    IObserverRegistrationGate registrationGate) : IReducers
+    IObserverRegistrationGate registrationGate,
+    INamespaceCasing namespaceCasing) : IReducers
 {
+    /// <summary>
+    /// The size, in characters, of a reducer's serialized state from which each reduce is reported as expensive.
+    /// </summary>
+    /// <remarks>
+    /// Every reduce sends the whole current state to the client, so the cost of a reduce grows with the read model.
+    /// </remarks>
+    internal const int LargeStateWarningThreshold = 8 * 1024 * 1024;
+
+    /// <summary>
+    /// The most partitions per stream the kernel remembers a returned state fingerprint for. The client side cache is larger
+    /// so the kernel never assumes the client holds a state the client has already evicted.
+    /// </summary>
+    internal const int MaxCachedStateFingerprints = 50_000;
+
     /// <inheritdoc/>
     public IObservable<ReduceOperationMessage> Observe(IObservable<ReducerMessage> messages, CallContext context = default)
     {
@@ -67,6 +84,7 @@ internal sealed class Reducers(
         var registrationTcs = new TaskCompletionSource<RegisterReducer>(TaskCreationOptions.RunContinuationsAsynchronously);
         var pendingDeliveries = new PendingDeliveries<ReducerSubscriberResult>();
         IReducer? clientObserver = null;
+        var stateFingerprints = new ReducerStateFingerprints(MaxCachedStateFingerprints);
 
         // The read model definition will be populated once the reducer is registered.
         var model = new ReadModelDefinition(
@@ -106,12 +124,14 @@ internal sealed class Reducers(
                         register.Reducer.EventSequenceId,
                         register.ConnectionId);
 
+                    stateFingerprints.Enabled = register.StateCaching?.Enabled == true;
                     registrationTcs.TrySetResult(register);
                     break;
 
                 case ReducerResult result:
                     foreach (var (partition, subscriberResult) in ToSubscriberResults(result, model))
                     {
+                        RememberReturnedState(stateFingerprints, partition, subscriberResult);
                         if (!pendingDeliveries.TryComplete(result.DeliveryId, partition, subscriberResult))
                         {
                             logger.UnknownDeliveryResult(result.DeliveryId, partition);
@@ -137,6 +157,7 @@ internal sealed class Reducers(
                 try
                 {
                     var registration = await registrationTcs.Task.WaitAsync(cancellation.Token);
+                    registration.Namespace = (await namespaceCasing.Canonicalize(registration.EventStore, registration.Namespace)).Value;
                     connectionId = registration.ConnectionId;
                     observerId = registration.Reducer.ReducerId;
                     eventStoreName = registration.EventStore;
@@ -173,8 +194,18 @@ internal sealed class Reducers(
                         deliver = (reduceOperation, tcs) =>
                         {
                             var deliveryId = pendingDeliveries.Add(reduceOperation.Partition, tcs);
-                            var initialState = reduceOperation.InitialState is null ? null : expandoObjectConverter.ToJsonObject(reduceOperation.InitialState, model.GetSchemaForLatestGeneration()).ToString();
+
                             var partition = reduceOperation.Partition.Value.ToString()!;
+
+                            // A state the client already holds is not serialized at all: the client returned it on its previous reduce.
+                            var initialStateUnchanged = IsInitialStateUnchanged(stateFingerprints, partition, reduceOperation.InitialState);
+
+                            // Compact JSON: JsonNode.ToString() writes indented JSON, which inflates every reduce's state by the whitespace.
+                            var initialState = reduceOperation.InitialState is null || initialStateUnchanged ? null : expandoObjectConverter.ToJsonObject(reduceOperation.InitialState, model.GetSchemaForLatestGeneration()).ToJsonString(jsonSerializerOptions);
+                            if (initialState?.Length > LargeStateWarningThreshold)
+                            {
+                                logger.LargeInitialState(observerId, reduceOperation.Partition.ToString()!, initialState.Length);
+                            }
                             var events = reduceOperation.Events.Select(_ => _.ToContract(jsonSerializerOptions)).ToArray();
                             var message = new ReduceOperationMessage()
                             {
@@ -185,18 +216,23 @@ internal sealed class Reducers(
 
                             if (deliversPages)
                             {
-                                message.Partitions = [new ReducerPartition { Partition = partition, InitialState = initialState, Events = events }];
+                                message.Partitions = [new ReducerPartition { Partition = partition, InitialState = initialState, InitialStateUnchanged = initialStateUnchanged, Events = events }];
                             }
                             else
                             {
                                 message.Partition = partition;
                                 message.InitialState = initialState;
+                                message.InitialStateUnchanged = initialStateUnchanged;
                                 message.Events = events;
                             }
 
                             observer.OnNext(message);
                         };
-                        replay = (replayState, partition) => observer.OnNext(new ReduceOperationMessage { Partition = partition, ReplayState = (Contracts.Observation.ReplayState)replayState });
+                        replay = (replayState, partition) =>
+                        {
+                            ForgetState(stateFingerprints, partition);
+                            observer.OnNext(new ReduceOperationMessage { Partition = partition, ReplayState = (Contracts.Observation.ReplayState)replayState });
+                        };
 
                         reducerMediator.Subscribe(
                             registration.Reducer.ReducerId,
@@ -273,6 +309,7 @@ internal sealed class Reducers(
         register = context.CancellationToken.Register(() =>
         {
             logger.ObserverStreamDisconnected(observerId, connectionId);
+            stateFingerprints.Clear();
             pendingDeliveries.Disconnect(new(ObserverSubscriberResult.Disconnected(), new ExpandoObject()));
             observableObserver?.OnCompleted();
             DisconnectStream((observerId, connectionId, eventStoreName, namespaceName), deliver, replay);
@@ -281,6 +318,46 @@ internal sealed class Reducers(
         });
 
         return observable;
+    }
+
+    static bool IsInitialStateUnchanged(ReducerStateFingerprints stateFingerprints, string partition, ExpandoObject? initialState)
+    {
+        if (!stateFingerprints.Enabled || initialState is null || !stateFingerprints.Has(partition))
+        {
+            return false;
+        }
+
+        return ReadModelStateFingerprint.TryCompute(initialState, out var fingerprint) && stateFingerprints.IsUnchanged(partition, fingerprint);
+    }
+
+    static void RememberReturnedState(ReducerStateFingerprints stateFingerprints, string partition, ReducerSubscriberResult result)
+    {
+        if (!stateFingerprints.Enabled)
+        {
+            return;
+        }
+
+        // Only a handled partition with a state is remembered; anything else makes the next delivery carry the full state.
+        if (result.ObserverResult.State == ObserverSubscriberState.Ok &&
+            result.ReadModelState is not null &&
+            ReadModelStateFingerprint.TryCompute(result.ReadModelState, out var fingerprint))
+        {
+            stateFingerprints.Set(partition, fingerprint);
+            return;
+        }
+
+        stateFingerprints.Remove(partition);
+    }
+
+    static void ForgetState(ReducerStateFingerprints stateFingerprints, string? partition)
+    {
+        if (string.IsNullOrEmpty(partition))
+        {
+            stateFingerprints.Clear();
+            return;
+        }
+
+        stateFingerprints.Remove(partition);
     }
 
     static ReducerRegistrationFailed CreateRegistrationFailure(RegisterReducer registration, Exception exception)
@@ -354,10 +431,35 @@ internal sealed class Reducers(
 
     IEnumerable<(string Partition, ReducerSubscriberResult Result)> ToSubscriberResults(ReducerResult result, ReadModelDefinition model) =>
         result.Partitions.Count > 0
-            ? result.Partitions.Select(_ => (_.Partition, new ReducerSubscriberResult(_.ToObserverSubscriberResult(TimeProvider.System), ToReadModelState(_.ReadModelState, model))))
-            : [(result.Partition, new ReducerSubscriberResult(
+            ? result.Partitions.Select(_ => (_.Partition, ToSubscriberResult(result.DeliveryId, _.Partition, () => new ReducerSubscriberResult(_.ToObserverSubscriberResult(TimeProvider.System), ToReadModelState(_.ReadModelState, model)))))
+            : [(result.Partition, ToSubscriberResult(result.DeliveryId, result.Partition, () => new ReducerSubscriberResult(
                 ObservationResultConverters.ToObserverSubscriberResult(result.State, result.LastSuccessfulObservation, result.ExceptionMessages, result.ExceptionStackTrace, result.RetryAfterMilliseconds, TimeProvider.System),
-                ToReadModelState(result.ReadModelState, model)))];
+                ToReadModelState(result.ReadModelState, model))))];
+
+    /// <summary>
+    /// Converts a result of the client, failing the delivery when the state it returned cannot be read.
+    /// </summary>
+    /// <remarks>
+    /// Reading the state can fail - on a state too large to materialize it fails with an out of memory. That must
+    /// fail the delivery: an exception here would leave the observer waiting for an answer that has already
+    /// arrived, until the subscriber timeout, which is minutes.
+    /// </remarks>
+    /// <param name="deliveryId">The identifier of the delivery.</param>
+    /// <param name="partition">The partition the result is for.</param>
+    /// <param name="convert">Converts the result.</param>
+    /// <returns>The <see cref="ReducerSubscriberResult"/>.</returns>
+    ReducerSubscriberResult ToSubscriberResult(ulong deliveryId, string partition, Func<ReducerSubscriberResult> convert)
+    {
+        try
+        {
+            return convert();
+        }
+        catch (Exception exception)
+        {
+            logger.UnreadableDeliveryResult(deliveryId, partition, exception);
+            return new ReducerSubscriberResult(ObserverSubscriberResult.Failed(Concepts.Events.EventSequenceNumber.Unavailable, exception.Message), null);
+        }
+    }
 
     ExpandoObject? ToReadModelState(string? readModelState, ReadModelDefinition model) =>
         readModelState is null ? null : expandoObjectConverter.ToExpandoObject(JsonNode.Parse(readModelState)!.AsObject(), model.GetSchemaForLatestGeneration());

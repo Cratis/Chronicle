@@ -92,6 +92,11 @@ public class Projections(
     internal string? SoftwareVersion { get; init; }
 
     /// <summary>
+    /// Gets the discovery of graph projections, which target a property graph instead of a document read model.
+    /// </summary>
+    internal Graphs.GraphProjections? Graphs { get; init; }
+
+    /// <summary>
     /// Gets the identifier of the current connection, sent with every registration so the kernel knows which live
     /// connection declares the projections. It is optional: a registration without it still succeeds.
     /// </summary>
@@ -450,10 +455,13 @@ public class Projections(
             _discoveredHandlersByModelType = discoveredHandlersByModelType;
             _discoveredContainerNames = containerNames;
 
+            Graphs?.Discover();
+
             _discoveredDefinitions =
                 ((IEnumerable<ProjectionDefinition>)[
                     .. _definitionsByType.Values.Select(_ => _).ToList(),
-                    .. modelBoundDefinitions.Values
+                    .. modelBoundDefinitions.Values,
+                    .. Graphs?.Registrations.Select(_ => _.Projection) ?? []
                 ]).ToImmutableList();
 
             _discoveredArtifactRegistrations =
@@ -461,7 +469,8 @@ public class Projections(
                     .. _definitionsByType.Keys.Select(type => new ArtifactRegistration(type, null)),
                     .. modelBoundDefinitions.Keys.Select(type => new ArtifactRegistration(type, null)),
                     .. failures.Select(kvp => new ArtifactRegistration(kvp.Key, kvp.Value)),
-                    .. modelBoundFailures.Select(kvp => new ArtifactRegistration(kvp.Key, kvp.Value))
+                    .. modelBoundFailures.Select(kvp => new ArtifactRegistration(kvp.Key, kvp.Value)),
+                    .. Graphs?.Failures.Select(kvp => new ArtifactRegistration(kvp.Key, kvp.Value)) ?? []
                 ]).ToImmutableList();
 
             _explicitRegistrations = registrations;

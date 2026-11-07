@@ -8,7 +8,7 @@ import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const scripts = resolve(dirname(fileURLToPath(import.meta.url)), '../../hooks/scripts');
-const guards = ['cratis-guard-store-mutations.sh', 'cratis-guard-secrets.sh', 'cratis-guard-pr-body.sh'];
+const guards = ['cratis-guard-store-mutations.sh', 'cratis-guard-secrets.sh', 'cratis-guard-pr-body.sh', 'cratis-guard-shell-writes.sh'];
 const outputLimit = 64 * 1024;
 
 function deny(reason) {
@@ -69,8 +69,9 @@ function runGuard(script, input, cwd, executable, timeoutMs) {
         collect(child.stdout, text => { stdout += text; });
         collect(child.stderr, text => { stderr += text; });
         child.stdin.on('error', error => {
-            // An early guard verdict may deliberately close stdin without consuming it.
-            if (error.code !== 'EPIPE') { failure ||= 'Guard input failed.'; stop(); }
+            // An early guard verdict may deliberately close stdin without consuming it. Child stdio is a pipe or a
+            // socketpair depending on the platform, so the reader closing surfaces as EPIPE or ECONNRESET; the exit status decides.
+            if (error.code !== 'EPIPE' && error.code !== 'ECONNRESET') { failure ||= 'Guard input failed.'; stop(); }
         });
         child.stdin.end(input);
     });

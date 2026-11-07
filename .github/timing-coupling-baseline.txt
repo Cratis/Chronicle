@@ -49,6 +49,7 @@
 1 Integration/Client/for_EventSequence/when_revising/SomeReducer.cs
 1 Integration/Client/for_EventSequence/when_server_restarts/and_events_are_appended_before_restart.cs  # readiness
 1 Integration/Client/for_EventStoreSubscriptions/given/a_subscription_with_retained_outbox_history.cs  # readiness: persisted forwarder state visibility, bounded by cancellation
+1 Integration/Client/for_EventStoreSubscriptions/given/an_operator_addressing_two_lobbies.cs  # readiness: persisted forwarder state visibility, bounded by cancellation
 1 Integration/Client/for_EventStoreSubscriptions/given/multi_event_store_subscription_setup.cs
 1 Integration/Client/for_EventStoreSubscriptions/given/subscription_states_after_subscribing.cs
 1 Integration/Client/for_EventStoreSubscriptions/when_registering_implicit_subscriptions/and_reactor_infers_external_inbox_subscription.cs

@@ -1,8 +1,16 @@
 ---
-description: Set IsRewindable to false on a model-bound Chronicle projection definition with [NotRewindable].
+title: Mark a Cratis Chronicle model-bound projection as not rewindable
+description: Use NotRewindable to set IsRewindable to false on a Cratis Chronicle model-bound projection definition, separately from observer replayability.
 ---
-# Not Rewindable
 
-Mark a projection as not rewindable using `[NotRewindable]`. This sets `IsRewindable` to `false` on the projection definition and is distinct from observer replayability:
+<a id="not-rewindable"></a>
+
+`[NotRewindable]` sets `IsRewindable` to `false` on a Cratis Chronicle model-bound projection definition. Use it to declare that the projection is intended to move forward only.
+
+In C#, apply the attribute to the read model type:
 
 <ChronicleClientTabs snippet="projections/model-bound/not-rewindable/basic" />
+
+The example marks `MbNotRewindableAuditLog` as not rewindable while keeping its event-to-property mappings unchanged. Without the attribute, the model-bound builder sets `IsRewindable` to `true`.
+
+This projection setting is separate from observer replayability. It does not configure how a reactor handles historical events; see [Observers](../../concepts/observers.mdx) for replay policy and [Reactor replay handlers](../../reactors/replay.mdx) for replay-specific work.

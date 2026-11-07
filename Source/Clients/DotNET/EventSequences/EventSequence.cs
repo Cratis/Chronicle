@@ -53,6 +53,7 @@ namespace Cratis.Chronicle.EventSequences;
 /// <param name="sideEffectHandlers">Optional handlers used to recognize synchronous reactor return types.</param>
 /// <param name="eventSources">Optional <see cref="IEventSources"/> for appending through event source definitions.</param>
 /// <param name="telemetry">Optional event source id tracing configuration.</param>
+/// <param name="tagResolver">Optional <see cref="EventTagResolver"/> resolving the named tags of every appended event. Defaults to the built-in enrichers only.</param>
 public class EventSequence(
     EventStoreName eventStoreName,
     EventStoreNamespaceName @namespace,
@@ -70,7 +71,8 @@ public class EventSequence(
     IActivitySource<EventSequence>? activitySource = null,
     IReactorSideEffectHandlers? sideEffectHandlers = null,
     IEventSources? eventSources = null,
-    ChronicleTelemetryOptions? telemetry = null) : IEventSequence, IEventSequenceWithReadProtection, IEventSequenceWithEffectReceipts
+    ChronicleTelemetryOptions? telemetry = null,
+    EventTagResolver? tagResolver = null) : IEventSequence, IEventSequenceWithReadProtection, IEventSequenceWithEffectReceipts
 {
     /// <summary>
     /// Gets the default <see cref="IActivitySource{T}"/> for Chronicle client event sequence traces.
@@ -1044,6 +1046,9 @@ public class EventSequence(
         return AppendCore(eventSourceId, @event, namedTags, eventStreamType, eventStreamId, eventSourceType, correlationId, tags, concurrencyScope, occurred, subject);
     }
 
+    IReadOnlyList<NamedTag> ResolveTags(EventSourceId eventSourceId, EventType eventType, object @event, IEnumerable<NamedTag> existing) =>
+        (tagResolver ?? EventTagResolver.Default).ResolveTags(new EventTagContext(eventStoreName, eventSequenceId, eventSourceId, eventType, @event, NamedTagConverters.Merge([], existing)));
+
     async Task<AppendResult> AppendCore(
         EventSourceId eventSourceId,
         object @event,
@@ -1090,7 +1095,7 @@ public class EventSequence(
             // Merge static tags from the event type with dynamic tags
             var allTags = preparedEvent.Tags.Concat(tags ?? []).Distinct().ToList();
 
-            var resolvedNamedTags = NamedTagConverters.Merge([], namedTags);
+            var resolvedNamedTags = ResolveTags(eventSourceId, eventType, @event, namedTags);
             var request = new Contracts.Sequences.AppendRequest
             {
                 EventStore = eventStoreName,
@@ -1267,7 +1272,7 @@ public class EventSequence(
             var resolvedEventStreamId = ResolveEventStreamId(eventStreamId);
             var resolvedEventSourceType = ResolveEventSourceType(eventSourceType);
             var eventsList = events.ToList();
-            var resolvedNamedTags = NamedTagConverters.Merge([], namedTags);
+            var callNamedTags = NamedTagConverters.Merge([], namedTags);
             if (idempotencyKey is not null) IdempotentAppendSupport.Require(connection);
 
             if (concurrencyScope is null || concurrencyScope == ConcurrencyScope.NotSet)
@@ -1302,10 +1307,11 @@ public class EventSequence(
                     correlationId,
                     allTags,
                     new Dictionary<EventSourceId, ConcurrencyScope> { [eventSourceId] = concurrencyScope },
-                    resolvedNamedTags);
+                    callNamedTags);
             }
 
             var eventsToAppend = new List<Contracts.Sequences.EventToAppend>(eventsList.Count);
+            var eventNamedTags = new List<IReadOnlyList<NamedTag>>(eventsList.Count);
             foreach (var @event in eventsList)
             {
                 var eventClrType = @event.GetType();
@@ -1313,6 +1319,7 @@ public class EventSequence(
 
                 var eventType = eventTypes.GetEventTypeFor(eventClrType);
                 var content = (await eventSerializer.Serialize(@event)).ToJsonString();
+                eventNamedTags.Add(ResolveTags(eventSourceId, eventType, @event, callNamedTags));
                 eventsToAppend.Add(new Contracts.Sequences.EventToAppend
                 {
                     EventType = eventType.ToSequencesContract(),
@@ -1339,7 +1346,7 @@ public class EventSequence(
                 CausedBy = identity.ToSequencesContract(),
                 ConcurrencyScope = concurrencyScope.ToSequencesContract()
             };
-            var response = resolvedNamedTags.Count == 0
+            var response = eventNamedTags.TrueForAll(_ => _.Count == 0)
                 ? await _servicesAccessor.Services.Sequences.AppendMany(request).EnsureSuccess()
                 : await _servicesAccessor.Services.Sequences.AppendManyWithNamedTags(new Contracts.Sequences.AppendManyWithNamedTagsRequest
                 {
@@ -1347,12 +1354,12 @@ public class EventSequence(
                     Namespace = request.Namespace,
                     EventSequenceId = request.EventSequenceId,
                     EventSourceId = request.EventSourceId,
-                    Events = eventsToAppend.Select(_ => new Contracts.Sequences.EventToAppendWithNamedTags
+                    Events = eventsToAppend.Select((_, index) => new Contracts.Sequences.EventToAppendWithNamedTags
                     {
                         EventType = _.EventType,
                         Content = _.Content,
                         Subject = _.Subject,
-                        NamedTags = resolvedNamedTags.Select(tag => tag.ToSequencesContract()).ToArray()
+                        NamedTags = eventNamedTags[index].Select(tag => tag.ToSequencesContract()).ToArray()
                     }).ToArray(),
                     CorrelationId = request.CorrelationId,
                     Tags = request.Tags,
@@ -1383,7 +1390,7 @@ public class EventSequence(
                 identity,
                 result,
                 occurred,
-                resolvedNamedTags);
+                eventNamedTags);
             span?.Activity?.RecordAppendOutcome(result);
             return result;
         }
@@ -1509,7 +1516,9 @@ public class EventSequence(
             return ResolvedEventRouting.ResolveMetadata(@event, routing);
         }).ToList();
         var eventsToAppend = new List<Contracts.Sequences.EventForEventSourceId>(eventsList.Count);
-        var effectiveNamedTags = eventsList.Select(_ => NamedTagConverters.Merge(_.NamedTags, callNamedTags)).ToArray();
+        var effectiveNamedTags = eventsList
+            .Select(_ => ResolveTags(_.EventSourceId, EventTagResolver.EventTypeFor(eventTypes, _.Event.GetType()), _.Event, NamedTagConverters.Merge(_.NamedTags, callNamedTags)))
+            .ToArray();
         var causation = causationManager.GetCurrentChain();
         var eventCausations = eventsList.ConvertAll(@event => @event.Causation is null ? causation : causation.Add(@event.Causation));
 
@@ -1806,7 +1815,7 @@ public class EventSequence(
         Identity identity,
         AppendManyResult result,
         DateTimeOffset? occurred,
-        IReadOnlyList<NamedTag> namedTags)
+        List<IReadOnlyList<NamedTag>> namedTags)
     {
         var handler = _appendedEventsRaised;
         if (events.Count == 0 || handler is null) return;
@@ -1836,7 +1845,7 @@ public class EventSequence(
             {
                 Causation = causation,
                 CausedBy = identity,
-                NamedTags = namedTags,
+                NamedTags = namedTags[i],
                 Subject = new Subject(eventsToAppend[i].Subject ?? eventSourceId.Value)
             };
 

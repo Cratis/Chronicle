@@ -192,11 +192,13 @@ class [GrainType("generationinitializer")] Cratis.Chronicle.Generations.Enableme
 interface [GrainInterfaceType("Cratis.Chronicle.Generations.Enablement.IGenerationInitializer")] Cratis.Chronicle.Generations.Enablement.IGenerationInitializer [Version(0)]
   821C1699: Initialize(Cratis.Chronicle.Concepts.EventStoreName) -> Task<GenerationInitializationResult>
 
-interface [GrainInterfaceType("Cratis.Chronicle.Namespaces.INamespaces")] Cratis.Chronicle.Namespaces.INamespaces [Version(0)]
+interface [GrainInterfaceType("Cratis.Chronicle.Namespaces.INamespaces")] Cratis.Chronicle.Namespaces.INamespaces [Version(1)]
   DCF49287: Ensure(Cratis.Chronicle.Concepts.EventStoreNamespaceName) -> Task
+  F7C4B965: EnsureCanonical(Cratis.Chronicle.Concepts.EventStoreNamespaceName) -> Task<Cratis.Chronicle.Concepts.EventStoreNamespaceName>
   BE5D8DA6: EnsureDefault() -> Task
   CB6B3C92: Forget(Cratis.Chronicle.Concepts.EventStoreNamespaceName) -> Task
   9DB83269: GetAll() -> Task<System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.EventStoreNamespaceName>>
+  CD7F641B: GetCanonical(Cratis.Chronicle.Concepts.EventStoreNamespaceName) -> Task<Cratis.Chronicle.Concepts.EventStoreNamespaceName?>
 
 class [GrainType("namespaces")] Cratis.Chronicle.Namespaces.Namespaces
 
@@ -222,7 +224,7 @@ interface [GrainInterfaceType("Cratis.Chronicle.Observation.EventStoreSubscripti
 interface [GrainInterfaceType("Cratis.Chronicle.Observation.IDrainableObserverSubscriber")] Cratis.Chronicle.Observation.IDrainableObserverSubscriber [Version(0)]
   99F6A550: Drain() -> Task
 
-interface [GrainInterfaceType("Cratis.Chronicle.Observation.IObserver")] Cratis.Chronicle.Observation.IObserver [Version(6)]
+interface [GrainInterfaceType("Cratis.Chronicle.Observation.IObserver")] Cratis.Chronicle.Observation.IObserver [Version(8)]
   FF1D5EC7: CanResumeFailedPartition(Cratis.Chronicle.Concepts.Keys.Key, Cratis.Chronicle.Concepts.Observation.FailedPartitionId?, System.Guid?) -> Task<bool>
   906EECAF: CatchUp() -> Task
   E95279C4: CaughtUp(Cratis.Choreography.Jobs.JobId, Cratis.Chronicle.Concepts.Events.EventSequenceNumber) -> Task
@@ -244,6 +246,7 @@ interface [GrainInterfaceType("Cratis.Chronicle.Observation.IObserver")] Cratis.
   98A3B662: GetState() -> Task<Cratis.Chronicle.Storage.Observation.ObserverState>
   08DD9D90: GetSubscription() -> Task<Cratis.Chronicle.Observation.ObserverSubscription>
   F2A145F7: Handle(Cratis.Chronicle.Concepts.Keys.Key, System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.AppendedEvent>) -> Task
+  0AB2E3C6: HandlePage(System.Collections.Generic.IReadOnlyList<Cratis.Chronicle.Observation.ObserverPartitionBatch>) -> Task
   056816D9: HasFailedPartitions() -> Task<bool>
   2155BE82: IsCatchUpBackedOff() -> Task<bool>
   C6C2E50F: IsObserverQuarantined() -> Task<bool>
@@ -256,6 +259,8 @@ interface [GrainInterfaceType("Cratis.Chronicle.Observation.IObserver")] Cratis.
   FBC5310A: PartitionCaughtUp(Cratis.Chronicle.Concepts.Keys.Key, Cratis.Chronicle.Concepts.Events.EventSequenceNumber, Cratis.Chronicle.Concepts.Events.EventSequenceNumber) -> Task
   24239E7A: PartitionCaughtUp(Cratis.Chronicle.Concepts.Keys.Key, Cratis.Chronicle.Concepts.Events.EventSequenceNumber, Cratis.Chronicle.Concepts.Events.EventSequenceNumber, ulong?) -> Task
   957B55C5: PartitionDeferred(Cratis.Chronicle.Concepts.Keys.Key, Cratis.Chronicle.Concepts.Observation.PartitionDeferral, Cratis.Chronicle.Concepts.Observation.FailedPartitionId?, System.Guid?) -> Task
+  42CD159D: PartitionDeferred(Cratis.Chronicle.Concepts.Keys.Key, Cratis.Chronicle.Concepts.Observation.PartitionDeferral, Cratis.Chronicle.Concepts.Observation.FailedPartitionId?, System.Guid?, Cratis.Chronicle.Concepts.Observation.ReplayEpoch?) -> Task
+  AF3F856D: PartitionFailed(Cratis.Chronicle.Concepts.Keys.Key, Cratis.Chronicle.Concepts.Events.EventSequenceNumber, System.Collections.Generic.IEnumerable<string>, string, Cratis.Chronicle.Concepts.Observation.FailureKind, Cratis.Chronicle.Concepts.Observation.FailedPartitionId?, System.Guid?, Cratis.Chronicle.Observation.PartitionFailureContext) -> Task
   25E3BC5A: PartitionFailed(Cratis.Chronicle.Concepts.Keys.Key, Cratis.Chronicle.Concepts.Events.EventSequenceNumber, System.Collections.Generic.IEnumerable<string>, string, Cratis.Chronicle.Concepts.Observation.FailureKind, Cratis.Chronicle.Concepts.Observation.FailedPartitionId?, System.Guid?, Cratis.Chronicle.Observation.WebhookDeliveryFailurePolicy) -> Task
   520F1A05: PartitionFailedWithDeliveryFence(Cratis.Chronicle.Concepts.Keys.Key, Cratis.Chronicle.Concepts.Events.EventSequenceNumber, System.Collections.Generic.IEnumerable<string>, string, Cratis.Chronicle.Concepts.Observation.FailureKind, Cratis.Chronicle.Observation.PartitionFailureContext) -> Task
   8B2111ED: PartitionReplayPartiallyCompleted(Cratis.Chronicle.Concepts.Keys.Key, Cratis.Chronicle.Concepts.Events.EventSequenceNumber) -> Task
@@ -300,6 +305,9 @@ interface [GrainInterfaceType("Cratis.Chronicle.Observation.IObserver")] Cratis.
 
 interface [GrainInterfaceType("Cratis.Chronicle.Observation.IObserverPageSubscriber")] Cratis.Chronicle.Observation.IObserverPageSubscriber [Version(1)]
   50EF116D: OnNextPage(System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.AppendedEvent>, Cratis.Chronicle.Observation.ObserverSubscriberContext) -> Task<Cratis.Chronicle.Observation.ObserverSubscriberResult>
+
+interface [GrainInterfaceType("Cratis.Chronicle.Observation.IObserverPartitionPageSubscriber")] Cratis.Chronicle.Observation.IObserverPartitionPageSubscriber [Version(1)]
+  85360CA0: OnNextPartitions(System.Collections.Generic.IReadOnlyList<Cratis.Chronicle.Observation.ObserverPartitionBatch>, Cratis.Chronicle.Observation.ObserverSubscriberContext) -> Task<Cratis.Chronicle.Observation.ObserverPageResult>
 
 interface [GrainInterfaceType("Cratis.Chronicle.Observation.IObserverService")] Cratis.Chronicle.Observation.IObserverService [Version(0)]
   6CB341E4: AbandonReplayFor(Cratis.Chronicle.Observation.ObserverDetails) -> Task
@@ -367,6 +375,8 @@ interface [GrainInterfaceType("Cratis.Chronicle.Observation.Reactors.Clients.IRe
 
 interface [GrainInterfaceType("Cratis.Chronicle.Observation.Reactors.Clients.IReactorObserverSubscriber")] Cratis.Chronicle.Observation.Reactors.Clients.IReactorObserverSubscriber [Version(0)]
 
+interface [GrainInterfaceType("Cratis.Chronicle.Observation.Reactors.Clients.IReactorPageObserverSubscriber")] Cratis.Chronicle.Observation.Reactors.Clients.IReactorPageObserverSubscriber [Version(0)]
+
 class [GrainType("reactor")] Cratis.Chronicle.Observation.Reactors.Clients.Reactor
 
 class [GrainType("reactorobserversubscriber")] Cratis.Chronicle.Observation.Reactors.Clients.ReactorObserverSubscriber
@@ -420,9 +430,12 @@ interface [GrainInterfaceType("Cratis.Chronicle.Observation.Webhooks.IWebhooks")
   5CDB4041: SetTargetUrl(Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookId, Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookTargetUrl) -> Task
   73A40E5D: Update(Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookDefinition) -> Task
 
-interface [GrainInterfaceType("Cratis.Chronicle.Observation.Webhooks.Signing.IWebhookSigningKeyRing")] Cratis.Chronicle.Observation.Webhooks.Signing.IWebhookSigningKeyRing [Version(0)]
+interface [GrainInterfaceType("Cratis.Chronicle.Observation.Webhooks.Signing.IWebhookSigningKeyRing")] Cratis.Chronicle.Observation.Webhooks.Signing.IWebhookSigningKeyRing [Version(1)]
   E5E4DCAC: GetSigningKeys() -> Task<System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookSigningKey>>
+  56C200D0: GetWebhookSecrets(Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookId) -> Task<System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookSigningKey>>
+  28FA256C: RetireWebhookSecrets(Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookId) -> Task
   8106DA1D: Rotate(Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookSigningKeyOverlap) -> Task<Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookSigningKey>
+  1DA7B7E1: RotateWebhookSecret(Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookId, Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookSigningKeyOverlap) -> Task<Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookSigningKey>
 
 class [GrainType("webhooksigningkeyring")] Cratis.Chronicle.Observation.Webhooks.Signing.WebhookSigningKeyRing
 
@@ -498,7 +511,8 @@ interface [GrainInterfaceType("Cratis.Chronicle.Projections.IProjection")] Crati
   EE92359E: SubscribeDefinitionsChanged(Cratis.Chronicle.Projections.INotifyProjectionDefinitionsChanged) -> Task
   47C0888D: UnsubscribeDefinitionsChanged(Cratis.Chronicle.Projections.INotifyProjectionDefinitionsChanged) -> Task
 
-interface [GrainInterfaceType("Cratis.Chronicle.Projections.IProjectionChangesetNotifier")] Cratis.Chronicle.Projections.IProjectionChangesetNotifier [Version(1)]
+interface [GrainInterfaceType("Cratis.Chronicle.Projections.IProjectionChangesetNotifier")] Cratis.Chronicle.Projections.IProjectionChangesetNotifier [Version(2)]
+  FC52E931: HasSubscribers() -> Task<bool>
   120AA1AB: Notify(Cratis.Chronicle.Concepts.EventStoreNamespaceName, Cratis.Chronicle.Concepts.ReadModels.ReadModelKey, System.Text.Json.Nodes.JsonObject, ReadModelChangeContext) -> Task
   DA42063C: NotifyMany(Cratis.Chronicle.Concepts.EventStoreNamespaceName, System.Collections.Generic.IReadOnlyList<ReadModelChangeNotification>) -> Task
   14CDE012: Subscribe(Cratis.Chronicle.Projections.IReadModelChangesetSubscriber) -> Task

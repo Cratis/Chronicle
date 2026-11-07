@@ -1,11 +1,11 @@
 ---
-title: Closing streams
-description: End a stream, one event source's stream, or any slice of an event sequence, so the kernel refuses further appends to it.
+title: Closing streams in Cratis Chronicle
+description: Closing a stream in Cratis Chronicle rejects new events within a chosen scope. Choose a manual close or a domain event, and understand the limits.
 ---
 
-Some facts end a story. An invoice is issued, a month is signed off, a customer is archived. After that, nothing should be appended to it, and a rule in your command code is not enough: two requests can race, and a bug in one client can still append.
+Closing a stream in Cratis Chronicle tells the kernel to reject new events within a chosen scope, such as one invoice or one reporting period. Appends inside that scope fail with a `StreamClosed` constraint violation, regardless of which client sends them. Events already stored remain available to read and replay.
 
-Closing a stream moves that rule into the kernel. Once a scope is closed, every append that falls inside it is rejected with a constraint violation of type `StreamClosed`, no matter which client sends it.
+Use a closure when a business rule says no more events belong in that part of the history. Checking the rule only in command code leaves room for two requests to race or another client to bypass it; the kernel checks it before committing an append.
 
 ## What closing means
 
@@ -15,21 +15,21 @@ There are two ways to create a closure:
 
 | Way | Written by | Reopened by |
 |---|---|---|
-| **Manual** | Your code calls `CompleteStream` | Nothing in the normal flow. Only the [admin repair path](inspecting-and-repairing.mdx) |
-| **Event-driven** | The kernel, when it appends an event type declared with [`[ClosesStream]`](closing-events.mdx) | An event type you name in `ReopenedBy` |
+| Manual | Your code calls `CompleteStream` | Only the [admin repair path](inspecting-and-repairing.mdx), not a normal application flow |
+| Event-driven | The kernel, when it appends an event type declared with [`[ClosesStream]`](closing-events.mdx) | An event type you name in `ReopenedBy` |
 
-Pick the event-driven form when a domain fact ends the scope. The closing fact and the closure are written in the same step, and the closure shows up in the log as the fact that caused it. Pick the manual form for ad-hoc closes that no domain event represents.
+Choose an event-driven closure when a domain fact ends the scope: the event log then records the fact that caused the closure. The kernel writes the closure after storing that event, without allowing another append between them. These writes are not crash-atomic; see [Guarantees and limits](#guarantees-and-limits). Use a manual closure for an ad-hoc close that no domain event represents.
 
 ## Choose a scope
 
-A scope is any non-empty combination of four dimensions. A dimension you leave unset is not constrained:
+A scope selects which events a closure blocks. Build it from any non-empty combination of these four dimensions; leaving a dimension unset means it can match any value:
 
 | Dimension | Matches |
 |---|---|
 | Event source id | One event source, for example one invoice |
 | Event source type | Every event source of one type |
 | Event stream type | A kind of stream, for example `monthly-report` |
-| Event stream id | A stream within a type, for example `2026-04` |
+| Event stream id | A stream id, for example `2026-04`; combine it with a stream type to narrow the match |
 
 An append is refused when every dimension set in a closure equals the append's value. Closing the stream `monthly-report` / `2026-04` of event source `report-7` refuses only appends that carry all three values. Another report that uses the same stream type and id is unaffected.
 
@@ -45,7 +45,7 @@ Some examples:
 `EventSourceId.Unspecified`, `EventSourceType.Unspecified` and an empty stream type or stream id count as unset. `EventStreamType.All` and `EventStreamId.Default` are real values: the scope event source `report-7` + `All` + `Default` closes exactly the default stream of `report-7`.
 
 :::caution[The default stream cannot be closed on its own]
-A scope that names no event source and whose stream values are only `All` and `Default` would block the whole event sequence. `CompleteStream` returns `DefaultStreamCannotBeCompleted` for it. The same applies when the event source type is unset or `Default`. Add an event source id, or any other specific value, to close a default stream.
+To close a default stream, include an event source id or another specific dimension. `CompleteStream` returns `DefaultStreamCannotBeCompleted` for a non-empty scope with no event source id, an unset or `Default` event source type, and no stream values more specific than `All` and `Default`.
 :::
 
 [Scoped closing](scoped-closing.mdx) shows how to close each combination from code.
@@ -60,7 +60,7 @@ An empty stream type means `All` and an empty stream id means `Default`, so `(""
 
 To close anything narrower or broader than "one pair for every event source", pass a `ClosedStreamScope` to `CompleteStream(scope, expectedTailSequenceNumber)`.
 
-The optional `expectedTailSequenceNumber` makes the close race-free. The kernel compares it with the sequence number of the last event inside the scope and closes in the same step, so you close only if nothing landed after the last fact you know about. [Scoped closing](scoped-closing.mdx#close-only-if-nothing-landed) shows the pattern.
+Pass `expectedTailSequenceNumber` when your decision depends on the events you have read. The kernel compares it with the sequence number of the last event inside the scope and closes in the same step. If the tail has changed, the close fails instead of acting on an outdated decision. [Scoped closing](scoped-closing.mdx#close-only-if-nothing-landed) shows how to use the number returned by your final append.
 
 ### Errors
 
@@ -75,7 +75,7 @@ The optional `expectedTailSequenceNumber` makes the close race-free. The kernel 
 
 A scope is covered when an existing closure's dimensions are a subset of the scope's dimensions and their values match. A narrower scope than an existing manual closure is therefore `AlreadyCompleted`. A broader one is not covered and creates a new closure.
 
-Coverage by an event-driven closure alone does not return `AlreadyCompleted`. The call succeeds and writes a manual closure next to it. Manual closures are final, so a later `ReopenedBy` event cannot undo what an operator decided explicitly.
+Coverage by an event-driven closure alone does not return `AlreadyCompleted`. The call succeeds and writes a manual closure next to it. A later `ReopenedBy` event cannot remove that manual closure; undoing it requires the [admin repair path](inspecting-and-repairing.mdx).
 
 Retrying a close is safe: a second call returns `AlreadyCompleted` before the expected-tail check runs.
 
@@ -93,16 +93,19 @@ Closing does not touch what is already stored or how it is read:
 - Events already in the stream stay in the log.
 - A redacted closing event keeps its closure.
 
-Closing only refuses new appends. The closing event itself is accepted.
+An event that creates a closure is accepted before that closure takes effect. A closing event is still rejected if it falls inside an already-closed scope.
 
 ## Guarantees and limits
 
-- **No interleaving.** The kernel writes an event-driven closure in the same turn as the durable append. No other append to that event sequence can land between the closing event and its closure. Unique constraints rely on the same mechanism.
-- **Not crash-atomic.** If the kernel stops after it wrote the event and before it wrote the closure, the scope stays open until the closure is rebuilt.
-- **Reindex rebuilds event-driven closures.** A constraint reindex that names a closing constraint rebuilds its closures from the events in the log. Manual closures are never touched. Registering or changing a declaration does not start a reindex and closes nothing in history. Removing a declaration leaves its closures in force.
-- **Redacted property-sourced events.** When a closing or reopening event takes its stream id from a property and that event has been redacted, the rebuild cannot recover the scope. It leaves that constraint's closures untouched, logs a warning with the constraint and event position, and continues with the other constraints. Closures whose dimensions come from the event context are unaffected.
-- **Event type generations.** A property-sourced scope is read from the generation the event was appended with. If a new generation renames the property, update the declaration, otherwise closing and reopening fail for events of that generation.
-- **Kernel version.** Scoped closing and closing events use new kernel calls. A client that uses them needs a kernel that has them. An older kernel could otherwise ignore the extra dimensions and close too broadly.
+The kernel writes an event-driven closure in the same turn as the durable append. No other append to that event sequence can land between the closing event and its closure. Unique constraints use the same mechanism. The two writes are not crash-atomic, however: if the kernel stops after storing the event but before storing the closure, the scope stays open until the closure is rebuilt.
+
+A constraint reindex that names a closing constraint rebuilds its closures from the log. It never touches manual closures. Registering or changing a declaration does not start a reindex or close historical scopes, and removing a declaration leaves its closures in force.
+
+Redaction matters when the stream id comes from an event property. A rebuild can recover a redacted closing or reopening event's scope only if the existing closure snapshot has a record at that event's sequence number. Without one, it leaves all closures owned by that constraint untouched, logs a warning identifying the constraint and event position, and continues with other constraints. Scopes derived entirely from event context do not have this payload-recovery limit.
+
+A property-sourced scope is read from the generation in which the event was appended. If a new generation renames the property, update the declaration or closing and reopening fail for events of that generation.
+
+Use a kernel that supports scoped closing and closing constraints. The .NET client throws `ClosedStreamScopesNotSupported` when a scoped-closing call is unimplemented; it does not fall back to the broader two-argument close. Closing-constraint registration also checks the kernel's advertised capabilities.
 
 ## Next steps
 

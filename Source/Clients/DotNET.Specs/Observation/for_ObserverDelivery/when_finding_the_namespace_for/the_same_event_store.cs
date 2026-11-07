@@ -9,7 +9,7 @@ public class the_same_event_store : given.a_delivery_context
 
     void Because()
     {
-        using var delivery = ObserverDelivery.Enter(ProviderOf(), _context);
+        using var delivery = ObserverDeliveryScope.Enter(ProviderOf(), _context);
         _result = ObserverDeliveryContext.NamespaceFor("store");
     }
 

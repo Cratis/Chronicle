@@ -11,6 +11,7 @@ namespace Cratis.Chronicle.Observation;
 public partial class Observer
 {
     readonly StalledObserverJobs _stalledJobs = new();
+    readonly ReplayRestartBackoff _replayRestarts = new();
 
     /// <summary>
     /// Gets or sets the clock used to observe stalled job progress.

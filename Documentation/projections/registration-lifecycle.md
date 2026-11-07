@@ -1,11 +1,15 @@
 ---
-description: How Chronicle handles projection registration when clients connect, including changed definitions, the version guard for older clients, and rollback.
+description: Chronicle compares projection definitions when clients connect. Learn when changes rebuild history, how versions protect deployments, and what retirement keeps.
 ---
 # Registration lifecycle
 
-Clients register their projections on every connect — the full set of definitions the client's code
-declares. Chronicle compares each incoming definition against the registered one and only acts on
-what changed, so a re-registration from an unchanged client is near-free.
+Chronicle compares projection definitions when a client connects, applies changed mappings, and
+plans any historical rebuild they require. Registration and catch-up are separate: an accepted
+definition does not mean its stored read models are ready to query.
+
+A client registers the definitions its code declares on every connect. Unchanged mappings do not
+trigger replay. Before a deployment, check the mapping change, the client's software version, and
+whether its full set still declares every projection you intend to keep.
 
 ## When a definition changes
 
@@ -15,19 +19,26 @@ decides what to rebuild. Active projection subscribers discard their silo-local 
 before rebuilding from the changed definition. Newly consumed events therefore use the updated key
 resolvers without requiring a kernel restart.
 
-The rebuild decision is:
+Chronicle checks each namespace's history when deciding what to rebuild:
 
-- **No action** when the only change adds event types and no events of those types exist yet.
-- **Full replay** when newly mapped event types have history, or when changes affect event ordering,
-  keys, joins, children, removal behavior, or existing mappings. Even independent new mappings require
-  a full rebuild: replaying selected historical events into the live container can reject writes behind
-  its watermark or apply contributions twice.
+- No historical action is needed when the only change adds event types and none of those events exist.
+- Full replay is required when newly mapped event types have history, or when changes affect event
+  ordering, keys, joins, children, removal behavior, or existing mappings.
+
+Even independent new mappings require a full rebuild when they need historical data. Applying only
+selected old events to the live container can reject writes behind its watermark or apply
+contributions twice. A projection's version or descriptive tags alone do not change its mapping and
+do not trigger replay.
 
 The [`definitionEvolution`](../hosting/configuration/observers.md#definition-evolution) policy controls
-which plans Chronicle performs automatically. The default, `Automatic`, performs the full replay.
-`PartialOnly` and `Manual` create a recommendation for a full replay instead. No-action changes do not
-create recommendations. Explicit partition replay remains available and is not changed by this policy.
-Full replays use the existing observer job progress shown in the Workbench.
+which plans Chronicle performs automatically. The default, `Automatic`, starts the required full
+replay for a non-global projection. Global projections receive a replay recommendation instead.
+`PartialOnly` and `Manual` also create a recommendation when a full replay is required. No-action
+changes do not create recommendations. Explicit partition replay remains available regardless of
+this policy.
+
+Follow full-replay job progress in the Workbench before relying on the rebuilt view. The policy
+controls rebuilding history, not whether the new definition is stored or used for newly consumed events.
 
 ## When an older client registers — the version guard
 
@@ -81,25 +92,26 @@ rolled-back deployment to a version above the one you are leaving. Rolling forwa
 
 ## When a registration partially fails
 
-Definitions are isolated from each other: a definition the engine rejects fails *alone*. Every other
-definition in the registration still lands — in the engine, in its projection grain, and in the
-registered state — and the failure is reported back to the client naming exactly the projections that
-did not register. A failed definition is not marked registered, so the next registration retries it.
+A failed definition does not roll back other successfully registered projections. Chronicle returns
+failures by projection identifier and leaves failed definitions unregistered so the next registration
+can retry them.
+
+Inspect the .NET client's [registration outcome](../clients/dotnet/registration-outcome.md) to find the
+failed artifact. A failure building a local definition needs a code or configuration correction;
+waiting for the kernel to become less busy cannot repair it.
 
 ## When the kernel is busy
 
-Registering a projection against a store that already holds events starts a catch-up, and registration
-does not wait for it. A projection catches up through a single job step that walks the sequence in
-global order, and that step is brought up on the observer's own turn rather than inside the
-registration call — so the size of the event log does not decide how long registering takes.
+A newly registered projection can need to catch up with existing events. Registration does not wait
+for that work. Catch-up runs on the observer's own turn in a job step that walks the sequence in global
+order, rather than processing all that history inside the registration call.
 
-Registration is also retried rather than fatal. The client re-runs the whole registration with an
-exponential backoff before giving up, configurable through
-[`RegistrationRetry`](../configuration/chronicle-options) — every step is idempotent, so a retry
-costs the kernel only the comparison it already does. A host therefore waits out a kernel that is
-merely busy instead of failing to start, restarting, and re-registering into the queue it was waiting
-on. A kernel that is genuinely refusing the definitions still fails the host, once the attempts are
-spent.
+The .NET client retries registration with exponential backoff, configured through
+[`RegistrationRetry`](../configuration/chronicle-options). After the foreground attempts are spent,
+a failed kernel registration is reported to the caller and can continue retrying in the background
+until it succeeds or disconnects. Local preparation failures and identity drift stop that retry path;
+they need correction instead. Do not treat an exhausted foreground retry as proof that no artifacts
+registered, or repeatedly restart the host to make it catch up.
 
 ## When a projection is no longer registered — retirement
 
@@ -114,8 +126,10 @@ new identity — is **retired** when the client next registers its full set:
 
 Retirement only happens for a **full-set** registration: the client SDK marks the registration as the
 complete set for its owner, and only when every discovered artifact produced a definition. Partial
-registrations — such as saving a single projection from the Workbench — never retire anything, and a
-client-owned full set never retires server-owned projections (or the other way around).
+registrations, such as saving a single projection from the Workbench, never retire anything. A
+client-owned full set cannot retire server-owned projections, or vice versa. When the client supplies
+a registrant identity, retirement is also limited to projections registered by that application, so
+applications sharing an event store do not retire each other's definitions.
 
 ### Renamed read models and shared containers
 

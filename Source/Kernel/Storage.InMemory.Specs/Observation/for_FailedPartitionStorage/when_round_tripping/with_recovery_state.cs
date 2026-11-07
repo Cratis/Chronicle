@@ -23,7 +23,8 @@ public class with_recovery_state : Specification
             Hold = new(FailedPartitionHoldReason.WaitingForHandler, new("event-a"), new(2026, 10, 17, 12, 0, 0, TimeSpan.Zero)),
             Attempts = [new() { SequenceNumber = new(42) }, new() { SequenceNumber = new(50), Kind = FailureKind.Handling }],
             AttemptsBeforeBudgetReset = 1,
-            IsQuarantined = true
+            IsQuarantined = true,
+            ReplayEpoch = Guid.Parse("aaaaaaaa-0000-0000-0000-00000000000b")
         }).ToArray();
     }
 
@@ -41,6 +42,7 @@ public class with_recovery_state : Specification
     [Fact] void should_keep_retry_budgets() => _restored.Select(partition => partition.AttemptsInCurrentBudget).ShouldEqual([1, 1, 1]);
     [Fact] void should_keep_quarantine() => _restored.All(partition => partition.IsQuarantined).ShouldBeTrue();
     [Fact] void should_keep_the_last_attempt() => _restored.Select(partition => partition.LastAttempt.SequenceNumber.Value).ShouldEqual([50UL, 50UL, 50UL]);
+    [Fact] void should_keep_the_replay_epoch() => _restored.Select(partition => partition.ReplayEpoch).All(epoch => epoch == new ReplayEpoch(Guid.Parse("aaaaaaaa-0000-0000-0000-00000000000b"))).ShouldBeTrue();
     [Fact] void should_keep_failure_kinds() => _restored.All(partition => partition.LastAttempt.Kind == FailureKind.Handling).ShouldBeTrue();
 
     void Destroy() => _storage.Dispose();

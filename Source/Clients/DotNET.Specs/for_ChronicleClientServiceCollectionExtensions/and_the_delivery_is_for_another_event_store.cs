@@ -11,7 +11,7 @@ public class and_the_delivery_is_for_another_event_store : given.a_host_resolvin
 
     void Because()
     {
-        using var delivery = ObserverDelivery.Enter(_provider, new("another-store", "namespace-x", new("observer"), ObserverDeliveryKind.Reactor, typeof(object)));
+        using var delivery = ObserverDeliveryScope.Enter(_provider, new("another-store", "namespace-x", new("observer"), ObserverDeliveryKind.Reactor, typeof(object)));
         _result = ResolveNamespace();
     }
 

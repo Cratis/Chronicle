@@ -39,7 +39,8 @@ public class when_a_reducer_registers_on_a_connection_another_caller_owns : Spec
             Options.Create(new ChronicleOptions()),
             Substitute.For<IConnectionOwnership>(),
             NullLogger<Reducers>.Instance,
-            Substitute.For<IObserverRegistrationGate>());
+            Substitute.For<IObserverRegistrationGate>(),
+            NamespaceCasingContext.Create());
         using var messages = new Subject<ReducerMessage>();
         var observed = reducers.Observe(messages).ToTask();
 

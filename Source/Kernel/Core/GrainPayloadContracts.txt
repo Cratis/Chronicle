@@ -373,6 +373,7 @@ json Cratis.Chronicle.Concepts.Observation.EventStoreSubscriptions.EventStoreSub
   eventTypes: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.EventType>
   generationDelivery: Cratis.Chronicle.Concepts.Observation.EventGenerationDelivery
   identifier: Cratis.Chronicle.Concepts.Observation.EventStoreSubscriptions.EventStoreSubscriptionId
+  namedTags: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.NamedTag>
   sourceEventStore: Cratis.Chronicle.Concepts.EventStoreName
 concept Cratis.Chronicle.Concepts.Observation.EventStoreSubscriptions.EventStoreSubscriptionId : string
 json Cratis.Chronicle.Concepts.Observation.EventTypeWithKeyExpression
@@ -392,6 +393,7 @@ json Cratis.Chronicle.Concepts.Observation.FailedPartition
   partition: Cratis.Chronicle.Concepts.Keys.Key
   recoveryCursor: Cratis.Chronicle.Concepts.Observation.FailedPartitionRecoveryCursor
   recoveryOwner: Cratis.Chronicle.Concepts.Observation.FailedPartitionRecoveryOwner
+  replayEpoch: Cratis.Chronicle.Concepts.Observation.ReplayEpoch
   webhookDisposition: Cratis.Chronicle.Concepts.Observation.WebhookFailureDisposition?
   webhookRecoveryId: System.Guid?
 json Cratis.Chronicle.Concepts.Observation.FailedPartitionAttempt
@@ -477,6 +479,9 @@ enum Cratis.Chronicle.Concepts.Observation.ObserverType : int
   Reactor = 1
   Reducer = 3
   Unknown = 0
+json Cratis.Chronicle.Concepts.Observation.PageDeliveryDefinition
+  maxDelay: System.TimeSpan
+  maxEventsPerPage: int
 json Cratis.Chronicle.Concepts.Observation.PartitionDeferral
   id: System.Guid
   reason: Cratis.Chronicle.Concepts.Observation.PartitionDeferralReason
@@ -502,6 +507,7 @@ json Cratis.Chronicle.Concepts.Observation.Reactors.ReactorDefinition
   identifier: Cratis.Chronicle.Concepts.Observation.Reactors.ReactorId
   isReplayable: bool
   owner: Cratis.Chronicle.Concepts.Observation.Reactors.ReactorOwner
+  pageDelivery: Cratis.Chronicle.Concepts.Observation.PageDeliveryDefinition
   startAtTail: bool
   tags: System.Collections.Generic.IEnumerable<string>
 concept Cratis.Chronicle.Concepts.Observation.Reactors.ReactorId : string
@@ -520,6 +526,7 @@ json Cratis.Chronicle.Concepts.Observation.Reducers.ReducerDefinition
   readModel: Cratis.Chronicle.Concepts.ReadModels.ReadModelIdentifier
   tags: System.Collections.Generic.IEnumerable<string>
 concept Cratis.Chronicle.Concepts.Observation.Reducers.ReducerId : string
+concept Cratis.Chronicle.Concepts.Observation.ReplayEpoch : System.Guid
 json Cratis.Chronicle.Concepts.Observation.Replaying.ReplayCandidateReason
   type: Cratis.Chronicle.Concepts.Observation.Replaying.ReplayCandidateReasonType
 concept Cratis.Chronicle.Concepts.Observation.Replaying.ReplayCandidateReasonType : string
@@ -642,6 +649,7 @@ json Cratis.Chronicle.Concepts.Projections.Definitions.ChildrenDefinition
   fromEventProperty: Cratis.Chronicle.Concepts.Projections.Definitions.FromEventPropertyDefinition
   fromEvery: Cratis.Chronicle.Concepts.Projections.Definitions.FromEveryDefinition
   generationDelivery: Cratis.Chronicle.Concepts.Observation.EventGenerationDelivery
+  graph: Cratis.Chronicle.Concepts.Projections.Graphs.GraphProjectionDefinition
   hasLegacyStorageFields: bool
   identifiedBy: Cratis.Chronicle.Properties.PropertyPath
   identifier: Cratis.Chronicle.Concepts.Projections.ProjectionId
@@ -689,6 +697,7 @@ json Cratis.Chronicle.Concepts.Projections.Definitions.ProjectionDefinition
   fromEventProperty: Cratis.Chronicle.Concepts.Projections.Definitions.FromEventPropertyDefinition
   fromEvery: Cratis.Chronicle.Concepts.Projections.Definitions.FromEveryDefinition
   generationDelivery: Cratis.Chronicle.Concepts.Observation.EventGenerationDelivery
+  graph: Cratis.Chronicle.Concepts.Projections.Graphs.GraphProjectionDefinition
   hasLegacyStorageFields: bool
   identifier: Cratis.Chronicle.Concepts.Projections.ProjectionId
   initialModelState: System.Text.Json.Nodes.JsonObject
@@ -728,6 +737,32 @@ enum Cratis.Chronicle.Concepts.Projections.Generations.Enablement.GenerationInit
   MaterializationAdopted = 3
   None = 0
 concept Cratis.Chronicle.Concepts.Projections.Generations.Enablement.StoreIncarnation : System.Guid
+json Cratis.Chronicle.Concepts.Projections.Graphs.GraphEdgeFromDefinition
+  identity: Cratis.Chronicle.Concepts.Projections.PropertyExpression
+  properties: System.Collections.Generic.IDictionary<string,string>
+  sourceKey: Cratis.Chronicle.Concepts.Projections.PropertyExpression
+  targetKey: Cratis.Chronicle.Concepts.Projections.PropertyExpression
+json Cratis.Chronicle.Concepts.Projections.Graphs.GraphEdgeProjectionDefinition
+  from: System.Collections.Generic.IDictionary<string,Cratis.Chronicle.Concepts.Projections.Graphs.GraphEdgeFromDefinition>
+  removedWith: System.Collections.Generic.IDictionary<string,Cratis.Chronicle.Concepts.Projections.Graphs.GraphEdgeRemovedWithDefinition>
+json Cratis.Chronicle.Concepts.Projections.Graphs.GraphEdgeRemovedWithDefinition
+  identity: Cratis.Chronicle.Concepts.Projections.PropertyExpression
+  sourceKey: Cratis.Chronicle.Concepts.Projections.PropertyExpression
+  targetKey: Cratis.Chronicle.Concepts.Projections.PropertyExpression
+json Cratis.Chronicle.Concepts.Projections.Graphs.GraphNodeFromDefinition
+  key: Cratis.Chronicle.Concepts.Projections.PropertyExpression
+  properties: System.Collections.Generic.IDictionary<string,string>
+  updateOnly: bool
+json Cratis.Chronicle.Concepts.Projections.Graphs.GraphNodeProjectionDefinition
+  from: System.Collections.Generic.IDictionary<string,Cratis.Chronicle.Concepts.Projections.Graphs.GraphNodeFromDefinition>
+  removedWith: System.Collections.Generic.IDictionary<string,Cratis.Chronicle.Concepts.Projections.Graphs.GraphNodeRemovedWithDefinition>
+json Cratis.Chronicle.Concepts.Projections.Graphs.GraphNodeRemovedWithDefinition
+  detach: bool
+  key: Cratis.Chronicle.Concepts.Projections.PropertyExpression
+json Cratis.Chronicle.Concepts.Projections.Graphs.GraphProjectionDefinition
+  edges: System.Collections.Generic.IDictionary<string,Cratis.Chronicle.Concepts.Projections.Graphs.GraphEdgeProjectionDefinition>
+  isEmpty: bool
+  nodes: System.Collections.Generic.IDictionary<string,Cratis.Chronicle.Concepts.Projections.Graphs.GraphNodeProjectionDefinition>
 concept Cratis.Chronicle.Concepts.Projections.ProjectionDeclaration : string
 concept Cratis.Chronicle.Concepts.Projections.ProjectionFutureId : System.Guid
 concept Cratis.Chronicle.Concepts.Projections.ProjectionId : string
@@ -1074,6 +1109,7 @@ json Cratis.Chronicle.Observation.Jobs.HandleEventsForPartitionArguments
   ownershipEpoch: ulong?
   partition: Cratis.Chronicle.Concepts.Keys.Key
   readerScope: Cratis.Chronicle.Concepts.Observation.ObserverReaderScope
+  replayEpoch: Cratis.Chronicle.Concepts.Observation.ReplayEpoch
   revision: ulong?
   startEventSequenceNumber: Cratis.Chronicle.Concepts.Events.EventSequenceNumber
 json Cratis.Chronicle.Observation.Jobs.HandleEventsForPartitionState
@@ -1092,6 +1128,7 @@ json Cratis.Chronicle.Observation.Jobs.HandleEventsForPartitionState
   partition: Cratis.Chronicle.Concepts.Keys.Key
   progress: Cratis.Choreography.Jobs.JobStepProgress
   readerScope: Cratis.Chronicle.Concepts.Observation.ObserverReaderScope
+  replayEpoch: Cratis.Chronicle.Concepts.Observation.ReplayEpoch
   stage: Cratis.Choreography.Jobs.Stages.JobStepStage
   startEventSequenceNumber: Cratis.Chronicle.Concepts.Events.EventSequenceNumber
   status: Cratis.Choreography.Jobs.JobStepStatus
@@ -1131,10 +1168,16 @@ json Cratis.Chronicle.Observation.Jobs.RetryFailedPartitionRequest
   observerType: Cratis.Chronicle.Concepts.Observation.ObserverType
   ownershipEpoch: ulong?
   readerScope: Cratis.Chronicle.Concepts.Observation.ObserverReaderScope
+  replayEpoch: Cratis.Chronicle.Concepts.Observation.ReplayEpoch
   revision: ulong?
 json Cratis.Chronicle.Observation.ObserverDetails
   key: Cratis.Chronicle.Concepts.Observation.ObserverKey
   type: Cratis.Chronicle.Concepts.Observation.ObserverType
+json Cratis.Chronicle.Observation.ObserverPageResult
+  results: System.Collections.Generic.IReadOnlyDictionary<Cratis.Chronicle.Concepts.Keys.Key,Cratis.Chronicle.Observation.ObserverSubscriberResult>
+json Cratis.Chronicle.Observation.ObserverPartitionBatch
+  events: System.Collections.Generic.IReadOnlyList<Cratis.Chronicle.Concepts.Events.AppendedEvent>
+  partition: Cratis.Chronicle.Concepts.Keys.Key
 custom Cratis.Chronicle.Observation.ObserverSubscriberContext
 json Cratis.Chronicle.Observation.ObserverSubscriberResult
   deferral: Cratis.Chronicle.Concepts.Observation.PartitionDeferral
@@ -1156,6 +1199,7 @@ custom Cratis.Chronicle.Observation.ObserverSubscription
 json Cratis.Chronicle.Observation.PartitionFailureContext
   deliveryFence: Cratis.Chronicle.Concepts.Observation.DeliveryFenceContext
   policy: Cratis.Chronicle.Observation.WebhookDeliveryFailurePolicy
+  replayEpoch: Cratis.Chronicle.Concepts.Observation.ReplayEpoch
 json Cratis.Chronicle.Observation.States.ReplayCandidateRequest
   observerId: Cratis.Chronicle.Concepts.Observation.ObserverId
   observerKey: Cratis.Chronicle.Concepts.Observation.ObserverKey

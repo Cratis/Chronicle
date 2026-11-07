@@ -1,23 +1,29 @@
 ---
-description: How Chronicle reducers process events, discover handler methods, resolve multiple matching methods and isolate event sources.
+title: Process events with Cratis Chronicle reducers
+description: Cratis Chronicle reducers apply events to each source's current state. Learn handler selection, null results, failure behavior, and safe collection updates.
 ---
-# Event Processing
 
-Understanding how reducers process events is crucial for building effective read models. This guide covers the event processing model, method patterns, and advanced techniques.
+<a id="event-processing"></a>
 
-:::note[Client coverage on this page]
-The patterns below are shown in C# and build on the shape already established in [Getting started with reducers](getting-started): Kotlin and Java dispatch handlers with an optional `EventContext` as a third parameter; TypeScript dispatches a fixed `(event, current)` shape with no context parameter; Elixir dispatches through a single `reduce/3` callback that does receive a context map. Every client except TypeScript can therefore use event metadata (timestamps, sequence numbers) while computing the next state. The accumulation/state-transition/collection/time-window/conditional patterns on this page are illustrative C# idioms (`with` expressions, LINQ) rather than framework capabilities — the same ideas apply in every client using that language's own idioms for immutable updates.
-:::
+Cratis Chronicle reducers apply each event to the state produced by the previous event for the same
+event source. Use this guide when implementing a fold, the function that combines an event with
+current state to produce the next state. Choose the handler shape and decide what a missing state
+means, then return new state without mutating a result another reader may hold.
+
+The examples use C# and .NET dispatch rules. TypeScript handlers also receive context as
+`(event, current, context)`; Kotlin and Java can accept `EventContext` as a third parameter, and
+Elixir receives a context map through `reduce/3`. Follow
+[Getting started with reducers](getting-started) for each client's handler conventions rather than
+copying C# syntax into another language.
 
 ## Event Processing Model
 
 ### Event Method Discovery
 
-Reducers use convention-based method discovery. Chronicle automatically finds and invokes methods that:
-
-- Accept a known event type as the first parameter — the method name itself can be anything; discovery matches on the parameter type, not the name (a descriptive name such as `OrderCreated` for an `OrderCreated` event is good practice, not a requirement)
-- Accept the current read model state (nullable) as the second parameter
-- Optionally accept `EventContext` as the third parameter
+For a .NET instance reducer, Chronicle matches methods by parameter type, not method name. Put the
+known event type first, the nullable current read model second, and an optional `EventContext` third.
+Return the model or `Task<TReadModel>`, including nullable results. A descriptive name helps readers
+find the transition but does not affect event matching.
 
 <ChronicleClientTabs snippet="reducers/event-processing/method-discovery" />
 
@@ -25,29 +31,26 @@ Reducers use convention-based method discovery. Chronicle automatically finds an
 
 This section describes classic instance reducers. [Self reducers](self-reducing-read-models#handler-selection) use public static `Reduce` methods and uniquely most-specific dispatch; ambiguity fails rather than using method-name or context-overload tie-breaking.
 
-Discovery matches on the parameter types, so a helper you extract out of a reducer method keeps the same shape the reducer method has and matches the same event type. When that happens, Chronicle picks one method per event type, in this order:
+A helper with the same reducer-shaped parameters can become a candidate for the same event. For
+.NET instance reducers, Chronicle selects one method per event type using this precedence:
 
-1. **A public method beats a non-public one.** Reducer methods are public by convention; anything else is an implementation detail, so a private helper never displaces the method that calls it.
-2. **The richest signature wins.** Between two methods of the same accessibility, the one taking the most parameters asked for the most context — so the overload that also takes the `EventContext` is preferred.
-3. **Method name, ordinal**, so a genuine tie resolves the same way on every run rather than being left to reflection order.
+1. A public method takes precedence over a non-public method.
+2. At the same accessibility, a method with more parameters takes precedence, so the context overload wins.
+3. A remaining tie is resolved by method name in ordinal order, not reflection order.
 
 A private method is still a valid reducer method when nothing else handles that event type — the precedence only decides between candidates, it does not disqualify any of them. If a helper is not meant to take part in dispatch at all, change its parameters so it no longer has the reducer shape.
 
 ### Event Source Isolation
 
-Each reducer method is called for a single event source:
-
-- Events for the same event source (e.g., the same order) are processed sequentially
-- The `current` parameter contains the current state for that specific event source
-- Each event source has its own independent state
+Each event source has independent state. An order event receives that order's current model, not
+another order's model. Events for the same source are processed sequentially; this isolation does not
+provide ordering or coordination between different sources.
 
 ### Sequential Processing
 
-Events are guaranteed to be processed in sequence order:
-
-1. Events are ordered by their sequence number
-2. Each event in the delivered batch invokes its selected method; retries and replays can deliver it again
-3. The return value becomes the `current` parameter for the next event
+Within a delivered batch, Chronicle applies events in sequence-number order. Each return value
+becomes `current` for the next event. Retries and replay can deliver events again, so the fold must
+not rely on being invoked only once.
 
 ## Method Signatures
 
@@ -59,7 +62,7 @@ The simplest pattern accepts the event and current state:
 
 ### Pattern with Event Context
 
-Access event metadata by adding `EventContext` parameter:
+Add `EventContext` when the result depends on recorded metadata, such as occurrence time:
 
 <ChronicleClientTabs snippet="reducers/event-processing/pattern-with-context" />
 
@@ -71,11 +74,14 @@ Both patterns support async methods:
 
 ## Event Context
 
-The `EventContext` provides metadata about the event:
+`EventContext` identifies the event's source and sequence position and carries its recorded metadata:
 
 <ChronicleClientTabs snippet="reducers/event-processing/event-context-shape" />
 
 ### Using Event Context
+
+Use the event's recorded occurrence time for a last-updated value. Reading the clock during a fold
+would produce a different timestamp when the same history is replayed:
 
 <ChronicleClientTabs snippet="reducers/event-processing/using-event-context" />
 
@@ -85,57 +91,58 @@ The `current` parameter represents the previously computed state for this event 
 
 ### First Event
 
-When processing the first event for an event source:
-
-- `current` is `null`
-- Initialize your read model with appropriate values
-- You can return `null` (declare the handler's return type as `TReadModel?`) to skip creating state for certain events
+When an event source has no state yet, `current` is `null`. Initialize the model from an event that
+can create it. For other events, declare a nullable return type such as `TReadModel?` and return
+`null` if the model should remain absent.
 
 <ChronicleClientTabs snippet="reducers/event-processing/first-event" />
 
 ### Subsequent Events
 
-For subsequent events:
-
-- `current` contains the state from the previous event
-- Use record's `with` expression to create modified copies
-- Return the new state
+After creation, `current` contains the previous event's result. A C# record's `with` expression lets
+you return a changed copy. If a later transition removes the model, the following event receives
+`null` again, so null handling is not just a first-event concern.
 
 ## Processing Patterns
 
 ### Pattern 1: Accumulation
 
-Accumulate values across events:
+Keep a running sum and count to calculate an average without retaining every value:
 
 <ChronicleClientTabs snippet="reducers/event-processing/accumulation-pattern" />
 
 ### Pattern 2: State Transitions
 
-Track state changes through events:
+Represent order progress as state changes, recording the time of each transition from event context:
 
 <ChronicleClientTabs snippet="reducers/event-processing/state-transitions-pattern" />
 
 ### Pattern 3: Collection Building
 
-Build collections from events:
+Build an activity log by copying the previous list before adding the new entry. Returning a new
+record alone would not copy a mutable list inside it:
 
 <ChronicleClientTabs snippet="reducers/event-processing/collection-building-pattern" />
 
 ### Pattern 4: Time-Based Aggregation
 
-Aggregate events within time windows:
+Group metrics by the hour in the recorded event time. This example combines the same hour across
+all dates; include a date in the key if each day's hours must stay separate:
 
 <ChronicleClientTabs snippet="reducers/event-processing/time-based-aggregation-pattern" />
 
 ### Pattern 5: Conditional Processing
 
-Skip processing based on conditions:
+Return the existing state when a condition means the event should have no effect:
 
 <ChronicleClientTabs snippet="reducers/event-processing/conditional-processing-pattern" />
 
 ## Error Handling
 
-A failed fold does not persist a successful prefix of that batch. Watchers can still be notified on a failed fold, so a `Watch` notification is not a persistence-success signal ([#4817](https://github.com/Cratis/Chronicle/issues/4817)). This limitation is shared by classic and self reducers.
+If a handler fails, Chronicle does not persist the successfully reduced prefix of that batch. In
+.NET, failed folds do not notify watchers. A successful fold does notify them before the Kernel
+persists its result, so `Watch` is still not a persistence-success signal
+([#4817](https://github.com/Cratis/Chronicle/issues/4817)). Classic and self reducers share this behavior.
 
 ### Handling Invalid State
 
@@ -147,37 +154,48 @@ Note the difference between **skipping** an event and **removing** a read model:
 
 ### Recording Errors in State
 
-Include error information in your read model:
+If invalid input is a result the view should expose rather than an exception that should stop the
+fold, represent that error in the model:
 
 <ChronicleClientTabs snippet="reducers/event-processing/recording-errors" />
 
 ## Performance Optimization
 
+Measure a fold with representative histories before optimizing it. Reducing allocations must not
+come at the cost of mutating state that has already been returned.
+
 ### Minimize Object Creation
 
-Leverage record types with `with` expressions:
+A record's `with` expression makes a shallow copy with selected changes. It keeps the transition
+readable, but it still creates a record and does not copy nested collections:
 
 <ChronicleClientTabs snippet="reducers/event-processing/minimize-object-creation" />
 
 ### Reuse Collections
 
-Copy a collection before mutating it — a previously-returned state instance may still be held by a snapshot or another reader, so mutating it in place can corrupt state you don't own:
+Copy a collection before changing it. A snapshot or another reader may still hold the previous
+state, including the same collection reference:
 
 <ChronicleClientTabs snippet="reducers/event-processing/reuse-collections" />
 
 ## Best Practices
 
-1. **Use record types** - Prefer immutable record types for read models
-2. **Keep logic pure** - Avoid side effects; only compute state from events
-3. **Handle null safely** - Always check `current` for null on first event
-4. **Use with expressions** - Leverage record's `with` for clean state updates
-5. **Return null to skip or remove** - Declare the handler's return type as `TReadModel?` and return `null` — but only when you mean to clear the read model, not merely to ignore the event (return `current` unchanged for that)
-6. **Access context when needed** - Use `EventContext` for metadata like timestamps
-7. **Name methods clearly** - Use descriptive method names that match event types
-8. **Test thoroughly** - Unit test with various event sequences and edge cases
+Keep the fold deterministic: compute from the event, its context, and the current state rather than
+live external values. Do not send messages or write elsewhere from a transition; retries and replay
+can repeat those side effects.
+
+Test creation, updates, removal, and recreation, including events that arrive without prior state.
+[ReadModelScenario](../testing/read-models/scenario.mdx) lets you check the resulting model through
+the registered reducer.
 
 ## Concurrency Across Partitions (.NET client)
 
-Within one partition the .NET client runs batches strictly in arrival order. Different partitions of the same reducer can now be reduced **at the same time**, up to a bound, so reducer code and any services it uses must be safe for concurrent use, and there is no ordering across partitions. Replay begin and end notifications wait for work in flight. Results are still reported to the Kernel one at a time.
+A partition is the unit of state and ordering, normally one event source. Within a partition, the
+.NET client runs batches in arrival order. Different partitions of the same reducer can run at the
+same time, so reducer code and its services must be safe for concurrent use. There is no ordering
+across partitions. Replay begin and end notifications wait for work in flight; results are reported
+to the Kernel one at a time.
 
-The bound is `Reducers.MaxConcurrentPartitions` in [`ChronicleOptions`](../configuration/chronicle-options#reducers) and defaults to the processor count, at most 8. Set it to `1` to restore the previous behavior of handling one batch at a time.
+`Reducers.MaxConcurrentPartitions` in
+[`ChronicleOptions`](../configuration/chronicle-options#reducers) defaults to the processor count,
+capped at 8. Set it to `1` when you need batches handled one at a time.

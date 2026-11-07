@@ -17,7 +17,7 @@ public class when_entering_without_any_scope_registered_repeatedly : given.a_del
         // Warm up, so one-off caching and JIT work is not counted.
         for (var i = 0; i < 10; i++)
         {
-            using var warm = ObserverDelivery.Enter(provider, _context);
+            using var warm = ObserverDeliveryScope.Enter(provider, _context);
             _baselineAmbient.Value = _context;
             _baselineAmbient.Value = null;
         }
@@ -35,7 +35,7 @@ public class when_entering_without_any_scope_registered_repeatedly : given.a_del
         before = GC.GetAllocatedBytesForCurrentThread();
         for (var i = 0; i < Iterations; i++)
         {
-            using var delivery = ObserverDelivery.Enter(provider, _context);
+            using var delivery = ObserverDeliveryScope.Enter(provider, _context);
         }
 
         _deliveryBytes = GC.GetAllocatedBytesForCurrentThread() - before;

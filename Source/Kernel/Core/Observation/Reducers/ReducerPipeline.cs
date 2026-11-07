@@ -60,7 +60,7 @@ public class ReducerPipeline(
     public Task<IEnumerable<FailedPartition>> EndBulk() => Sink.EndBulk();
 
     /// <inheritdoc/>
-    public async Task<ReadModelChangeNotification?> Reduce(ReducerContext context, ReducerDelegate reducer)
+    public async Task<ReadModelChangeNotification?> Reduce(ReducerContext context, ReducerDelegate reducer, bool createNotification = true)
     {
         var schema = ReadModel.GetTargetSchema();
         var storedInitial = await Sink.FindOrDefault(context.Key);
@@ -156,7 +156,8 @@ public class ReducerPipeline(
             throw new ReducerSinkWriteFailed(failures);
         }
 
-        return CreateNotification(context, result.ReadModelState, initial, storedState);
+        // The notification is a whole new copy of the state, so it is only built when something is watching.
+        return createNotification ? CreateNotification(context, result.ReadModelState, initial, storedState) : null;
     }
 
     ReadModelChangeNotification CreateNotification(ReducerContext context, ExpandoObject? result, ExpandoObject? initial, ExpandoObject? storedState)

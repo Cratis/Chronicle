@@ -143,6 +143,7 @@ internal sealed class TestingServices : IServices
         // One pipeline serves every command-dispatching service. Its provider carries the collaborators the
         // command handlers resolve their parameters from - the same instances the service constructors used
         // to receive directly before dispatch moved to the Arc command pipeline.
+        var namespaceCasing = new InProcessNamespaceCasing(storage);
         var commandPipeline = new Lazy<Arc.Commands.ICommandPipeline>(() =>
             InProcessCommandPipeline.Create(
                 grainFactory,
@@ -178,7 +179,8 @@ internal sealed class TestingServices : IServices
             storage,
             new KernelObserverRemover(grainFactory, storage, NullLogger<KernelObserverRemover>.Instance),
             new KernelCore::Cratis.Chronicle.Clients.ConnectedClientsVisibility(kernelOptions, connectionOwnership, new Microsoft.AspNetCore.Http.HttpContextAccessor()),
-            kernelOptions)));
+            kernelOptions,
+            namespaceCasing)));
 
         _failedPartitions = new(() => new KernelFailedPartitionsService(storage));
 
@@ -194,7 +196,8 @@ internal sealed class TestingServices : IServices
                 Options.Create(new KernelCore::Cratis.Chronicle.Configuration.ChronicleOptions()),
                 connectionOwnership,
                 NullLogger<KernelReactorsService>.Instance,
-                registrationGate));
+                registrationGate,
+                namespaceCasing));
 
         _reducers = new(() =>
             new KernelReducersService(
@@ -206,7 +209,8 @@ internal sealed class TestingServices : IServices
                 Options.Create(new KernelCore::Cratis.Chronicle.Configuration.ChronicleOptions()),
                 connectionOwnership,
                 NullLogger<KernelReducersService>.Instance,
-                registrationGate));
+                registrationGate,
+                namespaceCasing));
 
         _projections = new(() =>
             new KernelProjectionsService(
@@ -218,7 +222,8 @@ internal sealed class TestingServices : IServices
                 null!,
                 connectionOwnership,
                 kernelOptions,
-                NullLogger<KernelProjectionsService>.Instance));
+                NullLogger<KernelProjectionsService>.Instance,
+                namespaceCasing));
 
         _webhooks = new(() =>
             new KernelWebhooksService(
@@ -325,7 +330,8 @@ internal sealed class TestingServices : IServices
                 null!,
                 compliance.CreateReadModelsCompliance(),
                 new KernelMaterializedReadModelStore(readBindings, compliance.CreateReadModelsCompliance()),
-                jsonSerializerOptions));
+                jsonSerializerOptions,
+                namespaceCasing));
 
         _compliance = new(() =>
             new KernelComplianceService(

@@ -109,7 +109,7 @@ public class Database : IDatabase
         }
 
         var client = _clientManager.GetClientFor(settings);
-        database = client.GetDatabase(databaseName);
+        database = client.GetDatabaseByExistingCasing(databaseName);
         _readModelDatabases[key] = database;
         return database;
     }

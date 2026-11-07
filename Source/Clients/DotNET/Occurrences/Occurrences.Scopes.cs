@@ -25,7 +25,7 @@ public partial class Occurrences
                     {
                         if (running.ContainsKey((pair.Trigger, scope))) continue;
                         var worker = new OccurrenceWorker(eventStore, _triggers.Get(pair.Trigger).Id, _attemptFactory!(pair.Trigger, pair.Handler, scope), TimeProvider, _logger!, scope);
-                        running[(pair.Trigger, scope)] = Observation.ObserverDelivery.RunDetached(() => worker.Run(cancellationToken));
+                        running[(pair.Trigger, scope)] = Observation.ObserverDeliveryScope.RunDetached(() => worker.Run(cancellationToken));
                     }
                 }
                 await _scopeChanges.Reader.ReadAsync(cancellationToken);

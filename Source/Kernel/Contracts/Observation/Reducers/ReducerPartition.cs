@@ -28,4 +28,11 @@ public class ReducerPartition
     /// </summary>
     [ProtoMember(3)]
     public IList<AppendedEvent> Events { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the state is unchanged since the client's previous reduce of the partition.
+    /// When true, <see cref="InitialState"/> is null and the client uses the state it returned on that reduce.
+    /// </summary>
+    [ProtoMember(4)]
+    public bool InitialStateUnchanged { get; set; }
 }

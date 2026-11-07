@@ -33,7 +33,8 @@ while IFS= read -r slice; do
     done <<EOF
 $changed
 EOF
-    if printf '%s\n' "$changed" | LC_ALL=C grep -Fxq "$anchor"; then
+    # A here-string, never `printf … | grep -q`: under `pipefail` the early-exiting `grep -q` can SIGPIPE `printf`.
+    if LC_ALL=C grep -Fxq "$anchor" <<<"$changed"; then
         spec_paths="$(printf '%s\n' "$paths" | CRATIS_SLICE="$slice/" awk '
             index($0, ENVIRON["CRATIS_SLICE"]) == 1 && /\/when_[^\/]+(\/|\.cs$)/ { print }
         ')"

@@ -322,7 +322,7 @@ public partial class Observer
         {
             _metrics?.WebhookProbeAttempt();
             logger.WebhookProbeAttempt(control.Id, failure.Id);
-            _webhookProbeDelivery = subscriber.OnNextWithin(TimeSpan.FromSeconds(options.TimeoutSeconds), failure.Partition, released, new ObserverSubscriberContext(_subscription.GenerationDelivery), cancellation.Token);
+            _webhookProbeDelivery = subscriber.OnNextWithin(TimeSpan.FromSeconds(options.TimeoutSeconds), failure.Partition, released, new ObserverSubscriberContext(_subscription.GenerationDelivery) { ReplayEpoch = failure.ReplayEpoch }, cancellation.Token);
             var result = await _webhookProbeDelivery;
 
             // Even a nominal result cannot release quarantine before the completion barrier.

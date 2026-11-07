@@ -204,9 +204,6 @@ module Invoicing
         then PaymentReversed
           for "9c1f0a52-6a4e-4b1c-9f55-0d2c7b8e1a01"
           amount = 130
-        then RefundRequested
-          for "9c1f0a52-6a4e-4b1c-9f55-0d2c7b8e1a01"
-          amount = 130
 
       specification RejectingAReversalWithoutAReceivedPayment
         given caller

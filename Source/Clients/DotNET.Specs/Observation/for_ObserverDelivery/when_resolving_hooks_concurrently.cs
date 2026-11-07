@@ -14,7 +14,7 @@ public class when_resolving_hooks_concurrently : given.a_delivery_context
 
     void Because() => Parallel.For(0, 64, _ =>
     {
-        using var delivery = ObserverDelivery.Enter(_provider, _context);
+        using var delivery = ObserverDeliveryScope.Enter(_provider, _context);
     });
 
     [Fact] void should_resolve_the_hooks_once() => _provider.Received(1).GetService(typeof(IEnumerable<IObserverDeliveryScope>));

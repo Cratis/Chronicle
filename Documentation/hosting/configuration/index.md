@@ -1,9 +1,10 @@
 ---
-description: Configure Chronicle Server with a chronicle.json file or environment variables, which take precedence and suit containerized deployments.
+title: Configure the Cratis Chronicle Kernel
+description: Configure the Chronicle Kernel with chronicle.json and environment overrides for storage, authentication, certificates, and observer processing.
 ---
-# Configuration
+Configure the Chronicle Kernel with a `chronicle.json` file, `Cratis__Chronicle__` environment variables, or both. Environment variables override matching file settings, letting you share a configuration file while supplying deployment-specific connections and credentials separately.
 
-Chronicle Server can be configured using a `chronicle.json` file or environment variables. Environment variables take precedence over file-based configuration, which is useful for containerized deployments.
+Start with [Configuration File](configuration-file.md) to place the file, or [Docker Configuration](docker.md) to mount it in a container. Use [Configuration Precedence](configuration-precedence.md) when a setting does not match the value you expected.
 
 ## Example configuration
 
@@ -33,8 +34,12 @@ Chronicle Server can be configured using a `chronicle.json` file or environment 
 | TLS | TLS certificate configuration for the Chronicle port |
 | Encryption certificate | Certificate protecting OAuth keys, webhook credentials, and Data Protection keys |
 | Health | Dedicated port for the health endpoint |
-| Identity Provider Certificate | Dedicated certificate configuration for internal OAuth authority |
+| Identity Provider Certificate | Ignored legacy setting; migrate to the shared TLS certificate |
 | Clients | Bootstrap client registrations created on startup |
+
+The example selects MongoDB storage and port `35000`; it is not a complete production configuration. Before starting the production image, configure the [TLS certificate](tls.md) and [Data Protection Key Encryption](../encryption-certificate.md), and review [Production hosting](../production.md) for the requirements and supported alternatives.
+
+If your deployment provisions storage before starting replicas, use [SQL schema operations](sql-schema-operations.md) or [MongoDB index operations](mongodb-index-operations.md). Their verification modes have different startup behavior and runtime permission requirements.
 
 ## Topics
 
@@ -61,3 +66,5 @@ Chronicle Server can be configured using a `chronicle.json` file or environment 
 - [Best Practices](best-practices.md) - Recommended configuration guidelines.
 - [Port Reference](port-reference.md) - Ports exposed by Chronicle Server.
 - [Job Throttling](job-throttling.md) - Limit parallel job steps to control CPU usage.
+- [SQL schema operations](sql-schema-operations.md) - Provision and verify SQL schemas before starting replicas.
+- [MongoDB index operations](mongodb-index-operations.md) - Provision indexes offline and inspect index readiness.
