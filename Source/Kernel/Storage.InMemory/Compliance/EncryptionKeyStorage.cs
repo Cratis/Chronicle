@@ -54,6 +54,10 @@ public sealed class EncryptionKeyStorage : IEncryptionKeyStorage
         _storage.GetErasureFor(eventStore, eventStoreNamespace, identifier);
 
     /// <inheritdoc/>
+    public Task<EncryptionKeyErasure?> GetFenceFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier) =>
+        _storage.GetFenceFor(eventStore, eventStoreNamespace, identifier);
+
+    /// <inheritdoc/>
     public Task RecordErasureFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier) =>
         _storage.RecordErasureFor(eventStore, eventStoreNamespace, identifier);
 

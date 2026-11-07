@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Security.Cryptography;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 
@@ -39,6 +40,19 @@ public abstract class EncryptionKeyStorageContract : Specification
         await write();
     }
 
+    /// <summary>
+    /// Lose the response after a successful write. Transport-backed harnesses override this to inject
+    /// the fault at their write-response boundary, after the provider has applied the operation.
+    /// </summary>
+    /// <param name="write">The write whose response is lost.</param>
+    /// <returns>Async task that fails with a timeout after the write succeeds.</returns>
+    /// <exception cref="TimeoutException">The successful write's response was lost.</exception>
+    protected virtual async Task LoseWriteResponse(Func<Task> write)
+    {
+        await write();
+        throw new TimeoutException();
+    }
+
     void Establish() => _storage = CreateStorage();
 
     [Fact] public void should_declare_both_atomic_guarantees() =>
@@ -51,6 +65,41 @@ public abstract class EncryptionKeyStorageContract : Specification
         fence.NewKeyAllowed.ShouldBeTrue();
         fence.ErasedLifecycle.ShouldEqual(0u);
         (await Latest())!.StagedLifecycle.ShouldEqual(fence.Lifecycle);
+        (await Erasure()).ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task should_not_report_erasure_when_unwrapping_fails_after_provisioning()
+    {
+        using var original = RSA.Create(2048);
+        using var replacement = RSA.Create(2048);
+        var wrapped = original.Encrypt(new byte[32], RSAEncryptionPadding.OaepSHA256);
+        await Provision(new(replacement.ExportRSAPublicKey(), replacement.ExportRSAPrivateKey()));
+        using var unwrapper = RSA.Create();
+        unwrapper.ImportRSAPrivateKey((await Latest())!.Key.Private, out _);
+        Assert.ThrowsAny<CryptographicException>(() => unwrapper.Decrypt(wrapped, RSAEncryptionPadding.OaepSHA256));
+        (await Erasure()).ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task should_report_a_missing_key_not_erasure_after_deletion_without_erasure()
+    {
+        await Provision(_original);
+        await _storage.DeleteFor(_eventStore, _namespace, _identifier);
+        (await Erasure()).ShouldBeNull();
+        (await Latest()).ShouldBeNull();
+        await Assert.ThrowsAsync<MissingEncryptionKey>(() => _storage.GetFor(_eventStore, _namespace, _identifier));
+        (await Fence()).ErasedLifecycle.ShouldEqual(0u);
+    }
+
+    [Fact]
+    public async Task should_report_recorded_erasure_even_after_a_successor_is_authorized()
+    {
+        await Raise("empty");
+        (await Erasure()).ShouldEqual(await Fence());
+        await Authorize(await Fence());
+        await Provision(_successor);
+        (await Erasure()).ShouldEqual(await Fence());
     }
 
     [Fact] public async Task should_refuse_a_delayed_save_of_destroyed_material_at_a_higher_revision()
@@ -239,13 +288,7 @@ public abstract class EncryptionKeyStorageContract : Specification
     {
         // Model a transport losing the response after the server applied the write. A caller must see the error;
         // it may retry only with the same request id, not turn the ambiguous outcome into a fresh erasure.
-        async Task LoseResponse()
-        {
-            await Raise("lost-response");
-            throw new TimeoutException();
-        }
-
-        await Assert.ThrowsAsync<TimeoutException>(LoseResponse);
+        await Assert.ThrowsAsync<TimeoutException>(() => LoseWriteResponse(() => Raise("lost-response")));
         var applied = await Fence();
         await Raise("lost-response");
         (await Fence()).ShouldEqual(applied);
@@ -258,5 +301,6 @@ public abstract class EncryptionKeyStorageContract : Specification
     Task Sweep(string requestId) => _storage.DeleteThroughFor(_eventStore, _namespace, _identifier, requestId);
     Task Confirm(string requestId) => _storage.ConfirmErasureFor(_eventStore, _namespace, _identifier, requestId);
     Task Authorize(EncryptionKeyErasure observed) => _storage.AllowNewKeyFor(_eventStore, _namespace, _identifier, observed.Version, observed.Lifecycle);
-    async Task<EncryptionKeyErasure> Fence() => (await _storage.GetErasureFor(_eventStore, _namespace, _identifier))!;
+    Task<EncryptionKeyErasure?> Erasure() => _storage.GetErasureFor(_eventStore, _namespace, _identifier);
+    async Task<EncryptionKeyErasure> Fence() => (await _storage.GetFenceFor(_eventStore, _namespace, _identifier))!;
 }

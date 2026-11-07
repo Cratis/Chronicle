@@ -17,6 +17,21 @@ public interface IEncryptionKeyStorage
     EncryptionKeyFenceGuarantees FenceGuarantees => EncryptionKeyFenceGuarantees.None;
 
     /// <summary>
+    /// Get the current fence, including an empty guard created before the first save.
+    /// </summary>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="eventStoreNamespace">The namespace.</param>
+    /// <param name="identifier">The key identifier.</param>
+    /// <returns>The fence, or <see langword="null"/> when none exists.</returns>
+    /// <remarks>
+    /// Guard existence is not evidence of erasure. Legacy readers must use
+    /// <see cref="GetErasureFor"/>, which returns only recorded erasures.
+    /// Providers without empty guards retain their legacy erasure-read behavior.
+    /// </remarks>
+    Task<EncryptionKeyErasure?> GetFenceFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier) =>
+        GetErasureFor(eventStore, eventStoreNamespace, identifier);
+
+    /// <summary>
     /// Record an immutable, retry-safe erasure boundary (C1, C4).
     /// </summary>
     /// <param name="eventStore">The event store.</param>

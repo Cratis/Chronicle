@@ -105,6 +105,17 @@ public class InMemoryEncryptionKeyStorage : IEncryptionKeyStorage
     {
         lock (_lock)
         {
+            var fence = ErasureFor(new(eventStore, eventStoreNamespace, identifier));
+            var hasErasure = fence is not null && (fence.ErasedThrough.Value > 0 || fence.ErasedKeyFingerprints.Count > 0 || fence.ErasedLifecycle > 0);
+            return Task.FromResult(hasErasure ? fence : null);
+        }
+    }
+
+    /// <inheritdoc/>
+    public Task<EncryptionKeyErasure?> GetFenceFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
+    {
+        lock (_lock)
+        {
             return Task.FromResult(ErasureFor(new(eventStore, eventStoreNamespace, identifier)));
         }
     }
