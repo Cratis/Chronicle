@@ -8,10 +8,10 @@ namespace Cratis.Chronicle.Security;
 
 /// <summary>Records an explicit event store access grant.</summary>
 /// <param name="Holder">The receiving principal.</param>
-/// <param name="EventStore">The store, or all non-System stores.</param>
-/// <param name="Namespace">The namespace, or all namespaces.</param>
 /// <param name="Access">The granted access.</param>
 /// <param name="Source">The authority supplying the grant.</param>
+/// <param name="EventStore">The store, or null for all non-System stores.</param>
+/// <param name="Namespace">The namespace, or null for all namespaces.</param>
 /// <param name="Proof">The kernel proof.</param>
 [EventType]
-public record EventStoreAccessGranted(PrincipalKey Holder, EventStoreName? EventStore, EventStoreNamespaceName? Namespace, StoreAccess Access, EventStoreAccessGrantSource Source, string Proof = "");
+public record EventStoreAccessGranted(PrincipalKey Holder, StoreAccess Access, EventStoreAccessGrantSource Source, EventStoreName? EventStore = null, EventStoreNamespaceName? Namespace = null, string Proof = "");

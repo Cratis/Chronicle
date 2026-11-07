@@ -31,13 +31,13 @@ public class StoreEntitlements(IStorage storage, IGrainFactory grains, IEventSer
         {
             if (_history.IsRemoved(grant.Holder)) throw new ArgumentException("The principal has been removed.", nameof(grant));
             var existing = _history.Grants.FirstOrDefault(candidate => StoreEntitlementsHistory.SameIdentity(candidate, grant));
-            return existing == grant ? [] : [new EventStoreAccessGranted(grant.Holder, grant.EventStore, grant.Namespace, grant.Access, grant.Source)];
+            return existing == grant ? [] : [new EventStoreAccessGranted(grant.Holder, grant.Access, grant.Source, EventStore: grant.EventStore, Namespace: grant.Namespace)];
         });
     }
 
     /// <inheritdoc/>
     public Task<bool> Revoke(EventStoreAccessGrant grant) => Mutate(() => _history.Grants.Any(candidate => StoreEntitlementsHistory.SameIdentity(candidate, grant))
-        ? [new EventStoreAccessRevoked(grant.Holder, grant.EventStore, grant.Namespace)] : []);
+        ? [new EventStoreAccessRevoked(grant.Holder, EventStore: grant.EventStore, Namespace: grant.Namespace)] : []);
 
     /// <inheritdoc/>
     public async Task Reconcile(IEnumerable<ConfiguredGrant> grants)
@@ -79,12 +79,12 @@ public class StoreEntitlements(IStorage storage, IGrainFactory grains, IEventSer
         var changes = new List<object>();
         changes.AddRange(_history.Grants
             .Where(existing => existing.Source == EventStoreAccessGrantSource.Configuration && !desired.Any(grant => StoreEntitlementsHistory.SameIdentity(existing, grant)))
-            .Select(existing => new EventStoreAccessRevoked(existing.Holder, existing.EventStore, existing.Namespace)));
+            .Select(existing => new EventStoreAccessRevoked(existing.Holder, EventStore: existing.EventStore, Namespace: existing.Namespace)));
         foreach (var grant in desired.Where(grant => !_history.IsRemoved(grant.Holder)))
         {
             var existing = _history.Grants.FirstOrDefault(candidate => StoreEntitlementsHistory.SameIdentity(candidate, grant));
             if (existing?.Source == EventStoreAccessGrantSource.Command || existing == grant) continue;
-            changes.Add(new EventStoreAccessGranted(grant.Holder, grant.EventStore, grant.Namespace, grant.Access, grant.Source));
+            changes.Add(new EventStoreAccessGranted(grant.Holder, grant.Access, grant.Source, EventStore: grant.EventStore, Namespace: grant.Namespace));
         }
         return changes.ToArray();
     }
