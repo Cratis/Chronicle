@@ -90,6 +90,21 @@ internal static partial class SecretNames
             ? null
             : SanitizedPrefix(eventStore.Value, eventStoreNamespace.Value, identifier.Value);
 
+    /// <summary>
+    /// Hashes an exact event store name in the reserved internal-secret naming domain.
+    /// </summary>
+    /// <param name="eventStore">The event store name.</param>
+    /// <returns>The lowercase SHA-256 hash of its length-prefixed UTF-8 encoding.</returns>
+    internal static string InternalSecretHash(EventStoreName eventStore)
+    {
+        const string domainTag = "chronicle-internal-secret-name/v1";
+        var buffer = new byte[domainTag.Length + 1 + LengthPrefixSize + MaxUtf8Length(eventStore.Value)];
+        var written = Encoding.ASCII.GetBytes(domainTag, buffer);
+        buffer[written++] = 0;
+        written = AppendUtf8(buffer, written, eventStore.Value, "event store");
+        return ToLowerHex(SHA256.HashData(buffer.AsSpan(0, written)));
+    }
+
     static string SanitizedPrefix(string eventStore, string eventStoreNamespace, string identifier) =>
         $"{LegacyNamePrefix}--{Sanitize(eventStore)}--{Sanitize(eventStoreNamespace)}--{Sanitize(identifier)}--";
 
@@ -163,6 +178,11 @@ internal static partial class SecretNames
             throw new InvalidEncryptionKeyAddress(component);
         }
 
+        return AppendUtf8(buffer, offset, value, component);
+    }
+
+    static int AppendUtf8(Span<byte> buffer, int offset, string value, string component)
+    {
         var status = Utf8.FromUtf16(value, buffer[(offset + LengthPrefixSize)..], out _, out var written, replaceInvalidSequences: false);
         if (status != OperationStatus.Done)
         {

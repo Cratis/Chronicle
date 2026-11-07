@@ -15,9 +15,15 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.Encryption;
 /// Internal secrets have their own table, which no subject key operation reads or writes. They are per event store and
 /// are kept in the default namespace's database.
 /// </remarks>
-[PrimaryKey(nameof(Purpose))]
+[PrimaryKey(nameof(EventStore), nameof(Purpose))]
 public class InternalSecret
 {
+    /// <summary>
+    /// Gets or sets the exact UTF-8 event store name, compared as bytes on every provider.
+    /// </summary>
+    [MaxLength(600)]
+    public byte[] EventStore { get; set; } = [];
+
     /// <summary>
     /// Gets or sets the <see cref="Cratis.Chronicle.Storage.Compliance.InternalSecretPurpose"/> value the secret is for.
     /// </summary>

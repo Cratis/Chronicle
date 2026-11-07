@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Buffers.Binary;
 using System.Security.Cryptography;
 using System.Text;
 using Cratis.Chronicle.Concepts;
@@ -12,7 +13,8 @@ namespace Cratis.Chronicle.Storage.EventSequences.Mutations;
 /// </summary>
 /// <remarks>
 /// The key is never the stored secret itself: it is derived from it with HKDF-SHA256 and the fixed
-/// <see cref="DerivationLabel"/>, so the stored material is only ever used for this one purpose. The derived bytes are
+/// <see cref="DerivationLabel"/> followed by the length-prefixed exact UTF-8 event store name. This binds the stored
+/// material to both this purpose and this event store, even if stores receive identical secrets. The derived bytes are
 /// held privately and are never exposed, logged or included in an exception.
 /// </remarks>
 public sealed class EventSequenceMutationDigestKey
@@ -56,8 +58,14 @@ public sealed class EventSequenceMutationDigestKey
             throw new ArgumentException($"The digest secret must be at least {MinimumSecretLength} bytes.", nameof(secret));
         }
 
+        var storeBytes = Encoding.UTF8.GetBytes(eventStore.Value);
+        var info = new byte[_label.Length + sizeof(int) + storeBytes.Length];
+        _label.CopyTo(info, 0);
+        BinaryPrimitives.WriteInt32BigEndian(info.AsSpan(_label.Length), storeBytes.Length);
+        storeBytes.CopyTo(info, _label.Length + sizeof(int));
+
         var key = new byte[KeyLength];
-        HKDF.DeriveKey(HashAlgorithmName.SHA256, secret, key, salt: [], info: _label);
+        HKDF.DeriveKey(HashAlgorithmName.SHA256, secret, key, salt: [], info: info);
         return new(eventStore, key);
     }
 

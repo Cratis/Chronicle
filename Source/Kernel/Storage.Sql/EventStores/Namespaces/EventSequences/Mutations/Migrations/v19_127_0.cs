@@ -122,11 +122,14 @@ public class v19_127_0 : Migration
             name: WellKnownTableNames.InternalSecrets,
             columns: table => new
             {
+                EventStore = migrationBuilder.ActiveProvider == "Microsoft.EntityFrameworkCore.SqlServer"
+                    ? table.Column<byte[]>(type: "varbinary(600)", maxLength: 600, nullable: false)
+                    : table.Column<byte[]>(maxLength: 600, nullable: false),
                 Purpose = table.StringColumn(migrationBuilder, maxLength: 64, nullable: false),
                 PublicKey = table.Column<byte[]>(nullable: false),
                 PrivateKey = table.Column<byte[]>(nullable: false)
             },
-            constraints: table => table.PrimaryKey($"PK_{WellKnownTableNames.InternalSecrets}", x => x.Purpose));
+            constraints: table => table.PrimaryKey($"PK_{WellKnownTableNames.InternalSecrets}", x => new { x.EventStore, x.Purpose }));
 
     static string CanonicalSqliteMutationId(string column) =>
         $"typeof(\"{column}\") = 'text' AND " +

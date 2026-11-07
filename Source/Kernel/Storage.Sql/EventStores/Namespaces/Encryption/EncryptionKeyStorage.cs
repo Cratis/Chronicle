@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage.Compliance;
@@ -250,12 +251,13 @@ public class EncryptionKeyStorage(IDatabase database, ILogger<EncryptionKeyStora
     /// <inheritdoc/>
     /// <remarks>
     /// The secret is a row in the <see cref="WellKnownTableNames.InternalSecrets"/> table of the default namespace,
-    /// keyed by the purpose. The primary key is the ordering point: a concurrent creator that loses reads the winner.
+    /// keyed by the exact event store and purpose. The primary key is the ordering point: a concurrent creator that loses reads the winner.
     /// </remarks>
     public async Task<StoredEncryptionKey> GetOrAddInternalSecretFor(EventStoreName eventStore, InternalSecretPurpose purpose, StoredEncryptionKey candidate)
     {
+        var storeBytes = Encoding.UTF8.GetBytes(eventStore.Value);
         await using var scope = await database.Namespace(eventStore, EventStoreNamespaceName.Default);
-        if (await FindInternalSecret(scope.DbContext, purpose) is { } existing)
+        if (await FindInternalSecret(scope.DbContext, storeBytes, purpose) is { } existing)
         {
             return existing;
         }
@@ -264,6 +266,7 @@ public class EncryptionKeyStorage(IDatabase database, ILogger<EncryptionKeyStora
         {
             scope.DbContext.InternalSecrets.Add(new InternalSecret
             {
+                EventStore = storeBytes,
                 Purpose = purpose.Value,
                 PublicKey = candidate.Public,
                 PrivateKey = candidate.Private
@@ -274,15 +277,15 @@ public class EncryptionKeyStorage(IDatabase database, ILogger<EncryptionKeyStora
         catch (DbUpdateException ex) when (ex.IsUniqueViolation())
         {
             await using var retry = await database.Namespace(eventStore, EventStoreNamespaceName.Default);
-            var winner = await FindInternalSecret(retry.DbContext, purpose) ?? throw new InternalSecretProvisioningConflict(purpose);
+            var winner = await FindInternalSecret(retry.DbContext, storeBytes, purpose) ?? throw new InternalSecretProvisioningConflict(purpose);
             _telemetry.RecoveredCollision("internal-secret");
             return winner;
         }
     }
 
-    static async Task<StoredEncryptionKey?> FindInternalSecret(NamespaceDbContext dbContext, InternalSecretPurpose purpose)
+    static async Task<StoredEncryptionKey?> FindInternalSecret(NamespaceDbContext dbContext, byte[] eventStore, InternalSecretPurpose purpose)
     {
-        var row = await dbContext.InternalSecrets.AsNoTracking().SingleOrDefaultAsync(e => e.Purpose == purpose.Value);
+        var row = await dbContext.InternalSecrets.AsNoTracking().SingleOrDefaultAsync(e => e.EventStore == eventStore && e.Purpose == purpose.Value);
         return row is null ? null : new StoredEncryptionKey(row.PublicKey, row.PrivateKey);
     }
 

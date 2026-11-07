@@ -8,10 +8,10 @@ namespace Cratis.Chronicle.Storage.EventSequences.Mutations.for_EventSequenceMut
 public class when_deriving_and_computing : Specification
 {
     /// <summary>
-    /// HKDF-SHA256(ikm = 0x00..0x1f, salt = empty, info = "cratis.chronicle.mutation-receipt-digest.v2", 32 bytes),
+    /// HKDF-SHA256(ikm = 0x00..0x1f, salt = empty, info = "cratis.chronicle.mutation-receipt-digest.v2" || int32be(11) || UTF8("event-store"), 32 bytes),
     /// then HMAC-SHA256 over "canonical". Computed independently with Node's crypto.
     /// </summary>
-    const string Expected = "8ea15a96c2468a7a6e91b43b2e4889689587d620e43b6ffb3b38f5671eb40ed6";
+    const string Expected = "99deea40fb477a5303f87269bac4f9ca1ddc988715146753185c10157232badc";
 
     /// <summary>
     /// HMAC-SHA256 keyed with the raw secret, which the derived key must never equal.

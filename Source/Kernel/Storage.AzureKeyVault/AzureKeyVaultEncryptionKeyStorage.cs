@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using Azure;
 using Azure.Security.KeyVault.Secrets;
 using Cratis.Chronicle.Compliance;
@@ -58,7 +57,7 @@ namespace Cratis.Chronicle.Storage.AzureKeyVault;
 /// fails the deletion loudly with <see cref="EncryptionKeyNotPurged"/>.
 /// </para>
 /// </remarks>
-public partial class AzureKeyVaultEncryptionKeyStorage : IEncryptionKeyStorage
+public class AzureKeyVaultEncryptionKeyStorage : IEncryptionKeyStorage
 {
     const string InternalSecretNamePrefix = "chronicle-internal";
     const string PublicKeyField = "publicKey";
@@ -93,9 +92,6 @@ public partial class AzureKeyVaultEncryptionKeyStorage : IEncryptionKeyStorage
         _secretClient = secretClient;
         _election = new(secretClient, timeProvider, Deserialize);
     }
-
-    [GeneratedRegex("[^a-z0-9]+", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
-    private static partial Regex SanitizeRegex { get; }
 
     /// <inheritdoc/>
     public async Task SaveFor(
@@ -312,10 +308,7 @@ public partial class AzureKeyVaultEncryptionKeyStorage : IEncryptionKeyStorage
     /// <param name="purpose">The <see cref="InternalSecretPurpose"/>.</param>
     /// <returns>The secret name.</returns>
     internal static string BuildInternalSecretName(EventStoreName eventStore, InternalSecretPurpose purpose) =>
-        $"{InternalSecretNamePrefix}--{Sanitize(eventStore.Value)}--{purpose.Value}";
-
-    static string Sanitize(string input) =>
-        SanitizeRegex.Replace(input.ToLowerInvariant(), "-").Trim('-');
+        $"{InternalSecretNamePrefix}--{SecretNames.InternalSecretHash(eventStore)}--{purpose.Value}";
 
     static bool IsDisabled(RequestFailedException exception) =>
         exception.Status == 403 &&
