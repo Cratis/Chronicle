@@ -154,13 +154,23 @@ internal static class SystemStoreGuard
     }
 
     /// <summary>
-    /// Gets the request of a call. The ASP.NET Core gRPC host keeps it in the call user state under the key its own
-    /// GetHttpContext extension reads, which this project does not reference.
+    /// Gets the request of a call through the ASP.NET Core gRPC host's own GetHttpContext extension. The host does
+    /// not keep the request in the call user state, so reading the state directly finds nothing for a real call.
     /// </summary>
     /// <param name="callContext">The <see cref="CallContext"/> of the call.</param>
-    /// <returns>The <see cref="HttpContext"/>, or null when the call is not served over HTTP.</returns>
-    internal static HttpContext? HttpContextFor(CallContext callContext) =>
-        callContext.ServerCallContext?.UserState.TryGetValue("__HttpContext", out var value) == true ? value as HttpContext : null;
+    /// <returns>The <see cref="HttpContext"/>, or null when the call is not served over HTTP, which callers treat as no identity.</returns>
+    internal static HttpContext? HttpContextFor(CallContext callContext)
+    {
+        if (callContext.ServerCallContext is not { } serverCallContext) return null;
+        try
+        {
+            return serverCallContext.GetHttpContext();
+        }
+        catch (InvalidOperationException)
+        {
+            return null;
+        }
+    }
 
     /// <summary>
     /// Gets the refusal of a call that the caller is not allowed to make.
