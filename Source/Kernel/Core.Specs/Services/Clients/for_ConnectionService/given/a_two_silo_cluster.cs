@@ -47,7 +47,7 @@ public class a_two_silo_cluster : Specification
             new[] { _siloA, _siloB }.ToImmutableDictionary(silo => silo, silo => new ClusterMember(silo, SiloStatus.Active, silo.ToString())),
             new MembershipVersion(1)));
         _grain = new SharedReservation(membership) { Clock = _clock };
-        _reservation = new SignallingReservation(Decorate(_grain), _released);
+        _reservation = new SignallingReservation(Decorate(new TurnBasedReservation(_grain)), _released);
 
         var options = Options.Create(new ChronicleOptions { ConnectedClients = new() { KeepAliveIntervalSeconds = 1 }, Clustering = new() { ResponseTimeout = ResponseTimeout } });
         (_serviceA, _ownershipA) = CreateService(_siloA, options);
@@ -159,6 +159,31 @@ public class a_two_silo_cluster : Specification
             NullLogger<KernelConnectionService>.Instance,
             options);
         return (service, ownership);
+    }
+
+    /// <summary>
+    /// Runs one call at a time against the shared grain, as Orleans does for a non-reentrant grain.
+    /// </summary>
+    /// <param name="inner">The grain the calls run against.</param>
+    sealed class TurnBasedReservation(IConnectionReservation inner) : IConnectionReservation
+    {
+        readonly Lock _turn = new();
+
+        public Task<bool> Claim(ConnectionOwner owner, SiloAddress silo, Guid token, TimeSpan lease)
+        {
+            lock (_turn)
+            {
+                return inner.Claim(owner, silo, token, lease);
+            }
+        }
+
+        public Task Release(ConnectionOwner owner, Guid token)
+        {
+            lock (_turn)
+            {
+                return inner.Release(owner, token);
+            }
+        }
     }
 
     sealed class SignallingReservation(IConnectionReservation inner, TaskCompletionSource released) : IConnectionReservation
