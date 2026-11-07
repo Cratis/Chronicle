@@ -41,6 +41,19 @@ public abstract class EncryptionKeyStorageContract : Specification
     }
 
     /// <summary>
+    /// Interleave an erasure with a competing lifecycle change. Atomic stores finish the erasure first;
+    /// transport-backed stores pause after observing the fence but before attempting its guarded update.
+    /// </summary>
+    /// <param name="erase">The erasure to pause.</param>
+    /// <param name="competingOperation">The operation establishing the successor.</param>
+    /// <returns>Async task.</returns>
+    protected virtual async Task DuringErasure(Func<Task> erase, Func<Task> competingOperation)
+    {
+        await erase();
+        await competingOperation();
+    }
+
+    /// <summary>
     /// Lose the response after a successful write. Transport-backed harnesses override this to inject
     /// the fault at their write-response boundary, after the provider has applied the operation.
     /// </summary>
@@ -250,6 +263,29 @@ public abstract class EncryptionKeyStorageContract : Specification
         await Authorize(observed);
         await Assert.ThrowsAsync<EncryptionKeyFenceChanged>(() => _storage.RecordErasureFor(
             _eventStore, _namespace, _identifier, new("stale", Lifecycle: observed.Lifecycle)));
+    }
+
+    [Fact]
+    public async Task should_not_retarget_an_in_flight_erasure_to_an_authorized_successor()
+    {
+        await Save(_original);
+        EncryptionKeyErasure successorFence = null!;
+        await DuringErasure(
+            async () =>
+            {
+                var result = await Catch.Exception(() => _storage.RecordErasureFor(_eventStore, _namespace, _identifier));
+                result?.ShouldBeOfExactType<EncryptionKeyFenceChanged>();
+            },
+            async () =>
+            {
+                await Raise("winner");
+                await Sweep("winner");
+                await Authorize(await Fence());
+                await Provision(_successor);
+                successorFence = await Fence();
+            });
+        AssertFence(await Fence(), successorFence);
+        AssertKey((await Latest())!.Key, _successor);
     }
 
     [Fact] public async Task should_verify_the_sweep_before_confirming()

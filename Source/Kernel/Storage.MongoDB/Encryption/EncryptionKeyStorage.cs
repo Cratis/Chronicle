@@ -45,6 +45,7 @@ public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
     {
         var collection = await GetCollection(eventStore, eventStoreNamespace);
         var observed = await EnsureFence(eventStore, eventStoreNamespace, identifier);
+        var lifecycle = observed.Lifecycle;
         for (var attempt = 0; attempt < MaximumAttempts; attempt++)
         {
             var next = IsLatest(revision) ? await GetNextRevisionFor(collection, identifier, observed) : revision!;
@@ -59,6 +60,11 @@ public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
             {
                 // A duplicate insert is a definite non-write, unlike a timeout or lost acknowledgment.
                 observed = await RequiredFence(eventStore, eventStoreNamespace, identifier);
+                if (observed.Lifecycle != lifecycle)
+                {
+                    throw new EncryptionKeyFenceChanged(identifier);
+                }
+
                 await Backoff(attempt);
             }
         }
@@ -77,10 +83,16 @@ public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
     public async Task<EncryptionKeyAtRevision> GetOrAddWithRevisionFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKey key)
     {
         var collection = await GetCollection(eventStore, eventStoreNamespace);
+        var initial = await EnsureFence(eventStore, eventStoreNamespace, identifier);
         for (var attempt = 0; attempt < MaximumAttempts; attempt++)
         {
             // Validate provisioning even when returning an existing key: a closed fence cannot be bypassed by a hit.
-            var observed = await EnsureFence(eventStore, eventStoreNamespace, identifier);
+            var observed = attempt == 0 ? initial : await RequiredFence(eventStore, eventStoreNamespace, identifier);
+            if (observed.Lifecycle != initial.Lifecycle)
+            {
+                throw new EncryptionKeyFenceChanged(identifier);
+            }
+
             var revision = observed.RevisionForNewKey(identifier, key);
             var existing = await ReadPublishedFor(collection, identifier, null, observed);
             if (existing is not null)
@@ -171,7 +183,8 @@ public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
     public async Task RecordErasureFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyErasureRequest request)
     {
         var collection = await GetCollection(eventStore, eventStoreNamespace);
-        await EnsureFence(eventStore, eventStoreNamespace, identifier);
+        var initial = await EnsureFence(eventStore, eventStoreNamespace, identifier);
+        var lifecycle = request.Lifecycle == 0 ? initial.Lifecycle : request.Lifecycle;
         for (var attempt = 0; attempt < MaximumAttempts; attempt++)
         {
             var observed = await RequiredFence(eventStore, eventStoreNamespace, identifier);
@@ -180,7 +193,7 @@ public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
                 return;
             }
 
-            if (request.Lifecycle != 0 && request.Lifecycle != observed.Lifecycle)
+            if (lifecycle != observed.Lifecycle)
             {
                 throw new EncryptionKeyFenceChanged(identifier);
             }
@@ -287,7 +300,11 @@ public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
         var filter = EncryptionKeyFenceUpdates.Observed(identifier, observed) & _fences.Eq(_ => _.NewKeyAllowed, false);
         if (!await WriteFence(eventStore, eventStoreNamespace, filter, EncryptionKeyFenceUpdates.Authorize(next)))
         {
-            throw new EncryptionKeyFenceChanged(identifier);
+            var current = await RequiredFence(eventStore, eventStoreNamespace, identifier);
+            if (!IsAuthorizationRetry(current, observedVersion, observedLifecycle))
+            {
+                throw new EncryptionKeyFenceChanged(identifier);
+            }
         }
     }
 

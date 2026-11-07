@@ -18,6 +18,7 @@ public class when_running_the_contract(ReplicaSetMongoDBFixture fixture) : Encry
     TaskCompletionSource _staged;
     TaskCompletionSource _resume;
     bool _pausePublication;
+    bool _pauseErasure;
     bool _loseResponse;
 
     protected override IEncryptionKeyStorage CreateStorage()
@@ -37,12 +38,23 @@ public class when_running_the_contract(ReplicaSetMongoDBFixture fixture) : Encry
         return new EncryptionKeyStorage(database);
     }
 
-    protected override async Task DuringPublication(Func<Task> write, Func<Task> competingOperation)
+    protected override Task DuringPublication(Func<Task> write, Func<Task> competingOperation)
+    {
+        _pausePublication = true;
+        return DuringOperation(write, competingOperation);
+    }
+
+    protected override Task DuringErasure(Func<Task> erase, Func<Task> competingOperation)
+    {
+        _pauseErasure = true;
+        return DuringOperation(erase, competingOperation);
+    }
+
+    async Task DuringOperation(Func<Task> operation, Func<Task> competingOperation)
     {
         _staged = new(TaskCreationOptions.RunContinuationsAsynchronously);
         _resume = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        _pausePublication = true;
-        var pending = write();
+        var pending = operation();
         try
         {
             await _staged.Task.WaitAsync(TimeSpan.FromSeconds(30));
@@ -106,6 +118,13 @@ public class when_running_the_contract(ReplicaSetMongoDBFixture fixture) : Encry
         proxy.FindOneAndUpdateAsync(Arg.Any<FilterDefinition<EncryptionKeyErasureForIdentifier>>(), Arg.Any<UpdateDefinition<EncryptionKeyErasureForIdentifier>>(), Arg.Any<FindOneAndUpdateOptions<EncryptionKeyErasureForIdentifier>>(), Arg.Any<CancellationToken>())
             .Returns(async call =>
             {
+                if (_pauseErasure)
+                {
+                    _pauseErasure = false;
+                    _staged.TrySetResult();
+                    await _resume.Task;
+                }
+
                 var result = await actual.FindOneAndUpdateAsync(call.Arg<FilterDefinition<EncryptionKeyErasureForIdentifier>>(), call.Arg<UpdateDefinition<EncryptionKeyErasureForIdentifier>>(), call.Arg<FindOneAndUpdateOptions<EncryptionKeyErasureForIdentifier>>(), call.Arg<CancellationToken>());
                 if (_loseResponse && result is not null)
                 {
