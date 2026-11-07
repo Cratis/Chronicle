@@ -338,6 +338,9 @@ public interface IEventSequenceStorage
     /// <summary>
     /// Get events from a sequence number, including original content and revisions.
     /// </summary>
+    /// <remarks>
+    /// The default body reads the current event only and does not load history. A storage that keeps original content or revisions must override it.
+    /// </remarks>
     /// <param name="sequenceNumber">The inclusive starting sequence number.</param>
     /// <param name="eventSourceId">Optional event source identity.</param>
     /// <param name="eventSourceType">Optional event source type.</param>
@@ -383,6 +386,9 @@ public interface IEventSequenceStorage
     /// <summary>
     /// Get events within a sequence number range, including original content and revisions.
     /// </summary>
+    /// <remarks>
+    /// The default body reads the current event only and does not load history. A storage that keeps original content or revisions must override it.
+    /// </remarks>
     /// <param name="start">Inclusive start of the range.</param>
     /// <param name="end">Inclusive end of the range.</param>
     /// <param name="eventSourceId">Optional event source identity.</param>
