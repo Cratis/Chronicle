@@ -96,10 +96,10 @@ public abstract class EncryptionKeyStorageContract : Specification
     public async Task should_report_recorded_erasure_even_after_a_successor_is_authorized()
     {
         await Raise("empty");
-        (await Erasure()).ShouldEqual(await Fence());
+        AssertFence((await Erasure())!, await Fence());
         await Authorize(await Fence());
         await Provision(_successor);
-        (await Erasure()).ShouldEqual(await Fence());
+        AssertFence((await Erasure())!, await Fence());
     }
 
     [Fact] public async Task should_refuse_a_delayed_save_of_destroyed_material_at_a_higher_revision()
@@ -127,7 +127,7 @@ public abstract class EncryptionKeyStorageContract : Specification
         await Authorize(observed);
         var authorized = await Fence();
         await Authorize(observed);
-        (await Fence()).ShouldEqual(authorized);
+        AssertFence(await Fence(), authorized);
         authorized.Version.ShouldEqual(observed.Version + 1);
         authorized.Lifecycle.ShouldEqual(observed.Lifecycle + 1);
     }
@@ -182,7 +182,7 @@ public abstract class EncryptionKeyStorageContract : Specification
             (await _storage.TryGetFor(_eventStore, _namespace, _identifier, 1u)).ShouldBeNull();
             (await _storage.HasFor(_eventStore, _namespace, _identifier)).ShouldBeFalse();
         });
-        (await Latest())!.Key.ShouldEqual(_original);
+        AssertKey((await Latest())!.Key, _original);
     }
 
     [Fact] public async Task should_keep_get_or_add_on_the_published_revision_during_a_later_stage()
@@ -190,10 +190,10 @@ public abstract class EncryptionKeyStorageContract : Specification
         await Save(_original);
         await DuringPublication(() => Save(_successor, 2u), async () =>
         {
-            (await Provision(_successor)).Key.ShouldEqual(_original);
-            (await _storage.GetOrAddFor(_eventStore, _namespace, _identifier, _successor)).ShouldEqual(_original);
+            AssertKey((await Provision(_successor)).Key, _original);
+            AssertKey(await _storage.GetOrAddFor(_eventStore, _namespace, _identifier, _successor), _original);
         });
-        (await Latest())!.Key.ShouldEqual(_successor);
+        AssertKey((await Latest())!.Key, _successor);
     }
 
     [Fact] public async Task should_hide_covered_rows_before_the_sweep_including_get_or_add()
@@ -219,9 +219,12 @@ public abstract class EncryptionKeyStorageContract : Specification
         await Raise("old");
         await Sweep("old");
         await Confirm("old");
-        (await Latest()).ShouldEqual(successor);
-        (await Fence()).ShouldEqual(beforeRetry);
-        (await Fence()).Requests!.Single().ShouldEqual(request);
+        var latest = (await Latest())!;
+        latest.Revision.ShouldEqual(successor.Revision);
+        latest.StagedLifecycle.ShouldEqual(successor.StagedLifecycle);
+        AssertKey(latest.Key, successor.Key);
+        AssertFence(await Fence(), beforeRetry);
+        AssertRequest((await Fence()).Requests!.Single(), request);
     }
 
     [Fact] public async Task should_keep_an_old_request_after_the_inline_log_reaches_capacity()
@@ -235,7 +238,7 @@ public abstract class EncryptionKeyStorageContract : Specification
 
         var beforeRetry = await Fence();
         await Raise("old");
-        (await Fence()).ShouldEqual(beforeRetry);
+        AssertFence(await Fence(), beforeRetry);
         await Assert.ThrowsAsync<EncryptionKeyRequestLogFull>(() => Raise("overflow"));
         (await Fence()).Requests!.Count.ShouldEqual(1024);
     }
@@ -291,7 +294,40 @@ public abstract class EncryptionKeyStorageContract : Specification
         await Assert.ThrowsAsync<TimeoutException>(() => LoseWriteResponse(() => Raise("lost-response")));
         var applied = await Fence();
         await Raise("lost-response");
-        (await Fence()).ShouldEqual(applied);
+        AssertFence(await Fence(), applied);
+    }
+
+    static void AssertKey(EncryptionKey actual, EncryptionKey expected)
+    {
+        actual.Public.ShouldEqual(expected.Public);
+        actual.Private.ShouldEqual(expected.Private);
+    }
+
+    static void AssertRequest(EncryptionKeyErasureRequest actual, EncryptionKeyErasureRequest expected)
+    {
+        actual.RequestId.ShouldEqual(expected.RequestId);
+        actual.Through.ShouldEqual(expected.Through);
+        actual.Lifecycle.ShouldEqual(expected.Lifecycle);
+        actual.Confirmed.ShouldEqual(expected.Confirmed);
+        (actual.Fingerprints ?? []).Order(StringComparer.Ordinal).ShouldEqual((expected.Fingerprints ?? []).Order(StringComparer.Ordinal));
+    }
+
+    static void AssertFence(EncryptionKeyErasure actual, EncryptionKeyErasure expected)
+    {
+        actual.ErasedThrough.ShouldEqual(expected.ErasedThrough);
+        actual.NewKeyAllowed.ShouldEqual(expected.NewKeyAllowed);
+        actual.Version.ShouldEqual(expected.Version);
+        actual.Lifecycle.ShouldEqual(expected.Lifecycle);
+        actual.ErasedLifecycle.ShouldEqual(expected.ErasedLifecycle);
+        actual.Seal.ShouldEqual(expected.Seal);
+        actual.ErasedKeyFingerprints.Order(StringComparer.Ordinal).ShouldEqual(expected.ErasedKeyFingerprints.Order(StringComparer.Ordinal));
+        var requests = actual.Requests ?? [];
+        var expectedRequests = expected.Requests ?? [];
+        requests.Count.ShouldEqual(expectedRequests.Count);
+        for (var index = 0; index < requests.Count; index++)
+        {
+            AssertRequest(requests[index], expectedRequests[index]);
+        }
     }
 
     Task Save(EncryptionKey key, EncryptionKeyRevision? revision = null) => _storage.SaveFor(_eventStore, _namespace, _identifier, key, revision);

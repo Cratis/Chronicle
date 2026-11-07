@@ -13,16 +13,26 @@ public class racing_encryption_key_collections : Specification
     protected IMongoCollection<EncryptionKeyForIdentifier> _keys;
     protected IMongoCollection<EncryptionKeyErasureForIdentifier> _erasures;
     protected EncryptionKeyStorage _storage;
+    protected EncryptionKeyErasureForIdentifier _fence = new("identifier", 0u, [], true);
+    protected bool _sealFence = true;
 
     void Establish()
     {
         _keys = Substitute.For<IMongoCollection<EncryptionKeyForIdentifier>>();
         _erasures = Substitute.For<IMongoCollection<EncryptionKeyErasureForIdentifier>>();
         _keys.CollectionNamespace.Returns(new CollectionNamespace("specs", "encryption-keys"));
+        _keys.WithWriteConcern(Arg.Any<WriteConcern>()).Returns(_keys);
+        _keys.WithReadConcern(Arg.Any<ReadConcern>()).Returns(_keys);
+        _keys.WithReadPreference(Arg.Any<ReadPreference>()).Returns(_keys);
+        _erasures.WithWriteConcern(Arg.Any<WriteConcern>()).Returns(_erasures);
+        _erasures.WithReadConcern(Arg.Any<ReadConcern>()).Returns(_erasures);
+        _erasures.WithReadPreference(Arg.Any<ReadPreference>()).Returns(_erasures);
+        _keys.UpdateOneAsync(Arg.Any<FilterDefinition<EncryptionKeyForIdentifier>>(), Arg.Any<UpdateDefinition<EncryptionKeyForIdentifier>>(), Arg.Any<UpdateOptions>(), Arg.Any<CancellationToken>())
+            .Returns(new UpdateResult.Acknowledged(1, 1, null));
         _keys.FindAsync(Arg.Any<FilterDefinition<EncryptionKeyForIdentifier>>(), Arg.Any<FindOptions<EncryptionKeyForIdentifier, EncryptionKeyForIdentifier>>(), Arg.Any<CancellationToken>())
             .Returns(_ => Task.FromResult(duplicate_keys.CursorOf<EncryptionKeyForIdentifier>()));
         _erasures.FindAsync(Arg.Any<FilterDefinition<EncryptionKeyErasureForIdentifier>>(), Arg.Any<FindOptions<EncryptionKeyErasureForIdentifier, EncryptionKeyErasureForIdentifier>>(), Arg.Any<CancellationToken>())
-            .Returns(_ => Task.FromResult(duplicate_keys.CursorOf<EncryptionKeyErasureForIdentifier>()));
+            .Returns(_ => Task.FromResult(duplicate_keys.CursorOf(_sealFence ? _fence with { Seal = EncryptionKeyFenceUpdates.Seal(_fence.ToFence()) } : _fence)));
 
         var database = Substitute.For<IDatabase>();
         var eventStore = Substitute.For<IEventStoreDatabase>();

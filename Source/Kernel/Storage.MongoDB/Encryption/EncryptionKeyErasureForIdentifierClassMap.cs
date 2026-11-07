@@ -16,5 +16,7 @@ public class EncryptionKeyErasureForIdentifierClassMap : IBsonClassMapFor<Encryp
     {
         classMap.AutoMap();
         classMap.MapIdProperty(_ => _.Id);
+        classMap.SetIgnoreExtraElements(true);
+        classMap.MapMember(_ => _.Lifecycle).SetDefaultValue(1u);
     }
 }
