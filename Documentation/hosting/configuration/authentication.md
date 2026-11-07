@@ -25,7 +25,10 @@ The legacy `identityProvider.certificate` option is ignored; see [Identity Provi
 | externalAdministratorClaim | object | null | Opt-in claim `type` and `value` that grants administrator privilege to external-authority callers. See [Administrator privilege with an external authority](#administrator-privilege-with-an-external-authority) |
 | audience | string | "chronicle" | Required audience for external-authority access tokens |
 | requireHttpsMetadata | bool | true | Require HTTPS when retrieving external-authority metadata |
-| enforceAdministratorPolicyForOperations | bool | false | Enforce administrator privilege for System-store operational recovery instead of auditing would-be denials |
+| enforceAdministratorPolicyForOperations | bool | false | Opt in to administrator enforcement for System-store operational recovery and kernel-scoped administrator-policy operations instead of auditing would-be denials. The default becomes true in the next major release |
+| enforceDestructiveOperations | bool | false | Opt in to refusing non-administrators destructive operations on the System store or at kernel scope, and compliance key operations beyond the requested event store. The default becomes true in the next major release; independent checks still apply |
+| enforceStoreEntitlements | bool | false | Require explicit event store entitlements for store-scoped capabilities, including compliance operations. When off, decisions are audited only |
+| eventStoreAccess | array | [] | Explicit event store grants for issuer-qualified external principals |
 | defaultAdminUsername | string | "admin" | Default admin username created on first startup when `adminUser` is not configured |
 | initialAdminSetupToken | string | null | Optional operator-provided token for initial password setup; use secret management |
 
@@ -54,7 +57,7 @@ Behind an ingress, configure ASP.NET Core `ForwardedHeaders` with trusted proxie
 Administrator privilege is separate from a user account. The `Administrators` service lets an existing
 administrator grant or revoke that privilege and list active administrators. The last active administrator
 cannot be revoked or removed. These management operations always enforce the `Chronicle.Administrator`
-policy when authentication is enabled; the audit-mode setting below does not weaken them.
+policy when authentication is enabled; audit mode below does not weaken them.
 
 Only authenticated users issued by Chronicle's internal authority can pass that policy. Their principal
 must carry `chronicle_principal=user`, and the authoritative System roster must still grant the privilege
@@ -67,20 +70,22 @@ User tokens issued before this marker was introduced must be refreshed or obtain
 or Identity bearer sessions without the marker must sign in again. Privilege is checked against the roster
 on each call, not cached in the token or inferred from the administrator read-model projection.
 
-### Audit mode for existing operations
+### Enforcement for existing operations
 
 Existing user/application management commands, job stop/resume/delete operations, observer recovery
 operations, and development-only kernel reset use `Chronicle.Administrator.Operations`.
 System-store reads and operations always require an administrator, regardless of
 `EnforceAdministratorPolicyForOperations`. See [The System event store](../system-event-store.md) for recovery guidance.
-For the remaining administrator-policy operations, by default,
-`EnforceAdministratorPolicyForOperations` is `false`: operations that would fail the administrator check
-log a warning and continue under their existing authentication requirements. Each would-deny warning names
+For the remaining administrator-policy operations, `EnforceAdministratorPolicyForOperations` defaults to
+`false`, preserving audit mode in this minor release: operations that would fail the administrator check
+log a warning and continue under their existing authentication requirements. `EnforceDestructiveOperations`
+also defaults to `false`. When either flag is false, including when unset, Chronicle logs a startup warning
+naming the flag and stating that its default becomes enforcing in the next major release. Set the flags to
+`true` to opt in now. Each would-deny warning names
 the caller kind (`user`, `app`, or `anonymous`) and operation, without token, secret, or command-property
 contents. Audit mode does not grant administrator privilege.
 
-Review those warnings before switching on enforcement. Set `EnforceAdministratorPolicyForOperations=true`
-through the authentication configuration:
+Review those warnings before opting in to enforcement. For example:
 
 ```json
 {

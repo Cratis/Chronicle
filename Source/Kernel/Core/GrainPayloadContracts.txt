@@ -153,6 +153,10 @@ json Cratis.Chronicle.Captures.Engine.CaptureValidationMessage
   column: int
   line: int
   message: string
+orleans [Alias("Cratis.Chronicle.Clients.ConnectionOwner")] Cratis.Chronicle.Clients.ConnectionOwner
+  [Id(0)] Issuer: string
+  [Id(1)] Subject: string
+  [Id(2)] IsClient: bool
 concept Cratis.Chronicle.Compliance.EncryptionKeyIdentifier : string
 enum Cratis.Chronicle.Concepts.Alerts.AlertClearedReason : int
   Cleared = 1
@@ -1273,6 +1277,40 @@ orleans Cratis.Chronicle.Projections.SingleReadModelProjectionState
   [Id(2)] IsInitialized: bool
 custom Cratis.Chronicle.Properties.PropertyPath
 custom Cratis.Chronicle.Schemas.JsonSchema
+orleans Cratis.Chronicle.Security.ConfiguredGrant
+  [Id(0)] Holder: Cratis.Chronicle.Security.PrincipalKey
+  [Id(1)] EventStore: Cratis.Chronicle.Concepts.EventStoreName
+  [Id(2)] Namespace: Cratis.Chronicle.Concepts.EventStoreNamespaceName
+  [Id(3)] Access: Cratis.Chronicle.Security.StoreAccess
+orleans Cratis.Chronicle.Security.EventStoreAccessGrant
+  [Id(0)] Holder: Cratis.Chronicle.Security.PrincipalKey
+  [Id(1)] EventStore: Cratis.Chronicle.Concepts.EventStoreName
+  [Id(2)] Namespace: Cratis.Chronicle.Concepts.EventStoreNamespaceName
+  [Id(3)] Access: Cratis.Chronicle.Security.StoreAccess
+  [Id(4)] Source: Cratis.Chronicle.Security.EventStoreAccessGrantSource
+enum Cratis.Chronicle.Security.EventStoreAccessGrantSource : int
+  Command = 1
+  Configuration = 0
+orleans Cratis.Chronicle.Security.PrincipalKey
+  [Id(0)] Issuer: string
+  [Id(1)] Subject: string
+  [Id(2)] IsClient: bool
+enum Cratis.Chronicle.Security.StoreAccess : int
+  Append = 2
+  Manage = 4
+  None = 0
+  Read = 1
+orleans Cratis.Chronicle.Security.StoreEntitlementObservation
+  [Id(0)] Holder: Cratis.Chronicle.Security.PrincipalKey
+  [Id(1)] EventStore: Cratis.Chronicle.Concepts.EventStoreName
+  [Id(2)] Namespace: Cratis.Chronicle.Concepts.EventStoreNamespaceName
+  [Id(3)] Access: Cratis.Chronicle.Security.StoreAccess
+  [Id(4)] FirstSeen: System.DateTimeOffset
+  [Id(5)] LastSeen: System.DateTimeOffset
+  [Id(6)] Count: long
+orleans Cratis.Chronicle.Security.StoreEntitlementsState
+  [Id(0)] Version: long
+  [Id(1)] Grants: System.Collections.Generic.IReadOnlyList<Cratis.Chronicle.Security.EventStoreAccessGrant>
 json Cratis.Chronicle.Seeding.SeedingEntry
   content: string
   eventSourceId: Cratis.Chronicle.Concepts.Events.EventSourceId

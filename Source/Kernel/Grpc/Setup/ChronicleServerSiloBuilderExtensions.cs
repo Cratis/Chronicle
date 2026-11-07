@@ -140,6 +140,7 @@ public static class ChronicleServerSiloBuilderExtensions
             .AddReplayStateManagement()
             .AddEventTypesCacheInvalidation()
             .AddEncryptionKeyCacheInvalidation()
+            .AddStoreEntitlementsCache()
             .AddProjectionsService()
             .AddReminders()
             .AddMemoryGrainStorage("PubSubStore") // TODO: Store Grain state in Database
@@ -179,6 +180,7 @@ public static class ChronicleServerSiloBuilderExtensions
             builder.Services.AddCratisArcCore();
         }
 
+        builder.Services.TryAddSingleton(new InProcessKernelHost());
         builder.Services.AddSingleton<IServices>(sp =>
         {
             Cratis.Chronicle.Services.SystemStoreGuard.InProcessServices = sp;
@@ -199,7 +201,8 @@ public static class ChronicleServerSiloBuilderExtensions
                 new Cratis.Chronicle.Services.Compliance.ComplianceService(
                     grainFactory,
                     sp.GetRequiredService<IJsonSchemaMetadataManager>(),
-                    sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Compliance.ComplianceService>>()),
+                    sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Compliance.ComplianceService>>(),
+                    sp.GetRequiredService<Cratis.Chronicle.Services.Compliance.ComplianceAuthorization>()),
                 ActivatorUtilities.CreateInstance<Cratis.Chronicle.Services.EventStores.EventStores>(sp),
                 ActivatorUtilities.CreateInstance<Cratis.Chronicle.Services.Namespaces.Namespaces>(sp),
                 ActivatorUtilities.CreateInstance<Cratis.Chronicle.Services.Recommendations.Recommendations>(sp),

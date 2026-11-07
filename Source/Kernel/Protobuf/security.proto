@@ -48,8 +48,49 @@ message CommandResult {
    string ExceptionStackTrace = 5;
    string AuthorizationFailureReason = 6;
 }
+message CommandResult_Boolean {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2;
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   string AuthorizationFailureReason = 6;
+   bool Response = 7;
+}
+enum EventStoreAccessGrantSource {
+   Configuration = 0;
+   Command = 1;
+}
+message EventStoreAccessGrantsResponse {
+   string EventStore = 4;
+   string Namespace = 5;
+   StoreAccess Access = 6;
+   EventStoreAccessGrantSource Source = 7;
+   EventStoreAccessHolder Holder = 8;
+}
+message EventStoreAccessHolder {
+   string Issuer = 1;
+   string Subject = 2;
+   bool IsClient = 3;
+}
+message EventStoreAccessPreflightResponse {
+   string EventStore = 4;
+   string Namespace = 5;
+   StoreAccess Access = 6;
+   SerializableDateTimeOffset FirstSeen = 7;
+   SerializableDateTimeOffset LastSeen = 8;
+   int64 Count = 9;
+   EventStoreAccessHolder Holder = 10;
+}
 message GrantAdministratorRequest {
    .bcl.Guid UserId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+}
+message GrantEventStoreAccessRequest {
+   string EventStore = 4;
+   string Namespace = 5;
+   StoreAccess Access = 6;
+   EventStoreAccessHolder Holder = 7;
+   bool AllEventStores = 8;
 }
 message QueryResult_AdminPasswordStatusResponse {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
@@ -75,6 +116,22 @@ message QueryResult_IEnumerable_ApplicationResponse {
    string ExceptionStackTrace = 5;
    repeated ApplicationResponse Data = 6;
 }
+message QueryResult_IEnumerable_EventStoreAccessGrantsResponse {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2;
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   repeated EventStoreAccessGrantsResponse Data = 6;
+}
+message QueryResult_IEnumerable_EventStoreAccessPreflightResponse {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2;
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   repeated EventStoreAccessPreflightResponse Data = 6;
+}
 message QueryResult_IEnumerable_UserResponse {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
    bool IsAuthorized = 2;
@@ -96,6 +153,12 @@ message RevokeAdministratorRequest {
    .bcl.Guid UserId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
    string Reason = 2;
 }
+message RevokeEventStoreAccessRequest {
+   string EventStore = 4;
+   string Namespace = 5;
+   EventStoreAccessHolder Holder = 6;
+   bool AllEventStores = 7;
+}
 // Represents a DateTimeOffset value as an ISO 8601 string (e.g., "2024-01-15T12:30:00.0000000+02:00").
 message SerializableDateTimeOffset {
    string Value = 1;
@@ -105,6 +168,12 @@ message SetInitialAdminPasswordRequest {
    string Password = 2;
    string ConfirmedPassword = 3;
    string SetupToken = 4;
+}
+enum StoreAccess {
+   None = 0;
+   Read = 1;
+   Append = 2;
+   Manage = 4;
 }
 message UserResponse {
    .bcl.Guid Id = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
@@ -127,9 +196,13 @@ enum ValidationResultSeverity {
    Error = 3;
 }
 service Administrators {
+   rpc All (.google.protobuf.Empty) returns (QueryResult_IEnumerable_EventStoreAccessGrantsResponse);
    rpc AllAdministrators (.google.protobuf.Empty) returns (QueryResult_IEnumerable_AdministratorResponse);
    rpc GrantAdministrator (GrantAdministratorRequest) returns (CommandResult);
+   rpc GrantEventStoreAccess (GrantEventStoreAccessRequest) returns (CommandResult);
    rpc RevokeAdministrator (RevokeAdministratorRequest) returns (CommandResult);
+   rpc RevokeEventStoreAccess (RevokeEventStoreAccessRequest) returns (CommandResult_Boolean);
+   rpc Uncovered (.google.protobuf.Empty) returns (QueryResult_IEnumerable_EventStoreAccessPreflightResponse);
 }
 service Applications {
    rpc AddApplication (AddApplicationRequest) returns (CommandResult);

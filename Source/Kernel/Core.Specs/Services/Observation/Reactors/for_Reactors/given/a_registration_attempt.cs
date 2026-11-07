@@ -41,7 +41,7 @@ public class a_registration_attempt : Specification
             ConnectionId = "connection",
             EventStore = "store",
             Namespace = "namespace",
-            Reactor = new Contracts.Observation.Reactors.ReactorDefinition { ReactorId = "reactor", EventSequenceId = "event-log" }
+            Reactor = new ReactorDefinition { ReactorId = "reactor", EventSequenceId = "event-log" }
         })));
         _error = await Catch.Exception(() => observed.WaitAsync(TimeSpan.FromSeconds(5)));
     }

@@ -3,10 +3,13 @@
 
 using System.Security.Claims;
 using Cratis.Chronicle.Clients;
+using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Services.for_QueryExecutor;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using ProtoBuf.Grpc;
 
 namespace Cratis.Chronicle.Services;
@@ -76,7 +79,14 @@ public static class AuthenticatedCalls
         authorization
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<object?>(), Arg.Any<string>())
             .Returns(administrator ? AuthorizationResult.Success() : AuthorizationResult.Failed());
-        var services = new ServiceCollection().AddSingleton(authorization).BuildServiceProvider();
+        var decisions = Substitute.For<IAuthorizationDecisions>();
+        decisions.Decide(Arg.Any<ClaimsPrincipal?>(), Arg.Any<Capability>(), Arg.Any<AuthorizationScope>()).Returns(call =>
+            AuthorizationDecision.Allow(AuthorizationReason.Granted, call.ArgAt<Capability>(1), call.ArgAt<AuthorizationScope>(2)));
+        var services = new ServiceCollection()
+            .AddSingleton(authorization)
+            .AddSingleton(decisions)
+            .AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance)
+            .BuildServiceProvider();
         var http = new DefaultHttpContext { User = principal, RequestServices = services };
         return new(new object(), new FakeServerCallContext(http, cancellationToken));
     }

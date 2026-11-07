@@ -38,7 +38,10 @@ public class an_authenticated_grpc_connection : Specification
         connectedClients.OnClientPing(Arg.Any<ConnectionId>()).Returns(true);
         var management = Substitute.For<IManagementGrain>();
         management.GetHosts(true).Returns(new Dictionary<SiloAddress, SiloStatus> { [silo] = SiloStatus.Active });
+        var reservation = Substitute.For<IConnectionReservation>();
+        reservation.Claim(Arg.Any<ConnectionOwner>(), Arg.Any<SiloAddress>(), Arg.Any<Guid>(), Arg.Any<TimeSpan>()).Returns(true);
         var grains = Substitute.For<IGrainFactory>();
+        grains.GetGrain<IConnectionReservation>(Arg.Any<string>(), Arg.Any<string>()).Returns(reservation);
         grains.GetGrain<IConnectedClients>(silo.ToParsableString(), Arg.Any<string>()).Returns(connectedClients);
         grains.GetGrain<IManagementGrain>(Arg.Any<long>(), Arg.Any<string>()).Returns(management);
         var localSilo = Substitute.For<ILocalSiloDetails>();

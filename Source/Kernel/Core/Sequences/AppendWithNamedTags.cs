@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Grpc;
+using Cratis.Chronicle.Security;
 
 namespace Cratis.Chronicle.Sequences;
 
@@ -32,6 +33,7 @@ namespace Cratis.Chronicle.Sequences;
 /// <param name="ConcurrencyScope">Optional concurrency scope.</param>
 /// <param name="EventSource">Optional name of the registered event source definition the event is appended through.</param>
 /// <param name="EffectReceipt">Optional occurrence effect to commit atomically with this event.</param>
+[StoreAccess(StoreAccess.Append)]
 [Command]
 [BelongsTo(WellKnownServices.EventSequences)]
 public record AppendWithNamedTags(

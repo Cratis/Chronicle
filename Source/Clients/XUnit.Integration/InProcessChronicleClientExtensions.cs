@@ -45,6 +45,7 @@ public static class InProcessChronicleClientExtensions
     {
         services.AddSingleton<IReactorMediator, ReactorMediator>();
         services.AddSingleton<IReducerMediator, ReducerMediator>();
+        services.TryAddSingleton<KernelCore::Cratis.Chronicle.Clients.IConnectionOwnership, KernelCore::Cratis.Chronicle.Clients.ConnectionOwnership>();
 
         services.RemoveAll<IClientArtifactsProvider>();
         services.AddSingleton(artifactsProvider);

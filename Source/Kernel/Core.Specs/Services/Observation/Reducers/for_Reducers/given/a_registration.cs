@@ -32,6 +32,7 @@ public class a_registration : Specification
     protected readonly TaskCompletionSource<Exception> _error = new(TaskCreationOptions.RunContinuationsAsynchronously);
     readonly List<IDisposable> _connections = [];
     Reducers _reducers;
+    protected Subject<ReducerMessage> _messages;
 
     void Establish()
     {
@@ -61,7 +62,7 @@ public class a_registration : Specification
 #pragma warning restore CA2012
         _reducers = new(
             _grainFactory,
-            Substitute.For<IReducerMediator>(),
+            CreateMediator(),
             Substitute.For<IExpandoObjectConverter>(),
             new JsonSerializerOptions(),
             new ActivitySource<Reducers>(),
@@ -76,15 +77,17 @@ public class a_registration : Specification
         _gate.ClearReceivedCalls();
     }
 
+    protected virtual IReducerMediator CreateMediator() => Substitute.For<IReducerMediator>();
+
 #pragma warning disable CA2012 // Configuring the substitute; the ValueTask is the stubbed call, not an operation to await
     protected void ExhaustGate() => _gate.Enter(Arg.Any<CancellationToken>()).Returns(call => WaitForPermit(call.Arg<CancellationToken>()));
 #pragma warning restore CA2012
 
-    protected void Connect(string connectionId = "connection", CancellationToken cancellationToken = default)
+    protected void Connect(string connectionId = "connection", CallContext? callContext = null, CancellationToken cancellationToken = default)
     {
-        var messages = new Subject<ReducerMessage>();
+        var messages = _messages = new Subject<ReducerMessage>();
         _connections.Add(messages);
-        _connections.Add(_reducers.Observe(messages, new CallContext(new CallOptions(cancellationToken: cancellationToken))).Subscribe(_ => { }, error => _error.TrySetResult(error)));
+        _connections.Add(_reducers.Observe(messages, callContext ?? new CallContext(new CallOptions(cancellationToken: cancellationToken))).Subscribe(_ => { }, error => _error.TrySetResult(error)));
         messages.OnNext(new(new(new RegisterReducer
         {
             ConnectionId = connectionId,

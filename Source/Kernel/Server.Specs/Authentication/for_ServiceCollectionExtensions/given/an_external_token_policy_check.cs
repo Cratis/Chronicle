@@ -7,6 +7,7 @@ using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Security;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.JsonWebTokens;
@@ -54,8 +55,10 @@ public class an_external_token_policy_check : chronicle_authentication_services
         var validation = await handler.ValidateTokenAsync(token, parameters);
         validation.IsValid.ShouldBeTrue();
 
+        // The policy runs for a request, as it does in the server: the administrator check comes from the request's services.
         var principal = new ClaimsPrincipal(validation.ClaimsIdentity);
+        var request = new DefaultHttpContext { User = principal, RequestServices = scope.ServiceProvider };
         return (await scope.ServiceProvider.GetRequiredService<IAuthorizationService>()
-            .AuthorizeAsync(principal, new object(), WellKnownAuthorizationPolicies.Administrator)).Succeeded;
+            .AuthorizeAsync(principal, request, WellKnownAuthorizationPolicies.Administrator)).Succeeded;
     }
 }

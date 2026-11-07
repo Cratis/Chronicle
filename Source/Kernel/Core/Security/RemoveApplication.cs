@@ -13,6 +13,7 @@ namespace Cratis.Chronicle.Security;
 /// <param name="Id">The unique identifier of the application to remove.</param>
 [Command]
 [Cratis.Arc.Authorization.Authorize(Policy = WellKnownAuthorizationPolicies.AdministratorOperations)]
+[DestructiveOperation]
 [BelongsTo(WellKnownServices.Applications)]
 public record RemoveApplication(Concepts.Security.ApplicationId Id)
 {

@@ -81,6 +81,7 @@
         <PackageReference Include="Cratis.Choreography.Storage" />
         <PackageReference Include="Cratis.Choreography.Storage.MongoDB" />
         <PackageReference Include="Cratis.Screenplay" />
+        <PackageReference Include="Grpc.AspNetCore.Server" />
         <PackageReference Include="JsonCons.JmesPath" />
         <PackageReference Include="Microsoft.AspNetCore.DataProtection" />
         <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />

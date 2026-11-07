@@ -33,6 +33,19 @@ public static class AllowingConnectionOwnership
         var management = Substitute.For<IManagementGrain>();
         management.GetHosts(true).Returns(silos.ToDictionary(silo => silo, _ => SiloStatus.Active));
         grainFactory.GetGrain<IManagementGrain>(Arg.Any<long>(), Arg.Any<string>()).Returns(management);
+        WithAllowingReservations(grainFactory);
+    }
+
+    /// <summary>
+    /// Makes every cluster-wide connection reservation succeed.
+    /// </summary>
+    /// <param name="grainFactory">The <see cref="IGrainFactory"/> to stub.</param>
+    public static void WithAllowingReservations(IGrainFactory grainFactory)
+    {
+        var reservation = Substitute.For<IConnectionReservation>();
+        reservation.Claim(Arg.Any<ConnectionOwner>(), Arg.Any<SiloAddress>(), Arg.Any<Guid>(), Arg.Any<TimeSpan>()).Returns(true);
+        reservation.Release(Arg.Any<ConnectionOwner>(), Arg.Any<Guid>()).Returns(Task.CompletedTask);
+        grainFactory.GetGrain<IConnectionReservation>(Arg.Any<string>(), Arg.Any<string>()).Returns(reservation);
     }
 
     /// <summary>

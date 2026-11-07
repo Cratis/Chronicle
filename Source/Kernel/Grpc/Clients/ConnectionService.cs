@@ -39,6 +39,13 @@ internal sealed class ConnectionService(
     ILogger<ConnectionService> logger,
     IOptions<ChronicleOptions> options) : IConnectionService
 {
+    /// <summary>
+    /// How many keep-alive intervals a reservation lease lasts without being renewed. The holder renews it every
+    /// half lease, off the keep-alive path, so a lease survives a few missed or slow renewals but a reservation nobody holds any more
+    /// - a lost release, a holder that died - lapses within a few intervals.
+    /// </summary>
+    const int ReservationLeaseIntervals = 4;
+
     static readonly Status _notAvailableToCaller = new(StatusCode.PermissionDenied, "The connection is not available to the caller.");
     static readonly Lazy<string> _schemaDefinition = new(GenerateSchema);
     static readonly Lazy<WireContract> _wireContract = new(() => WireContractReader.Read(Contracts.WireContractDescriptorSet.Bytes));
@@ -60,6 +67,16 @@ internal sealed class ConnectionService(
     /// Gets or sets the clock used for registration deadlines.
     /// </summary>
     internal TimeProvider RegistrationTimeProvider { get; set; } = TimeProvider.System;
+
+    /// <summary>
+    /// How often the holder renews its lease: half of the lease, so a lease survives a missed renewal.
+    /// </summary>
+    TimeSpan RenewalPeriod => _keepAliveInterval * ReservationLeaseIntervals / 2;
+
+    /// <summary>
+    /// How long a renewal may wait for the reservation: never longer than the period, so one renewal is over before the next is due.
+    /// </summary>
+    TimeSpan RenewalTimeout => options.Value.Clustering.ResponseTimeout < RenewalPeriod ? options.Value.Clustering.ResponseTimeout : RenewalPeriod;
 
     /// <inheritdoc/>
     public IObservable<ConnectionKeepAlive> Connect(
@@ -218,6 +235,21 @@ internal sealed class ConnectionService(
             request.MachineName,
             request.ClientType);
 
+    static async Task EndRenewal(CancellationTokenSource renewals, Task<ReservationOutcome>? renewal)
+    {
+        await renewals.CancelAsync().ConfigureAwait(false);
+        if (renewal is null) return;
+
+        try
+        {
+            await renewal.ConfigureAwait(false);
+        }
+        catch
+        {
+            // The renewal reports its own failures; ending the stream must not depend on it.
+        }
+    }
+
     async Task PingOwningSilo(Cratis.Chronicle.Concepts.Clients.ConnectionId connectionId)
     {
         var owner = await ConnectedClientsLocator.Find(grainFactory, localSiloDetails.SiloAddress, connectionId);
@@ -234,18 +266,20 @@ internal sealed class ConnectionService(
         ConnectionOwner owner,
         CancellationToken cancellationToken)
     {
-        if (!await TryClaim(subject, request, owner, cancellationToken))
+        var token = Guid.NewGuid();
+        if (!await TryClaim(subject, request, owner, token, cancellationToken))
         {
             return;
         }
 
         try
         {
-            await Serve(subject, connectedClients, request, cancellationToken);
+            await Serve(subject, connectedClients, request, owner, token, cancellationToken);
         }
         finally
         {
             ownership.Release(request.ConnectionId, owner);
+            ReleaseReservation(request.ConnectionId, owner, token);
         }
     }
 
@@ -253,6 +287,7 @@ internal sealed class ConnectionService(
         ReplaySubject<ConnectionKeepAlive> subject,
         ConnectRequest request,
         ConnectionOwner owner,
+        Guid token,
         CancellationToken cancellationToken)
     {
         if (owner.IsUnidentified)
@@ -269,8 +304,36 @@ internal sealed class ConnectionService(
                 .WaitAsync(options.Value.Clustering.ResponseTimeout, RegistrationTimeProvider, cancellationToken)
                 .ConfigureAwait(false);
 
-            if (isElsewhere || ownership.Claim(request.ConnectionId, owner) == ConnectionClaim.Refused)
+            if (isElsewhere)
             {
+                logger.ConnectionRefusedForAnotherCaller(request.ConnectionId);
+                subject.OnError(new RpcException(_notAvailableToCaller));
+                return false;
+            }
+
+            var reservation = await TryReserve(request, owner, token, cancellationToken);
+            if (reservation != ReservationOutcome.Granted)
+            {
+                if (reservation == ReservationOutcome.Refused)
+                {
+                    logger.ConnectionRefusedForAnotherCaller(request.ConnectionId);
+                    subject.OnError(new RpcException(_notAvailableToCaller));
+                }
+                else if (cancellationToken.IsCancellationRequested)
+                {
+                    subject.OnCompleted();
+                }
+                else
+                {
+                    subject.OnError(new RpcException(new Status(StatusCode.Unavailable, "Client registration could not be verified")));
+                }
+
+                return false;
+            }
+
+            if (ownership.Claim(request.ConnectionId, owner) == ConnectionClaim.Refused)
+            {
+                ReleaseReservation(request.ConnectionId, owner, token);
                 logger.ConnectionRefusedForAnotherCaller(request.ConnectionId);
                 subject.OnError(new RpcException(_notAvailableToCaller));
                 return false;
@@ -291,13 +354,85 @@ internal sealed class ConnectionService(
         return true;
     }
 
+    async Task<ReservationOutcome> TryReserve(ConnectRequest request, ConnectionOwner owner, Guid token, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await ClaimReservation(request.ConnectionId, owner, token, options.Value.Clustering.ResponseTimeout, cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // The claim may still be processed after it was given up on, so it has to be undone.
+            ReleaseReservation(request.ConnectionId, owner, token);
+            return ReservationOutcome.Failed;
+        }
+        catch (Exception ex)
+        {
+            logger.ConnectionReservationFailed(request.ConnectionId, ex);
+            ReleaseReservation(request.ConnectionId, owner, token);
+            return ReservationOutcome.Failed;
+        }
+    }
+
+    async Task<ReservationOutcome> RenewReservation(ConnectRequest request, ConnectionOwner owner, Guid token, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await ClaimReservation(request.ConnectionId, owner, token, RenewalTimeout, cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return ReservationOutcome.Failed;
+        }
+        catch (Exception ex)
+        {
+            // The lease outlasts a few missed renewals, so this is tried again at the next renewal period.
+            logger.FailedToRenewReservation(request.ConnectionId, ex);
+            return ReservationOutcome.Failed;
+        }
+    }
+
+    async Task<ReservationOutcome> ClaimReservation(string connectionId, ConnectionOwner owner, Guid token, TimeSpan timeout, CancellationToken cancellationToken)
+    {
+        var granted = await grainFactory
+            .GetGrain<IConnectionReservation>(connectionId)
+            .Claim(owner, localSiloDetails.SiloAddress, token, _keepAliveInterval * ReservationLeaseIntervals)
+            .WaitAsync(timeout, RegistrationTimeProvider, cancellationToken)
+            .ConfigureAwait(false);
+        return granted ? ReservationOutcome.Granted : ReservationOutcome.Refused;
+    }
+
+    void ReleaseReservation(string connectionId, ConnectionOwner owner, Guid token)
+    {
+        var reservation = grainFactory.GetGrain<IConnectionReservation>(connectionId);
+        _ = ReleaseReservation(reservation, connectionId, owner, token);
+    }
+
+    async Task ReleaseReservation(IConnectionReservation reservation, string connectionId, ConnectionOwner owner, Guid token)
+    {
+        try
+        {
+            await reservation
+                .Release(owner, token)
+                .WaitAsync(options.Value.Clustering.ResponseTimeout, RegistrationTimeProvider, CancellationToken.None)
+                .ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            logger.FailedToReleaseReservation(connectionId, ex);
+        }
+    }
+
     async Task Serve(
         ReplaySubject<ConnectionKeepAlive> subject,
         IConnectedClients connectedClients,
         ConnectRequest request,
+        ConnectionOwner owner,
+        Guid token,
         CancellationToken cancellationToken)
     {
         var terminated = false;
+        var reservedByAnother = false;
         try
         {
             if (!await TryRegister(subject, connectedClients, request, cancellationToken))
@@ -307,6 +442,9 @@ internal sealed class ConnectionService(
 
             openConnections.Opened(request, DateTimeOffset.UtcNow);
             var keepRegistered = Task.CompletedTask;
+            Task<ReservationOutcome>? renewal = null;
+            using var renewals = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            var lastRenewal = RegistrationTimeProvider.GetTimestamp();
 
             try
             {
@@ -337,6 +475,26 @@ internal sealed class ConnectionService(
                         break;
                     }
 
+                    // A renewal never holds back a keep-alive: it runs on its own, at most one at a time, and only
+                    // a finished renewal that was refused closes the stream.
+                    if (renewal is { IsCompleted: true })
+                    {
+                        var outcome = await renewal.ConfigureAwait(false);
+                        renewal = null;
+                        if (outcome == ReservationOutcome.Refused)
+                        {
+                            logger.ConnectionClosedForAnotherCaller(request.ConnectionId);
+                            reservedByAnother = true;
+                            break;
+                        }
+                    }
+
+                    if (renewal is null && RegistrationTimeProvider.GetElapsedTime(lastRenewal) >= RenewalPeriod)
+                    {
+                        lastRenewal = RegistrationTimeProvider.GetTimestamp();
+                        renewal = RenewReservation(request, owner, token, renewals.Token);
+                    }
+
                     subject.OnNext(new ConnectionKeepAlive
                     {
                         ConnectionId = request.ConnectionId
@@ -351,9 +509,22 @@ internal sealed class ConnectionService(
             {
                 logger.FailureDuringKeepAlive(request.ConnectionId, ex);
             }
+            finally
+            {
+                // A renewal still pending must be over before the reservation is released, or it could claim it again.
+                await EndRenewal(renewals, renewal).ConfigureAwait(false);
+            }
 
             terminated = true;
-            subject.OnCompleted();
+            if (reservedByAnother)
+            {
+                subject.OnError(new RpcException(_notAvailableToCaller));
+            }
+            else
+            {
+                subject.OnCompleted();
+            }
+
             openConnections.Closed(request.ConnectionId);
 
             // A registry check given up on above may still be putting the client back. Let it settle first, so the

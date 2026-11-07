@@ -17,7 +17,7 @@ public class when_revoking_the_last_administrator_through_the_management_command
     }
 
     async Task Because() => _error = await Catch.Exception(() =>
-        new RevokeAdministrator(_first, "attempted removal").Handle(_grainFactory, Substitute.For<ICurrentPrincipalAccessor>()));
+        new RevokeAdministrator(_first, "attempted removal").Handle(_grainFactory, Substitute.For<ICurrentPrincipalAccessor>(), Microsoft.Extensions.Options.Options.Create(new Cratis.Chronicle.Configuration.ChronicleOptions())));
 
     [Fact] void should_reject_revocation() => _error.ShouldBeOfExactType<LastAdministratorCannotBeRemoved>();
     [Fact] void should_not_record_a_revocation() => Recorded<UserRevokedAdministrator>().ShouldBeEmpty();

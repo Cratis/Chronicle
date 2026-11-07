@@ -34,4 +34,8 @@
         <ProjectReference Include="../Concepts/Concepts.csproj" />
         <ProjectReference Include="../../Clients/Connections/Connections.csproj" />
     </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Grpc.AspNetCore.Server" />
+    </ItemGroup>
 </Project>

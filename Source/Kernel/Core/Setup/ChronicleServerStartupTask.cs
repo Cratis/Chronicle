@@ -46,6 +46,7 @@ namespace Orleans.Hosting;
 /// <param name="logger">The logger.</param>
 /// <param name="timeProvider">Optional <see cref="TimeProvider"/> the retry backoff waits on; defaults to <see cref="TimeProvider.System"/>.</param>
 /// <param name="generationFloorAdmission">Optional read-only generation admission; defaults to the real storage-backed admission.</param>
+/// <param name="storeEntitlementsCache">The local silo's entitlement snapshot cache.</param>
 /// <remarks>
 /// Every step in <see cref="Execute"/> is a grain call that can land on a sibling silo, and every
 /// silo runs this task as it starts. A sibling that has not stabilized yet answers none of them, and
@@ -79,7 +80,8 @@ internal sealed class ChronicleServerStartupTask(
     IKernelProjectionRegistrationRetries kernelProjectionRetries,
     ILogger<ChronicleServerStartupTask> logger,
     TimeProvider? timeProvider = null,
-    IGenerationFloorAdmission? generationFloorAdmission = null) : ILifecycleParticipant<ISiloLifecycle>
+    IGenerationFloorAdmission? generationFloorAdmission = null,
+    Cratis.Chronicle.Security.IStoreEntitlementsCache? storeEntitlementsCache = null) : ILifecycleParticipant<ISiloLifecycle>
 {
     /// <summary>
     /// How many times a step is attempted before its failure is believed.
@@ -320,6 +322,7 @@ internal sealed class ChronicleServerStartupTask(
 
     async Task EnsureAdministrator(CancellationToken cancellationToken)
     {
+        if (storeEntitlementsCache is not null) await RunStep(nameof(storeEntitlementsCache.Load), storeEntitlementsCache.Load, cancellationToken);
         await RunStep(nameof(IAuthenticationService.EnsureDefaultAdminUser), authenticationService.EnsureDefaultAdminUser, cancellationToken);
         await RunStep(nameof(Cratis.Chronicle.Security.IAdministratorRoster.EnsureAdministratorPrivilege), () => grainFactory.GetGrain<Cratis.Chronicle.Security.IAdministratorRoster>(Cratis.Chronicle.Concepts.Security.AdministratorRoster.Key).EnsureAdministratorPrivilege(), cancellationToken);
     }

@@ -25,9 +25,9 @@ public class a_decision_point : Specification
     };
 
     protected AuthorizationDecisions CreateDecisions() => new(
-        _administrators,
         Options.Create(new ChronicleOptions { Authentication = new Authentication { Enabled = _authenticationEnabled } }),
-        _logger);
+        _logger,
+        httpContextAccessor: Security.given.caller_services.For(_administrators));
 
     protected Task<AuthorizationDecision> Decide(ClaimsPrincipal? principal, Capability capability, AuthorizationScope scope) =>
         CreateDecisions().Decide(principal, capability, scope);
