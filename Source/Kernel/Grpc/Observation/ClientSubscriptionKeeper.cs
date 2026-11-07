@@ -52,6 +52,34 @@ internal static class ClientSubscriptionKeeper
         }
     }
 
+    /// <summary>
+    /// Keeps one subscription, sending its definition only when the subscription is not intact.
+    /// </summary>
+    /// <param name="isIntact">Asks the observer's client grain whether there is nothing to restore - a call that carries no definition.</param>
+    /// <param name="keep">Sends the definition so the grain can restore what was lost.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// A failing check - a silo of an older version during a rolling deployment does not know it - is treated as not
+    /// intact, so the subscription is kept the way it always was rather than not at all.
+    /// </remarks>
+    public static async Task KeepSubscription(Func<Task<bool>> isIntact, Func<Task> keep)
+    {
+        var intact = false;
+        try
+        {
+            intact = await isIntact();
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // Falls through to the full keep below.
+        }
+
+        if (!intact)
+        {
+            await keep();
+        }
+    }
+
     static async Task Keep(Func<Task> keep, ConnectionId connectionId, ILogger logger, CancellationToken cancellationToken)
     {
         try

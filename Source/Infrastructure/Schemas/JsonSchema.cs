@@ -49,6 +49,9 @@ public partial class JsonSchema
     volatile Cached<bool>? _hasComplianceMetadataCache;
     volatile Cached<bool>? _hasSecurityMetadataCache;
     volatile Cached<JsonSchema?>? _referenceCache;
+    volatile Cached<string?>? _formatCache;
+    volatile Cached<JsonObjectType>? _typeCache;
+    volatile Dictionary<string, JsonSchemaProperty>? _flattenedPropertiesByExactNameCache;
     volatile Cached<JsonSchema?>? _itemCache;
 
     /// <summary>
@@ -76,8 +79,13 @@ public partial class JsonSchema
     /// </summary>
     public JsonObjectType Type
     {
-        get => ParseTypeFromNode(Node);
-        set => SetTypeOnNode(Node, value);
+        // Read for every value converted, and parsing it walks the node each time.
+        get => (_typeCache ??= new Cached<JsonObjectType>(ParseTypeFromNode(Node))).Value;
+        set
+        {
+            _typeCache = null;
+            SetTypeOnNode(Node, value);
+        }
     }
 
     /// <summary>
@@ -85,9 +93,11 @@ public partial class JsonSchema
     /// </summary>
     public string? Format
     {
-        get => Node["format"]?.GetValue<string>();
+        // Read for every value converted, and reading it from the node allocates a string each time.
+        get => (_formatCache ??= new Cached<string?>(Node["format"]?.GetValue<string>())).Value;
         set
         {
+            _formatCache = null;
             if (value is null)
             {
                 Node.Remove("format");
@@ -428,6 +438,11 @@ public partial class JsonSchema
     /// Gets the flattened properties of this schema, including inherited properties resolved through <c language="csharp">allOf</c> references.
     /// </summary>
     internal IReadOnlyList<JsonSchemaProperty> FlattenedProperties => _flattenedPropertiesCache ??= BuildFlattenedProperties();
+
+    /// <summary>
+    /// Gets the flattened properties keyed by name, using case-sensitive lookup.
+    /// </summary>
+    internal IReadOnlyDictionary<string, JsonSchemaProperty> FlattenedPropertiesByExactName => _flattenedPropertiesByExactNameCache ??= BuildFlattenedPropertiesByExactName();
 
     /// <summary>
     /// Gets the flattened properties keyed by name, using case-insensitive lookup.
@@ -941,6 +956,17 @@ public partial class JsonSchema
                 allOfSchema.CollectPropertiesInto(properties);
             }
         }
+    }
+
+    Dictionary<string, JsonSchemaProperty> BuildFlattenedPropertiesByExactName()
+    {
+        var byName = new Dictionary<string, JsonSchemaProperty>(StringComparer.Ordinal);
+        foreach (var property in FlattenedProperties)
+        {
+            byName.TryAdd(property.Name, property);
+        }
+
+        return byName;
     }
 
     Dictionary<string, JsonSchemaProperty> BuildFlattenedPropertiesByName() =>

@@ -12,4 +12,5 @@ namespace Cratis.Chronicle.Projections.Engine.Graphs;
 /// <param name="Label">The node label.</param>
 /// <param name="Key">The <see cref="ValueProvider{T}"/> for the key of the node.</param>
 /// <param name="Detach">Whether the edges attached to the node are deleted with it.</param>
-public record GraphNodeRemoval(string Label, ValueProvider<AppendedEvent> Key, bool Detach);
+/// <param name="ForEach">The collection property of the event the mapping runs once per item of, if any.</param>
+public record GraphNodeRemoval(string Label, ValueProvider<AppendedEvent> Key, bool Detach, string? ForEach = null);

@@ -52,6 +52,15 @@ public partial class EventSequenceStorage(
     JsonSerializerOptions jsonSerializerOptions,
     ILogger<EventSequenceStorage> logger) : IEventSequenceStorage, IEventPublicationStorage
 {
+    /// <summary>
+    /// The number of events the driver fetches from the server per round trip when a cursor is read. Left to the
+    /// driver, a batch is whatever fits in 16 MB - tens of thousands of events that are all materialized
+    /// at once, several times over, long before the observer reading them has got through the first hundred.
+    /// </summary>
+    const int CursorBatchSize = 1000;
+
+    static readonly FindOptions _cursorFindOptions = new() { BatchSize = CursorBatchSize };
+
     readonly IMongoCollection<Event> _collection = database.GetEventSequenceCollectionFor(eventSequenceId);
 
     /// <inheritdoc/>
@@ -912,7 +921,7 @@ public partial class EventSequenceStorage(
         }
 
         var filter = Builders<Event>.Filter.And([.. filters]);
-        var cursor = await collection.Find(filter)
+        var cursor = await collection.Find(filter, _cursorFindOptions)
                                      .SortByAscendingSequenceNumber()
                                      .ToCursorAsync(cancellationToken)
                                      .ConfigureAwait(false);
@@ -969,7 +978,7 @@ public partial class EventSequenceStorage(
 
         var filter = Builders<Event>.Filter.And([.. filters]);
 
-        var cursor = await collection.Find(filter)
+        var cursor = await collection.Find(filter, _cursorFindOptions)
                                      .SortByAscendingSequenceNumber()
                                      .ToCursorAsync(cancellationToken)
                                      .ConfigureAwait(false);
@@ -1022,7 +1031,7 @@ public partial class EventSequenceStorage(
 
         var filter = Builders<Event>.Filter.And([.. filters]);
 
-        var cursor = await collection.Find(filter)
+        var cursor = await collection.Find(filter, _cursorFindOptions)
                                      .SortByAscendingSequenceNumber()
                                      .Limit(limit)
                                      .ToCursorAsync(cancellationToken)

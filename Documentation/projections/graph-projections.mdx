@@ -42,6 +42,12 @@ Give an edge a `[Key]` member to identify it among edges of the same type betwee
 
 <ChronicleClientTabs snippet="projections/graph/identified-edge" />
 
+## One operation per item of a collection
+
+An event that carries a collection can map each item to its own node or edge. Name the collection in the mapping's `ForEach` (contract `GraphNodeFromDefinition`, `GraphEdgeFromDefinition` and the two removed-with definitions). The key, source, target, identity and property expressions then run once per item, and they address the item's properties as `collection.property`, for example `slots.series`.
+
+An event whose collection is absent or empty produces nothing for that mapping. Each operation is still keyed by the node key, or the edge's source, target and identity, so redelivery and replay stay idempotent. To retract the items of a collection, use a removed-with mapping with the same `ForEach`.
+
 ## The operations
 
 A graph projection does not produce state diffs. For every event it produces a `GraphChangeset`, a list of five idempotent operations:

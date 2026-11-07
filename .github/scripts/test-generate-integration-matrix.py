@@ -179,6 +179,16 @@ class for_generating_the_matrix(unittest.TestCase):
                 self.assertEqual("outofprocess", entry["mode"])
                 self.assertEqual("postgresql", entry["database"])
 
+    def test_graph_projections_run_in_process_and_on_each_other_backend_out_of_process(self):
+        def lanes(*arguments):
+            return {(entry["mode"], entry["database"]) for entry in _run(*arguments)
+                    if entry["namespace"].endswith(".GraphProjections")}
+
+        self.assertEqual({("inprocess", "mongodb"), ("outofprocess", "sqlite")}, lanes())
+        self.assertEqual(
+            {("inprocess", "mongodb"), ("outofprocess", "sqlite"), ("outofprocess", "postgresql"), ("outofprocess", "mssql")},
+            lanes("--all-providers"))
+
     def test_an_unknown_backend_fails_the_run(self):
         completed = subprocess.run(
             [sys.executable, SCRIPT, "--databases", "mysql"],

@@ -24,6 +24,12 @@ internal sealed class StoreClientArtifactsProvider(IClientArtifactsProvider nati
     public IEnumerable<Type> ModelBoundProjections => Current.ModelBoundProjections;
 
     /// <inheritdoc/>
+    public IEnumerable<Type> GraphElements => Current.GraphElements;
+
+    /// <inheritdoc/>
+    public IEnumerable<Type> GraphProjections => Current.GraphProjections;
+
+    /// <inheritdoc/>
     public IEnumerable<Type> Reactors => Current.Reactors;
 
     /// <inheritdoc/>
