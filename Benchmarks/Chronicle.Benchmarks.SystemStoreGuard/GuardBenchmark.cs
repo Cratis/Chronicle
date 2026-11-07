@@ -9,7 +9,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
-using NSubstitute;
 
 namespace Cratis.Chronicle.Benchmarks.SystemStoreGuard;
 
@@ -115,8 +114,7 @@ public class GuardBenchmark
     {
         // The administrator check is resolved from the caller's request services, as in the server.
         var services = new ServiceCollection().AddSingleton<IAdministratorAuthorization>(probe).BuildServiceProvider();
-        var accessor = Substitute.For<IHttpContextAccessor>();
-        accessor.HttpContext.Returns(new DefaultHttpContext { RequestServices = services });
+        var accessor = new FixedHttpContextAccessor(new DefaultHttpContext { RequestServices = services });
         return new(Options.Create(new ChronicleOptions()), NullLogger<AuthorizationDecisions>.Instance, httpContextAccessor: accessor);
     }
 }
