@@ -12,6 +12,7 @@ using Cratis.Chronicle.Storage.Identities;
 using Cratis.Monads;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences.for_EventSequenceStorage.given;
@@ -37,6 +38,7 @@ public class an_event_sequence_storage : Specification, IDisposable
     protected IIdentityStorage _identityStorage;
     protected Chronicle.Storage.EventTypes.IEventTypesStorage _eventTypesStorage;
     protected EventSequenceStorage _storage;
+    protected IInterceptor[] _interceptors = [];
 
     void Establish()
     {
@@ -93,7 +95,7 @@ public class an_event_sequence_storage : Specification, IDisposable
             case "SQLServer": builder.UseSqlServer(_connectionString); break;
             default: builder.UseSqlite(_connectionString); break;
         }
-        builder.AddConceptAsSupport().WithoutServiceProviderCaching();
+        builder.AddConceptAsSupport().WithoutServiceProviderCaching().AddInterceptors(_interceptors);
         return new EventSequenceDbContext(builder.Options, _tableName, _migrator);
     }
 

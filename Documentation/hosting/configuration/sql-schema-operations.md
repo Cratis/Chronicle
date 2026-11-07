@@ -6,6 +6,8 @@ Run Chronicle SQL migrations as a separate deployment step when Kernel replicas 
 
 Use the same Chronicle Server build and storage placement for the migration job and replicas, while selecting the appropriate schema or runtime identity through [storage connection resolution](storage-connection-resolution.md). Verification prevents versioned migrations at runtime; it does not prohibit all data definition operations (DDL), because dynamically shaped tables can still be created on first use.
 
+For rolling upgrades, SQL Server storage requires a source release of 19.115.1 or later: releases before 19.115 cannot connect through SqlClient, and 19.115.0 is listed as unusable in `.github/rolling-upgrade-unusable-releases.txt` because of the Data Protection key-ring deadlock (#5485). See [Supported source releases](../rolling-deploy.md#supported-source-releases).
+
 ## Provision before starting replicas
 
 Run the server executable once with `--migrate-only`:
@@ -112,6 +114,8 @@ The runtime identity still needs permissions for Chronicle's dynamic per-table o
 - Event-sequence tables for sequences that did not exist when `--migrate-only` ran.
 - Unique-constraint tables.
 - Read-model tables, including the per-generation tables created when a projection is rebuilt.
+
+Per-sequence upgrades add nullable `OriginalContent` and `Revisions` columns in both Migrate and Verify modes. SQL storage keeps the existing content columns current so earlier nodes still read revised content. Originals already overwritten by a revision before this release are lost and are not backfilled; such events report no original content. Revisions made by earlier nodes are served but are not recorded in history. A redaction by an earlier node can leave history in those columns: new readers ignore it immediately, and the next new-node table initialization clears it from redacted rows. SQL content verification remains unavailable.
 
 The `chronicle_sink_cycle_receipts` table is different: Verify mode does not create it. Run `--migrate-only` first, including after an upgrade. A Verify replica fails at startup with `SchemaNotCurrent` if the receipt table or its required index is missing or drifted in any known event store and namespace, including the system store and default namespaces. It does not report ready or repair the table.
 
