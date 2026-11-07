@@ -4,6 +4,7 @@
 using System.Diagnostics;
 using System.Reactive.Linq;
 using System.Text.Json;
+using Cratis.Chronicle.Clients;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Observation;
@@ -17,6 +18,7 @@ using Cratis.Chronicle.Observation.Reactors.Clients;
 using Cratis.Chronicle.Services.Events;
 using Cratis.Chronicle.Storage;
 using Cratis.Traces;
+using Grpc.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -37,6 +39,7 @@ namespace Cratis.Chronicle.Services.Observation.Reactors;
 /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
 /// <param name="activitySource">The <see cref="IActivitySource{T}"/> for tracing.</param>
 /// <param name="options"><see cref="IOptions{ChronicleOptions}"/> for how often to check the subscription of a connected client.</param>
+/// <param name="connectionOwnership"><see cref="IConnectionOwnership"/> telling which caller opened each connection.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 /// <param name="registrationGate">The silo-wide gate for observer registrations.</param>
 /// <param name="namespaceCasing">The namespace casing resolver.</param>
@@ -47,6 +50,7 @@ internal sealed class Reactors(
     JsonSerializerOptions jsonSerializerOptions,
     [FromKeyedServices(WellKnown.MeterName)] IActivitySource<Reactors> activitySource,
     IOptions<ChronicleOptions> options,
+    IConnectionOwnership connectionOwnership,
     ILogger<Reactors> logger,
     IObserverRegistrationGate registrationGate,
     INamespaceCasing namespaceCasing) : IReactors
@@ -55,6 +59,7 @@ internal sealed class Reactors(
     public IObservable<EventsToObserve> Observe(IObservable<ReactorMessage> messages, CallContext context = default)
     {
         logger.Observe();
+        var caller = ConnectionCallers.From(context, options.Value);
 
         var registrationTcs = new TaskCompletionSource<RegisterReactor>(TaskCreationOptions.RunContinuationsAsynchronously);
         var pendingDeliveries = new PendingDeliveries<ObserverSubscriberResult>();
@@ -68,6 +73,13 @@ internal sealed class Reactors(
                     if (SystemStoreGuard.RegistrationRefusal(new(register.EventStore, register.Namespace, register.Reactor.ReactorId, register.Reactor.EventSequenceId, register.ConnectionId)) is { } refusal)
                     {
                         registrationTcs.TrySetException(refusal);
+                        break;
+                    }
+
+                    if (!connectionOwnership.IsOwnedBy(register.ConnectionId, caller.Owner))
+                    {
+                        logger.ConnectionNotAvailableToCaller(register.ConnectionId);
+                        registrationTcs.TrySetException(new RpcException(new Status(StatusCode.PermissionDenied, "The connection is not available to the caller.")));
                         break;
                     }
 

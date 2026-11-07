@@ -66,7 +66,7 @@ internal sealed class ReducerDispatcher(
                 _stateCache.Forget(handler.Id, operation.Partition);
             }
 
-            await HandleReplayNotification(handler, operation.ReplayState, operation.Partition);
+            await HandleReplayNotification(handler, @namespace, operation.ReplayState, operation.Partition);
             return;
         }
 
@@ -107,6 +107,7 @@ internal sealed class ReducerDispatcher(
             try
             {
                 var appendedEvents = partition.Events.Select(ToAppendedEvent).ToList();
+                using var delivery = ObserverDeliveryScope.Enter(serviceProvider, DeliveryContextFor(handler, @namespace));
                 await using var serviceProviderScope = serviceProvider.CreateAsyncScope();
                 identityProvider.SetCurrentIdentity(Identity.System);
                 var initialStateJson = partition.InitialState;
@@ -200,14 +201,29 @@ internal sealed class ReducerDispatcher(
         }
     }
 
-    async Task HandleReplayNotification(IReducerHandler handler, ReplayState replayState, string partition)
+    ObserverDeliveryContext DeliveryContextFor(IReducerHandler handler, EventStoreNamespaceName @namespace) =>
+        new(eventStore.Name, @namespace, new(handler.Id.Value), ObserverDeliveryKind.Reducer, handler.ReducerType);
+
+    async Task HandleReplayNotification(IReducerHandler handler, EventStoreNamespaceName @namespace, ReplayState replayState, string partition)
     {
         if (handler.Invoker is SelfReducerInvoker self)
         {
-            await self.ReplayHooks.Invoke(serviceProvider, replayState, partition);
+            await self.ReplayHooks.Invoke(serviceProvider, DeliveryContextFor(handler, @namespace), replayState, partition);
             return;
         }
 
+        ObserverDeliveryScope delivery;
+        try
+        {
+            delivery = ObserverDeliveryScope.Enter(serviceProvider, DeliveryContextFor(handler, @namespace));
+        }
+        catch (Exception enterException)
+        {
+            logger.FailedEnteringDeliveryScopeForReducerReplayNotification(enterException, handler.Id, replayState);
+            return;
+        }
+
+        using var deliveryScope = delivery;
         await using var serviceProviderScope = serviceProvider.CreateAsyncScope();
         var activatedReducerResult = artifactActivator.Activate(serviceProviderScope.ServiceProvider, handler.ReducerType);
         if (activatedReducerResult.TryGetException(out var ex))

@@ -80,6 +80,7 @@ internal static class LegacyTelemetryNames
         [WellKnownMetricNames.SqlSchemaLockWaitDuration] = [new("chronicle-sql-schema-lock-wait", "s", "Time spent waiting for a database schema lock")],
         [WellKnownMetricNames.SqlLiveQueryPollFailures] = [new("chronicle-sql-live-query-poll-failures", null, "Failed SQL live-query polls; each is retried")],
         [WellKnownMetricNames.SqlUpsertRecoveredCollisions] = [new("chronicle-sql-upsert-collisions-recovered", null, "Concurrent SQL insert collisions recovered by storage")],
+        [WellKnownMetricNames.SqlEncryptionKeyIdentifiersRefused] = [new("chronicle-sql-encryption-key-identifiers-refused", null, "Encryption key operations refused because their identifier is under review")],
         [WellKnownMetricNames.SqlCompositeKeyStampFailures] = [new("chronicle.sql.composite_key.stamp_failures", null, null)],
         [WellKnownMetricNames.SqlCompositeKeyCollisions] = [new("chronicle.sql.composite_key.collisions", null, null)],
     };

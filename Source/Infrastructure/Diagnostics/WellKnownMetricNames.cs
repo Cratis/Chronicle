@@ -296,6 +296,12 @@ public static class WellKnownMetricNames
     /// <summary>Unit of <see cref="SqlUpsertRecoveredCollisions"/>.</summary>
     public const string SqlUpsertRecoveredCollisionsUnit = "{collision}";
 
+    /// <summary>Number of encryption key operations refused because their identifier is under review.</summary>
+    public const string SqlEncryptionKeyIdentifiersRefused = "cratis.chronicle.sql.encryption_key.refused_identifiers";
+
+    /// <summary>Unit of <see cref="SqlEncryptionKeyIdentifiersRefused"/>.</summary>
+    public const string SqlEncryptionKeyIdentifiersRefusedUnit = "{operation}";
+
     /// <summary>Number of failed composite key stamps.</summary>
     public const string SqlCompositeKeyStampFailures = "cratis.chronicle.sql.composite_key.stamp_failures";
 

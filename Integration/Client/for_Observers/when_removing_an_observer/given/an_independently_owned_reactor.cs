@@ -39,6 +39,7 @@ public class an_independently_owned_reactor(ChronicleFixture fixture) : Specific
         services.AddSingleton(Reactor);
         services.AddSingleton(Services.GetRequiredService<IGrainFactory>());
         services.AddSingleton(Services.GetRequiredService<ILocalSiloDetails>());
+        services.AddSingleton(Services.GetRequiredService<global::Cratis.Chronicle.Clients.IConnectionOwnership>());
         services.AddSingleton(Services.GetRequiredService<IServices>());
         services.AddSingleton(Services.GetRequiredService<ILoggerFactory>());
         services.AddSingleton<IOptions<ChronicleOptions>>(Options.Create(new ChronicleOptions
