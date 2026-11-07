@@ -93,6 +93,10 @@ public partial class HandleEventsForPartition(
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
+        // Steps are read one by one from storage, each with its own copy of the event types its observer reads.
+        State.EventTypes = EventTypeInterner.Intern(State.EventTypes);
+        State.ReaderScope = EventTypeInterner.Intern(State.ReaderScope);
+
         if (State.IsPrepared)
         {
             _observer = GrainFactory.GetGrain<IObserver>(State.ObserverKey);
@@ -136,8 +140,8 @@ public partial class HandleEventsForPartition(
         State.ReplayEpoch = request.ReplayEpoch;
         State.ObserverKey = request.ObserverKey;
         State.EventObservationState = request.EventObservationState;
-        State.EventTypes = request.EventTypes.ToArray();
-        State.ReaderScope = request.ReaderScope;
+        State.EventTypes = EventTypeInterner.Intern(request.EventTypes);
+        State.ReaderScope = EventTypeInterner.Intern(request.ReaderScope);
         State.Partition = request.Partition;
         State.StartEventSequenceNumber = request.StartEventSequenceNumber;
         State.EndEventSequenceNumber = request.EndEventSequenceNumber;

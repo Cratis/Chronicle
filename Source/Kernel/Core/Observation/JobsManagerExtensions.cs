@@ -46,6 +46,28 @@ public static partial class JobsManagerExtensions
         jobsManager.GetJobs(new JobQuery { Statuses = _unfinishedStatuses, Take = 0 });
 
     /// <summary>
+    /// Gets the jobs of one type that are outstanding: unfinished, or removing with work still in flight.
+    /// </summary>
+    /// <param name="jobsManager">The <see cref="IJobsManager"/> to ask.</param>
+    /// <typeparam name="TJob">The type of the job.</typeparam>
+    /// <returns>The outstanding <see cref="JobState"/> of that type.</returns>
+    /// <remarks>
+    /// Jobs of other types are not read. A job holds its whole step plan, which for a job over thousands of partitions is
+    /// megabytes, so listing every job to find the few of one type reads, copies and discards all of it on every call.
+    /// </remarks>
+    public static Task<IImmutableList<JobState>> GetOutstandingJobsOf<TJob>(this IJobsManager jobsManager) =>
+        jobsManager.GetJobs(QueryFor<TJob>(_outstandingStatuses));
+
+    /// <summary>
+    /// Gets the jobs of one type that are unfinished.
+    /// </summary>
+    /// <param name="jobsManager">The <see cref="IJobsManager"/> to ask.</param>
+    /// <typeparam name="TJob">The type of the job.</typeparam>
+    /// <returns>The unfinished <see cref="JobState"/> of that type.</returns>
+    public static Task<IImmutableList<JobState>> GetUnfinishedJobsOf<TJob>(this IJobsManager jobsManager) =>
+        jobsManager.GetJobs(QueryFor<TJob>(_unfinishedStatuses));
+
+    /// <summary>
     /// Gets jobs that still own work, including jobs draining during removal.
     /// </summary>
     /// <param name="jobsManager">The jobs manager.</param>
@@ -189,7 +211,7 @@ public static partial class JobsManagerExtensions
         onResume ??= () => Task.CompletedTask;
         onStartNew ??= () => Task.CompletedTask;
         onResumeRefused ??= () => Task.CompletedTask;
-        var jobs = await jobsManager.GetOutstandingJobs();
+        var jobs = await jobsManager.GetOutstandingJobsOf<TJob>();
         var request = createRequest();
 
         // The exclusion is read after the lookup, so it covers jobs that concluded while it was in flight. A listing is no
@@ -417,4 +439,13 @@ public static partial class JobsManagerExtensions
 
     [LoggerMessage(LogLevel.Warning, "Stopped job {JobId} never prepared a step and can not be resumed - removing it so catch-up can start a new job")]
     static partial void RemovingUnresumableJob(this ILogger logger, JobId jobId);
+
+    static JobQuery QueryFor<TJob>(JobStatus[] statuses) =>
+        new()
+        {
+            // An unregistered type is not narrowed, which is what listing everything did before.
+            Type = JobTypes.Instance.GetFor(typeof(TJob)).TryPickT0(out var jobType, out _) ? jobType : null,
+            Statuses = statuses,
+            Take = 0
+        };
 }
