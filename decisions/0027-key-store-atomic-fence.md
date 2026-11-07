@@ -144,8 +144,8 @@ C9. **Revision ownership before undo.** A writer may only undo what it staged: e
 nonce and the store's own write identity (Mongo `_id` plus nonce, SQL row nonce, Vault version number, Azure version id). Undo is
 conditional on that identity; if the revision no longer carries it, the writer does nothing. In Vault, destroy leaves
 CurrentVersion; a CAS tombstone invalidates delayed publication. Undo CAS-writes a key-free tombstone against its own
-observed staged version and nonce, then destroys versions through that stage. If another writer has advanced the version,
-undo does nothing. It never deletes the revision's metadata.
+observed staged version and nonce, retaining lifecycle-tagged fingerprint evidence and all key history for the erasure sweep.
+If another writer has advanced the version, undo does nothing. It never deletes the revision's metadata or destroys versions.
 
 C10. **Release linearization and revocation.** A release (append, idempotency, watch update) is permitted if a linearizable fence
 read taken inside its release scope shows the key not covered (`Covers`, C3); that read is the linearization point. The scope memo
@@ -226,11 +226,17 @@ Destruction does **not** change KV v2 `CurrentVersion`: CAS against a destroyed-
 destroying covered versions through V, the sweep CAS-writes a key-free `{erasedTombstone:true}` at V+1. Readers treat it as
 absent. A publisher holding CAS V now loses and re-reads the fence before failing closed. If publication wins first, the
 sweep re-reads and tombstones the new current version, bounded and jittered against the original request lifecycle.
-Undo (C9) checks its nonce and staged version, CAS-tombstones that version, then destroys versions through it; it never
-removes subject metadata. Tombstones are retained so native CAS cannot suffer an ABA reset. Before reusing a tombstoned
-revision, a writer completes destruction of its historical versions. Confirmation checks metadata to prove those versions
-were destroyed; a successful tombstone alone is not proof of physical erasure. Fake and pinned-server contracts exercise
-both the destroy-without-version-change behavior and publication paused after validation until after the sweep.
+**Replacement/erasure amendment:** replacement, deletion and undo (C9) only CAS-tombstone/mark; they never call irreversible
+version destruction. Undo checks its nonce and staged version. Tombstones retain subject metadata (preventing native-CAS ABA)
+and cumulative key-free fingerprint evidence tagged with the material's staged lifecycle; replacement stages and publications
+carry that evidence forward. Current and historical key versions remain available to the sweep, including when replacement
+validated before an erasure request existed and tombstoned only after its fence CAS. Before publication, writers record any
+covered historical/evidence fingerprints into the request and aggregate fence with fence CAS, then re-read that durable fence
+and fail closed for covered candidates. Only the request-bounded erasure sweep records/consumes covered fingerprint evidence
+and irreversibly destroys covered key versions; it leaves uncovered successor versions and fingerprint evidence intact.
+Confirmation inspects history and requires all covered evidence to have been recorded by the request; a tombstone alone is
+never proof of physical erasure. Fake and pinned-server contracts exercise destroy-without-version-change, publication paused
+after validation until after the sweep, and erasure committing between replacement validation and its reversible tombstone.
 A KV v1 mount ignores CAS and would silently
 lose the guarantee, so the startup check performs a probe (write a probe secret with CAS 0 twice; the second must be refused
 with `check-and-set`) and reports `None` when it is not refused (warning in N, refusal from N+1, D4). Vault's `cas_required` mount option is
@@ -353,7 +359,7 @@ then refuse erasure in the N+1 switch-on behind `RequireAtomicKeyFence`, or keep
 | B4 N does not enforce | Yes | N enforces protocol; N+1 gated on `ProtocolFloor`; missing-Version detection dropped |
 | B5 memo and revocation | Yes | C10 boundary, per-identifier memo, grace; C7 benchmark; restored memo task replaced |
 | Advisory: stale baseline | Yes (`Storage/Compliance/InMemoryEncryptionKeyStorage.cs:18-27` already locks; `Storage.InMemory/Compliance/EncryptionKeyStorage.cs` does not; SQL persist-or-read-winner exists at `EncryptionKeyStorage.cs:98-109`) | InMemory scope narrowed; SQL notes keep the winner-read; baseline corrected |
-| Advisory: Vault/Azure undo name-wide | Yes (`DeleteFor` uses `DeleteMetadataAsync` path-wide) | C9 ownership; Vault destroys own version, Azure disables own version and publishes by version id |
+| Advisory: Vault/Azure undo name-wide | Yes (`DeleteFor` uses `DeleteMetadataAsync` path-wide) | C9 ownership; Vault tombstones its own version and retains evidence for the sweep, Azure disables its own version and publishes by version id |
 | Restoration proofs | Yes | Restoring section supplies ordering, completion, revocation proofs |
 
 ## Review resolution (review-r2)

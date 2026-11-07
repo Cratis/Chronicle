@@ -48,8 +48,9 @@ public sealed class VaultInterleaving(HttpMessageHandler inner) : DelegatingHand
         if (_pause?.Invoke(request, data) == true)
         {
             _pause = null;
+            var resume = _resume.Task;
             _paused.TrySetResult();
-            await _resume.Task;
+            await resume;
         }
 
         var response = await base.SendAsync(request, cancellationToken);
@@ -67,21 +68,23 @@ public sealed class VaultInterleaving(HttpMessageHandler inner) : DelegatingHand
 
     async Task During(Func<HttpRequestMessage, JsonElement?, bool> predicate, Func<Task> operation, Func<Task> competingOperation)
     {
-        _paused = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        _resume = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        var paused = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var resume = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _paused = paused;
+        _resume = resume;
         _pause = predicate;
         var pending = operation();
         try
         {
-            var completed = await Task.WhenAny(_paused.Task, pending);
+            var completed = await Task.WhenAny(paused.Task, pending);
             if (completed == pending) await pending;
-            await _paused.Task.WaitAsync(TimeSpan.FromSeconds(30));
+            await paused.Task.WaitAsync(TimeSpan.FromSeconds(30));
             await competingOperation();
         }
         finally
         {
             _pause = null;
-            _resume.TrySetResult();
+            resume.TrySetResult();
         }
 
         await pending;

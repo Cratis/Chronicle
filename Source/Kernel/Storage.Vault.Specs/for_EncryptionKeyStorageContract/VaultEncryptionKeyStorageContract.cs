@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Globalization;
+using System.Text.Json;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Storage.Compliance;
 using VaultSharp;
@@ -99,7 +100,7 @@ public abstract class VaultEncryptionKeyStorageContract : Cratis.Chronicle.Stora
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task should_destroy_history_before_overwriting_a_key_missed_by_the_erasure_snapshot(bool missedMaterialIsHistorical)
+    public async Task should_retain_history_until_the_sweep_when_overwriting_a_key_missed_by_the_erasure_snapshot(bool missedMaterialIsHistorical)
     {
         var missed = new EncryptionKey([3], [4]);
         await Storage.SaveFor("contract", "contract", Identifier, Original);
@@ -130,11 +131,69 @@ public abstract class VaultEncryptionKeyStorageContract : Cratis.Chronicle.Stora
         retained.Data.Versions["2"].Destroyed.ShouldBeFalse();
         await Storage.SaveFor("contract", "contract", Identifier, successor, 99u);
         var metadata = await Client.V1.Secrets.KeyValue.V2.ReadSecretMetadataAsync(Path(99u), mountPoint: Mount);
-        metadata.Data.Versions["1"].Destroyed.ShouldBeTrue();
-        metadata.Data.Versions["2"].Destroyed.ShouldBeTrue();
+        metadata.Data.Versions["1"].Destroyed.ShouldBeFalse();
+        metadata.Data.Versions["2"].Destroyed.ShouldBeFalse();
+        await Assert.ThrowsAsync<EncryptionKeyFenceUnavailable>(() => Storage.ConfirmErasureFor("contract", "contract", Identifier, "snapshot"));
         await Storage.DeleteThroughFor("contract", "contract", Identifier, "snapshot");
         await Storage.ConfirmErasureFor("contract", "contract", Identifier, "snapshot");
+        metadata = await Client.V1.Secrets.KeyValue.V2.ReadSecretMetadataAsync(Path(99u), mountPoint: Mount);
+        metadata.Data.Versions["1"].Destroyed.ShouldBeTrue();
+        metadata.Data.Versions["2"].Destroyed.ShouldBeTrue();
         (await Storage.GetFor("contract", "contract", Identifier, 99u)).Fingerprint.ShouldEqual(successor.Fingerprint);
+        await Assert.ThrowsAsync<EncryptionKeyErased>(() => Storage.SaveFor("contract", "contract", Identifier, missed, 100u));
+    }
+
+    [Fact]
+    public async Task should_preserve_evidence_when_erasure_commits_between_replacement_validation_and_tombstone()
+    {
+        var missed = new EncryptionKey([3], [4]);
+        var tombstoneReached = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var erasureCommitted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var replacement = Task.CompletedTask;
+        await Storage.SaveFor("contract", "contract", Identifier, Original);
+        try
+        {
+            await DuringErasure(
+                () => Storage.RecordErasureFor("contract", "contract", Identifier, new("late-fence")),
+                async () =>
+                {
+                    await Storage.SaveFor("contract", "contract", Identifier, missed, 99u);
+                    replacement = Interleaving.DuringTombstone(
+                        () => Storage.SaveFor("contract", "contract", Identifier, new EncryptionKey([5], [6]), 99u),
+                        async () =>
+                        {
+                            tombstoneReached.TrySetResult();
+                            await erasureCommitted.Task.WaitAsync(TimeSpan.FromSeconds(30));
+                        });
+                    await tombstoneReached.Task.WaitAsync(TimeSpan.FromSeconds(30));
+                });
+        }
+        finally
+        {
+            erasureCommitted.TrySetResult();
+        }
+
+        await Assert.ThrowsAsync<EncryptionKeyErased>(() => replacement);
+        var erased = (await Storage.GetFenceFor("contract", "contract", Identifier))!;
+        erased.ErasedThrough.Value.ShouldEqual(1u);
+        var tombstone = await Client.V1.Secrets.KeyValue.V2.ReadSecretAsync(Path(99u), mountPoint: Mount);
+        tombstone.Data.Data.ContainsKey("privateKey").ShouldBeFalse();
+        using var evidence = JsonDocument.Parse(tombstone.Data.Data["fingerprintEvidence"].ToString()!);
+        evidence.RootElement.EnumerateArray().Any(_ => _.GetProperty("Fingerprint").GetString() == missed.Fingerprint && _.GetProperty("Lifecycle").GetUInt32() == erased.Lifecycle).ShouldBeTrue();
+        await Storage.AllowNewKeyFor("contract", "contract", Identifier, erased.Version, erased.Lifecycle);
+        await Assert.ThrowsAsync<EncryptionKeyErased>(() => Storage.SaveFor("contract", "contract", Identifier, missed, 99u));
+        (await Storage.TryGetFor("contract", "contract", Identifier, 99u)).ShouldBeNull();
+        await Assert.ThrowsAsync<EncryptionKeyFenceUnavailable>(() => Storage.ConfirmErasureFor("contract", "contract", Identifier, "late-fence"));
+        var metadata = await Client.V1.Secrets.KeyValue.V2.ReadSecretMetadataAsync(Path(99u), mountPoint: Mount);
+        metadata.Data.Versions["1"].Destroyed.ShouldBeFalse();
+        metadata.Data.Versions["2"].Destroyed.ShouldBeFalse();
+        await Storage.DeleteThroughFor("contract", "contract", Identifier, "late-fence");
+        await Storage.ConfirmErasureFor("contract", "contract", Identifier, "late-fence");
+        metadata = await Client.V1.Secrets.KeyValue.V2.ReadSecretMetadataAsync(Path(99u), mountPoint: Mount);
+        metadata.Data.Versions["1"].Destroyed.ShouldBeTrue();
+        metadata.Data.Versions["2"].Destroyed.ShouldBeTrue();
+        var captured = (await Storage.GetFenceFor("contract", "contract", Identifier))!;
+        captured.Requests!.Single(_ => _.RequestId == "late-fence").Fingerprints.ShouldContain(missed.Fingerprint);
         await Assert.ThrowsAsync<EncryptionKeyErased>(() => Storage.SaveFor("contract", "contract", Identifier, missed, 100u));
     }
 

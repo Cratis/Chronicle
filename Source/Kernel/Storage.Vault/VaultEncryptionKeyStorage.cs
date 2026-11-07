@@ -3,6 +3,7 @@
 
 using System.Globalization;
 using System.Net;
+using System.Text.Json;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage.Compliance;
@@ -107,7 +108,6 @@ public class VaultEncryptionKeyStorage : IEncryptionKeyStorage
             var observed = await _access.Read(locations.Path(revision));
             if (observed is null || IsTombstone(observed.Value.Data))
             {
-                if (observed is not null) await _access.Destroy(locations.Path(revision), observed.Value.Version - 1);
                 if (await StageAndPublish(locations, identifier, key, revision, fence, observed?.Version ?? 0) is { } created) return created;
             }
 
@@ -216,10 +216,7 @@ public class VaultEncryptionKeyStorage : IEncryptionKeyStorage
         var request = Request((await RequiredFence(locations, identifier)).Fence, identifier, requestId);
         foreach (var (revision, path) in await RevisionPaths(locations))
         {
-            await Tombstone(path, identifier, data => Covered(request, revision, data), async data =>
-            {
-                if (Key(data) is { } key) await AddFingerprint(locations, identifier, requestId, key.Fingerprint);
-            });
+            await Tombstone(path, identifier, data => Covered(request, revision, data));
             await DestroyCoveredHistory(locations, (revision, path), identifier, request);
         }
     }
@@ -269,6 +266,20 @@ public class VaultEncryptionKeyStorage : IEncryptionKeyStorage
         revision.Value <= (request.Through ?? EncryptionKeyRevision.Initial).Value ||
         (Lifecycle(data) is { } lifecycle && lifecycle <= request.Lifecycle) ||
         (Key(data) is { } key && request.Fingerprints?.Contains(key.Fingerprint, StringComparer.Ordinal) == true);
+
+    static FingerprintEvidence[] Evidence(Dictionary<string, object> data)
+    {
+        var retained = data.TryGetValue("fingerprintEvidence", out var value)
+            ? JsonSerializer.Deserialize<FingerprintEvidence[]>(value.ToString()!) ?? throw new JsonException("Missing fingerprint evidence.")
+            : [];
+        return Key(data) is { } key ? retained.Append(new(key.Fingerprint, Lifecycle(data))).Distinct().ToArray() : retained;
+    }
+
+    static bool Covered(EncryptionKeyErasureRequest request, EncryptionKeyRevision revision, FingerprintEvidence evidence) =>
+        revision.Value <= (request.Through ?? EncryptionKeyRevision.Initial).Value ||
+        (evidence.Lifecycle is { } lifecycle && lifecycle <= request.Lifecycle) ||
+        request.Fingerprints?.Contains(evidence.Fingerprint, StringComparer.Ordinal) == true;
+
     static bool IsAuthorizationRetry(EncryptionKeyErasure fence, ulong version, uint lifecycle) =>
         version < ulong.MaxValue && lifecycle < uint.MaxValue && fence.Version == version + 1 && fence.Lifecycle == lifecycle + 1 && fence.NewKeyAllowed;
     static EncryptionKeyErasureRequest Request(EncryptionKeyErasure fence, EncryptionKeyIdentifier identifier, string id) =>
@@ -292,12 +303,13 @@ public class VaultEncryptionKeyStorage : IEncryptionKeyStorage
             ["writerNonce"] = nonce,
             ["stagedLifecycle"] = initial.Lifecycle
         };
-        var stagedVersion = await _access.Write(path, data, observedVersion);
+        var stagedVersion = await StageWithEvidence(path, data, observedVersion);
         if (stagedVersion is null) return null;
         var candidate = new EncryptionKeyAtRevision(key, revision, initial.Lifecycle);
         var ownedVersion = stagedVersion.Value;
         try
         {
+            await CaptureCoveredFingerprints(locations, (revision, path), identifier);
             var fence = (await RequiredFence(locations, identifier)).Fence;
             if (fence.Version < initial.Version) throw new EncryptionKeyFenceUnavailable(identifier);
             if (fence.Lifecycle != initial.Lifecycle) throw new EncryptionKeyFenceChanged(identifier);
@@ -325,7 +337,19 @@ public class VaultEncryptionKeyStorage : IEncryptionKeyStorage
         }
     }
 
-    async Task Tombstone(string path, EncryptionKeyIdentifier identifier, Func<Dictionary<string, object>, bool> covered, Func<Dictionary<string, object>, Task>? beforeDestroy = null, int? expectedVersion = null)
+    async Task<int?> StageWithEvidence(string path, Dictionary<string, object> data, int observedVersion)
+    {
+        if (observedVersion > 0)
+        {
+            var previous = await _access.Read(path);
+            if (previous is null || previous.Value.Version != observedVersion) return null;
+            data["fingerprintEvidence"] = JsonSerializer.Serialize(Evidence(previous.Value.Data));
+        }
+
+        return await _access.Write(path, data, observedVersion);
+    }
+
+    async Task Tombstone(string path, EncryptionKeyIdentifier identifier, Func<Dictionary<string, object>, bool> covered, int? expectedVersion = null)
     {
         for (var attempt = 0; attempt < MaximumAttempts; attempt++)
         {
@@ -333,20 +357,15 @@ public class VaultEncryptionKeyStorage : IEncryptionKeyStorage
             if (row is null) return;
             var (data, version) = row.Value;
             if (expectedVersion is not null && expectedVersion != version) return;
-            if (IsTombstone(data))
+            if (IsTombstone(data) || !covered(data)) return;
+            var evidence = (await _access.History(path, identifier)).SelectMany(_ => Evidence(_.Data)).Distinct().ToArray();
+            var tombstone = new Dictionary<string, object>
             {
-                await _access.Destroy(path, version - 1);
-                return;
-            }
-
-            if (!covered(data)) return;
-            if (beforeDestroy is not null) await beforeDestroy(data);
-            var tombstone = new Dictionary<string, object> { ["erasedTombstone"] = true, ["layout"] = VaultPathSegments.Root };
-            if (await _access.Write(path, tombstone, version) is not null)
-            {
-                await _access.Destroy(path, version);
-                return;
-            }
+                ["erasedTombstone"] = true,
+                ["layout"] = VaultPathSegments.Root,
+                ["fingerprintEvidence"] = JsonSerializer.Serialize(evidence)
+            };
+            if (await _access.Write(path, tombstone, version) is not null) return;
 
             await _access.Backoff(attempt);
         }
@@ -358,20 +377,18 @@ public class VaultEncryptionKeyStorage : IEncryptionKeyStorage
     {
         var path = locations.Path(candidate.Revision);
 
-        // Preserve evidence before replacement can destroy covered current or historical material.
+        // Record covered evidence before validating a replacement, without destroying any history.
         await CaptureCoveredFingerprints(locations, (candidate.Revision, path), identifier);
         var fence = (await RequiredFence(locations, identifier)).Fence;
         if (fence.Lifecycle != candidate.StagedLifecycle) throw new EncryptionKeyFenceChanged(identifier);
         fence.EnsureStillAllowed(identifier, candidate);
 
-        // Never hide key material in history behind a successor from a newer lifecycle.
+        // Invalidate delayed publication reversibly; the sweep alone may destroy history.
         await Tombstone(path, identifier, _ => true, expectedVersion: observedVersion);
         var replacement = await _access.Read(path);
         if (replacement is null || !IsTombstone(replacement.Value.Data)) return null;
 
-        // A concurrent tombstone may have won the CAS but not yet completed destruction.
         await CaptureCoveredFingerprints(locations, (candidate.Revision, path), identifier);
-        await _access.Destroy(path, replacement.Value.Version - 1);
         return replacement.Value.Version;
     }
 
@@ -383,9 +400,9 @@ public class VaultEncryptionKeyStorage : IEncryptionKeyStorage
         {
             foreach (var historical in history)
             {
-                if (Key(historical.Data) is { } key && Covered(request, location.Revision, historical.Data))
+                foreach (var evidence in Evidence(historical.Data).Where(_ => Covered(request, location.Revision, _)))
                 {
-                    await AddFingerprint(locations, identifier, request.RequestId, key.Fingerprint);
+                    await AddFingerprint(locations, identifier, request.RequestId, evidence.Fingerprint);
                 }
             }
         }
@@ -395,22 +412,28 @@ public class VaultEncryptionKeyStorage : IEncryptionKeyStorage
     {
         foreach (var historical in await _access.History(location.Path, identifier))
         {
-            if (Key(historical.Data) is not { } key || !Covered(request, location.Revision, historical.Data)) continue;
-            await AddFingerprint(locations, identifier, request.RequestId, key.Fingerprint);
-            await _access.DestroyVersion(location.Path, historical.Version);
+            foreach (var evidence in Evidence(historical.Data).Where(_ => Covered(request, location.Revision, _)))
+            {
+                await AddFingerprint(locations, identifier, request.RequestId, evidence.Fingerprint);
+            }
+
+            if (Key(historical.Data) is not null && Covered(request, location.Revision, historical.Data))
+            {
+                await _access.DestroyVersion(location.Path, historical.Version);
+            }
         }
     }
 
     async Task VerifyErasure(string path, EncryptionKeyIdentifier identifier, EncryptionKeyErasureRequest request, EncryptionKeyRevision revision)
     {
-        var row = await _access.Read(path);
         foreach (var historical in await _access.History(path, identifier))
         {
             if (Key(historical.Data) is not null && Covered(request, revision, historical.Data)) throw new EncryptionKeyFenceUnavailable(identifier);
+            if (Evidence(historical.Data).Any(evidence => Covered(request, revision, evidence) && request.Fingerprints?.Contains(evidence.Fingerprint, StringComparer.Ordinal) != true))
+            {
+                throw new EncryptionKeyFenceUnavailable(identifier);
+            }
         }
-
-        if (row is null || !IsTombstone(row.Value.Data)) return;
-        if (!await _access.IsDestroyed(path, row.Value.Version - 1)) throw new EncryptionKeyFenceUnavailable(identifier);
     }
 
     async Task AddFingerprint(VaultKeyLocations locations, EncryptionKeyIdentifier identifier, string requestId, string fingerprint)
@@ -555,4 +578,6 @@ public class VaultEncryptionKeyStorage : IEncryptionKeyStorage
             return [];
         }
     }
+
+    sealed record FingerprintEvidence(string Fingerprint, uint? Lifecycle);
 }
