@@ -6,6 +6,7 @@ using Cratis.Chronicle;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Cratis.Chronicle.Identities;
+using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Serialization;
 using Cratis.Traces;
@@ -78,13 +79,14 @@ internal static class ChronicleClientServiceCollectionExtensions
         services.AddScoped(sp =>
         {
             var options = sp.GetRequiredService<IOptions<ChronicleClientOptions>>().Value;
-            var namespaceName = sp.GetRequiredService<IEventStoreNamespaceResolver>().Resolve();
+            var namespaceName = ObserverDeliveryContext.NamespaceFor(options.EventStore) ?? sp.GetRequiredService<IEventStoreNamespaceResolver>().Resolve();
 
             // The client keys its own event stores on both the name and the namespace and builds each at most once,
             // so a second cache here only added a worse key: it left out the event store name, and being static it
             // was shared by every container in the process - so two containers resolving the same namespace got one
             // event store built from whichever of them resolved first. Passing the namespace rather than letting the
-            // client resolve it again also stops the two from being able to disagree about which one this is.
+            // client resolve it again also stops the two from being able to disagree about which one this is. While an observer
+            // delivery is running for this event store, the delivered namespace is used instead of the resolver answer.
             return sp.GetRequiredService<IChronicleClient>().GetEventStore(options.EventStore, namespaceName).GetAwaiter().GetResult();
         });
 

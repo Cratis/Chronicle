@@ -79,9 +79,15 @@ CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
 CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
 
 SchemaCommand schemaCommand;
+EncryptionKeyCommand encryptionKeyCommand;
 try
 {
     schemaCommand = SchemaCommand.Parse(args);
+    encryptionKeyCommand = EncryptionKeyCommand.Parse(schemaCommand.RemainingArgs);
+    if (encryptionKeyCommand.Verify && schemaCommand.Action != SchemaAction.None)
+    {
+        throw new ArgumentException($"{EncryptionKeyCommand.VerifyFlag} cannot be combined with schema actions.");
+    }
 }
 catch (ArgumentException exception)
 {
@@ -89,7 +95,7 @@ catch (ArgumentException exception)
     return 4;
 }
 
-var builder = WebApplication.CreateBuilder(schemaCommand.RemainingArgs);
+var builder = WebApplication.CreateBuilder(encryptionKeyCommand.RemainingArgs);
 
 #pragma warning disable ASP0000 // Do not call 'IServiceCollection.BuildServiceProvider' in 'ConfigureServices'
 logger = builder.Logging.Services
@@ -361,6 +367,18 @@ _ = app.Services.GetRequiredService<IShutdownDrainBudget>();
 
 logger = app.Services.GetRequiredService<ILogger<Kernel>>();
 logger.ServerConfigured();
+
+// Look for encryption keys stored under earlier names before anything starts. A layout that cannot be used, or
+// --verify-encryption-keys, ends the process here; otherwise the counts are logged and startup continues.
+var encryptionKeyExit = await EncryptionKeyCommandRunner.Run(
+    app.Services.GetService<Cratis.Chronicle.Storage.Compliance.IEncryptionKeyStoreUpgradeCheck>(),
+    logger,
+    encryptionKeyCommand,
+    Console.Out);
+if (encryptionKeyExit is { } exitCode)
+{
+    return exitCode;
+}
 
 // State the certificate ring at every boot. A rotation is carried out by restarting nodes with a changed
 // ring, so this is the record of what each node actually loaded - the thing that has to match across the

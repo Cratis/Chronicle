@@ -12,6 +12,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using ConnectionService = KernelGrpc::Cratis.Chronicle.Services.Clients.ConnectionService;
 using IConnectedClients = KernelCore::Cratis.Chronicle.Clients.IConnectedClients;
+using IConnectionOwnership = KernelCore::Cratis.Chronicle.Clients.IConnectionOwnership;
 using KernelConnectionId = KernelConcepts::Cratis.Chronicle.Concepts.Clients.ConnectionId;
 using OpenConnections = KernelGrpc::Cratis.Chronicle.Services.Clients.OpenConnections;
 
@@ -31,11 +32,13 @@ namespace Cratis.Chronicle.XUnit.Integration;
 /// <param name="lifecycle"><see cref="IConnectionLifecycle"/> for managing lifecycle.</param>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for working with grains.</param>
 /// <param name="localSiloDetails"><see cref="ILocalSiloDetails"/> for the silo the client is co-hosted with.</param>
+/// <param name="connectionOwnership"><see cref="IConnectionOwnership"/> telling which caller opened each connection.</param>
 /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
 internal class ChronicleConnection(
     IConnectionLifecycle lifecycle,
     IGrainFactory grainFactory,
     ILocalSiloDetails localSiloDetails,
+    IConnectionOwnership connectionOwnership,
     ILoggerFactory loggerFactory) : IChronicleConnection, IChronicleServicesAccessor, IKernelCapabilities
 {
     /// <summary>
@@ -203,21 +206,35 @@ internal class ChronicleConnection(
             localSiloDetails,
             new KernelCore::Cratis.Chronicle.Clients.ConnectedClientsQuery(grainFactory, chronicleOptions),
             new OpenConnections(),
+            connectionOwnership,
+            new KernelCore::Cratis.Chronicle.Clients.ConnectedClientsVisibility(chronicleOptions, connectionOwnership, new Microsoft.AspNetCore.Http.HttpContextAccessor()),
             loggerFactory.CreateLogger<ConnectionService>(),
             chronicleOptions);
+        var firstResponse = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         _connectionService.Connect(new()
         {
             ConnectionId = lifecycle.ConnectionId,
             IsRunningWithDebugger = KeepAliveExempt,
             ClientType = ".NET",
-        }).Subscribe(HandleConnection);
+        }).Subscribe(
+            _ =>
+            {
+                firstResponse.TrySetResult();
+                HandleConnection();
+            },
+            error => firstResponse.TrySetException(error),
+            () => firstResponse.TrySetException(new InvalidOperationException("The connection stream ended before the server responded.")));
+
+        // The first response only arrives after the server has claimed the connection, so registrations made
+        // from the OnConnected callbacks are not refused for lack of ownership.
+        await firstResponse.Task;
 
         // The capabilities must be known before the OnConnected callbacks fire, because they read them.
         await FetchCapabilities();
         await lifecycle.Connected();
     }
 
-    void HandleConnection(ConnectionKeepAlive keepAlive) => _ = SendKeepAlive();
+    void HandleConnection() => _ = SendKeepAlive();
 
     async Task SendKeepAlive()
     {

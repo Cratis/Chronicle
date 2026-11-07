@@ -28,6 +28,9 @@ public class a_registration_lifetime : Specification
     protected readonly ConnectionLogger _logger = new();
     protected readonly ConcurrentQueue<Exception> _errors = new();
     protected readonly ConcurrentQueue<string> _events = new();
+    protected IConnectionOwnership _ownership = AllowingConnectionOwnership.Create();
+    protected IGrainFactory _grainFactory;
+    protected SiloAddress _localSilo;
     protected Func<Task> _register;
     protected IConnectedClients _connectedClients;
     protected ConnectionKeepAlive _firstKeepAlive;
@@ -50,7 +53,7 @@ public class a_registration_lifetime : Specification
     void Establish()
     {
         _register = () => _registration.Task;
-        var silo = SiloAddress.New(new IPEndPoint(IPAddress.Loopback, 11111), 1);
+        var silo = _localSilo = SiloAddress.New(new IPEndPoint(IPAddress.Loopback, 11111), 1);
         _connectedClients = Substitute.For<IConnectedClients>();
         _connectedClients.OnClientConnected(Arg.Any<ConnectionId>(), Arg.Any<string>(), Arg.Any<bool>(), Arg.Any<int>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>()).Returns(_ =>
         {
@@ -62,18 +65,22 @@ public class a_registration_lifetime : Specification
             _disconnected.TrySetResult();
             return Task.CompletedTask;
         });
-        var grainFactory = Substitute.For<IGrainFactory>();
+        var grainFactory = _grainFactory = Substitute.For<IGrainFactory>();
         grainFactory.GetGrain<IConnectedClients>(silo.ToParsableString(), Arg.Any<string>()).Returns(_connectedClients);
         var localSiloDetails = Substitute.For<ILocalSiloDetails>();
         localSiloDetails.SiloAddress.Returns(silo);
         var configuration = new ChronicleOptions { ConnectedClients = new() { KeepAliveIntervalSeconds = 30 } };
         configuration.Clustering.ResponseTimeout = ResponseTimeout;
         var options = Options.Create(configuration);
+        AllowingConnectionOwnership.WithActiveSilos(grainFactory, silo);
+        var ownership = _ownership;
         _service = new KernelConnectionService(
             grainFactory,
             localSiloDetails,
             new ConnectedClientsQuery(grainFactory, options),
             _openConnections,
+            ownership,
+            AllowingConnectionOwnership.VisibilityFor(options, ownership),
             _logger,
             options)
         {

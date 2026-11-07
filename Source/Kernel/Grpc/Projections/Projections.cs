@@ -9,6 +9,7 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Contracts.Primitives;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Json;
@@ -23,6 +24,7 @@ using Cratis.Chronicle.Services.ReadModels;
 using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using ProtoBuf.Grpc;
 using ContractProjectionDefinitionParsingErrors = Cratis.Chronicle.Contracts.Projections.ProjectionDeclarationParsingErrors;
 using ContractProjectionPreview = Cratis.Chronicle.Contracts.Projections.ProjectionPreview;
@@ -39,6 +41,8 @@ namespace Cratis.Chronicle.Services.Projections;
 /// <param name="serviceProvider"><see cref="IServiceProvider"/> for accessing services.</param>
 /// <param name="readModelsCompliance"><see cref="IReadModelsCompliance"/> for decrypting PII fields in previewed read model instances.</param>
 /// <param name="localSiloDetails">The local silo details for locating client connections.</param>
+/// <param name="connectionOwnership"><see cref="IConnectionOwnership"/> telling which caller opened each connection.</param>
+/// <param name="options">The <see cref="IOptions{ChronicleOptions}"/> for configuration.</param>
 /// <param name="logger">The logger.</param>
 /// <param name="namespaceCasing">The namespace casing resolver.</param>
 internal sealed class Projections(
@@ -48,6 +52,8 @@ internal sealed class Projections(
     IServiceProvider serviceProvider,
     IReadModelsCompliance readModelsCompliance,
     ILocalSiloDetails localSiloDetails,
+    IConnectionOwnership connectionOwnership,
+    IOptions<ChronicleOptions> options,
     ILogger<Projections> logger,
     INamespaceCasing namespaceCasing) : IProjections
 {
@@ -73,7 +79,11 @@ internal sealed class Projections(
         var projectionsManager = grainFactory.GetGrain<IProjectionsManager>(request.EventStore);
         var owner = (Concepts.Projections.ProjectionOwner)(int)request.Owner;
         var projections = request.Projections.Select(_ => _.ToChronicle(owner)).ToArray();
-        if (!string.IsNullOrEmpty(request.ConnectionId))
+        if (!string.IsNullOrEmpty(request.ConnectionId) && !connectionOwnership.IsOwnedBy(request.ConnectionId, ConnectionCallers.From(context, options.Value).Owner))
+        {
+            logger.DeclarationsSkippedForConnection(request.EventStore, request.ConnectionId);
+        }
+        else if (!string.IsNullOrEmpty(request.ConnectionId))
         {
             try
             {

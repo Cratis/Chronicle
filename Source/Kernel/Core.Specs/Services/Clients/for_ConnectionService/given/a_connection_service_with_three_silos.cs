@@ -47,6 +47,8 @@ public class a_connection_service_with_three_silos : Specification
             Substitute.For<ILocalSiloDetails>(),
             new ConnectedClientsQuery(_grainFactory, Options.Create(new ChronicleOptions())),
             new OpenConnections(),
+            AllowingConnectionOwnership.Create(),
+            AllowingConnectionOwnership.VisibilityFor(Options.Create(new ChronicleOptions()), AllowingConnectionOwnership.Create()),
             NullLogger<KernelConnectionService>.Instance,
             Options.Create(new ChronicleOptions()));
     }

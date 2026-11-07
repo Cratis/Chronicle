@@ -171,10 +171,15 @@ internal sealed class TestingServices : IServices
                     services.AddSingleton(eventTypes());
                 }));
 
+        var connectionOwnership = new InProcessConnectionOwnership();
+        var kernelOptions = Options.Create(new KernelCore::Cratis.Chronicle.Configuration.ChronicleOptions());
+
         _observers = new(() => new ObserversForTesting(new KernelObserversService(
             grainFactory,
             storage,
             new KernelObserverRemover(grainFactory, storage, NullLogger<KernelObserverRemover>.Instance),
+            new KernelCore::Cratis.Chronicle.Clients.ConnectedClientsVisibility(kernelOptions, connectionOwnership, new Microsoft.AspNetCore.Http.HttpContextAccessor()),
+            kernelOptions,
             namespaceCasing)));
 
         _failedPartitions = new(() => new KernelFailedPartitionsService(storage));
@@ -189,6 +194,7 @@ internal sealed class TestingServices : IServices
                 jsonSerializerOptions,
                 new ActivitySource<KernelReactorsService>(),
                 Options.Create(new KernelCore::Cratis.Chronicle.Configuration.ChronicleOptions()),
+                connectionOwnership,
                 NullLogger<KernelReactorsService>.Instance,
                 registrationGate,
                 namespaceCasing));
@@ -201,6 +207,7 @@ internal sealed class TestingServices : IServices
                 jsonSerializerOptions,
                 new ActivitySource<KernelReducersService>(),
                 Options.Create(new KernelCore::Cratis.Chronicle.Configuration.ChronicleOptions()),
+                connectionOwnership,
                 NullLogger<KernelReducersService>.Instance,
                 registrationGate,
                 namespaceCasing));
@@ -213,6 +220,8 @@ internal sealed class TestingServices : IServices
                 null!,
                 null!,
                 null!,
+                connectionOwnership,
+                kernelOptions,
                 NullLogger<KernelProjectionsService>.Instance,
                 namespaceCasing));
 

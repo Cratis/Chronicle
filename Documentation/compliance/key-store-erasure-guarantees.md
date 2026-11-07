@@ -62,7 +62,7 @@ Vault snapshots, Consul snapshots and replicated clusters need their own retenti
 
 Source: `Source/Kernel/Storage.AzureKeyVault/AzureKeyVaultEncryptionKeyStorage.cs`, `EncryptionKeyNotPurged.cs`.
 
-Chronicle stores each revision as a secret named `chronicle--{event-store}--{namespace}--{identifier}--{revision}`. Erasing a revision does two things:
+Chronicle stores each revision as a secret named `chronicle-k1--{hash}--{revision}`, where `{hash}` is derived from the event store, namespace and identifier. Erasing a revision does two things:
 
 1. It soft-deletes the secret and waits for the delete to finish.
 2. It purges the deleted secret.
@@ -74,6 +74,10 @@ Soft-delete alone is not an erasure. Azure Key Vault [keeps a soft-deleted secre
 Give Chronicle's identity permission to purge deleted secrets, in addition to the Get, List, Set and Delete permissions in [Compliance Storage](../hosting/configuration/compliance-storage.md#azure-key-vault). It also needs permission to list deleted secrets so it can finish an earlier incomplete erasure.
 
 If your procedure requires purge at erasure time, use a vault without [purge protection](https://learn.microsoft.com/en-us/azure/key-vault/general/soft-delete-overview). With protection enabled, Azure refuses purge until retention expires. Chronicle does not detect this setting in advance, so the erasure call fails while purge remains blocked.
+
+### Disabled secrets
+
+A key secret that is disabled in the vault counts as present but unavailable. Chronicle does not read it, does not replace it with a new key, and does not reuse its revision number: the operation throws `EncryptionKeyUnavailable`, the metric `chronicle-encryption-key-unavailable` is incremented and one warning without identifiers is logged. A disabled erasure secret is treated the same way, so a disabled fence never reads as no fence. Erasing the subject removes and purges the disabled secret, and the erasure covers its revision.
 
 ### What happens when the purge is refused
 

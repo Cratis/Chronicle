@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+extern alias KernelCore;
+
 using System.Reactive.Linq;
 using System.Reactive.Threading.Tasks;
 using Cratis.Chronicle.Contracts;
@@ -40,6 +42,7 @@ public sealed class OccurrenceApp : IAsyncDisposable
         var services = new ServiceCollection();
         services.AddSingleton(kernel.GetRequiredService<IGrainFactory>());
         services.AddSingleton(kernel.GetRequiredService<ILocalSiloDetails>());
+        services.AddSingleton(kernel.GetRequiredService<KernelCore::Cratis.Chronicle.Clients.IConnectionOwnership>());
         services.AddSingleton<IServices>(_ => kernel.GetRequiredService<IServices>());
         services.AddSingleton(kernel.GetRequiredService<ILoggerFactory>());
         services.AddLogging();

@@ -56,11 +56,13 @@ public class when_using_both_metric_names : Specification
         "chronicle-sql-schema-lock-wait",
         "chronicle-sql-live-query-poll-failures",
         "chronicle-sql-upsert-collisions-recovered",
+        "chronicle-sql-encryption-key-identifiers-refused",
         "chronicle.sql.composite_key.stamp_failures",
         "chronicle.sql.composite_key.collisions",
         "cratis.chronicle.sql.schema_lock.wait_duration",
         "cratis.chronicle.sql.live_query.poll_failures",
         "cratis.chronicle.sql.upsert.recovered_collisions",
+        "cratis.chronicle.sql.encryption_key.refused_identifiers",
         "cratis.chronicle.sql.composite_key.stamp_failures",
         "cratis.chronicle.sql.composite_key.collisions"
     }.Order());
