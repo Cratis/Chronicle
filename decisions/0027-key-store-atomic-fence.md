@@ -68,7 +68,7 @@ erasure sets `NewKeyAllowed=false`. Writing an older fence over a newer one is i
 
 C2. **Conditional authorization.** `AllowNewKeyFor` succeeds only against the fence state the caller observed
 (its `Version`). If the fence changed, it fails with `EncryptionKeyFenceChanged` (the caller re-reads and decides). It
-is idempotent for a retry of an authorization that already applied. It never authorizes an erasure it did not observe.
+is idempotent for a retry of an authorization that already applied. It never authorizes an erasure it did not observe. Idempotent retry is defined exactly: the call is a no-op success only when the stored fence is `Version == observedVersion + 1`, `NewKeyAllowed == true` and `Lifecycle == observedLifecycle + 1` (the state that authorization itself produces); after any later fence write it throws `EncryptionKeyFenceChanged`, and the caller re-reads (seeing `NewKeyAllowed == true` it needs nothing more). No authorization history is persisted.
 
 C3. **Guarded publication: stage, validate, publish.** Every key write carries the fence state its writer observed
 (`Version`, `Lifecycle`) and lands *unpublished*. Only published revisions are readable: every reader, `GetOrAdd`'s
