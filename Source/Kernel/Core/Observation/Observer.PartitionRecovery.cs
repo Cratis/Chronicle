@@ -98,6 +98,7 @@ public partial class Observer
         var config = await GetRetryConfiguration();
         var started = 0;
         var failedToStart = false;
+        var notStarted = new List<FailedPartitionId>();
         while (started < MaxPartitionRecoveriesPerTurn && _partitionsAwaitingRecovery.TryDequeue(out var failedPartitionId))
         {
             _partitionsAwaitingRecoveryLookup.Remove(failedPartitionId);
@@ -130,15 +131,17 @@ public partial class Observer
                 // A job that cannot be started - its grain could not activate while the silo was busy - must not end the
                 // turn: the partitions still queued would wait for the next subscription, which may never come.
                 logger.CouldNotStartRecoveryOfFailedPartition(ex, partition.Partition);
-                if (_partitionsAwaitingRecoveryLookup.Add(failedPartitionId))
-                {
-                    _partitionsAwaitingRecovery.Enqueue(failedPartitionId);
-                }
-
+                notStarted.Add(failedPartitionId);
                 failedToStart = true;
             }
 
             started++;
+        }
+
+        // Tried again in a later turn, not in this one: it would only fail the same way again straight away.
+        foreach (var failedPartitionId in notStarted.Where(_partitionsAwaitingRecoveryLookup.Add))
+        {
+            _partitionsAwaitingRecovery.Enqueue(failedPartitionId);
         }
 
         if (_partitionsAwaitingRecovery.Count > 0 || _retryJobSweepRequested)
