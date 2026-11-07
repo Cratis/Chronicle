@@ -78,7 +78,7 @@ public class VaultEncryptionKeyStorage : IEncryptionKeyStorage
             var observed = await _access.Read(path);
             if (observed is not null && ((!IsLatest(revision) && IsPublished(observed.Value.Data)) || IsTombstone(observed.Value.Data)))
             {
-                var replacement = await PrepareReplacement(path, identifier, observed.Value.Version);
+                var replacement = await PrepareReplacement(locations, identifier, new(key, next, initial.Lifecycle), observed.Value.Version);
                 if (replacement is { } version && await StageAndPublish(locations, identifier, key, next, fence, version) is not null) return;
             }
             else if (observed is null && await StageAndPublish(locations, identifier, key, next, fence, 0) is not null)
@@ -354,16 +354,41 @@ public class VaultEncryptionKeyStorage : IEncryptionKeyStorage
         throw new EncryptionKeyFenceUnavailable(identifier);
     }
 
-    async Task<int?> PrepareReplacement(string path, EncryptionKeyIdentifier identifier, int observedVersion)
+    async Task<int?> PrepareReplacement(VaultKeyLocations locations, EncryptionKeyIdentifier identifier, EncryptionKeyAtRevision candidate, int observedVersion)
     {
+        var path = locations.Path(candidate.Revision);
+
+        // Preserve evidence before replacement can destroy covered current or historical material.
+        await CaptureCoveredFingerprints(locations, (candidate.Revision, path), identifier);
+        var fence = (await RequiredFence(locations, identifier)).Fence;
+        if (fence.Lifecycle != candidate.StagedLifecycle) throw new EncryptionKeyFenceChanged(identifier);
+        fence.EnsureStillAllowed(identifier, candidate);
+
         // Never hide key material in history behind a successor from a newer lifecycle.
         await Tombstone(path, identifier, _ => true, expectedVersion: observedVersion);
         var replacement = await _access.Read(path);
         if (replacement is null || !IsTombstone(replacement.Value.Data)) return null;
 
         // A concurrent tombstone may have won the CAS but not yet completed destruction.
+        await CaptureCoveredFingerprints(locations, (candidate.Revision, path), identifier);
         await _access.Destroy(path, replacement.Value.Version - 1);
         return replacement.Value.Version;
+    }
+
+    async Task CaptureCoveredFingerprints(VaultKeyLocations locations, (EncryptionKeyRevision Revision, string Path) location, EncryptionKeyIdentifier identifier)
+    {
+        var history = await _access.History(location.Path, identifier);
+        var fence = (await RequiredFence(locations, identifier)).Fence;
+        foreach (var request in fence.Requests ?? [])
+        {
+            foreach (var historical in history)
+            {
+                if (Key(historical.Data) is { } key && Covered(request, location.Revision, historical.Data))
+                {
+                    await AddFingerprint(locations, identifier, request.RequestId, key.Fingerprint);
+                }
+            }
+        }
     }
 
     async Task DestroyCoveredHistory(VaultKeyLocations locations, (EncryptionKeyRevision Revision, string Path) location, EncryptionKeyIdentifier identifier, EncryptionKeyErasureRequest request)

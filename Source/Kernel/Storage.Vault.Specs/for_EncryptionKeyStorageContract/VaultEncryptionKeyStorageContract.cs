@@ -96,17 +96,38 @@ public abstract class VaultEncryptionKeyStorageContract : Cratis.Chronicle.Stora
         (await Storage.TryGetFor("contract", "contract", Identifier, 99u))!.Fingerprint.ShouldEqual(winner.Fingerprint);
     }
 
-    [Fact]
-    public async Task should_destroy_history_before_overwriting_a_key_missed_by_the_erasure_snapshot()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task should_destroy_history_before_overwriting_a_key_missed_by_the_erasure_snapshot(bool missedMaterialIsHistorical)
     {
+        var missed = new EncryptionKey([3], [4]);
         await Storage.SaveFor("contract", "contract", Identifier, Original);
         await DuringErasure(
             () => Storage.RecordErasureFor("contract", "contract", Identifier, new("snapshot")),
-            () => Storage.SaveFor("contract", "contract", Identifier, new EncryptionKey([3], [4]), 99u));
+            () => Storage.SaveFor("contract", "contract", Identifier, missed, 99u));
         var erased = (await Storage.GetFenceFor("contract", "contract", Identifier))!;
         erased.ErasedThrough.Value.ShouldEqual(1u);
+        erased.ErasedKeyFingerprints.ShouldNotContain(missed.Fingerprint);
         await Storage.AllowNewKeyFor("contract", "contract", Identifier, erased.Version, erased.Lifecycle);
         var successor = new EncryptionKey([5], [6]);
+        if (missedMaterialIsHistorical)
+        {
+            // Leave covered history behind an uncovered current key, as an earlier implementation could.
+            var current = await Client.V1.Secrets.KeyValue.V2.ReadSecretAsync(Path(99u), mountPoint: Mount);
+            current.Data.Data["stagedLifecycle"] = erased.Lifecycle + 1;
+            current.Data.Data["publicKey"] = Convert.ToBase64String(successor.Public);
+            current.Data.Data["privateKey"] = Convert.ToBase64String(successor.Private);
+            await Client.V1.Secrets.KeyValue.V2.WriteSecretAsync(Path(99u), current.Data.Data, checkAndSet: current.Data.Metadata.Version, mountPoint: Mount);
+        }
+
+        await Assert.ThrowsAsync<EncryptionKeyErased>(() => Storage.SaveFor("contract", "contract", Identifier, missed, 99u));
+        var captured = (await Storage.GetFenceFor("contract", "contract", Identifier))!;
+        captured.ErasedKeyFingerprints.ShouldContain(missed.Fingerprint);
+        captured.Requests!.Single(_ => _.RequestId == "snapshot").Fingerprints.ShouldContain(missed.Fingerprint);
+        var retained = await Client.V1.Secrets.KeyValue.V2.ReadSecretMetadataAsync(Path(99u), mountPoint: Mount);
+        retained.Data.Versions["1"].Destroyed.ShouldBeFalse();
+        retained.Data.Versions["2"].Destroyed.ShouldBeFalse();
         await Storage.SaveFor("contract", "contract", Identifier, successor, 99u);
         var metadata = await Client.V1.Secrets.KeyValue.V2.ReadSecretMetadataAsync(Path(99u), mountPoint: Mount);
         metadata.Data.Versions["1"].Destroyed.ShouldBeTrue();
@@ -114,6 +135,7 @@ public abstract class VaultEncryptionKeyStorageContract : Cratis.Chronicle.Stora
         await Storage.DeleteThroughFor("contract", "contract", Identifier, "snapshot");
         await Storage.ConfirmErasureFor("contract", "contract", Identifier, "snapshot");
         (await Storage.GetFor("contract", "contract", Identifier, 99u)).Fingerprint.ShouldEqual(successor.Fingerprint);
+        await Assert.ThrowsAsync<EncryptionKeyErased>(() => Storage.SaveFor("contract", "contract", Identifier, missed, 100u));
     }
 
     [Fact]

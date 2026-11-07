@@ -57,6 +57,7 @@ public static class UnprovableLayouts
     public static (IVaultClient Client, IKeyValueSecretsEngineV2 Engine) Create(Step step, Exception failure)
     {
         var client = Substitute.For<IVaultClient>();
+        client.Settings.Returns(new VaultClientSettings("http://vault.invalid", null));
         var engine = client.V1.Secrets.KeyValue.V2;
         var markerReads = 0;
 
