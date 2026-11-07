@@ -12,8 +12,6 @@ namespace Cratis.Chronicle.Projections;
 /// Represents an implementation of <see cref="IProjectionChangesetNotifier"/>.
 /// </summary>
 /// <param name="logger">The <see cref="ILogger{T}"/> for logging.</param>
-/// <param name="projectionsServiceClient">The <see cref="IProjectionsServiceClient"/> used to tell every silo whether the projection is watched.</param>
-/// <param name="timeProvider">The <see cref="TimeProvider"/> used to throttle republishing; defaults to <see cref="TimeProvider.System"/>.</param>
 /// <remarks>
 /// One activation exists per observer, event store and namespace (see <see cref="ProjectionChangesetNotifierKey"/>).
 /// Marked <c language="csharp">[KeepAlive]</c> because the subscriber registrations live only in memory — there is no
@@ -27,19 +25,9 @@ namespace Cratis.Chronicle.Projections;
 /// hosting each watch connection.
 /// </remarks>
 [KeepAlive]
-public class ProjectionChangesetNotifier(
-    ILogger<ProjectionChangesetNotifier> logger,
-    IProjectionsServiceClient projectionsServiceClient,
-    TimeProvider? timeProvider = null) : Grain, IProjectionChangesetNotifier
+public class ProjectionChangesetNotifier(ILogger<ProjectionChangesetNotifier> logger) : Grain, IProjectionChangesetNotifier
 {
-    static readonly TimeSpan _republishWindow = TimeSpan.FromSeconds(20);
-
     readonly HashSet<IReadModelChangesetSubscriber> _subscribers = [];
-    readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
-    IGrainTimer? _publishTimer;
-    bool _isPublishing;
-    long _lastPublished;
-    bool _hasPublished;
 
     /// <inheritdoc/>
     public override Task OnActivateAsync(CancellationToken cancellationToken)
@@ -60,17 +48,9 @@ public class ProjectionChangesetNotifier(
     /// <inheritdoc/>
     public Task Subscribe(IReadModelChangesetSubscriber subscriber)
     {
-        var wasUnwatched = _subscribers.Count == 0;
         if (_subscribers.Add(subscriber))
         {
             logger.Subscribed(this.GetPrimaryKeyString(), _subscribers.Count);
-        }
-
-        // Becoming watched is always published, never throttled. Otherwise the watch is refreshed by subscribing again,
-        // so a subscribe past the republish window renews the watch state.
-        if (wasUnwatched || !_hasPublished || _timeProvider.GetElapsedTime(_lastPublished) > _republishWindow)
-        {
-            SchedulePublish();
         }
 
         return Task.CompletedTask;
@@ -82,7 +62,7 @@ public class ProjectionChangesetNotifier(
         _subscribers.Remove(subscriber);
         if (_subscribers.Count == 0)
         {
-            SchedulePublish();
+            DeactivateOnIdle();
         }
 
         return Task.CompletedTask;
@@ -115,69 +95,6 @@ public class ProjectionChangesetNotifier(
         foreach (var notification in notifications)
         {
             await Task.WhenAll(_subscribers.Select(subscriber => subscriber.OnChangeset(namespaceName, notification.ReadModelKey, notification.ReadModel, notification.Change)));
-        }
-    }
-
-    void SchedulePublish()
-    {
-        // A publication in flight reconciles with the current state when it completes, so it needs no second one.
-        if (_publishTimer is not null || _isPublishing)
-        {
-            return;
-        }
-
-        // Interleaved one-shot timer: the watch state goes to every silo, which must neither delay Subscribe or Unsubscribe
-        // nor hold the turn of this non-reentrant activation while it does.
-        _publishTimer = this.RegisterGrainTimer(
-            async _ =>
-            {
-                _publishTimer?.Dispose();
-                _publishTimer = null;
-                await PublishWatchState();
-            },
-            new GrainTimerCreationOptions { DueTime = TimeSpan.Zero, Period = Timeout.InfiniteTimeSpan, Interleave = true });
-    }
-
-    async Task PublishWatchState()
-    {
-        _isPublishing = true;
-        try
-        {
-            bool isWatched;
-            do
-            {
-                isWatched = _subscribers.Count > 0;
-                await TryPublish(isWatched);
-
-                // A subscribe or unsubscribe during the await may have changed the state that was attempted; publish again, whether
-                // the attempt succeeded or failed, so a stale state is never the last one attempted. An unchanged state is not retried
-                // after a failure: the TTL or the next subscribe renews it.
-            }
-            while (isWatched != _subscribers.Count > 0);
-        }
-        finally
-        {
-            _isPublishing = false;
-        }
-
-        if (_subscribers.Count == 0)
-        {
-            DeactivateOnIdle();
-        }
-    }
-
-    async Task TryPublish(bool isWatched)
-    {
-        try
-        {
-            var key = ProjectionChangesetNotifierKey.Parse(this.GetPrimaryKeyString());
-            await projectionsServiceClient.SetWatchState(key.EventStore, key.Namespace, key.ObserverId, isWatched);
-            _hasPublished = true;
-            _lastPublished = _timeProvider.GetTimestamp();
-        }
-        catch (Exception ex)
-        {
-            logger.PublishingWatchStateFailed(ex, this.GetPrimaryKeyString(), isWatched);
         }
     }
 }

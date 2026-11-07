@@ -38,7 +38,4 @@ internal static partial class ProjectionObserverSubscriberLogging
 
     [LoggerMessage(LogLevel.Debug, "Silo is shutting down; skipping definition change unsubscribe for key {Key}")]
     internal static partial void SkippingDefinitionUnsubscribeDuringShutdown(this ILogger<ProjectionObserverSubscriber> logger, ObserverSubscriberKey key);
-
-    [LoggerMessage(LogLevel.Warning, "Notifying the parents affected by a join removal failed for key {Key}; watchers may miss those changes")]
-    internal static partial void NotifyingAffectedParentsFailed(this ILogger<ProjectionObserverSubscriber> logger, Exception ex, ObserverSubscriberKey key);
 }

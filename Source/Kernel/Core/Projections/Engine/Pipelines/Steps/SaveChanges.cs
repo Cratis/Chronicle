@@ -23,7 +23,6 @@ public class SaveChanges : ICanPerformProjectionPipelineStep
     readonly ILogger<SaveChanges> _logger;
     readonly IProjectionFuturesStore? _projectionFutures;
     readonly ReadModelContainerName? _changesetContainer;
-    readonly ProjectionWatchGate _watchGate;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SaveChanges"/> class.
@@ -34,9 +33,8 @@ public class SaveChanges : ICanPerformProjectionPipelineStep
     /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
     /// <param name="projectionFutures">The persisted futures to acknowledge after successful writes.</param>
     /// <param name="changesetContainer">The container changesets are recorded under, when it is not the read model's own container - as for a materialization generation's destination.</param>
-    /// <param name="watchGate">The <see cref="ProjectionWatchGate"/> telling whether the projection is watched; defaults to a gate that is never open.</param>
-    public SaveChanges(ISink sink, IChangesetStorage changesetStorage, bool guardWritesOnWatermark, ILogger<SaveChanges> logger, IProjectionFutures? projectionFutures = null, ReadModelContainerName? changesetContainer = null, ProjectionWatchGate? watchGate = null)
-        : this(projectionFutures is null ? null : new ProjectionFuturesStore(projectionFutures), sink, changesetStorage, guardWritesOnWatermark, logger, changesetContainer, watchGate)
+    public SaveChanges(ISink sink, IChangesetStorage changesetStorage, bool guardWritesOnWatermark, ILogger<SaveChanges> logger, IProjectionFutures? projectionFutures = null, ReadModelContainerName? changesetContainer = null)
+        : this(projectionFutures is null ? null : new ProjectionFuturesStore(projectionFutures), sink, changesetStorage, guardWritesOnWatermark, logger, changesetContainer)
     {
     }
 
@@ -49,8 +47,7 @@ public class SaveChanges : ICanPerformProjectionPipelineStep
     /// <param name="guardWritesOnWatermark">Whether a write may be made conditional on advancing the read model's watermark.</param>
     /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
     /// <param name="changesetContainer">The container changesets are recorded under, when it is not the read model's own container - as for a materialization generation's destination.</param>
-    /// <param name="watchGate">The <see cref="ProjectionWatchGate"/> telling whether the projection is watched; defaults to a gate that is never open.</param>
-    internal SaveChanges(IProjectionFuturesStore? futuresStore, ISink sink, IChangesetStorage changesetStorage, bool guardWritesOnWatermark, ILogger<SaveChanges> logger, ReadModelContainerName? changesetContainer = null, ProjectionWatchGate? watchGate = null)
+    internal SaveChanges(IProjectionFuturesStore? futuresStore, ISink sink, IChangesetStorage changesetStorage, bool guardWritesOnWatermark, ILogger<SaveChanges> logger, ReadModelContainerName? changesetContainer = null)
     {
         _sink = sink;
         _changesetStorage = changesetStorage;
@@ -58,7 +55,6 @@ public class SaveChanges : ICanPerformProjectionPipelineStep
         _logger = logger;
         _projectionFutures = futuresStore;
         _changesetContainer = changesetContainer;
-        _watchGate = watchGate ?? ProjectionWatchGate.Closed;
     }
 
     /// <inheritdoc/>
@@ -146,40 +142,12 @@ public class SaveChanges : ICanPerformProjectionPipelineStep
         return failedPartitions.Any(failure => Equals(failure.EventSourceId.Value, ownPartition) || Equals(failure.EventSourceId.Value, key.Value));
     }
 
-    /// <summary>
-    /// Applies the main changes. Deliberately not async: with the watch gate closed it forwards the sink task directly, as it always did,
-    /// so an unwatched write allocates no state machine. Only the watched path goes through the async helper.
-    /// </summary>
-    /// <param name="projection">The projection being handled.</param>
-    /// <param name="context">The event context holding the changeset.</param>
-    /// <param name="foldedFutureSaves">Future saves already folded into the changeset.</param>
-    /// <returns>The failed partitions reported by the sink.</returns>
     Task<IEnumerable<FailedPartition>> ApplyMainChanges(IProjection projection, ProjectionEventContext context, PendingFutureSave[] foldedFutureSaves)
-    {
-        if (_watchGate.IsOpen && ChangesetChildRemovals.HasChildRemovalsFromAll(context.Changeset))
-        {
-            return RecordAffectedParentsThenApply(projection, context, foldedFutureSaves);
-        }
-
-        return ApplyToSink(projection, context, foldedFutureSaves);
-    }
-
-    Task<IEnumerable<FailedPartition>> ApplyToSink(IProjection projection, ProjectionEventContext context, PendingFutureSave[] foldedFutureSaves)
     {
         var mode = WriteModeFor(projection, context);
         return foldedFutureSaves.Length > 0
             ? _sink.ApplyChangesImmediately(context.Key, context.Changeset, context.Event.Context.SequenceNumber, mode)
             : _sink.ApplyChanges(context.Key, context.Changeset, context.Event.Context.SequenceNumber, mode);
-    }
-
-    async Task<IEnumerable<FailedPartition>> RecordAffectedParentsThenApply(IProjection projection, ProjectionEventContext context, PendingFutureSave[] foldedFutureSaves)
-    {
-        foreach (var removal in context.Changeset.Changes.OfType<ChildRemovedFromAll>())
-        {
-            context.AddAffectedParentKeys(await _sink.FindKeysHoldingChild(removal));
-        }
-
-        return await ApplyToSink(projection, context, foldedFutureSaves);
     }
 
     async Task ApplyPendingFutureSaves(ProjectionEventContext context)
