@@ -29,6 +29,7 @@ Start with [Configuration File](configuration-file.md) to place the file, or [Do
 | Observers | Retry and timeout settings |
 | Read models | Replay retention for replay-generated read model versions |
 | Events | Event queue configuration |
+| Memory | Memory budget for work with a large footprint |
 | Jobs | Parallel job step throttling |
 | Authentication | External authority, default admin, and initial admin user bootstrap |
 | TLS | TLS certificate configuration for the Chronicle port |
@@ -52,6 +53,7 @@ If your deployment provisions storage before starting replicas, use [SQL schema 
 - [Observers](observers.md) - Retry and timeout settings for observer subscriptions.
 - [Read Models](read-models.md) - Configure replay retention for replay-generated read model versions.
 - [Events](events.md) - Configure event queues.
+- [Memory](memory.md) - Memory budget and memory metrics.
 - [Authentication](authentication.md) - External authority and default admin settings.
 - [TLS](tls.md) - Configure the TLS certificate for the Chronicle port.
 - [Data Protection Key Encryption](../encryption-certificate.md) - Configure the encryption certificate, required in production.
