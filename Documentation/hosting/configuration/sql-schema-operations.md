@@ -6,6 +6,8 @@ Run Chronicle SQL migrations as a separate deployment step when Kernel replicas 
 
 Use the same Chronicle Server build and storage placement for the migration job and replicas, while selecting the appropriate schema or runtime identity through [storage connection resolution](storage-connection-resolution.md). Verification prevents versioned migrations at runtime; it does not prohibit all data definition operations (DDL), because dynamically shaped tables can still be created on first use.
 
+For rolling upgrades, SQL Server storage requires a source release of 19.115.1 or later: releases before 19.115 cannot connect through SqlClient, and 19.115.0 is listed as unusable in `.github/rolling-upgrade-unusable-releases.txt` because of the Data Protection key-ring deadlock (#5485). See [Supported source releases](../rolling-deploy.md#supported-source-releases).
+
 ## Provision before starting replicas
 
 Run the server executable once with `--migrate-only`:

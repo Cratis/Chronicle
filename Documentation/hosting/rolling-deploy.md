@@ -33,7 +33,7 @@ For releases without a compatibility exception, use this table:
 
 | Upgrading | Within one major | How to upgrade |
 | --- | --- | --- |
-| From 19.111 or later | Yes | Replace nodes one at a time. Releases are checked in CI against the release before them. |
+| From 19.111 or later (19.115.1 or later for SQL Server) | Yes | Replace nodes one at a time. Releases are checked in CI against the release before them. |
 | From a 19.x release before 19.111 | Yes | Stop every node, then start the new version. Older releases lack the patch-manager handover or have incompatible grain calls. |
 | From a release before 19.123.1 to 19.123.1 or later | No | Stop every node, then start the new version. The serializers were renamed from `Cratis.Orleans` to `Cratis.Choreography` in 19.123.1, and a node of either side cannot read a concept value written by the other. Replacing nodes one at a time crash-loops the new node and fills the old nodes with grain errors. A new node that finds such a release in the cluster logs a critical message and stops. |
 | To a new major | No | Stop every node, then start the new version. A major release may change grain calls. |
@@ -111,6 +111,8 @@ Cratis Chronicle Server started successfully - ready and listening on port 35000
 The server writes this line when the host has finished starting, which includes the startup task above. If the node fails instead, read the failure in step 6 before you continue.
 
 ### 3. Replace the remaining nodes one at a time
+
+SQL nodes from the supported source releases read revised content during the rollout; revisions made by earlier nodes are served but are not recorded in revision history. Originals already overwritten by a revision before this release are lost and are not backfilled; such events report no original content.
 
 Allow one node to be unavailable at a time. In Kubernetes, set `maxUnavailable: 1` on the rolling update strategy and set `maxSurge` to a small number. Replacing nodes one at a time keeps the cluster membership changing slowly enough for the remaining silos to agree on who is alive.
 
