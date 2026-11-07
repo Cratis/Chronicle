@@ -25,6 +25,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <PackageReference Include="protobuf-net.Grpc.AspNetCore" />
         <ProjectReference Include="../Core/Core.csproj" />
         <ProjectReference Include="../Contracts/Contracts.csproj" />
         <!-- Core.csproj marks its own references to these two PrivateAssets="all", so they do not flow

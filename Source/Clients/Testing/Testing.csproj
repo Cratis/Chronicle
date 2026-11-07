@@ -93,6 +93,7 @@
         <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" />
         <PackageReference Include="protobuf-net" />
         <PackageReference Include="protobuf-net.Grpc" />
+        <PackageReference Include="protobuf-net.Grpc.AspNetCore" />
         <PackageReference Include="protobuf-net.Grpc.Reflection" />
         <PackageReference Include="protobuf-net.Reflection" />
         <PackageReference Include="System.Reactive" />
