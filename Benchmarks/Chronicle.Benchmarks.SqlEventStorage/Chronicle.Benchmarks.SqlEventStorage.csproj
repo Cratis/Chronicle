@@ -22,5 +22,6 @@
     <ProjectReference Include="../../Source/Kernel/Storage/Storage.csproj" />
     <ProjectReference Include="../../Source/Kernel/Concepts/Concepts.csproj" />
     <Compile Include="../../Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/EventSequences/for_EventSequenceStorage/given/EventSequenceStorageHost.cs" Link="Storage/EventSequenceStorageHost.cs" />
+    <Compile Include="../../Integration/Client/SqlServerContainerImage.cs" Link="SqlServerContainerImage.cs" />
   </ItemGroup>
 </Project>
