@@ -1,6 +1,6 @@
 ---
 title: Compliance
-description: Protect personally identifiable information in an immutable event log with encryption, erasure, and redaction.
+description: Protect personal data in Chronicle's immutable event log with PII markers, encryption, subject erasure, and redaction while understanding compliance limits.
 ---
 
 Cratis Chronicle protects personally identifiable information (PII) in events with encryption tied to the
