@@ -1,6 +1,6 @@
 ---
 name: cratis-arc-command-execution
-description: Execute an existing Cratis Arc command from backend code through ICommandPipeline — the scopeless and scoped overloads, the typed generic Execute, the pre-flight Validate, validation severity filtering, and how to read CommandResult. Use when a reactor, background job, scheduled task, or backend service must run a command without an HTTP request. Do not use to define a command.
+description: Use when a reactor, job or backend service must execute an existing Arc command without an HTTP request. Not for defining a command or appending another stream's events directly.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-arc-command-execution/SKILL.md -->
@@ -102,8 +102,9 @@ if (result.IsSuccess)
 }
 ```
 
-⚠️ `Execute<TResult>` throws `InvalidCastException` when the handler returned a
-response of a different type. When the handler returns no response, or the
+`Execute<TResult>` accepts an assignable response, such as an array requested
+as `IEnumerable<T>` or a concrete value requested as an interface/base type.
+⚠️ An incompatible non-null response still throws `InvalidCastException`. When the handler returns no response, or the
 command failed for any reason, `Response` is `default` — a failed result never
 carries a response, because the pipeline clears it once the execution scopes
 have completed.

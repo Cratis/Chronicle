@@ -3,6 +3,7 @@
 
 using System.Reactive.Linq;
 using Cratis.Chronicle.Contracts.Observation;
+using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Storage;
 using Cratis.Reactive;
 using ProtoBuf.Grpc;
@@ -18,7 +19,7 @@ internal sealed class FailedPartitions(IStorage storage) : IFailedPartitions
     /// <inheritdoc/>
     public async Task<IEnumerable<FailedPartition>> GetFailedPartitions(GetFailedPartitionsRequest request, CallContext context = default)
     {
-        await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.ObserverId));
+        await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.ObserverId), StoreAccess.Read);
         var failedPartitions = await storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).FailedPartitions.GetFor(GetObserverId(request.ObserverId));
         return failedPartitions.Partitions.Select(_ => _.ToContract()).ToArray();
     }
@@ -28,6 +29,7 @@ internal sealed class FailedPartitions(IStorage storage) : IFailedPartitions
         SystemStoreGuard.Ensure(
             context,
             new(request.EventStore, request.Namespace, request.ObserverId),
+            StoreAccess.Read,
             () => storage
                 .GetEventStore(request.EventStore)
                 .GetNamespace(request.Namespace).FailedPartitions

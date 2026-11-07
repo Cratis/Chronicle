@@ -65,11 +65,33 @@ public class UnitOfWorkManager : IUnitOfWorkManager
         _logger = logger;
     }
 
+    /// <summary>
+    /// Initializes a manager with the selected client span names.
+    /// </summary>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="activitySource">Optional activity source.</param>
+    /// <param name="lifecyclePolicy">The policy for staging after completion begins.</param>
+    /// <param name="logger">Optional logger for late staging diagnostics.</param>
+    /// <param name="spanNames">The <see cref="ClientSpanNames"/> to use for client spans.</param>
+    internal UnitOfWorkManager(IEventStore eventStore, IActivitySource<UnitOfWork>? activitySource, UnitOfWorkLifecyclePolicy lifecyclePolicy, ILogger<UnitOfWork>? logger, ClientSpanNames spanNames)
+        : this(() => eventStore, activitySource, lifecyclePolicy, logger)
+    {
+        SpanNames = spanNames;
+    }
+
     /// <inheritdoc/>
     public IUnitOfWork Current => OpenFrame()?.UnitOfWork ?? throw new NoUnitOfWorkHasBeenStarted();
 
     /// <inheritdoc/>
     public bool HasCurrent => OpenFrame() is not null;
+
+    /// <summary>
+    /// Gets or sets the <see cref="EventTagResolver"/> units of work use to resolve the named tags of staged events.
+    /// </summary>
+    internal EventTagResolver? TagResolver { get; set; }
+
+    /// <summary>Gets the span naming convention supplied by the event store.</summary>
+    internal ClientSpanNames SpanNames { get; }
 
     /// <inheritdoc/>
     public bool TryGetFor(CorrelationId correlationId, [MaybeNullWhen(false)] out IUnitOfWork unitOfWork) =>
@@ -84,7 +106,11 @@ public class UnitOfWorkManager : IUnitOfWorkManager
             _eventStore,
             _activitySource,
             _lifecyclePolicy,
-            _logger);
+            _logger)
+        {
+            TagResolver = TagResolver,
+            SpanNames = SpanNames
+        };
         ImmediateAppendGuard.RequireUnit(unitOfWork);
         ReadProtectionGuard.RequireUnit(unitOfWork);
         _current.Value = new CurrentFrame(unitOfWork, OpenFrame());

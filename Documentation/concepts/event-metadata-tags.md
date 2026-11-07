@@ -1,24 +1,25 @@
 ---
-description: "The event metadata tags Chronicle uses to identify and categorize events: event source type and id, and event stream type and id."
+title: Cratis Chronicle event metadata tags for stream routing
+description: Cratis Chronicle uses source and stream metadata to identify events and scope concurrency checks. Custom tags label events without guarding appends.
 ---
-# Event Metadata Tags
-
-Event metadata tags provide a structured way to categorize and identify events within the Chronicle system. Below are the formalized tags available:
+Event metadata tags in Cratis Chronicle identify which source and stream an event belongs to. Use them to distinguish an account's transactions from its onboarding events, or to check for concurrent changes to a particular stream before appending. These four values sit alongside the event's payload.
 
 ## EventSourceType
 
-- **Description**: Overarching, binding concept (e.g., Account).
+`EventSourceType` identifies the category of [event source](./event-source.md), such as `Account`. It distinguishes account events from events belonging to orders or shipments.
 
 ## EventSourceId
 
-- **Description**: Unique identifier for the event source.
+`EventSourceId` identifies the particular source, such as an account number. Events for the same account share this value even when they belong to different processes.
 
 ## EventStreamType
 
-- **Description**: A concrete process related to event source type (e.g., Onboarding, Transactions). Automatically linked to an AggregateRoot in Chronicle.
+`EventStreamType` identifies a process within the source, such as `Onboarding` or `Transactions`. An event source definition declares the stream names you can append through.
 
 ## EventStreamId
 
-- **Description**: A marker that can be used to separate independent streams for a stream type (e.g., Monthly, Yearly).
+`EventStreamId` distinguishes stream instances within the same source and stream type. For example, separate IDs can keep monthly transaction streams apart.
 
-You can declare the event source type and the stream types once, as an event source definition. See [Event sources and streams](../event-sources/index.mdx). All four values can narrow a concurrency scope, which is how Chronicle expresses an append condition for a [Dynamic Consistency Boundary](../dynamic-consistency-boundary/chronicle.md). Custom tags cannot.
+Declare the source type and stream types once with [event sources and streams](../event-sources/index.mdx), then append through that definition instead of repeating names at each call site.
+
+All four values can narrow a concurrency scope: the set of events Chronicle checks for changes before accepting an append. This is how Chronicle expresses an append condition for a [Dynamic Consistency Boundary](../dynamic-consistency-boundary/chronicle.md). Custom tags support categorization and filtering, but do not take part in that check.

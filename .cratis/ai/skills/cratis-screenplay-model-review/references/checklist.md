@@ -106,7 +106,7 @@ the format in `worked-example.md`.
 | C6 | No secret or bearer values as facts (tokens, magic links, signed URLs): record a keyed hash or a reference | event payloads | D |
 | C7 | No two events of one kind of event source mean the same thing (a shared property set is a signal, not a defect: distinct facts may share a shape and historical generations are exempt; major only when meaning is lost, a rule bypassed or consumers ambiguous); one fact is not recorded twice (aggregate event plus per-item fan-out) | event declarations side by side | D |
 | C8 | Corrections are new facts that name what they correct; redaction and crypto-erasure are compliance tools, not corrections | event names | D |
-| C9 | A changed event contract is a generation or a new event with a recorded reason; no past meaning is reinterpreted through a rename or payload cleanup | `id` pins, generations, documentation | D (major when history changes meaning) |
+| C9 | A changed event contract is a generation or a new event with a recorded reason; no past meaning is reinterpreted through a rename or payload cleanup. For `enum-*` items with `stored: true`, number change/removal/reuse is breaking; explicit-number-preserving renames retain numeric storage compatibility but rename generated code. Pin positional enums before reordering; stable explicit-number reorders add no enum records. `EnumerationNotComparable` is unresolved, not unchanged | `id` pins, generations, documentation; [enum comparison](../../cratis-screenplay-model-authoring/references/mcp-tools.md#enum-numeric-identity) | D (major when history changes meaning) |
 
 ## Phase 6. Events versus views (7 checks, D1-D7)
 | Id | Check | Evidence | Tier |

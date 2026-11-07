@@ -93,6 +93,11 @@ public class EventStoreDbContext(DbContextOptions<EventStoreDbContext> options) 
     public DbSet<WebhookDefinition> WebhookDefinitions { get; set; }
 
     /// <summary>
+    /// Gets or sets the webhook signing keys DbSet.
+    /// </summary>
+    public DbSet<Webhooks.WebhookSigningKey> WebhookSigningKeys { get; set; }
+
+    /// <summary>
     /// Gets or sets the event source definitions DbSet.
     /// </summary>
     public DbSet<EventSourceDefinition> EventSourceDefinitions { get; set; }
@@ -161,29 +166,34 @@ public class EventStoreDbContext(DbContextOptions<EventStoreDbContext> options) 
         // whose read model type is named "ReadModel" (pluralized to "ReadModels" by DefaultNamingPolicy).
         modelBuilder.Entity<ReadModelDefinition>().ToTable(WellKnownTableNames.ReadModelDefinitions);
 
+        modelBuilder.Entity<Webhooks.WebhookSigningKey>()
+            .ToTable(WellKnownTableNames.WebhookSigningKeys)
+            .HasKey(row => row.KeyId);
+
         modelBuilder.Entity<ProjectionDefinitionHistoryRow>()
             .ToTable(WellKnownTableNames.ProjectionDefinitionHistory)
             .HasKey(row => new { row.ProjectionId, row.Digest });
 
-        modelBuilder.Entity<Generations.GenerationInitializationReceiptRow>().ToTable("GenerationInitializationReceipts").HasKey(row => new { row.Step, row.Subject });
-        modelBuilder.Entity<Generations.GenerationInitializationBlockerRow>().ToTable("GenerationInitializationBlockers").HasKey(row => new { row.Kind, row.Subject });
+        modelBuilder.Entity<EventStoreInitialization>().ToTable(WellKnownTableNames.EventStoreInitialization);
+        modelBuilder.Entity<Generations.GenerationInitializationReceiptRow>().ToTable(WellKnownTableNames.GenerationInitializationReceipts).HasKey(row => new { row.Step, row.Subject });
+        modelBuilder.Entity<Generations.GenerationInitializationBlockerRow>().ToTable(WellKnownTableNames.GenerationInitializationBlockers).HasKey(row => new { row.Kind, row.Subject });
         modelBuilder.Entity<Generations.GenerationInitializationReceiptRow>().Property(row => row.Subject).HasMaxLength(400);
         modelBuilder.Entity<Generations.GenerationInitializationBlockerRow>().Property(row => row.Subject).HasMaxLength(400);
-        modelBuilder.Entity<Generations.GenerationFloor>().ToTable("GenerationFloor").HasKey(_ => _.Id);
+        modelBuilder.Entity<Generations.GenerationFloor>().ToTable(WellKnownTableNames.GenerationFloor).HasKey(_ => _.Id);
         modelBuilder.Entity<Generations.GenerationFloor>().Property(_ => _.Id).ValueGeneratedNever();
-        modelBuilder.Entity<Generations.GenerationFloorHistoryEntry>().ToTable("GenerationFloorHistory").HasKey(_ => _.Revision);
+        modelBuilder.Entity<Generations.GenerationFloorHistoryEntry>().ToTable(WellKnownTableNames.GenerationFloorHistory).HasKey(_ => _.Revision);
         modelBuilder.Entity<Generations.GenerationFloorHistoryEntry>().Property(_ => _.Revision).ValueGeneratedNever();
 
         base.OnModelCreating(modelBuilder);
         Occurrences.OccurrenceModel.Configure(modelBuilder);
         modelBuilder.Entity<Occurrences.LifecycleFanOutEntry>(entity =>
         {
-            entity.ToTable("LifecycleFanOutIntents");
+            entity.ToTable(WellKnownTableNames.LifecycleFanOutIntents);
             entity.HasKey(row => row.Id);
             entity.Property(row => row.Id).HasMaxLength(64);
         }).Entity<Occurrences.TriggerDefinitionEntry>(entity =>
         {
-            entity.ToTable("TriggerDefinitions");
+            entity.ToTable(WellKnownTableNames.TriggerDefinitions);
             entity.HasKey(row => row.Id);
             entity.Property(row => row.Id).HasMaxLength(64);
         });

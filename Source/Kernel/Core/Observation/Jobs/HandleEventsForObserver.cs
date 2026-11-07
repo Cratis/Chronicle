@@ -38,7 +38,7 @@ namespace Cratis.Chronicle.Observation.Jobs;
 /// <param name="logger">The logger.</param>
 /// <param name="eventGenerationRelease">The pinned generation release boundary.</param>
 /// <param name="timeProvider">The delivery fence clock.</param>
-public class HandleEventsForObserver(
+public partial class HandleEventsForObserver(
     [PersistentState(nameof(JobStepState), Choreography.WellKnownGrainStorageProviders.JobSteps)]
     IPersistentState<HandleEventsForObserverState> state,
     IJobStepThrottle throttle,
@@ -60,6 +60,8 @@ public class HandleEventsForObserver(
     readonly SemaphoreSlim _flushGate = new(1, 1);
     TimeSpan _abandonedDeliveryHold;
     DeliveryFenceContext? _deliveryFence;
+    bool _stepClosed;
+    bool _partitionFailedInSweep;
     ObservationOrigin _origin = ObservationOrigin.CatchUp;
     IEventSequenceStorage? _eventSequenceStorage;
     IObserver _observer = null!;
@@ -293,7 +295,8 @@ public class HandleEventsForObserver(
 
                 var usePages = DeliversPages &&
                     _subscription.SubscriberType.IsAssignableTo(typeof(IObserverPageSubscriber));
-                if (usePages && failedPartitions.Count > 0)
+                var usePartitionPages = _subscription.DeliversPartitionPages;
+                if ((usePages || usePartitionPages) && failedPartitions.Count > 0)
                 {
                     eventsToHandle = eventsToHandle.Where(_ => !failedPartitions.Contains(_.Context.EventSourceId)).ToArray();
                 }
@@ -305,6 +308,22 @@ public class HandleEventsForObserver(
                         if (!await FlushReplayReports()) return ClosedResult();
                         LogCancelled(lastSuccessfullyHandledEventSequenceNumber);
                         return JobStepResult.Failed(PerformJobStepError.CancelledWithPartialResult(CreateResult(_lastDurableCheckpoint)));
+                    }
+
+                    if (usePartitionPages)
+                    {
+                        if (cancellationToken.IsCancellationRequested)
+                        {
+                            if (!await FlushReplayReports()) return ClosedResult();
+                            LogCancelled(lastSuccessfullyHandledEventSequenceNumber);
+                            return JobStepResult.Failed(PerformJobStepError.CancelledWithPartialResult(CreateResult(_lastDurableCheckpoint)));
+                        }
+
+                        var (pageStepResult, pageLastSuccessful) = await HandlePartitionPage(currentState, unit, subscriberTimeout, failedPartitions, lastSuccessfullyHandledEventSequenceNumber, cancellationToken);
+                        lastSuccessfullyHandledEventSequenceNumber = pageLastSuccessful;
+                        if (pageStepResult is not null) return pageStepResult;
+                        if (!await FlushReplayReports()) return ClosedResult();
+                        continue;
                     }
 
                     if (usePages)
@@ -440,6 +459,15 @@ public class HandleEventsForObserver(
             if (!Advanced(await FlushFromWork()))
             {
                 return ClosedResult();
+            }
+
+            if (_partitionFailedInSweep)
+            {
+                // The partitions that failed are parked for the retry job; the step does not claim to have covered them.
+                return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(
+                    CreateResult(_lastDurableCheckpoint),
+                    ["One or more partitions failed and are parked for recovery"],
+                    string.Empty));
             }
 
             return JobStepResult.Succeeded(CreateResult(_lastDurableCheckpoint) with
@@ -753,7 +781,11 @@ public class HandleEventsForObserver(
         return false;
     }
 
-    JobStepResult ClosedResult() => JobStepResult.Failed(PerformJobStepError.CancelledWithPartialResult(CreateResult(_lastDurableCheckpoint)));
+    JobStepResult ClosedResult()
+    {
+        _stepClosed = true;
+        return JobStepResult.Failed(PerformJobStepError.CancelledWithPartialResult(CreateResult(_lastDurableCheckpoint)));
+    }
 
     async Task FlushPendingCheckpoint()
     {

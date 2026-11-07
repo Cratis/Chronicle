@@ -37,7 +37,7 @@ public class ClusterStorage(
         foreach (var store in (await GetEventStores()).Concat(await DiscoverEventStores()).Append(EventStoreName.System)
             .Distinct(CaseInsensitiveEventStoreNameComparer.Instance).OrderBy(_ => _.Value, StringComparer.Ordinal))
         {
-            var collection = database.GetEventStoreDatabase(store).GetCollection<BsonDocument>("generation-floor");
+            var collection = database.GetEventStoreDatabase(store).GetCollection<BsonDocument>(WellKnownCollectionNames.GenerationFloor);
             if (await new Generations.GenerationFloorStorage(collection).Get() is { } floor)
             {
                 floors.Add(store, floor);

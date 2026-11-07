@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using Cratis.Arc.Queries.ModelBound;
 using Cratis.Reactive;
@@ -37,19 +38,27 @@ public record ConnectedClientDetails(
     /// Gets every client connected to the server, across all silos in the cluster.
     /// </summary>
     /// <param name="clients">The <see cref="ConnectedClientsQuery"/> holding the cluster view.</param>
+    /// <param name="visibility">The <see cref="IConnectedClientsVisibility"/> limiting what the caller sees.</param>
     /// <returns>A collection of <see cref="ConnectedClientDetails"/>.</returns>
-    public static async Task<IEnumerable<ConnectedClientDetails>> GetConnectedClients(ConnectedClientsQuery clients) =>
-        (await clients.GetAll()).ToReadModel();
+    public static async Task<IEnumerable<ConnectedClientDetails>> GetConnectedClients(ConnectedClientsQuery clients, IConnectedClientsVisibility visibility) =>
+        (await visibility.FilterForCurrentRequest(await clients.GetAll())).ToReadModel();
 
     /// <summary>
     /// Observes every client connected to the server, across all silos in the cluster.
     /// </summary>
     /// <param name="clients">The <see cref="ConnectedClientsQuery"/> holding the cluster view.</param>
+    /// <param name="visibility">The <see cref="IConnectedClientsVisibility"/> limiting what the caller sees.</param>
     /// <returns>An observable subject emitting collections of <see cref="ConnectedClientDetails"/>.</returns>
-    public static ISubject<IEnumerable<ConnectedClientDetails>> AllConnectedClients(ConnectedClientsQuery clients) =>
-        clients.InvokeAndWrapWithTransformSubject(
-            clients.ObserveAll,
+    public static ISubject<IEnumerable<ConnectedClientDetails>> AllConnectedClients(ConnectedClientsQuery clients, IConnectedClientsVisibility visibility)
+    {
+        var caller = visibility.CurrentCaller();
+        return clients.InvokeAndWrapWithTransformSubject(
+            cancellationToken => clients
+                .ObserveAll(cancellationToken)
+                .Select(all => Observable.FromAsync(() => visibility.Filter(all, caller)))
+                .Concat(),
             connected => connected.ToReadModel());
+    }
 
     /// <summary>
     /// Gets the clients a specific observer's subscription delivers events to.
@@ -59,6 +68,7 @@ public record ConnectedClientDetails(
     /// <param name="observerId">The identifier of the observer.</param>
     /// <param name="eventSequenceId">The event sequence the observer observes.</param>
     /// <param name="clients">The <see cref="ConnectedClientsQuery"/> holding the cluster view.</param>
+    /// <param name="visibility">The <see cref="IConnectedClientsVisibility"/> limiting what the caller sees.</param>
     /// <returns>A collection of <see cref="ConnectedClientDetails"/>.</returns>
     /// <remarks>
     /// Only client-owned observers have connected clients - for kernel-owned observers this is empty.
@@ -68,6 +78,7 @@ public record ConnectedClientDetails(
         string @namespace,
         string observerId,
         string eventSequenceId,
-        ConnectedClientsQuery clients) =>
-        (await clients.GetAllForObserver(eventStore, @namespace, observerId, eventSequenceId)).ToReadModel();
+        ConnectedClientsQuery clients,
+        IConnectedClientsVisibility visibility) =>
+        (await visibility.FilterForCurrentRequest(await clients.GetAllForObserver(eventStore, @namespace, observerId, eventSequenceId))).ToReadModel();
 }

@@ -38,8 +38,8 @@ public class and_a_hostile_reason_phrase_is_returned_while_a_cached_token_is_val
 
     [Fact] void should_serve_the_cached_token() => _result.ShouldEqual("the-token");
     [Fact] void should_attempt_a_refresh() => _handler.TokenRequests.Count().ShouldEqual(2);
-    [Fact] void should_log_the_fallback() => _log.Entries.Any(_ => _.Level == LogLevel.Warning && _.Exception is HttpRequestException).ShouldBeTrue();
-    [Fact] void should_preserve_the_status_code() => ((HttpRequestException)_log.Entries.Single(_ => _.Level == LogLevel.Warning && _.Exception is HttpRequestException).Exception!).StatusCode.ShouldEqual(HttpStatusCode.ServiceUnavailable);
+    [Fact] void should_log_the_fallback() => _log.Entries.Any(_ => _.Level == LogLevel.Warning && _.Message.Contains("reason: rejected", StringComparison.Ordinal)).ShouldBeTrue();
+    [Fact] void should_not_log_an_exception() => _log.Entries.All(_ => _.Exception is null).ShouldBeTrue();
     [Fact] void should_not_log_the_remote_reason_phrase() => _log.Entries.Any(_ => _.Contains("leak-marker")).ShouldBeFalse();
     [Fact] void should_not_keep_an_unsafe_inner_exception() => _log.Entries.Where(_ => _.Exception is not null).All(_ => _.Exception!.InnerException is null).ShouldBeTrue();
 }

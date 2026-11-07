@@ -64,11 +64,11 @@ One spec in the slice does not cover the others.
 - Current admitted Automation/Translate specifications run through standalone
   `screenplay test` or MCP `run-specifications`. Validate/render alone is not V4;
   report unsupported/unbound separately from passing scenarios.
-- A command spec lists the cascade (v6 semantics: after
-  `when <Command>`, `then` lists every new fact, including reaction appends). Only when the V1
-  tool's compiler stops before v6 does it report a false PLAY0285 on a cascade:
-  then keep the cascade out of the command spec, specify it in the Automation slice
-  (`when append <Trigger>`) and record the expectation. See `cratis-screenplay-scenario-coverage`.
+- A specification runs only its own slice (Screenplay decision 0115). A command spec
+  states the command's own events; the Automation states what its reaction appends in
+  its own `when append <Trigger>` spec, and a command it invokes in another slice with
+  `then invokes <Command>` (ESM v34). Another slice's event in a spec is PLAY0285
+  (unreachable). See `cratis-screenplay-scenario-coverage`.
 - `given capture` never persists between specs: state the baseline in each record
   update spec. First records (root, child, nested) are added only; field-change
   `and`/`or` and transitions need previous state. Expressions/maps/unguarded record

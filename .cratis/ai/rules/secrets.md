@@ -17,7 +17,7 @@ Every line is tagged **[contract]** (binding) per the Three Levels of Authority 
   secrets; `kubectl get secret`; `kubectl config view --raw`; `env`, `printenv`, `export -p`
   (including `env | …`); `docker inspect`; `gh secret`, `gh api …/secrets`, `gh auth token`;
   `vault read`, `vault kv get`; cloud secret-manager reads; `pulumi … --show-secrets`;
-  reading kubeconfigs, `.env*` files, private keys or token files.
+  `cratis config get … --show-secret`; reading kubeconfigs, `.env*` files, private keys or token files.
 - **[contract] Project the field you need and say which one:** `-o jsonpath='{.spec.containers[*].image}'`,
   `-o custom-columns=…`, `kubectl get … -o name`, status fields, `kubectl logs`, `docker inspect --format`.
   Read a `.env.example`, never the `.env`.

@@ -27,9 +27,9 @@ Apply before an authorized `git commit`, including `rtk git commit` or `rtk prox
 
 3. **Run specs for each affected .NET project**:
    ```
-   dotnet test <specs-project-path> --no-build
+   ./<project-dir>/bin/<Config>/<TFM>/<AssemblyName>
    ```
-   Use `--no-build` only when matching build outputs are current; otherwise incrementally build the affected specs project first. If the owning specs project cannot be identified, inspect project references or report the uncertainty; do not default to a root-wide test run.
+   Use the project's verified built spec executable (or `dotnet <TargetPath.dll>` without apphost; see [running-specs](../skills/cratis-specifications-csharp/references/running-specs.md)). Only VSTest uses `dotnet test <project> --no-build`. Require current matching outputs; otherwise incrementally build the affected specs project first. If the owning specs project cannot be identified, inspect project references or report the uncertainty; do not default to a root-wide test run.
 
 4. **Run specs for each affected TypeScript project**:
    ```

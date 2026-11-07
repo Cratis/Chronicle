@@ -14,6 +14,9 @@ namespace Cratis.Chronicle.Observation.Jobs;
 
 internal static partial class HandleEventsForObserverLogging
 {
+    [LoggerMessage(LogLevel.Debug, "Delivering a page of {EventCount} events across {PartitionCount} partitions")]
+    internal static partial void DeliveringPage(this ILogger<HandleEventsForObserver> logger, int eventCount, int partitionCount);
+
     [LoggerMessage(LogLevel.Debug, "Preparing HandleEventsForObserver job step handling events from sequence number {FromSequenceNumber} to sequence number {ToSequenceNumber}")]
     internal static partial void Preparing(this ILogger<HandleEventsForObserver> logger, EventSequenceNumber fromSequenceNumber, EventSequenceNumber toSequenceNumber);
 

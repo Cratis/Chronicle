@@ -1,6 +1,6 @@
 ---
 name: cratis-arc-command-kotlin
-description: Define a Cratis Arc command in Kotlin or Java — the @Command class, its handle() method, the optional provide() step, Chronicle event responses, and command authorization. Use when adding a command to a Kotlin or Java Arc application, choosing what handle() should return, or wiring Chronicle event append from a command. Do not use for the .NET Arc command shape, for validation-only changes, or for query/read-model definition.
+description: Use when defining a Kotlin or Java Arc command, choosing its handler return shape or returning Chronicle events. Not for validation-only changes or query definitions.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-arc-command-kotlin/SKILL.md -->

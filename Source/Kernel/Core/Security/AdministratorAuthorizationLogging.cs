@@ -26,4 +26,13 @@ internal static partial class AdministratorAuthorizationLogging
     /// <param name="command">The command name.</param>
     [LoggerMessage(LogLevel.Warning, "Administrator policy would deny {CallerKind} calling {Command}; audit mode allows the call")]
     internal static partial void AdministratorOperationWouldDeny(this ILogger logger, string callerKind, string command);
+
+    /// <summary>
+    /// Logs that a destructive operation was refused for a non-administrator.
+    /// </summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="callerKind">The caller kind.</param>
+    /// <param name="command">The command name.</param>
+    [LoggerMessage(LogLevel.Warning, "Destructive operations are enforced; {CallerKind} calling {Command} is refused")]
+    internal static partial void DestructiveOperationRefused(this ILogger logger, string callerKind, string command);
 }

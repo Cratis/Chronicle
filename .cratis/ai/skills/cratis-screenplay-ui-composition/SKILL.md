@@ -1,6 +1,6 @@
 ---
 name: cratis-screenplay-ui-composition
-description: Compose the user interface of a Cratis Screenplay `.play` model — `layout` and responsive `arrangement`, screen/dialog templates, component data-context bindings, exposed template configuration, command forms and columns, navigation contributions, application navigation regions (topbar/sidebar, module inherit/extend/override), toolbar slice buttons, blueprint template references, sample data packs, hierarchical outlets/routes, toolbar dialogs, package/icon selection, interaction `behavior`/`on`/`uses` wiring, `ui profile` (root template, shell options, appearance, new screens default), `theme`, localized `$strings`, and `file` references. Use when declaring the application shell, reusable screen shapes, component/package configuration, command forms, navigation/toolbars, click or submit behavior, or theming. Do not use for a screen's own data and actions.
+description: Use when declaring Screenplay shells, reusable templates, forms, navigation, interaction wiring or themes. Not for a screen's own query data and action contract; use cratis-screenplay-read-surface.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-screenplay-ui-composition/SKILL.md -->
@@ -21,8 +21,8 @@ a trigger value named `file` is written `@file`.
 ## Locate the model
 
 Look first for the project's existing `.play` files: their folder is the model.
-For a new model, check `Source/` or `src/`, else use `Screenplay/` at the repository
-root. Never put a model under `.cratis/` or hand-copy it between repositories.
+Reuse existing model/workspace roots; code-only `Source/` or `src/` does not
+qualify. Otherwise use repository-root `Screenplay/` ([discovery/version gates](../cratis-screenplay-event-modeling/references/file-layout.md#locate-the-model)). Never put a model under `.cratis/` or hand-copy it between repositories.
 `cratis ai install` manages `.cratis/ai/`, never model files. Keep explanatory
 Markdown in project documentation; `.play` is the single flow model.
 
@@ -32,15 +32,17 @@ Tool versions: toolchain `SKILL.md`. UI statements come from Screenplay
 `screens.md`, `contributions.md`, `navigation.md`, `sample-data.md`, `forms.md`, `templates.md`, `ui-profile.md`,
 `fixtures/screen-release-ui.play`, `layout-arrangement.md`, `interactions.md`, `theme.md`,
 `internationalization.md` and `file-references.md` under `Documentation/screenplay/`. Scene
-runtime sources: scaffold Scene tag, `Source/JavaScript/**`. This guidance does not verify
-UI rendering.
+runtime sources: scaffold Scene tag, `Source/JavaScript/**`. See
+[Scene v4.82.0 runtime boundaries](references/scene-runtime-boundaries.md) for
+exact query registration/submission, root-profile serialization and interaction
+limits. These host APIs are not new `.play` syntax and do not verify UI rendering.
 
 Every construct on this page is deferred from the executable model with
 information `PLAY0269`: it never blocks binding, and it is not evidence that a
 target renders it.
 
-The screens-release surface adds component data-context bindings, exposed template
-configuration, package/icon catalogs, manual form columns, hierarchical outlets,
+The screens-release surface adds component data-context bindings,
+exposed template configuration, package/icon catalogs, manual form columns, hierarchical outlets,
 routes, toolbars and dialog destinations, each with a separate support level
 (authoring accepted, executable admitted, runtime implemented). Discover the
 installed shape through MCP `syntax-schema`; details:
@@ -201,6 +203,9 @@ capability gap, never a flat-list fallback; Studio production proof is separate.
 
 ## The application shell: regions, slice buttons, blueprint references, sample data
 
+This covers application navigation regions (topbar/sidebar, module inherit/extend/override)
+and toolbar slice buttons alongside blueprint references and sample data.
+
 The shell's navigation is declared in the `layout` (`navigation topbar` / `navigation sidebar`, with `logo` and nested
 `item` lines) and each `module` states how it relates to a region: **inherit** (the default), **extend** (the
 application's items plus its own) or **override** (its own only). Toolbars gain `button <id> title "<text>" slice
@@ -239,9 +244,17 @@ and [guarded interactions](references/guarded-interactions.md).
 
 Guarded alternatives and `where` deprecation:
 [guarded interactions](references/guarded-interactions.md).
+Read [change alternatives](references/change-alternatives.md) when a component's
+`on change` should choose an action list by the changed item, such as a kanban move.
 
 Read [interaction example](references/interaction-example.md) when wiring a
 named confirmation behavior and an inline refresh to the same screen.
+
+State every plain and toolbar `action`'s subject: `for item` (the chosen record fills its
+inputs) or `for screen` (no row does). Omitted, the compiler infers it from types, and a
+create action on a list can bind the selected row's id. Read
+[action subjects](references/action-subjects.md) when adding a screen action or when
+PLAY0817-PLAY0821 appear.
 Scalar/named `returns` bind and reference-execute (ESM v7).
 Renderer generation/response limits: command-surface `references/generated-values-and-responses.md`.
 Screenplay resolves response names in form submit and execute success (Requires Screenplay 4.148.0 or later);
@@ -269,7 +282,51 @@ precedence, PLAY0485 and examples.
 
 ## `ui profile` and `theme`
 
+Requires Screenplay 4.227.0 (`screenplay --version`) for a quoted profile reference
+such as `theme "Scene Default Light"`: an undeclared quoted name selects a package
+theme without PLAY0231; a declared one gets PLAY0232 compatibility checks. Bare
+`theme Nordic` still works; declaration headers stay identifier-only. See the
+reference below for escaping and PLAY0229 malformed/blank-name refusals.
+
 A `ui profile` selects the application shell with `root template` (an own layout or application-scope screen template, or `blueprint <B> <Name>` with an optional `version` pin), its shell `option` lines, an `appearance` block (`color scheme`, `accent`), the template new screens start from (`new screens use template`), the theme and the `packages`, listed in override-priority order (a later package shadows an earlier one); `target platform` and `target size` accept any identifier, so a typo is silent. The legacy `layout <Name>` line inside a profile still reads but warns `PLAY0791`: write `root template`. `PLAY0790` to `PLAY0799` check the shell. Read [references/ui-profile-and-theme.md](references/ui-profile-and-theme.md) when writing a profile or theme, or fixing a shell diagnostic.
+
+## A deliverable app declares its identity, titles and labels
+
+Symptom: a rendered app titled "Cratis Stage" whose buttons and dialogs show raw command names. The renderer
+defaults to those when the model is silent, so declare, in every deliverable app:
+
+- the layout's `logo image "<path>" title "<text>"` inside `navigation topbar` or `navigation sidebar` (the
+  application title the shell shows; `logo initials` is only valid in a profile's `identity`);
+- a `ui profile` with `root template`, shell `option` lines such as `option showFooter false`, and an `identity`
+  block (`name`, `logo initials`);
+- a `title "<text>"` in each screen and a navigation `item <id> title "<text>" target <Module.Feature>` per screen;
+- `label "<text>"` on **every** `action`.
+
+```screenplay excerpt
+layout AppShell
+  category application
+  content
+
+  navigation sidebar
+    logo image "/assets/solocrm.svg" title "SoloCRM"
+    item organizations title "Organizations" target Crm.Organizations
+
+ui profile Desktop
+  target platform web
+  root template AppShell
+    option showFooter false
+  identity
+    name "SoloCRM"
+    logo initials "SC"
+```
+
+```screenplay excerpt
+screen Organizations
+  data OrganizationOverview[] via query AllOrganizations
+  title "Organizations"
+  action RegisterOrganization
+    label "New organization"
+```
 
 ## Localized strings
 
@@ -295,6 +352,8 @@ Localized text lives in companion `.strings` files and is referenced unquoted as
 - [ ] Every theme a profile selects is `compatible with` one of its packages.
 - [ ] `target platform` and `target size` values are spelled correctly; nothing
       checks them.
+- [ ] A deliverable app declares layout `logo ... title`, a `ui profile` with `option` lines and `identity`,
+      a `title` per screen and a `label` on every `action`.
 - [ ] User-visible text is `$strings.` where the application is localized.
 - [ ] No `file` reference is doing work the declaration should be doing.
 - [ ] Every click, submit and screen entry that does something has an `on` or

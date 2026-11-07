@@ -12,8 +12,23 @@ namespace Cratis.Chronicle.Projections.ModelBound;
 /// <param name="key">Optional property name on the event that identifies the instance to remove. Defaults to WellKnownExpressions.EventSourceId.</param>
 /// <param name="parentKey">Optional property name that identifies the parent (only used for children). Defaults to WellKnownExpressions.EventSourceId.</param>
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct | AttributeTargets.Property | AttributeTargets.Parameter, AllowMultiple = true)]
-public sealed class RemovedWithAttribute<TEvent>(string? key = default, string? parentKey = default) : Attribute, IProjectionAnnotation, IRemovedWithAttribute
+public sealed class RemovedWithAttribute<TEvent>(string? key = default, string? parentKey = default) : Attribute, IProjectionAnnotation, IRemovedWithAttribute, IDetachingRemovedWithAttribute
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RemovedWithAttribute{TEvent}"/> class for a node in a graph.
+    /// </summary>
+    /// <param name="detach">Whether the edges attached to the node are deleted with it.</param>
+    public RemovedWithAttribute(bool detach)
+        : this(null, null)
+    {
+        Detach = detach;
+    }
+
+    /// <summary>
+    /// Gets a value indicating whether, for a node in a graph, the edges attached to the node are deleted with it.
+    /// </summary>
+    public bool Detach { get; init; }
+
     /// <inheritdoc/>
     public Type EventType => typeof(TEvent);
 

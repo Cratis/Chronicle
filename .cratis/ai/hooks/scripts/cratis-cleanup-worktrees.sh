@@ -99,16 +99,16 @@ if [ "$SELFTEST" = 1 ]; then
     chk "fresh worktree kept"          '[ -d "$t/wt-fresh" ]'
     chk "fresh branch kept"            'git rev-parse -q --verify refs/heads/fresh >/dev/null'
     chk "main kept"                    'git rev-parse -q --verify refs/heads/main >/dev/null'
-    chk "report names the removal"     'printf "%s" "$out" | grep -q "removed worktree"'
+    chk "report names the removal"     'grep -q "removed worktree" <<<"$out"'
     chk "work records kept"            '[ -f "$t/wt-records/.ai-work/.handoff" ]'
     chk "work records branch kept"     'git rev-parse -q --verify refs/heads/records >/dev/null'
-    chk "work records reason reported" 'printf "%s" "$out" | grep -Fq "has untracked work records (.ai-work/)"'
+    chk "work records reason reported" 'grep -Fq "has untracked work records (.ai-work/)" <<<"$out"'
     chk "empty work records removed"   '[ ! -d "$t/wt-empty-records" ]'
     chk "locked worktree kept"         '[ -d "$t/wt-locked" ]'
     chk "locked branch kept"           'git rev-parse -q --verify refs/heads/locked >/dev/null'
-    chk "locked reason reported"       'printf "%s" "$out" | grep -Fq "worktree $t/wt-locked (locked): locked"'
+    chk "locked reason reported"       'grep -Fq "worktree $t/wt-locked (locked): locked" <<<"$out"'
     chk "locked detached kept"         '[ -d "$t/wt-locked-detached" ]'
-    chk "locked detached reported"     'printf "%s" "$out" | grep -Fq "worktree $t/wt-locked-detached (detached): locked"'
+    chk "locked detached reported"     'grep -Fq "worktree $t/wt-locked-detached (detached): locked" <<<"$out"'
     out=$(printf '%s' '{"hook_event_name":"SessionStart"}' | "$self" --no-fetch --include-work-records --hook 2>&1) || { echo "FAIL: hook exit $?"; echo "$out"; exit 1; }
     chk "hook ignores opt-in"          '[ -f "$t/wt-records/.ai-work/.handoff" ]'
     out=$("$self" --no-fetch --include-work-records 2>&1) || { echo "FAIL: opt-in exit $?"; echo "$out"; exit 1; }
@@ -140,34 +140,128 @@ REMOVED=(); KEPT=(); FREED_KB=0
 note_removed() { REMOVED+=("$1"); }
 note_kept() { KEPT+=("$1"); }
 
-# delivered <sha> <branch|""> <upstream-track>  → prints the evidence, returns 0 when delivered
-delivered() {
-    local sha="$1" br="$2" track="$3"
-    if git merge-base --is-ancestor "$sha" "$default" 2>/dev/null; then
-        if ! grep -qx "$sha" "$firstparent"; then echo "merged into $default"; return 0; fi
-        if [ "$track" = "[gone]" ]; then echo "merged into $default, upstream gone"; return 0; fi
+# The cache is available only after a successful, valid batch. Failed attempts also stamp the window.
+GH_PULLS=''
+valid_pulls() {
+    jq -e -s 'length == 1 and (.[0] | type == "array" and all(.[];
+        type == "object" and has("merged_at") and (.merged_at == null or (.merged_at | type == "string")) and
+        (.head | type == "object" and (.ref | type == "string") and (.sha | type == "string"))))' "$1" >/dev/null 2>&1
+}
+lock_stat() { stat -c '%i %Y' "$1" 2>/dev/null || stat -f '%i %m' "$1" 2>/dev/null; }
+fresh_stamp() {
+    local stamp
+    stamp=$(cat "$state/stamp" 2>/dev/null || true)
+    [[ "$stamp" =~ ^[0-9]+$ ]] && [ "$now" -lt "$((stamp + 900))" ]
+}
+cached_pulls() {
+    fresh_stamp && [ ! -e "$state/failed" ] && valid_pulls "$state/pulls.json" || return 1
+    cat "$state/pulls.json"
+}
+take_lock() {
+    mkdir "$state/lock" 2>/dev/null && return 0
+    local inode modified retired acquired current
+    read -r inode modified < <(lock_stat "$state/lock")
+    [[ "$modified" =~ ^[0-9]+$ ]] && [ "$now" -ge "$((modified + 900))" ] || return 1
+    # Rename atomically: a killed reclaimer can leave only a retired directory, never a blocking marker.
+    retired="$state/lock.stale.$$.$RANDOM"
+    mv "$state/lock" "$retired" 2>/dev/null || return 1
+    read -r current _ < <(lock_stat "$retired")
+    if [ "$current" != "$inode" ]; then
+        # Another reclaimer replaced the stale directory. Restore its lock if possible;
+        # never acquire or delete a directory that was not the stale one we inspected.
+        [ -e "$state/lock" ] || mv "$retired" "$state/lock" 2>/dev/null
+        return 1
     fi
-    if [ -n "$br" ] && [ "${CRATIS_CLEANUP_NO_GH:-}" != 1 ] && command -v gh >/dev/null 2>&1; then
-        if gh pr list --head "$br" --state merged --json headRefOid -q '.[].headRefOid' 2>/dev/null | grep -qx "$sha"; then
-            echo "pull request merged at this commit"; return 0
-        fi
+    acquired=1
+    mkdir "$state/lock" 2>/dev/null && acquired=0
+    rm -rf "$retired"
+    return "$acquired"
+}
+hook_pulls() (
+    local repo="$1" common state now temporary lock_inode current
+    common=$(git rev-parse --git-common-dir) || exit 1
+    state="$common/cratis-cleanup-gh/$repo"
+    now=$(date +%s)
+    mkdir -p "$state" 2>/dev/null || exit 1
+    if ! take_lock; then cached_pulls; exit $?; fi
+    read -r lock_inode _ < <(lock_stat "$state/lock")
+    temporary=''
+    # A retired owner must never remove its replacement's lock.
+    trap '[[ -z "$temporary" ]] || rm -f "$temporary"; read -r current _ < <(lock_stat "$state/lock"); [ "$current" != "$lock_inode" ] || rmdir "$state/lock" 2>/dev/null' EXIT
+    if fresh_stamp; then cached_pulls; exit $?; fi
+    temporary=$(mktemp "$state/pulls.XXXXXX") || exit 1
+    printf '%s\n' "$now" > "$temporary" && mv "$temporary" "$state/failed" || exit 1
+    printf '%s\n' "$now" > "$temporary" && mv "$temporary" "$state/stamp" || exit 1
+    read -r current _ < <(lock_stat "$state/lock")
+    [ "$current" = "$lock_inode" ] || exit 1
+    # Only the latest 100 closed PRs are searched; older merged branches are simply kept.
+    if gh api "repos/$repo/pulls?state=closed&per_page=100" > "$temporary" 2>/dev/null && valid_pulls "$temporary"; then
+        read -r current _ < <(lock_stat "$state/lock")
+        [ "$current" = "$lock_inode" ] || exit 1
+        mv "$temporary" "$state/pulls.json" && rm -f "$state/failed" || exit 1
+        cat "$state/pulls.json"
+    else exit 1; fi
+)
+GH_POSSIBLE=0; GH_REPO=''
+configure_github() {
+    [ "${CRATIS_CLEANUP_NO_GH:-}" != 1 ] || return 0
+    command -v gh >/dev/null 2>&1 && command -v jq >/dev/null 2>&1 || return 0
+    local remote repo
+    remote=$(git remote get-url origin 2>/dev/null) || return 0
+    case "$remote" in
+        https://github.com/*) repo=${remote#https://github.com/} ;;
+        git@github.com:*) repo=${remote#git@github.com:} ;;
+        ssh://git@github.com/*) repo=${remote#ssh://git@github.com/} ;;
+        *) return 0 ;;
+    esac
+    repo=${repo%.git}
+    [[ "$repo" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] || return 0
+    GH_REPO=$repo; GH_POSSIBLE=1
+}
+configure_github
+load_pulls() {
+    if [ "$HOOK" = 1 ]; then GH_PULLS=$(hook_pulls "$GH_REPO") || return 1
+    else GH_PULLS=$(gh api "repos/$GH_REPO/pulls?state=closed&per_page=100" 2>/dev/null) || return 1; fi
+    printf '%s' "$GH_PULLS" | valid_pulls /dev/stdin
+}
+
+# Ancestry evidence is resolved during planning; GitHub evidence only after the complete plan exists.
+ancestry_delivered() {
+    local sha="$1" track="$3"
+    if git merge-base --is-ancestor "$sha" "$default" 2>/dev/null; then
+        if ! grep -qx "$sha" "$firstparent"; then EVIDENCE="merged into $default"; return 0; fi
+        if [ "$track" = "[gone]" ]; then EVIDENCE="merged into $default, upstream gone"; return 0; fi
     fi
     return 1
 }
+github_delivered() {
+    printf '%s' "$GH_PULLS" | jq -e --arg br "$1" --arg sha "$2" \
+        'any(.[]; .merged_at != null and .head.ref == $br and .head.sha == $sha)' >/dev/null 2>&1
+}
+PLAN_KIND=(); PLAN_PATH=(); PLAN_SHA=(); PLAN_BRANCH=(); PLAN_EVIDENCE=(); NEEDS_GH=0
+plan_item() {
+    local kind="$1" path="$2" tip="$3" branch="$4" evidence=''
+    if ancestry_delivered "$tip" "$branch" "$([ -n "$branch" ] && track_of "$branch")"; then evidence=$EVIDENCE
+    elif [ -n "$branch" ] && [ "$GH_POSSIBLE" = 1 ]; then NEEDS_GH=1; fi
+    PLAN_KIND+=("$kind"); PLAN_PATH+=("$path"); PLAN_SHA+=("$tip")
+    PLAN_BRANCH+=("$branch"); PLAN_EVIDENCE+=("$evidence")
+}
 track_of() { git for-each-ref --format='%(upstream:track)' "refs/heads/$1" 2>/dev/null; }
 
-# ── Worktrees ─────────────────────────────────────────────────────────────────
-git worktree prune >/dev/null 2>&1
+# ── Plan the entire sweep without removing worktrees or branches ──────────────
 wt=""; sha=""; br=""; locked=0; first=1
 process_worktree() {
     [ -n "$wt" ] || return 0
     if [ "$first" = 1 ]; then first=0; return 0; fi        # the main worktree is never removed
-    local name="${br:-detached}" ev
+    local name="${br:-detached}"
     if [ "$locked" = 1 ]; then note_kept "worktree $wt ($name): locked"; return 0; fi
     case "$here/" in "$wt"/*) note_kept "worktree $wt ($name): it is the current directory - run the sweep from the main checkout"; return 0 ;; esac
-    if ! ev=$(delivered "$sha" "$br" "$([ -n "$br" ] && track_of "$br")"); then
-        note_kept "worktree $wt ($name): work not delivered to $default"; return 0
-    fi
+    plan_item worktree "$wt" "$sha" "$br"
+}
+execute_worktree() {
+    local name="${br:-detached}" ev="$1" current
+    current=$(git -C "$wt" rev-parse HEAD 2>/dev/null) || return 0
+    [ "$current" = "$sha" ] || { note_kept "worktree $wt ($name): tip changed since planning"; return 0; }
     if [ "$INCLUDE_WORK_RECORDS" = 0 ] && [ -d "$wt/.ai-work" ]; then
         local records
         if ! records=$(find "$wt/.ai-work/." -mindepth 1 -maxdepth 1 -print -quit); then
@@ -192,19 +286,49 @@ while IFS= read -r line; do
 done < <(git worktree list --porcelain; echo)
 process_worktree
 
-# ── Local branches ────────────────────────────────────────────────────────────
 in_use=$(git worktree list --porcelain | sed -n 's#^branch refs/heads/##p')
+planned_branches=$(printf '%s\n' "${PLAN_BRANCH[@]+"${PLAN_BRANCH[@]}"}")
 while IFS='|' read -r b bsha; do
     if [ -z "$b" ] || [ "$b" = "$default_local" ]; then continue; fi
-    printf '%s\n' "$in_use" | grep -qx "$b" && continue
-    if ev=$(delivered "$bsha" "$b" "$(track_of "$b")"); then
-        if [ "$DRY" = 1 ]; then note_removed "branch $b: would delete, $ev"
-        elif git branch -D "$b" >/dev/null 2>&1; then note_removed "branch $b: $ev"
-        else note_kept "branch $b: git refused to delete it"; fi
-    else
-        note_kept "branch $b: work not delivered to $default"
+    # Drain producers under pipefail: grep -q can turn a match into a SIGPIPE failure.
+    if printf '%s\n' "$in_use" | grep -x "$b" >/dev/null; then
+        [ "$DRY" = 0 ] || continue
+        printf '%s\n' "$planned_branches" | grep -x "$b" >/dev/null || continue
     fi
+    plan_item branch "$b" "$bsha" "$b"
 done < <(git for-each-ref --format='%(refname:short)|%(objectname)' refs/heads)
+
+abort_sweep() {
+    echo "cratis-cleanup-worktrees: GitHub evidence unavailable; 0 removed, keeping the entire sweep" >&2
+    exit 0
+}
+# Resolve every item's evidence before any deletion, including ancestry-proven items.
+if [ "$NEEDS_GH" = 1 ] && ! load_pulls; then abort_sweep; fi
+for ((i=0; i<${#PLAN_KIND[@]}; i++)); do
+    if [ -z "${PLAN_EVIDENCE[i]}" ] && [ -n "${PLAN_BRANCH[i]}" ] && [ -n "$GH_PULLS" ]; then
+        if github_delivered "${PLAN_BRANCH[i]}" "${PLAN_SHA[i]}"; then PLAN_EVIDENCE[i]="pull request merged at this commit"
+        else result=$?; [ "$result" = 1 ] || abort_sweep; fi
+    fi
+done
+
+# ── Execute the resolved plan, rechecking tips and worktree safety ─────────────
+git worktree prune >/dev/null 2>&1
+for ((i=0; i<${#PLAN_KIND[@]}; i++)); do
+    kind=${PLAN_KIND[i]}; path=${PLAN_PATH[i]}; sha=${PLAN_SHA[i]}; br=${PLAN_BRANCH[i]}; ev=${PLAN_EVIDENCE[i]}
+    if [ "$kind" = branch ]; then
+        git worktree list --porcelain | sed -n 's#^branch refs/heads/##p' | grep -x "$br" >/dev/null && continue
+    fi
+    if [ -z "$ev" ]; then
+        if [ "$kind" = worktree ]; then note_kept "worktree $path (${br:-detached}): work not delivered to $default"
+        else note_kept "branch $br: work not delivered to $default"; fi
+        continue
+    fi
+    if [ "$kind" = worktree ]; then wt=$path; execute_worktree "$ev"; continue; fi
+    [ "$(git rev-parse -q --verify "refs/heads/$br")" = "$sha" ] || { note_kept "branch $br: tip changed since planning"; continue; }
+    if [ "$DRY" = 1 ]; then note_removed "branch $br: would delete, $ev"
+    elif git branch -D "$br" >/dev/null 2>&1; then note_removed "branch $br: $ev"
+    else note_kept "branch $br: git refused to delete it"; fi
+done
 
 # ── Report ────────────────────────────────────────────────────────────────────
 summary="cratis-cleanup-worktrees: ${#REMOVED[@]} removed, ${#KEPT[@]} kept"

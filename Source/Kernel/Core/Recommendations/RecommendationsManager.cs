@@ -4,6 +4,7 @@
 using System.Text.Json;
 using Cratis.Chronicle.Concepts.Recommendations;
 using Cratis.Chronicle.Storage;
+using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Recommendations;
 
@@ -14,7 +15,8 @@ namespace Cratis.Chronicle.Recommendations;
 /// Initializes a new instance of the <see cref="RecommendationsManager"/> class.
 /// </remarks>
 /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
-public class RecommendationsManager(IStorage storage) : Grain, IRecommendationsManager
+/// <param name="logger">The logger.</param>
+public class RecommendationsManager(IStorage storage, ILogger<RecommendationsManager> logger) : Grain, IRecommendationsManager
 {
     /// <inheritdoc/>
     public async Task<RecommendationId> Add<TRecommendation, TRequest>(RecommendationDescription description, TRequest request)
@@ -27,8 +29,8 @@ public class RecommendationsManager(IStorage storage) : Grain, IRecommendationsM
         var existingRecommendations = await recommendationStorage.GetAll();
         var requestAsJson = JsonSerializer.Serialize((object)request);
 
-        // Ignored recommendations are kept on purpose: an identical request that was ignored matches here, so it is not raised again.
-        // The scan reads every retained row, ignored ones included, so its cost grows with the total number of retained recommendations.
+        // Ignored recommendations are kept while they can still match, so an identical request is not raised again.
+        // Once superseded by a newer stored version, ignored projection registration recommendations are pruned below.
         var existing = existingRecommendations.FirstOrDefault(r =>
             r.Type == recommendationType &&
             JsonSerializer.Serialize((object)r.Request) == requestAsJson);
@@ -36,6 +38,12 @@ public class RecommendationsManager(IStorage storage) : Grain, IRecommendationsM
         if (existing is not null)
         {
             return existing.Id;
+        }
+
+        var pruned = await IgnoredRecommendations.Remove(recommendationStorage, IgnoredRecommendations.SupersededBy(existingRecommendations, recommendationType, request));
+        if (pruned > 0)
+        {
+            logger.PrunedIgnoredRecommendations(pruned);
         }
 
         var id = RecommendationId.New();

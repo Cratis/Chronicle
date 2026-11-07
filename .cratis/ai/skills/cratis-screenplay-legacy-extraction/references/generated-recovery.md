@@ -179,9 +179,9 @@ resolved adapter version, diagnostic, retained/withheld form and open question:
 `MaximumExecutableModelVersion` below v15 withholds non-default concept generation
 with SP0073 and dependent values/responses/mappings with SP0052; pins against them
 withhold scenarios with SP0039. Below v7 responses/return expectations are withheld.
-A cap describes less behavior, not an equivalent implementation. Handler references
-compile but refuse executable binding (PLAY0800 for file/inline command handlers);
-record that verdict separately and gap-fill the slice with a constrained implementation
-attachment, not by waiting for ESM admission.
+A cap describes less behavior, not an equivalent implementation. A file/inline command
+handler binds only beside unconditional `produces` with a resolved body (Screenplay
+4.250.0); otherwise it refuses executable binding with PLAY0800. Record that verdict
+separately and gap-fill the slice in code.
 Requires Screenplay 4.210.0 (`screenplay --version`); older binders use PLAY0268 for these handlers.
 Never remove protection, required payloads or loss rows to obtain a green result.

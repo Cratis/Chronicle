@@ -82,7 +82,7 @@ public class ClusterDbContext(DbContextOptions<ClusterDbContext> options) : Base
         SingleWriterLeaseModel.Configure(modelBuilder, Database.ProviderName);
         modelBuilder.Entity<DatabaseNameBinding>(entity =>
         {
-            entity.ToTable("DatabaseNames");
+            entity.ToTable(WellKnownTableNames.DatabaseNames);
             entity.HasKey(row => new { row.Kind, row.EventStore, row.Namespace });
             entity.Property(row => row.EventStore).HasMaxLength(200);
             entity.Property(row => row.Namespace).HasMaxLength(200);

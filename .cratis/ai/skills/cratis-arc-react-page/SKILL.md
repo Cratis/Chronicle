@@ -1,6 +1,6 @@
 ---
 name: cratis-arc-react-page
-description: "Build a React page in a Cratis Arc application with Cratis Components — DataPage lists, columns, toolbar menu items, command dialogs, confirmation and busy-indicator dialogs, row selection, details panes, snapshot and observable queries, paging, and MVVM view models. Use when building or changing a page that lists or displays data, wiring Add/Edit/Delete actions, connecting a component to a generated Arc query or command proxy, asking the user to confirm something, or implementing a `.play` screen or form as a page. Not for: a multi-step wizard dialog alone (use `cratis-components-stepper-command-dialog`), a canvas tool palette (use `cratis-components-toolbar`), theming (use `cratis-components-styling`), backend commands and read models (use `cratis-arc-command`, `cratis-chronicle-read-model`), or editing the `.play` model itself (use `cratis-screenplay-event-modeling`)."
+description: Use when building an Arc React data page, wiring its command dialogs or connecting generated proxies. Not for editing a .play model, theming alone or a standalone wizard dialog.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-arc-react-page/SKILL.md -->
@@ -45,6 +45,17 @@ import { InputTextField } from '@cratis/components/CommandForm';
 import { Dialog } from '@cratis/components/Dialogs';
 import { DialogProps, DialogResult, useDialog } from '@cratis/arc.react/dialogs';
 ```
+
+## Guid command fields
+
+Requires Components 4.31.0 and matching Arc/Arc React 22.19.1 for GuidField invalid-draft execution blocking; check `yarn why @cratis/components` and `yarn why @cratis/arc.react`, or keep a host-validated field.
+
+Opt into `GuidField` from `@cratis/components/CommandForm`. It binds native
+Fundamentals `Guid` values, accepts partial text drafts and never generates an
+identifier. Register it once through `registerFieldTypeProvider` for
+`AutoCommandForm`; it is not a built-in provider. Invalid drafts clear the bound
+value. Preserve host-set errors and use `resetKey` to discard an unchanged empty
+value's draft.
 
 ## Initial focus
 

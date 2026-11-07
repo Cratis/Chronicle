@@ -26,6 +26,11 @@ on:
         type: boolean
         required: false
         default: false
+      integration_selection:
+        description: "JSON naming the integration lanes a pull request needs (see .github/scripts/select-integration.py). Empty runs every lane."
+        type: string
+        required: false
+        default: ""
     outputs:
       all_providers:
         description: "Whether the integration matrix used all storage providers"
@@ -92,8 +97,51 @@ jobs:
     if: needs.already-ran.outputs.skip != 'true'
     uses: ./.github/workflows/grain-compatibility.yml
 
+  # Workbench proxies are generated during development and committed, so this job only proves the committed ones
+  # are still what Core generates (drift fails the pull request). Nothing the build or specs produce depends on it,
+  # so it runs beside the compatibility gates and the build instead of inside the build job. `specs` requires it.
+  workbench-proxies:
+    needs: [already-ran]
+    if: needs.already-ran.outputs.skip != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Spec Workbench proxy freshness guard
+        run: node .github/scripts/test-check-workbench-proxies.mjs
+      - name: Setup .Net
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+      # Shared org cache: pull requests restore only; the nightly build and default-branch runs save (Cratis/Workflows#164).
+      - name: Cache NuGet packages
+        uses: Cratis/Workflows/.github/actions/dotnet-cache@main
+      - name: Add GitHub Package Registry to NuGet
+        run: |
+          dotnet nuget update source github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text || \
+          dotnet nuget add source --name github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text https://nuget.pkg.github.com/cratis/index.json
+      - name: Stamp the build version
+        run: python3 .github/scripts/derive-build-version.py >> "$GITHUB_ENV"
+      - name: Set isolated Workbench proxy destination
+        run: echo "WORKBENCH_PROXIES=$RUNNER_TEMP/workbench-proxies" >> "$GITHUB_ENV"
+      - name: Prepare isolated Workbench proxy generation
+        run: node .github/scripts/check-workbench-proxies.mjs prepare --output "$WORKBENCH_PROXIES"
+      - name: Generate native Debug Workbench proxies
+        run: >-
+          dotnet build Source/Kernel/Core/Core.csproj --configuration Debug
+          -p:DisableProxyGenerator=false -p:DisableGrpcContractGeneration=true
+          -p:DisableProtoGeneration=true -p:DisableDockerBuild=true
+          -p:CratisProxiesIncremental=false "-p:CratisProxiesOutputPath=$WORKBENCH_PROXIES"
+      - name: Check Workbench proxy freshness
+        run: node .github/scripts/check-workbench-proxies.mjs check --generated "$WORKBENCH_PROXIES"
+
+  # The wire and grain compatibility gates run beside the build instead of in front of it: nothing the build
+  # produces depends on their result, so waiting for them only added their six minutes to every pull request.
+  # They stay required (as does the proxy check): the `specs` aggregate and `legacy-contracts` both fail when either is not green, and the
+  # integration jobs wait for `specs`.
   dotnet-build:
-    needs: [already-ran, wire-compatibility, grain-compatibility]
+    needs: [already-ran]
     if: needs.already-ran.outputs.skip != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 120
@@ -134,6 +182,9 @@ jobs:
       - name: Spec bounded nightly coverage admission without network
         run: python3 -B .github/scripts/test-nightly-coverage-feed.py
 
+      - name: Spec the zero-test guard
+        run: python3 .github/scripts/test-assert-tests-ran.py
+
       # Runs the real entrypoint against a fake server: no image is needed to prove that a container stop
       # reaches the server and that the container reports the server's own exit status (#5361).
       - name: Spec container entrypoint signal forwarding
@@ -163,8 +214,6 @@ jobs:
           python3 .github/scripts/test-pr-artifact-handoff.py
           python3 .github/scripts/test-sparse-integration-workflows.py
 
-      - name: Spec Workbench proxy freshness guard
-        run: node .github/scripts/test-check-workbench-proxies.mjs
 
       - name: Spec the analyzer ownership map
         run: python3 .github/scripts/test-analyzer-ownership.py
@@ -214,22 +263,6 @@ jobs:
 
       - name: Stamp the build version
         run: python3 .github/scripts/derive-build-version.py >> "$GITHUB_ENV"
-
-      - name: Set isolated Workbench proxy destination
-        run: echo "WORKBENCH_PROXIES=$RUNNER_TEMP/workbench-proxies" >> "$GITHUB_ENV"
-
-      - name: Prepare isolated Workbench proxy generation
-        run: node .github/scripts/check-workbench-proxies.mjs prepare --output "$WORKBENCH_PROXIES"
-
-      - name: Generate native Debug Workbench proxies
-        run: >-
-          dotnet build Source/Kernel/Core/Core.csproj --configuration Debug
-          -p:DisableProxyGenerator=false -p:DisableGrpcContractGeneration=true
-          -p:DisableProtoGeneration=true -p:DisableDockerBuild=true
-          -p:CratisProxiesIncremental=false "-p:CratisProxiesOutputPath=$WORKBENCH_PROXIES"
-
-      - name: Check Workbench proxy freshness
-        run: node .github/scripts/check-workbench-proxies.mjs check --generated "$WORKBENCH_PROXIES"
 
       - name: Build
         run: dotnet build --configuration Release -p:DisableProxyGenerator=true -p:DisableDockerBuild=true -p:ForceCodeGeneration=true
@@ -313,6 +346,7 @@ jobs:
             --configuration Debug \
             --no-restore \
             -p:RunAnalyzers=false \
+            -p:DisableProxyGenerator=true \
             -o Source/Kernel/Server/out
           docker build -t "${{ env.CRATIS_CHRONICLE_LOCAL_IMAGE }}" -f Docker/Local/Dockerfile .
 
@@ -353,7 +387,7 @@ jobs:
   # keep the Release build and specs, without this extra build or artifact.
   dotnet-build-development:
     if: needs.already-ran.outputs.skip != 'true' && (github.event_name != 'pull_request')
-    needs: [already-ran, wire-compatibility, grain-compatibility]
+    needs: [already-ran]
     runs-on: ubuntu-latest
     timeout-minutes: 120
     permissions:
@@ -394,6 +428,13 @@ jobs:
 
       - name: Build with DEVELOPMENT symbol
         run: dotnet build --configuration Release -p:EnableDevelopmentSymbol=true -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
+
+      # Client, Kernel and Clustering shards download only their own project's output (a fraction of the full
+      # artifact below, which the SQL clustering shards still use).
+      - name: Pack per-project integration build output
+        uses: ./.github/actions/pack-integration-output
+        with:
+          prefix: build-output-development
 
       - name: Pack DEVELOPMENT build output
         run: |
@@ -417,7 +458,7 @@ jobs:
   # specs before any shard runs; a red spec costs only this one build.
   dotnet-build-development-requested:
     if: needs.already-ran.outputs.skip != 'true' && (github.event_name == 'pull_request' && inputs.integration_requested)
-    needs: [already-ran, wire-compatibility, grain-compatibility]
+    needs: [already-ran]
     runs-on: ubuntu-latest
     timeout-minutes: 120
     permissions:
@@ -458,6 +499,13 @@ jobs:
 
       - name: Build with DEVELOPMENT symbol
         run: dotnet build --configuration Release -p:EnableDevelopmentSymbol=true -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
+
+      # Client, Kernel and Clustering shards download only their own project's output (a fraction of the full
+      # artifact below, which the SQL clustering shards still use).
+      - name: Pack per-project integration build output
+        uses: ./.github/actions/pack-integration-output
+        with:
+          prefix: build-output-development
 
       - name: Pack DEVELOPMENT build output
         run: |
@@ -577,13 +625,14 @@ jobs:
   specs-sql:
     if: needs.already-ran.outputs.skip != 'true'
     runs-on: ubuntu-latest
-    # The sqlserver shard takes 21-27 minutes on hosted runners; 30 cancelled a passing run.
+    # SQL Server specs are about five times slower than PostgreSQL ones, so they run as three shards of about
+    # seven minutes each (the single shard took 17-27 minutes and was the longest job on every pull request).
     timeout-minutes: 45
     needs: [already-ran, dotnet-build]
     strategy:
       fail-fast: false
       matrix:
-        shard: [postgresql, sqlserver, remaining]
+        shard: [postgresql, sqlserver-1, sqlserver-2, sqlserver-3, remaining]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -646,7 +695,7 @@ jobs:
   # A failed, skipped or cancelled shard must never turn this aggregate green.
   specs:
     if: ${{ needs.already-ran.outputs.skip != 'true' && (always()) }}
-    needs: [already-ran, specs-other, specs-sql]
+    needs: [already-ran, wire-compatibility, grain-compatibility, workbench-proxies, specs-other, specs-sql]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -655,9 +704,12 @@ jobs:
     steps:
       - name: Require every spec job to pass
         env:
+          WIRE_RESULT: ${{ needs.wire-compatibility.result }}
+          GRAIN_RESULT: ${{ needs.grain-compatibility.result }}
+          PROXIES_RESULT: ${{ needs.workbench-proxies.result }}
           OTHER_RESULT: ${{ needs.specs-other.result }}
           SQL_RESULT: ${{ needs.specs-sql.result }}
-        run: test "$OTHER_RESULT" = success && test "$SQL_RESULT" = success
+        run: test "$WIRE_RESULT" = success && test "$GRAIN_RESULT" = success && test "$PROXIES_RESULT" = success && test "$OTHER_RESULT" = success && test "$SQL_RESULT" = success
 
       - name: Checkout shard contract
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -701,6 +753,8 @@ jobs:
       chronicle-image: ${{ needs.dotnet-build.outputs.chronicle-image }}
       # Every storage backend nightly and on dispatch; labeled hot-core PRs also use all providers.
       all-providers: ${{ github.event_name != 'pull_request' || inputs.all_providers }}
+      # Only a requested pull-request run narrows the lanes; every other event runs them all.
+      selection: ${{ github.event_name == 'pull_request' && inputs.integration_selection || '' }}
 
   integration-api:
     # Waits for the ordinary specs on pull requests, like the integration matrix (#5050).

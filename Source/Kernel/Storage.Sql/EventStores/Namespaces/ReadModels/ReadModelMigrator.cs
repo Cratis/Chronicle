@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using Cratis.Arc.EntityFrameworkCore;
 using Cratis.Arc.EntityFrameworkCore.Json;
 using Cratis.Chronicle.Configuration;
+using Cratis.Chronicle.Diagnostics;
 using Cratis.Chronicle.Storage.Sql.Schema;
 using Microsoft.Data.SqlClient;
 using Microsoft.Data.Sqlite;
@@ -37,6 +38,7 @@ public class ReadModelMigrator(
     TimeProvider? timeProvider = null) : IReadModelMigrator
 {
     static readonly ConcurrentDictionary<string, bool> _columnMigrations = new();
+    readonly SqlStorageTelemetry _telemetry = new(options?.Value?.Telemetry.MetricNames ?? MetricNames.Legacy);
 
     /// <inheritdoc/>
     public async Task EnsureTableMigrated(string tableName, ReadModelDbContext context)
@@ -161,13 +163,13 @@ public class ReadModelMigrator(
         if (missingColumns.Count > 0)
         {
             logger.AddingMissingColumns(missingColumns.Count, tableName, string.Join(',', missingColumns.Select(c => c.Name)));
-            await DatabaseSchemaLock.Run(context, () => AddMissingColumns(tableName, context, missingColumns));
+            await DatabaseSchemaLock.Run(context, () => AddMissingColumns(tableName, context, missingColumns), _telemetry);
         }
 
         var execution = new Sinks.ReadModelIndexOperations.Execution(Online: true, CommandTimeout: (options?.Value.Sql ?? new()).ShadowIndexDdlTimeoutSeconds, Logger: logger);
         if (await ShadowColumnIndexes.NeedsReconciliation(context))
         {
-            await DatabaseSchemaLock.Run(context, () => ShadowColumnIndexes.Ensure(context, execution, timeProvider ?? TimeProvider.System));
+            await DatabaseSchemaLock.Run(context, () => ShadowColumnIndexes.Ensure(context, execution, timeProvider ?? TimeProvider.System), _telemetry);
         }
 
         // Outside the database-wide lock and only when the marker index is missing: the build takes only its own

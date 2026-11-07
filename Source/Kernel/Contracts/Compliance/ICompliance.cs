@@ -36,4 +36,22 @@ public interface ICompliance
     /// <returns>Awaitable task.</returns>
     [Operation]
     Task AllowNewEncryptionKey(AllowNewEncryptionKeyRequest request, CallContext context = default);
+
+    /// <summary>
+    /// Erase a key and report event stores not covered by the caller's capabilities.
+    /// </summary>
+    /// <param name="request">The erasure request.</param>
+    /// <param name="context">The current call.</param>
+    /// <returns>The coverage response.</returns>
+    [Operation]
+    Task<DeleteEncryptionKeyResponse> DeleteEncryptionKeyWithCoverage(DeleteEncryptionKeyRequest request, CallContext context = default);
+
+    /// <summary>
+    /// Authorize a fresh key and report event stores not covered by the caller's capabilities.
+    /// </summary>
+    /// <param name="request">The new-key request.</param>
+    /// <param name="context">The current call.</param>
+    /// <returns>The coverage response.</returns>
+    [Operation]
+    Task<AllowNewEncryptionKeyResponse> AllowNewEncryptionKeyWithCoverage(AllowNewEncryptionKeyRequest request, CallContext context = default);
 }

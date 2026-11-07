@@ -11,10 +11,13 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Occurrences;
 /// Stores infrastructure occurrences directly in one application or namespace database.
 /// </summary>
 /// <param name="open">Opens a fresh context for each operation.</param>
+/// <param name="database">The configured database for telemetry, if any.</param>
 /// <typeparam name="TContext">The owning database context.</typeparam>
-public partial class OccurrencesStorage<TContext>(Func<Task<DbContextScope<TContext>>> open) : IOccurrencesStorage, IScheduleStorage
+public partial class OccurrencesStorage<TContext>(Func<Task<DbContextScope<TContext>>> open, IDatabase? database = null) : IOccurrencesStorage, IScheduleStorage
     where TContext : DbContext
 {
+    readonly SqlStorageTelemetry _telemetry = SqlStorageTelemetry.For(database);
+
     /// <inheritdoc/>
     public async Task<OccurrenceRecordResult> Record(Occurrence occurrence)
     {
@@ -35,7 +38,7 @@ public partial class OccurrencesStorage<TContext>(Func<Task<DbContextScope<TCont
 
             if (existing.Fingerprint == occurrence.Fingerprint)
             {
-                SqlStorageTelemetry.RecoveredCollision("occurrence");
+                _telemetry.RecoveredCollision("occurrence");
                 return OccurrenceRecordResult.AlreadyRecorded;
             }
 
@@ -210,7 +213,7 @@ public partial class OccurrencesStorage<TContext>(Func<Task<DbContextScope<TCont
                 throw;
             }
 
-            SqlStorageTelemetry.RecoveredCollision("occurrence-claim-fence");
+            _telemetry.RecoveredCollision("occurrence-claim-fence");
         }
     }
 }

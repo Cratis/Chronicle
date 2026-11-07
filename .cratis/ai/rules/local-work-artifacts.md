@@ -17,8 +17,9 @@ dumps, and similar coordination files. These are **work records, not documentati
   If you find one tracked in git, move it into `.ai-work/` and remove it from
   tracking in a dedicated commit.
 - A genuine follow-up that must survive the session is **not** a work record — suggest
-  opening a GitHub issue for it (or open one when asked) so future work is tracked
-  where everyone can see it, instead of leaving a planning file behind.
+  opening a GitHub issue for it so future work is tracked
+  where everyone can see it, instead of leaving a planning file behind. A follow-up
+  issue includes an `## Acceptance criteria` section of concrete, testable bullets.
 - Knowledge that must outlive the session (real documentation, ADRs, operator
   guides) is written deliberately into the repository's documentation structure
   through normal review — not left behind as a work record.
@@ -37,16 +38,15 @@ dumps, and similar coordination files. These are **work records, not documentati
   replace the prompt.
 - **A worktree is a work record too.** Create it outside the repository tree, for
   example in a sibling `../.worktrees/` directory. A nested worktree inherits the
-  parent's `.globalconfig` alongside its own, causing .NET's `MultipleGlobalAnalyzerKeys`
+  parent's `.globalconfig`, causing .NET's `MultipleGlobalAnalyzerKeys`
   errors or silently changing analyzer severities. **Delivered work is cleaned up by
   `.cratis/ai/hooks/scripts/cratis-cleanup-worktrees.sh`, not by memory:** run it from the
   main checkout when a pull request merges or you finish a task (hooks also run it after
   `gh pr merge` and at session start where the harness supports them, and **ship-changes**
   ends with it). It removes a worktree and its branch only on evidence the work reached the
-  default branch — pushed is not merged — and never forces. Worktrees with non-empty `.ai-work/`
-  directories are kept by default as "has untracked work records (.ai-work/)". Manual
-  `--include-work-records` permits deleting those records after you preserve what you need;
-  automatic hooks never opt in. Pin a long-lived worktree with `git worktree lock <path>`;
+  default branch — pushed is not merged — and never forces. It keeps worktrees with non-empty
+  `.ai-work/` directories; manual `--include-work-records` deletes those records after you
+  preserve what you need, and automatic hooks never opt in. Pin a long-lived worktree with `git worktree lock <path>`;
   locked worktrees are always kept, even with opt-in. Other ignored files such as `.env` files
   and local databases can still be deleted with a removed worktree, so move anything you
   still need out first. Do not hand-remove worktrees or `git branch -D` a delivered branch

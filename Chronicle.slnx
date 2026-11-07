@@ -43,6 +43,8 @@
         <Project Path="Source/Kernel/Storage.InMemory.Specs/Storage.InMemory.Specs.csproj" />
         <Project Path="Source/Kernel/Storage.MongoDB/Storage.MongoDB.csproj" />
         <Project Path="Source/Kernel/Storage.MongoDB.Specs/Storage.MongoDB.Specs.csproj" />
+        <Project Path="Source/Kernel/Storage.Neo4j/Storage.Neo4j.csproj" />
+        <Project Path="Source/Kernel/Storage.Neo4j.Specs/Storage.Neo4j.Specs.csproj" />
         <Project Path="Source/Kernel/Storage.Specs/Storage.Specs.csproj" />
         <Project Path="Source/Kernel/Storage.Sql/Storage.Sql.csproj" />
         <Project Path="Source/Kernel/Storage.Sql.Specs/Storage.Sql.Specs.csproj" />

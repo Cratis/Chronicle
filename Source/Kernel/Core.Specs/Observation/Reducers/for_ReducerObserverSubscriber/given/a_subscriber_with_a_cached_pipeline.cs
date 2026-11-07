@@ -60,12 +60,12 @@ public class a_subscriber_with_a_cached_pipeline : Specification
                 new ReducerSubscriberResult(ObserverSubscriberResult.Ok(42), null)));
         silo.AddService(_mediator);
 
-        _firstPipeline.Reduce(Arg.Any<ReducerContext>(), Arg.Any<ReducerDelegate>()).Returns(async callInfo =>
+        _firstPipeline.Reduce(Arg.Any<ReducerContext>(), Arg.Any<ReducerDelegate>(), Arg.Any<bool>()).Returns(async callInfo =>
         {
             await callInfo.Arg<ReducerDelegate>()([], null);
             return null;
         });
-        _secondPipeline.Reduce(Arg.Any<ReducerContext>(), Arg.Any<ReducerDelegate>()).Returns(async callInfo =>
+        _secondPipeline.Reduce(Arg.Any<ReducerContext>(), Arg.Any<ReducerDelegate>(), Arg.Any<bool>()).Returns(async callInfo =>
         {
             await callInfo.Arg<ReducerDelegate>()([], null);
             return null;

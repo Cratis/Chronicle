@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Contracts.Observation;
+using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Storage;
 
@@ -19,11 +20,13 @@ internal static class ObserverExtensions
     /// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
     /// <param name="command"><see cref="IObserverCommand"/> to get the observer for.</param>
     /// <param name="storage">The storage containing observer definitions.</param>
+    /// <param name="namespaceCasing">The namespace casing resolver, when called from an entry point.</param>
     /// <returns>An instance of the observer.</returns>
-    public static async Task<IObserver> GetObserver(this IGrainFactory grainFactory, IObserverCommand command, IStorage storage)
+    public static async Task<IObserver> GetObserver(this IGrainFactory grainFactory, IObserverCommand command, IStorage storage, INamespaceCasing? namespaceCasing = null)
     {
+        var @namespace = namespaceCasing is null ? (Concepts.EventStoreNamespaceName)command.Namespace : await namespaceCasing.Canonicalize(command.EventStore, command.Namespace);
         var eventSequenceId = await ObserverEventSequenceResolver.Resolve(storage, command.EventStore, command.ObserverId, command.EventSequenceId);
-        var key = new ObserverKey(command.ObserverId, command.EventStore, command.Namespace, eventSequenceId);
+        var key = new ObserverKey(command.ObserverId, command.EventStore, @namespace, eventSequenceId);
         return grainFactory.GetGrain<IObserver>(key);
     }
 }

@@ -34,4 +34,11 @@ public class EventStoreSubscriptionDefinition
     /// </summary>
     [ProtoMember(4)]
     public EventGenerationDelivery GenerationDelivery { get; set; } = EventGenerationDelivery.Compatibility;
+
+    /// <summary>
+    /// Gets or sets the named-tag filter. Several values of one name are alternatives, different names must all match.
+    /// An empty filter delivers every event of the subscribed types.
+    /// </summary>
+    [ProtoMember(5)]
+    public IList<NamedTag> NamedTags { get; set; } = [];
 }

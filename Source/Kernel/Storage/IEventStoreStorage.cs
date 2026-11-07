@@ -113,6 +113,11 @@ public interface IEventStoreStorage
     IWebhookDefinitionsStorage Webhooks { get; }
 
     /// <summary>
+    /// Gets the <see cref="IWebhookSigningKeysStorage"/> for the event store.
+    /// </summary>
+    IWebhookSigningKeysStorage WebhookSigningKeys { get; }
+
+    /// <summary>
     /// Gets the <see cref="IExternalServiceDefinitionsStorage"/> for the event store.
     /// </summary>
     IExternalServiceDefinitionsStorage ExternalServices { get; }
@@ -196,4 +201,11 @@ public interface IEventStoreStorage
     /// does nothing, leaving the data in place.
     /// </remarks>
     Task DropNamespace(EventStoreNamespaceName @namespace) => Task.CompletedTask;
+
+    /// <summary>
+    /// Checks whether the exact namespace casing has its own persisted data, without resolving aliases or creating data.
+    /// </summary>
+    /// <param name="namespace">The exact namespace name.</param>
+    /// <returns>True only when data is stored under exactly this name, not under a case variant.</returns>
+    Task<bool> HasOwnNamespaceData(EventStoreNamespaceName @namespace) => Task.FromResult(false);
 }

@@ -7,9 +7,36 @@ description: "Write reader-centered documentation using the Cratis documentation
 # Write Documentation
 
 Write documentation for a feature, component, or concept. Follow
-`.cratis/ai/rules/documentation.md` and invoke **cratis-documentation-writing**.
-For a Cratis product page, also use **cratis-engineering-docs-authoring**;
-for samples or snippets, use **cratis-technical-examples**.
+`.cratis/ai/rules/documentation.md` and use **cratis-documentation-writing**.
+
+## Read the applicable skills first
+
+Read the actual applicable `SKILL.md` files before drafting, in this order:
+
+1. `.cratis/ai/skills/cratis-documentation-writing/SKILL.md` for reader journey
+   and page purpose.
+2. `.cratis/ai/skills/cratis-engineering-docs-authoring/SKILL.md` for
+   source-grounded authoring of a Cratis product page.
+3. `.cratis/ai/skills/cratis-technical-examples/SKILL.md` when including code,
+   commands, configuration or observable output.
+4. `.cratis/ai/skills/cratis-llm-friendly-documentation/SKILL.md` when discovery,
+   exports, mirrors or citations are involved.
+5. `.cratis/ai/skills/cratis-writing-voice-and-cadence/SKILL.md` before revising
+   existing prose, after establishing its claims.
+
+Read referenced material when its condition applies. Use the installed canonical
+equivalents if these repository paths are absent; report an unavailable skill
+instead of claiming it was read. Skill availability or invocation alone is not a read.
+In the private author/change note, record paths, source revision, and observed read order
+when transcript evidence exists; otherwise say what is unavailable. Do not add
+a public verification receipt or infer hidden reads from the skill list.
+For a new or materially changed journey, use the reader-review procedure linked
+by **cratis-documentation-writing**. Do not spawn a reader agent or run a live
+model evaluation without authorization; report unavailable independent review.
+
+Follow the documentation rule's naming contract: Cratis is the organization,
+Cratis Platform the umbrella, and named products are independently adoptable
+components or supporting tools. Keep literal APIs and package IDs unchanged.
 
 ## Determine the reader's job
 
@@ -25,7 +52,7 @@ Lead with the problem and payoff. Use active voice and show how the reader can
 recognize success. A tutorial can briefly explain an observed result without
 turning into a reference dump; link to deeper material. Verify framework APIs
 against first-party source at the applicable version, check the sample at its
-claimed scope, and run the owning repository's content and link gates. Add a
+claimed scope, explain ownership and observable handoffs between components, and run the owning repository's content and link gates. Add a
 new page to the owning product's `toc.yml`
 (a page missing from it silently drops out of the sidebar); otherwise update
 navigation only when the page's placement or route changes.

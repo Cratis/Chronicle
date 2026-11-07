@@ -117,6 +117,7 @@ message ReduceOperationMessage {
    uint64 DeliverWithinMilliseconds = 6;
    repeated ReducerPartition Partitions = 7;
    ObservationOrigin Origin = 8;
+   bool InitialStateUnchanged = 9;
 }
 message ReducerDefinition {
    string ReducerId = 1;
@@ -136,6 +137,7 @@ message ReducerPartition {
    string Partition = 1;
    string InitialState = 2;
    repeated AppendedEvent Events = 3;
+   bool InitialStateUnchanged = 4;
 }
 message ReducerResult {
    string Partition = 1;
@@ -154,6 +156,7 @@ message RegisterReducer {
    string Namespace = 3;
    ReducerDefinition Reducer = 4;
    PageDelivery PageDelivery = 5;
+   StateCaching StateCaching = 6;
 }
 enum ReplayState {
    REPLAY_STATE_None = 0;
@@ -165,6 +168,9 @@ enum ReplayState {
 // Represents a DateTimeOffset value as an ISO 8601 string (e.g., "2024-01-15T12:30:00.0000000+02:00").
 message SerializableDateTimeOffset {
    string Value = 1;
+}
+message StateCaching {
+   bool Enabled = 1;
 }
 service Reducers {
    rpc Observe (stream ReducerMessage) returns (stream ReduceOperationMessage);

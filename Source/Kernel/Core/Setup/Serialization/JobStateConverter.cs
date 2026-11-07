@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
-using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using Cratis.Choreography.Jobs;
 using Cratis.Choreography.Storage.Jobs;
@@ -52,32 +51,37 @@ public sealed class JobStateConverter : JsonConverter<JobState>
         {
             return default!;
         }
-        var jobStateResult = (JobState)Activator.CreateInstance(typeToConvert)!;
-        var nodeAsObject = JsonObject.Create(node);
-        jobStateResult.Type = new(nodeAsObject![nameof(JobState.Type).ToCamelCase()]!.ToString());
 
-        foreach (var (field, value) in nodeAsObject)
+        // Read straight from the parsed document. Going through JsonNode wrote every property, the step plan included,
+        // out to a second buffer before it could be deserialized.
+        var jobStateResult = (JobState)Activator.CreateInstance(typeToConvert)!;
+        var typeName = nameof(JobState.Type).ToCamelCase();
+        var requestName = nameof(JobState.Request).ToCamelCase();
+        jobStateResult.Type = new(node.GetProperty(typeName).ToString());
+
+        JsonElement? requestElement = null;
+        foreach (var property in node.EnumerateObject())
         {
-            if (field == nameof(JobState.Request).ToCamelCase())
+            if (property.NameEquals(requestName))
             {
+                requestElement = property.Value;
                 continue;
             }
 
-            var propertyName = field.ToPascalCase();
-            var jobStatePropertyInfo = typeToConvert.GetProperty(propertyName);
+            var jobStatePropertyInfo = typeToConvert.GetProperty(property.Name.ToPascalCase());
             if (jobStatePropertyInfo?.SetMethod is null)
             {
                 continue;
             }
 
-            var deserializedValue = value.Deserialize(jobStatePropertyInfo.PropertyType, options);
+            var deserializedValue = property.Value.Deserialize(jobStatePropertyInfo.PropertyType, options);
             jobStatePropertyInfo.SetValue(jobStateResult, deserializedValue);
         }
 
         // Write only emits the request when there is one, and JobState.Request starts out unset, so a state persisted
         // before its request was assigned has no request to read back - and nothing to resolve a request type for.
         // Mirrors the MongoDB serializer's bookmark handling.
-        if (nodeAsObject[nameof(JobState.Request).ToCamelCase()] is { } requestNode)
+        if (requestElement is { } requestNode)
         {
             var jobRequestType = _jobTypes.Value.GetRequestClrTypeForOrThrow(jobStateResult.Type);
             var jobStateRequestProperty = typeToConvert.GetProperty(nameof(JobState.Request))!;

@@ -1,20 +1,22 @@
 ---
-title: Host the kernel on Container Apps, App Service or Cloud Run
-description: Run the Chronicle kernel as a single instance on Azure Container Apps, an App Service sidecar or Google Cloud Run, with h2c ingress, probes and always-allocated CPU.
+title: Host Chronicle on Container Apps, App Service or Cloud Run
+description: Run one Chronicle kernel on Azure Container Apps, App Service or Google Cloud Run with HTTP/2 ingress, separate health probes and always-on CPU.
 ---
 
-This page lists what changes when you run the Chronicle kernel on Azure Container Apps (ACA), Azure App Service or Google Cloud Run instead of Kubernetes or virtual machines. For storage and identity, see [Run Chronicle on Azure](azure.md). For the general production checklist, see [Production deployment](production.md).
+To run a single Chronicle kernel on Azure Container Apps (ACA), Azure App Service or Google Cloud Run, keep the instance running between requests and forward gRPC traffic over HTTP/2. This guide covers ingress, health probes and the settings that keep background event processing active. Configure storage and identity with [Run Chronicle on Azure](azure.md), and use [Production deployment](production.md) for the wider production checklist.
 
 ## Run one instance
 
-These platforms host one kernel instance, not a highly available cluster. A restart or a revision change is an outage for appends and event delivery while the new instance starts and loads its state, and there is no failover. For high availability, run several kernel nodes with a clustering provider (MongoDB or SQL) on Kubernetes or virtual machines; see [Clustering](configuration/clustering.md).
+The configuration in this guide runs one kernel instance without failover. A restart or revision change interrupts appends and event delivery while the new instance starts and loads its state. If you need several kernel nodes for availability, use a clustering provider (MongoDB or SQL) on Kubernetes or virtual machines; see [Clustering](configuration/clustering.md).
 
 - Set the minimum and maximum instance count to 1.
 - Do not scale to zero. Time-driven work (failed-partition retries, occurrence schedules, captures) and event delivery to observers run only while the process runs, so keep CPU allocated at all times, not only during requests.
 - Make sure the old instance has stopped before a new one starts against the same store. Two kernels on one store block each other.
 - An App Service sidecar scales with the web app. Keep the app at one instance.
 
-The time until the kernel answers on its port grows with the number of event stores, namespaces and observers. Size the startup probe for a fully loaded store, not an empty one. To size the container memory limit, see [Size the kernel for a container](container-resources.md).
+The kernel opens its listeners before silo startup finishes. A listening port does not mean it is ready to process events: use liveness for startup probes and readiness to decide when to send traffic, as described below.
+
+To size the container memory limit, see [Size the kernel for a container](container-resources.md).
 
 The kernel waits up to 10 seconds for a graceful shutdown, so size the platform's termination grace period accordingly. Observer progress that is not saved before the process stops is not lost: those events are delivered again after the restart (at-least-once).
 
@@ -45,7 +47,7 @@ Cratis__Chronicle__Health__Tls=false
 Cratis__Chronicle__Health__Exclusive=true
 ```
 
-The kernel exposes `/health`, `/health/ready` and `/health/live` on that port. Point the ACA startup, liveness and readiness probes at it. If the readiness probe depends on the gRPC listener, ACA can deadlock the rollout; see [Production deployment](production.md). See also [Health endpoint](configuration/health-endpoint.md).
+Point startup and liveness probes at `/health/live` on port 8080. Use `/health` or `/health/ready` on the same port for readiness; these remain unhealthy until kernel startup completes and become unhealthy when shutdown begins. Keeping probes off the gRPC listener avoids the ACA rollout deadlock described in [Production deployment](production.md). The [health endpoint reference](configuration/health-endpoint.md) explains which storage checks readiness includes.
 
 ## Keep internal ports private
 
@@ -68,7 +70,7 @@ Use a managed database: PostgreSQL, SQL Server or MongoDB. For MongoDB, the kern
 
 ## Google Cloud Run
 
-Cloud Run has the same shape as ACA for the kernel, and the settings above apply. The Cloud Run specifics:
+Use the single-instance, TLS and health-port settings above on Cloud Run, with these platform-specific settings:
 
 - Deploy with `--use-http2`. Cloud Run otherwise downgrades requests to HTTP/1, except native gRPC traffic, and the kernel answers only HTTP/2 on 35000 when TLS is disabled. See [Use HTTP/2 for services](https://cloud.google.com/run/docs/configuring/http2).
 - Use instance-based billing (formerly "CPU always allocated") with a minimum and maximum of one instance. With the default request-based billing, CPU is allocated only while a request is processed. See [Billing settings for services](https://cloud.google.com/run/docs/configuring/billing-settings).

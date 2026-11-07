@@ -28,7 +28,7 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
     static readonly TimeSpan _failedFetchRetryDelay = TimeSpan.FromSeconds(5);
 
     readonly Func<string> _tokenEndpoint;
-    readonly Func<string, string> _describeEndpoint;
+    readonly TokenEndpointSource _source;
     readonly string _clientId;
     readonly string _clientSecret;
     readonly string? _scope;
@@ -119,6 +119,7 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
     /// <param name="logger">Logger for logging.</param>
     /// <param name="httpMessageHandler">The <see cref="HttpMessageHandler"/> to perform token requests with.</param>
     /// <param name="timeProvider">The <see cref="TimeProvider"/> for expiry and throttling decisions.</param>
+    /// <param name="source">Where the endpoint came from - the only endpoint information diagnostics carry.</param>
     /// <exception cref="InsecureTokenEndpoint">Thrown when the endpoint is not an absolute https URL without user info.</exception>
     internal OAuthTokenProvider(
         Uri tokenEndpoint,
@@ -127,8 +128,9 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
         string? scope,
         ILogger<OAuthTokenProvider> logger,
         HttpMessageHandler httpMessageHandler,
-        TimeProvider timeProvider)
-        : this(ExternalEndpoint(tokenEndpoint), clientId, clientSecret, scope, logger, httpMessageHandler, timeProvider, endpoint => ExternalTokenEndpoints.Describe(new Uri(endpoint)))
+        TimeProvider timeProvider,
+        TokenEndpointSource source = TokenEndpointSource.Configured)
+        : this(ExternalEndpoint(tokenEndpoint, source), clientId, clientSecret, scope, logger, httpMessageHandler, timeProvider, source)
     {
     }
 
@@ -140,10 +142,10 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
         ILogger<OAuthTokenProvider> logger,
         HttpMessageHandler httpMessageHandler,
         TimeProvider timeProvider,
-        Func<string, string>? describeEndpoint = null)
+        TokenEndpointSource source = TokenEndpointSource.DefaultServer)
     {
         _tokenEndpoint = tokenEndpoint;
-        _describeEndpoint = describeEndpoint ?? (endpoint => endpoint);
+        _source = source;
         _clientId = clientId;
         _clientSecret = clientSecret;
         _scope = scope;
@@ -241,9 +243,9 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
     /// <returns>The token endpoint.</returns>
     internal string GetCurrentTokenEndpoint() => _tokenEndpoint();
 
-    static Func<string> ExternalEndpoint(Uri tokenEndpoint)
+    static Func<string> ExternalEndpoint(Uri tokenEndpoint, TokenEndpointSource source)
     {
-        var endpoint = ExternalTokenEndpoints.Require(tokenEndpoint).AbsoluteUri;
+        var endpoint = ExternalTokenEndpoints.Require(tokenEndpoint, source).AbsoluteUri;
         return () => endpoint;
     }
 
@@ -256,13 +258,15 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
         }
     };
 
+    static bool IsTransportFailure(Exception exception) => exception is HttpRequestException { StatusCode: null };
+
     static bool IsTransientStatus(HttpStatusCode statusCode) =>
         (int)statusCode >= 500 || statusCode is HttpStatusCode.RequestTimeout or HttpStatusCode.TooManyRequests;
 
     async Task<string?> FetchToken(CancellationToken cancellationToken)
     {
         var tokenEndpoint = _tokenEndpoint();
-        var loggedEndpoint = _describeEndpoint(tokenEndpoint);
+        var loggedEndpoint = TokenDiagnostics.Label(_source);
         try
         {
             _logger.RequestingAccessToken(loggedEndpoint);
@@ -304,11 +308,17 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
             {
                 // Only the refresh margin has been crossed, not the actual expiry - a transient
                 // token-endpoint failure must not take down an otherwise healthy session.
-                _logger.ServingCachedTokenAfterFailedFetch(loggedEndpoint, _expiresAt, ex);
+                _logger.ServingCachedTokenAfterFailedFetch(loggedEndpoint, _expiresAt, TokenDiagnostics.Label(TokenDiagnostics.Categorize(ex)));
                 return cachedToken;
             }
 
             LogTokenFetchFailure(loggedEndpoint, ex);
+            if (IsTransportFailure(ex))
+            {
+                // The original transport failure can name the remote host; surface the category only.
+                throw new HttpRequestException(TokenDiagnostics.Describe(TokenDiagnostics.Categorize(ex)));
+            }
+
             throw;
         }
     }
@@ -336,10 +346,10 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
                 // The HTTP response status was already reported; do not log it a second time.
                 break;
             case HttpRequestException:
-                _logger.TokenEndpointUnreachable(loggedEndpoint, exception);
+                _logger.TokenEndpointUnreachable(loggedEndpoint, TokenDiagnostics.Label(TokenDiagnostics.Categorize(exception)));
                 break;
             default:
-                _logger.FailedToObtainAccessToken(loggedEndpoint, exception);
+                _logger.FailedToObtainAccessToken(loggedEndpoint, TokenDiagnostics.Label(TokenDiagnostics.Categorize(exception)));
                 break;
         }
     }

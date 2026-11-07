@@ -16,10 +16,12 @@ namespace Cratis.Chronicle.Storage;
 /// <param name="clusterStorage">The <see cref="IClusterStorage"/> instance.</param>
 /// <param name="systemStorage">The <see cref="ISystemStorage"/> instance.</param>
 /// <param name="sinkFactories"><see cref="ISinkFactory"/> instances.</param>
+/// <param name="systemEventStoreRelocation">The <see cref="ISystemEventStoreRelocation"/> of the storage provider, when it has one.</param>
 public class Storage(
     IClusterStorage clusterStorage,
     ISystemStorage systemStorage,
-    IInstancesOf<ISinkFactory> sinkFactories) : IStorage
+    IInstancesOf<ISinkFactory> sinkFactories,
+    ISystemEventStoreRelocation? systemEventStoreRelocation = null) : IStorage
 {
     readonly ConcurrentDictionary<EventStoreName, IEventStoreStorage> _eventStores = new(CaseInsensitiveEventStoreNameComparer.Instance);
 
@@ -29,6 +31,14 @@ public class Storage(
     /// <inheritdoc/>
     public Task<IReadOnlyDictionary<EventStoreName, Concepts.Projections.Generations.Enablement.GenerationFloor>> ReadGenerationFloors() =>
         clusterStorage.ReadGenerationFloors();
+
+    /// <inheritdoc/>
+    public Task<string?> FindMisplacedSystemEventStoreData() =>
+        systemEventStoreRelocation?.FindMisplacedData() ?? Task.FromResult<string?>(null);
+
+    /// <inheritdoc/>
+    public Task MoveSystemEventStoreTo(SystemEventStoreLocation location) =>
+        systemEventStoreRelocation?.MoveTo(location) ?? Task.CompletedTask;
 
     /// <inheritdoc/>
     public async Task<IEnumerable<EventStoreName>> GetEventStores() => (await clusterStorage.GetEventStores()).Where(IsListed);

@@ -1,13 +1,13 @@
 ---
-description: Restrict which events a Chronicle reducer receives by placing tag, event source type and event stream type filter attributes on the reducer class.
+title: Cratis Chronicle reducer event filtering
+description: Limit a Cratis Chronicle reducer to events with matching tags, event source types, or stream types, without changing the reducer's state transitions.
 ---
-# Filter reducers by appended event metadata
 
-A reducer observes all events that match its handler method signatures by default. You can restrict which events a reducer receives by placing filter attributes on the reducer class. Chronicle evaluates these filters before dispatching an event — events that do not match are dropped before they ever reach the reducer.
+<span id="filter-reducers-by-appended-event-metadata"></span>
 
-For [self reducers](self-reducing-read-models), place these attributes on the model. The same matching applies to passive reads and reducer scenarios, using stored or seeded metadata. Multiple tags are OR alternatives; source and stream categories must also match. Unspecified source and `All` stream filters are wildcards; an explicit `Default` source filter is not. Stream-id subscription filtering is not supported.
+Cratis Chronicle reducer filters select which events can update a read model by matching stored event metadata. Use them when the same event type serves several views, but one view should include only a tagged subset or a particular source or stream type.
 
-A bounded collection read takes its event-type-selected prefix before metadata rejection, not the first N accepted events. Inbox forwarding currently drops tags for both reducer forms ([#4823](https://github.com/Cratis/Chronicle/issues/4823)); [external-store route filters](external-event-store-subscriptions#forwarded-metadata-limitation) do not depend on tags.
+Place filter attributes on a .NET reducer class, or on the model for a [self-reducing read model](self-reducing-read-models). Events must match both the reducer's observed event types and its metadata filters before they reach its transition methods. A nonmatching event is skipped for that reducer, not removed from the event store.
 
 ## Filter attributes
 
@@ -17,12 +17,12 @@ A bounded collection read takes its event-type-selected prefix before metadata r
 | `[EventSourceType("...")]` | Event source type set at append time | The event source type matches exactly |
 | `[EventStreamType("...")]` | Event stream type set at append time | The event stream type matches exactly |
 
-These attributes correlate directly to the metadata you provide when appending an event:
+An event source type categorizes the source, such as `customer`; a stream type categorizes the stream, such as `fulfillment`. These are types, not individual source or stream IDs. Set the metadata when appending the event:
 
 <ChronicleClientTabs snippet="reducers/filtering/metadata-example" />
 
 :::note[Client coverage]
-Kotlin and Java attach the same filters with `@FilterEventsByTag`, `@EventSourceType`, and `@EventStreamType` on the reducer class. Elixir's `use Chronicle.Reducers.Reducer` and TypeScript's `reducer()` register a reducer without a way to attach these filters.
+Kotlin and Java use `@FilterEventsByTag`, `@EventSourceType`, and `@EventStreamType` on the reducer class. TypeScript uses `@filterEventsByTag(...)`, `@eventSourceType(...)`, and `@eventStreamType(...)` alongside `reducer()`. Elixir's `use Chronicle.Reducers.Reducer` does not expose these filter options.
 :::
 
 ## Filter by tag
@@ -31,7 +31,7 @@ Append an event with a tag and place `[FilterEventsByTag]` on the reducer to acc
 
 <ChronicleClientTabs snippet="reducers/filtering/by-tag" />
 
-`PriorityOrderTotalsReducer` updates only when the appended event carries the `priority` tag. Orders without that tag do not affect this read model.
+In this example, only orders whose appended events carry the `priority` tag update the totals. An order event without that tag leaves this read model unchanged.
 
 ### Multiple filter tags
 
@@ -59,13 +59,23 @@ You can combine `[FilterEventsByTag]`, `[EventSourceType]`, and `[EventStreamTyp
 
 <ChronicleClientTabs snippet="reducers/filtering/combine-filters" />
 
-The reducer only receives events that match all three: the `premium` tag, the `order` event source type, and the `fulfillment` stream type.
+The reducer only receives events that match all three: the `premium` tag, the `order` event source type, and the `fulfillment` stream type. Multiple tags are alternatives within the tag category; they do not relax the source or stream requirements.
+
+Without a source filter, `Unspecified` matches any source type. Without a stream filter, `All` matches any stream type. An explicit `Default` source filter matches only the default source type, not every source. Subscription filtering by an individual stream ID is not supported.
+
+## Passive reads and forwarded events
+
+The .NET client applies the same matching rules to passive reads and reducer scenarios for separate and self-reducing models, using stored or seeded metadata. When a collection read has an event-count limit, it selects that many events of the observed types before applying metadata filters. It does not keep reading until that many matching events have been accepted.
+
+Inbox forwarding preserves tags and route metadata. Older inbox events affected by the tag-loss issue ([#4823](https://github.com/Cratis/Chronicle/issues/4823)) remain untagged and cannot match a tag filter. See [external-store route filters](external-event-store-subscriptions#forwarded-metadata-limitation) before relying on tags in an existing inbox history.
 
 ## Tagging the reducer vs filtering events
 
-`[Tag]` and `[Tags]` on a reducer class label the reducer itself for organization and discoverability. They do not filter incoming events:
+`[Tag]` and `[Tags]` label the reducer itself, not the events it accepts. Use `[FilterEventsByTag]` when delivery should depend on event tags:
 
 <ChronicleClientTabs snippet="reducers/filtering/tag-vs-filter" />
+
+If you only need to describe or group reducers, continue with [tagging reducers](tagging-reducers). To choose which sequence supplies their events, use [event sequence selection](event-sequence).
 
 ## Detailed guides
 

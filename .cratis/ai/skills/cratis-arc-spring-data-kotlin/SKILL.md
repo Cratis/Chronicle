@@ -1,6 +1,6 @@
 ---
 name: cratis-arc-spring-data-kotlin
-description: Use Spring Data JPA or MongoDB with Kotlin or Java Arc read models — repository-backed queries and paging, command current-state resolution, observable snapshots, concept converters, certified tenant storage and explicit transaction opt-ins. Use when wiring JVM Arc persistence or database-backed observations. Do not use for Chronicle projections, C# EF Core, query transport alone, or authentication and tenant resolution alone.
+description: Use when wiring Spring Data JPA or MongoDB persistence, current-state injection or storage-backed observations in JVM Arc. Not for Chronicle projections, C# EF Core or query transport alone.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-arc-spring-data-kotlin/SKILL.md -->

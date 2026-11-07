@@ -1,9 +1,8 @@
 ---
-description: Mark a declarative Chronicle projection with NotRewindable(), which sets IsRewindable to false on the projection definition.
+title: "Cratis Chronicle projections: declare NotRewindable"
+description: "Call NotRewindable() to set IsRewindable to false on a Cratis Chronicle projection definition without changing its event mappings or subscriptions."
 ---
-# Projection with NotRewindable
-
-The `NotRewindable()` method sets `IsRewindable` to `false` on the projection definition. This is a property of the projection definition and is distinct from observer replayability.
+In Cratis Chronicle, `NotRewindable()` records `IsRewindable = false` on a projection definition. Use it to declare that flag, not to prevent observer replay: the flag is separate from observer replayability and does not change event handling.
 
 ## Defining a non-rewindable projection
 
@@ -11,27 +10,27 @@ Call `NotRewindable()` on the projection builder:
 
 <ChronicleClientTabs snippet="projections/declarative/not-rewindable/basic" />
 
-This projection is registered with `IsRewindable` set to `false` in its definition.
+The client registers this definition with the Kernel with `IsRewindable` set to `false`. The `From` and `FromEvery` mappings still determine which values the projection writes.
 
 ## Read model definition
 
-The read model can include timestamp and audit information:
+The example targets an audit-entry read model with fields for the action and its timestamps:
 
 <ChronicleClientTabs snippet="projections/declarative/not-rewindable/read-model" />
 
 ## Event definitions
 
-Events used by the projection:
+These events supply the action and system information used in the examples:
 
 <ChronicleClientTabs snippet="projections/declarative/not-rewindable/events" />
 
 ## How it works
 
-`NotRewindable()` records `IsRewindable = false` on the projection definition that the client registers with the Kernel. It does not change which events the projection subscribes to or how it handles them.
+The builder starts with `IsRewindable` set to `true`; `NotRewindable()` changes it to `false`. The Kernel carries that value on the engine's projection. Observer replayability is classified separately, so do not use this flag as a substitute for replay policy.
 
 ## Further examples
 
-These examples show `NotRewindable()` on projections with different read models. They illustrate the call, not a recommendation.
+The same declaration works with audit entries, performance metrics, and financial transactions. Each example keeps its own event mappings and read-model shape:
 
 ### Audit entries
 
@@ -47,8 +46,8 @@ These examples show `NotRewindable()` on projections with different read models.
 
 ## Combining with other features
 
-NotRewindable can be combined with other projection features:
+You can declare the flag alongside an event sequence, passive mode, and property mappings:
 
 <ChronicleClientTabs snippet="projections/declarative/not-rewindable/combined-features" />
 
-This combines `NotRewindable()` with event sequence specification, passive mode, and event-context timestamp mapping.
+Here, `FromEventSequence` selects the events, `Passive()` selects on-demand computation, and the mappings set status and timestamps. Those choices are independent of `NotRewindable()`. Continue with [passive projections](./passive) if you want to compute a read model at read time rather than maintain stored state.

@@ -12,7 +12,8 @@ namespace Cratis.Chronicle.Setup;
 /// </summary>
 /// <param name="storage">The underlying <see cref="IGrainStorage"/>.</param>
 /// <param name="resiliencePipelineProvider">The <see cref="ResiliencePipelineProvider{TKey}"/>.</param>
-public class ResilientGrainStorage(IGrainStorage storage, ResiliencePipelineProvider<string> resiliencePipelineProvider) : IGrainStorage
+/// <param name="gate">The optional <see cref="StorageConcurrencyGate"/> bounding concurrent operations.</param>
+public class ResilientGrainStorage(IGrainStorage storage, ResiliencePipelineProvider<string> resiliencePipelineProvider, StorageConcurrencyGate? gate = null) : IGrainStorage
 {
     /// <summary>
     /// The <see cref="ResiliencePipeline"/> key.
@@ -22,14 +23,16 @@ public class ResilientGrainStorage(IGrainStorage storage, ResiliencePipelineProv
     readonly ResiliencePipeline _resiliencePipeline = resiliencePipelineProvider.GetPipeline(ResiliencePipelineKey);
 
     /// <inheritdoc/>
-    public Task ReadStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState) => _resiliencePipeline.ExecuteAsync(async _ =>
-        await storage.ReadStateAsync(stateName, grainId, grainState)).AsTask();
+    public Task ReadStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState) => Gated(() => _resiliencePipeline.ExecuteAsync(async _ =>
+        await storage.ReadStateAsync(stateName, grainId, grainState)).AsTask());
 
     /// <inheritdoc/>
-    public Task WriteStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState) => _resiliencePipeline.ExecuteAsync(async _ =>
-        await storage.WriteStateAsync(stateName, grainId, grainState)).AsTask();
+    public Task WriteStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState) => Gated(() => _resiliencePipeline.ExecuteAsync(async _ =>
+        await storage.WriteStateAsync(stateName, grainId, grainState)).AsTask());
 
     /// <inheritdoc/>
-    public Task ClearStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState) => _resiliencePipeline.ExecuteAsync(async _ =>
-        await storage.ClearStateAsync(stateName, grainId, grainState)).AsTask();
+    public Task ClearStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState) => Gated(() => _resiliencePipeline.ExecuteAsync(async _ =>
+        await storage.ClearStateAsync(stateName, grainId, grainState)).AsTask());
+
+    Task Gated(Func<Task> operation) => gate is null ? operation() : gate.Run(operation);
 }

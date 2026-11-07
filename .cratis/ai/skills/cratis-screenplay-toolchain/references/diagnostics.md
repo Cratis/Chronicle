@@ -6,6 +6,7 @@
 - Warnings that hide defects (always validate with `--warnings-as-errors`)
 - Source reference and identifier checks
 - Public events and translation direction
+- Event-source capture keys
 - Explicit enum member numbers
 - Reserved stored names and event pins
 - Named keys, production routes and observer filters
@@ -97,6 +98,20 @@ and event delivery to captures; older runners do not execute that delivery.
 Requires Screenplay 4.176.0 or later for PLAY0694; older compilers leave the
 legacy directionless co-location unchecked. Full capture execution and ordering:
 automations-and-translations `references/public-events-and-direction.md`.
+
+## Event-source capture keys
+
+Requires Screenplay 4.242.0 or later (`screenplay --version`); the marker selects ESM v33.
+
+| Code | Severity | Meaning / fix |
+| --- | --- | --- |
+| PLAY0809 | E | `key <property> is event source` outside a single-property `source events` capture key. Declare it only when every captured event is sourced by that property. Other sources or key shapes are errors, with no automatic repair. |
+
+Marked typed fixtures reject an explicit `for` that differs from the key. Without
+`for`, the fixture takes the key before projections/reactions. The contract checks
+givens too, even without an action. This execution rejection is not PLAY0809 and
+not a successful `then no events` outcome. Unmarked captures retain prior semantics.
+Read captures-and-reactions [event-source keys](../../cratis-screenplay-captures-and-reactions/references/capture-map-and-example.md#keying-by-the-event-source).
 
 ## Explicit enum member numbers
 
@@ -282,11 +297,11 @@ Routes do not by themselves select v17: redelivery executes as v17 (Requires Scr
 
 | Code | Severity | Meaning / fix |
 | --- | --- | --- |
-| PLAY0560 | E | Alternatives on a non-item trigger; only click/double click/select admit them. |
+| PLAY0560 | E | Alternatives on a non-item trigger; only click, double click, select or change admit them. |
 | PLAY0561 | E | Alternatives mixed with plain actions or `where`; choose one form. |
 | PLAY0562 | E | Empty branch; supply a nonempty action list. |
 | PLAY0563 | E | One-line labeled-action `when … execute …` in an interaction; use an indented list. C# offers a typed repair. |
-| PLAY0564 | W/I | Item-trigger opaque `where` deprecated: a strict item condition warns with a C# repair to one `when`, no fallback; other text is information with no repair. Other triggers unchanged. |
+| PLAY0564 | W/I | Item-trigger opaque `where` deprecated: a strict item condition warns with a C# repair to one `when`, no fallback; other text is information with no repair. Other triggers unchanged, including `change`, which keeps opaque `where`. |
 
 PLAY0563/0564 repairs need individual review and canonical formatting, refuse
 comment loss and do not support pinned evidence. TypeScript diagnoses but does
@@ -349,8 +364,16 @@ presentation order, not execution: a backward event/read-model dependency or a
 mutually dependent sibling group. A cycle group replaces internal individual
 backward findings. Ordering roots are the sole source document, an importing
 `application.play`, or a unique importing root; without one, folder timeline
-checking is skipped. Safe PLAY0516 repairs move siblings/imports or pin files
-before a retained glob; cycles and own-sub-feature findings have no repair.
+checking is skipped. Safe PLAY0516 repairs move siblings/imports, pin files
+before a retained glob, or replace a same-parent wildcard-import span with explicit
+ordered imports when earlier moves cannot safely fix it (Requires Screenplay
+4.219.0; `screenplay --version`). **New files need explicit imports** after that
+replacement. Review comments, identities, placement and readiness preservation,
+and no new timeline findings; cycles, own-sub-feature edges and ambiguous imports
+remain refused. Use the [timeline repair loop](../../cratis-screenplay-model-authoring/references/repairs.md#timeline-import-order),
+not a hand-written reorder; rediscover after applying. In the same release the
+TypeScript compiler/Monaco expose the PLAY0516 quick fix, and VS Code provides a
+reviewed saved-file code action (preview, drift checks and recovery).
 
 ## Editor versus C# verdicts
 
@@ -374,7 +397,9 @@ or V4 execution. Run the CLI or MCP for those verdicts.
 | PLAY0282 | `validate` rule targets a field absent from the command |
 | PLAY0283 | `reads View by field` type matches no `by` param of the view's queries |
 | PLAY0284 | `children`/`nested` never populates a declared element field |
-| PLAY0285 | a spec's `then` event contradicts every possible declared producer of its `when` command (decidable literals, property copies, equality conditions). Fix the model or the spec deliberately. **False positive** on reaction cascades with an older bundled compiler. On an older bundle confirm with the standalone tool, record a tool gap, do not "fix" a correct model |
+| PLAY0285 | a spec's `then` event contradicts every possible declared producer of its `when` command (decidable literals, property copies, equality conditions). Follows only reactions, invocations and publications declared in the specification's own slice (decision 0115), so stating another slice's reaction event or an outbound publication is refused; move the `then` to that slice or state `then invokes <Command>`. Fix the model or the spec deliberately |
+| PLAY0815 | a specification `then invokes` line is not `then invokes <Command>` |
+| PLAY0816 | a specification states `then invokes <Command>`, but no reaction declared in its own slice invokes that command; a specification runs its own slice only, so the invocation can never be made |
 | PLAY0286 | spec value is not a member of the enum |
 | PLAY0287 | producer/capture/spec assigns a field the event lacks |
 | PLAY0291-0294 | bad single-line JSON / unknown key / wrong shape / duplicate key |
@@ -403,7 +428,7 @@ refusal reasons. Read [language admission](language-admission.md) before changin
 | PLAY0787 (W) | Exact deprecated Studio text-rule pattern; repair to literal rule or equality, preserving message/severity |
 | STAGE-ESM-043 | Atomic mode not realized in admitted v22–v27; retain declaration and gap-fill (v22 admission Requires Stage 4.139.0; older Stage reports -016) |
 | STAGE-ESM-047 | Single-instance query by composite key parts (v27) in the renderer, until Chronicle can look up composite keys (Chronicle#4265); keep the query, gap-fill |
-| STAGE-ESM-048 | Read model with several key parts, or projection keyed by parts (v27), in the renderer or legacy syntax engine; keep the model, gap-fill |
+| STAGE-ESM-048 | Read model with several key parts, or projection keyed by parts (v27), in the renderer or legacy syntax engine; also a DateTime part or a decimal part (`Decimal` or concept over `Decimal`, replay can split `1.0`/`1.00`; lifts with Stage#847 once Chronicle#5427 lands). Keep the model, gap-fill |
 | STAGE-ESM-044 | Renderer refuses a protected read despite v25 admission: any protected read in a bundle that predates protected-read rendering, afterwards only shapes it cannot preserve (constrained events, read paths in `produces when`, optional/collection/composite/mistyped mapping targets, freshness scopes), naming the reason; the legacy Host/structural runner refuse the preamble. Semantic Host/executor support is separate; keep protection and gap-fill generated-app scope |
 | STAGE-ESM-045 | Non-Error protected requirement; semantic Host/executor refuse before execution, including reaction-invoked commands; keep severity and report Unsupported |
 | STAGE-IMPL-002 | Described handler body not realized by Stage, even Stub mode; no stubs emitted |
@@ -421,12 +446,12 @@ Requires Stage 4.129.0 for semantic Host/executor protected reads; older engines
 
 ## Binding (V2 and V3) - see `executable-subset.md` for the full table
 
-Requires Screenplay 4.210.0 (`screenplay --version`) for PLAY0800 and its required typed `subject`; older binders attribute attached command handlers to PLAY0268. Other PLAY0268 refusal families are unchanged.
+Requires Screenplay 4.210.0 (`screenplay --version`) for PLAY0800 and its required typed `subject`; older binders attribute attached command handlers to PLAY0268. From Screenplay 4.250.0 an attached handler beside unconditional `produces` with a resolved body binds instead. Other PLAY0268 refusal families are unchanged.
 
 | Code | Meaning | Fix |
 |---|---|---|
 | PLAY0268 | construct not representable in a supported ESM version yet (`executable-subset.md` lists unsupported query shapes, protected enum/identity concepts, read paths without opt-in or in `produces when`, Uuid ordering, different Uuid concepts and Uuid rules, and older bundled-compiler limits) | stay in design mode, or change the construct if the domain allows; never strip `pii`/authorization |
-| PLAY0800 | error `CommandHandlerRequiresAttachment`: a file/inline command handler requires a constrained implementation attachment; required typed `subject` identifies the command | permanent limitation: gap-fill the slice in code, not by waiting for ESM admission; hosts switch on the code and read `arguments.subject`, never match the message |
+| PLAY0800 | error `CommandHandlerRequiresAttachment`: a file/inline command handler has no unconditional `produces` result contract or no resolved, nonempty, language-tagged body; required typed `subject` identifies the command | declare unconditional `produces` beside a resolved body, split variable outcomes into separate commands, or gap-fill the slice in code; hosts switch on the code and read `arguments.subject`, never match the message |
 | PLAY0269 / 0270 | UI deferred / authoring metadata (I) | none |
 | PLAY0271 | legacy `reads` or a `concurrency` block keeps its legacy meaning and cannot bind (error) | opt eligible command reads into v25 with reviewed preamble repair; `concurrency` remains unbound; uniqueness uses a constraint, target realization stays separate |
 | PLAY0273 | incoherent: ambiguous `for`, property not on event revision, operand type mismatch, derived `$eventContext` path, unparsable date literal or offset-less DateTime literal in an admitted v26 comparison, or a Uuid comparison literal that is not lowercase hyphenated (v28) | fix the reference or literal; DateTime needs offset/Z; Uuid literals are lowercase hyphenated |

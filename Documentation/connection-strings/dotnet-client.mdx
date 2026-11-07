@@ -1,45 +1,51 @@
 ---
-description: Pass a Chronicle connection string to ChronicleOptions or ChronicleClient in .NET, or build one fluently, starting from the development default.
+title: Cratis Chronicle connection strings in .NET
+description: Pass a Cratis Chronicle connection string to ChronicleOptions or ChronicleClient in .NET, build one fluently, and redact credentials for logging.
 ---
-# DotNET client usage
 
-Chronicle uses connection strings to configure the .NET client. You can pass a connection string to `ChronicleOptions` or provide one when constructing a `ChronicleClient`.
+<a id="dotnet-client-usage"></a>
+
+When constructing a Cratis Chronicle .NET client yourself, pass the connection string to `ChronicleOptions` or directly to `ChronicleClient`. If your application uses a .NET host, use [connection string configuration](configuration) to bind settings through `AddCratisChronicle` instead.
 
 ## Development defaults
 
-The `ChronicleConnectionString.Development` constant provides a pre-configured development connection string. Default constructors also use this value:
+`ChronicleConnectionString.Development` points to `localhost:35000` with the built-in development credentials. Both the default `ChronicleOptions` constructor and the parameterless `ChronicleClient` constructor use this value:
 
 <ChronicleClientTabs snippet="connection-strings/dotnet-client/development-defaults" />
 
-This is equivalent to:
+You can select the same connection explicitly through either options or the client constructor:
 
 <ChronicleClientTabs snippet="connection-strings/dotnet-client/development-defaults-equivalent" />
 
 > [!NOTE]
 > In development, you can use `chronicle://localhost:35000` without credentials. The .NET client automatically attempts the built-in development credentials (`chronicle-dev-client` / `chronicle-dev-secret`).
 
-Use explicit configuration for production environments.
+Use explicit connection settings and credentials for production. The .NET client skips server certificate validation by default; follow [TLS configuration](../configuration/tls) to enable validation before connecting to a remote server.
 
 ## From connection string
 
+Use `ChronicleOptions.FromConnectionString` when you need to set other client options alongside the endpoint:
+
 <ChronicleClientTabs snippet="connection-strings/dotnet-client/from-connection-string" />
+
+The resulting options belong to this client instance. Constructing a client this way does not bind the host's `Cratis:Chronicle` configuration section. You can also pass a string or a `ChronicleConnectionString` directly to the `ChronicleClient` constructor.
 
 ## Fluent builder
 
-Use `ChronicleConnectionStringBuilder` to construct a connection string programmatically:
+Use `ChronicleConnectionStringBuilder` when your application supplies the host, port, and credentials as separate values:
 
 <ChronicleClientTabs snippet="connection-strings/dotnet-client/fluent-builder" />
 
+`Build()` returns a string that you can pass to `ChronicleOptions.FromConnectionString` or the client constructor. For the available URI options, see [connection string format and server support](server.md).
+
 ## Logging a connection string
 
-A connection string carries the client secret, the API key and the certificate password, so it must never be written to a log or an error message as it stands. `ChronicleConnectionString.Redacted` renders it with every credential replaced by `REDACTED`, while keeping the parts that make a log entry useful — scheme, host, port and the non-sensitive options:
+A connection string can contain a client secret, an API key, or a certificate password, so never write it to a log or an error message as it stands. Use `ChronicleConnectionString.Redacted` instead: it replaces the user name and every credential value with `REDACTED` while preserving the scheme, host, port, and non-sensitive options you need to diagnose a connection problem:
 
 <ChronicleClientTabs snippet="connection-strings/dotnet-client/redacting-for-logs" />
 
-`ToString()` still renders the connection string in full, credentials included. Use it to pass the value on, never to report it.
-
-The client uses `Redacted` for its own log messages, so connecting no longer writes the client secret to the log.
+`ToString()` renders the full connection string, including credentials. Use it only when passing the connection value to code that needs it. The client uses `Redacted` in its own connection log messages; use the same property in your application logs.
 
 ## Authentication validation
 
-You cannot specify both client credentials and API key authentication in the same connection string. Doing so throws an `AmbiguousAuthenticationMode` error.
+Choose either client credentials or an API key for a connection string. Specifying both throws `AmbiguousAuthenticationMode`. See [connection string format and server support](server.md) for the authentication parameters.

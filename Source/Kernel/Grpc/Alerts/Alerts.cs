@@ -21,7 +21,7 @@ internal sealed class Alerts(
     public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<global::Cratis.Chronicle.Contracts.Alerts.AlertIncidentLookupResponse>> GetOpenIncident(global::Cratis.Chronicle.Contracts.Alerts.GetOpenIncidentRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<global::Cratis.Chronicle.Contracts.Alerts.AlertIncidentLookupResponse>(
             callContext,
-            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, request.Namespace),
+            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: request.Namespace, Capability: "chronicle.alerts.read"),
             async () =>
             {
                 var result = await global::Cratis.Chronicle.Alerts.AlertIncidentLookup.GetOpenIncident((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.Alerts.IncidentId)request.IncidentId, storage, alertIncidentsReadiness, (request.Namespace is null ? null : (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace));
@@ -33,7 +33,7 @@ internal sealed class Alerts(
     public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<global::Cratis.Chronicle.Contracts.Alerts.AlertIncidentPageResponse>> GetOpenIncidents(global::Cratis.Chronicle.Contracts.Alerts.GetOpenIncidentsRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<global::Cratis.Chronicle.Contracts.Alerts.AlertIncidentPageResponse>(
             callContext,
-            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, request.Namespace, request.ObserverId),
+            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: request.Namespace, First: request.ObserverId, Capability: "chronicle.alerts.read"),
             async () =>
             {
                 var result = await global::Cratis.Chronicle.Alerts.AlertIncidentPage.GetOpenIncidents((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, storage, alertIncidentsReadiness, (request.Namespace is null ? null : (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace), (request.ObserverId is null ? null : (global::Cratis.Chronicle.Concepts.Observation.ObserverId)request.ObserverId), (request.Condition is null ? null : (global::Cratis.Chronicle.Concepts.Alerts.AlertConditionKind)request.Condition), (global::Cratis.Chronicle.Concepts.Alerts.AlertSeverity?)request.MinimumSeverity, request.Limit, request.AfterRaisedSequenceNumber, (request.AfterIncidentId is null ? null : (global::Cratis.Chronicle.Concepts.Alerts.IncidentId)request.AfterIncidentId));
@@ -45,7 +45,7 @@ internal sealed class Alerts(
     public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<global::Cratis.Chronicle.Contracts.Alerts.AlertIncidentSummaryResponse>> GetOpenIncidentCounts(global::Cratis.Chronicle.Contracts.Alerts.GetOpenIncidentCountsRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<global::Cratis.Chronicle.Contracts.Alerts.AlertIncidentSummaryResponse>(
             callContext,
-            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, request.Namespace),
+            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: request.Namespace, Capability: "chronicle.alerts.read"),
             async () =>
             {
                 var result = await global::Cratis.Chronicle.Alerts.AlertIncidentSummary.GetOpenIncidentCounts((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, storage, alertIncidentsReadiness, (request.Namespace is null ? null : (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace));

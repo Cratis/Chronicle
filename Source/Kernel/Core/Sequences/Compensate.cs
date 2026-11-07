@@ -8,6 +8,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Grpc;
+using Cratis.Chronicle.Security;
 
 namespace Cratis.Chronicle.Sequences;
 
@@ -34,6 +35,7 @@ namespace Cratis.Chronicle.Sequences;
 /// that BCL type.
 /// </para>
 /// </remarks>
+[StoreAccess(StoreAccess.Read | StoreAccess.Append)]
 [Command]
 [BelongsTo(WellKnownServices.EventSequences)]
 public record Compensate(
@@ -68,7 +70,7 @@ public record Compensate(
         var eventSequence = grainFactory.GetEventSequence(EventSequenceId, EventStore, Namespace);
         var correlationId = CorrelationId ?? Guid.NewGuid();
         return eventSequence.Compensate(
-            new Concepts.Events.EventSequenceNumber(CompensationFor),
+            new EventSequenceNumber(CompensationFor),
             EventType.ToChronicle(),
             JsonNode.Parse(Content)!.AsObject(),
             correlationId,

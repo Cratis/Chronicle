@@ -9,6 +9,10 @@ public static class administrator_surface_policy
     {
         ["Cratis.Chronicle.Security.GrantAdministrator"] = WellKnownAuthorizationPolicies.Administrator,
         ["Cratis.Chronicle.Security.RevokeAdministrator"] = WellKnownAuthorizationPolicies.Administrator,
+        ["Cratis.Chronicle.Security.GrantEventStoreAccess"] = WellKnownAuthorizationPolicies.Administrator,
+        ["Cratis.Chronicle.Security.RevokeEventStoreAccess"] = WellKnownAuthorizationPolicies.Administrator,
+        ["Cratis.Chronicle.Security.EventStoreAccessGrants"] = WellKnownAuthorizationPolicies.Administrator,
+        ["Cratis.Chronicle.Security.EventStoreAccessPreflight"] = WellKnownAuthorizationPolicies.Administrator,
         ["Cratis.Chronicle.Security.Administrator"] = WellKnownAuthorizationPolicies.Administrator,
         ["Cratis.Chronicle.Security.User"] = WellKnownAuthorizationPolicies.Administrator,
         ["Cratis.Chronicle.Security.Application"] = WellKnownAuthorizationPolicies.Administrator,

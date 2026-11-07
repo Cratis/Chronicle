@@ -42,6 +42,8 @@ public partial class EventSequenceStorage(
     Chronicle.Storage.EventTypes.IEventTypesStorage eventTypesStorage,
     Json.IExpandoObjectConverter converter) : IEventSequenceStorage, IEventPublicationStorage
 {
+    readonly SqlStorageTelemetry _telemetry = SqlStorageTelemetry.For(database);
+
     /// <inheritdoc/>
     public bool SupportsRevisionTracking => false;
 
