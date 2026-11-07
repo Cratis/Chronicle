@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using NSubstitute;
 
 namespace Cratis.Chronicle.Benchmarks.SystemStoreGuard;
 
@@ -40,11 +41,20 @@ public class GuardBenchmark
     /// <summary>
     /// Creates the access primitives.
     /// </summary>
+    /// <returns>A task that completes when the verdicts have been verified.</returns>
+    /// <exception cref="InvalidOperationException">The configured callers received unexpected verdicts.</exception>
     [GlobalSetup]
-    public void Setup()
+    public async Task Setup()
     {
         _adminAccess = new(Decisions(_admin));
         _nonAdminAccess = new(Decisions(_nonAdmin));
+        var caller = new ClaimsPrincipal(new ClaimsIdentity([new Claim("sub", "caller")], "bench"));
+        if (!await _adminAccess.IsAllowed(caller) || await _nonAdminAccess.IsAllowed(caller))
+        {
+            throw new InvalidOperationException("The configured callers received unexpected verdicts.");
+        }
+        _admin.Reset();
+        _nonAdmin.Reset();
     }
 
     /// <summary>Creates fresh callers outside the measured operation.</summary>
@@ -105,7 +115,8 @@ public class GuardBenchmark
     {
         // The administrator check is resolved from the caller's request services, as in the server.
         var services = new ServiceCollection().AddSingleton<IAdministratorAuthorization>(probe).BuildServiceProvider();
-        var accessor = new HttpContextAccessor { HttpContext = new DefaultHttpContext { RequestServices = services } };
+        var accessor = Substitute.For<IHttpContextAccessor>();
+        accessor.HttpContext.Returns(new DefaultHttpContext { RequestServices = services });
         return new(Options.Create(new ChronicleOptions()), NullLogger<AuthorizationDecisions>.Instance, httpContextAccessor: accessor);
     }
 }

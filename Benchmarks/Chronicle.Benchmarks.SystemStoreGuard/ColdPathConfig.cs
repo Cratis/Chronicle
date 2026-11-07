@@ -7,9 +7,9 @@ using BenchmarkDotNet.Toolchains.InProcess.Emit;
 
 namespace Cratis.Chronicle.Benchmarks.SystemStoreGuard;
 
-/// <summary>Runs a short batch with one prepared request per invocation.</summary>
+/// <summary>Runs a medium job with one prepared request per invocation.</summary>
 public sealed class ColdPathConfig : ManualConfig
 {
     /// <summary>Initializes a new instance of the <see cref="ColdPathConfig"/> class.</summary>
-    public ColdPathConfig() => AddJob(Job.ShortRun.WithToolchain(InProcessEmitToolchain.Instance).WithInvocationCount(EntitledCaller.RequestCount).WithUnrollFactor(1).WithWarmupCount(10));
+    public ColdPathConfig() => AddJob(Job.MediumRun.WithToolchain(InProcessEmitToolchain.Instance).WithInvocationCount(EntitledCaller.RequestCount).WithUnrollFactor(1).WithWarmupCount(10));
 }

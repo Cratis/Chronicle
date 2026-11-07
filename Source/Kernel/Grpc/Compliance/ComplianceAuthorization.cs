@@ -172,11 +172,11 @@ public class ComplianceAuthorization(
         {
             if (caller.RequestServices is { } services)
             {
-                return await services.GetRequiredService<IAuthorizationDecisions>().Decide(caller.Principal, capability, scope);
+                return await services.GetRequiredService<IAuthorizationDecisions>().Decide(new AuthorizationCaller(caller.Principal, services), capability, scope);
             }
 
             await using var serviceScope = scopes.CreateAsyncScope();
-            return await serviceScope.ServiceProvider.GetRequiredService<IAuthorizationDecisions>().Decide(caller.Principal, capability, scope);
+            return await serviceScope.ServiceProvider.GetRequiredService<IAuthorizationDecisions>().Decide(new AuthorizationCaller(caller.Principal, serviceScope.ServiceProvider), capability, scope);
         }
         catch
         {
