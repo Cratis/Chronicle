@@ -46,10 +46,10 @@ public partial class AdministratorPolicyStartupWarning(IOptions<ChronicleOptions
     [LoggerMessage(LogLevel.Warning, "Authentication is disabled; administrator authorization allows all callers")]
     static partial void WarnAuthenticationDisabled(ILogger logger);
 
-    [LoggerMessage(LogLevel.Warning, "Administrator policy for operations is not enforced; operations it would refuse are logged and allowed. Authentication:EnforceAdministratorPolicyForOperations is a temporary opt-out that is removed in the next major release; set it to true to enforce it")]
+    [LoggerMessage(LogLevel.Warning, "Administrator policy for operations is not enforced; operations it would refuse are logged and allowed. Authentication:EnforceAdministratorPolicyForOperations defaults to false; the default becomes enforcing in the next major release. Set it to true to opt in now")]
     static partial void WarnOperationsNotEnforced(ILogger logger);
 
-    [LoggerMessage(LogLevel.Warning, "Destructive operations are not enforced; compliance key operations beyond the requested event store are logged and allowed. Authentication:EnforceDestructiveOperations is a temporary opt-out that is removed in the next major release; set it to true to enforce it")]
+    [LoggerMessage(LogLevel.Warning, "Destructive operations are not enforced; compliance key operations beyond the requested event store are logged and allowed. Authentication:EnforceDestructiveOperations defaults to false; the default becomes enforcing in the next major release. Set it to true to opt in now")]
     static partial void WarnDestructiveOperationsNotEnforced(ILogger logger);
 
     [LoggerMessage(LogLevel.Warning, "External-authority administrator mapping is configured but authentication is disabled; it has no effect")]

@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Observation.Reducers;
 using Cratis.Chronicle.Observation.Reducers.Clients;
+using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Services.given;
 using Grpc.Core;
 
@@ -30,10 +31,11 @@ public class and_access_is_withdrawn : given.a_registration
     }
 
     [Theory]
-    [InlineData(false, false)]
-    [InlineData(true, false)]
-    [InlineData(true, true)]
-    public async Task should_end_and_release_the_real_stream(bool expireLease, bool confirmLease)
+    [InlineData(false, false, false)]
+    [InlineData(false, false, true)]
+    [InlineData(true, false, false)]
+    [InlineData(true, true, false)]
+    public async Task should_end_and_release_the_real_stream(bool expireLease, bool confirmLease, bool keepManage)
     {
         using var caller = new an_entitled_caller();
         Connect(callContext: caller.Context);
@@ -46,6 +48,7 @@ public class and_access_is_withdrawn : given.a_registration
             _error.Task.IsCompleted.ShouldBeFalse();
         }
         if (expireLease) caller.Clock.Advance(TimeSpan.FromMinutes(6));
+        else if (keepManage) caller.KeepOnly(StoreAccess.Manage);
         else caller.Revoke();
         var error = await _error.Task.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
         ((RpcException)error).StatusCode.ShouldEqual(StatusCode.PermissionDenied);
@@ -54,11 +57,13 @@ public class and_access_is_withdrawn : given.a_registration
         _lease.Received(1).Dispose();
     }
 
-    [Fact]
-    public async Task should_report_an_initial_refusal_to_the_subscriber()
+    [Theory]
+    [InlineData(StoreAccess.None)]
+    [InlineData(StoreAccess.Read)]
+    [InlineData(StoreAccess.Manage)]
+    public async Task should_require_read_and_manage_before_registering(StoreAccess access)
     {
-        using var caller = new an_entitled_caller();
-        caller.Revoke();
+        using var caller = new an_entitled_caller(access: access);
         Connect(callContext: caller.Context);
         var error = await _error.Task.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
         ((RpcException)error).StatusCode.ShouldEqual(StatusCode.PermissionDenied);

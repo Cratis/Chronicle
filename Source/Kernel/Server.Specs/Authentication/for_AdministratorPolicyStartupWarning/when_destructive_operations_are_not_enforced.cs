@@ -13,14 +13,14 @@ public class when_destructive_operations_are_not_enforced : Specification
 
     async Task Because()
     {
-        var options = Options.Create(new ChronicleOptions { Authentication = new Configuration.Authentication { Enabled = true, EnforceDestructiveOperations = false } });
+        var options = Options.Create(new ChronicleOptions { Authentication = new Configuration.Authentication { Enabled = true, EnforceDestructiveOperations = false, EnforceAdministratorPolicyForOperations = true } });
         var warning = new AdministratorPolicyStartupWarning(options, _logger);
         await warning.StartAsync(CancellationToken.None);
     }
 
     [Fact] void should_warn_once() => _logger.Entries.Single().Level.ShouldEqual(LogLevel.Warning);
     [Fact] void should_name_the_flag() => _logger.Entries.Single().Message.ShouldContain("EnforceDestructiveOperations");
-    [Fact] void should_say_the_opt_out_is_removed_in_the_next_major_release() => _logger.Entries.Single().Message.ShouldContain("removed in the next major release");
+    [Fact] void should_explain_the_next_major_default() => _logger.Entries.Single().Message.ShouldContain("default becomes enforcing in the next major release");
 
     sealed class RecordingLogger : ILogger<AdministratorPolicyStartupWarning>
     {

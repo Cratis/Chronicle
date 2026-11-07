@@ -41,7 +41,7 @@ internal sealed class EventTypes(
     public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.EventTypes.EventTypeDetailsResponse>>> AllEventTypeGenerations(global::Cratis.Chronicle.Contracts.EventTypes.AllEventTypeGenerationsRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.EventTypes.EventTypeDetailsResponse>>(
             callContext,
-            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore),
+            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: null),
             async () =>
             {
                 var result = await global::Cratis.Chronicle.EventTypes.EventTypeDetails.AllEventTypeGenerations((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.Events.EventTypeId)request.EventTypeId, storage);
@@ -53,7 +53,7 @@ internal sealed class EventTypes(
     public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.EventTypes.EventTypeDetailsResponse>>> AllEventTypes(global::Cratis.Chronicle.Contracts.EventTypes.AllEventTypesRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.EventTypes.EventTypeDetailsResponse>>(
             callContext,
-            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore),
+            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: null),
             async () =>
             {
                 var result = await global::Cratis.Chronicle.EventTypes.EventTypeDetails.AllEventTypes((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, storage);
@@ -65,7 +65,7 @@ internal sealed class EventTypes(
     public IObservable<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.EventTypes.EventTypeDetailsResponse>>> ObserveEventTypes(global::Cratis.Chronicle.Contracts.EventTypes.ObserveEventTypesRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.EventTypes.EventTypeDetailsResponse>>(
             callContext,
-            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore),
+            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: null),
             () => global::Cratis.Chronicle.EventTypes.EventTypeDetails.ObserveEventTypes((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, storage)
                 .CompletedBy(callContext.CancellationToken)
                 .Select(_ => (IEnumerable<global::Cratis.Chronicle.Contracts.EventTypes.EventTypeDetailsResponse>)_.Select(ToEventTypeDetailsResponse).ToList()),

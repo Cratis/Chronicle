@@ -22,8 +22,9 @@ reserves connections. None of the changes alter a wire contract or a grain inter
 - **Alert queries are decided for the addressed event store.** Reading alerts requires the
   `chronicle.alerts.read` capability at the event store the query addresses. The same decision applies
   over gRPC and over HTTP.
-- **Users are not enrolled yet.** A user who has not been granted the capability on an ordinary event store
-  is allowed, and the decision is recorded in the log.
+- **Store entitlements are audited by default.** With `EnforceStoreEntitlements=false`, a caller who lacks
+  the capability on an ordinary event store is allowed, and the decision is recorded in the log. Set the option
+  to `true` to require explicit event store entitlements.
 - **Unknown capabilities and failed decisions are refused.** A capability that is not known, or a decision
   that cannot be made, refuses the query.
 
@@ -36,22 +37,33 @@ reserves connections. None of the changes alter a wire contract or a grain inter
 ## Connections
 
 - **Connection ids are reserved across the cluster.** A connection id is held by the caller that
-  opened it, on every silo. The holder keeps the reservation for as long as its stream is open, and it is
-  released shortly after the stream ends. Another caller that asks for the same id during that time receives
+  opened it, on every silo. The holder keeps the reservation for as long as its stream is open, and the id
+  stays reserved for that owner for one hour after its last stream ends. Another caller that asks for the same id during that time receives
   `PermissionDenied`.
 - **Transient reservation failures answer `Unavailable`.** When the reservation cannot be checked in
   time, the connection attempt answers `Unavailable` and the client can retry.
 
-## Optional enforcement
+## Enforcement defaults
 
-The following options on `Authentication` are off by default. They are listed with the other
-[configuration options](../configuration/chronicle-options.mdx#authentication).
+The following options on `Authentication` control enforcement. They are listed with the other
+[configuration options](../hosting/configuration/authentication.md).
 
-| Option | Effect when on |
-| --- | --- |
-| `EnforceAdministratorPolicyForOperations` | Operational mutations require an administrator. |
-| `EnforceComplianceCapabilities` | Compliance operations require the compliance capability on every event store they reach. |
-| `EnforceDestructiveOperations` | Destructive operations on the System event store, and compliance key operations beyond the requested event store, require an administrator. |
+| Option | Default | Effect when on |
+| --- | --- | --- |
+| `EnforceAdministratorPolicyForOperations` | `false` | System-store operational recovery and kernel-scoped administrator-policy operations require an administrator. Application-store operations follow per-store rules. |
+| `EnforceStoreEntitlements` | `false` | Store-scoped operations, including compliance operations, require the capability on each event store they reach. |
+| `EnforceDestructiveOperations` | `false` | Destructive operations on the System event store or at kernel scope, and compliance key operations beyond the requested event store, require an administrator. |
 
-Enable an option in a test environment first, and watch the decision messages in the log before
-enabling it where it matters.
+This minor release preserves audit mode for unconfigured deployments. Set
+`EnforceAdministratorPolicyForOperations=true` and `EnforceDestructiveOperations=true` to opt in to enforcement.
+When either flag is false (including when unset), startup logs a warning naming the flag and explaining that
+its default becomes enforcing in the next major release. The flags are independent: turning one off does not bypass
+checks enforced by another. Administrator management and System-store access remain administrator-only
+when authentication is enabled.
+
+Legacy `DeleteEncryptionKey` and `AllowNewEncryptionKey` RPCs now return `PermissionDenied`, naming uncovered
+stores, when coverage is incomplete; they never report success for a partial operation, even in audit mode.
+Changes may already have been applied to covered stores. Use the coverage-returning RPCs to inspect partial results.
+
+Before enabling `EnforceStoreEntitlements`, review the audited decisions and configure the required grants
+in a test environment.

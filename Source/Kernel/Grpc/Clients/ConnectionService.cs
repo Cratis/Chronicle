@@ -304,7 +304,7 @@ internal sealed class ConnectionService(
                 .WaitAsync(options.Value.Clustering.ResponseTimeout, RegistrationTimeProvider, cancellationToken)
                 .ConfigureAwait(false);
 
-            if (isElsewhere || ownership.Claim(request.ConnectionId, owner) == ConnectionClaim.Refused)
+            if (isElsewhere)
             {
                 logger.ConnectionRefusedForAnotherCaller(request.ConnectionId);
                 subject.OnError(new RpcException(_notAvailableToCaller));
@@ -314,7 +314,6 @@ internal sealed class ConnectionService(
             var reservation = await TryReserve(request, owner, token, cancellationToken);
             if (reservation != ReservationOutcome.Granted)
             {
-                ownership.Release(request.ConnectionId, owner);
                 if (reservation == ReservationOutcome.Refused)
                 {
                     logger.ConnectionRefusedForAnotherCaller(request.ConnectionId);
@@ -329,6 +328,14 @@ internal sealed class ConnectionService(
                     subject.OnError(new RpcException(new Status(StatusCode.Unavailable, "Client registration could not be verified")));
                 }
 
+                return false;
+            }
+
+            if (ownership.Claim(request.ConnectionId, owner) == ConnectionClaim.Refused)
+            {
+                ReleaseReservation(request.ConnectionId, owner, token);
+                logger.ConnectionRefusedForAnotherCaller(request.ConnectionId);
+                subject.OnError(new RpcException(_notAvailableToCaller));
                 return false;
             }
         }

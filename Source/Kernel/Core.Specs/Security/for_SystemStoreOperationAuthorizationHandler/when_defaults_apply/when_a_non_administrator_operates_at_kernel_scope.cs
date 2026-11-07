@@ -13,5 +13,6 @@ public class when_a_non_administrator_operates_at_kernel_scope : given.an_operat
 
     Task Because() => AuthorizeOperation();
 
-    [Fact] void should_refuse_the_operation() => _context.HasSucceeded.ShouldBeFalse();
+    [Fact] void should_allow_the_operation_in_audit_mode() => _context.HasSucceeded.ShouldBeTrue();
+    [Fact] void should_warn_about_the_denial() => _logger.Entries.Count.ShouldEqual(1);
 }

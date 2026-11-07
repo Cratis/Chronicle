@@ -18,7 +18,10 @@ public class when_defaults_apply : Specification
         await warning.StartAsync(CancellationToken.None);
     }
 
-    [Fact] void should_not_log() => _logger.Entries.ShouldBeEmpty();
+    [Fact] void should_warn_for_both_unconfigured_flags() => _logger.Entries.Count.ShouldEqual(2);
+    [Fact] void should_name_both_flags() => string.Join(' ', _logger.Entries.Select(_ => _.Message)).ShouldContain("EnforceAdministratorPolicyForOperations");
+    [Fact] void should_name_destructive_enforcement() => string.Join(' ', _logger.Entries.Select(_ => _.Message)).ShouldContain("EnforceDestructiveOperations");
+    [Fact] void should_explain_the_next_major_default() => _logger.Entries.TrueForAll(_ => _.Level == LogLevel.Warning && _.Message.Contains("default becomes enforcing in the next major release")).ShouldBeTrue();
 
     sealed class RecordingLogger : ILogger<AdministratorPolicyStartupWarning>
     {

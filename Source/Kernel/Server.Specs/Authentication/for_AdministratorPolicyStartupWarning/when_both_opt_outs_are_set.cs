@@ -20,7 +20,7 @@ public class when_both_opt_outs_are_set : Specification
 
     [Fact] void should_warn_for_each_opt_out() => _logger.Entries.Count.ShouldEqual(2);
     [Fact] void should_name_both_flags() => string.Join(' ', _logger.Entries.Select(_ => _.Message)).ShouldContain("EnforceAdministratorPolicyForOperations");
-    [Fact] void should_say_each_opt_out_is_removed_in_the_next_major_release() => _logger.Entries.TrueForAll(_ => _.Message.Contains("removed in the next major release")).ShouldBeTrue();
+    [Fact] void should_explain_both_next_major_defaults() => _logger.Entries.TrueForAll(_ => _.Message.Contains("default becomes enforcing in the next major release")).ShouldBeTrue();
     [Fact] void should_carry_no_caller_data() => _logger.Entries.TrueForAll(_ => !_.Message.Contains("subject", StringComparison.OrdinalIgnoreCase) && !_.Message.Contains("issuer", StringComparison.OrdinalIgnoreCase)).ShouldBeTrue();
 
     sealed class RecordingLogger : ILogger<AdministratorPolicyStartupWarning>

@@ -19,6 +19,7 @@ public class when_an_external_administrator_mapping_is_enabled : Specification
             {
                 Enabled = true,
                 EnforceAdministratorPolicyForOperations = true,
+                EnforceDestructiveOperations = true,
                 Authority = "https://identity.example",
                 ExternalAdministratorClaim = new ExternalAdministratorClaim { Type = "roles", Value = "secret-admin-value" }
             }

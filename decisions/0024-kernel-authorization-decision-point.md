@@ -82,7 +82,7 @@ immutable grant set, with a benchmark.
 
 ## Addendum: the exception mechanism (skeleton)
 
-Status: pending. The default values below are not decided; they are recorded here so the mechanism is one pattern.
+Status: defaults decided for the minor release. Enforcement remains opt-in until the next major release.
 
 Where a behavior has an enforcing form that cannot be the default yet, it follows one pattern:
 
@@ -94,13 +94,15 @@ Where a behavior has an enforcing form that cannot be the default yet, it follow
 
 | Flag | Scope | Default in code today | Final default |
 | --- | --- | --- | --- |
-| `EnforceAdministratorPolicyForOperations` | operational mutations | `false` (`DefaultEnforceAdministratorPolicyForOperations`) | TODO: pending decision |
-| `EnforceComplianceCapabilities` | compliance operations per event store | `false` (no constant; audit-only) | TODO: pending decision |
-| `EnforceDestructiveOperations` | destructive operations on the System store or at kernel scope, and compliance key operations beyond the requested event store | `false` (`DefaultEnforceDestructiveOperations`) | TODO: pending decision |
+| `EnforceAdministratorPolicyForOperations` | System-store operational recovery and kernel-scoped administrator-policy operations | `false` (`DefaultEnforceAdministratorPolicyForOperations`) | Enforcing in the next major release |
+| `EnforceStoreEntitlements` | store-scoped capabilities, including compliance operations | `false` (`DefaultEnforceStoreEntitlements`) | Opt-in in this minor release |
+| `EnforceDestructiveOperations` | destructive operations on the System store or at kernel scope, and compliance key operations beyond the requested event store | `false` (`DefaultEnforceDestructiveOperations`) | Enforcing in the next major release |
 
 `EnforceDestructiveOperations` is deliberately narrow. Operations on an ordinary event store, such as an application replaying its own observers, stay with the per-store rules, and rotating an application secret is excluded because an administrator can rotate it again. With the flag off, such an operation is logged and allowed. A broader flag that is on still enforces its broader scope.
 
-TODO (pending decision): the release in which each default changes, the opt-out period, the wording of the startup notices, the amendment to Invariant 4 for snapshots and caches, per-store entitlements and how legacy grants map to them, and benchmark results.
+When either administrator-policy or destructive-operation enforcement is false, including when unset, startup warns that its default becomes enforcing in the next major release. Operators can opt in by setting the flags to true now. Legacy void compliance key RPCs return explicit failure on incomplete coverage in every mode.
+
+TODO (pending decision): the amendment to Invariant 4 for snapshots and caches, how legacy grants map to per-store entitlements, and benchmark results.
 
 ### Store capabilities enrolled so far
 

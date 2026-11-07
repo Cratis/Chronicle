@@ -13,7 +13,7 @@ public class when_operations_are_enforced : Specification
 
     async Task Because()
     {
-        var options = Options.Create(new ChronicleOptions { Authentication = new Configuration.Authentication { Enabled = true, EnforceAdministratorPolicyForOperations = true } });
+        var options = Options.Create(new ChronicleOptions { Authentication = new Configuration.Authentication { Enabled = true, EnforceAdministratorPolicyForOperations = true, EnforceDestructiveOperations = true } });
         var warning = new AdministratorPolicyStartupWarning(options, _logger);
         await warning.StartAsync(CancellationToken.None);
     }

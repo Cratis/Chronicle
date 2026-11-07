@@ -91,7 +91,7 @@ internal sealed class Reactors(
                         register.Reactor.EventSequenceId,
                         register.ConnectionId);
 
-                    _ = SystemStoreGuard.CompleteRegistration(context, register.EventStore, register.Namespace, StoreAccess.Manage, registrationTcs, register);
+                    _ = SystemStoreGuard.CompleteRegistration(context, register.EventStore, register.Namespace, StoreAccess.Read | StoreAccess.Manage, registrationTcs, register);
                     break;
 
                 case ReactorResult result:
@@ -302,7 +302,7 @@ internal sealed class Reactors(
     static IObservable<EventsToObserve> MonitorRegistration(IObservable<EventsToObserve> source, Task<RegisterReactor> registration, CallContext context, (IDisposable Messages, CancellationTokenRegistration? Registration) lifetime) =>
         Observable.FromAsync(() => registration.WaitAsync(context.CancellationToken))
             .Catch<RegisterReactor, OperationCanceledException>(_ => Observable.Empty<RegisterReactor>())
-            .SelectMany(arguments => StoreCapabilityGuard.EndWhenRevoked(source, context, arguments.EventStore, arguments.Namespace, StoreAccess.Manage))
+            .SelectMany(arguments => StoreCapabilityGuard.EndWhenRevoked(source, context, arguments.EventStore, arguments.Namespace, StoreAccess.Read | StoreAccess.Manage))
             .Finally(() =>
             {
                 lifetime.Messages.Dispose();
