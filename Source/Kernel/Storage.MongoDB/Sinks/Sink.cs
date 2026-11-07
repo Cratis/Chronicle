@@ -2030,6 +2030,18 @@ public partial class Sink(
         var childFilter = Builders<BsonDocument>.Filter.Eq(identifiedByProperty, childRemoved.Key.ToBsonValue());
         var update = Builders<BsonDocument>.Update.PullFilter(string.Join('.', path), childFilter);
         await DirectWrites.UpdateManyAsync(filter, update, new UpdateOptions { ArrayFilters = arrayFilters.Count == 0 ? null : arrayFilters });
+
+        if (_isBulkMode && !_bulkStateCache.IsEmpty)
+        {
+            lock (_bulkLock)
+            {
+                // Dirty parents own queued writes that MongoDB cannot answer yet; preserve their state in place.
+                foreach (var state in _bulkStateCache.Values)
+                {
+                    CachedChildRemoval.Remove(state, childRemoved);
+                }
+            }
+        }
     }
 
     static (List<string> Path, List<BsonDocumentArrayFilterDefinition<BsonDocument>> ArrayFilters, FilterDefinition<BsonDocument> Filter) BuildChildPath(IPropertyPathSegment[] segments)
