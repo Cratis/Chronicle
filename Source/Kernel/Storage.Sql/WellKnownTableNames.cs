@@ -84,6 +84,16 @@ public static class WellKnownTableNames
     public const string EventSequenceEvents = "EventSequenceEvents";
 
     /// <summary>
+    /// The table that holds event sequence mutation heads.
+    /// </summary>
+    public const string EventSequenceMutationHeads = "EventSequenceMutationHeads";
+
+    /// <summary>
+    /// The table that holds completed event sequence mutation history.
+    /// </summary>
+    public const string EventSequenceMutationHistory = "EventSequenceMutationHistory";
+
+    /// <summary>
     /// The table that holds connected clients state.
     /// </summary>
     public const string ConnectedClients = "ConnectedClients";
@@ -287,6 +297,11 @@ public static class WellKnownTableNames
     /// The table that holds recorded erasures of encryption keys for compliance handling.
     /// </summary>
     public const string EncryptionKeyErasures = "EncryptionKeyErasures";
+
+    /// <summary>
+    /// The table that holds kernel-internal secrets, apart from subject encryption keys.
+    /// </summary>
+    public const string InternalSecrets = "InternalSecrets";
 
     /// <summary>
     /// The table that holds the encryption key identifiers stored before they were compared exactly on SQL Server.

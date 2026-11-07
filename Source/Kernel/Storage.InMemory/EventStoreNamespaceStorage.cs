@@ -10,10 +10,12 @@ using Cratis.Chronicle.Storage.Alerts;
 using Cratis.Chronicle.Storage.Changes;
 using Cratis.Chronicle.Storage.Events.Constraints;
 using Cratis.Chronicle.Storage.EventSequences;
+using Cratis.Chronicle.Storage.EventSequences.Mutations;
 using Cratis.Chronicle.Storage.Identities;
 using Cratis.Chronicle.Storage.InMemory.Changes;
 using Cratis.Chronicle.Storage.InMemory.Events.Constraints;
 using Cratis.Chronicle.Storage.InMemory.EventSequences;
+using Cratis.Chronicle.Storage.InMemory.EventSequences.Mutations;
 using Cratis.Chronicle.Storage.InMemory.Identities;
 using Cratis.Chronicle.Storage.InMemory.Keys;
 using Cratis.Chronicle.Storage.InMemory.Observation;
@@ -40,11 +42,13 @@ namespace Cratis.Chronicle.Storage.InMemory;
 /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> the storage serves.</param>
 /// <param name="jobsStorage">The <see cref="IJobsStorage"/> resolving jobs storage for a scope and namespace.</param>
 /// <param name="sinks">The <see cref="ISinks"/> for the namespace.</param>
+/// <param name="mutationDigestKeys">The source of mutation digest keys; without one, every mutation fails closed.</param>
 public sealed class EventStoreNamespaceStorage(
     EventStoreName eventStore,
     EventStoreNamespaceName @namespace,
     IJobsStorage jobsStorage,
-    ISinks sinks) : IEventStoreNamespaceStorage
+    ISinks sinks,
+    IEventSequenceMutationDigestKeys? mutationDigestKeys = null) : IEventStoreNamespaceStorage
 {
     readonly Occurrences.OccurrencesStorage _occurrences = new();
     readonly Occurrences.EffectReceiptState _effectReceipts = new();
@@ -54,6 +58,7 @@ public sealed class EventStoreNamespaceStorage(
     readonly ConcurrentDictionary<EventSequenceId, IUniqueConstraintsStorage> _uniqueConstraints = new();
     readonly ConcurrentDictionary<EventSequenceId, IUniqueEventTypesConstraintsStorage> _uniqueEventTypesConstraints = new();
     readonly ConcurrentDictionary<EventSequenceId, IClosedStreamsConstraintStorage> _closedStreamsConstraints = new();
+    readonly EventSequenceMutationRegistryState _eventSequenceMutationState = new();
 
     /// <inheritdoc/>
     public Chronicle.Storage.Occurrences.IOccurrencesStorage Occurrences => _occurrences;
@@ -118,6 +123,12 @@ public sealed class EventStoreNamespaceStorage(
 
     /// <inheritdoc/>
     public IProjectionFuturesStorage ProjectionFutures { get; } = new ProjectionFuturesStorage();
+
+    /// <inheritdoc/>
+    public IEventSequenceMutationRegistry EventSequenceMutations => new DigestKeyedEventSequenceMutationRegistry(
+        eventStore,
+        mutationDigestKeys ?? UnavailableEventSequenceMutationDigestKeys.Instance,
+        new EventSequenceMutationRegistry(eventStore, @namespace, _eventSequenceMutationState));
 
     /// <inheritdoc/>
     /// <remarks>

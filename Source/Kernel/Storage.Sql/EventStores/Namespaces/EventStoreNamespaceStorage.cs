@@ -9,6 +9,7 @@ using Cratis.Chronicle.Storage.Alerts;
 using Cratis.Chronicle.Storage.Changes;
 using Cratis.Chronicle.Storage.Events.Constraints;
 using Cratis.Chronicle.Storage.EventSequences;
+using Cratis.Chronicle.Storage.EventSequences.Mutations;
 using Cratis.Chronicle.Storage.Identities;
 using Cratis.Chronicle.Storage.Keys;
 using Cratis.Chronicle.Storage.Observation;
@@ -37,7 +38,17 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
 /// <param name="jsonSerializerOptions">The global <see cref="JsonSerializerOptions"/>.</param>
 /// <param name="eventTypesStorage">The event store's shared event type storage.</param>
 /// <param name="converter">The schema-aware content converter.</param>
-public class EventStoreNamespaceStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace, IDatabase database, IInstancesOf<ISinkFactory> sinkFactories, Choreography.Storage.IJobsStorage jobsStorage, JsonSerializerOptions jsonSerializerOptions, Chronicle.Storage.EventTypes.IEventTypesStorage eventTypesStorage, Json.IExpandoObjectConverter converter) : IEventStoreNamespaceStorage
+/// <param name="mutationDigestKeys">The source of mutation digest keys; without one, every mutation fails closed.</param>
+public class EventStoreNamespaceStorage(
+    EventStoreName eventStore,
+    EventStoreNamespaceName @namespace,
+    IDatabase database,
+    IInstancesOf<ISinkFactory> sinkFactories,
+    Choreography.Storage.IJobsStorage jobsStorage,
+    JsonSerializerOptions jsonSerializerOptions,
+    Chronicle.Storage.EventTypes.IEventTypesStorage eventTypesStorage,
+    Json.IExpandoObjectConverter converter,
+    IEventSequenceMutationDigestKeys? mutationDigestKeys = null) : IEventStoreNamespaceStorage
 {
     readonly Sql.EventStores.Occurrences.OccurrencesStorage<NamespaceDbContext> _occurrences = new(() => database.Namespace(eventStore, @namespace), database);
 
@@ -52,6 +63,12 @@ public class EventStoreNamespaceStorage(EventStoreName eventStore, EventStoreNam
 
     /// <inheritdoc/>
     public IIdentityStorage Identities { get; } = new Identities.IdentityStorage(eventStore, @namespace, database);
+
+    /// <inheritdoc/>
+    public IEventSequenceMutationRegistry EventSequenceMutations { get; } = new DigestKeyedEventSequenceMutationRegistry(
+        eventStore,
+        mutationDigestKeys ?? UnavailableEventSequenceMutationDigestKeys.Instance,
+        new EventSequences.Mutations.EventSequenceMutationRegistry(eventStore, @namespace, database));
 
     /// <inheritdoc/>
     public IJobStorage Jobs => jobsStorage.GetFor(eventStore, @namespace).Jobs;

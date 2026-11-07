@@ -247,6 +247,45 @@ public class EncryptionKeyStorage(IDatabase database, ILogger<EncryptionKeyStora
         await UpsertErasure(scope.DbContext, stored, erasure with { NewKeyAllowed = true });
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// The secret is a row in the <see cref="WellKnownTableNames.InternalSecrets"/> table of the default namespace,
+    /// keyed by the purpose. The primary key is the ordering point: a concurrent creator that loses reads the winner.
+    /// </remarks>
+    public async Task<StoredEncryptionKey> GetOrAddInternalSecretFor(EventStoreName eventStore, InternalSecretPurpose purpose, StoredEncryptionKey candidate)
+    {
+        await using var scope = await database.Namespace(eventStore, EventStoreNamespaceName.Default);
+        if (await FindInternalSecret(scope.DbContext, purpose) is { } existing)
+        {
+            return existing;
+        }
+
+        try
+        {
+            scope.DbContext.InternalSecrets.Add(new InternalSecret
+            {
+                Purpose = purpose.Value,
+                PublicKey = candidate.Public,
+                PrivateKey = candidate.Private
+            });
+            await scope.DbContext.SaveChangesAsync();
+            return candidate;
+        }
+        catch (DbUpdateException ex) when (ex.IsUniqueViolation())
+        {
+            await using var retry = await database.Namespace(eventStore, EventStoreNamespaceName.Default);
+            var winner = await FindInternalSecret(retry.DbContext, purpose) ?? throw new InternalSecretProvisioningConflict(purpose);
+            _telemetry.RecoveredCollision("internal-secret");
+            return winner;
+        }
+    }
+
+    static async Task<StoredEncryptionKey?> FindInternalSecret(NamespaceDbContext dbContext, InternalSecretPurpose purpose)
+    {
+        var row = await dbContext.InternalSecrets.AsNoTracking().SingleOrDefaultAsync(e => e.Purpose == purpose.Value);
+        return row is null ? null : new StoredEncryptionKey(row.PublicKey, row.PrivateKey);
+    }
+
     static bool IsLatest(EncryptionKeyRevision? revision) => revision is null || revision == EncryptionKeyRevision.Latest;
 
     static async Task<uint> GetNextRevision(NamespaceDbContext dbContext, string stored)

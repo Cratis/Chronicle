@@ -15,6 +15,7 @@ public class InMemoryEncryptionKeyStorage : IEncryptionKeyStorage
 {
     readonly Dictionary<Key, EncryptionKey> _keys = [];
     readonly Dictionary<Scope, EncryptionKeyErasure> _erasures = [];
+    readonly Dictionary<(EventStoreName EventStore, InternalSecretPurpose Purpose), EncryptionKey> _internalSecrets = [];
     readonly Lock _lock = new();
 
     /// <inheritdoc/>
@@ -164,6 +165,16 @@ public class InMemoryEncryptionKeyStorage : IEncryptionKeyStorage
         }
 
         return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    /// <remarks>Internal secrets live in their own dictionary, which no subject key member reads or writes.</remarks>
+    public Task<EncryptionKey> GetOrAddInternalSecretFor(EventStoreName eventStore, InternalSecretPurpose purpose, EncryptionKey candidate)
+    {
+        lock (_lock)
+        {
+            return Task.FromResult(_internalSecrets.TryAdd((eventStore, purpose), candidate) ? candidate : _internalSecrets[(eventStore, purpose)]);
+        }
     }
 
     static bool IsLatest(EncryptionKeyRevision? revision) => revision is null || revision == EncryptionKeyRevision.Latest;

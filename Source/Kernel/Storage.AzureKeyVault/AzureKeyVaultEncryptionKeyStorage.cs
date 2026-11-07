@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Azure;
 using Azure.Security.KeyVault.Secrets;
 using Cratis.Chronicle.Compliance;
@@ -31,6 +32,13 @@ namespace Cratis.Chronicle.Storage.AzureKeyVault;
 /// single hyphens (plus the identifiers Chronicle builds for encrypted values). Earlier names are never written.
 /// </para>
 /// <para>
+/// Kernel-internal secrets are named <c language="csharp">chronicle-internal--{eventStore}--{purpose}</c>. A subject key
+/// name starts with <c language="csharp">chronicle-k1--</c> (or <c language="csharp">chronicle--</c> for earlier names),
+/// while an internal secret name starts with <c language="csharp">chronicle-internal--</c>. No subject key
+/// name, erasure name or subject key prefix can therefore equal or enumerate an internal secret name, whatever the
+/// event store, namespace or identifier.
+/// </para>
+/// <para>
 /// Authentication is performed using the <see cref="Azure.Core.TokenCredential"/> provided to the
 /// <see cref="SecretClient"/> constructor parameter.
 /// </para>
@@ -50,8 +58,9 @@ namespace Cratis.Chronicle.Storage.AzureKeyVault;
 /// fails the deletion loudly with <see cref="EncryptionKeyNotPurged"/>.
 /// </para>
 /// </remarks>
-public class AzureKeyVaultEncryptionKeyStorage : IEncryptionKeyStorage
+public partial class AzureKeyVaultEncryptionKeyStorage : IEncryptionKeyStorage
 {
+    const string InternalSecretNamePrefix = "chronicle-internal";
     const string PublicKeyField = "publicKey";
     const string PrivateKeyField = "privateKey";
     const string ErasedThroughField = "erasedThrough";
@@ -84,6 +93,9 @@ public class AzureKeyVaultEncryptionKeyStorage : IEncryptionKeyStorage
         _secretClient = secretClient;
         _election = new(secretClient, timeProvider, Deserialize);
     }
+
+    [GeneratedRegex("[^a-z0-9]+", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex SanitizeRegex { get; }
 
     /// <inheritdoc/>
     public async Task SaveFor(
@@ -273,6 +285,37 @@ public class AzureKeyVaultEncryptionKeyStorage : IEncryptionKeyStorage
 
         await WriteErasure(locations, erasure with { NewKeyAllowed = true });
     }
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// The secret is provisioned through the same candidate election as subject keys, so concurrent creators converge
+    /// on one stored secret.
+    /// </remarks>
+    public async Task<EncryptionKey> GetOrAddInternalSecretFor(EventStoreName eventStore, InternalSecretPurpose purpose, EncryptionKey candidate)
+    {
+        var name = BuildInternalSecretName(eventStore, purpose);
+        if (await ReadKey(name) is { } existing)
+        {
+            return existing;
+        }
+
+        var secret = new KeyVaultSecret(name, Serialize(candidate));
+        ProvisioningCandidateElection.MarkAsCandidate(secret);
+        await _secretClient.SetSecretAsync(secret);
+        return await Elect(name) ?? throw new InternalSecretProvisioningConflict(purpose);
+    }
+
+    /// <summary>
+    /// Builds the secret name of a kernel-internal secret.
+    /// </summary>
+    /// <param name="eventStore">The <see cref="EventStoreName"/>.</param>
+    /// <param name="purpose">The <see cref="InternalSecretPurpose"/>.</param>
+    /// <returns>The secret name.</returns>
+    internal static string BuildInternalSecretName(EventStoreName eventStore, InternalSecretPurpose purpose) =>
+        $"{InternalSecretNamePrefix}--{Sanitize(eventStore.Value)}--{purpose.Value}";
+
+    static string Sanitize(string input) =>
+        SanitizeRegex.Replace(input.ToLowerInvariant(), "-").Trim('-');
 
     static bool IsDisabled(RequestFailedException exception) =>
         exception.Status == 403 &&
