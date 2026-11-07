@@ -1,8 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Dynamic;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Projections.Generations;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Projections.Engine.Pipelines.Steps;
@@ -187,5 +189,22 @@ public partial class ProjectionPipeline(
         logger.CompletedAllSteps(@event.Context.SequenceNumber);
 
         return context;
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<(Key Key, ExpandoObject State)>> ReadCurrent(IReadOnlyCollection<Key> keys)
+    {
+        // Whatever is being handled right now has to land before the state is read, so the read never precedes a write it follows.
+        using var handleScope = await _handleLock.AcquireCoarse();
+        var states = new List<(Key Key, ExpandoObject State)>(keys.Count);
+        foreach (var key in keys)
+        {
+            if (await sink.FindOrDefault(key) is { } state)
+            {
+                states.Add((key, state));
+            }
+        }
+
+        return states;
     }
 }

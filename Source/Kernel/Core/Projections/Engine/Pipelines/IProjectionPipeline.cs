@@ -1,7 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Dynamic;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Storage.ReadModels;
 using Cratis.Chronicle.Storage.Sinks;
 
@@ -94,4 +96,12 @@ public interface IProjectionPipeline
     /// <param name="event"><see cref="AppendedEvent"/> to handle.</param>
     /// <returns>The <see cref="ProjectionEventContext"/> with the result of processing.</returns>
     Task<ProjectionEventContext> Handle(AppendedEvent @event);
+
+    /// <summary>
+    /// Reads the current state of the given read model instances, waiting for any handling in progress to finish first.
+    /// </summary>
+    /// <param name="keys">The keys of the instances to read.</param>
+    /// <returns>The state of every instance that exists; keys without an instance are left out.</returns>
+    Task<IReadOnlyList<(Key Key, ExpandoObject State)>> ReadCurrent(IReadOnlyCollection<Key> keys) =>
+        Task.FromResult<IReadOnlyList<(Key Key, ExpandoObject State)>>([]);
 }

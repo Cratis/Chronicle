@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Projections.Engine;
@@ -58,6 +59,10 @@ public class ProjectionsServiceClient(IGrainFactory grainFactory, IServiceProvid
     /// <inheritdoc/>
     public async Task NamespaceAdded(EventStoreName eventStore, EventStoreNamespaceName @namespace) =>
         await ForEachGrainService(service => service.NamespaceAdded(eventStore, @namespace));
+
+    /// <inheritdoc/>
+    public async Task SetWatchState(EventStoreName eventStore, EventStoreNamespaceName @namespace, ObserverId projection, bool isWatched) =>
+        await ForEachGrainService(service => service.SetWatchState(eventStore, @namespace, projection, isWatched));
 
     async Task ForEachGrainService(Func<IProjectionsService, Task> callback)
     {
