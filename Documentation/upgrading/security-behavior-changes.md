@@ -16,6 +16,8 @@ reserves connections. None of the changes alter a wire contract or a grain inter
 - **A denied requested store answers `PermissionDenied` alone.** The answer does not include the list
   of other event stores. Callers allowed on the requested store still receive the list of stores that
   were not covered.
+- **Coverage is decided before the operation runs.** A grant withdrawn while an already admitted
+  operation is in flight does not cancel that operation; the withdrawal applies to the next call.
 
 ## Store capabilities
 
