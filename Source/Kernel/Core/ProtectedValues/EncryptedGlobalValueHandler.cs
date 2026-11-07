@@ -64,6 +64,16 @@ public class EncryptedGlobalValueHandler(
         ProtectedValueCodec.TryRelease(encryptionKeyStore, encryption, EncryptedValueKeyIdentifiers.GlobalEventStore, EncryptedValueKeyIdentifiers.GlobalNamespace, EncryptedValueKeyIdentifiers.ForGlobal(), value);
 
     /// <inheritdoc/>
+    public Task<ReleasedProtectedValue> ReleaseWithStatus(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value) =>
+        EncryptedValueOperations.ReleaseWithStatus(
+            encryptionKeyStore,
+            encryption,
+            EncryptedValueKeyIdentifiers.GlobalEventStore,
+            EncryptedValueKeyIdentifiers.GlobalNamespace,
+            EncryptedValueKeyIdentifiers.ForGlobal(),
+            value);
+
+    /// <inheritdoc/>
     public Task<JsonNode> ReleaseStrict(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value) =>
         EncryptedValueOperations.Release(
             encryptionKeyStore,

@@ -57,16 +57,10 @@ public abstract partial class ChronicleClientFixture<TChronicleFixture> : IDispo
         }
 
         TestAssembly ??= TestAssemblyLocator.GetTestAssembly();
-        if (ContentRoot is null)
-        {
-            var codeBaseUri = new Uri(TestAssembly!.Location);
-            ContentRoot = Path.GetDirectoryName(codeBaseUri.LocalPath)!;
 
-            while (!Directory.EnumerateFiles(ContentRoot, "*.csproj").Any())
-            {
-                ContentRoot = Path.GetDirectoryName(ContentRoot)!;
-            }
-        }
+        // Fixtures are constructed concurrently. Walk to the project directory in a local and publish only the
+        // finished result, so no fixture ever reads a partially walked path from the shared static.
+        ContentRoot ??= ContentRootLocator.FindFor(TestAssembly!);
     }
 
     /// <summary>

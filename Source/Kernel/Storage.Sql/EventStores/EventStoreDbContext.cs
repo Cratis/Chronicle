@@ -39,6 +39,11 @@ public class EventStoreDbContext(DbContextOptions<EventStoreDbContext> options) 
     /// <summary>Gets or sets the durable generation floor.</summary>
     public DbSet<Generations.GenerationFloor> GenerationFloor { get; set; }
 
+    /// <summary>
+    /// Gets or sets the unique-constraint encoding key row.
+    /// </summary>
+    public DbSet<UniqueConstraintEncodingKeyRow> UniqueConstraintEncodingKey { get; set; }
+
     /// <summary>Gets or sets the generation floor audit trail.</summary>
     public DbSet<Generations.GenerationFloorHistoryEntry> GenerationFloorHistory { get; set; }
 
@@ -181,6 +186,10 @@ public class EventStoreDbContext(DbContextOptions<EventStoreDbContext> options) 
         modelBuilder.Entity<Generations.GenerationInitializationBlockerRow>().Property(row => row.Subject).HasMaxLength(400);
         modelBuilder.Entity<Generations.GenerationFloor>().ToTable(WellKnownTableNames.GenerationFloor).HasKey(_ => _.Id);
         modelBuilder.Entity<Generations.GenerationFloor>().Property(_ => _.Id).ValueGeneratedNever();
+        modelBuilder.Entity<UniqueConstraintEncodingKeyRow>().ToTable(WellKnownTableNames.UniqueConstraintEncodingKey).HasKey(_ => _.Id);
+        modelBuilder.Entity<UniqueConstraintEncodingKeyRow>().Property(_ => _.Id).ValueGeneratedNever();
+        modelBuilder.Entity<UniqueConstraintEncodingKeyRow>().Property(_ => _.KeyId).HasMaxLength(16).IsFixedLength().IsRequired();
+        modelBuilder.Entity<UniqueConstraintEncodingKeyRow>().Property(_ => _.Material).HasMaxLength(32).IsFixedLength().IsRequired();
         modelBuilder.Entity<Generations.GenerationFloorHistoryEntry>().ToTable(WellKnownTableNames.GenerationFloorHistory).HasKey(_ => _.Revision);
         modelBuilder.Entity<Generations.GenerationFloorHistoryEntry>().Property(_ => _.Revision).ValueGeneratedNever();
 

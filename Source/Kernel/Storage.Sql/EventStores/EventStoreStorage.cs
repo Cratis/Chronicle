@@ -69,6 +69,9 @@ public class EventStoreStorage(
     public Chronicle.Storage.Generations.IGenerationFloorStorage GenerationFloor { get; } = new Generations.GenerationFloorStorage(() => database.EventStore(eventStore));
 
     /// <inheritdoc/>
+    public IUniqueConstraintEncodingStorage UniqueConstraintEncoding { get; } = new Constraints.UniqueConstraintEncodingStorage(() => database.EventStore(eventStore));
+
+    /// <inheritdoc/>
     public EventStoreName EventStore { get; } = eventStore.Value;
 
     /// <inheritdoc/>

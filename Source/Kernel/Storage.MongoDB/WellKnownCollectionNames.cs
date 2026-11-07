@@ -346,6 +346,11 @@ public static class WellKnownCollectionNames
     public const string GenerationFloor = "generation-floor";
 
     /// <summary>
+    /// The collection that holds the unique-constraint encoding key.
+    /// </summary>
+    public const string UniqueConstraintEncodingKey = "unique-constraint-encoding-key";
+
+    /// <summary>
     /// The collection that holds initialization markers.
     /// </summary>
     public const string Initialization = "initialization";

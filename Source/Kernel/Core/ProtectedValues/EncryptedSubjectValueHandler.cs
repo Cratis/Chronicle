@@ -62,6 +62,10 @@ public class EncryptedSubjectValueHandler(
         ProtectedValueCodec.TryRelease(encryptionKeyStore, encryption, eventStore, eventStoreNamespace, EncryptedValueKeyIdentifiers.ForSubject(identifier), value);
 
     /// <inheritdoc/>
+    public Task<ReleasedProtectedValue> ReleaseWithStatus(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value) =>
+        EncryptedValueOperations.ReleaseWithStatus(encryptionKeyStore, encryption, eventStore, eventStoreNamespace, EncryptedValueKeyIdentifiers.ForSubject(identifier), value);
+
+    /// <inheritdoc/>
     public Task<JsonNode> ReleaseStrict(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value) =>
         EncryptedValueOperations.Release(encryptionKeyStore, encryption, eventStore, eventStoreNamespace, EncryptedValueKeyIdentifiers.ForSubject(identifier), value, strict: true);
 

@@ -61,6 +61,35 @@ static class EncryptedValueOperations
     }
 
     /// <summary>
+    /// Releases a confidentiality value with an explicit status, never treating a missing key as erasure.
+    /// </summary>
+    /// <param name="encryptionKeyStore">The key storage.</param>
+    /// <param name="encryption">The encryption implementation.</param>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="eventStoreNamespace">The namespace.</param>
+    /// <param name="keyIdentifier">The confidentiality key identifier.</param>
+    /// <param name="value">The value to release.</param>
+    /// <returns>The plain or decrypted value with its status.</returns>
+    /// <exception cref="MissingEncryptionKey">The confidentiality key is missing.</exception>
+    public static async Task<ReleasedProtectedValue> ReleaseWithStatus(
+        IEncryptionKeyStorage encryptionKeyStore,
+        IEncryption encryption,
+        EventStoreName eventStore,
+        EventStoreNamespaceName eventStoreNamespace,
+        EncryptionKeyIdentifier keyIdentifier,
+        JsonNode value)
+    {
+        if (!ProtectedValueCodec.TryDecodeCipherText(encryption, value.ToString(), out var encrypted))
+        {
+            return new(value, ProtectedValueReleaseStatus.Plain);
+        }
+
+        var key = await encryptionKeyStore.TryGetFor(eventStore, eventStoreNamespace, keyIdentifier)
+            ?? throw new MissingEncryptionKey(keyIdentifier);
+        return new(ProtectedValueCodec.Decrypt(encryption, key, encrypted), ProtectedValueReleaseStatus.Decrypted);
+    }
+
+    /// <summary>
     /// Decrypt a value that was encrypted under the given key identity.
     /// </summary>
     /// <param name="encryptionKeyStore"><see cref="IEncryptionKeyStorage"/> to use for looking up the key.</param>
