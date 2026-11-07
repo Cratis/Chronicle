@@ -35,14 +35,14 @@ internal static class SystemStoreGuard
         if (httpContext is not null)
         {
             var access = httpContext.RequestServices.GetRequiredService<ISystemStoreAccess>();
-            return await access.IsAllowed(httpContext.User);
+            return await access.IsAllowed(httpContext.User, httpContext.RequestServices);
         }
 
         // A server call without its HTTP request remains fail-closed. Only direct in-process calls
         // consult the server's services, with no identity (allowed only while authentication is disabled).
         if (callContext.ServerCallContext is not null || InProcessServices is not { } services) return false;
         await using var scope = services.CreateAsyncScope();
-        return await scope.ServiceProvider.GetRequiredService<ISystemStoreAccess>().IsAllowed(null);
+        return await scope.ServiceProvider.GetRequiredService<ISystemStoreAccess>().IsAllowed(null, scope.ServiceProvider);
     }
 
     /// <summary>

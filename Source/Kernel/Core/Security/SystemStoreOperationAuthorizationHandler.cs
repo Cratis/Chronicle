@@ -31,7 +31,7 @@ public class SystemStoreOperationAuthorizationHandler(
         var store = operation?.GetType().GetProperty("EventStore")?.GetValue(operation);
         var storeName = store is EventStoreName name ? name.Value : store as string;
         var scope = storeName is null ? AuthorizationScope.Kernel : AuthorizationScope.ForEventStore(storeName);
-        var decision = await decisions.Decide(context.User, WellKnownCapabilities.OperateEventStore, scope);
+        var decision = await decisions.DecideForResource(context, WellKnownCapabilities.OperateEventStore, scope);
         if (decision.IsAllowed)
         {
             context.Succeed(requirement);

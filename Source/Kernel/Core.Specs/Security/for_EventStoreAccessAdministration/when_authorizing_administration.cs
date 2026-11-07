@@ -30,7 +30,7 @@ public class when_authorizing_administration : Specification
         var admins = Substitute.For<IAdministratorAuthorization>();
         admins.IsAuthorized(principal).Returns(administrator && !application);
         var options = Options.Create(new ChronicleOptions { Authentication = new() { EnforceAdministratorPolicyForOperations = false, EnforceDestructiveOperations = false, EnforceStoreEntitlements = false } });
-        var decisions = new AuthorizationDecisions(admins, options, Microsoft.Extensions.Logging.Abstractions.NullLogger<AuthorizationDecisions>.Instance, Substitute.For<IStoreEntitlementsCache>());
+        var decisions = new AuthorizationDecisions(options, Microsoft.Extensions.Logging.Abstractions.NullLogger<AuthorizationDecisions>.Instance, Substitute.For<IStoreEntitlementsCache>(), Security.given.caller_services.For(admins));
         var context = new AuthorizationHandlerContext([new AdministratorRequirement()], principal, null);
         await new AdministratorAuthorizationHandler(decisions).HandleAsync(context);
         context.HasSucceeded.ShouldEqual(allowed);

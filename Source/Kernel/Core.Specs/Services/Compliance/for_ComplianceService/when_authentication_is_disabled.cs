@@ -17,7 +17,6 @@ public class when_authentication_is_disabled : given.a_compliance_boundary
     {
         Configure(enforce: true, authenticationEnabled: false);
         _decisions = new AuthorizationDecisions(
-            Substitute.For<IAdministratorAuthorization>(),
             Options.Create(new ChronicleOptions { Authentication = new() { Enabled = false } }),
             NullLogger<AuthorizationDecisions>.Instance);
         UseCaller(new ClaimsPrincipal(new ClaimsIdentity()));

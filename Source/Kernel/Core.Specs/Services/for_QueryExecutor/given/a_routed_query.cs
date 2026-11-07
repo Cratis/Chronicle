@@ -59,6 +59,7 @@ public class a_routed_query : Chronicle.Security.given.a_system_store_caller
             })
             .AddSingleton(services.GetRequiredService<ILoggerFactory>())
             .AddSingleton(services.GetRequiredService<IAuthorizationDecisions>())
+            .AddSingleton(services.GetRequiredService<IAdministratorAuthorization>())
             .BuildServiceProvider();
         var http = new DefaultHttpContext { User = principal ?? new ClaimsPrincipal(), RequestServices = counted };
         return new CallContext(new object(), new FakeServerCallContext(served ? http : null));

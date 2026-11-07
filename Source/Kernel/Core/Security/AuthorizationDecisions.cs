@@ -6,6 +6,8 @@ using System.Security.Claims;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Configuration;
 using Cratis.DependencyInjection;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -14,16 +16,16 @@ namespace Cratis.Chronicle.Security;
 /// <summary>
 /// Decides explicit store access locally and administrator capabilities authoritatively.
 /// </summary>
-/// <param name="administrators">The administrator check.</param>
 /// <param name="options">The server configuration.</param>
 /// <param name="logger">The logger.</param>
 /// <param name="cache">The local silo's explicit grant snapshot.</param>
+/// <param name="httpContextAccessor">The current HTTP caller, if any.</param>
 [Singleton]
 public class AuthorizationDecisions(
-    IAdministratorAuthorization administrators,
     IOptions<ChronicleOptions> options,
     ILogger<AuthorizationDecisions> logger,
-    IStoreEntitlementsCache? cache = null) : IAuthorizationDecisions
+    IStoreEntitlementsCache? cache = null,
+    IHttpContextAccessor? httpContextAccessor = null) : IAuthorizationDecisions
 {
     static StoreDecisionInputs? _fallbackInputs;
 
@@ -31,8 +33,17 @@ public class AuthorizationDecisions(
     internal StoreDecisionInputs Inputs => cache?.Snapshot.Inputs ?? LazyInitializer.EnsureInitialized(ref _fallbackInputs);
 
     /// <inheritdoc/>
+    public Task<AuthorizationDecision> Decide(ClaimsPrincipal? principal, Capability capability, AuthorizationScope scope) =>
+        Decide(principal, capability, scope, httpContextAccessor?.HttpContext?.RequestServices);
+
+    /// <summary>Decides using the caller's provider without retaining its services.</summary>
+    /// <param name="principal">The caller.</param>
+    /// <param name="capability">The capability.</param>
+    /// <param name="scope">The authorization scope.</param>
+    /// <param name="services">The caller's provider, or null when unavailable.</param>
+    /// <returns>The decision.</returns>
     [SuppressMessage("Roslynator", "RCS1229:Use async/await when necessary", Justification = "Ordinary store decisions must complete synchronously; the cold administrator branch handles its asynchronous failures.")]
-    public Task<AuthorizationDecision> Decide(ClaimsPrincipal? principal, Capability capability, AuthorizationScope scope)
+    internal Task<AuthorizationDecision> Decide(ClaimsPrincipal? principal, Capability capability, AuthorizationScope scope, IServiceProvider? services)
     {
         try
         {
@@ -41,8 +52,8 @@ public class AuthorizationDecisions(
             if (!options.Value.Authentication.Enabled) return Allow(AuthorizationReason.AuthenticationDisabled, capability, scope);
             if (principal?.Identity?.IsAuthenticated is not true) return Deny(AuthorizationReason.NoPrincipal, capability, scope);
             return IsOrdinaryStoreScope(capability, scope)
-                ? DecideStore(principal, capability, scope)
-                : DecideAdministrator(principal, capability, scope);
+                ? DecideStore(principal, capability, scope, services)
+                : DecideAdministrator(principal, capability, scope, services);
         }
         catch (Exception exception)
         {
@@ -68,7 +79,7 @@ public class AuthorizationDecisions(
     Task<AuthorizationDecision> Allow(AuthorizationReason reason, Capability capability, AuthorizationScope scope) => Inputs.Result(reason, capability, scope, true);
     Task<AuthorizationDecision> Deny(AuthorizationReason reason, Capability capability, AuthorizationScope scope) => Inputs.Result(reason, capability, scope, false);
 
-    Task<AuthorizationDecision> DecideStore(ClaimsPrincipal principal, Capability capability, AuthorizationScope scope)
+    Task<AuthorizationDecision> DecideStore(ClaimsPrincipal principal, Capability capability, AuthorizationScope scope, IServiceProvider? services)
     {
         var authentication = options.Value.Authentication;
         var holder = PrincipalKey.From(principal, authentication);
@@ -76,11 +87,11 @@ public class AuthorizationDecisions(
         {
             return IsOrdinaryCapability(capability)
                 ? Deny(AuthorizationReason.NoPrincipal, capability, scope)
-                : DecideAdministrator(principal, capability, scope);
+                : DecideAdministrator(principal, capability, scope, services);
         }
         if (authentication.EnforceStoreEntitlements && cache?.IsFresh is not true) return Deny(AuthorizationReason.Failed, capability, scope);
         if (HasGrant(holder, principal, capability, scope)) return Allow(AuthorizationReason.Granted, capability, scope);
-        if (!IsOrdinaryCapability(capability)) return DecideAdministrator(principal, capability, scope);
+        if (!IsOrdinaryCapability(capability)) return DecideAdministrator(principal, capability, scope, services);
         return PrincipalKey.IsLocalUser(principal, authentication)
             ? Allow(AuthorizationReason.NotEnrolled, capability, scope)
             : Deny(AuthorizationReason.NotGranted, capability, scope);
@@ -100,10 +111,12 @@ public class AuthorizationDecisions(
         return holder.Issuer != PrincipalKey.LocalIssuer && ExternalAdministratorClaims.Grants(principal, options.Value.Authentication.ExternalAdministratorClaim);
     }
 
-    async Task<AuthorizationDecision> DecideAdministrator(ClaimsPrincipal principal, Capability capability, AuthorizationScope scope)
+    async Task<AuthorizationDecision> DecideAdministrator(ClaimsPrincipal principal, Capability capability, AuthorizationScope scope, IServiceProvider? services)
     {
         try
         {
+            if (services is null) return AuthorizationDecision.Deny(AuthorizationReason.Failed, capability, scope);
+            var administrators = services.GetRequiredService<IAdministratorAuthorization>();
             return await administrators.IsAuthorized(principal)
                 ? AuthorizationDecision.Allow(AuthorizationReason.Granted, capability, scope)
                 : AuthorizationDecision.Deny(AuthorizationReason.NotGranted, capability, scope);

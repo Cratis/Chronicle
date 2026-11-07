@@ -33,12 +33,16 @@ public class a_system_store_caller : Specification
     {
         var authorization = new AdministratorAuthorization(
             Options.Create(new ChronicleOptions { Authentication = _authentication }), _privileges, NullLogger<AdministratorAuthorization>.Instance);
-        return new ServiceCollection()
-            .AddSingleton<IHttpContextAccessor>(new HttpContextAccessor { HttpContext = new DefaultHttpContext { User = _caller } })
-            .AddSingleton<ISystemStoreAccess>(new SystemStoreAccessVerdict(new AuthorizationDecisions(authorization, Options.Create(new ChronicleOptions { Authentication = _authentication }), NullLogger<AuthorizationDecisions>.Instance)))
+        var accessor = new HttpContextAccessor { HttpContext = new DefaultHttpContext { User = _caller } };
+        var services = new ServiceCollection()
+            .AddSingleton<IHttpContextAccessor>(accessor)
+            .AddSingleton<IAdministratorAuthorization>(authorization)
+            .AddSingleton<ISystemStoreAccess>(new SystemStoreAccessVerdict(new AuthorizationDecisions(Options.Create(new ChronicleOptions { Authentication = _authentication }), NullLogger<AuthorizationDecisions>.Instance, httpContextAccessor: accessor)))
             .AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance)
             .AddSingleton(StoreDecisions())
             .BuildServiceProvider();
+        accessor.HttpContext.RequestServices = services;
+        return services;
     }
 
     /// <summary>Entitles every caller to the stores they address, as a store-scoped decision is not what these specs are about.</summary>

@@ -17,4 +17,11 @@ public class SystemStoreAccessVerdict(IAuthorizationDecisions decisions) : ISyst
     /// <inheritdoc/>
     public async Task<bool> IsAllowed(ClaimsPrincipal? principal) =>
         (await decisions.Decide(principal, WellKnownCapabilities.AccessSystemStore, AuthorizationScope.ForEventStore(EventStoreName.System))).IsAllowed;
+
+    /// <summary>Checks access using the caller's provider.</summary>
+    /// <param name="principal">The caller.</param>
+    /// <param name="services">The caller's provider.</param>
+    /// <returns>Whether access is allowed.</returns>
+    internal async Task<bool> IsAllowed(ClaimsPrincipal? principal, IServiceProvider? services) =>
+        (await decisions.Decide(new AuthorizationCaller(principal, services), WellKnownCapabilities.AccessSystemStore, AuthorizationScope.ForEventStore(EventStoreName.System))).IsAllowed;
 }

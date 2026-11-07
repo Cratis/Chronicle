@@ -16,7 +16,7 @@ public class AdministratorAuthorizationHandler(IAuthorizationDecisions decisions
     /// <inheritdoc/>
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context, AdministratorRequirement requirement)
     {
-        var decision = await decisions.Decide(context.User, WellKnownCapabilities.AdministerSecurity, AuthorizationScope.Kernel);
+        var decision = await decisions.DecideForResource(context, WellKnownCapabilities.AdministerSecurity, AuthorizationScope.Kernel);
         if (decision.IsAllowed) context.Succeed(requirement);
     }
 }

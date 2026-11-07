@@ -34,7 +34,7 @@ public sealed class an_entitled_caller : IDisposable
             .AddSingleton<IHttpContextAccessor>(accessor)
             .AddSingleton<IStoreEntitlementsCache>(_cache)
             .AddSingleton<TimeProvider>(Clock)
-            .AddSingleton<IAuthorizationDecisions>(new AuthorizationDecisions(Substitute.For<IAdministratorAuthorization>(), options, NullLogger<AuthorizationDecisions>.Instance, _cache))
+            .AddSingleton<IAuthorizationDecisions>(new AuthorizationDecisions(options, NullLogger<AuthorizationDecisions>.Instance, _cache))
             .AddSingleton(options)
             .AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance)
             .BuildServiceProvider();

@@ -78,7 +78,7 @@ public static class StoreCapabilityDecision
             AuthorizationScope scope;
             if (decisions is AuthorizationDecisions local) scope = local.Inputs.Scope(eventStore, @namespace);
             else scope = @namespace is null ? AuthorizationScope.ForEventStore(eventStore) : AuthorizationScope.ForNamespace(eventStore, @namespace);
-            decision = await decisions.Decide(user, CapabilityFor(capability), scope);
+            decision = await decisions.Decide(new AuthorizationCaller(user, services), CapabilityFor(capability), scope);
         }
         catch
         {

@@ -31,7 +31,7 @@ public class an_operation_policy : Specification
             ? new Authentication()
             : new Authentication { Enabled = _authenticationEnabled, EnforceAdministratorPolicyForOperations = _enforce, EnforceDestructiveOperations = _enforceDestructive };
         var options = Options.Create(new ChronicleOptions { Authentication = authentication });
-        await new SystemStoreOperationAuthorizationHandler(_decisions ?? new AuthorizationDecisions(_authorization, options, NullLogger<AuthorizationDecisions>.Instance), options, _logger).HandleAsync(_context);
+        await new SystemStoreOperationAuthorizationHandler(_decisions ?? new AuthorizationDecisions(options, NullLogger<AuthorizationDecisions>.Instance, httpContextAccessor: Security.given.caller_services.For(_authorization)), options, _logger).HandleAsync(_context);
     }
 
     void Establish()

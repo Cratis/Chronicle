@@ -6,6 +6,7 @@ using BenchmarkDotNet.Attributes;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Security;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
@@ -100,6 +101,11 @@ public class GuardBenchmark
     [Benchmark]
     public Task<bool> SystemNonAdmin() => SystemStoreAccess.IsSystem("SYSTEM") ? _nonAdminAccess.IsAllowed(_requests[_next++].User) : Task.FromResult(true);
 
-    static AuthorizationDecisions Decisions(SystemStoreAuthorizationProbe probe) =>
-        new(probe, Options.Create(new ChronicleOptions()), NullLogger<AuthorizationDecisions>.Instance);
+    static AuthorizationDecisions Decisions(SystemStoreAuthorizationProbe probe)
+    {
+        // The administrator check is resolved from the caller's request services, as in the server.
+        var services = new ServiceCollection().AddSingleton<IAdministratorAuthorization>(probe).BuildServiceProvider();
+        var accessor = new HttpContextAccessor { HttpContext = new DefaultHttpContext { RequestServices = services } };
+        return new(Options.Create(new ChronicleOptions()), NullLogger<AuthorizationDecisions>.Instance, httpContextAccessor: accessor);
+    }
 }

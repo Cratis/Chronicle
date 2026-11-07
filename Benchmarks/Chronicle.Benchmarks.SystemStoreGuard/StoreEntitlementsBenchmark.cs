@@ -36,7 +36,7 @@ public class StoreEntitlementsBenchmark : IDisposable
         grants.Add(new(_holder, "bench", null, StoreAccess.Read, EventStoreAccessGrantSource.Command));
         _cache = new(_grains, NullLogger<StoreEntitlementsCache>.Instance, TimeProvider.System);
         _cache.Publish(new(1, grants));
-        _decisions = new(_administrator, Options.Create(new ChronicleOptions { Authentication = new Authentication { Enabled = true, EnforceStoreEntitlements = true } }), NullLogger<AuthorizationDecisions>.Instance, _cache);
+        _decisions = new(Options.Create(new ChronicleOptions { Authentication = new Authentication { Enabled = true, EnforceStoreEntitlements = true } }), NullLogger<AuthorizationDecisions>.Instance, _cache);
     }
 
     /// <summary>Looks up a grant without allocations or remote calls.</summary>

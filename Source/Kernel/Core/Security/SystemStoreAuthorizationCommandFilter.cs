@@ -36,7 +36,7 @@ public class SystemStoreAuthorizationCommandFilter : IAuthorizationCommandFilter
         if (context.ServiceProvider is { } services)
         {
             var access = services.GetRequiredService<ISystemStoreAccess>();
-            if (await access.IsAllowed(SystemStoreRouting.CallerFor(services, context.AuthorizedPrincipal))) return null!;
+            if (await access.IsAllowed(SystemStoreRouting.CallerFor(services, context.AuthorizedPrincipal), services)) return null!;
         }
 
         return CommandResult.Unauthorized(context.CorrelationId, SystemStoreAccess.Refused);

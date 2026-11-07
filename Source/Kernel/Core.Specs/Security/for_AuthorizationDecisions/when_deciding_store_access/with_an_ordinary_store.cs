@@ -156,7 +156,7 @@ public class with_an_ordinary_store : Specification
     AuthorizationDecisions Decisions(Authentication? authentication = null)
     {
         var options = Options.Create(new ChronicleOptions { Authentication = authentication ?? _authentication });
-        return new(new AdministratorAuthorization(options, _privileges, NullLogger<AdministratorAuthorization>.Instance), options, NullLogger<AuthorizationDecisions>.Instance, _cache);
+        return new(options, NullLogger<AuthorizationDecisions>.Instance, _cache, Security.given.caller_services.For(new AdministratorAuthorization(options, _privileges, NullLogger<AdministratorAuthorization>.Instance)));
     }
 
     static ClaimsPrincipal Principal(string subject, bool user, string issuer = ClaimsIdentity.DefaultIssuer) => new(new ClaimsIdentity(
