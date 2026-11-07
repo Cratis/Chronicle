@@ -513,6 +513,7 @@ public partial class Observer
         failure.ObserverId = _observerId;
         var onlyThisPartition = new FailedPartitions { Partitions = [failure] };
         await storage.GetEventStore(_observerKey.EventStore).GetNamespace(_observerKey.Namespace).FailedPartitions.Save(_observerId, onlyThisPartition);
+        Failures.MarkPersisted(onlyThisPartition);
     }
 
     async Task RegisterRetryReminder(FailedPartition failure)
