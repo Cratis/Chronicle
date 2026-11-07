@@ -67,6 +67,7 @@
         <PackageReference Include="Cratis.Metrics.Roslyn" />
         <PackageReference Include="DnsClient" />
         <PackageReference Include="FluentValidation" />
+        <PackageReference Include="Grpc.AspNetCore.Server" />
         <PackageReference Include="Grpc.Net.Client" />
         <PackageReference Include="Microsoft.AspNetCore.Cryptography.KeyDerivation" />
         <PackageReference Include="Microsoft.AspNetCore.DataProtection" />
