@@ -50,6 +50,38 @@ public static class LargeJson
     }
 
     /// <summary>
+    /// Write JSON with a writer to a compact JSON string.
+    /// </summary>
+    /// <param name="write">The action that writes the document.</param>
+    /// <param name="options">The <see cref="JsonSerializerOptions"/> the writer follows.</param>
+    /// <param name="sizeHint">The expected size of the JSON in bytes. Zero when unknown.</param>
+    /// <returns>The JSON.</returns>
+    public static string Serialize(Action<Utf8JsonWriter> write, JsonSerializerOptions options, int sizeHint = 0)
+    {
+        var buffer = new ArrayBufferWriter<byte>(Math.Max(InitialCapacity, sizeHint));
+        using (var writer = new Utf8JsonWriter(
+            buffer,
+            new JsonWriterOptions
+            {
+                Encoder = options.Encoder,
+                Indented = options.WriteIndented,
+                SkipValidation = true
+            }))
+        {
+            write(writer);
+        }
+
+        return Encoding.UTF8.GetString(buffer.WrittenSpan);
+    }
+
+    /// <summary>
+    /// Get the UTF-8 encoding of a JSON string in a buffer of exactly the size needed.
+    /// </summary>
+    /// <param name="json">The JSON.</param>
+    /// <returns>The bytes.</returns>
+    public static byte[] ToUtf8(string json) => Encoding.UTF8.GetBytes(json);
+
+    /// <summary>
     /// Parse a JSON string into a node.
     /// </summary>
     /// <param name="json">The JSON to parse.</param>

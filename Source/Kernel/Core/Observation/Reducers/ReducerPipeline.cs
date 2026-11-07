@@ -29,6 +29,7 @@ namespace Cratis.Chronicle.Observation.Reducers;
 /// <param name="eventStoreNamespace">The <see cref="EventStoreNamespaceName"/> this pipeline belongs to.</param>
 /// <param name="guardWritesOnWatermark">Whether a write may be made conditional on advancing the read model's watermark.</param>
 /// <param name="expandoObjectConverter">The converter used to serialize committed state for watchers.</param>
+/// <param name="memoryGate">Optional <see cref="ReducerMemoryGate"/> that makes reduces of large states wait for room in the memory budget.</param>
 public class ReducerPipeline(
     ReadModelDefinition readModel,
     ISink sink,
@@ -37,8 +38,11 @@ public class ReducerPipeline(
     EventStoreName eventStore,
     EventStoreNamespaceName eventStoreNamespace,
     bool guardWritesOnWatermark = true,
-    IExpandoObjectConverter? expandoObjectConverter = null) : IReducerPipeline
+    IExpandoObjectConverter? expandoObjectConverter = null,
+    ReducerMemoryGate? memoryGate = null) : IReducerPipeline
 {
+    readonly string _memoryScope = $"{eventStore}/{eventStoreNamespace}/{readModel.Identifier}";
+
     readonly IExpandoObjectConverter _expandoObjectConverter = expandoObjectConverter ?? new ExpandoObjectConverter(new TypeFormats());
 
     /// <inheritdoc/>
@@ -62,8 +66,14 @@ public class ReducerPipeline(
     /// <inheritdoc/>
     public async Task<ReadModelChangeNotification?> Reduce(ReducerContext context, ReducerDelegate reducer, bool createNotification = true)
     {
+        using var memoryTicket = memoryGate is null ? ReducerMemoryTicket.None : await memoryGate.Enter(_memoryScope, context.Key);
         var schema = ReadModel.GetTargetSchema();
         var storedInitial = await Sink.FindOrDefault(context.Key);
+        if (memoryGate is not null)
+        {
+            await memoryGate.Observe(memoryTicket, _memoryScope, context.Key, storedInitial);
+        }
+
         var initial = storedInitial;
         object? storedSubject = null;
 

@@ -4,6 +4,7 @@
 using System.Collections;
 using System.Dynamic;
 using System.Globalization;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Schemas;
@@ -22,7 +23,12 @@ namespace Cratis.Chronicle.Json;
 /// <param name="typeFormats"><see cref="ITypeFormats"/> for mapping type formats in a schema.</param>
 public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectConverter
 {
+    static readonly object _true = true;
+    static readonly object _false = false;
     readonly JsonSerializerOptions? _jsonSerializerOptions;
+    readonly ConditionalWeakTable<JsonSchema, object> _writesStringsAsTheyAre = new();
+    readonly ConditionalWeakTable<JsonSchema, object> _readsStringsAsTheyAre = new();
+    readonly ConditionalWeakTable<JsonSchema, object> _scalarKinds = new();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ExpandoObjectConverter"/> class with provider-specific serializer options.
@@ -154,6 +160,21 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
         return expandoObject;
     }
 
+    /// <inheritdoc/>
+    public void WriteJson(Utf8JsonWriter writer, ExpandoObject expandoObject, JsonSchema schema) => WriteObject(writer, expandoObject, schema);
+
+    /// <inheritdoc/>
+    public ExpandoObject ToExpandoObject(ReadOnlyMemory<byte> utf8Json, JsonSchema schema)
+    {
+        var reader = new Utf8JsonReader(utf8Json.Span);
+        if (!reader.Read() || reader.TokenType != JsonTokenType.StartObject)
+        {
+            throw new JsonException("The JSON of a read model state must be an object.");
+        }
+
+        return ReadObject(ref reader, schema);
+    }
+
     /// <summary>
     /// Gets whether the schema marks its value as protected. Asked for every string value converted, so the
     /// memoized recursive answer is consulted first: when it is no, there is nothing at this level either.
@@ -166,6 +187,382 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
         (schema.Reference is { } reference &&
             ((reference.HasComplianceMetadata() && reference.GetComplianceMetadata().Any()) ||
              (reference.HasSecurityMetadata() && reference.GetSecurityMetadata().Any())));
+
+    void WriteObject(Utf8JsonWriter writer, ExpandoObject expandoObject, JsonSchema schema)
+    {
+        var expandoObjectAsDictionary = (IDictionary<string, object?>)expandoObject;
+        var schemaProperties = schema.FlattenedProperties;
+
+        writer.WriteStartObject();
+
+        // A schema without properties preserves everything in the document.
+        if (schemaProperties.Count == 0)
+        {
+            foreach (var (key, value) in expandoObjectAsDictionary)
+            {
+                WriteProperty(writer, key, ConvertUnknownSchemaTypeToJsonValue(value));
+            }
+
+            writer.WriteEndObject();
+            return;
+        }
+
+        foreach (var property in schemaProperties)
+        {
+            var name = property.Name;
+
+            // Prefer an exact-case match; fall back to a case-insensitive match, as ToJsonObject does.
+            if (!expandoObjectAsDictionary.TryGetValue(name, out var sourceValue))
+            {
+                sourceValue = null;
+                foreach (var candidate in expandoObjectAsDictionary)
+                {
+                    if (candidate.Key.Equals(name, StringComparison.OrdinalIgnoreCase))
+                    {
+                        sourceValue = candidate.Value;
+                        break;
+                    }
+                }
+            }
+
+            // Documents and collections of documents are written as they are walked; they are what a large state is made of.
+            if (sourceValue is not null && IsStructured(sourceValue, property))
+            {
+                writer.WritePropertyName(name);
+                WriteStructured(writer, sourceValue, property);
+                continue;
+            }
+
+            if (sourceValue is string text && WritesStringsAsTheyAre(property))
+            {
+                writer.WriteString(name, text);
+                continue;
+            }
+
+            var node = ConvertToJsonNode(sourceValue, property);
+            if (node is null)
+            {
+                var defaultValue = property.GetDefaultValue(typeFormats);
+                if (defaultValue is not null)
+                {
+                    node = ConvertToJsonNode(defaultValue, property);
+                }
+            }
+
+            WriteProperty(writer, name, node);
+        }
+
+        writer.WriteEndObject();
+    }
+
+    void WriteProperty(Utf8JsonWriter writer, string name, JsonNode? node)
+    {
+        if (node is null)
+        {
+            return;
+        }
+
+        writer.WritePropertyName(name);
+        node.WriteTo(writer, SerializerOptions);
+    }
+
+    bool IsStructured(object value, JsonSchema schema) =>
+        value is not string &&
+        !schema.IsDictionary &&
+        (value is ExpandoObject || (schema.Type.HasFlag(JsonObjectType.Array) && value is IEnumerable));
+
+    void WriteStructured(Utf8JsonWriter writer, object value, JsonSchema schema)
+    {
+        if (value is ExpandoObject expando)
+        {
+            WriteObject(
+                writer,
+                expando,
+                schema.IsArray ? schema.Item!.Reference ?? schema.Item : schema.ActualTypeSchema);
+            return;
+        }
+
+        writer.WriteStartArray();
+        var itemSchema = schema.Item?.Reference ?? schema.Item;
+        foreach (var item in (IEnumerable)value)
+        {
+            if (item is not null && itemSchema is not null && IsStructured(item, itemSchema))
+            {
+                WriteStructured(writer, item, itemSchema);
+                continue;
+            }
+
+            if (item is string text && itemSchema is not null && WritesStringsAsTheyAre(itemSchema))
+            {
+                writer.WriteStringValue(text);
+                continue;
+            }
+
+            var node = itemSchema is not null ? ConvertToJsonNode(item, itemSchema) : ConvertUnknownSchemaTypeToJsonValue(item);
+            if (node is null)
+            {
+                writer.WriteNullValue();
+            }
+            else
+            {
+                node.WriteTo(writer, SerializerOptions);
+            }
+        }
+
+        writer.WriteEndArray();
+    }
+
+    ExpandoObject ReadObject(ref Utf8JsonReader reader, JsonSchema schema)
+    {
+        var schemaProperties = schema.FlattenedProperties;
+
+        // A schema without properties preserves everything in the document, which needs it as a whole.
+        if (schemaProperties.Count == 0)
+        {
+            return ToExpandoObject(JsonNode.Parse(ref reader)!.AsObject(), schema);
+        }
+
+        var exact = schema.FlattenedPropertiesByExactName;
+        var ignoringCase = schema.FlattenedPropertiesByName;
+        var read = new Dictionary<string, (object? Value, bool IsExactMatch)>(StringComparer.Ordinal);
+
+        while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
+        {
+            var documentName = reader.GetString()!;
+            var isExactMatch = exact.TryGetValue(documentName, out var property);
+            if (!isExactMatch && !ignoringCase.TryGetValue(documentName, out property))
+            {
+                reader.Read();
+                reader.Skip();
+                continue;
+            }
+
+            reader.Read();
+            var value = ReadValue(ref reader, property!);
+
+            // A document can carry both casings of a name; the exact one wins, as it does when reading a node.
+            if (!read.TryGetValue(property!.Name, out var existing) || !existing.IsExactMatch || isExactMatch)
+            {
+                read[property.Name] = (value, isExactMatch);
+            }
+        }
+
+        var expandoObject = new ExpandoObject();
+        var expandoObjectAsDictionary = (IDictionary<string, object?>)expandoObject;
+        foreach (var property in schemaProperties)
+        {
+            var name = property.Name;
+            read.TryGetValue(name, out var entry);
+            var value = entry.Value ?? property.GetDefaultValue(typeFormats);
+            if (value is not null)
+            {
+                expandoObjectAsDictionary[name] = value;
+            }
+        }
+
+        return expandoObject;
+    }
+
+    object? ReadValue(ref Utf8JsonReader reader, JsonSchema schema)
+    {
+        if (reader.TokenType == JsonTokenType.StartObject &&
+            !schema.IsDictionary &&
+            !typeFormats.IsKnown(schema.Format ?? schema.ActualTypeSchema.Format!))
+        {
+            return ReadObject(ref reader, schema.IsArray ? schema.Item!.Reference ?? schema.Item : schema.ActualTypeSchema);
+        }
+
+        if (reader.TokenType == JsonTokenType.StartArray && schema.Item is not null)
+        {
+            var items = new List<object?>();
+            while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
+            {
+                items.Add(ReadValue(ref reader, schema.Item));
+            }
+
+            return items.ToArray();
+        }
+
+        if (reader.TokenType == JsonTokenType.String && ReadsStringsAsTheyAre(schema))
+        {
+            return reader.GetString();
+        }
+
+        if (reader.TokenType == JsonTokenType.StartObject && schema.IsDictionary)
+        {
+            return ReadDictionary(ref reader);
+        }
+
+        if (reader.TokenType == JsonTokenType.String)
+        {
+            // A value that does not parse is left to the general path, which knows what to do with an encrypted one.
+            switch (ScalarKindOf(schema))
+            {
+                case StringScalar.Guid when reader.TryGetGuid(out var guid):
+                    return guid;
+                case StringScalar.DateTime when reader.TryGetDateTime(out var dateTime):
+                    return dateTime;
+            }
+        }
+
+        return ConvertFromJsonNode(JsonNode.Parse(ref reader), schema);
+    }
+
+    Dictionary<string, object> ReadDictionary(ref Utf8JsonReader reader)
+    {
+        var dictionary = new Dictionary<string, object>(StringComparer.Ordinal);
+        while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
+        {
+            var key = reader.GetString()!;
+            reader.Read();
+            dictionary[key] = ReadUnknown(ref reader)!;
+        }
+
+        return dictionary;
+    }
+
+    object? ReadUnknown(ref Utf8JsonReader reader)
+    {
+        switch (reader.TokenType)
+        {
+            case JsonTokenType.String:
+                return reader.GetString();
+            case JsonTokenType.Number:
+                return reader.GetDouble();
+            case JsonTokenType.True:
+                return true;
+            case JsonTokenType.False:
+                return false;
+            case JsonTokenType.StartObject:
+                var expandoObject = new ExpandoObject();
+                var expandoObjectAsDictionary = (IDictionary<string, object?>)expandoObject;
+                while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
+                {
+                    var property = reader.GetString()!;
+                    reader.Read();
+                    expandoObjectAsDictionary[property] = ReadUnknown(ref reader);
+                }
+
+                return expandoObject;
+            case JsonTokenType.StartArray:
+                var items = new List<object?>();
+                while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
+                {
+                    items.Add(ReadUnknown(ref reader));
+                }
+
+                return items.ToArray();
+            default:
+                return null;
+        }
+    }
+
+    /// <summary>
+    /// Gets whether a string value is written to JSON exactly as it is when converted against a schema, which holds
+    /// for most strings of a state and spares them a node of their own.
+    /// </summary>
+    /// <param name="schema">The <see cref="JsonSchema"/> of the value.</param>
+    /// <returns>True when the string is written as it is.</returns>
+    bool WritesStringsAsTheyAre(JsonSchema schema)
+    {
+        if (_writesStringsAsTheyAre.TryGetValue(schema, out var known))
+        {
+            return ReferenceEquals(known, _true);
+        }
+
+        var answer = ComputeWritesStringsAsTheyAre(schema);
+        _writesStringsAsTheyAre.TryAdd(schema, answer ? _true : _false);
+        return answer;
+    }
+
+    bool ComputeWritesStringsAsTheyAre(JsonSchema schema)
+    {
+        // These are the branches of ConvertToJsonNode that keep a string as it is, in the order it tries them.
+        if (HasProtectedValueMetadata(schema) || schema.IsDictionary || schema.Type.HasFlag(JsonObjectType.Array))
+        {
+            return true;
+        }
+
+        if (typeFormats.IsKnown(schema.Format ?? schema.ActualTypeSchema.Format!))
+        {
+            return false;
+        }
+
+        var type = EffectiveType(schema);
+        return type is JsonObjectType.String or JsonObjectType.None;
+    }
+
+    /// <summary>
+    /// Gets whether a string token is read as the string it is when converted against a schema.
+    /// </summary>
+    /// <param name="schema">The <see cref="JsonSchema"/> of the value.</param>
+    /// <returns>True when the string is read as it is.</returns>
+    bool ReadsStringsAsTheyAre(JsonSchema schema)
+    {
+        if (_readsStringsAsTheyAre.TryGetValue(schema, out var known))
+        {
+            return ReferenceEquals(known, _true);
+        }
+
+        var answer = ComputeReadsStringsAsTheyAre(schema);
+        _readsStringsAsTheyAre.TryAdd(schema, answer ? _true : _false);
+        return answer;
+    }
+
+    /// <summary>
+    /// Gets which scalar a string token of a schema is read directly into, because it is formatted as one.
+    /// </summary>
+    /// <param name="schema">The <see cref="JsonSchema"/> of the value.</param>
+    /// <returns>The <see cref="StringScalar"/>.</returns>
+    StringScalar ScalarKindOf(JsonSchema schema)
+    {
+        if (_scalarKinds.TryGetValue(schema, out var known))
+        {
+            return (StringScalar)known;
+        }
+
+        var kind = StringScalar.None;
+        var format = schema.Format ?? schema.ActualTypeSchema.Format!;
+        if (!schema.IsDictionary && typeFormats.IsKnown(format))
+        {
+            var type = typeFormats.GetTypeForFormat(format);
+            type = Nullable.GetUnderlyingType(type) ?? type;
+            if (type == typeof(Guid))
+            {
+                kind = StringScalar.Guid;
+            }
+            else if (type == typeof(DateTime))
+            {
+                kind = StringScalar.DateTime;
+            }
+        }
+
+        _scalarKinds.TryAdd(schema, kind);
+        return kind;
+    }
+
+    bool ComputeReadsStringsAsTheyAre(JsonSchema schema) =>
+        !schema.IsDictionary &&
+        !typeFormats.IsKnown(schema.Format ?? schema.ActualTypeSchema.Format!) &&
+        EffectiveType(schema) == JsonObjectType.String &&
+        schema.Format != "guid" &&
+        schema.OneOf.Count == 0;
+
+    JsonObjectType EffectiveType(JsonSchema schema)
+    {
+        // A nullable value is a union with null; the type of the value is that of the other branch.
+        if (schema.OneOf.Count > 0)
+        {
+            var oneOfSchema = schema.OneOf.FirstOrDefault(_ => _.Type != JsonObjectType.Null);
+            if (oneOfSchema != default)
+            {
+                schema = oneOfSchema;
+            }
+        }
+
+        var type = (schema.Type == JsonObjectType.None && schema.HasReference) ? schema.Reference!.Type : schema.Type;
+        return type.HasFlag(JsonObjectType.Null) ? type ^ JsonObjectType.Null : type;
+    }
 
     JsonNode? ConvertToJsonNode(object? value, JsonSchema schemaProperty)
     {
@@ -444,7 +841,24 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
             return document;
         }
 
-        if (value?.GetType().IsDictionary() == true)
+        if (value is string text)
+        {
+            return JsonValue.Create(text);
+        }
+
+        if (value is IDictionary dictionaryValue)
+        {
+            var dictionaryDocument = new JsonObject();
+            var entries = dictionaryValue.GetEnumerator();
+            while (entries.MoveNext())
+            {
+                dictionaryDocument[entries.Key.ToString() ?? string.Empty] = ConvertUnknownSchemaTypeToJsonValue(entries.Value);
+            }
+
+            return dictionaryDocument;
+        }
+
+        if (value?.GetType() is { IsValueType: false } valueType0 && valueType0.IsDictionary())
         {
             var dictionaryType = value.GetType();
             var keyType = dictionaryType.GetKeyType();
