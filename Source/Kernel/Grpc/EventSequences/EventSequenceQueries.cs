@@ -20,7 +20,7 @@ internal sealed class EventSequenceQueries(
     public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<bool>> IsStreamCompleted(global::Cratis.Chronicle.Contracts.EventSequences.IsStreamCompletedRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<bool>(
             callContext,
-            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, request.EventSequenceId, request.Namespace),
+            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: request.Namespace, First: request.EventSequenceId),
             () => grainFactory.GetGrain<global::Cratis.Chronicle.EventSequences.IEventSequence>(global::Cratis.Chronicle.KeyHelper.Combine((global::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId)request.EventSequenceId, (global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace)).IsStreamCompleted((global::Cratis.Chronicle.Concepts.Events.EventStreamType)request.EventStreamType, (global::Cratis.Chronicle.Concepts.Events.EventStreamId)request.EventStreamId),
             exception => logger.QueryFailed(exception, "EventSequenceQueries", "IsStreamCompleted"));
 }

@@ -78,7 +78,7 @@ internal static class SystemStoreGuard
         }
 
         if (routing.Store is null) return;
-        if (!await StoreCapabilityGuard.Permits(callContext, routing.Store, namespaceAddressed ? routing.Namespace : null, access)) throw Refused();
+        if (!await StoreCapabilityGuard.Permits(callContext, routing.Store, namespaceAddressed ? routing.AddressedNamespace : null, access)) throw Refused();
     }
 
     /// <summary>Authorizes a contract without a call-context parameter from the current server request.</summary>
@@ -206,7 +206,7 @@ internal static class SystemStoreGuard
         Observable.Create<T>(async observer =>
         {
             await Ensure(callContext, routing, access);
-            return StoreCapabilityGuard.EndWhenRevoked(source(), callContext, routing.Store!, routing.Namespace, access).Subscribe(observer);
+            return StoreCapabilityGuard.EndWhenRevoked(source(), callContext, routing.Store!, routing.AddressedNamespace, access).Subscribe(observer);
         });
 
     static IObservable<T> EnsureObservableForSystem<T>(CallContext callContext, QueryRouting routing, StoreAccess access, Func<IObservable<T>> source) =>

@@ -30,7 +30,7 @@ internal static class StoreCapabilityGuard
     {
         if (routing.Store is null) return Task.FromResult(true);
         var capability = routing.Capability ?? WellKnownCapabilities.ReadEventStore.Value;
-        return Decide(callContext, routing.Store, routing.Namespace, capability, StoreAccess.None);
+        return Decide(callContext, routing.Store, routing.AddressedNamespace, capability, StoreAccess.None);
     }
 
     /// <summary>
@@ -82,7 +82,7 @@ internal static class StoreCapabilityGuard
         var access = WellKnownCapabilities.AccessOf(new(capability));
         if (routing.Store is null || routing.TargetsSystem) return source;
         if (access == StoreAccess.None) return source;
-        return EndWhenRevoked(source, context, routing.Store, routing.Namespace, access);
+        return EndWhenRevoked(source, context, routing.Store, routing.AddressedNamespace, access);
     }
 
     static IObservable<Unit> LeaseExpiry(IStoreEntitlementsCache cache, TimeProvider time) => Observable.Create<Unit>(observer =>

@@ -42,6 +42,11 @@ static class KernelCommandRouting
 
     static RoutingGetter[] CreateGetters(Type type)
     {
+        if (type == typeof(EventStores.EnsureEventStore))
+        {
+            return [new("EventStore", true, command => ((EventStores.EnsureEventStore)command).Name.Value)];
+        }
+
         var getters = new List<RoutingGetter>();
         foreach (var name in SystemStoreRouting.Names)
         {

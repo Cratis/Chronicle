@@ -14,12 +14,12 @@ public class Authentication
     /// <summary>
     /// The default for <see cref="EnforceAdministratorPolicyForOperations"/>.
     /// </summary>
-    public const bool DefaultEnforceAdministratorPolicyForOperations = true;
+    public const bool DefaultEnforceAdministratorPolicyForOperations = false;
 
     /// <summary>
     /// The default for <see cref="EnforceDestructiveOperations"/>.
     /// </summary>
-    public const bool DefaultEnforceDestructiveOperations = true;
+    public const bool DefaultEnforceDestructiveOperations = false;
 
     /// <summary>
     /// Gets the server-local, single-use administrator recovery request.
@@ -42,8 +42,8 @@ public class Authentication
     /// <summary>
     /// Gets whether to enforce administrator authorization for System-store operational recovery.
     /// Administrator management is always enforced. When this is off, an operation the administrator policy
-    /// would refuse is logged and allowed. Defaults to <see langword="true"/>. Setting it to <see langword="false"/>
-    /// is a temporary opt-out that is removed in the next major release.
+    /// would refuse is logged and allowed. Defaults to <see langword="false"/> until the next major release.
+    /// Set it to <see langword="true"/> to opt in to enforcement.
     /// </summary>
     public bool EnforceAdministratorPolicyForOperations { get; init; } = DefaultEnforceAdministratorPolicyForOperations;
 
@@ -56,8 +56,8 @@ public class Authentication
     /// fan-out beyond the requested event store. Operations on an ordinary event store, such as an application replaying its
     /// own observers, stay with the per-store rules and are not affected by this flag. Rotating an application secret is
     /// deliberately excluded, because an administrator can rotate it again.
-    /// When this is off, such operations are logged and allowed as before. Defaults to <see langword="true"/>.
-    /// Setting it to <see langword="false"/> is a temporary opt-out that is removed in the next major release.
+    /// When this is off, such operations are logged and allowed as before. Defaults to <see langword="false"/> until
+    /// the next major release. Set it to <see langword="true"/> to opt in to enforcement.
     /// </summary>
     public bool EnforceDestructiveOperations { get; init; } = DefaultEnforceDestructiveOperations;
 

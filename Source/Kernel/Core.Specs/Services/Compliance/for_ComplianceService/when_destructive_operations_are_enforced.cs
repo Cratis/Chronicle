@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Grpc.Core;
+
 namespace Cratis.Chronicle.Services.Compliance.for_ComplianceService;
 
 public class when_destructive_operations_are_enforced : given.a_compliance_boundary
@@ -24,13 +26,13 @@ public class when_destructive_operations_are_enforced : given.a_compliance_bound
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task should_complete_the_legacy_calls_without_mutating_denied_stores(bool allowNew)
+    public async Task should_refuse_partial_success_without_mutating_denied_stores(bool allowNew)
     {
         Deny(OtherEventStore);
         var exception = await Catch.Exception(() => allowNew
             ? _service.AllowNewEncryptionKey(new() { EventStore = EventStore, Namespace = EventStoreNamespace, Identifier = Identifier }, _context)
             : _service.DeleteEncryptionKey(new() { EventStore = EventStore, Namespace = EventStoreNamespace, Identifier = Identifier }, _context));
-        exception.ShouldBeNull();
+        ((RpcException)exception).StatusCode.ShouldEqual(StatusCode.PermissionDenied);
         ShouldNotHaveTouched(OtherEventStore);
     }
 

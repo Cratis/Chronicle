@@ -19,7 +19,7 @@ public sealed class an_entitled_caller : IDisposable
     readonly ServiceProvider _services;
     readonly StoreEntitlementsCache _cache;
 
-    public an_entitled_caller(bool enforce = true, string? ns = null, CancellationToken cancellationToken = default)
+    public an_entitled_caller(bool enforce = true, string? ns = null, StoreAccess access = StoreAccess.Read | StoreAccess.Append | StoreAccess.Manage, CancellationToken cancellationToken = default)
     {
         Clock = new EntitlementClock();
         var grain = Substitute.For<IStoreEntitlements>();
@@ -27,7 +27,7 @@ public sealed class an_entitled_caller : IDisposable
         var grains = Substitute.For<IGrainFactory>();
         grains.GetGrain<IStoreEntitlements>(IStoreEntitlements.Key).Returns(grain);
         _cache = new(grains, NullLogger<StoreEntitlementsCache>.Instance, Clock);
-        _cache.Publish(new(1, [new(new(PrincipalKey.LocalIssuer, "app"), "store", ns is null ? null : new Concepts.EventStoreNamespaceName(ns), StoreAccess.Read | StoreAccess.Append | StoreAccess.Manage, EventStoreAccessGrantSource.Command)]));
+        _cache.Publish(new(1, [new(new(PrincipalKey.LocalIssuer, "app"), "store", ns is null ? null : new Concepts.EventStoreNamespaceName(ns), access, EventStoreAccessGrantSource.Command)]));
         var options = Options.Create(new ChronicleOptions { Authentication = new Authentication { Enabled = true, EnforceStoreEntitlements = enforce } });
         var accessor = new HttpContextAccessor();
         _services = new ServiceCollection()
@@ -47,6 +47,7 @@ public sealed class an_entitled_caller : IDisposable
     public HttpContext Http { get; }
     public EntitlementClock Clock { get; }
     public void Revoke() => _cache.Publish(new(2, []));
+    public void KeepOnly(StoreAccess access) => _cache.Publish(new(2, [new(new(PrincipalKey.LocalIssuer, "app"), "store", null, access, EventStoreAccessGrantSource.Command)]));
     public Task ConfirmLease() => _cache.Poll();
 
     public void Dispose()

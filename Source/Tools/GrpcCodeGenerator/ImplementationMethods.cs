@@ -374,8 +374,11 @@ public static class ImplementationMethods
             return null;
         }
 
-        var components = routing.Where(p => p != store).ToList();
-        if (components.Count > MaximumRoutingComponents)
+        var @namespace = routing.FirstOrDefault(parameter =>
+            parameter.ParameterType.FullName == "Cratis.Chronicle.Concepts.EventStoreNamespaceName" ||
+            (parameter.ParameterType == typeof(string) && parameter.Name == "namespace"));
+        var components = routing.Where(p => p != store && p != @namespace).ToList();
+        if (components.Count + (@namespace is null ? 0 : 1) > MaximumRoutingComponents)
         {
             throw new UnsupportedServiceShape(
                 routing[0].Member.Name,
@@ -383,7 +386,9 @@ public static class ImplementationMethods
         }
 
         var values = new List<string> { store is null ? "null" : RequestField(store) };
-        values.AddRange(components.Select(RequestField));
+        values.Add($"Namespace: {(@namespace is null ? "null" : RequestField(@namespace))}");
+        string[] componentNames = ["First", "Second", "Third", "Fourth", "Fifth"];
+        values.AddRange(components.Select((component, index) => $"{componentNames[index]}: {RequestField(component)}"));
         if (capability is not null)
         {
             values.Add($"Capability: {System.Text.Json.JsonSerializer.Serialize(capability)}");

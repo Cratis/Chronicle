@@ -107,7 +107,7 @@ internal sealed class Reducers(
                         register.Reducer.EventSequenceId,
                         register.ConnectionId);
 
-                    _ = SystemStoreGuard.CompleteRegistration(context, register.EventStore, register.Namespace, StoreAccess.Manage, registrationTcs, register);
+                    _ = SystemStoreGuard.CompleteRegistration(context, register.EventStore, register.Namespace, StoreAccess.Read | StoreAccess.Manage, registrationTcs, register);
                     break;
 
                 case ReducerResult result:
@@ -287,7 +287,7 @@ internal sealed class Reducers(
     static IObservable<ReduceOperationMessage> MonitorRegistration(IObservable<ReduceOperationMessage> source, Task<RegisterReducer> registration, CallContext context, (IDisposable Messages, CancellationTokenRegistration? Registration, Action Refused) ownership) =>
         Observable.FromAsync(() => registration.WaitAsync(context.CancellationToken))
             .Catch<RegisterReducer, OperationCanceledException>(_ => Observable.Empty<RegisterReducer>())
-            .SelectMany(arguments => StoreCapabilityGuard.EndWhenRevoked(source, context, arguments.EventStore, arguments.Namespace, StoreAccess.Manage))
+            .SelectMany(arguments => StoreCapabilityGuard.EndWhenRevoked(source, context, arguments.EventStore, arguments.Namespace, StoreAccess.Read | StoreAccess.Manage))
             .Do(_ => { }, _ => ownership.Refused())
             .Finally(() =>
             {
