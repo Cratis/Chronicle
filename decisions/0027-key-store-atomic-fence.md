@@ -226,14 +226,18 @@ Destruction does **not** change KV v2 `CurrentVersion`: CAS against a destroyed-
 destroying covered versions through V, the sweep CAS-writes a key-free `{erasedTombstone:true}` at V+1. Readers treat it as
 absent. A publisher holding CAS V now loses and re-reads the fence before failing closed. If publication wins first, the
 sweep re-reads and tombstones the new current version, bounded and jittered against the original request lifecycle.
-**Replacement/erasure amendment:** replacement, deletion and undo (C9) only CAS-tombstone/mark; they never call irreversible
-version destruction. Undo checks its nonce and staged version. Tombstones retain subject metadata (preventing native-CAS ABA)
+**Replacement/erasure amendment:** replacement, deletion without a recorded erasure request and undo (C9) only
+CAS-tombstone/mark; they never call irreversible version destruction. Legacy `RecordErasureFor` followed by `DeleteFor`
+runs the recorded requests' bounded sweep before returning, including in release N's `None` compatibility mode.
+Undo checks its nonce and staged version. Tombstones retain subject metadata (preventing native-CAS ABA)
 and cumulative key-free fingerprint evidence tagged with the material's staged lifecycle; replacement stages and publications
 carry that evidence forward. Current and historical key versions remain available to the sweep, including when replacement
-validated before an erasure request existed and tombstoned only after its fence CAS. Before publication, writers record any
-covered historical/evidence fingerprints into the request and aggregate fence with fence CAS, then re-read that durable fence
-and fail closed for covered candidates. Only the request-bounded erasure sweep records/consumes covered fingerprint evidence
-and irreversibly destroys covered key versions; it leaves uncovered successor versions and fingerprint evidence intact.
+validated before an erasure request existed and tombstoned only after its fence CAS. Before publication, writers reconcile
+covered fingerprints from every subject revision's history and locally retained evidence into the request and aggregate fence
+with fence CAS, then re-read that durable fence and fail closed for covered candidates, even at a different revision.
+The writer remains pinned to its first observed lifecycle, including across fence initialization and CAS retries.
+Only the request-bounded erasure sweep irreversibly destroys covered key versions after recording their fingerprint evidence;
+it leaves uncovered successor versions and fingerprint evidence intact.
 Confirmation inspects history and requires all covered evidence to have been recorded by the request; a tombstone alone is
 never proof of physical erasure. Fake and pinned-server contracts exercise destroy-without-version-change, publication paused
 after validation until after the sweep, and erasure committing between replacement validation and its reversible tombstone.

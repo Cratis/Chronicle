@@ -143,9 +143,11 @@ public class VaultEncryptionKeyStorage : IEncryptionKeyStorage
         var locations = VaultKeyLocations.For(eventStore, eventStoreNamespace, identifier);
         await EnsureLayoutProven();
         await _access.Require(identifier);
+        var requests = (await ReadFence(locations, identifier))?.Fence.Requests ?? [];
         foreach (var (number, path) in await RevisionPaths(locations))
         {
-            if (IsLatest(revision) || number == revision) await Tombstone(path, identifier, _ => true);
+            if (!IsLatest(revision) && number != revision) continue;
+            await DeleteRevision(locations, (number, path), identifier, requests);
         }
     }
 
@@ -309,7 +311,7 @@ public class VaultEncryptionKeyStorage : IEncryptionKeyStorage
         var ownedVersion = stagedVersion.Value;
         try
         {
-            await CaptureCoveredFingerprints(locations, (revision, path), identifier);
+            await CaptureCoveredFingerprints(locations, identifier);
             var fence = (await RequiredFence(locations, identifier)).Fence;
             if (fence.Version < initial.Version) throw new EncryptionKeyFenceUnavailable(identifier);
             if (fence.Lifecycle != initial.Lifecycle) throw new EncryptionKeyFenceChanged(identifier);
@@ -378,7 +380,7 @@ public class VaultEncryptionKeyStorage : IEncryptionKeyStorage
         var path = locations.Path(candidate.Revision);
 
         // Record covered evidence before validating a replacement, without destroying any history.
-        await CaptureCoveredFingerprints(locations, (candidate.Revision, path), identifier);
+        await CaptureCoveredFingerprints(locations, identifier);
         var fence = (await RequiredFence(locations, identifier)).Fence;
         if (fence.Lifecycle != candidate.StagedLifecycle) throw new EncryptionKeyFenceChanged(identifier);
         fence.EnsureStillAllowed(identifier, candidate);
@@ -388,23 +390,41 @@ public class VaultEncryptionKeyStorage : IEncryptionKeyStorage
         var replacement = await _access.Read(path);
         if (replacement is null || !IsTombstone(replacement.Value.Data)) return null;
 
-        await CaptureCoveredFingerprints(locations, (candidate.Revision, path), identifier);
+        await CaptureCoveredFingerprints(locations, identifier);
         return replacement.Value.Version;
     }
 
-    async Task CaptureCoveredFingerprints(VaultKeyLocations locations, (EncryptionKeyRevision Revision, string Path) location, EncryptionKeyIdentifier identifier)
+    async Task CaptureCoveredFingerprints(VaultKeyLocations locations, EncryptionKeyIdentifier identifier)
     {
-        var history = await _access.History(location.Path, identifier);
-        var fence = (await RequiredFence(locations, identifier)).Fence;
-        foreach (var request in fence.Requests ?? [])
+        // A successor at any revision must not reuse material missed by an earlier erasure snapshot.
+        // History includes cumulative, key-free evidence retained by replacements and undo.
+        foreach (var (revision, path) in await RevisionPaths(locations))
         {
-            foreach (var historical in history)
+            var history = await _access.History(path, identifier);
+            var fence = (await RequiredFence(locations, identifier)).Fence;
+            foreach (var request in fence.Requests ?? [])
             {
-                foreach (var evidence in Evidence(historical.Data).Where(_ => Covered(request, location.Revision, _)))
+                foreach (var evidence in history.SelectMany(_ => Evidence(_.Data)).Distinct().Where(_ => Covered(request, revision, _)))
                 {
                     await AddFingerprint(locations, identifier, request.RequestId, evidence.Fingerprint);
                 }
             }
+        }
+    }
+
+    async Task DeleteRevision(VaultKeyLocations locations, (EncryptionKeyRevision Revision, string Path) location, EncryptionKeyIdentifier identifier, IReadOnlyList<EncryptionKeyErasureRequest> requests)
+    {
+        if (requests.Count == 0)
+        {
+            await Tombstone(location.Path, identifier, _ => true);
+            return;
+        }
+
+        // Legacy callers record erasure before deleting; keep destruction bounded to those requests.
+        foreach (var request in requests)
+        {
+            await Tombstone(location.Path, identifier, data => Covered(request, location.Revision, data));
+            await DestroyCoveredHistory(locations, location, identifier, request);
         }
     }
 
@@ -483,13 +503,20 @@ public class VaultEncryptionKeyStorage : IEncryptionKeyStorage
             if (current is not null && fence.Seal is not null) return fence;
             if (await _access.WriteFence(locations.ErasurePath, fence with { Version = checked(fence.Version + 1) }, current?.Version ?? 0) is not null)
             {
-                return (await RequiredFence(locations, identifier)).Fence;
+                return await RequiredLifecycle(locations, identifier, lifecycle.Value);
             }
 
             await _access.Backoff(attempt);
         }
 
         throw new EncryptionKeyFenceUnavailable(identifier);
+    }
+
+    async Task<EncryptionKeyErasure> RequiredLifecycle(VaultKeyLocations locations, EncryptionKeyIdentifier identifier, uint lifecycle)
+    {
+        var fence = (await RequiredFence(locations, identifier)).Fence;
+        if (fence.Lifecycle != lifecycle) throw new EncryptionKeyFenceChanged(identifier);
+        return fence;
     }
 
     async Task<(EncryptionKeyErasure Fence, int Version)> RequiredFence(VaultKeyLocations locations, EncryptionKeyIdentifier identifier) =>

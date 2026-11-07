@@ -109,10 +109,16 @@ public class on_fake : VaultEncryptionKeyStorageContract
         _fake.IgnoreCas = true;
         _fake.Seed("contract/contract/subject/1", new() { ["publicKey"] = Convert.ToBase64String(Original.Public), ["privateKey"] = Convert.ToBase64String(Original.Private) });
         Storage.FenceGuarantees.ShouldEqual(EncryptionKeyFenceGuarantees.None);
+        const string legacyPath = "contract/contract/subject/1";
+        var original = await Client.V1.Secrets.KeyValue.V2.ReadSecretAsync(legacyPath, mountPoint: Mount);
+        await Client.V1.Secrets.KeyValue.V2.WriteSecretAsync(legacyPath, original.Data.Data, mountPoint: Mount);
         await Storage.RecordErasureFor("contract", "contract", Identifier);
         await Storage.DeleteFor("contract", "contract", Identifier);
         (await Storage.TryGetLatestFor("contract", "contract", Identifier)).ShouldBeNull();
         (await Storage.GetErasureFor("contract", "contract", Identifier)).ShouldNotBeNull();
+        var metadata = await Client.V1.Secrets.KeyValue.V2.ReadSecretMetadataAsync(legacyPath, mountPoint: Mount);
+        metadata.Data.Versions["1"].Destroyed.ShouldBeTrue();
+        metadata.Data.Versions["2"].Destroyed.ShouldBeTrue();
     }
 
     [Fact]

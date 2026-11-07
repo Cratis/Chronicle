@@ -197,6 +197,73 @@ public abstract class VaultEncryptionKeyStorageContract : Cratis.Chronicle.Stora
         await Assert.ThrowsAsync<EncryptionKeyErased>(() => Storage.SaveFor("contract", "contract", Identifier, missed, 100u));
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task should_reconcile_subject_wide_evidence_before_publishing_at_a_different_revision(bool onlyRetainedEvidence)
+    {
+        var missed = new EncryptionKey([3], [4]);
+        await Storage.SaveFor("contract", "contract", Identifier, Original);
+        await DuringErasure(
+            () => Storage.RecordErasureFor("contract", "contract", Identifier, new("cross-revision")),
+            async () =>
+            {
+                await Storage.SaveFor("contract", "contract", Identifier, missed, 99u);
+                await Storage.SaveFor("contract", "contract", Identifier, new EncryptionKey([5], [6]), 99u);
+            });
+        var erased = (await Storage.GetFenceFor("contract", "contract", Identifier))!;
+        erased.ErasedThrough.Value.ShouldEqual(1u);
+        erased.ErasedKeyFingerprints.ShouldNotContain(missed.Fingerprint);
+        if (onlyRetainedEvidence)
+        {
+            // The replacement's key-free evidence must suffice even without the original material's history.
+            await Client.V1.Secrets.KeyValue.V2.DestroySecretVersionsAsync(Path(99u), [1, 2], mountPoint: Mount);
+        }
+
+        await Storage.AllowNewKeyFor("contract", "contract", Identifier, erased.Version, erased.Lifecycle);
+        await Assert.ThrowsAsync<EncryptionKeyErased>(() => Storage.SaveFor("contract", "contract", Identifier, missed, 100u));
+        (await Storage.TryGetFor("contract", "contract", Identifier, 100u)).ShouldBeNull();
+        var captured = (await Storage.GetFenceFor("contract", "contract", Identifier))!;
+        captured.ErasedKeyFingerprints.ShouldContain(missed.Fingerprint);
+        captured.Requests!.Single(_ => _.RequestId == "cross-revision").Fingerprints.ShouldContain(missed.Fingerprint);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task should_pin_the_writer_lifecycle_while_initializing_its_fence(bool provision)
+    {
+        await Assert.ThrowsAsync<EncryptionKeyFenceChanged>(() => Interleaving.DuringFenceCreationResponse(
+            async () =>
+            {
+                if (provision) await Storage.GetOrAddWithRevisionFor("contract", "contract", Identifier, Original);
+                else await Storage.SaveFor("contract", "contract", Identifier, Original);
+            },
+            async () =>
+            {
+                await Storage.RecordErasureFor("contract", "contract", Identifier, new("initializing"));
+                var erased = (await Storage.GetFenceFor("contract", "contract", Identifier))!;
+                await Storage.AllowNewKeyFor("contract", "contract", Identifier, erased.Version, erased.Lifecycle);
+            }));
+        (await Storage.TryGetLatestFor("contract", "contract", Identifier)).ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task should_sweep_legacy_erasure_without_destroying_an_authorized_successor()
+    {
+        await Storage.SaveFor("contract", "contract", Identifier, Original);
+        await Storage.RecordErasureFor("contract", "contract", Identifier);
+        var erased = (await Storage.GetFenceFor("contract", "contract", Identifier))!;
+        await Storage.AllowNewKeyFor("contract", "contract", Identifier, erased.Version, erased.Lifecycle);
+        var successor = new EncryptionKey([5], [6]);
+        await Storage.SaveFor("contract", "contract", Identifier, successor, 2u);
+        await Storage.DeleteFor("contract", "contract", Identifier);
+        var metadata = await Client.V1.Secrets.KeyValue.V2.ReadSecretMetadataAsync(Path(1u), mountPoint: Mount);
+        metadata.Data.Versions["1"].Destroyed.ShouldBeTrue();
+        metadata.Data.Versions["2"].Destroyed.ShouldBeTrue();
+        (await Storage.GetFor("contract", "contract", Identifier, 2u)).Fingerprint.ShouldEqual(successor.Fingerprint);
+    }
+
     [Fact]
     public async Task should_verify_and_sweep_covered_history_even_under_an_uncovered_current_key()
     {
