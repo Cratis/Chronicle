@@ -128,5 +128,6 @@ public class when_identical_registrations_arrive_concurrently(context context) :
 
         public Task Unregister(KernelEventStoreName eventStore, KernelProjectionId projectionId) => inner.Unregister(eventStore, projectionId);
         public Task NamespaceAdded(KernelEventStoreName eventStore, KernelNamespaceName @namespace) => inner.NamespaceAdded(eventStore, @namespace);
+        public Task SetWatchState(KernelEventStoreName eventStore, KernelNamespaceName @namespace, Cratis.Chronicle.Concepts.Observation.ObserverId projection, bool isWatched) => inner.SetWatchState(eventStore, @namespace, projection, isWatched);
     }
 }
