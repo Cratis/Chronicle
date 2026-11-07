@@ -35,7 +35,12 @@ internal sealed class VaultFenceAccess
         _mount = mount;
 
         // The public capability getter is synchronous; do not capture its caller's synchronization context.
-        _probe = new(() => Task.Run(() => upgradeCheck.ProbeFenceGuarantees(this)));
+        _probe = new(() => Task.Run(async () =>
+        {
+            var guarantees = await upgradeCheck.ProbeFenceGuarantees(this);
+            if (guarantees == EncryptionKeyFenceGuarantees.None) Unsupported?.Invoke();
+            return guarantees;
+        }));
         _random = random ?? Random.Shared;
         _delay = delay ?? (_ => Task.Delay(_));
         var previous = client.Settings.BeforeApiRequestAction;
@@ -46,6 +51,9 @@ internal sealed class VaultFenceAccess
             request.Headers.Add("X-Vault-Inconsistent", "forward-active-node");
         };
     }
+
+    /// <summary>Notifies once when the probe cannot verify atomic fencing.</summary>
+    internal event Action? Unsupported;
 
     /// <summary>Gets the guarantees proven by the server probe.</summary>
     internal EncryptionKeyFenceGuarantees Guarantees => Probe().GetAwaiter().GetResult();
@@ -64,23 +72,36 @@ internal sealed class VaultFenceAccess
     /// <returns>The proven guarantees.</returns>
     internal Task<EncryptionKeyFenceGuarantees> Probe() => _probe.Value;
 
-    /// <summary>Refuse an unverified server.</summary>
+    /// <summary>Require a verified read topology, retaining release-N compatibility for unsupported CAS.</summary>
     /// <param name="identifier">The subject.</param>
     /// <returns>The continuation.</returns>
     /// <exception cref="EncryptionKeyFenceUnavailable">The server cannot guarantee strong fences.</exception>
     internal async Task Require(EncryptionKeyIdentifier identifier)
     {
-        if (await Probe() == EncryptionKeyFenceGuarantees.None) throw new EncryptionKeyFenceUnavailable(identifier);
+        if (await Probe() != EncryptionKeyFenceGuarantees.None) return;
+
+        // D4 defers refusal for missing CAS until N+1, but C8 still requires primary reads in N.
+        try
+        {
+            var health = await _client.V1.System.GetHealthStatusAsync(standbyOk: true);
+            if (!health.Initialized || health.Sealed) throw new EncryptionKeyFenceUnavailable(identifier);
+            if (health.Enterprise || health.PerformanceStandby) throw new EncryptionKeyFenceUnavailable(identifier);
+        }
+        catch (Exception exception) when (exception is VaultApiException or HttpRequestException or TimeoutException or OperationCanceledException)
+        {
+            throw new EncryptionKeyFenceUnavailable(identifier);
+        }
     }
 
     /// <summary>Read a secret and its native CAS version.</summary>
     /// <param name="path">The secret path.</param>
+    /// <param name="version">An exact historical version, or null for current.</param>
     /// <returns>The secret or null when absent.</returns>
-    internal async Task<(Dictionary<string, object> Data, int Version)?> Read(string path)
+    internal async Task<(Dictionary<string, object> Data, int Version)?> Read(string path, int? version = null)
     {
         try
         {
-            var secret = await _client.V1.Secrets.KeyValue.V2.ReadSecretAsync(path, mountPoint: _mount);
+            var secret = await _client.V1.Secrets.KeyValue.V2.ReadSecretAsync(path, version: version, mountPoint: _mount);
             return (new(secret.Data.Data, StringComparer.Ordinal), secret.Data.Metadata.Version);
         }
         catch (VaultApiException exception) when (exception.HttpStatusCode == HttpStatusCode.NotFound)
@@ -138,6 +159,30 @@ internal sealed class VaultFenceAccess
     /// <param name="through">The inclusive native version boundary.</param>
     /// <returns>The continuation.</returns>
     internal Task Destroy(string path, int through) => _client.V1.Secrets.KeyValue.V2.DestroySecretVersionsAsync(path, Enumerable.Range(1, through).ToList(), mountPoint: _mount);
+
+    /// <summary>Read every version that metadata does not prove physically destroyed.</summary>
+    /// <param name="path">The secret path.</param>
+    /// <param name="identifier">The subject.</param>
+    /// <returns>The surviving versions, including unpublished history.</returns>
+    /// <exception cref="EncryptionKeyFenceUnavailable">A surviving version cannot be inspected.</exception>
+    internal async Task<List<(Dictionary<string, object> Data, int Version)>> History(string path, EncryptionKeyIdentifier identifier)
+    {
+        var metadata = await _client.V1.Secrets.KeyValue.V2.ReadSecretMetadataAsync(path, mountPoint: _mount);
+        var history = new List<(Dictionary<string, object> Data, int Version)>();
+        foreach (var version in metadata.Data.Versions.Where(_ => !_.Value.Destroyed))
+        {
+            // Soft deletion is not physical erasure, and must never become proof of absence.
+            history.Add(await Read(path, int.Parse(version.Key, CultureInfo.InvariantCulture)) ?? throw new EncryptionKeyFenceUnavailable(identifier));
+        }
+
+        return history;
+    }
+
+    /// <summary>Destroy exactly one covered historical version.</summary>
+    /// <param name="path">The secret path.</param>
+    /// <param name="version">The native version.</param>
+    /// <returns>The continuation.</returns>
+    internal Task DestroyVersion(string path, int version) => _client.V1.Secrets.KeyValue.V2.DestroySecretVersionsAsync(path, [version], mountPoint: _mount);
 
     /// <summary>Verify every historical version under a tombstone was physically destroyed.</summary>
     /// <param name="path">The secret path.</param>

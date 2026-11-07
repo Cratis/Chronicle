@@ -16,6 +16,9 @@ public sealed class FakeVault : HttpMessageHandler
 {
     readonly Dictionary<string, List<Dictionary<string, object>?>> _paths = new(StringComparer.Ordinal);
     readonly object _lock = new();
+    readonly HashSet<(string Path, int Version)> _deleted = [];
+
+    public bool CasRequired { get; set; }
 
     public bool IgnoreCas { get; set; }
     public bool Enterprise { get; set; }
@@ -58,6 +61,11 @@ public sealed class FakeVault : HttpMessageHandler
         var route = request.RequestUri!.AbsolutePath.Split('/', 5);
         if (request.RequestUri.AbsolutePath == "/v1/sys/health") return Reply(new { initialized = true, @sealed = false, enterprise = Enterprise, performance_standby = Enterprise });
         var action = route[3];
+        if (action == "config")
+        {
+            CasRequired = body!.RootElement.GetProperty("cas_required").GetBoolean();
+            return new(HttpStatusCode.NoContent);
+        }
         var path = route.Length == 5 ? Uri.UnescapeDataString(route[4]).TrimEnd('/') : string.Empty;
         if (action == "metadata" && IsList(request)) return List(path);
         _paths.TryGetValue(path, out var versions);
@@ -65,13 +73,22 @@ public sealed class FakeVault : HttpMessageHandler
         {
             "metadata" => Metadata(request.Method, path, versions),
             "destroy" => Destroy(body!, versions),
-            "data" when request.Method == HttpMethod.Get => Read(versions),
-            "data" when request.Method == HttpMethod.Put || request.Method == HttpMethod.Post => Write(path, body!, versions),
+            "delete" => SoftDelete(path, body, versions),
+            "undelete" => Undelete(path, body!, versions),
+            "data" => Data(request, path, body, versions),
             _ => Error(HttpStatusCode.BadRequest, "unexpected route")
         };
     }
 
     static bool IsList(HttpRequestMessage request) => request.Method.Method == "LIST" || request.RequestUri!.Query == "?list=true";
+
+    HttpResponseMessage Data(HttpRequestMessage request, string path, JsonDocument? body, List<Dictionary<string, object>?>? versions)
+    {
+        if (request.Method == HttpMethod.Delete) return SoftDelete(path, null, versions);
+        if (request.Method == HttpMethod.Get) return Read(path, request.RequestUri!.Query, versions);
+        if (request.Method == HttpMethod.Put || request.Method == HttpMethod.Post) return Write(path, body!, versions);
+        return Error(HttpStatusCode.BadRequest, "unexpected route");
+    }
 
     HttpResponseMessage List(string path)
     {
@@ -94,7 +111,7 @@ public sealed class FakeVault : HttpMessageHandler
         {
             return versions is null ? Error(HttpStatusCode.NotFound, "not found") : Reply(new
             {
-                data = new { current_version = versions.Count, versions = versions.Select((data, index) => (data, index)).ToDictionary(_ => (_.index + 1).ToString(System.Globalization.CultureInfo.InvariantCulture), _ => new { destroyed = _.data is null }) }
+                data = new { current_version = versions.Count, versions = versions.Select((data, index) => (data, index)).ToDictionary(_ => (_.index + 1).ToString(System.Globalization.CultureInfo.InvariantCulture), _ => new { destroyed = _.data is null, deletion_time = _deleted.Contains((path, _.index + 1)) ? "2026-01-01T00:00:00Z" : string.Empty }) }
             });
         }
 
@@ -112,11 +129,34 @@ public sealed class FakeVault : HttpMessageHandler
         return new(HttpStatusCode.NoContent);
     }
 
-    HttpResponseMessage Read(List<Dictionary<string, object>?>? versions)
+    HttpResponseMessage SoftDelete(string path, JsonDocument? body, List<Dictionary<string, object>?>? versions)
+    {
+        foreach (var version in body is null ? [versions?.Count ?? 0] : body.RootElement.GetProperty("versions").EnumerateArray().Select(_ => _.GetInt32()).ToArray())
+        {
+            if (version > 0 && version <= (versions?.Count ?? 0)) _deleted.Add((path, version));
+        }
+
+        return new(HttpStatusCode.NoContent);
+    }
+
+    HttpResponseMessage Undelete(string path, JsonDocument body, List<Dictionary<string, object>?>? versions)
+    {
+        foreach (var version in body.RootElement.GetProperty("versions").EnumerateArray().Select(_ => _.GetInt32()))
+        {
+            if (version > 0 && version <= (versions?.Count ?? 0)) _deleted.Remove((path, version));
+        }
+
+        return new(HttpStatusCode.NoContent);
+    }
+
+    HttpResponseMessage Read(string path, string query, List<Dictionary<string, object>?>? versions)
     {
         if (RefuseReads) return Error(HttpStatusCode.Forbidden, "permission denied");
-        if (versions is null || versions.Count == 0 || versions[^1] is null) return Error(HttpStatusCode.NotFound, "not found");
-        return Reply(new { data = new { data = versions[^1], metadata = new { version = versions.Count } } });
+        var requested = query.TrimStart('?').Split('&').FirstOrDefault(_ => _.StartsWith("version=", StringComparison.Ordinal));
+        var version = requested is null ? versions?.Count ?? 0 : int.Parse(requested["version=".Length..], System.Globalization.CultureInfo.InvariantCulture);
+        if (version == 0) version = versions?.Count ?? 0;
+        if (versions is null || version <= 0 || version > versions.Count || versions[version - 1] is null || _deleted.Contains((path, version))) return Error(HttpStatusCode.NotFound, "not found");
+        return Reply(new { data = new { data = versions[version - 1], metadata = new { version } } });
     }
 
     HttpResponseMessage Write(string path, JsonDocument body, List<Dictionary<string, object>?>? versions)
@@ -128,6 +168,7 @@ public sealed class FakeVault : HttpMessageHandler
             return Error(HttpStatusCode.BadRequest, "check-and-set parameter did not match the current version");
         }
 
+        if (CasRequired && ExpectedVersion(root) is null) return Error(HttpStatusCode.BadRequest, "check-and-set parameter required for this call");
         if (!IgnoreCas && ExpectedVersion(root) is { } expected && expected != (versions?.Count ?? 0))
         {
             return Error(HttpStatusCode.BadRequest, "check-and-set parameter did not match the current version");

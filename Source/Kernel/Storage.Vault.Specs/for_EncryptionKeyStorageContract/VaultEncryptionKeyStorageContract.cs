@@ -5,6 +5,8 @@ using System.Globalization;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Storage.Compliance;
 using VaultSharp;
+using VaultSharp.Core;
+using VaultSharp.V1.SecretsEngines.KeyValue.V2;
 
 namespace Cratis.Chronicle.Storage.Vault.for_EncryptionKeyStorageContract;
 
@@ -92,6 +94,92 @@ public abstract class VaultEncryptionKeyStorageContract : Cratis.Chronicle.Stora
                 await Client.V1.Secrets.KeyValue.V2.WriteSecretAsync(Path(99u), staged.Data.Data, checkAndSet: staged.Data.Metadata.Version, mountPoint: Mount);
             }));
         (await Storage.TryGetFor("contract", "contract", Identifier, 99u))!.Fingerprint.ShouldEqual(winner.Fingerprint);
+    }
+
+    [Fact]
+    public async Task should_destroy_history_before_overwriting_a_key_missed_by_the_erasure_snapshot()
+    {
+        await Storage.SaveFor("contract", "contract", Identifier, Original);
+        await DuringErasure(
+            () => Storage.RecordErasureFor("contract", "contract", Identifier, new("snapshot")),
+            () => Storage.SaveFor("contract", "contract", Identifier, new EncryptionKey([3], [4]), 99u));
+        var erased = (await Storage.GetFenceFor("contract", "contract", Identifier))!;
+        erased.ErasedThrough.Value.ShouldEqual(1u);
+        await Storage.AllowNewKeyFor("contract", "contract", Identifier, erased.Version, erased.Lifecycle);
+        var successor = new EncryptionKey([5], [6]);
+        await Storage.SaveFor("contract", "contract", Identifier, successor, 99u);
+        var metadata = await Client.V1.Secrets.KeyValue.V2.ReadSecretMetadataAsync(Path(99u), mountPoint: Mount);
+        metadata.Data.Versions["1"].Destroyed.ShouldBeTrue();
+        metadata.Data.Versions["2"].Destroyed.ShouldBeTrue();
+        await Storage.DeleteThroughFor("contract", "contract", Identifier, "snapshot");
+        await Storage.ConfirmErasureFor("contract", "contract", Identifier, "snapshot");
+        (await Storage.GetFor("contract", "contract", Identifier, 99u)).Fingerprint.ShouldEqual(successor.Fingerprint);
+    }
+
+    [Fact]
+    public async Task should_verify_and_sweep_covered_history_even_under_an_uncovered_current_key()
+    {
+        await Storage.SaveFor("contract", "contract", Identifier, Original);
+        await DuringErasure(
+            () => Storage.RecordErasureFor("contract", "contract", Identifier, new("history")),
+            () => Storage.SaveFor("contract", "contract", Identifier, new EncryptionKey([3], [4]), 99u));
+        var erased = (await Storage.GetFenceFor("contract", "contract", Identifier))!;
+        await Storage.AllowNewKeyFor("contract", "contract", Identifier, erased.Version, erased.Lifecycle);
+        var current = await Client.V1.Secrets.KeyValue.V2.ReadSecretAsync(Path(99u), mountPoint: Mount);
+        current.Data.Data["stagedLifecycle"] = erased.Lifecycle + 1;
+        current.Data.Data["publicKey"] = Convert.ToBase64String(new byte[] { 5 });
+        current.Data.Data["privateKey"] = Convert.ToBase64String(new byte[] { 6 });
+
+        // Simulate history left by an earlier implementation, bypassing guarded replacement.
+        var successor = await Client.V1.Secrets.KeyValue.V2.WriteSecretAsync(Path(99u), current.Data.Data, checkAndSet: current.Data.Metadata.Version, mountPoint: Mount);
+        await Assert.ThrowsAsync<EncryptionKeyFenceUnavailable>(() => Storage.ConfirmErasureFor("contract", "contract", Identifier, "history"));
+        await Storage.DeleteThroughFor("contract", "contract", Identifier, "history");
+        await Storage.ConfirmErasureFor("contract", "contract", Identifier, "history");
+        var metadata = await Client.V1.Secrets.KeyValue.V2.ReadSecretMetadataAsync(Path(99u), mountPoint: Mount);
+        metadata.Data.Versions["1"].Destroyed.ShouldBeTrue();
+        metadata.Data.Versions["2"].Destroyed.ShouldBeTrue();
+        metadata.Data.Versions[successor.Data.Version.ToString(CultureInfo.InvariantCulture)].Destroyed.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task should_read_the_requested_historical_version_instead_of_current()
+    {
+        var path = Path(57u);
+        await Client.V1.Secrets.KeyValue.V2.WriteSecretAsync(path, new Dictionary<string, object> { ["value"] = "first" }, checkAndSet: 0, mountPoint: Mount);
+        await Client.V1.Secrets.KeyValue.V2.WriteSecretAsync(path, new Dictionary<string, object> { ["value"] = "second" }, checkAndSet: 1, mountPoint: Mount);
+        var historical = await Client.V1.Secrets.KeyValue.V2.ReadSecretAsync(path, version: 1, mountPoint: Mount);
+        historical.Data.Metadata.Version.ShouldEqual(1);
+        historical.Data.Data["value"].ToString().ShouldEqual("first");
+        (await Client.V1.Secrets.KeyValue.V2.ReadSecretAsync(path, mountPoint: Mount)).Data.Data["value"].ToString().ShouldEqual("second");
+    }
+
+    [Fact]
+    public async Task should_model_soft_delete_as_reversible_and_distinct_from_destruction()
+    {
+        var path = Path(57u);
+        await Client.V1.Secrets.KeyValue.V2.WriteSecretAsync(path, new Dictionary<string, object> { ["value"] = "first" }, checkAndSet: 0, mountPoint: Mount);
+        await Client.V1.Secrets.KeyValue.V2.DeleteSecretVersionsAsync(path, [1], mountPoint: Mount);
+        await Assert.ThrowsAsync<VaultApiException>(() => Client.V1.Secrets.KeyValue.V2.ReadSecretAsync(path, version: 1, mountPoint: Mount));
+        var deleted = await Client.V1.Secrets.KeyValue.V2.ReadSecretMetadataAsync(path, mountPoint: Mount);
+        deleted.Data.CurrentVersion.ShouldEqual(1);
+        deleted.Data.Versions["1"].Destroyed.ShouldBeFalse();
+        await Client.V1.Secrets.KeyValue.V2.UndeleteSecretVersionsAsync(path, [1], mountPoint: Mount);
+        (await Client.V1.Secrets.KeyValue.V2.ReadSecretAsync(path, version: 1, mountPoint: Mount)).Data.Data["value"].ToString().ShouldEqual("first");
+        await Client.V1.Secrets.KeyValue.V2.DestroySecretVersionsAsync(path, [1], mountPoint: Mount);
+        await Client.V1.Secrets.KeyValue.V2.UndeleteSecretVersionsAsync(path, [1], mountPoint: Mount);
+        await Assert.ThrowsAsync<VaultApiException>(() => Client.V1.Secrets.KeyValue.V2.ReadSecretAsync(path, version: 1, mountPoint: Mount));
+    }
+
+    [Fact]
+    public async Task should_require_cas_when_the_mount_is_configured_to_require_it()
+    {
+        await Client.V1.Secrets.KeyValue.V2.ConfigureAsync(new KeyValue2ConfigModel { CASRequired = true }, mountPoint: Mount);
+        await Assert.ThrowsAsync<VaultApiException>(() => Client.V1.Secrets.KeyValue.V2.WriteSecretAsync(Path(57u), new Dictionary<string, object> { ["value"] = true }, mountPoint: Mount));
+        await Storage.SaveFor("contract", "contract", Identifier, Original);
+        await Storage.RecordErasureFor("contract", "contract", Identifier, new("cas"));
+        await Storage.DeleteThroughFor("contract", "contract", Identifier, "cas");
+        await Storage.ConfirmErasureFor("contract", "contract", Identifier, "cas");
+        (await Storage.GetFenceFor("contract", "contract", Identifier))!.Requests!.Single().Confirmed.ShouldBeTrue();
     }
 
     protected static string Path(EncryptionKeyRevision revision) => VaultKeyLocations.For("contract", "contract", Identifier).Path(revision);

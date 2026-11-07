@@ -21,6 +21,7 @@ public class VaultEncryptionKeyStorage : IEncryptionKeyStorage
     const string DefaultMountPoint = "secret";
     const string CheckAndSetMismatch = "check-and-set parameter did not match";
     const int MaximumAttempts = 8;
+    static readonly Action<ILogger, Exception?> _unsupportedFenceWarning = LoggerMessage.Define(LogLevel.Warning, new EventId(4979, "UnsupportedFenceWarning"), "Vault has not verified atomic encryption-key fencing. Release N retains compatibility; N+1 will refuse erasure and new-key authorization.");
     readonly IVaultClient _vaultClient;
     readonly string _mountPoint;
     readonly ILogger<VaultEncryptionKeyStorage> _logger;
@@ -54,6 +55,7 @@ public class VaultEncryptionKeyStorage : IEncryptionKeyStorage
         _logger = logger ?? NullLogger<VaultEncryptionKeyStorage>.Instance;
         _layoutCheck = new(vaultClient, _mountPoint);
         _access = new(vaultClient, _mountPoint, _layoutCheck, random, delay);
+        _access.Unsupported += () => _unsupportedFenceWarning(_logger, null);
     }
 
     /// <inheritdoc/>
@@ -76,8 +78,8 @@ public class VaultEncryptionKeyStorage : IEncryptionKeyStorage
             var observed = await _access.Read(path);
             if (observed is not null && ((!IsLatest(revision) && IsPublished(observed.Value.Data)) || IsTombstone(observed.Value.Data)))
             {
-                if (IsTombstone(observed.Value.Data)) await _access.Destroy(path, observed.Value.Version - 1);
-                if (await StageAndPublish(locations, identifier, key, next, fence, observed.Value.Version) is not null) return;
+                var replacement = await PrepareReplacement(path, identifier, observed.Value.Version);
+                if (replacement is { } version && await StageAndPublish(locations, identifier, key, next, fence, version) is not null) return;
             }
             else if (observed is null && await StageAndPublish(locations, identifier, key, next, fence, 0) is not null)
             {
@@ -218,6 +220,7 @@ public class VaultEncryptionKeyStorage : IEncryptionKeyStorage
             {
                 if (Key(data) is { } key) await AddFingerprint(locations, identifier, requestId, key.Fingerprint);
             });
+            await DestroyCoveredHistory(locations, (revision, path), identifier, request);
         }
     }
 
@@ -233,10 +236,7 @@ public class VaultEncryptionKeyStorage : IEncryptionKeyStorage
             {
                 foreach (var (revision, path) in await RevisionPaths(locations))
                 {
-                    var row = await _access.Read(path);
-                    if (row is null) continue;
-                    if (Key(row.Value.Data) is not null && Covered(request, revision, row.Value.Data)) throw new EncryptionKeyFenceUnavailable(identifier);
-                    if (IsTombstone(row.Value.Data) && !await _access.IsDestroyed(path, row.Value.Version - 1)) throw new EncryptionKeyFenceUnavailable(identifier);
+                    await VerifyErasure(path, identifier, request, revision);
                 }
             }
             catch (Exception exception) when (exception is VaultApiException or HttpRequestException or TimeoutException or OperationCanceledException)
@@ -352,6 +352,40 @@ public class VaultEncryptionKeyStorage : IEncryptionKeyStorage
         }
 
         throw new EncryptionKeyFenceUnavailable(identifier);
+    }
+
+    async Task<int?> PrepareReplacement(string path, EncryptionKeyIdentifier identifier, int observedVersion)
+    {
+        // Never hide key material in history behind a successor from a newer lifecycle.
+        await Tombstone(path, identifier, _ => true, expectedVersion: observedVersion);
+        var replacement = await _access.Read(path);
+        if (replacement is null || !IsTombstone(replacement.Value.Data)) return null;
+
+        // A concurrent tombstone may have won the CAS but not yet completed destruction.
+        await _access.Destroy(path, replacement.Value.Version - 1);
+        return replacement.Value.Version;
+    }
+
+    async Task DestroyCoveredHistory(VaultKeyLocations locations, (EncryptionKeyRevision Revision, string Path) location, EncryptionKeyIdentifier identifier, EncryptionKeyErasureRequest request)
+    {
+        foreach (var historical in await _access.History(location.Path, identifier))
+        {
+            if (Key(historical.Data) is not { } key || !Covered(request, location.Revision, historical.Data)) continue;
+            await AddFingerprint(locations, identifier, request.RequestId, key.Fingerprint);
+            await _access.DestroyVersion(location.Path, historical.Version);
+        }
+    }
+
+    async Task VerifyErasure(string path, EncryptionKeyIdentifier identifier, EncryptionKeyErasureRequest request, EncryptionKeyRevision revision)
+    {
+        var row = await _access.Read(path);
+        foreach (var historical in await _access.History(path, identifier))
+        {
+            if (Key(historical.Data) is not null && Covered(request, revision, historical.Data)) throw new EncryptionKeyFenceUnavailable(identifier);
+        }
+
+        if (row is null || !IsTombstone(row.Value.Data)) return;
+        if (!await _access.IsDestroyed(path, row.Value.Version - 1)) throw new EncryptionKeyFenceUnavailable(identifier);
     }
 
     async Task AddFingerprint(VaultKeyLocations locations, EncryptionKeyIdentifier identifier, string requestId, string fingerprint)

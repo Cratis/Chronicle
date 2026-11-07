@@ -104,6 +104,34 @@ public class on_fake : VaultEncryptionKeyStorageContract
     }
 
     [Fact]
+    public async Task should_keep_release_n_legacy_erasure_available_when_cas_is_unsupported()
+    {
+        _fake.IgnoreCas = true;
+        _fake.Seed("contract/contract/subject/1", new() { ["publicKey"] = Convert.ToBase64String(Original.Public), ["privateKey"] = Convert.ToBase64String(Original.Private) });
+        Storage.FenceGuarantees.ShouldEqual(EncryptionKeyFenceGuarantees.None);
+        await Storage.RecordErasureFor("contract", "contract", Identifier);
+        await Storage.DeleteFor("contract", "contract", Identifier);
+        (await Storage.TryGetLatestFor("contract", "contract", Identifier)).ShouldBeNull();
+        (await Storage.GetErasureFor("contract", "contract", Identifier)).ShouldNotBeNull();
+    }
+
+    [Fact]
+    public async Task should_still_fail_closed_on_unverified_enterprise_reads_in_release_n()
+    {
+        _fake.Enterprise = true;
+        await Assert.ThrowsAsync<EncryptionKeyFenceUnavailable>(() => Storage.GetFenceFor("contract", "contract", Identifier));
+    }
+
+    [Fact]
+    public async Task should_still_fail_closed_on_refused_reads_when_cas_is_unsupported()
+    {
+        _fake.IgnoreCas = true;
+        Storage.FenceGuarantees.ShouldEqual(EncryptionKeyFenceGuarantees.None);
+        _fake.RefuseReads = true;
+        await Assert.ThrowsAsync<EncryptionKeyFenceUnavailable>(() => Storage.GetFenceFor("contract", "contract", Identifier));
+    }
+
+    [Fact]
     public void should_report_none_for_unverified_enterprise_forwarding()
     {
         _fake.Enterprise = true;
@@ -132,6 +160,16 @@ public class on_fake : VaultEncryptionKeyStorageContract
         await Storage.RecordErasureFor("contract", "contract", Identifier, new("denied"));
         _fake.RefuseLists = true;
         await Assert.ThrowsAsync<EncryptionKeyFenceUnavailable>(() => Storage.ConfirmErasureFor("contract", "contract", Identifier, "denied"));
+    }
+
+    [Fact]
+    public async Task should_not_confirm_soft_deleted_key_material_as_physically_erased()
+    {
+        await Storage.SaveFor("contract", "contract", Identifier, Original);
+        await Storage.RecordErasureFor("contract", "contract", Identifier, new("soft"));
+        await Client.V1.Secrets.KeyValue.V2.DeleteSecretVersionsAsync(Path(1u), [1, 2], mountPoint: Mount);
+        await Assert.ThrowsAsync<EncryptionKeyFenceUnavailable>(() => Storage.ConfirmErasureFor("contract", "contract", Identifier, "soft"));
+        (await Storage.GetFenceFor("contract", "contract", Identifier))!.Requests!.Single().Confirmed.ShouldBeFalse();
     }
 
     [Fact]
