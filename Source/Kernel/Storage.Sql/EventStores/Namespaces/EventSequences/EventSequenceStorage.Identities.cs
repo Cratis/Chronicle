@@ -26,7 +26,7 @@ public partial class EventSequenceStorage
         var hashes = ids.Select(PublicationIdentityHash).ToArray();
         await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
         var entries = await scope.DbContext.Events.AsNoTracking()
-            .Where(row => hashes.Contains(row.PublicationIdentityHash!)).WithoutHistory().ToArrayAsync();
+            .Where(row => hashes.Contains(row.PublicationIdentityHash!)).ToArrayAsync();
         return entries.Where(row => row.PublicationId is not null && ids.Contains(row.PublicationId))
             .ToDictionary(row => row.PublicationId!, row => new StoredEventPublication(row.SequenceNumber, row.PublicationFingerprint!), StringComparer.Ordinal);
     }

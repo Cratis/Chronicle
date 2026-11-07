@@ -141,8 +141,6 @@ public partial class EventSequenceMigrator(
                 EventStreamId = table.StringColumn(migrationBuilder, maxLength: 200),
                 Content = table.StringColumn(migrationBuilder),
                 ContentHashes = table.StringColumn(migrationBuilder),
-                OriginalContent = table.StringColumn(migrationBuilder, nullable: true),
-                Revisions = table.StringColumn(migrationBuilder, nullable: true),
                 DerivedGenerations = table.StringColumn(migrationBuilder, nullable: true),
                 Compensations = table.JsonColumn<IDictionary<string, string>>(migrationBuilder),
                 Subject = table.StringColumn(migrationBuilder, nullable: true),
@@ -187,7 +185,6 @@ public partial class EventSequenceMigrator(
 
     async Task UpgradeTable(EventSequenceDbContext context, string tableName)
     {
-        await EnsureRevisionHistoryColumns(context, tableName);
         if (!await tableMigrator.ColumnExists(context, tableName, nameof(EventEntry.RevisedGeneration)))
         {
             var revisionMigration = new MigrationBuilder(context.Database.ProviderName);
@@ -260,6 +257,5 @@ public partial class EventSequenceMigrator(
         }
 
         await EnsureParentHistoryIndex(context, tableName);
-        await ClearRevisionsOfRedactedEvents(context, tableName);
     }
 }

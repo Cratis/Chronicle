@@ -33,11 +33,6 @@ public static class EventEntryConverter
     };
 
     /// <summary>
-    /// Gets the options shared by current content and revision history.
-    /// </summary>
-    internal static JsonSerializerOptions JsonOptions { get; } = _jsonSerializerOptions;
-
-    /// <summary>
     /// Convert from domain models to <see cref="EventEntry"/>.
     /// </summary>
     /// <param name="sequenceNumber">The sequence number.</param>
@@ -590,11 +585,9 @@ public static class EventEntryConverter
             : JsonSerializer.Deserialize<Dictionary<string, string>>(entry.ContentHashes, _jsonSerializerOptions) ?? [];
         return new AppendedEvent(eventContext, content)
         {
-            GenerationalContent = RevisionHistory.Merge(GetAllGenerationalContent(entry), RevisionHistory.OriginalGenerations(entry)),
-            GenerationalHashes = RevisionHistory.Merge(hashes.Where(_ => int.TryParse(_.Key, out var generation) && generation > 0).ToDictionary(_ => int.Parse(_.Key), _ => new EventHash(_.Value)), RevisionHistory.OriginalHashes(entry)),
-            RevisedGeneration = entry.RevisedGeneration is { } revised ? new EventTypeGeneration(revised) : null,
-            Revisions = entry.Revisions is null ? [] : await RevisionHistory.Restore(entry, identityStorage),
-            OriginalContent = RevisionHistory.Original(entry)
+            GenerationalContent = GetAllGenerationalContent(entry),
+            GenerationalHashes = hashes.Where(_ => int.TryParse(_.Key, out var generation) && generation > 0).ToDictionary(_ => int.Parse(_.Key), _ => new EventHash(_.Value)),
+            RevisedGeneration = entry.RevisedGeneration is { } revised ? new EventTypeGeneration(revised) : null
         };
     }
 
