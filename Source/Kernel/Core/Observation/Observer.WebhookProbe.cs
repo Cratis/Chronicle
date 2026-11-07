@@ -479,7 +479,7 @@ public partial class Observer
     async Task ResumeAfterWebhookProbe(WebhookProbeState control, FailedPartition failure)
     {
         if (!CurrentWebhookProbe(control, failure)) return;
-        var jobs = await _jobsManager.GetUnfinishedJobs();
+        var jobs = await _jobsManager.GetUnfinishedJobsOf<Jobs.IRetryFailedPartition>();
         foreach (var job in jobs.Where(IsEligibleWebhookProbeRetryJob))
         {
             if (!CurrentWebhookProbe(control, failure)) return;

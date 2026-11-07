@@ -8,6 +8,7 @@ using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Schemas;
+using Cratis.DependencyInjection;
 using Cratis.Json;
 using Cratis.Reflection;
 using Cratis.Types;
@@ -21,6 +22,7 @@ namespace Cratis.Chronicle.Json;
 /// Initializes a new instance of the <see cref="ExpandoObjectConverter"/> class.
 /// </remarks>
 /// <param name="typeFormats"><see cref="ITypeFormats"/> for mapping type formats in a schema.</param>
+[Singleton]
 public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectConverter
 {
     static readonly object _true = true;
