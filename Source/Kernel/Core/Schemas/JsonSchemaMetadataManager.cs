@@ -56,7 +56,7 @@ public class JsonSchemaMetadataManager(
             return (result, uses);
         }
 
-        await HandleActionFor(schema, identifier, result, SchemaMetadataActionFailed.ApplyAction, (_, _, value) => Task.FromResult(value), boundaryTransform: async (path, handlers, subject, value) =>
+        await HandleActionFor(schema, identifier, result, SchemaMetadataActionFailed.ApplyAction, (_, _, value) => Task.FromResult(value), boundaryTransform: async (path, _, handlers, subject, value) =>
         {
             ProtectionLocation(path, handlers, subject);
             var plaintext = value.DeepClone();
@@ -77,7 +77,7 @@ public class JsonSchemaMetadataManager(
             return locations;
         }
 
-        await HandleActionFor(schema, identifier, (JsonObject)json.DeepClone(), SchemaMetadataActionFailed.ApplyAction, (_, _, value) => Task.FromResult(value), boundaryTransform: (path, handlers, subject, value) =>
+        await HandleActionFor(schema, identifier, (JsonObject)json.DeepClone(), SchemaMetadataActionFailed.ApplyAction, (_, _, value) => Task.FromResult(value), boundaryTransform: (path, _, handlers, subject, value) =>
         {
             var location = ProtectionLocation(path, handlers, subject);
             locations.Add(new(path, location.Kind, location.Identifier, value.DeepClone()));
@@ -122,6 +122,38 @@ public class JsonSchemaMetadataManager(
         var result = (json.DeepClone() as JsonObject)!;
         await HandleActionFor(schema, identifier, result!, SchemaMetadataActionFailed.ReleaseAction, async (h, id, token) => await h.Release(eventStore, eventStoreNamespace, id, token));
         return result;
+    }
+
+    /// <inheritdoc/>
+    public async Task<StatusedRelease> ReleaseWithStatus(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, JsonSchema schema, string identifier, JsonObject json)
+    {
+        var result = (JsonObject)json.DeepClone();
+        var statuses = new Dictionary<string, ProtectedValueReleaseStatus>(StringComparer.Ordinal);
+        if (!schema.HasSchemaMetadata())
+        {
+            return new StatusedRelease(result, statuses);
+        }
+
+        await HandleActionFor(
+            schema,
+            identifier,
+            result,
+            SchemaMetadataActionFailed.ReleaseAction,
+            (_, _, value) => Task.FromResult(value),
+            boundaryTransform: async (path, boundarySchema, handlers, subject, value) =>
+            {
+                if (handlers.Length != 1)
+                {
+                    throw new ProtectedBoundaryUnsupported(path);
+                }
+
+                var released = await handlers[0].ReleaseWithStatus(eventStore, eventStoreNamespace, subject, value);
+                statuses[path] = released.Status;
+                return released.Status == ProtectedValueReleaseStatus.Decrypted
+                    ? StrictJsonSchemaRelease.TryRestore(boundarySchema, released.Value) ?? throw new StrictSchemaMetadataReleaseNotSupported()
+                    : released.Value;
+            });
+        return new StatusedRelease(result, statuses);
     }
 
     /// <inheritdoc/>
@@ -483,7 +515,7 @@ public class JsonSchemaMetadataManager(
         string path = "",
         bool strictRelease = false,
         Func<JsonSchema, IJsonSchemaMetadataValueHandler, JsonNode, Task<JsonNode?>>? comparisonTransform = null,
-        Func<string, IJsonSchemaMetadataValueHandler[], string, JsonNode, Task<JsonNode>>? boundaryTransform = null) =>
+        Func<string, JsonSchema, IJsonSchemaMetadataValueHandler[], string, JsonNode, Task<JsonNode>>? boundaryTransform = null) =>
         WalkObject(new MetadataWalk { Identifier = identifier, ActionName = actionName, Action = action, StrictRelease = strictRelease, ComparisonTransform = comparisonTransform, BoundaryTransform = boundaryTransform }, schema, json, path);
 
     async Task WalkObject(MetadataWalk walk, JsonSchema schema, JsonObject json, string path, bool cacheable = true)
@@ -513,7 +545,7 @@ public class JsonSchemaMetadataManager(
 
             if (walk.BoundaryTransform is not null && RegisteredHandlers(propertyMetadata) is { Length: > 0 } handlers)
             {
-                json[property] = await walk.BoundaryTransform(propertyPath, handlers, walk.Identifier, value);
+                json[property] = await walk.BoundaryTransform(propertyPath, propertySchema, handlers, walk.Identifier, value);
                 continue;
             }
 
@@ -585,7 +617,7 @@ public class JsonSchemaMetadataManager(
 
             if (walk.BoundaryTransform is not null && RegisteredHandlers(itemMetadata) is { Length: > 0 } handlers)
             {
-                var transformed = await walk.BoundaryTransform(elementPath, handlers, walk.Identifier, element);
+                var transformed = await walk.BoundaryTransform(elementPath, itemSchema, handlers, walk.Identifier, element);
                 if (!ReferenceEquals(transformed, element))
                 {
                     array[i] = transformed;
@@ -708,7 +740,7 @@ public class JsonSchemaMetadataManager(
 
         public Func<JsonSchema, IJsonSchemaMetadataValueHandler, JsonNode, Task<JsonNode?>>? ComparisonTransform { get; init; }
 
-        public Func<string, IJsonSchemaMetadataValueHandler[], string, JsonNode, Task<JsonNode>>? BoundaryTransform { get; init; }
+        public Func<string, JsonSchema, IJsonSchemaMetadataValueHandler[], string, JsonNode, Task<JsonNode>>? BoundaryTransform { get; init; }
 
         public ErasedPathCollector? Erasure { get; init; }
 
