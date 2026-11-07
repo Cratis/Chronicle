@@ -96,13 +96,23 @@ internal static class SystemStoreGuard
     }
 
     /// <summary>
-    /// Gets the request of a call. The ASP.NET Core gRPC host keeps it in the call user state under the key its own
-    /// GetHttpContext extension reads, which this project does not reference.
+    /// Gets the request of a call using the ASP.NET Core gRPC host's context accessor.
     /// </summary>
     /// <param name="callContext">The <see cref="CallContext"/> of the call.</param>
     /// <returns>The <see cref="HttpContext"/>, or null when the call is not served over HTTP.</returns>
-    internal static HttpContext? HttpContextFor(CallContext callContext) =>
-        callContext.ServerCallContext?.UserState.TryGetValue("__HttpContext", out var value) == true ? value as HttpContext : null;
+    internal static HttpContext? HttpContextFor(CallContext callContext)
+    {
+        if (callContext.ServerCallContext is not { } serverCallContext) return null;
+        try
+        {
+            return serverCallContext.GetHttpContext();
+        }
+        catch (InvalidOperationException)
+        {
+            // A server call without an ASP.NET Core request must still fail closed.
+            return null;
+        }
+    }
 
     static IObservable<T> EnsureObservableForSystem<T>(CallContext callContext, QueryRouting routing, Func<IObservable<T>> source) =>
         Observable.FromAsync(() => Ensure(callContext, routing)).SelectMany(_ => source());
