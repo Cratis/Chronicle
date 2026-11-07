@@ -58,6 +58,7 @@ public class when_preserving_the_default_metric_metadata : Specification
         new("chronicle-sql-schema-lock-wait", "s", "Time spent waiting for a database schema lock"),
         new("chronicle-sql-live-query-poll-failures", null, "Failed SQL live-query polls; each is retried"),
         new("chronicle-sql-upsert-collisions-recovered", null, "Concurrent SQL insert collisions recovered by storage"),
+        new("chronicle-sql-encryption-key-identifiers-refused", null, "Encryption key operations refused because their identifier is under review"),
         new("chronicle.sql.composite_key.stamp_failures", null, null),
         new("chronicle.sql.composite_key.collisions", null, null)
     ];

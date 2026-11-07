@@ -9,6 +9,7 @@ using Cratis.Chronicle.Contracts.Commands;
 using Cratis.Chronicle.Contracts.Occurrences;
 using Cratis.Chronicle.Contracts.Storage.Occurrences;
 using Cratis.Chronicle.Identities;
+using Cratis.Chronicle.Observation;
 using Grpc.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -161,6 +162,9 @@ internal sealed class OccurrenceAttempt(
 
     async Task Invoke(string payload, OccurrenceContext context, CancellationToken cancellationToken)
     {
+        using var delivery = context.Namespace is { } deliveredNamespace
+            ? ObserverDeliveryScope.Enter(services, new(eventStore.Name, deliveredNamespace, ObserverId.Unspecified, ObserverDeliveryKind.Occurrence, handlerType))
+            : ObserverDeliveryScope.EnterCleared();
         await using var scope = services.CreateAsyncScope();
         var activation = activator.Activate(scope.ServiceProvider, handlerType);
         if (activation.TryGetException(out var failure)) throw failure;

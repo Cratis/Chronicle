@@ -181,14 +181,18 @@ Introducing fence support does not rewrite existing keys. Subjects with no recor
 
 Re-run erasure for subjects erased before fence support was deployed. Their missing keys are indistinguishable from keys never provisioned, so the upgrade cannot infer a fence for them. Repeating erasure is idempotent and records that fence.
 
-Upgrade every silo before relying on fence enforcement. An older silo can provision without honoring it. The storage additions are:
+**Upgrade every silo together.** The fence is enforced by the key store, so a silo that predates it provisions straight over one. Do not run mixed versions while an erasure is in force.
+
+**Keys stored under earlier names.** HashiCorp Vault and Azure Key Vault now keep new keys under names of their own. Keys that an earlier version stored are still read when their earlier name belongs to one address only. For any other address Chronicle refuses to read or provision, instead of creating a second key, until the keys have been upgraded. Run the server with `--verify-encryption-keys` to count what is stored under earlier names; see [Compliance Storage](../hosting/configuration/compliance-storage.md#upgrading-keys-stored-under-earlier-names).
+
+Backend by backend, the fence needs:
 
 | Backend | What is added |
 |---|---|
 | MongoDB | An `encryption-key-erasures` collection per `(event store, namespace)`, created on first use |
 | SQL | An `EncryptionKeyErasures` table, created by a migration that runs automatically on startup |
-| HashiCorp Vault | An `erasure` secret beside the revisions under `{store}/{namespace}/{identifier}` |
-| Azure Key Vault | A `chronicle--{store}--{namespace}--{identifier}--erasure` secret |
+| HashiCorp Vault | An `erasure` secret beside the revisions under `k1/{store}/{namespace}/{identifier}` |
+| Azure Key Vault | A `chronicle-k1--{hash}--erasure` secret |
 | In-memory | Nothing persisted; the fence lives as long as the process |
 
 ## See also

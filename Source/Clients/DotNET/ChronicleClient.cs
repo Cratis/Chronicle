@@ -15,6 +15,7 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Migrations;
 using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.Identities;
+using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Reactors.SideEffects;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
@@ -278,7 +279,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
         EventStoreName name,
         EventStoreNamespaceName? @namespace = null)
     {
-        @namespace ??= _namespaceResolver.Resolve();
+        @namespace ??= ObserverDeliveryContext.NamespaceFor(name) ?? _namespaceResolver.Resolve();
         var key = new EventStoreKey(name, @namespace);
 
         var lazyEventStore = _eventStores.GetOrAdd(

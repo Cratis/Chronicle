@@ -25,6 +25,8 @@ namespace Cratis.Chronicle.Services.Clients;
 /// <param name="localSiloDetails"><see cref="ILocalSiloDetails"/> for the silo terminating the client connections.</param>
 /// <param name="connectedClientsQuery"><see cref="ConnectedClientsQuery"/> for the cluster-wide view of connected clients.</param>
 /// <param name="openConnections"><see cref="OpenConnections"/> tracking the connections open on this silo.</param>
+/// <param name="ownership"><see cref="IConnectionOwnership"/> telling which caller opened each connection.</param>
+/// <param name="visibility"><see cref="IConnectedClientsVisibility"/> limiting which connected clients a caller sees.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 /// <param name="options"><see cref="IOptions{ChronicleOptions}"/> for configuration.</param>
 internal sealed class ConnectionService(
@@ -32,9 +34,12 @@ internal sealed class ConnectionService(
     ILocalSiloDetails localSiloDetails,
     ConnectedClientsQuery connectedClientsQuery,
     OpenConnections openConnections,
+    IConnectionOwnership ownership,
+    IConnectedClientsVisibility visibility,
     ILogger<ConnectionService> logger,
     IOptions<ChronicleOptions> options) : IConnectionService
 {
+    static readonly Status _notAvailableToCaller = new(StatusCode.PermissionDenied, "The connection is not available to the caller.");
     static readonly Lazy<string> _schemaDefinition = new(GenerateSchema);
     static readonly Lazy<WireContract> _wireContract = new(() => WireContractReader.Read(Contracts.WireContractDescriptorSet.Bytes));
     readonly TimeSpan _keepAliveInterval = TimeSpan.FromSeconds(options.Value.ConnectedClients.KeepAliveIntervalSeconds);
@@ -66,18 +71,26 @@ internal sealed class ConnectionService(
         // for, which would silently put the client back to waiting a full interval. One is all that needs
         // replaying: a keep-alive carries nothing but the connection it belongs to.
         var subject = new ReplaySubject<ConnectionKeepAlive>(1);
+        var caller = ConnectionCallers.From(context, options.Value);
         var connectedClients = grainFactory.GetConnectedClients(localSiloDetails.SiloAddress);
 
         // The producer is the only owner of the subject: it alone emits and terminates, so a cancelling call and a
         // registration finishing cannot race each other into two terminal notifications.
-        _ = Task.Run(() => Produce(subject, connectedClients, request, context.CancellationToken), CancellationToken.None);
+        _ = Task.Run(() => Produce(subject, connectedClients, request, caller.Owner, context.CancellationToken), CancellationToken.None);
 
         return subject;
     }
 
     /// <inheritdoc/>
-    public async Task ConnectionKeepAlive(ConnectionKeepAlive keepAlive)
+    public async Task ConnectionKeepAlive(ConnectionKeepAlive keepAlive, CallContext context = default)
     {
+        var caller = ConnectionCallers.From(context, options.Value);
+        if (!ownership.IsOwnedBy(keepAlive.ConnectionId, caller.Owner))
+        {
+            logger.KeepAliveRefused(keepAlive.ConnectionId);
+            throw new RpcException(_notAvailableToCaller);
+        }
+
         var respondedAt = DateTimeOffset.UtcNow;
         try
         {
@@ -163,12 +176,21 @@ internal sealed class ConnectionService(
     }
 
     /// <inheritdoc/>
-    public Task<IEnumerable<ConnectedClient>> GetConnectedClients(CallContext context = default) =>
-        connectedClientsQuery.GetAll();
+    public async Task<IEnumerable<ConnectedClient>> GetConnectedClients(CallContext context = default)
+    {
+        var caller = ConnectionCallers.From(context, options.Value);
+        return await visibility.Filter(await connectedClientsQuery.GetAll(), caller);
+    }
 
     /// <inheritdoc/>
-    public IObservable<IEnumerable<ConnectedClient>> ObserveConnectedClients(CallContext context = default) =>
-        connectedClientsQuery.ObserveAll(context.CancellationToken);
+    public IObservable<IEnumerable<ConnectedClient>> ObserveConnectedClients(CallContext context = default)
+    {
+        var caller = ConnectionCallers.From(context, options.Value);
+        return connectedClientsQuery
+            .ObserveAll(context.CancellationToken)
+            .Select(clients => Observable.FromAsync(() => visibility.Filter(clients, caller)))
+            .Concat();
+    }
 
     static string GenerateSchema()
     {
@@ -206,6 +228,70 @@ internal sealed class ConnectionService(
     }
 
     async Task Produce(
+        ReplaySubject<ConnectionKeepAlive> subject,
+        IConnectedClients connectedClients,
+        ConnectRequest request,
+        ConnectionOwner owner,
+        CancellationToken cancellationToken)
+    {
+        if (!await TryClaim(subject, request, owner, cancellationToken))
+        {
+            return;
+        }
+
+        try
+        {
+            await Serve(subject, connectedClients, request, cancellationToken);
+        }
+        finally
+        {
+            ownership.Release(request.ConnectionId, owner);
+        }
+    }
+
+    async Task<bool> TryClaim(
+        ReplaySubject<ConnectionKeepAlive> subject,
+        ConnectRequest request,
+        ConnectionOwner owner,
+        CancellationToken cancellationToken)
+    {
+        if (owner.IsUnidentified)
+        {
+            logger.ConnectionRefusedWithoutIdentity(request.ConnectionId);
+            subject.OnError(new RpcException(_notAvailableToCaller));
+            return false;
+        }
+
+        try
+        {
+            var isElsewhere = await connectedClientsQuery
+                .IsConnectedOnAnotherSilo(localSiloDetails.SiloAddress, request.ConnectionId)
+                .WaitAsync(options.Value.Clustering.ResponseTimeout, RegistrationTimeProvider, cancellationToken)
+                .ConfigureAwait(false);
+
+            if (isElsewhere || ownership.Claim(request.ConnectionId, owner) == ConnectionClaim.Refused)
+            {
+                logger.ConnectionRefusedForAnotherCaller(request.ConnectionId);
+                subject.OnError(new RpcException(_notAvailableToCaller));
+                return false;
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            subject.OnCompleted();
+            return false;
+        }
+        catch (Exception ex)
+        {
+            logger.ClientRegistrationFailed(request.ConnectionId, ex);
+            subject.OnError(new RpcException(new Status(StatusCode.Unavailable, "Client registration could not be verified")));
+            return false;
+        }
+
+        return true;
+    }
+
+    async Task Serve(
         ReplaySubject<ConnectionKeepAlive> subject,
         IConnectedClients connectedClients,
         ConnectRequest request,

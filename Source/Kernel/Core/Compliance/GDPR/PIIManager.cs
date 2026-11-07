@@ -64,6 +64,7 @@ public class PIIManager(
         if (failures.Count > 0)
         {
             logger.SubjectErasureIncomplete(BindingFor(identifier), key.Namespace, failures.Count, eventStores.Count, Names(eventStores));
+            failures.ThrowIfUnderReview();
             throw new EncryptionKeyErasureIncomplete(identifier, failures);
         }
 
@@ -87,6 +88,7 @@ public class PIIManager(
         if (failures.Count > 0)
         {
             logger.NewEncryptionKeyAuthorizationIncomplete(BindingFor(identifier), key.Namespace, failures.Count, eventStores.Count, Names(eventStores));
+            failures.ThrowIfUnderReview();
             throw new EncryptionKeyLifecycleIncomplete(identifier, failures);
         }
 

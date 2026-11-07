@@ -45,6 +45,9 @@ internal static partial class ReducersLogMessages
     [LoggerMessage(LogLevel.Error, "Error occurred for reducer {ReducerId} from connection {ConnectionId} - disengaging")]
     internal static partial void Disengage(this ILogger<Reducers> logger, ObserverId reducerId, ConnectionId connectionId, Exception exception);
 
+    [LoggerMessage(LogLevel.Warning, "A reducer registration for connection {ConnectionId} was refused because the connection is not available to the caller")]
+    internal static partial void ConnectionNotAvailableToCaller(this ILogger<Reducers> logger, ConnectionId connectionId);
+
     [LoggerMessage(LogLevel.Warning, "Reducer {ReducerId} sends {Size} characters of state for partition {Partition} with every reduce - a read model this large makes each batch cost memory proportional to its size; consider splitting it into smaller read models")]
     internal static partial void LargeInitialState(this ILogger<Reducers> logger, ObserverId reducerId, string partition, int size);
 }

@@ -29,6 +29,15 @@ internal static partial class ConnectionServiceLogMessages
     [LoggerMessage(LogLevel.Information, "The registry of connected clients no longer knows connection {ConnectionId}, which is still open. Registering it again")]
     internal static partial void RegisteringClientAgain(this ILogger<ConnectionService> logger, string connectionId);
 
+    [LoggerMessage(LogLevel.Warning, "Connection {ConnectionId} was not opened because the caller could not be identified")]
+    internal static partial void ConnectionRefusedWithoutIdentity(this ILogger<ConnectionService> logger, string connectionId);
+
+    [LoggerMessage(LogLevel.Warning, "Connection {ConnectionId} was not opened because it is not available to the caller")]
+    internal static partial void ConnectionRefusedForAnotherCaller(this ILogger<ConnectionService> logger, string connectionId);
+
+    [LoggerMessage(LogLevel.Warning, "A keep-alive for connection {ConnectionId} was refused because the connection is not available to the caller")]
+    internal static partial void KeepAliveRefused(this ILogger<ConnectionService> logger, string connectionId);
+
     [LoggerMessage(LogLevel.Warning, "Could not check that connection {ConnectionId} is still registered. Retrying at the next keep-alive")]
     internal static partial void FailedToKeepClientRegistered(this ILogger<ConnectionService> logger, string connectionId, Exception exception);
 }
