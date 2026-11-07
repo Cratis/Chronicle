@@ -14,7 +14,7 @@ namespace Cratis.Compliance.MongoDB;
 /// Internal secrets live in their own collection in the event store database. Subject keys live in a differently named
 /// collection in each namespace database, and no subject key operation reads or writes this collection.
 /// </remarks>
-/// <param name="Id">The <see cref="InternalSecretPurpose"/> value the secret is for.</param>
+/// <param name="Id">The exact event store and <see cref="InternalSecretPurpose"/> the secret is for.</param>
 /// <param name="PublicKey">The public part of the secret.</param>
 /// <param name="PrivateKey">The private part of the secret.</param>
 public record InternalSecretForPurpose(string Id, byte[] PublicKey, byte[] PrivateKey);

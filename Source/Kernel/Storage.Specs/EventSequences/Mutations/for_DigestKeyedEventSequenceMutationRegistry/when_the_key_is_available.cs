@@ -6,6 +6,8 @@ namespace Cratis.Chronicle.Storage.EventSequences.Mutations.for_DigestKeyedEvent
 public class when_the_key_is_available : Specification
 {
     static readonly byte[] _canonical = [1, 2, 3];
+    readonly TaskCompletionSource _entered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    readonly TaskCompletionSource _release = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     EventSequenceMutationDigestKey _key;
     IEventSequenceMutationRegistry _inner;
@@ -25,14 +27,21 @@ public class when_the_key_is_available : Specification
         _inner.Begin(Arg.Any<EventSequenceMutationRequest>(), Arg.Any<EventSequenceMutationTarget>(), Arg.Any<CancellationToken>())
             .Returns(async _ =>
             {
-                await Task.Yield();
+                _entered.SetResult();
+                await _release.Task;
                 _computedByTheProvider = EventSequenceMutationDigestSeam.Compute("event-store", EventSequenceMutationDigestVersion.HmacSha256PerEventStore, _canonical);
                 return _expected;
             });
         _registry = new("event-store", keys, _inner);
     }
 
-    async Task Because() => _begin = await _registry.Begin(null!, null!);
+    async Task Because()
+    {
+        var begin = _registry.Begin(null!, null!);
+        await _entered.Task;
+        _release.SetResult();
+        _begin = await begin;
+    }
 
     [Fact] void should_return_the_provider_result() => ReferenceEquals(_begin, _expected).ShouldBeTrue();
     [Fact] void should_compute_with_the_event_stores_key() => _computedByTheProvider.SequenceEqual(_key.Compute(_canonical)).ShouldBeTrue();
