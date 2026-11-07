@@ -56,7 +56,7 @@ public static partial class JobsManagerExtensions
     /// megabytes, so listing every job to find the few of one type reads, copies and discards all of it on every call.
     /// </remarks>
     public static Task<IImmutableList<JobState>> GetOutstandingJobsOf<TJob>(this IJobsManager jobsManager) =>
-        jobsManager.GetJobs(QueryFor<TJob>(_outstandingStatuses));
+        ListOf<TJob>(jobsManager, _outstandingStatuses, jobsManager.GetOutstandingJobs);
 
     /// <summary>
     /// Gets the jobs of one type that are unfinished.
@@ -65,7 +65,7 @@ public static partial class JobsManagerExtensions
     /// <typeparam name="TJob">The type of the job.</typeparam>
     /// <returns>The unfinished <see cref="JobState"/> of that type.</returns>
     public static Task<IImmutableList<JobState>> GetUnfinishedJobsOf<TJob>(this IJobsManager jobsManager) =>
-        jobsManager.GetJobs(QueryFor<TJob>(_unfinishedStatuses));
+        ListOf<TJob>(jobsManager, _unfinishedStatuses, jobsManager.GetUnfinishedJobs);
 
     /// <summary>
     /// Gets jobs that still own work, including jobs draining during removal.
@@ -440,12 +440,15 @@ public static partial class JobsManagerExtensions
     [LoggerMessage(LogLevel.Warning, "Stopped job {JobId} never prepared a step and can not be resumed - removing it so catch-up can start a new job")]
     static partial void RemovingUnresumableJob(this ILogger logger, JobId jobId);
 
-    static JobQuery QueryFor<TJob>(JobStatus[] statuses) =>
-        new()
+    static Task<IImmutableList<JobState>> ListOf<TJob>(IJobsManager jobsManager, JobStatus[] statuses, Func<Task<IImmutableList<JobState>>> listAll)
+    {
+        // A job type that is not known cannot be narrowed to, so everything is listed, as it always was.
+        var jobTypes = JobTypes.Instance;
+        if (jobTypes is null || !jobTypes.GetFor(typeof(TJob)).TryPickT0(out var jobType, out _))
         {
-            // An unregistered type is not narrowed, which is what listing everything did before.
-            Type = JobTypes.Instance.GetFor(typeof(TJob)).TryPickT0(out var jobType, out _) ? jobType : null,
-            Statuses = statuses,
-            Take = 0
-        };
+            return listAll();
+        }
+
+        return jobsManager.GetJobs(new JobQuery { Type = jobType, Statuses = statuses, Take = 0 });
+    }
 }

@@ -5,7 +5,6 @@ using Cratis.Choreography.Storage.Jobs;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation;
-using Orleans.Serialization.Cloning;
 
 namespace Cratis.Chronicle.Setup.Serialization.for_SharedInstanceCopier;
 
