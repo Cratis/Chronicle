@@ -194,6 +194,11 @@ public class ChronicleConnectionString
     public string Redacted => _redacted ??= _builder.BuildRedacted();
 
     /// <summary>
+    /// Gets whether certificate validation was explicitly configured.
+    /// </summary>
+    internal bool HasExplicitSkipTlsValidation => _builder.HasExplicitSkipTlsValidation;
+
+    /// <summary>
     /// Implicitly convert from <see cref="string"/> to <see cref="ChronicleConnectionString"/>.
     /// </summary>
     /// <param name="connectionString">String connection string to convert from.</param>

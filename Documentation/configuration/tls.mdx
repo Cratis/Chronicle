@@ -4,7 +4,7 @@ description: Enable server certificate validation in the Chronicle .NET client, 
 ---
 <a id="tls-configuration-client" />
 
-The Chronicle .NET client uses TLS by default but skips server certificate validation. Enable validation before connecting beyond a trusted development environment so the client checks which server it is talking to, not just whether the traffic is encrypted.
+The Chronicle .NET client uses TLS by default but still skips server certificate validation in this release. We recommend explicitly setting `skipTlsValidation=false` after preparing certificate trust or a matching pin. The next major release will enable validation by default.
 
 TLS on the kernel listener is configured separately. Development builds can generate a self-signed certificate when none is supplied; production deployments need a configured server certificate. See [TLS Configuration (Server)](../hosting/configuration/tls.md).
 
@@ -42,13 +42,13 @@ For direct `ChronicleClient` construction, supply the same values through `Chron
 
 ## Certificate validation
 
-With the defaults, the client accepts any server certificate, including a self-signed one. Traffic is encrypted, but the client does not establish the server's identity. An attacker able to intercept the connection could present a different certificate and still be accepted.
+With both settings omitted, this release continues to accept any server certificate, including a self-signed one. Configure validation explicitly rather than relying on that default.
 
 Prepare certificate trust or a matching pin using [Enabling validation](#enabling-validation), then turn validation on with `skipTlsValidation=false` in the connection string:
 
 <ChronicleClientTabs snippet="configuration/tls/validation-enabled" />
 
-Alternatively, set `Tls:SkipCertificateValidation=false` in configuration or `SkipCertificateValidation = false` on the TLS options. Either `false` setting enables validation: the client skips it only when both the connection string and TLS options permit skipping. An omitted setting uses `true` and cannot override an explicit request to validate.
+Alternatively, set `Tls:SkipCertificateValidation=false` in configuration or `SkipCertificateValidation = false` on the TLS options. Either explicit `false` requires validation, even on localhost and even if the other setting is explicitly `true`. Otherwise, either explicit `true` skips validation. If both settings are omitted, the release default applies: skipping validation, unchanged in this release. Builder round-trips and credential helpers preserve whether the connection-string option was omitted or explicitly set.
 
 Keep validation enabled outside a trusted development environment. The following connection-string setting explicitly permits skipping validation, but takes effect only if the TLS options also permit it:
 
@@ -62,11 +62,11 @@ Trust the server's certificate authority (CA) on each client machine. In an appl
 
 Alternatively, configure `certificatePath` with the matching server certificate to pin it. With validation enabled, a matching pin can allow a certificate whose chain is not trusted, including a self-signed certificate. The pin does not override a host-name mismatch or a missing server certificate.
 
-After preparing trust or pinning, set `skipTlsValidation=false` or `Tls:SkipCertificateValidation=false`. The client logs a warning when validation is disabled for a non-loopback target or a DNS SRV lookup. Loopback targets are exempt from that warning, not from the configured validation behavior.
+After preparing trust or pinning, set `skipTlsValidation=false` or `Tls:SkipCertificateValidation=false`. The client logs a startup warning when validation is skipped for a remote host or an SRV lookup, including with omitted settings. Loopback targets do not log it. With `disableTls=true`, certificate validation does not apply and that warning is suppressed.
 
 ## Development setup
 
-The development images (`latest-development` and `latest-development-slim`) generate a self-signed certificate when none is configured. The default client accepts it without trust-store setup. This is useful for local development, but it does not exercise certificate validation.
+The development images (`latest-development` and `latest-development-slim`) generate an untrusted, self-signed certificate on every start when none is configured. Its subject alternative names (SANs) are `localhost`, `chronicle`, `127.0.0.1`, and `::1`. The default client accepts it without trust-store setup in this release. For development only, make that choice explicit with `chronicle://localhost:35000?skipTlsValidation=true`; an explicit `false` in TLS options still requires validation.
 
 To test the validation path, configure a server certificate issued by a CA the client trusts, or supply a matching certificate pin, and enable validation. A pin for an automatically generated certificate must match the certificate from the current server run.
 

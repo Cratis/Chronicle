@@ -193,7 +193,9 @@ services:
 
 ## Client Configuration
 
-For a local server with a self-signed certificate, the client configuration is shown below. Bypassing validation is only a development shortcut; it does not establish trust. Before connecting to a production server, configure certificate validation as described in [Production Hosting](production.md).
+For a local server with a self-signed certificate, the client configuration is shown below. The development images generate an untrusted certificate on every start when none is configured, with SANs `localhost`, `chronicle`, `127.0.0.1`, and `::1`. A pin must match the current certificate.
+
+The .NET client still skips validation when both settings are omitted in this release; the next major release will enable it by default. We recommend explicitly setting `skipTlsValidation=false` after configuring trust or a matching pin. For development only, explicitly opt out with `chronicle://localhost:35000?skipTlsValidation=true`. An explicit `Tls.SkipCertificateValidation=false` still requires validation. Before connecting to a production server, configure certificate validation as described in [Client TLS configuration](../configuration/tls) and [Production Hosting](production.md).
 
 <ChronicleClientTabs snippet="hosting/local-certificates/client-configuration" />
 

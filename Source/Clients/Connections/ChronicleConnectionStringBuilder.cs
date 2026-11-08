@@ -294,10 +294,10 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     /// Gets or sets whether to skip TLS certificate validation when connecting.
     /// </summary>
     /// <remarks>
-    /// The client always connects over TLS but does not validate the server's certificate by default,
-    /// accepting any certificate, including self-signed ones. Set <c language="csharp">skipTlsValidation=false</c> to
-    /// require full certificate chain validation instead — only do so against a server whose
-    /// certificate is verifiable (not a self-signed development certificate).
+    /// Defaults to true in this release; the next major release will require validation by default.
+    /// Set <c language="csharp">skipTlsValidation=false</c> explicitly to require certificate validation.
+    /// An explicit false in either the connection string or TLS options requires validation.
+    /// Use true only as a development opt-out. This option has no effect when TLS is disabled.
     /// </remarks>
     public bool SkipTlsValidation
     {
@@ -459,6 +459,11 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     }
 
     /// <summary>
+    /// Gets whether certificate validation was explicitly configured.
+    /// </summary>
+    internal bool HasExplicitSkipTlsValidation => ContainsKey(SkipTlsValidationKey);
+
+    /// <summary>
     /// Builds a Chronicle connection string from the current settings.
     /// </summary>
     /// <returns>The Chronicle connection string.</returns>
@@ -493,9 +498,9 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
             queryParams.Add($"apiKey={Uri.EscapeDataString((string)this[ApiKeyKey])}");
         }
 
-        if (!SkipTlsValidation)
+        if (HasExplicitSkipTlsValidation)
         {
-            queryParams.Add("skipTlsValidation=false");
+            queryParams.Add($"skipTlsValidation={SkipTlsValidation.ToString().ToLowerInvariant()}");
         }
 
         if (DisableTls)
