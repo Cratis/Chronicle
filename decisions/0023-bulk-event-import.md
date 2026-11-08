@@ -1,11 +1,13 @@
 ---
 id: 0023-bulk-event-import
 title: Import large volumes of events into an event sequence through a resumable, chunked import session that stages and validates every event before committing any, commits in ordered chunks through a job without locking, and hands observers one catch-up
-status: proposed
+status: accepted
 stage: none
 class: contract
 reversibility: costly
 proposed: 2026-11-03
+decided: 2026-11-08
+decider: Einar
 applies-to:
   - Source/Kernel/Core/EventSequences/**
   - Source/Kernel/Core/Sequences/**
@@ -75,7 +77,7 @@ Chronicle gets an **import session**. An import is a durable object with an id. 
   - It then validates constraints over the whole import in staging order, against the persisted indexes plus the import's own claims. This is the batch rule `ConstraintBatchClaims` already applies, extended to the import.
   - If anything is rejected and `OnInvalid = Reject` (the default), the import fails and **nothing is committed**.
   - Otherwise it starts the commit job.
-- **The commit job** (`ImportEvents`, a `Cratis.Choreography` job) commits staged events in staging order. It calls a new event sequence grain method, `AppendImportChunk`, with chunks of `Imports.CommitChunkSize` (proposed 1 000 events).
+- **The commit job** (`ImportEvents`, a `Cratis.Orleans.Jobs` job) commits staged events in staging order. It calls a new event sequence grain method, `AppendImportChunk`, with chunks of `Imports.CommitChunkSize` (proposed 1 000 events).
   - Each chunk follows the existing path: PII encryption, migration, hashing, numbering, one storage transaction, and constraint index updates.
   - Nothing is locked. Constraints are checked again on every chunk, because an ordinary writer can claim a unique value between `CompleteImport` and the chunk's commit. An event that loses such a race is not committed and is reported as a rejection on the `ImportResult`. The rest of the import continues, since the committed chunks are never rolled back.
   - The grain is released between chunks, so ordinary appends interleave with the import instead of waiting behind it.
@@ -228,13 +230,13 @@ People import by looping `AppendMany` themselves, as seeding does. Large imports
   - Because nothing is locked, an event can pass validation at `CompleteImport` and then lose a unique-constraint race at commit. It is reported as a rejection, which makes "nothing is committed if anything is invalid" hold at validation time only.
 - **Forecloses:**
   - Atomic visibility of a whole import to readers. Events become visible chunk by chunk during the commit; readers that must not see a partial import should wait for `Completed`.
-- **Open questions:**
-  - How PII in imported events is keyed when the subject does not yet exist.
-  - Staging retention and size quotas per namespace.
+- **Settled at acceptance:**
+  - PII in imported events is keyed exactly as for an ordinary append. The commit runs the existing encryption step, which creates a subject's key on its first encrypted value, so a subject that does not exist yet gets its key when its first imported event is committed. Staging stores the payloads as received and never encrypts, so an abandoned import leaves no keys behind.
+  - Staging retention is `Imports.StagingRetention`, 24 h by default. There is no size quota per namespace in this release; `BeginImport` reports the server's chunk limits, and an operator who needs a quota can lower `Imports.StagingRetention` or abandon imports through the Workbench.
 
 ## Rulings from review
 
-Rulings given by Einar on 2026-11-03 while the record is still proposed. The rest of the record stays open for a verdict.
+Rulings given by Einar on 2026-11-03 and 2026-11-04 while the record was proposed. Einar accepted the record on 2026-11-08 by asking for the remaining work to be delivered and shipped.
 
 - **Observers see imported events once, through the existing mechanics.** Reactors and reducers handle imported events as normal. There is no import flag and no extra need for `[OnceOnly]`.
 - **Importing locks nothing.** No exclusive mode, no lock on the event sequence, no held-back writers.
