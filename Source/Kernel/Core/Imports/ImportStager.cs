@@ -98,7 +98,7 @@ public class ImportStager(IGrainFactory grainFactory, IStorage storage, IOptions
     static ImportChunkStagingResult ConflictingChunk(int chunkIndex, StagedImportChunk? staged = null)
     {
         var error = staged is null
-            ? $"Chunk {chunkIndex} is already staged with other events."
+            ? $"Chunk {chunkIndex} was not staged: the chunk that held its index is gone, removed with the import's staging when the import ended."
             : $"Chunk {chunkIndex} is already staged with events {staged.FirstEventIndex} to {staged.FirstEventIndex + staged.EventsReceived - 1}; a chunk with the same index must carry the same events.";
         return ImportChunkStagingResult.Refused(chunkIndex, error);
     }

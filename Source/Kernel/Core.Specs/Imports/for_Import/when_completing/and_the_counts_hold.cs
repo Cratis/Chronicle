@@ -19,6 +19,5 @@ public class and_the_counts_hold : given.an_import
     [Fact] void should_succeed() => _result.IsSuccess.ShouldBeTrue();
     [Fact] void should_start_validating() => Record.State.ShouldEqual(ImportState.Validating);
     [Fact] void should_count_the_staged_events() => Record.EventsStaged.ShouldEqual(5L);
-    [Fact] void should_know_the_event_types() => Record.EventTypes.ShouldContainOnly("event-type");
     [Fact] void should_start_the_commit_job() => _startedJobs.Single().ImportId.ShouldEqual(_key.ImportId);
 }

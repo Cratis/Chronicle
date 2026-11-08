@@ -88,11 +88,6 @@ public record ImportRecord(ImportId Id, EventSequenceId EventSequenceId, OnInval
     public IEnumerable<ImportCommittedRange> CommittedRanges { get; init; } = [];
 
     /// <summary>
-    /// Gets the event types in the import, known once staging closes.
-    /// </summary>
-    public IEnumerable<string> EventTypes { get; init; } = [];
-
-    /// <summary>
     /// Gets why the import failed, if it did.
     /// </summary>
     public string? FailureReason { get; init; }

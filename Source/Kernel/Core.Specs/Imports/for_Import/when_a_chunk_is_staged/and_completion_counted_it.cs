@@ -16,7 +16,7 @@ public class and_completion_counted_it : given.an_import
         await _grain.Complete(1, 3);
     }
 
-    async Task Because() => _kept = await _grain.ChunkStaged(new ImportChunkSummary(0, 0, 3, 3, 0, ["event-type"]));
+    async Task Because() => _kept = await _grain.ChunkStaged(new ImportChunkSummary(0, 0, 3, 3, 0));
 
     [Fact] void should_keep_it() => _kept.ShouldBeTrue();
 }

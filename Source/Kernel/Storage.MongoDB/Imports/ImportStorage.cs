@@ -34,7 +34,6 @@ public class ImportStorage(IEventStoreNamespaceDatabase database) : IImportStora
     const string EventsStagedField = "eventsStaged";
     const string EventsRejectedField = "eventsRejected";
     const string StateField = "state";
-    const string EventTypesField = "eventTypes";
 
     readonly IMongoCollection<BsonDocument> _records = database.GetCollection<BsonDocument>(WellKnownCollectionNames.Imports);
     readonly IMongoCollection<BsonDocument> _chunks = database.GetCollection<BsonDocument>(WellKnownCollectionNames.ImportChunks);
@@ -82,7 +81,6 @@ public class ImportStorage(IEventStoreNamespaceDatabase database) : IImportStora
             { EventsReceivedField, summary.EventsReceived },
             { EventsStagedField, summary.EventsStaged },
             { EventsRejectedField, summary.EventsRejected },
-            { EventTypesField, new BsonArray(summary.EventTypes) },
             { PayloadField, ImportStorageSerialization.Serialize(chunk) }
         };
 
@@ -96,10 +94,7 @@ public class ImportStorage(IEventStoreNamespaceDatabase database) : IImportStora
         }
         catch (MongoWriteException ex) when (ex.WriteError?.Category == ServerErrorCategory.DuplicateKey)
         {
-            var existing = await Summary(chunk.ImportId, chunk.ChunkIndex).ConfigureAwait(false);
-            return existing?.Matches(chunk.FirstEventIndex, chunk.EventsReceived) != false
-                ? StagedChunkAddition.AlreadyStaged
-                : StagedChunkAddition.Conflicting;
+            return chunk.ComparedWith(await Summary(chunk.ImportId, chunk.ChunkIndex).ConfigureAwait(false));
         }
     }
 
@@ -145,8 +140,7 @@ public class ImportStorage(IEventStoreNamespaceDatabase database) : IImportStora
         document[FirstEventIndexField].ToInt64(),
         document[EventsReceivedField].ToInt32(),
         document[EventsStagedField].ToInt32(),
-        document[EventsRejectedField].ToInt32(),
-        document.TryGetValue(EventTypesField, out var eventTypes) ? eventTypes.AsBsonArray.Select(_ => _.AsString).ToArray() : []);
+        document[EventsRejectedField].ToInt32());
 
     static string Key(ImportId importId) => importId.Value.ToString("D", CultureInfo.InvariantCulture);
 

@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.Json;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Imports;
 using Cratis.Chronicle.Storage.Imports;
@@ -60,7 +59,7 @@ public class ImportStorage(EventStoreName eventStore, EventStoreNamespaceName @n
         await using var scope = await database.Namespace(eventStore, @namespace);
         var importId = chunk.ImportId.Value;
         var chunkIndex = chunk.ChunkIndex;
-        if (await Existing(scope.DbContext, importId, chunkIndex) is { } existing) return Compare(existing, chunk);
+        if (await Existing(scope.DbContext, importId, chunkIndex) is { } existing) return chunk.ComparedWith(existing);
 
         var summary = chunk.ToSummary();
         scope.DbContext.ImportChunks.Add(new ImportChunkEntity
@@ -71,7 +70,6 @@ public class ImportStorage(EventStoreName eventStore, EventStoreNamespaceName @n
             EventsReceived = summary.EventsReceived,
             EventsStaged = summary.EventsStaged,
             EventsRejected = summary.EventsRejected,
-            EventTypes = JsonSerializer.Serialize(summary.EventTypes, ImportStorageSerialization.Options),
             Payload = ImportStorageSerialization.Serialize(chunk)
         });
         try
@@ -79,12 +77,11 @@ public class ImportStorage(EventStoreName eventStore, EventStoreNamespaceName @n
             await scope.DbContext.SaveChangesAsync();
             return StagedChunkAddition.Added;
         }
-        catch (DbUpdateException)
+        catch (DbUpdateException error) when (error.IsUniqueViolation())
         {
-            // A concurrent resend of the same chunk won the key. Anything else is a real failure.
+            // A concurrent resend of the same chunk won the key; anything else is a real failure and is thrown.
             await using var check = await database.Namespace(eventStore, @namespace);
-            if (await Existing(check.DbContext, importId, chunkIndex) is { } winner) return Compare(winner, chunk);
-            throw;
+            return chunk.ComparedWith(await Existing(check.DbContext, importId, chunkIndex));
         }
     }
 
@@ -105,9 +102,9 @@ public class ImportStorage(EventStoreName eventStore, EventStoreNamespaceName @n
         var rows = await scope.DbContext.ImportChunks.AsNoTracking()
             .Where(_ => _.ImportId == id)
             .OrderBy(_ => _.ChunkIndex)
-            .Select(_ => new { _.ChunkIndex, _.FirstEventIndex, _.EventsReceived, _.EventsStaged, _.EventsRejected, _.EventTypes })
+            .Select(_ => new { _.ChunkIndex, _.FirstEventIndex, _.EventsReceived, _.EventsStaged, _.EventsRejected })
             .ToListAsync();
-        return rows.Select(_ => new ImportChunkSummary(_.ChunkIndex, _.FirstEventIndex, _.EventsReceived, _.EventsStaged, _.EventsRejected, EventTypesOf(_.EventTypes))).ToArray();
+        return rows.Select(_ => new ImportChunkSummary(_.ChunkIndex, _.FirstEventIndex, _.EventsReceived, _.EventsStaged, _.EventsRejected)).ToArray();
     }
 
     /// <inheritdoc/>
@@ -135,17 +132,9 @@ public class ImportStorage(EventStoreName eventStore, EventStoreNamespaceName @n
         await scope.DbContext.Imports.Where(_ => _.Id == id).ExecuteDeleteAsync();
     }
 
-    static StagedChunkAddition Compare(ImportChunkEntity existing, StagedImportChunk chunk) =>
-        existing.FirstEventIndex == chunk.FirstEventIndex && existing.EventsReceived == chunk.EventsReceived
-            ? StagedChunkAddition.AlreadyStaged
-            : StagedChunkAddition.Conflicting;
-
-    static string[] EventTypesOf(string json) =>
-        string.IsNullOrEmpty(json) ? [] : JsonSerializer.Deserialize<string[]>(json, ImportStorageSerialization.Options) ?? [];
-
-    static Task<ImportChunkEntity?> Existing(NamespaceDbContext dbContext, Guid importId, int chunkIndex) =>
+    static Task<ImportChunkSummary?> Existing(NamespaceDbContext dbContext, Guid importId, int chunkIndex) =>
         dbContext.ImportChunks.AsNoTracking()
             .Where(_ => _.ImportId == importId && _.ChunkIndex == chunkIndex)
-            .Select(_ => new ImportChunkEntity { ImportId = _.ImportId, ChunkIndex = _.ChunkIndex, FirstEventIndex = _.FirstEventIndex, EventsReceived = _.EventsReceived })
+            .Select(_ => new ImportChunkSummary(_.ChunkIndex, _.FirstEventIndex, _.EventsReceived, _.EventsStaged, _.EventsRejected))
             .FirstOrDefaultAsync();
 }

@@ -16,7 +16,7 @@ public class and_the_import_closed_without_it : given.an_import
         await _grain.Complete(1, 3);
     }
 
-    async Task Because() => _kept = await _grain.ChunkStaged(new ImportChunkSummary(1, 3, 2, 2, 0, ["event-type"]));
+    async Task Because() => _kept = await _grain.ChunkStaged(new ImportChunkSummary(1, 3, 2, 2, 0));
 
     [Fact] void should_tell_the_stager_to_remove_it() => _kept.ShouldBeFalse();
 }

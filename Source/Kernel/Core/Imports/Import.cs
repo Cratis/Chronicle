@@ -117,7 +117,7 @@ public class Import(
                 expectedEvents);
         }
 
-        // The summaries carry the event types and rejection counts; only chunks with rejections are read, and only
+        // The summaries carry the rejection counts; only chunks with rejections are read, and only
         // until the import retains as many rejections as it keeps.
         var stagingRejections = new List<ImportRejection>();
         foreach (var summary in summaries.Where(_ => _.EventsRejected > 0))
@@ -134,7 +134,6 @@ public class Import(
             ExpectedChunks = expectedChunks,
             ExpectedEvents = expectedEvents,
             EventsStaged = summaries.Sum(_ => (long)_.EventsStaged),
-            EventTypes = [.. summaries.SelectMany(_ => _.EventTypes).Distinct(StringComparer.Ordinal)],
             Rejections = retained,
             RejectedCount = rejectedCount,
             LastActivity = _time.GetUtcNow()

@@ -12,8 +12,8 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.Imports.Migrations
 #pragma warning disable SA1600, SA1402, MA0048
 
 [DbContext(typeof(NamespaceDbContext))]
-[Migration($"NS-{WellKnownTableNames.Imports}-{nameof(v19_143_0)}")]
-public class v19_143_0 : Migration
+[Migration($"NS-{WellKnownTableNames.Imports}-{nameof(v19_146_0)}")]
+public class v19_146_0 : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)
     {
@@ -37,7 +37,6 @@ public class v19_143_0 : Migration
                 EventsReceived = table.NumberColumn<int>(migrationBuilder, nullable: false),
                 EventsStaged = table.NumberColumn<int>(migrationBuilder, nullable: false),
                 EventsRejected = table.NumberColumn<int>(migrationBuilder, nullable: false),
-                EventTypes = table.JsonColumn<string>(migrationBuilder),
                 Payload = table.JsonColumn<string>(migrationBuilder)
             },
             constraints: table => table.PrimaryKey($"PK_{WellKnownTableNames.ImportChunks}", x => new { x.ImportId, x.ChunkIndex }));
