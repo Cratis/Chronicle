@@ -37,12 +37,12 @@ public class JsonSchemaMetadataManager(
     /// <inheritdoc/>
     public async Task<JsonObject> Apply(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, JsonSchema schema, string identifier, JsonObject json)
     {
-        using var scope = ReleaseKeys.BeginScope();
         if (!schema.HasSchemaMetadata())
         {
             return json;
         }
 
+        using var scope = ReleaseKeys.BeginScope();
         var result = (json.DeepClone() as JsonObject)!;
         await HandleActionFor(schema, identifier, result, SchemaMetadataActionFailed.ApplyAction, async (h, id, token) => await h.Apply(eventStore, eventStoreNamespace, id, token));
         return await ReleaseKeys.Complete(() => result);
@@ -51,7 +51,6 @@ public class JsonSchemaMetadataManager(
     /// <inheritdoc/>
     public async Task<(JsonObject Value, IReadOnlyList<ProtectedValueUse> Uses)> ApplyReportingKeys(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, JsonSchema schema, string identifier, JsonObject json)
     {
-        using var scope = ReleaseKeys.BeginScope();
         var result = (JsonObject)json.DeepClone();
         var uses = new List<ProtectedValueUse>();
         if (!schema.HasSchemaMetadata())
@@ -59,6 +58,7 @@ public class JsonSchemaMetadataManager(
             return (result, uses);
         }
 
+        using var scope = ReleaseKeys.BeginScope();
         await HandleActionFor(schema, identifier, result, SchemaMetadataActionFailed.ApplyAction, (_, _, value) => Task.FromResult(value), boundaryTransform: async (path, _, handlers, subject, value) =>
         {
             ProtectionLocation(path, handlers, subject);
@@ -117,12 +117,12 @@ public class JsonSchemaMetadataManager(
     /// <inheritdoc/>
     public async Task<JsonObject> Release(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, JsonSchema schema, string identifier, JsonObject json)
     {
-        using var scope = ReleaseKeys.BeginScope();
         if (!schema.HasSchemaMetadata())
         {
             return json;
         }
 
+        using var scope = ReleaseKeys.BeginScope();
         var result = (json.DeepClone() as JsonObject)!;
         await HandleActionFor(schema, identifier, result!, SchemaMetadataActionFailed.ReleaseAction, async (h, id, token) => await h.Release(eventStore, eventStoreNamespace, id, token));
         return await ReleaseKeys.Complete(() => result);
@@ -131,7 +131,6 @@ public class JsonSchemaMetadataManager(
     /// <inheritdoc/>
     public async Task<StatusedRelease> ReleaseWithStatus(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, JsonSchema schema, string identifier, JsonObject json)
     {
-        using var scope = ReleaseKeys.BeginScope();
         var result = (JsonObject)json.DeepClone();
         var statuses = new Dictionary<string, ProtectedValueReleaseStatus>(StringComparer.Ordinal);
         if (!schema.HasSchemaMetadata())
@@ -139,6 +138,7 @@ public class JsonSchemaMetadataManager(
             return new StatusedRelease(result, statuses);
         }
 
+        using var scope = ReleaseKeys.BeginScope();
         await HandleActionFor(
             schema,
             identifier,
