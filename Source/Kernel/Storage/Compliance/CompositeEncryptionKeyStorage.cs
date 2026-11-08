@@ -106,7 +106,7 @@ public class CompositeEncryptionKeyStorage : IEncryptionKeyStorage, IEvictEncryp
             Lifecycle = fences.Min(_ => _.Lifecycle),
             ErasedLifecycle = fences.Max(_ => _.ErasedLifecycle),
             Requests = fences.SelectMany(_ => _.Requests ?? []).GroupBy(_ => _.RequestId, StringComparer.Ordinal)
-                .Select(group => group.First() with { Confirmed = FenceGuarantees != EncryptionKeyFenceGuarantees.None && group.Count() == _inner.Length && group.All(_ => _.Confirmed) }).ToArray()
+                .Select(group => group.First() with { Confirmed = FenceGuarantees == (EncryptionKeyFenceGuarantees.MonotonicFence | EncryptionKeyFenceGuarantees.FencedSave) && group.Count() == _inner.Length && group.All(_ => _.Confirmed) }).ToArray()
         };
     }
 
@@ -119,7 +119,7 @@ public class CompositeEncryptionKeyStorage : IEncryptionKeyStorage, IEvictEncryp
             if (await store.GetErasureRequestFor(eventStore, eventStoreNamespace, identifier, requestId) is { } request) requests.Add(request);
         }
 
-        return requests.Count == 0 ? null : requests[0] with { Confirmed = FenceGuarantees != EncryptionKeyFenceGuarantees.None && requests.Count == _inner.Length && requests.TrueForAll(_ => _.Confirmed) };
+        return requests.Count == 0 ? null : requests[0] with { Confirmed = FenceGuarantees == (EncryptionKeyFenceGuarantees.MonotonicFence | EncryptionKeyFenceGuarantees.FencedSave) && requests.Count == _inner.Length && requests.TrueForAll(_ => _.Confirmed) };
     }
 
     /// <inheritdoc/>
