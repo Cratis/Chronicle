@@ -79,7 +79,7 @@ internal sealed class ReducerDispatcher(
         var outcomes = new PartitionOutcome[partitions.Count];
         await Parallel.ForEachAsync(
             Enumerable.Range(0, partitions.Count),
-            new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount },
+            new ParallelOptions { MaxDegreeOfParallelism = ObserverBatchSize.For(handler.ReducerType, handler.Invoker is IBatchReducerInvoker { HasBatchMethod: true }).MaxConcurrency },
             async (index, _) => outcomes[index] = await Reduce(partitions[index]));
 
         publish(operation.Partitions.Count > 0
