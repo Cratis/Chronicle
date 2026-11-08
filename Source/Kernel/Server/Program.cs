@@ -161,6 +161,7 @@ var isSqlStorage = string.Equals(chronicleOptions.Storage.Type, StorageType.Sqli
 var isInMemoryStorage = string.Equals(chronicleOptions.Storage.Type, StorageType.InMemory, StringComparison.OrdinalIgnoreCase);
 var localhostGuard = LocalhostClusteringGuard.Decide(chronicleOptions);
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddSingleton<IFederationCaller, HttpFederationCaller>();
 builder.Services.AddHealthChecks().AddCheck<StartupHealthCheck>("startup");
 
 if (chronicleOptions.Features.Api)
@@ -459,6 +460,14 @@ app.Use(async (context, next) =>
     if (FederationPortPolicy.ShouldReject(chronicleOptions, context.Connection.LocalPort, context.Request.Path.Value))
     {
         context.Response.StatusCode = StatusCodes.Status404NotFound;
+        return;
+    }
+
+    // The handshake already demands a client certificate; refuse here too if a request somehow has none. Identity is
+    // decided by pin in the pull service, never by chain, so this only checks that a certificate was presented.
+    if (FederationPortPolicy.IsFederationPort(chronicleOptions, context.Connection.LocalPort) && context.Connection.ClientCertificate is null)
+    {
+        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
         return;
     }
 
