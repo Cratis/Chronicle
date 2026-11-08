@@ -18,4 +18,7 @@ internal static partial class ConnectionLifecycleLogMessages
 
     [LoggerMessage(LogLevel.Error, "Failure during the disconnected lifecycle event")]
     internal static partial void FailureDuringDisconnected(this ILogger<ConnectionLifecycle> logger, Exception exception);
+
+    [LoggerMessage(LogLevel.Debug, "Waiting for the previous connection's disconnect handlers to complete before connecting")]
+    internal static partial void WaitingForDisconnectToComplete(this ILogger<ConnectionLifecycle> logger);
 }

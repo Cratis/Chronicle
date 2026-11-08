@@ -373,6 +373,10 @@ public partial class EventStore : IEventStore
             Connection.Lifecycle.OnConnected += RegisterAfterConnect;
             Connection.Lifecycle.OnDisconnected += MarkRegistrationAfterDisconnect;
         }
+        else
+        {
+            Connection.Lifecycle.OnConnected += RegisterReactorsAgainAfterReconnect;
+        }
     }
 
     /// <inheritdoc/>
@@ -874,6 +878,8 @@ public partial class EventStore : IEventStore
             _logger.ClientObserversNotRegistered(skipped);
         }
     }
+
+    Task RegisterReactorsAgainAfterReconnect() => (Reactors as Reactors.Reactors)?.RegisterAgainAfterReconnect() ?? Task.CompletedTask;
 
     Task RegisterClientHostedObservers(bool hostsClientObservers)
     {
