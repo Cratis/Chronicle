@@ -28,6 +28,7 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
 /// <param name="systemEventStoreRelocation"><see cref="ISystemEventStoreRelocation"/> for moving the System event store's databases.</param>
 /// <param name="mutationDigestKeys">The source of mutation digest keys; without one, every mutation fails closed.</param>
+/// <param name="sinkConfigurations">The <see cref="ISinkConfigurations"/> resolving named sinks; none configured when omitted.</param>
 public class Storage(
     IDatabase database,
     Json.IExpandoObjectConverter expandoObjectConverter,
@@ -37,7 +38,8 @@ public class Storage(
     IOptions<ChronicleOptions> options,
     ILoggerFactory loggerFactory,
     ISystemEventStoreRelocation systemEventStoreRelocation,
-    IEventSequenceMutationDigestKeys? mutationDigestKeys = null) : IStorage
+    IEventSequenceMutationDigestKeys? mutationDigestKeys = null,
+    ISinkConfigurations? sinkConfigurations = null) : IStorage
 {
     readonly ConcurrentDictionary<EventStoreName, IEventStoreStorage> _eventStores = new(CaseInsensitiveEventStoreNameComparer.Instance);
 
@@ -104,7 +106,7 @@ public class Storage(
             database.GetEventStoreDatabase(eventStore),
             expandoObjectConverter,
             jsonSerializerOptions,
-            @namespace => new Chronicle.Storage.Sinks.Sinks(eventStore, @namespace, sinkFactories),
+            @namespace => new Chronicle.Storage.Sinks.Sinks(eventStore, @namespace, sinkFactories, sinkConfigurations),
             jobsStorage,
             options,
             loggerFactory,

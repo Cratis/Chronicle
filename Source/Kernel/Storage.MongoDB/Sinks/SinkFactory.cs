@@ -22,7 +22,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 /// </summary>
 /// <remarks>
 /// Takes <see cref="IServiceProvider"/> and resolves <see cref="IDatabase"/> and
-/// <see cref="IExpandoObjectConverter"/> lazily on <see cref="CreateFor"/> rather than
+/// <see cref="IExpandoObjectConverter"/> lazily on <see cref="CreateFor(EventStoreName, EventStoreNamespaceName, ReadModelDefinition)"/> rather than
 /// eagerly via the constructor. This lets the factory be instantiated even in modes
 /// where MongoDB is not the active backend (e.g. SQL OOP integration tests load both
 /// Storage.MongoDB and Storage.Sql assemblies, and <c language="csharp">IInstancesOf&lt;ISinkFactory&gt;</c>
@@ -37,14 +37,28 @@ public class SinkFactory(
     IServiceProvider serviceProvider,
     ITypeFormats typeFormats) : ISinkFactory
 {
+    readonly Lazy<NamedSinkDatabases> _namedDatabases = new(() => new(serviceProvider.GetRequiredService<IOptions<ChronicleOptions>>().Value));
+    readonly Lazy<IExpandoObjectConverter> _expandoObjectConverter = new(() => new ExpandoObjectConverter(typeFormats));
+    readonly Lazy<IReadModelChangeStreams> _changeStreams = new(() => new ReadModelChangeStreams(serviceProvider.GetRequiredService<ILogger<ReadModelChangeStreams>>()));
+
     /// <inheritdoc/>
     public SinkTypeId TypeId => WellKnownSinkTypes.MongoDB;
 
     /// <inheritdoc/>
-    public ISink CreateFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, ReadModelDefinition readModel)
+    public ISink CreateFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, ReadModelDefinition readModel) =>
+        Create(eventStore, @namespace, readModel, serviceProvider.GetRequiredService<IDatabase>().GetReadModelDatabase(eventStore, @namespace));
+
+    /// <inheritdoc/>
+    public ISink CreateFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, ReadModelDefinition readModel, SinkName sink) =>
+        sink.IsDefault
+            ? CreateFor(eventStore, @namespace, readModel)
+            : Create(eventStore, @namespace, readModel, _namedDatabases.Value.GetReadModelDatabase(sink, eventStore, @namespace));
+
+    Sink Create(EventStoreName eventStore, EventStoreNamespaceName @namespace, ReadModelDefinition readModel, IMongoDatabase readModelDatabase)
     {
-        var database = serviceProvider.GetRequiredService<IDatabase>();
-        var expandoObjectConverter = serviceProvider.GetRequiredService<IExpandoObjectConverter>();
+        // A named sink stores to MongoDB whatever engine the kernel runs on, and the kernel removes the MongoDB storage services
+        // when it runs on another one, so the collaborators a MongoDB sink needs fall back to instances of its own.
+        var expandoObjectConverter = serviceProvider.GetService<IExpandoObjectConverter>() ?? _expandoObjectConverter.Value;
 
         var mongoDBConverter = new MongoDBConverter(
             expandoObjectConverter,
@@ -52,7 +66,6 @@ public class SinkFactory(
             readModel,
             serviceProvider.GetRequiredService<ILogger<MongoDBConverter>>());
 
-        var readModelDatabase = database.GetReadModelDatabase(eventStore, @namespace);
         var writes = CreateWrites(eventStore, @namespace, readModel, readModelDatabase);
         var mongoDBSinkCollections = new SinkCollections(
             readModel,
@@ -74,7 +87,7 @@ public class SinkFactory(
             mongoDBSinkCollections,
             mongoDBChangesetConverter,
             expandoObjectConverter,
-            serviceProvider.GetRequiredService<IReadModelChangeStreams>(),
+            serviceProvider.GetService<IReadModelChangeStreams>() ?? _changeStreams.Value,
             serviceProvider.GetRequiredService<ILogger<Sink>>(),
             writes,
             serviceProvider.GetRequiredService<IStorageAuthorizationDiagnostics>());

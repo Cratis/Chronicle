@@ -44,6 +44,11 @@ public static class DiagnosticIds
     public const string GraphElementCannotBeReadModel = "CHR0068";
 
     /// <summary>
+    /// A passive read model names a sink, but a passive read model has no sink.
+    /// </summary>
+    public const string SinkCannotBeCombinedWithPassive = "CHR0069";
+
+    /// <summary>
     /// Event type must have EventType attribute when appended to event sequence.
     /// </summary>
     public const string EventTypeMustHaveAttributeWhenAppended = "CHR0001";

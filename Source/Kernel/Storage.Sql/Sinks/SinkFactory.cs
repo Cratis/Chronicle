@@ -16,7 +16,7 @@ namespace Cratis.Chronicle.Storage.Sql.Sinks;
 /// </summary>
 /// <remarks>
 /// Takes <see cref="IServiceProvider"/> and resolves <see cref="IDatabase"/> lazily on
-/// <see cref="CreateFor"/> rather than eagerly via the constructor. This lets the factory
+/// <see cref="CreateFor(EventStoreName, EventStoreNamespaceName, ReadModelDefinition)"/> rather than eagerly via the constructor. This lets the factory
 /// be instantiated even in modes where SQL is not the active backend (e.g. MongoDB
 /// integration tests load both Storage.MongoDB and Storage.Sql assemblies, and
 /// <c language="csharp">IInstancesOf&lt;ISinkFactory&gt;</c> enumerates every implementation). Construction
@@ -27,6 +27,8 @@ namespace Cratis.Chronicle.Storage.Sql.Sinks;
 /// <param name="expandoObjectConverter">The schema-aware <see cref="IExpandoObjectConverter"/> used by created sinks.</param>
 public class SinkFactory(IServiceProvider serviceProvider, IExpandoObjectConverter expandoObjectConverter) : ISinkFactory
 {
+    readonly Lazy<NamedSinkDatabases> _namedDatabases = new(() => new(serviceProvider));
+
     /// <inheritdoc/>
     public SinkTypeId TypeId => WellKnownSinkTypes.SQL;
 
@@ -35,6 +37,18 @@ public class SinkFactory(IServiceProvider serviceProvider, IExpandoObjectConvert
     {
         var database = serviceProvider.GetRequiredService<IDatabase>();
         var replayingTables = serviceProvider.GetRequiredService<ReplayingTables>();
+        return new Sink(eventStore, @namespace, readModel, database, expandoObjectConverter, replayingTables, serviceProvider.GetRequiredService<ILogger<Sink>>());
+    }
+
+    /// <inheritdoc/>
+    public ISink CreateFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, ReadModelDefinition readModel, SinkName sink)
+    {
+        if (sink.IsDefault)
+        {
+            return CreateFor(eventStore, @namespace, readModel);
+        }
+
+        var (database, replayingTables) = _namedDatabases.Value.Get(sink);
         return new Sink(eventStore, @namespace, readModel, database, expandoObjectConverter, replayingTables, serviceProvider.GetRequiredService<ILogger<Sink>>());
     }
 }

@@ -74,6 +74,7 @@ Rule IDs are not a continuous sequence. The table includes the retired CHR0047 r
 | [CHR0066](CHR0066) | A node or an edge can only have primitive properties | Error | A property of a node or an edge in a graph projection that is an object |
 | [CHR0067](CHR0067) | A node needs exactly one key | Error | A node without exactly one key, or an edge with more than one key |
 | [CHR0068](CHR0068) | A node or an edge cannot be a read model | Error | A type that is both a node or an edge in a graph and a read model |
+| [CHR0069](CHR0069) | `[Sink]` cannot be combined with `[Passive]` | Error | A read model marked both `[Sink]` and `[Passive]` |
 
 ## Explicit registration evidence
 

@@ -189,6 +189,11 @@ public static class WellKnownTypes
     public const string PassiveAttributeName = "Cratis.Chronicle.ReadModels.PassiveAttribute";
 
     /// <summary>
+    /// The full name of the Sink attribute, which stores a read model or a graph in a named sink.
+    /// </summary>
+    public const string SinkAttributeName = "Cratis.Chronicle.Sinks.SinkAttribute";
+
+    /// <summary>
     /// The full name of the ReadModel attribute.
     /// </summary>
     public const string ReadModelAttributeName = "Cratis.Arc.Queries.ModelBound.ReadModelAttribute";

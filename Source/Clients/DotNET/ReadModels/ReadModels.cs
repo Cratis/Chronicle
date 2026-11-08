@@ -54,6 +54,7 @@ public partial class ReadModels(
 {
     readonly IChronicleServicesAccessor _chronicleServicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
     readonly SinkTypeId _defaultSinkTypeId = options.Value.DefaultSinkTypeId;
+    readonly string _defaultSinkName = options.Value.DefaultSinkName ?? string.Empty;
     readonly ReadModelReleaser _releaser = new(
         eventStore,
         schemaGenerator,
@@ -145,7 +146,8 @@ public partial class ReadModels(
                 Sink = new()
                 {
                     ConfigurationId = Guid.Empty,
-                    TypeId = GetSinkTypeIdFor(typeof(TReadModel))
+                    TypeId = GetSinkTypeIdFor(typeof(TReadModel)),
+                    Name = GetSinkNameFor(typeof(TReadModel))
                 },
                 Schema = schemaGenerator.GenerateForReadModel(typeof(TReadModel)).ToJson(),
                 Indexes = GetIndexesForType(typeof(TReadModel)),
@@ -555,6 +557,14 @@ public partial class ReadModels(
     /// </remarks>
     SinkTypeId GetSinkTypeIdFor(Type readModelType) =>
         IsPassive(readModelType) ? SinkTypeId.None : _defaultSinkTypeId;
+
+    /// <summary>
+    /// Resolves the name of the sink configuration a read model type stores to.
+    /// </summary>
+    /// <param name="readModelType">The read model type to resolve the sink name for.</param>
+    /// <returns>The name from <see cref="SinkAttribute"/>, else <see cref="ChronicleOptions.DefaultSinkName"/>; empty for passive read models, which have no sink.</returns>
+    string GetSinkNameFor(Type readModelType) =>
+        IsPassive(readModelType) ? string.Empty : readModelType.GetSinkName() ?? _defaultSinkName;
 
     bool IsPassive(Type readModelType) =>
         readModelType.IsPassive() || (projections is IKnowPassiveProjections passiveProjections && passiveProjections.IsPassive(readModelType));
