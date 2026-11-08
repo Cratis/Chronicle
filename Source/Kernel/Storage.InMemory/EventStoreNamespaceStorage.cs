@@ -67,6 +67,9 @@ public sealed class EventStoreNamespaceStorage(
     public Chronicle.Storage.Occurrences.IScheduleStorage Schedules => _occurrences;
 
     /// <inheritdoc/>
+    public Chronicle.Storage.Imports.IImportStorage Imports { get; } = new Imports.ImportStorage();
+
+    /// <inheritdoc/>
     public IChangesetStorage Changesets { get; } = new ChangesetStorage();
 
     /// <inheritdoc/>
