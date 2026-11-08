@@ -11,9 +11,9 @@ public class when_transitioning_from_legacy_fences : given.a_fenced_store
     public async Task should_reopen_an_imported_closure_when_the_database_authorizes()
     {
         await CloseLegacy();
-        (await Fence())!.NewKeyAllowed.ShouldBeFalse();
+        (await Fence()).NewKeyAllowed.ShouldBeFalse();
         await Authorize();
-        (await Fence())!.NewKeyAllowed.ShouldBeTrue();
+        (await Fence()).NewKeyAllowed.ShouldBeTrue();
         (await Storage.GetOrAddWithRevisionFor(EventStore, Namespace, Identifier, Successor)).Key.Private.ShouldEqual(Successor.Private);
     }
 
@@ -22,13 +22,13 @@ public class when_transitioning_from_legacy_fences : given.a_fenced_store
     {
         await CloseLegacy();
         await Authorize();
-        var reopened = (await Fence())!;
+        var reopened = await Fence();
         await CloseLegacy();
-        var imported = (await Fence())!;
+        var imported = await Fence();
         imported.NewKeyAllowed.ShouldBeFalse();
         imported.Lifecycle.ShouldEqual(reopened.Lifecycle);
         imported.Version.ShouldEqual(reopened.Version + 1);
-        (await Fence())!.Version.ShouldEqual(imported.Version);
+        (await Fence()).Version.ShouldEqual(imported.Version);
     }
 
     [Fact]
@@ -38,7 +38,7 @@ public class when_transitioning_from_legacy_fences : given.a_fenced_store
         _ = await Fence();
         Client.FailLegacyWrites = true;
         await Authorize();
-        (await Fence())!.NewKeyAllowed.ShouldBeTrue();
+        (await Fence()).NewKeyAllowed.ShouldBeTrue();
         Logged("database remains authoritative").ShouldBeTrue();
     }
 
@@ -47,7 +47,7 @@ public class when_transitioning_from_legacy_fences : given.a_fenced_store
     {
         Client.FailLegacyWrites = true;
         await Storage.RecordErasureFor(EventStore, Namespace, Identifier, new("erase"));
-        (await Fence())!.NewKeyAllowed.ShouldBeFalse();
+        (await Fence()).NewKeyAllowed.ShouldBeFalse();
         Logged("database remains authoritative").ShouldBeTrue();
     }
 

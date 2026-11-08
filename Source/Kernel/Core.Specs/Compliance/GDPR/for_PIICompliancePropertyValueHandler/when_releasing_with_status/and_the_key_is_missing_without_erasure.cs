@@ -19,7 +19,7 @@ public class and_the_key_is_missing_without_erasure : given.a_property_handler
         _keyStore.TryGetLatestFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, Identifier).Returns(Task.FromResult<EncryptionKeyAtRevision?>(null));
     }
 
-    async Task Because() => _error = (await Catch.Exception(() => _handler.ReleaseWithStatus(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, Identifier, _value)))!;
+    async Task Because() => _error = await Catch.Exception(() => _handler.ReleaseWithStatus(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, Identifier, _value));
 
     [Fact] void should_fail_closed() => _error.ShouldBeOfExactType<MissingEncryptionKey>();
 }

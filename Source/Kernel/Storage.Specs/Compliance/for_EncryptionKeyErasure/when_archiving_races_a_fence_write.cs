@@ -44,5 +44,5 @@ public class when_archiving_races_a_fence_write : Specification
 
     [Fact] void should_acknowledge_the_archive_before_attempting_removal() => _archiveAcknowledged.ShouldBeTrue();
     [Fact] void should_not_remove_requests_using_the_stale_version() => _removed.ShouldBeFalse();
-    [Fact] void should_preserve_the_competing_request() => _current.Erasure.Requests!.Select(_ => _.RequestId).ShouldEqual(["confirmed", "pending"]);
+    [Fact] void should_preserve_the_competing_request() => _current.Erasure.Requests.Select(_ => _.RequestId).ShouldEqual(["confirmed", "pending"]);
 }

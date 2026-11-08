@@ -48,7 +48,7 @@ public class a_migrated_event_with_protected_properties : a_stored_event
             EventTypeOwner.Client,
             false,
             [new(1, _first), new(2, _second)],
-            [new(1, 2, [], JsonNode.Parse(upcast)!.AsObject(), new JsonObject())]));
+            [new(1, 2, [], JsonNode.Parse(upcast).AsObject(), new JsonObject())]));
 
     protected void Store(JsonObject first, JsonObject second) =>
         _stored = _stored with { GenerationalContent = new Dictionary<int, string> { [1] = first.ToJsonString(), [2] = second.ToJsonString() } };

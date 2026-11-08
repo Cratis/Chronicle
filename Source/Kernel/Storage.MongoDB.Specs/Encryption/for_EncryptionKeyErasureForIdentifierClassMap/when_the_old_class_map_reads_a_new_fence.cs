@@ -19,6 +19,9 @@ public class when_the_old_class_map_reads_a_new_fence : Specification
         _classMap = new BsonClassMap<legacy_fence>();
         _classMap.AutoMap();
         _classMap.MapIdProperty(_ => _.Id);
+
+        // Bind every legacy member to the immutable fixture's constructor rather than relying on creator inference.
+        _classMap.MapCreator(_ => new legacy_fence(_.Id, _.ErasedThrough, _.ErasedKeyFingerprints, _.NewKeyAllowed));
         _classMap.Freeze();
         var document = new EncryptionKeyErasureForIdentifier("subject", 7u, ["fingerprint"], false, Version: 3, Lifecycle: 2, ErasedLifecycle: 2, Requests: [new("request", 7u, 2)], Seal: "seal").ToBsonDocument();
         using var reader = new BsonDocumentReader(document);

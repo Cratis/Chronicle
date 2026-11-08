@@ -19,7 +19,7 @@ public class and_the_key_is_missing : given.a_property_handler
         _keyStore.GetErasureFor(EventStore, EventStoreNamespace, KeyIdentifier).Returns(new EncryptionKeyErasure(1, [], false));
     }
 
-    async Task Because() => _error = (await Catch.Exception(() => _handler.ReleaseWithStatus(EventStore, EventStoreNamespace, "original-subject", _value)))!;
+    async Task Because() => _error = await Catch.Exception(() => _handler.ReleaseWithStatus(EventStore, EventStoreNamespace, "original-subject", _value));
 
     [Fact] void should_fail_instead_of_reporting_erasure() => _error.ShouldBeOfExactType<MissingEncryptionKey>();
     [Fact] async Task should_not_consult_erasure_records() => await _keyStore.DidNotReceive().GetErasureFor(EventStore, EventStoreNamespace, KeyIdentifier);

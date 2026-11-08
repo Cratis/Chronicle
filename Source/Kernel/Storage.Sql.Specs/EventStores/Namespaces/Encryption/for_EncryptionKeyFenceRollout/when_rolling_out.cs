@@ -50,8 +50,8 @@ public abstract class when_rolling_out(KeyStoreHarness harness) : a_key_store(ha
         erasure.NewKeyAllowed.ShouldBeFalse();
         erasure.Version.ShouldBeNull();
         erasure.StateSeal.ShouldBeNull();
-        (await _harness.Storage.TryGetFor(_store, _namespace, "legacy"))!.Private.ShouldEqual(_key.Private);
-        (await _harness.Storage.GetErasureFor(_store, _namespace, "erased"))!.ErasedThrough.Value.ShouldEqual(4u);
+        (await _harness.Storage.TryGetFor(_store, _namespace, "legacy")).Private.ShouldEqual(_key.Private);
+        (await _harness.Storage.GetErasureFor(_store, _namespace, "erased")).ErasedThrough.Value.ShouldEqual(4u);
         await Assert.ThrowsAsync<EncryptionKeyErased>(() => _harness.Storage.GetOrAddFor(_store, _namespace, "erased", _key));
     }
 
@@ -84,7 +84,7 @@ public abstract class when_rolling_out(KeyStoreHarness harness) : a_key_store(ha
         await _harness.Storage.SaveFor(_store, _namespace, _identifier, _key, 1u);
         var replacement = new Key([2], [12]);
         await _harness.Storage.SaveFor(_store, _namespace, _identifier, replacement, 1u);
-        (await _harness.Storage.TryGetFor(_store, _namespace, _identifier, 1u))!.Private.ShouldEqual(replacement.Private);
+        (await _harness.Storage.TryGetFor(_store, _namespace, _identifier, 1u)).Private.ShouldEqual(replacement.Private);
     }
 
     [Fact]
@@ -108,7 +108,7 @@ public abstract class when_rolling_out(KeyStoreHarness harness) : a_key_store(ha
         }
 
         _harness.CountCommands();
-        (await _harness.Storage.TryGetLatestFor(_store, _namespace, _identifier))!.Revision.Value.ShouldEqual(1u);
+        (await _harness.Storage.TryGetLatestFor(_store, _namespace, _identifier)).Revision.Value.ShouldEqual(1u);
         _harness.Commands.ShouldEqual(1);
         (await _harness.Storage.GetOrAddWithRevisionFor(_store, _namespace, _identifier, _key)).Revision.Value.ShouldEqual(1u);
         _harness.Commands.ShouldEqual(2);

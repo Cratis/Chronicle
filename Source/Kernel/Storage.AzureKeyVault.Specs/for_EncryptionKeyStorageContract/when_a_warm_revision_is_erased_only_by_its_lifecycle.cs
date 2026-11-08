@@ -19,7 +19,7 @@ public class when_a_warm_revision_is_erased_only_by_its_lifecycle : given.a_fenc
     {
         await Storage.SaveFor(EventStore, Namespace, Identifier, Original, 999u);
         _cache = new(Storage);
-        _warm = (await _cache.TryGetAtRevisionFor(EventStore, Namespace, Identifier, 999u))!;
+        _warm = await _cache.TryGetAtRevisionFor(EventStore, Namespace, Identifier, 999u);
 
         // Model the C3 empty-subject erasure racing a publication above the revision floor.
         var locations = SecretLocations.For(EventStore, Namespace, Identifier);
@@ -34,8 +34,8 @@ public class when_a_warm_revision_is_erased_only_by_its_lifecycle : given.a_fenc
 
     async Task Because()
     {
-        _released = (await _cache.TryGetAtRevisionFor(EventStore, Namespace, Identifier, 999u))!;
-        _fence = (await _cache.GetErasureForRelease(EventStore, Namespace, Identifier))!;
+        _released = await _cache.TryGetAtRevisionFor(EventStore, Namespace, Identifier, 999u);
+        _fence = await _cache.GetErasureForRelease(EventStore, Namespace, Identifier);
     }
 
     [Fact] void should_reuse_the_warm_revision_pair() => _released.ShouldEqual(_warm);

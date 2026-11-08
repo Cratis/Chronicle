@@ -42,7 +42,7 @@ public class a_real_release : a_factory
         _ownSchema = JsonSchema.FromJson("""{"type":"object","properties":{"name":{"type":"string"}}}""");
         _protectionSchema = JsonSchema.FromJson("""{"type":"object","properties":{"name":{"type":"string","compliance":[{"metadataType":"PII","details":""}]}}}""");
         _schemas.GetFor("event", 2).Returns(new EventTypeSchema(new("event", 2), EventTypeOwner.Server, EventTypeSource.Code, _ownSchema));
-        _schemaCache.ReturnsForAll<ValueTask<JsonSchema>>(_ => ValueTask.FromResult(_protectionSchema));
+        _schemaCache.ReturnsForAll(_ => ValueTask.FromResult(_protectionSchema));
         _factory = new(_schemas, _schemaCache, _manager, new UniqueConstraintComponentsBuilder(new ExpandoObjectConverter(new TypeFormats())));
         _definition = new("event", ["name"]);
     }

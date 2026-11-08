@@ -35,5 +35,5 @@ public class as_the_primary_holding_the_key_under_an_earlier_name_while_the_defa
     [Fact] void should_refuse_the_read() => _readError.ShouldBeOfExactType<EncryptionKeyNeedsUpgrade>();
     [Fact] void should_not_serve_the_default_storage_key() => _served.ShouldBeNull();
     [Fact] void should_refuse_provisioning() => _provisionError.ShouldBeOfExactType<EncryptionKeyNeedsUpgrade>();
-    [Fact] async Task should_keep_the_default_storage_key_unchanged() => (await KeyIn(_secondary))!.Fingerprint.ShouldEqual(KeyNamed("default").Fingerprint);
+    [Fact] async Task should_keep_the_default_storage_key_unchanged() => (await KeyIn(_secondary)).Fingerprint.ShouldEqual(KeyNamed("default").Fingerprint);
 }

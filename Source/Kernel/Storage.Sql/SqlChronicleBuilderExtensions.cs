@@ -53,13 +53,13 @@ public static class SqlChronicleBuilderExtensions
         builder.Services.AddSingleton<IStorage, Storage.Storage>();
         builder.Services.AddSingleton<IStorageErrorClassifier, SqlStorageErrorClassifier>();
         builder.Services.AddSingleton<IReservedEventSequenceIds, SqlReservedEventSequenceIds>();
-        builder.Services.AddSingleton<Cratis.Chronicle.Storage.Generations.Bindings.IMaterializationBindingStorage, Cratis.Chronicle.Storage.Sql.Generations.SqlMaterializationBindingStorage>();
+        builder.Services.AddSingleton<Storage.Generations.Bindings.IMaterializationBindingStorage, Storage.Sql.Generations.SqlMaterializationBindingStorage>();
 
         // The Cratis.Choreography job system storage: jobs DbContext options resolved per event store and
         // namespace onto the same database the namespace's own DbContext uses.
-        builder.Services.AddSingleton<Cratis.Choreography.Storage.IJobsStorage>(sp => new Cratis.Choreography.Storage.Sql.SqlJobsStorage(
-            sp.GetRequiredService<Cratis.Choreography.Jobs.IJobTypes>(),
-            Microsoft.Extensions.Options.Options.Create(new Cratis.Choreography.Storage.Sql.SqlJobsStorageOptions
+        builder.Services.AddSingleton<Choreography.Storage.IJobsStorage>(sp => new Choreography.Storage.Sql.SqlJobsStorage(
+            sp.GetRequiredService<Choreography.Jobs.IJobTypes>(),
+            Microsoft.Extensions.Options.Options.Create(new Choreography.Storage.Sql.SqlJobsStorageOptions
             {
                 OptionsResolver = (scope, @namespace) => sp.GetRequiredService<IDatabase>().GetJobsDbContextOptions(scope, @namespace)
             }),

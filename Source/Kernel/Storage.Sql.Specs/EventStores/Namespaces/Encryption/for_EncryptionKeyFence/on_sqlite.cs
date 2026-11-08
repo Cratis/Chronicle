@@ -7,7 +7,7 @@ using Cratis.Chronicle.Storage.Compliance;
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.Encryption.for_EncryptionKeyFence;
 
 [PerFactSpecificationLifecycle]
-public class on_sqlite() : for_EncryptionKeyStorage.given.a_key_store(for_EncryptionKeyStorage.given.a_key_store.Sqlite())
+public class on_sqlite() : for_EncryptionKeyStorage.given.a_key_store(Sqlite())
 {
     [Fact]
     public async Task should_condition_exact_version_publication_on_the_observed_state()

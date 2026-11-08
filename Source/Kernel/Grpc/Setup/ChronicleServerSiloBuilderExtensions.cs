@@ -156,7 +156,7 @@ public static class ChronicleServerSiloBuilderExtensions
         builder.Services.AddSingleton<ILifecycleParticipant<ISiloLifecycle>, Cratis.Chronicle.Compliance.EncryptionKeyFenceProtocol>();
         builder.Services.AddSingleton(sp => new Cratis.Chronicle.Storage.Compliance.EncryptionKeyErasureOptions
         {
-            RevocationGrace = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<ChronicleOptions>>().Value.Compliance.Encryption.RevocationGrace
+            RevocationGrace = sp.GetRequiredService<IOptions<ChronicleOptions>>().Value.Compliance.Encryption.RevocationGrace
         });
         builder.Services.AddSingleton<ILifecycleParticipant<ISiloLifecycle>, AlertIncidentsMetricsOwnerKeeper>();
 

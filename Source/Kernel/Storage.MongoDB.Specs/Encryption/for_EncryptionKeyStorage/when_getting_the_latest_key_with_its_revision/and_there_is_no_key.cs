@@ -27,7 +27,7 @@ public class and_there_is_no_key(ReplicaSetMongoDBFixture fixture) : Specificati
         namespaceDatabase.GetCollection<EncryptionKeyForIdentifier>("encryption-keys").Returns(mongo.GetCollection<EncryptionKeyForIdentifier>("encryption-keys"));
         namespaceDatabase.GetCollection<EncryptionKeyErasureForIdentifier>("encryption-key-erasures").Returns(mongo.GetCollection<EncryptionKeyErasureForIdentifier>("encryption-key-erasures"));
         eventStore.GetNamespaceDatabase(EventStoreNamespaceName.NotSet).Returns(namespaceDatabase);
-        _store = new Cratis.Compliance.MongoDB.EncryptionKeyStorage(database);
+        _store = new EncryptionKeyStorage(database);
     }
 
     async Task Because() => _result = await _store.TryGetLatestFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, _identifier);

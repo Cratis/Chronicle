@@ -79,7 +79,7 @@ public abstract class EncryptionKeyStorageContract : Specification
         var fence = await Fence();
         fence.NewKeyAllowed.ShouldBeTrue();
         fence.ErasedLifecycle.ShouldEqual(0u);
-        (await Latest())!.StagedLifecycle.ShouldEqual(fence.Lifecycle);
+        (await Latest()).StagedLifecycle.ShouldEqual(fence.Lifecycle);
         (await Erasure()).ShouldBeNull();
     }
 
@@ -91,7 +91,7 @@ public abstract class EncryptionKeyStorageContract : Specification
         var wrapped = original.Encrypt(new byte[32], RSAEncryptionPadding.OaepSHA256);
         await Provision(new(replacement.ExportRSAPublicKey(), replacement.ExportRSAPrivateKey()));
         using var unwrapper = RSA.Create();
-        unwrapper.ImportRSAPrivateKey((await Latest())!.Key.Private, out _);
+        unwrapper.ImportRSAPrivateKey((await Latest()).Key.Private, out _);
         Assert.ThrowsAny<CryptographicException>(() => unwrapper.Decrypt(wrapped, RSAEncryptionPadding.OaepSHA256));
         (await Erasure()).ShouldBeNull();
     }
@@ -111,10 +111,10 @@ public abstract class EncryptionKeyStorageContract : Specification
     public async Task should_report_recorded_erasure_even_after_a_successor_is_authorized()
     {
         await Raise("empty");
-        AssertFence((await Erasure())!, await Fence());
+        AssertFence(await Erasure(), await Fence());
         await Authorize(await Fence());
         await Provision(_successor);
-        AssertFence((await Erasure())!, await Fence());
+        AssertFence(await Erasure(), await Fence());
     }
 
     [Fact]
@@ -206,7 +206,7 @@ public abstract class EncryptionKeyStorageContract : Specification
             (await _storage.TryGetFor(_eventStore, _namespace, _identifier, 1u)).ShouldBeNull();
             (await _storage.HasFor(_eventStore, _namespace, _identifier)).ShouldBeFalse();
         });
-        AssertKey((await Latest())!.Key, _original);
+        AssertKey((await Latest()).Key, _original);
     }
 
     [Fact]
@@ -218,7 +218,7 @@ public abstract class EncryptionKeyStorageContract : Specification
             AssertKey((await Provision(_successor)).Key, _original);
             AssertKey(await _storage.GetOrAddFor(_eventStore, _namespace, _identifier, _successor), _original);
         });
-        AssertKey((await Latest())!.Key, _successor);
+        AssertKey((await Latest()).Key, _successor);
     }
 
     [Fact]
@@ -239,19 +239,19 @@ public abstract class EncryptionKeyStorageContract : Specification
         await Raise("old");
         await Sweep("old");
         await Confirm("old");
-        var request = (await Fence()).Requests!.Single();
+        var request = (await Fence()).Requests.Single();
         await Authorize(await Fence());
         var successor = await Provision(_successor);
         var beforeRetry = await Fence();
         await Raise("old");
         await Sweep("old");
         await Confirm("old");
-        var latest = (await Latest())!;
+        var latest = await Latest();
         latest.Revision.ShouldEqual(successor.Revision);
         latest.StagedLifecycle.ShouldEqual(successor.StagedLifecycle);
         AssertKey(latest.Key, successor.Key);
         AssertFence(await Fence(), beforeRetry);
-        AssertRequest((await Fence()).Requests!.Single(), request);
+        AssertRequest((await Fence()).Requests.Single(), request);
     }
 
     [Fact]
@@ -268,7 +268,7 @@ public abstract class EncryptionKeyStorageContract : Specification
         await Raise("old");
         AssertFence(await Fence(), beforeRetry);
         await Assert.ThrowsAsync<EncryptionKeyRequestLogFull>(() => Raise("overflow"));
-        (await Fence()).Requests!.Count.ShouldEqual(1024);
+        (await Fence()).Requests.Count.ShouldEqual(1024);
     }
 
     [Fact]
@@ -285,7 +285,7 @@ public abstract class EncryptionKeyStorageContract : Specification
     public async Task should_not_retarget_an_in_flight_erasure_to_an_authorized_successor()
     {
         await Save(_original);
-        EncryptionKeyErasure successorFence = null!;
+        EncryptionKeyErasure successorFence = null;
         await DuringErasure(
             async () =>
             {
@@ -301,7 +301,7 @@ public abstract class EncryptionKeyStorageContract : Specification
                 successorFence = await Fence();
             });
         AssertFence(await Fence(), successorFence);
-        AssertKey((await Latest())!.Key, _successor);
+        AssertKey((await Latest()).Key, _successor);
     }
 
     [Fact]
@@ -310,10 +310,10 @@ public abstract class EncryptionKeyStorageContract : Specification
         await Save(_original);
         await Raise("erase");
         await Assert.ThrowsAsync<EncryptionKeyFenceUnavailable>(() => Confirm("erase"));
-        (await Fence()).Requests!.Single().Confirmed.ShouldBeFalse();
+        (await Fence()).Requests.Single().Confirmed.ShouldBeFalse();
         await Sweep("erase");
         await Confirm("erase");
-        (await Fence()).Requests!.Single().Confirmed.ShouldBeTrue();
+        (await Fence()).Requests.Single().Confirmed.ShouldBeTrue();
     }
 
     [Fact]
@@ -359,16 +359,16 @@ public abstract class EncryptionKeyStorageContract : Specification
         await Raise("archived");
         await Sweep("archived");
         await Confirm("archived");
-        var request = (await Fence()).Requests!.Single();
+        var request = (await Fence()).Requests.Single();
         await _storage.CompactErasureRequestsFor(_eventStore, _namespace, _identifier, retain: 0);
-        (await Fence()).Requests!.ShouldBeEmpty();
-        AssertRequest((await _storage.GetErasureRequestFor(_eventStore, _namespace, _identifier, "archived"))!, request);
+        (await Fence()).Requests.ShouldBeEmpty();
+        AssertRequest(await _storage.GetErasureRequestFor(_eventStore, _namespace, _identifier, "archived"), request);
         await Authorize(await Fence());
         await Save(_successor);
         await Raise("archived");
         await Sweep("archived");
         await Confirm("archived");
-        AssertKey((await Latest())!.Key, _successor);
+        AssertKey((await Latest()).Key, _successor);
         (await Fence()).NewKeyAllowed.ShouldBeTrue();
     }
 
@@ -377,9 +377,9 @@ public abstract class EncryptionKeyStorageContract : Specification
     {
         await Save(_original);
         await Raise("pending");
-        var request = (await Fence()).Requests!.Single();
+        var request = (await Fence()).Requests.Single();
         await _storage.CompactErasureRequestsFor(_eventStore, _namespace, _identifier, retain: 0);
-        AssertRequest((await Fence()).Requests!.Single(), request);
+        AssertRequest((await Fence()).Requests.Single(), request);
     }
 
     static void AssertKey(EncryptionKey actual, EncryptionKey expected)

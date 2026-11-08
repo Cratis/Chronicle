@@ -28,13 +28,13 @@ public class and_the_key_exists(ReplicaSetMongoDBFixture fixture) : Specificatio
         namespaceDatabase.GetCollection<EncryptionKeyForIdentifier>("encryption-keys").Returns(mongo.GetCollection<EncryptionKeyForIdentifier>("encryption-keys"));
         namespaceDatabase.GetCollection<EncryptionKeyErasureForIdentifier>("encryption-key-erasures").Returns(mongo.GetCollection<EncryptionKeyErasureForIdentifier>("encryption-key-erasures"));
         eventStore.GetNamespaceDatabase(EventStoreNamespaceName.NotSet).Returns(namespaceDatabase);
-        _store = new Cratis.Compliance.MongoDB.EncryptionKeyStorage(database);
+        _store = new EncryptionKeyStorage(database);
         await _store.SaveFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, _identifier, _expected, new EncryptionKeyRevision(7u));
     }
 
     async Task Because() => _result = await _store.GetOrAddWithRevisionFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, _identifier, new EncryptionKey([3], [4]));
 
-    [Fact] void should_report_the_existing_revision() => _result!.Revision.ShouldEqual(new EncryptionKeyRevision(7u));
-    [Fact] void should_return_the_existing_key() => _result!.Key.Public.ShouldEqual(_expected.Public);
+    [Fact] void should_report_the_existing_revision() => _result.Revision.ShouldEqual(new EncryptionKeyRevision(7u));
+    [Fact] void should_return_the_existing_key() => _result.Key.Public.ShouldEqual(_expected.Public);
     [Fact] async Task should_not_mint_another_revision() => (await _store.HasFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, _identifier, new EncryptionKeyRevision(8u))).ShouldBeFalse();
 }
