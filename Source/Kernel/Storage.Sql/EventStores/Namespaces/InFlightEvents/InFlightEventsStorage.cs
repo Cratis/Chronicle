@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Storage.Observation;
+using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.InFlightEvents;
@@ -41,7 +42,8 @@ public class InFlightEventsStorage(EventStoreName eventStore, EventStoreNamespac
         var partitionValue = partition.ToString();
         decimal sequenceNumber = eventSequenceNumber.Value;
         await scope.DbContext.InFlightEvents
-            .Where(_ => _.ObserverId == observer && _.Partition == partitionValue && _.EventSequenceNumber == sequenceNumber)
+            .Where(_ => _.ObserverId == observer && _.EventSequenceNumber == sequenceNumber)
+            .WherePartition(scope.DbContext, partitionValue)
             .ExecuteDeleteAsync();
     }
 
@@ -53,7 +55,8 @@ public class InFlightEventsStorage(EventStoreName eventStore, EventStoreNamespac
         var partitionValue = partition.ToString();
         decimal upTo = upToInclusive.Value;
         await scope.DbContext.InFlightEvents
-            .Where(_ => _.ObserverId == observer && _.Partition == partitionValue && _.EventSequenceNumber <= upTo)
+            .Where(_ => _.ObserverId == observer && _.EventSequenceNumber <= upTo)
+            .WherePartition(scope.DbContext, partitionValue)
             .ExecuteDeleteAsync();
     }
 
