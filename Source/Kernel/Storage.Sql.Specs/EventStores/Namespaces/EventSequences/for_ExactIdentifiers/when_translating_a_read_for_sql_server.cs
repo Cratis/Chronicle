@@ -36,7 +36,8 @@ public class when_translating_a_read_for_sql_server() : given.a_storage_that_cap
     [Fact] void should_compare_the_event_source_type_in_binary_collation() => _bySourceType.ShouldContain("COLLATE Latin1_General_100_BIN2");
     [Fact] void should_compare_the_event_source_type_length_in_bytes() => _bySourceType.ShouldContain("DATALENGTH(");
     [Fact] void should_not_narrow_on_the_default_event_source_type() => _byDefaultSourceType.ShouldNotContain(SourceTypeSeek);
-    [Fact] void should_seek_on_the_stream_type_and_stream_id_columns()
+    [Fact]
+    void should_seek_on_the_stream_type_and_stream_id_columns()
     {
         _byStream.ShouldContain(StreamTypeSeek);
         _byStream.ShouldContain(StreamIdSeek);
