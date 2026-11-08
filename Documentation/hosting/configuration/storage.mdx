@@ -287,12 +287,44 @@ When you host Chronicle programmatically, select the in-memory backend with the 
 | --- | --- | --- | --- |
 | type | string | Yes | Storage type: `MongoDB`, `PostgreSql`, `MsSql`, `Sqlite`, or `InMemory` |
 | connectionDetails | string | Conditional | Connection string for the chosen storage backend. Required for all backends except `InMemory`, which ignores it |
+| connectionDetailsFile | string | No | Path of a file holding the connection string, such as a mounted Kubernetes Secret. Read once at startup and trimmed of a trailing newline. Set either this or `connectionDetails`, not both |
 | databaseNamePrefix | string | No | Prefix prepended to every MongoDB database name. Defaults to empty; ignored by other storage backends |
 | systemDatabaseName | string | No | Name the System event store's MongoDB databases are named by. Defaults to `_system`; ignored by other storage backends |
 | schema | string | No | SQL schema Chronicle keeps its tables in. Defaults to empty, the database user's default schema; ignored by MongoDB and SQLite |
 | createIfMissing | boolean | No | Whether Chronicle creates missing databases and schemas. Defaults to `true` |
 | connectionResolution | object | No | Resolves the server, database, schema and identity per event store, namespace and purpose. See [storage connection resolution](storage-connection-resolution.md) |
 
+
+## Read the connection from a file
+
+In Kubernetes a connection string is a Secret, and the safe way to hand a Secret to a pod is a mounted file. An environment variable exposes the value to anything that can read the pod's environment. Set `connectionDetailsFile` to the path of the file instead of `connectionDetails`:
+
+```json
+{
+  "storage": {
+    "type": "PostgreSql",
+    "connectionDetailsFile": "/var/run/secrets/chronicle/storage"
+  }
+}
+```
+
+Or through the environment:
+
+```bash
+Cratis__Chronicle__Storage__ConnectionDetailsFile=/var/run/secrets/chronicle/storage
+```
+
+The Kernel reads the file once, at startup, and trims a trailing newline. It stops startup with exit code 4 and a message naming the setting when:
+
+- `connectionDetails` and `connectionDetailsFile` are both set;
+- the file does not exist, is a directory, cannot be read, or is empty.
+
+The message names the setting and the path of the file, never what the file holds.
+
+> [!NOTE]
+> The development and local images ship a `chronicle.json` that sets `connectionDetails` to `mongodb://localhost:27017`. To use `connectionDetailsFile` with them, clear it with `Cratis__Chronicle__Storage__ConnectionDetails=` (empty). The production image has no such default.
+
+Named sinks read their connections from files the same way; see [Named sinks](sinks.md#connections-from-files).
 
 ## Single-writer lease storage
 
