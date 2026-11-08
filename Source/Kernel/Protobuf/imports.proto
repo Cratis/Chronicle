@@ -140,6 +140,8 @@ message ImportProgressResponse {
    string FailureReason = 17;
    int32 MaxChunkEvents = 18;
    int32 MaxChunkBytes = 19;
+   int32 AcknowledgedChunks = 20;
+   int64 AcknowledgedEvents = 21;
 }
 message ImportSequenceRange {
    int32 ChunkIndex = 1;

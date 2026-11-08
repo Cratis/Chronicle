@@ -120,6 +120,8 @@ internal sealed class Imports(
             LastSequenceNumber = source.LastSequenceNumber,
             FailureReason = source.FailureReason,
             MaxChunkEvents = source.MaxChunkEvents,
-            MaxChunkBytes = source.MaxChunkBytes
+            MaxChunkBytes = source.MaxChunkBytes,
+            AcknowledgedChunks = source.AcknowledgedChunks,
+            AcknowledgedEvents = source.AcknowledgedEvents
         };
 }

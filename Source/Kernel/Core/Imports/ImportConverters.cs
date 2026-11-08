@@ -45,6 +45,7 @@ internal static class ImportConverters
     internal static ImportProgress ToProgress(this ImportRecord record, IEnumerable<ImportChunkSummary> chunks, Configuration.Imports limits)
     {
         var summaries = chunks.ToArray();
+        var acknowledged = summaries.OrderBy(_ => _.ChunkIndex).TakeWhile((summary, position) => summary.ChunkIndex == position).ToArray();
         var staged = record.State.AcceptsChunks() ? summaries.Sum(_ => (long)_.EventsStaged) : record.EventsStaged;
         return new(
             record.Id.Value,
@@ -65,6 +66,8 @@ internal static class ImportConverters
             record.LastSequenceNumber,
             record.FailureReason,
             limits.MaxChunkEvents,
-            limits.MaxChunkBytes);
+            limits.MaxChunkBytes,
+            acknowledged.Length,
+            acknowledged.Sum(_ => (long)_.EventsReceived));
     }
 }

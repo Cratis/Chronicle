@@ -17,6 +17,7 @@ namespace Cratis.Chronicle.Imports;
 /// Represents an implementation of <see cref="IImport"/>.
 /// </summary>
 /// <param name="state">The <see cref="IPersistentState{TState}"/> holding the import.</param>
+/// <param name="grainFactory">The <see cref="IGrainFactory"/> for starting the commit job.</param>
 /// <param name="storage">The <see cref="IStorage"/> holding the staged chunks.</param>
 /// <param name="options">The <see cref="ChronicleOptions"/>.</param>
 /// <param name="logger">The logger.</param>
@@ -24,6 +25,7 @@ namespace Cratis.Chronicle.Imports;
 [GrainType("chronicle-import")]
 public class Import(
     [PersistentState(nameof(ImportGrainState), WellKnownGrainStorageProviders.Imports)] IPersistentState<ImportGrainState> state,
+    IGrainFactory grainFactory,
     IStorage storage,
     IOptions<ChronicleOptions> options,
     ILogger<Import> logger,
@@ -135,7 +137,7 @@ public class Import(
         state.State.Record = Record with { State = ImportState.Validating };
         await state.WriteStateAsync();
 
-        var started = await GrainFactory.GetJobsManager(_key.EventStore, _key.Namespace)
+        var started = await grainFactory.GetJobsManager(_key.EventStore, _key.Namespace)
             .Start<IImportEvents, ImportEventsRequest>(new(_key.ImportId));
         if (started.TryGetError(out var error))
         {

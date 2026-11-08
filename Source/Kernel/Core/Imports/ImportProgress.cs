@@ -34,6 +34,8 @@ namespace Cratis.Chronicle.Imports;
 /// <param name="FailureReason">Why the import failed or was abandoned, if it was.</param>
 /// <param name="MaxChunkEvents">The most events one chunk may carry.</param>
 /// <param name="MaxChunkBytes">The most bytes of event content one chunk may carry.</param>
+/// <param name="AcknowledgedChunks">How many chunks are staged without a gap from the first; a reattached client continues with the chunk of this index.</param>
+/// <param name="AcknowledgedEvents">How many events those chunks carry; a reattached client continues after this many events.</param>
 [ReadModel]
 [BelongsTo(WellKnownServices.Imports)]
 public record ImportProgress(
@@ -55,7 +57,9 @@ public record ImportProgress(
     ulong? LastSequenceNumber,
     string? FailureReason,
     int MaxChunkEvents,
-    int MaxChunkBytes)
+    int MaxChunkBytes,
+    int AcknowledgedChunks,
+    long AcknowledgedEvents)
 {
     /// <summary>
     /// Gets the progress of an import.

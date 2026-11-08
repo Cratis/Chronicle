@@ -15,11 +15,12 @@ namespace Cratis.Chronicle.Imports;
 /// <summary>
 /// Represents an implementation of <see cref="IImportStager"/>.
 /// </summary>
+/// <param name="grainFactory">The <see cref="IGrainFactory"/>.</param>
 /// <param name="storage">The <see cref="IStorage"/>.</param>
 /// <param name="options">The <see cref="ChronicleOptions"/>.</param>
 [StatelessWorker]
 [GrainType("chronicle-import-stager")]
-public class ImportStager(IStorage storage, IOptions<ChronicleOptions> options) : Grain, IImportStager
+public class ImportStager(IGrainFactory grainFactory, IStorage storage, IOptions<ChronicleOptions> options) : Grain, IImportStager
 {
     /// <inheritdoc/>
     public async Task<ImportChunkStagingResult> Stage(ImportKey key, int chunkIndex, long firstEventIndex, IReadOnlyList<ImportEvent> events, IReadOnlyList<Identity> causedBy)
@@ -31,7 +32,7 @@ public class ImportStager(IStorage storage, IOptions<ChronicleOptions> options) 
         var existing = await namespaceStorage.Imports.GetChunk(key.ImportId, chunkIndex);
         if (existing is not null) return ImportChunkStagingResult.From(existing, true);
 
-        var import = GrainFactory.GetGrain<IImport>(key);
+        var import = grainFactory.GetGrain<IImport>(key);
         var accepts = await import.EnsureAcceptsChunks();
         if (!accepts.IsSuccess) return ImportChunkStagingResult.Refused(chunkIndex, accepts.Error!);
 

@@ -435,6 +435,18 @@ public class ImportProgressResponse
     /// </summary>
     [ProtoMember(19)]
     public int MaxChunkBytes { get; set; }
+
+    /// <summary>
+    /// Gets or sets the AcknowledgedChunks.
+    /// </summary>
+    [ProtoMember(20)]
+    public int AcknowledgedChunks { get; set; }
+
+    /// <summary>
+    /// Gets or sets the AcknowledgedEvents.
+    /// </summary>
+    [ProtoMember(21)]
+    public long AcknowledgedEvents { get; set; }
 }
 
 /// <summary>
