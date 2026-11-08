@@ -6,6 +6,7 @@ using Cratis.Chronicle.Storage.Compliance;
 using Cratis.Chronicle.Storage.Compliance.for_EncryptionKeyStorageContract;
 using Cratis.Chronicle.Storage.MongoDB;
 using Cratis.Chronicle.Storage.MongoDB.EventSequences;
+using MongoDB.Bson;
 using MongoDB.Driver;
 
 namespace Cratis.Compliance.MongoDB.for_EncryptionKeyStorageContract;
@@ -35,6 +36,9 @@ public class when_running_the_contract(ReplicaSetMongoDBFixture fixture) : Encry
         eventStore.GetNamespaceDatabase(Arg.Any<EventStoreNamespaceName>()).Returns(namespaceDatabase);
         namespaceDatabase.GetCollection<EncryptionKeyForIdentifier>("encryption-keys").Returns(keys);
         namespaceDatabase.GetCollection<EncryptionKeyErasureForIdentifier>("encryption-key-erasures").Returns(fences);
+
+        // The request archive and external fences are untyped collections; an auto-substitute would silently drop archive writes.
+        namespaceDatabase.GetCollection<BsonDocument>(Arg.Any<string?>()).Returns(call => _mongo.GetCollection<BsonDocument>(call.Arg<string?>()));
         return new EncryptionKeyStorage(database);
     }
 

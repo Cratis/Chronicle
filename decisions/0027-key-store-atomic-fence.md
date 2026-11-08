@@ -191,8 +191,8 @@ document the upsert raises a duplicate key; that is read as "already applied or 
 re-read. Authorization: `findOneAndUpdate({_id, version: observed, newKeyAllowed: false}, {$set newKeyAllowed=true,
 $inc lifecycle, $inc version})`; no match means re-read and apply the idempotent-retry rule or throw
 `EncryptionKeyFenceChanged`. The ensure-exists upsert creates an empty fence document before any save. Fence writes use `majority`
-write concern (#4977); validation and verifying reads use `readConcern: linearizable` on the primary, which a replica set and a
-single node both support. If the server refuses or times out the operation throws `EncryptionKeyFenceUnavailable` (C8); there is no
+write concern (#4977); validation and verifying reads use `readConcern: linearizable` on the primary, which a replica set, including a
+single-node replica set, supports. A standalone `mongod` refuses it; Chronicle already requires a replica set for transactions and change streams, so a standalone is not a supported deployment and its fence reads fail closed. If the server refuses or times out the operation throws `EncryptionKeyFenceUnavailable` (C8); there is no
 `majority` fallback. Key inserts stage with `published=false` and the writer nonce; publish is `updateOne({_id, nonce}, {$set published=true})`;
 implicit revision recomputes the next revision on a duplicate key (bounded). No multi-document transaction (C3). Old silos replace
 the whole fence document (`ReplaceOne`); see rollout.
