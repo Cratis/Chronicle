@@ -16,6 +16,17 @@ namespace Cratis.Chronicle.CodeAnalysis;
 /// </remarks>
 internal static class KnownEventTypes
 {
+    static readonly CompilationCache<ImmutableArray<ITypeSymbol>> _cache = new();
+
+    /// <summary>
+    /// Gets the known event types of a compilation, collected once and shared by every analyzer that asks for them.
+    /// </summary>
+    /// <param name="compilation">The compilation.</param>
+    /// <param name="cancellationToken">The analysis cancellation token.</param>
+    /// <returns>The known event types.</returns>
+    internal static ImmutableArray<ITypeSymbol> For(Compilation compilation, CancellationToken cancellationToken) =>
+        _cache.For(compilation, (key, token) => In(key, ExplicitRegistrationEvidence.For(key, token), token), cancellationToken);
+
     /// <summary>
     /// Collects the known event types of a compilation.
     /// </summary>
