@@ -110,5 +110,74 @@ public class ReducerMemoryGate(
         }
     }
 
+    /// <summary>
+    /// Wait for room to reduce the partitions of a page together.
+    /// </summary>
+    /// <param name="scope">What the partitions belong to.</param>
+    /// <param name="partitions">The <see cref="Key"/> of every partition in the page.</param>
+    /// <returns>The one <see cref="ReducerMemoryTicket"/> the page holds, to dispose when its reduces are done.</returns>
+    /// <remarks>
+    /// The states of a page are held at the same time, so the page reserves for all of them in one go. Reserving one
+    /// partition at a time while holding the others could wait for room that only the page itself would give back.
+    /// </remarks>
+    public async ValueTask<ReducerMemoryTicket> EnterPage(string scope, IEnumerable<Key> partitions)
+    {
+        if (budget is null || !_settings.Enabled)
+        {
+            return ReducerMemoryTicket.None;
+        }
+
+        var cost = partitions.Sum(partition => _sizes.TryGetValue((scope, partition), out var size) ? CostOf(size) : 0);
+        return cost < _settings.MinimumReservationBytes ? ReducerMemoryTicket.None : new ReducerMemoryTicket(await budget.Reserve(cost));
+    }
+
+    /// <summary>
+    /// Account for the states of a page that have been read, and remember the size of each for its next reduce.
+    /// </summary>
+    /// <param name="ticket">The <see cref="ReducerMemoryTicket"/> of the page.</param>
+    /// <param name="scope">What the partitions belong to.</param>
+    /// <param name="states">The state of each partition in the page, when it has one.</param>
+    /// <returns>Awaitable task.</returns>
+    public async ValueTask ObservePage(ReducerMemoryTicket ticket, string scope, IEnumerable<(Key Partition, ExpandoObject? State)> states)
+    {
+        var cost = 0L;
+        foreach (var (partition, state) in states)
+        {
+            if (state is null)
+            {
+                continue;
+            }
+
+            var size = ExpandoObjectSize.Estimate(state);
+            _stateSize?.Record(size);
+            if (budget is null || !_settings.Enabled)
+            {
+                continue;
+            }
+
+            if (_sizes.Count >= MaximumRememberedPartitions)
+            {
+                _sizes.Clear();
+            }
+
+            _sizes[(scope, partition)] = size;
+            cost += CostOf(size);
+        }
+
+        if (budget is null || !_settings.Enabled || cost < _settings.MinimumReservationBytes)
+        {
+            return;
+        }
+
+        if (ticket.Reservation.Bytes == 0)
+        {
+            ticket.Reservation = await budget.Reserve(cost);
+        }
+        else if (cost > ticket.Reservation.Bytes)
+        {
+            ticket.Reservation.Grow(cost - ticket.Reservation.Bytes);
+        }
+    }
+
     long CostOf(long size) => size * Math.Max(1, _settings.ReducerCostMultiplier);
 }

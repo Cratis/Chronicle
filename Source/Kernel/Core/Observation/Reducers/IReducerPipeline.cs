@@ -56,4 +56,18 @@ public interface IReducerPipeline
     /// <param name="createNotification">Whether to build the notification of the change, a whole new copy of the state; false when nothing is watching.</param>
     /// <returns>The committed change to notify watchers of, or null if there was no change.</returns>
     Task<ReadModelChangeNotification?> Reduce(ReducerContext context, ReducerDelegate reducer, bool createNotification = true);
+
+    /// <summary>
+    /// Reduces a page of partitions in one delivery, settling each partition on its own.
+    /// </summary>
+    /// <param name="contexts">The <see cref="ReducerContext"/> of every partition in the page, in the order to write them.</param>
+    /// <param name="reducer"><see cref="ReducerPageDelegate"/> that reduces every partition of the page in one call.</param>
+    /// <param name="createNotification">Whether to build the notification of each change; false when nothing is watching.</param>
+    /// <returns>The <see cref="ReducerPageOutcome"/> with the result, the change and any failed write of each partition.</returns>
+    /// <remarks>
+    /// The states of every partition are read in one sink read where the sink can, and the successful states are written
+    /// in one bulk window. A partition the client failed or deferred writes nothing, and a failed write fails only its own
+    /// partition. Each partition is reduced exactly as <see cref="Reduce"/> reduces it on its own.
+    /// </remarks>
+    Task<ReducerPageOutcome> ReducePage(IReadOnlyList<ReducerContext> contexts, ReducerPageDelegate reducer, bool createNotification = true);
 }
