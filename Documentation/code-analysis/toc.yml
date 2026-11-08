@@ -122,19 +122,21 @@
   href: CHR0067.mdx
 - name: CHR0068 - A node or an edge cannot be a read model
   href: CHR0068.mdx
-- name: "CHR0069 - [Observes<T>] is only for batch methods"
+- name: CHR0069 - [Sink] cannot be combined with [Passive]
   href: CHR0069.mdx
-- name: "CHR0070 - Batch method observes no event types"
+- name: "CHR0070 - [Observes<T>] is only for batch methods"
   href: CHR0070.mdx
-- name: "CHR0071 - An event type reaches more than one method"
+- name: "CHR0071 - Batch method observes no event types"
   href: CHR0071.mdx
-- name: "CHR0072 - BatchContext is only for batch methods"
+- name: "CHR0072 - An event type reaches more than one method"
   href: CHR0072.mdx
-- name: "CHR0073 - Reactor batch method must return Task or void"
+- name: "CHR0073 - BatchContext is only for batch methods"
   href: CHR0073.mdx
-- name: "CHR0074 - A reducer with a batch method has no other reduce methods"
+- name: "CHR0074 - Reactor batch method must return Task or void"
   href: CHR0074.mdx
-- name: "CHR0075 - Batch method has a signature Chronicle cannot call"
+- name: "CHR0075 - A reducer with a batch method has no other reduce methods"
   href: CHR0075.mdx
-- name: "CHR0076 - Batch method matches an event type it does not observe"
+- name: "CHR0076 - Batch method has a signature Chronicle cannot call"
   href: CHR0076.mdx
+- name: "CHR0077 - Batch method matches an event type it does not observe"
+  href: CHR0077.mdx

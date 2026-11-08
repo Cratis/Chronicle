@@ -1,11 +1,15 @@
 ---
-title: "CHR0073: Reactor batch method must return Task or void"
-description: "CHR0073 reports a Cratis Chronicle reactor batch method that returns something other than Task or void."
+title: "CHR0073: BatchContext is only for batch methods"
+description: "CHR0073 reports a Cratis Chronicle per-event reactor or reducer method that takes a BatchContext."
 ---
 
 ## Rule description
 
-A per-event reactor method can return events and other side effects, because each is tied to the one event it came from. A batch method has no such single event, so returning side effects from it is not supported. Chronicle refuses to register a reactor whose batch method returns anything but `Task` or `void`.
+`BatchContext` describes the page of events a batch method is called for: its partitions, its event count, its origin and its deadline. A per-event method is called once per event and receives that event's `EventContext` instead. Chronicle refuses to register an observer whose per-event method takes a `BatchContext`.
+
+For a reducer, CHR0073 reports a method shaped like a reduce method, taking an event and the current read model, whose third parameter is a `BatchContext` where a reduce method takes the `EventContext`. Without the rule such a method would not be a reduce method at all, and its events would be skipped without a word. Other methods that happen to take an event and a `BatchContext` are not reduce methods and are not reported.
+
+A reducer that has a batch method is not reported either. There a method shaped like a reduce method but taking the `BatchContext` is a helper the batch method calls for each event with the context it was given, such as `Account? Apply(Deposited @event, Account? current, BatchContext context)`. Chronicle registers such a reducer and only calls the batch method.
 
 ## Severity
 
@@ -13,12 +17,9 @@ Error
 
 ## How to fix
 
-Return `Task` or `void`. When the batch must append events, inject an event log into the reactor and append through it.
-
-## Related rules
-
-- [CHR0054](CHR0054.mdx): Reactor method has an unsupported return type.
+- Take an `EventContext` instead, if the method needs the event's metadata.
+- Turn the method into a batch method, taking an `EventBatch` first and declaring `[Observes<TEvent>]`, if it needs to know about the page.
 
 ## Related topics
 
-- [Reactor batch methods](../reactors/batches.mdx)
+- [Reactor batch methods](../reactors/batches.mdx#the-batch-context)

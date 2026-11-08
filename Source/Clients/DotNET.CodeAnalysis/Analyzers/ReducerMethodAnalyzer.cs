@@ -53,7 +53,7 @@ public class ReducerMethodAnalyzer : DiagnosticAnalyzer
     {
         var methodSymbol = (IMethodSymbol)context.Symbol;
 
-        // A batch method has its own signature rule (CHR0075).
+        // A batch method has its own signature rule (CHR0076).
         if (!IsPublicInstanceMethod(methodSymbol) || methodSymbol.Parameters.Length == 0 || BatchObservers.IsBatchMethod(methodSymbol, context.Compilation)) return;
         var evidence = registrations.Value;
 

@@ -72,6 +72,10 @@ CONFIG_RESTRICTED = (
     "for_OccurrenceProcessRecovery", "for_ContainerStartup", "GraphProjections",
 )
 
+# The Neo4j lane of GraphProjections that runs with a database per namespace: Neo4j Enterprise, under its Evaluation Agreement (Cratis/Chronicle#5739).
+GRAPH_ENTERPRISE_SHARD = "enterprise"
+GRAPH_ENTERPRISE_IMAGE = "neo4j:5-enterprise"
+
 # Number of parallel shards per namespace. Any namespace not listed here runs as
 # a single job. Tuned from observed CI wall-clock: Projections (617 facts) was
 # the critical path of the whole run, and the others have a slow out-of-process
@@ -346,6 +350,11 @@ def build_include(suite, databases, batches, namespaces=None):
             namespace_configs = [config for config in configs if config[0] == "outofprocess" and config[1] == "postgresql"]
         for mode, database, needs_docker in namespace_configs:
             include.append({**entry, "mode": mode, "database": database, "needs-docker": needs_docker})
+        # Database per namespace needs a Neo4j with multiple databases, which only the Enterprise edition has. One extra in-process lane runs the
+        # suite on it. It accepts the Neo4j Evaluation Agreement for now (Cratis/Chronicle#5739); the workflow reads the two fields below.
+        if name == "GraphProjections":
+            include.append({**entry, "shard": GRAPH_ENTERPRISE_SHARD, "mode": "inprocess", "database": "mongodb", "needs-docker": True,
+                            "neo4j-image": GRAPH_ENTERPRISE_IMAGE, "neo4j-database-mode": "PerNamespace"})
     return include
 
 

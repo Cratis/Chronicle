@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Storage.Neo4j;
+
 namespace Cratis.Chronicle.Integration.GraphProjections;
 
 /// <summary>
@@ -15,7 +17,8 @@ namespace Cratis.Chronicle.Integration.GraphProjections;
 /// <para>
 /// The database mode is a parameter: <see cref="DatabaseMode"/> reads <c language="text">CHRONICLE_NEO4J_DATABASE_MODE</c>, and defaults to
 /// <c language="text">Single</c>, the only mode the Community edition supports. A server with multiple databases runs the same specifications in
-/// <c language="text">PerNamespace</c> mode by pointing <c language="text">CHRONICLE_NEO4J_IMAGE</c> at it - this repository never ships an Enterprise image.
+/// <c language="text">PerNamespace</c> mode by pointing <c language="text">CHRONICLE_NEO4J_IMAGE</c> at it. An Enterprise image is started under Neo4j's
+/// Evaluation Agreement (see Cratis/Chronicle#5739); this repository ships no Enterprise image itself.
 /// </para>
 /// </remarks>
 public class GraphChronicleFixture : ChronicleConfigurableFixture
@@ -31,9 +34,10 @@ public class GraphChronicleFixture : ChronicleConfigurableFixture
     public string DatabaseMode { get; } = Environment.GetEnvironmentVariable(ModeVariable) is { Length: > 0 } mode ? mode : "Single";
 
     /// <summary>
-    /// Gets the name of the Neo4j database the graph lives in. In per namespace mode the specifications ask the sink's naming for it.
+    /// Gets the name of the Neo4j database the graph of the default namespace lives in: the only database in single database mode, and the one the sink names
+    /// for the event store and the default namespace in per namespace mode. A specification that uses another namespace asks the sink's naming for it.
     /// </summary>
-    public string Database => Neo4jGraphServer.Database;
+    public string Database => DatabaseMode == "Single" ? Neo4jGraphServer.Database : GraphDatabaseName.For(null, Constants.EventStore, "Default");
 
     /// <summary>
     /// Gets the Neo4j server.

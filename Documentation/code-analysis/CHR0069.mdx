@@ -1,11 +1,11 @@
 ---
-title: "CHR0069: [Observes<T>] is only for batch methods"
-description: "CHR0069 reports a Cratis Chronicle reactor or reducer method that declares [Observes<T>] without taking an EventBatch."
+title: "CHR0069: [Sink] cannot be combined with [Passive]"
+description: "CHR0069 reports a read model marked both [Sink] and [Passive]."
 ---
 
 ## Rule description
 
-`[Observes<TEvent>]` declares the event types of a batch method, a method whose first parameter is an `EventBatch`. A per-event method already declares its event type with its first parameter, so `[Observes<TEvent>]` on it has no meaning. Chronicle refuses to register the observer, so the mistake is reported at compile time.
+`[Passive]` declares that a read model is never stored: it is projected on demand and has no sink. `[Sink("name")]` names the sink configuration a read model is stored in. A read model is one or the other.
 
 ## Severity
 
@@ -13,15 +13,8 @@ Error
 
 ## How to fix
 
-- To handle the events one at a time, remove `[Observes<TEvent>]` and take the event as the first parameter.
-- To handle them together, make `EventBatch` the method's first parameter and pattern-match on the events inside it.
-
-## Related rules
-
-- [CHR0070](CHR0070.mdx): Batch method observes no event types.
-- [CHR0072](CHR0072.mdx): `BatchContext` is only for batch methods.
+Remove `[Sink]` to keep the read model passive, or remove `[Passive]` to store it in the named sink.
 
 ## Related topics
 
-- [Reactor batch methods](../reactors/batches.mdx)
-- [Reducer batch methods](../reducers/batches.mdx)
+- [Sinks](../sinks/index.mdx)

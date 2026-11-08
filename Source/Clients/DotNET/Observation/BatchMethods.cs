@@ -110,7 +110,7 @@ internal static class BatchMethods
     /// <param name="leading">How many leading parameters Chronicle passes, starting with the <see cref="EventBatch"/>.</param>
     /// <exception cref="BatchMethodParameterCannotBeSupplied">A parameter cannot be supplied.</exception>
     /// <remarks>
-    /// Mirrors what the analyzer reports as CHR0075, so a method the analyzer refuses is also refused at registration instead
+    /// Mirrors what the analyzer reports as CHR0076, so a method the analyzer refuses is also refused at registration instead
     /// of failing every page it is called for.
     /// </remarks>
     public static void ThrowIfParametersCannotBeSupplied(Type observerType, MethodInfo method, int leading)

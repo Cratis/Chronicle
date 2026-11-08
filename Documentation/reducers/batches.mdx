@@ -25,21 +25,21 @@ break the fold. The analyzers in `Cratis.Chronicle.CodeAnalysis` report these mi
 
 | Mistake | Rule |
 | --- | --- |
-| A method with `[Observes<TEvent>]` does not take an `EventBatch` | [CHR0069](../code-analysis/CHR0069.mdx) |
-| A batch method has no `[Observes<TEvent>]` | [CHR0070](../code-analysis/CHR0070.mdx) |
-| A per-event method takes a `BatchContext` | [CHR0072](../code-analysis/CHR0072.mdx) |
-| A reducer has two batch methods, or a batch method and per-event methods | [CHR0074](../code-analysis/CHR0074.mdx) |
-| A batch method does not take or return the read model, takes a parameter Chronicle cannot supply, such as an `EventContext`, or on a self-reducing read model is not public, static and named `Reduce` | [CHR0075](../code-analysis/CHR0075.mdx) |
+| A method with `[Observes<TEvent>]` does not take an `EventBatch` | [CHR0070](../code-analysis/CHR0070.mdx) |
+| A batch method has no `[Observes<TEvent>]` | [CHR0071](../code-analysis/CHR0071.mdx) |
+| A per-event method takes a `BatchContext` | [CHR0073](../code-analysis/CHR0073.mdx) |
+| A reducer has two batch methods, or a batch method and per-event methods | [CHR0075](../code-analysis/CHR0075.mdx) |
+| A batch method does not take or return the read model, takes a parameter Chronicle cannot supply, such as an `EventContext`, or on a self-reducing read model is not public, static and named `Reduce` | [CHR0076](../code-analysis/CHR0076.mdx) |
 
-The client discovers a self-reducing read model's batch method only as a `public static` method named `Reduce`. CHR0075 also reports a batch method on a read model that takes the read model as its current state but that the client would not discover:
+The client discovers a self-reducing read model's batch method only as a `public static` method named `Reduce`. CHR0076 also reports a batch method on a read model that takes the read model as its current state but that the client would not discover:
 
 - a static method with another name than `Reduce`;
 - a static method that is not public;
 - an instance method that declares `[Observes<TEvent>]`.
 
-Registration refuses such a method only when the read model is self-reducing through another method, because the client then finds it among the read model's methods and refuses the reducer for having more than one batch method or for mixing batch and per-event methods. When it is the read model's only reduce method, the read model is not a reducer at all: it never runs and nothing fails. Rely on CHR0075 for that case.
+Registration refuses such a method only when the read model is self-reducing through another method, because the client then finds it among the read model's methods and refuses the reducer for having more than one batch method or for mixing batch and per-event methods. When it is the read model's only reduce method, the read model is not a reducer at all: it never runs and nothing fails. Rely on CHR0076 for that case.
 
-[CHR0076](../code-analysis/CHR0076.mdx) warns about a pattern on an event type the batch method does not observe, since it never matches.
+[CHR0077](../code-analysis/CHR0077.mdx) warns about a pattern on an event type the batch method does not observe, since it never matches.
 
 ## Reporting outcomes
 

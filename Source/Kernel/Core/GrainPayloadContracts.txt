@@ -871,7 +871,9 @@ concept Cratis.Chronicle.Concepts.Sinks.SinkConfigurationId : System.Guid
 json Cratis.Chronicle.Concepts.Sinks.SinkDefinition
   configuration: Cratis.Chronicle.Concepts.Sinks.SinkConfigurationId
   eventSequence: Cratis.Chronicle.Concepts.Sinks.EventSequenceSinkConfiguration
+  name: Cratis.Chronicle.Concepts.Sinks.SinkName
   type: Cratis.Chronicle.Concepts.Sinks.SinkTypeId
+concept Cratis.Chronicle.Concepts.Sinks.SinkName : string
 concept Cratis.Chronicle.Concepts.Sinks.SinkTypeId : string
 json Cratis.Chronicle.Concepts.System.SemanticVersion
   buildMetadata: string

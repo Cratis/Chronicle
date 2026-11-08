@@ -1,15 +1,16 @@
 ---
-title: "CHR0072: BatchContext is only for batch methods"
-description: "CHR0072 reports a Cratis Chronicle per-event reactor or reducer method that takes a BatchContext."
+title: "CHR0072: An event type reaches more than one method"
+description: "CHR0072 reports a Cratis Chronicle reactor where one event type is observed by two batch methods, or by a batch method and a per-event method."
 ---
 
 ## Rule description
 
-`BatchContext` describes the page of events a batch method is called for: its partitions, its event count, its origin and its deadline. A per-event method is called once per event and receives that event's `EventContext` instead. Chronicle refuses to register an observer whose per-event method takes a `BatchContext`.
+Every event type a reactor handles reaches exactly one of its methods. Chronicle never calls a batch method and a per-event method, or two batch methods, for the same event, so there is no question about which method handles it. CHR0072 reports:
 
-For a reducer, CHR0072 reports a method shaped like a reduce method, taking an event and the current read model, whose third parameter is a `BatchContext` where a reduce method takes the `EventContext`. Without the rule such a method would not be a reduce method at all, and its events would be skipped without a word. Other methods that happen to take an event and a `BatchContext` are not reduce methods and are not reported.
+- an event type observed by two batch methods
+- an event type observed by a batch method and also handled by a per-event method
 
-A reducer that has a batch method is not reported either. There a method shaped like a reduce method but taking the `BatchContext` is a helper the batch method calls for each event with the context it was given, such as `Account? Apply(Deposited @event, Account? current, BatchContext context)`. Chronicle registers such a reducer and only calls the batch method.
+An `[Observes<TEvent>]` that names an interface or base type covers every event type that implements or derives from it, so it can overlap a per-event method for one of those types.
 
 ## Severity
 
@@ -17,9 +18,12 @@ Error
 
 ## How to fix
 
-- Take an `EventContext` instead, if the method needs the event's metadata.
-- Turn the method into a batch method, taking an `EventBatch` first and declaring `[Observes<TEvent>]`, if it needs to know about the page.
+Move the event type to one method. When two side effects for the same event must happen in order, do both in that method: Chronicle keeps order within a method, not across a reactor's methods.
+
+## Related rules
+
+- [CHR0075](CHR0075.mdx): A reducer with a batch method has no other reduce methods.
 
 ## Related topics
 
-- [Reactor batch methods](../reactors/batches.mdx#the-batch-context)
+- [Reactor batch methods](../reactors/batches.mdx)

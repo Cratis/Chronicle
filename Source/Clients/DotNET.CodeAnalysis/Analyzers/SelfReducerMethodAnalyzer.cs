@@ -38,7 +38,7 @@ public sealed class SelfReducerMethodAnalyzer : DiagnosticAnalyzer
         if (!SelfReducerPolicy.CanBeSelf(model, context.Compilation)) return;
         var self = SelfReducerPolicy.IsSelf(model, context.Compilation);
 
-        // A batch method has its own signature rule (CHR0075).
+        // A batch method has its own signature rule (CHR0076).
         foreach (var method in SelfReducerPolicy.Methods(model).Where(method => method.Name == "Reduce" && !BatchObservers.IsBatchMethod(method, context.Compilation) &&
             (self || SelfReducerPolicy.IsNearMiss(method, model, context.Compilation)) && !SelfReducerPolicy.IsValid(method, model, context.Compilation)))
         {

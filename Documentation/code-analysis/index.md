@@ -74,14 +74,15 @@ Rule IDs are not a continuous sequence. The table includes the retired CHR0047 r
 | [CHR0066](CHR0066) | A node or an edge can only have primitive properties | Error | A property of a node or an edge in a graph projection that is an object |
 | [CHR0067](CHR0067) | A node needs exactly one key | Error | A node without exactly one key, or an edge with more than one key |
 | [CHR0068](CHR0068) | A node or an edge cannot be a read model | Error | A type that is both a node or an edge in a graph and a read model |
-| [CHR0069](CHR0069) | `[Observes<T>]` is only for batch methods | Error | `[Observes<T>]` is on a method that does not take an `EventBatch` first |
-| [CHR0070](CHR0070) | Batch method observes no event types | Error | A method taking an `EventBatch` declares no `[Observes<T>]`, so it would never be called |
-| [CHR0071](CHR0071) | An event type reaches more than one method | Error | An event type is observed by two batch methods of a reactor, or by a batch method and a per-event method |
-| [CHR0072](CHR0072) | `BatchContext` is only for batch methods | Error | A per-event reactor or reducer method takes a `BatchContext` |
-| [CHR0073](CHR0073) | Reactor batch method must return Task or void | Error | Returning events or other side effects from a reactor batch method is not supported |
-| [CHR0074](CHR0074) | A reducer with a batch method has no other reduce methods | Error | A reducer has two batch methods, or a batch method and per-event reduce methods |
-| [CHR0075](CHR0075) | Batch method has a signature Chronicle cannot call | Error | A batch method's parameters or result are not ones Chronicle can supply or read |
-| [CHR0076](CHR0076) | Batch method matches an event type it does not observe | Warning | A pattern in a batch method names an event type outside its `[Observes<T>]` list, so it never matches |
+| [CHR0069](CHR0069) | `[Sink]` cannot be combined with `[Passive]` | Error | A read model marked both `[Sink]` and `[Passive]` |
+| [CHR0070](CHR0070) | `[Observes<T>]` is only for batch methods | Error | `[Observes<T>]` is on a method that does not take an `EventBatch` first |
+| [CHR0071](CHR0071) | Batch method observes no event types | Error | A method taking an `EventBatch` declares no `[Observes<T>]`, so it would never be called |
+| [CHR0072](CHR0072) | An event type reaches more than one method | Error | An event type is observed by two batch methods of a reactor, or by a batch method and a per-event method |
+| [CHR0073](CHR0073) | `BatchContext` is only for batch methods | Error | A per-event reactor or reducer method takes a `BatchContext` |
+| [CHR0074](CHR0074) | Reactor batch method must return Task or void | Error | Returning events or other side effects from a reactor batch method is not supported |
+| [CHR0075](CHR0075) | A reducer with a batch method has no other reduce methods | Error | A reducer has two batch methods, or a batch method and per-event reduce methods |
+| [CHR0076](CHR0076) | Batch method has a signature Chronicle cannot call | Error | A batch method's parameters or result are not ones Chronicle can supply or read |
+| [CHR0077](CHR0077) | Batch method matches an event type it does not observe | Warning | A pattern in a batch method names an event type outside its `[Observes<T>]` list, so it never matches |
 
 ## Explicit registration evidence
 

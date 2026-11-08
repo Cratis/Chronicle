@@ -191,6 +191,11 @@ public class ChronicleOptions : IValidatableObject
     public ReadModels ReadModels { get; init; } = new ReadModels();
 
     /// <summary>
+    /// Gets the named sinks read models and graphs store to, and which of them are the defaults.
+    /// </summary>
+    public SinksOptions Sinks { get; init; } = new SinksOptions();
+
+    /// <summary>
     /// Gets or inits the trusted reverse proxies used for forwarded headers.
     /// </summary>
     public ForwardedHeaders ForwardedHeaders { get; init; } = new ForwardedHeaders();
@@ -296,9 +301,23 @@ public class ChronicleOptions : IValidatableObject
         foreach (var error in ValidateSingleWriterLease().Concat(alertErrors)) yield return error;
         foreach (var error in ObserverRetryOverrides.SelectMany(_ => _.Value.Validate(_.Key))) yield return error;
         foreach (var error in ConstraintIndexRepair.Validate()) yield return error;
+        if (ValidateSinks() is { } sinksError) yield return sinksError;
         if (!Webhooks.Probe.HasValidTiming)
         {
             yield return new ValidationResult("Invalid webhook probe timing settings.", [$"{nameof(Webhooks)}.{nameof(Configuration.Webhooks.Probe)}"]);
+        }
+    }
+
+    ValidationResult? ValidateSinks()
+    {
+        try
+        {
+            Sinks.Validate();
+            return null;
+        }
+        catch (InvalidSinkConfiguration exception)
+        {
+            return new ValidationResult(exception.Message, [nameof(Sinks)]);
         }
     }
 

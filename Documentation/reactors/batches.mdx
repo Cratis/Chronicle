@@ -23,14 +23,14 @@ Each event type assigned to a batch method must belong to that method alone. The
 
 | Mistake | Rule |
 | --- | --- |
-| A method with `[Observes<TEvent>]` does not take an `EventBatch` | [CHR0069](../code-analysis/CHR0069.mdx) |
-| A batch method has no `[Observes<TEvent>]` | [CHR0070](../code-analysis/CHR0070.mdx) |
-| An event type is observed by two batch methods, or by a batch method and a per-event method | [CHR0071](../code-analysis/CHR0071.mdx) |
-| A per-event method takes a `BatchContext` | [CHR0072](../code-analysis/CHR0072.mdx) |
-| A batch method returns anything but `Task` or `void` | [CHR0073](../code-analysis/CHR0073.mdx) |
-| A batch method takes a parameter Chronicle cannot supply, such as an `EventContext` | [CHR0075](../code-analysis/CHR0075.mdx) |
+| A method with `[Observes<TEvent>]` does not take an `EventBatch` | [CHR0070](../code-analysis/CHR0070.mdx) |
+| A batch method has no `[Observes<TEvent>]` | [CHR0071](../code-analysis/CHR0071.mdx) |
+| An event type is observed by two batch methods, or by a batch method and a per-event method | [CHR0072](../code-analysis/CHR0072.mdx) |
+| A per-event method takes a `BatchContext` | [CHR0073](../code-analysis/CHR0073.mdx) |
+| A batch method returns anything but `Task` or `void` | [CHR0074](../code-analysis/CHR0074.mdx) |
+| A batch method takes a parameter Chronicle cannot supply, such as an `EventContext` | [CHR0076](../code-analysis/CHR0076.mdx) |
 
-A batch method can only receive the event types it observes, so a pattern on any other event type never matches. [CHR0076](../code-analysis/CHR0076.mdx) warns about such a pattern, which usually means an `[Observes<TEvent>]` is missing.
+A batch method can only receive the event types it observes, so a pattern on any other event type never matches. [CHR0077](../code-analysis/CHR0077.mdx) warns about such a pattern, which usually means an `[Observes<TEvent>]` is missing.
 
 Returning events from a batch method is not supported. If the batch must produce events, append them through an event log supplied as a dependency.
 
