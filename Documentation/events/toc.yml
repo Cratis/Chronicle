@@ -14,6 +14,8 @@
   href: filtering/toc.yml
 - name: Appending many
   href: appending-many.mdx
+- name: Importing
+  href: importing.mdx
 - name: Transactions
   href: transactions.mdx
 - name: Observing appends

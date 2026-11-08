@@ -25,7 +25,7 @@ namespace Cratis.Chronicle.EventSequences;
 /// </summary>
 [KeepAlive]
 [PreferLocalPlacement]
-public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
+public partial class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
 {
     /// <summary>
     /// The most sequential per-partition deliveries one coalesced dispatch may cost a live observer before it is moved to its catch-up path.
@@ -219,6 +219,8 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         lock (_subscriptionsLock)
         {
             _subscriptions.Clear();
+            _holds.Clear();
+            _heldSubscriptions.Clear();
             catchupTriggers = [.. _catchupTriggers];
         }
 
@@ -254,7 +256,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
             // catch-up); each entry would otherwise leave stale duplicates behind and cause
             // observer.Handle to be invoked multiple times for the same event.
             _subscriptions.RemoveAll(subscription => subscription.ObserverKey == observerKey);
-            _subscriptions.Add(new(observerKey, eventTypes.Select(eventType => eventType.Id).ToArray(), filters));
+            AddOrHold(new(observerKey, eventTypes.Select(eventType => eventType.Id).ToArray(), filters));
         }
 
         return Task.CompletedTask;
@@ -271,7 +273,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
             }
 
             _subscriptions.RemoveAll(subscription => subscription.ObserverKey == observerKey);
-            _subscriptions.Add(new(observerKey, [], filters, AllEventTypes: true));
+            AddOrHold(new(observerKey, [], filters, AllEventTypes: true));
         }
 
         return Task.CompletedTask;
@@ -288,6 +290,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         lock (_subscriptionsLock)
         {
             _subscriptions.RemoveAll(subscription => subscription.ObserverKey == observerKey);
+            _heldSubscriptions.Remove(observerKey);
             CloseLane(observerKey);
             _pageObservers.TryRemove(observerKey, out _);
         }

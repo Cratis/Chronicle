@@ -49,6 +49,14 @@ Measures the performance of bulk appending events to the event log.
 Parameters:
 - EventCount: 10, 100, 1000 events per batch
 
+### ImportBenchmark
+
+Measures importing a large history through an import session: the client streams the events, the kernel stages and
+validates them, and a job commits them. It prints the staging and the commit throughput separately.
+
+Parameters:
+- EventCount: 300000 events per import
+
 ### StronglyConsistentPerKeyReadBenchmark
 
 Measures a strongly consistent read of one key as its stream grows, for a passive projection (folded in the Kernel

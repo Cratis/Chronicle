@@ -20,6 +20,11 @@ public record CausationType(string Name) : ConceptAs<string>(Name)
     public static readonly CausationType Unknown = new("Unknown");
 
     /// <summary>
+    /// The causation recorded on every event committed by a bulk import, carrying the import and the event's place in its source.
+    /// </summary>
+    public static readonly CausationType Import = new("Import");
+
+    /// <summary>
     /// Implicitly convert from <see cref="string"/> to <see cref="CausationType"/>.
     /// </summary>
     /// <param name="name">Name of causation type.</param>

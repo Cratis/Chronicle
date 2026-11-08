@@ -20,7 +20,7 @@ namespace Cratis.Chronicle.EventSequences;
 /// </summary>
 [KeyedBy<EventSequenceKey>]
 [BelongsTo(WellKnownServices.EventSequenceQueries)]
-[Version(1)]
+[Version(2)]
 public interface IEventSequence : IGrainWithStringKey
 {
     /// <summary>
@@ -444,4 +444,45 @@ public interface IEventSequence : IGrainWithStringKey
     /// <returns>True if the stream has been completed; false otherwise.</returns>
     [Query]
     Task<bool> IsStreamCompleted(EventStreamType eventStreamType, EventStreamId eventStreamId);
+
+    /// <summary>
+    /// Validates one chunk of an import against the constraints, in staging order, together with the claims of the
+    /// chunks validated before it in the same import.
+    /// </summary>
+    /// <param name="importId">The <see cref="Concepts.Imports.ImportId"/> whose claims accumulate.</param>
+    /// <param name="first">True for the first chunk, which starts the import's claims over.</param>
+    /// <param name="events">The staged events of the chunk.</param>
+    /// <returns>The <see cref="Imports.ImportChunkValidationResult"/>; nothing is written and no key is created.</returns>
+    Task<Imports.ImportChunkValidationResult> ValidateImportChunk(Concepts.Imports.ImportId importId, bool first, IReadOnlyList<Imports.ImportEventToAppend> events);
+
+    /// <summary>
+    /// Forgets the claims an import's validation accumulated.
+    /// </summary>
+    /// <param name="importId">The <see cref="Concepts.Imports.ImportId"/>.</param>
+    /// <returns>Awaitable task.</returns>
+    Task EndImportValidation(Concepts.Imports.ImportId importId);
+
+    /// <summary>
+    /// Commits one chunk of an import: each event is validated again and settled on its own, and the chunk is stored in
+    /// one transaction without being handed to live delivery.
+    /// </summary>
+    /// <param name="importId">The <see cref="Concepts.Imports.ImportId"/>.</param>
+    /// <param name="chunkIndex">The index of the chunk being committed.</param>
+    /// <param name="committedFrom">The sequence number from which the log may already hold events of this chunk from an interrupted commit.</param>
+    /// <param name="eventTypes">Every event type in the import; observers of them are held back from live delivery.</param>
+    /// <param name="events">The staged events of the chunk, in staging order.</param>
+    /// <returns>The <see cref="Imports.ImportChunkAppendResult"/>.</returns>
+    /// <remarks>
+    /// An event that loses a constraint race since validation is reported as rejected and the rest of the chunk is
+    /// committed. Events of this chunk that an interrupted commit already stored are recognized from their causation
+    /// and never appended twice.
+    /// </remarks>
+    Task<Imports.ImportChunkAppendResult> AppendImportChunk(Concepts.Imports.ImportId importId, int chunkIndex, EventSequenceNumber committedFrom, IEnumerable<EventTypeId> eventTypes, IReadOnlyList<Imports.ImportEventToAppend> events);
+
+    /// <summary>
+    /// Ends an import's hold on live delivery, starting one catch-up for each observer it held back.
+    /// </summary>
+    /// <param name="importId">The <see cref="Concepts.Imports.ImportId"/>.</param>
+    /// <returns>Awaitable task.</returns>
+    Task CompleteImportCommit(Concepts.Imports.ImportId importId);
 }

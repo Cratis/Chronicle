@@ -1,0 +1,31 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+namespace Cratis.Chronicle.Concepts.Imports;
+
+/// <summary>
+/// Represents the lifecycle state of an import session.
+/// </summary>
+public enum ImportState
+{
+    /// <summary>The import is open and has not received any chunk yet.</summary>
+    Open = 0,
+
+    /// <summary>The import has received chunks and is still accepting more.</summary>
+    Staging = 1,
+
+    /// <summary>Staging is closed and the whole import is being validated against the constraints.</summary>
+    Validating = 2,
+
+    /// <summary>The commit job is appending the staged events to the event sequence.</summary>
+    Committing = 3,
+
+    /// <summary>Every staged event has been committed or reported.</summary>
+    Completed = 4,
+
+    /// <summary>The import failed; when it failed before committing, nothing was committed.</summary>
+    Failed = 5,
+
+    /// <summary>The import was abandoned before its commit started and its staging was discarded.</summary>
+    Abandoned = 6
+}

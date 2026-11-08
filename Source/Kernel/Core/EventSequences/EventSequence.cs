@@ -677,7 +677,8 @@ public partial class EventSequence(
         IReadOnlyList<(EventToAppend Event, ExpandoObject CompliantEvent, JsonObject CompliantContent, ConstraintValidationContext ConstraintContext)> validatedEvents,
         CorrelationId correlationId,
         IEnumerable<Causation> causation,
-        IEnumerable<IdentityId> causedByChain)
+        IEnumerable<IdentityId> causedByChain,
+        List<(CorrelationId? CorrelationId, IEnumerable<IdentityId>? CausedBy)>? perEvent = null)
     {
         var eventsToAppend = new List<EventToAppendToStorage>();
         var constraintContexts = new List<ConstraintValidationContext>();
@@ -700,9 +701,9 @@ public partial class EventSequence(
                 eventToAppend.eventStreamType,
                 eventToAppend.eventStreamId,
                 eventToAppend.EventType,
-                correlationId,
+                perEvent?[eventsToAppend.Count].CorrelationId ?? correlationId,
                 CausationForStorage(eventToAppend.Causation ?? causation),
-                causedByChain,
+                perEvent?[eventsToAppend.Count].CausedBy ?? causedByChain,
                 eventToAppend.Tags,
                 eventToAppend.Occurred ?? _timeProvider.GetUtcNow(),
                 compliantEvent,
@@ -808,9 +809,18 @@ public partial class EventSequence(
         return Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Gets the causation as it is stored, honoring the configured property retention.
+    /// </summary>
+    /// <param name="causation">The causation chain.</param>
+    /// <returns>The causation chain to store.</returns>
+    /// <remarks>
+    /// An import's own causation keeps its properties whatever the retention: they are what tells an interrupted
+    /// commit which of its events are already in the log (decision 0023).
+    /// </remarks>
     IEnumerable<Causation> CausationForStorage(IEnumerable<Causation> causation) =>
         options.Value.Events.CausationPropertyRetention == CausationPropertyRetention.Omit
-            ? causation.Select(entry => entry with { Properties = new Dictionary<string, string>() }).ToArray()
+            ? causation.Select(entry => entry.Type == CausationType.Import ? entry : entry with { Properties = new Dictionary<string, string>() }).ToArray()
             : causation;
 
     async Task<AppendResult> AppendValidAndCompliantEvent(
@@ -1020,7 +1030,8 @@ public partial class EventSequence(
     {
         try
         {
-            await (_appendedEventsQueues?.Enqueue(appendedEvents) ?? Task.CompletedTask);
+            // An import commit is delivered by one catch-up per observer once it completes, not live (decision 0023).
+            if (!_committingImport) await (_appendedEventsQueues?.Enqueue(appendedEvents) ?? Task.CompletedTask);
         }
         catch (Exception ex)
         {

@@ -320,6 +320,18 @@ Kernel delivery settings under `Cratis:Chronicle:Occurrences`. These settings do
 
 Lease duration is selected by the claim or renew request, not this section: zero or a negative value uses 60 seconds, and the maximum is 600 seconds. Claims return at most 1,000 occurrences and remain subject to `MaxInFlight`. Kernel time controls expiry and backoff. See [occurrence delivery and receipts](../concepts/effect-receipts.md#record-and-deliver-an-occurrence) for ordering, quarantine and recovery.
 
+### Imports
+
+Kernel settings for [bulk event imports](../events/importing.mdx) under `Cratis:Chronicle:Imports`.
+
+| Property | Type | Default | Behavior |
+|---|---|---|---|
+| `StagingRetention` | `TimeSpan` | `24:00:00` | An open import without activity for longer than this is abandoned and its staging discarded |
+| `RetentionSweepInterval` | `TimeSpan` | `00:15:00` | How often each silo looks for imports that outlived their retention |
+| `CommitChunkSize` | `int` | `1000` | How many staged events the commit appends in one call to the event sequence |
+| `MaxChunkEvents` | `int` | `1000` | The most events one staged chunk may carry |
+| `MaxChunkBytes` | `int` | `4194304` | The most bytes of event content one staged chunk may carry |
+
 ### Authentication
 
 OAuth/OIDC authority configuration for the client-credentials token. The .NET client requests its token from, in order of precedence: `TokenEndpoint`, the token endpoint discovered from `Authority` (`{Authority}/.well-known/openid-configuration`), or the Chronicle server's own `/connect/token`.

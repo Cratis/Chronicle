@@ -38,6 +38,12 @@ public interface IEventStoreNamespaceStorage
     Occurrences.IScheduleStorage Schedules => throw new Occurrences.OccurrencesStorageNotSupported();
 
     /// <summary>
+    /// Gets the staging storage for import sessions.
+    /// </summary>
+    /// <exception cref="Imports.ImportStorageNotSupported">The custom provider has not implemented import staging.</exception>
+    Imports.IImportStorage Imports => throw new Imports.ImportStorageNotSupported();
+
+    /// <summary>
     /// Gets the <see cref="IEventSequenceStorage"/> for the event store namespace.
     /// </summary>
     IChangesetStorage Changesets { get; }

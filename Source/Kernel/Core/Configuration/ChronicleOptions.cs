@@ -146,6 +146,11 @@ public class ChronicleOptions : IValidatableObject
     public Occurrences Occurrences { get; init; } = new();
 
     /// <summary>
+    /// Gets the configuration for bulk event import sessions.
+    /// </summary>
+    public Imports Imports { get; init; } = new();
+
+    /// <summary>
     /// Gets the alerts configuration.
     /// </summary>
     public Alerts Alerts { get; init; } = new Alerts();

@@ -100,6 +100,17 @@ public class AppendedEventsQueues(IOptions<ChronicleOptions> options) : Grain, I
         await Parallel.ForEachAsync(_queues, async (queue, _) => await queue.SpillToCatchup());
 
     /// <inheritdoc/>
+    public async Task HoldBack(string holdId, IEnumerable<EventTypeId> eventTypes)
+    {
+        var types = eventTypes as IReadOnlyCollection<EventTypeId> ?? eventTypes.ToArray();
+        await Parallel.ForEachAsync(_queues, async (queue, _) => await queue.HoldBack(holdId, types));
+    }
+
+    /// <inheritdoc/>
+    public async Task ReleaseHold(string holdId) =>
+        await Parallel.ForEachAsync(_queues, async (queue, _) => await queue.ReleaseHold(holdId));
+
+    /// <inheritdoc/>
     public async Task<bool> IsSubscribed(ObserverKey observerKey)
     {
         var subscriptions = await _queues[_router.GetQueueIndexFor(observerKey)].GetSubscriptions();

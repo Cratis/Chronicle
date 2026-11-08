@@ -93,6 +93,9 @@ public class EventStoreNamespaceStorage(
     public IFailedPartitionsStorage FailedPartitions { get; } = new FailedPartitions.FailedPartitionStorage(eventStore, @namespace, database);
 
     /// <inheritdoc/>
+    public Chronicle.Storage.Imports.IImportStorage Imports { get; } = new Imports.ImportStorage(eventStore, @namespace, database);
+
+    /// <inheritdoc/>
     public IInFlightEventsStorage InFlightEvents { get; } = new InFlightEvents.InFlightEventsStorage(eventStore, @namespace, database);
 
     /// <inheritdoc/>
