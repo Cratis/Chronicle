@@ -18,11 +18,13 @@ public class when_the_old_class_map_reads_a_new_fence : Specification
         // Reproduce the previous four-field map, without the new map's explicit IgnoreExtraElements setting.
         _classMap = new BsonClassMap<legacy_fence>();
         _classMap.AutoMap();
-        _classMap.MapIdProperty(_ => _.Id);
 
-        // Bind every legacy member to the immutable fixture's constructor rather than relying on creator inference.
-        _classMap.MapCreator(_ => new legacy_fence(_.Id, _.ErasedThrough, _.ErasedKeyFingerprints, _.NewKeyAllowed));
-        _classMap.Freeze();
+        // Keep production extra-element handling, but pin the old wire shape and construction locally.
+        _classMap.MapIdProperty(_ => _.Id).SetElementName("_id");
+        _classMap.MapProperty(_ => _.ErasedThrough).SetElementName("erasedThrough");
+        _classMap.MapProperty(_ => _.ErasedKeyFingerprints).SetElementName("erasedKeyFingerprints");
+        _classMap.MapProperty(_ => _.NewKeyAllowed).SetElementName("newKeyAllowed");
+        _classMap.SetCreator(() => new legacy_fence()).Freeze();
         var document = new EncryptionKeyErasureForIdentifier("subject", 7u, ["fingerprint"], false, Version: 3, Lifecycle: 2, ErasedLifecycle: 2, Requests: [new("request", 7u, 2)], Seal: "seal").ToBsonDocument();
         using var reader = new BsonDocumentReader(document);
         _result = new BsonClassMapSerializer<legacy_fence>(_classMap).Deserialize(BsonDeserializationContext.CreateRoot(reader));
@@ -34,5 +36,14 @@ public class when_the_old_class_map_reads_a_new_fence : Specification
     [Fact] void should_keep_the_fingerprints() => _result.ErasedKeyFingerprints.ShouldEqual(["fingerprint"]);
     [Fact] void should_keep_provisioning_closed() => _result.NewKeyAllowed.ShouldBeFalse();
 
-    record legacy_fence(EncryptionKeyIdentifier Id, EncryptionKeyRevision ErasedThrough, string[] ErasedKeyFingerprints, bool NewKeyAllowed);
+    class legacy_fence
+    {
+        public EncryptionKeyIdentifier Id { get; set; }
+
+        public EncryptionKeyRevision ErasedThrough { get; set; }
+
+        public string[] ErasedKeyFingerprints { get; set; }
+
+        public bool NewKeyAllowed { get; set; }
+    }
 }
