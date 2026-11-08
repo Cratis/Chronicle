@@ -70,6 +70,13 @@ internal static class BatchMethods
     }
 
     /// <summary>
+    /// Gets whether an observer type declares any method taking an <see cref="EventBatch"/>.
+    /// </summary>
+    /// <param name="observerType">The observer <see cref="Type"/>.</param>
+    /// <returns>True if it does, false if not.</returns>
+    public static bool DeclaresAny(Type observerType) => AllMethodsOf(observerType).Any(TakesEventBatch);
+
+    /// <summary>
     /// Gets whether a method takes an <see cref="EventBatch"/> as its first parameter.
     /// </summary>
     /// <param name="method">The <see cref="MethodInfo"/>.</param>

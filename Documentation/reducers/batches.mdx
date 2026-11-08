@@ -21,8 +21,17 @@ On a [self-reducing read model](self-reducing-read-models) the batch method is a
 On a separate reducer implementing `IReducerFor<TReadModel>` it can have any name.
 
 A reducer has per-event methods or one batch method, never both, because splitting its events between methods would
-break the fold. Chronicle refuses to register a reducer that declares both, more than one batch method, or a batch
-method that does not take and return the read model.
+break the fold. The analyzers in `Cratis.Chronicle.CodeAnalysis` report these mistakes when you build, and Chronicle refuses to register a reducer that has one:
+
+| Mistake | Rule |
+| --- | --- |
+| A method with `[Observes<TEvent>]` does not take an `EventBatch` | [CHR0069](../code-analysis/CHR0069.mdx) |
+| A batch method has no `[Observes<TEvent>]` | [CHR0070](../code-analysis/CHR0070.mdx) |
+| A per-event method takes a `BatchContext` | [CHR0072](../code-analysis/CHR0072.mdx) |
+| A reducer has two batch methods, or a batch method and per-event methods | [CHR0074](../code-analysis/CHR0074.mdx) |
+| A batch method does not take or return the read model, or is not static on a self-reducing read model | [CHR0075](../code-analysis/CHR0075.mdx) |
+
+[CHR0076](../code-analysis/CHR0076.mdx) warns about a pattern on an event type the batch method does not observe, since it never matches.
 
 ## Reporting outcomes
 
@@ -31,5 +40,28 @@ Throwing or calling `Fail` on the batch fails the partition without writing its 
 Other partitions in the page can still succeed. The client reduces partitions in parallel, while keeping each partition's events in order. Keep state changes local to the partition rather than relying on another partition finishing first.
 
 Pages reach a reducer on every path: as events are appended, while it catches up, during a replay and when a failed partition is retried. A page can hold many event sources, and the kernel loads their current read models together and writes the new states of the partitions that succeeded together. A partition that fails or is deferred writes nothing and is delivered again from its stored state, while the others in the page are written.
+
+## Page size and concurrency
+
+Declare the page bounds and how many event sources are reduced at once with `[BatchSize]` on the reducer, or on a self-reducing read model:
+
+<ChronicleClientTabs snippet="reducers/batches/batch-size" />
+
+| Property | Meaning | Default |
+| --- | --- | --- |
+| `MaxEvents` | The most events in one page | 500 for a reducer with a batch method, 100 for one with per-event methods |
+| `MaxBytes` | The most bytes of event content in one page | Left to the kernel |
+| `MaxDelayMilliseconds` | How long the kernel may wait to fill a live page | 0, so a page holds what is already waiting |
+| `MaxConcurrency` | How many event sources of one page are reduced at the same time | The processor count; `1` reduces them one after another |
+
+`MaxConcurrency` applies to per-event reducers too, since the client folds each event source of a page separately either way. The kernel caps the page bounds with its own maximums. Chronicle refuses to register a reducer with a negative bound.
+
+## Testing a batch reducer
+
+`ReadModelScenario` from `Cratis.Chronicle.Testing` runs a batch reducer the same way as a per-event one: the events of one `Events(...)` call reach the batch method as one live page, with the state so far as the current read model.
+
+<ChronicleClientTabs snippet="reducers/batches/testing" />
+
+When the batch method fails the event source, through `Fail` or by throwing, reading the instance throws `ReducerFailed`. When it defers the event source, reading the instance throws `ReducerDeferred`, which carries the requested delay. For more on scenarios, see [testing read models](../testing/read-models/scenario.mdx).
 
 For the per-event alternative and replay behavior, continue with [reducer event processing](event-processing).

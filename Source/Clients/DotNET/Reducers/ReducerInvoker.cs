@@ -49,6 +49,9 @@ public class ReducerInvoker : IReducerInvoker, IBatchReducerInvoker
     }
 
     /// <inheritdoc/>
+    bool IBatchReducerInvoker.HasBatchMethod => _batchMethod is not null;
+
+    /// <inheritdoc/>
     public IImmutableList<EventType> EventTypes { get; }
 
     /// <inheritdoc/>

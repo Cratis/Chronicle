@@ -1,0 +1,21 @@
+---
+title: "CHR0072: BatchContext is only for batch methods"
+description: "CHR0072 reports a Cratis Chronicle per-event reactor or reducer method that takes a BatchContext."
+---
+
+## Rule description
+
+`BatchContext` describes the page of events a batch method is called for: its partitions, its event count, its origin and its deadline. A per-event method is called once per event and receives that event's `EventContext` instead. Chronicle refuses to register an observer whose per-event method takes a `BatchContext`.
+
+## Severity
+
+Error
+
+## How to fix
+
+- Take an `EventContext` instead, if the method needs the event's metadata.
+- Turn the method into a batch method, taking an `EventBatch` first and declaring `[Observes<TEvent>]`, if it needs to know about the page.
+
+## Related topics
+
+- [Reactor batch methods](../reactors/batches.mdx#the-batch-context)
