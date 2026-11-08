@@ -52,6 +52,7 @@ public class ReducerMethodAnalyzer : DiagnosticAnalyzer
     static void AnalyzeMethod(SymbolAnalysisContext context, Lazy<ImmutableArray<INamedTypeSymbol>> eventTypes, Lazy<ExplicitRegistrationEvidence> registrations)
     {
         var methodSymbol = (IMethodSymbol)context.Symbol;
+
         // A batch method has its own signature rule (CHR0075).
         if (!IsPublicInstanceMethod(methodSymbol) || methodSymbol.Parameters.Length == 0 || BatchObservers.IsBatchMethod(methodSymbol, context.Compilation)) return;
         var evidence = registrations.Value;

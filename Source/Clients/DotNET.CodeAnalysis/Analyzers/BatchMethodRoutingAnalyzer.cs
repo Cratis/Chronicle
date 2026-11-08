@@ -77,7 +77,7 @@ public class BatchMethodRoutingAnalyzer : DiagnosticAnalyzer
         {
             foreach (var (eventType, attribute) in BatchObservers.Observed(method, compilation))
             {
-                var other = claimed.FirstOrDefault(_ => !SymbolEqualityComparer.Default.Equals(_.Method, method) && BatchObservers.Overlaps(_.EventType, eventType, compilation));
+                var other = claimed.Find(_ => !SymbolEqualityComparer.Default.Equals(_.Method, method) && BatchObservers.Overlaps(_.EventType, eventType, compilation));
                 if (other.Method is not null && Owns(type, method))
                 {
                     context.ReportDiagnostic(Diagnostic.Create(OneMethodRule, BatchObservers.LocationOf(attribute, method), eventType.Name, other.Method.Name, method.Name, type.Name));
@@ -90,7 +90,7 @@ public class BatchMethodRoutingAnalyzer : DiagnosticAnalyzer
         foreach (var method in perEventMethods)
         {
             var eventType = method.Parameters[0].Type;
-            var other = claimed.FirstOrDefault(_ => BatchObservers.Overlaps(_.EventType, eventType, compilation));
+            var other = claimed.Find(_ => BatchObservers.Overlaps(_.EventType, eventType, compilation));
             if (other.Method is not null && (Owns(type, method) || Owns(type, other.Method)))
             {
                 context.ReportDiagnostic(Diagnostic.Create(OneMethodRule, method.Locations.FirstOrDefault(), eventType.Name, other.Method.Name, method.Name, type.Name));

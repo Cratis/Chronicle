@@ -46,7 +46,7 @@ internal static class SelfReducerPolicy
         CanBeSelf(type, compilation) && Methods(type).Any(method => IsValid(method, type, compilation) || IsValidBatch(method, type, compilation));
 
     /// <summary>
-    /// Checks the runtime shape of a static batch transition: <c>Reduce(EventBatch, TModel?, ...)</c> returning the model.
+    /// Checks the runtime shape of a static batch transition: <c language="csharp">Reduce(EventBatch, TModel?, ...)</c> returning the model.
     /// </summary>
     /// <param name="method">The declaration.</param>
     /// <param name="model">The model.</param>

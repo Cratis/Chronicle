@@ -116,7 +116,7 @@ internal static class BatchObservers
         {
             BatchObserverKind.Reactor => true,
             BatchObserverKind.Reducer => method is { IsStatic: false, DeclaredAccessibility: Accessibility.Public },
-            BatchObserverKind.SelfReducer => method is { IsStatic: true, Name: "Reduce" },
+            BatchObserverKind.SelfReducer => method.IsStatic && string.Equals(method.Name, "Reduce", StringComparison.Ordinal),
             _ => false
         };
     }
