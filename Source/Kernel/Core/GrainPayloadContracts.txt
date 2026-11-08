@@ -484,6 +484,7 @@ enum Cratis.Chronicle.Concepts.Observation.ObserverType : int
   Reducer = 3
   Unknown = 0
 json Cratis.Chronicle.Concepts.Observation.PageDeliveryDefinition
+  maxBytesPerPage: int
   maxDelay: System.TimeSpan
   maxEventsPerPage: int
 json Cratis.Chronicle.Concepts.Observation.PartitionDeferral

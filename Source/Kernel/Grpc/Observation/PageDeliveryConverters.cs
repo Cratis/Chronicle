@@ -18,6 +18,9 @@ internal static class PageDeliveryConverters
     /// <returns>The <see cref="PageDeliveryDefinition"/>, or null when the client did not enable page delivery.</returns>
     internal static PageDeliveryDefinition? ToChronicle(this PageDelivery? pageDelivery) =>
         pageDelivery is { Enabled: true }
-            ? new PageDeliveryDefinition((int)Math.Min(pageDelivery.MaxEventsPerPage, int.MaxValue), TimeSpan.FromMilliseconds(pageDelivery.MaxDelayMilliseconds))
+            ? new PageDeliveryDefinition(
+                (int)Math.Min(pageDelivery.MaxEventsPerPage, int.MaxValue),
+                TimeSpan.FromMilliseconds(pageDelivery.MaxDelayMilliseconds),
+                (int)Math.Min(pageDelivery.MaxBytesPerPage, int.MaxValue))
             : null;
 }
