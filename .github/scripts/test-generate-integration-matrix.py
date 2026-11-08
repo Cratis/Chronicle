@@ -156,7 +156,7 @@ class for_generating_the_matrix(unittest.TestCase):
         for entry in _run():
             self.assertEqual(
                 {"namespace", "shard", "filter", "members", "mode", "database", "needs-docker"},
-                set(entry))
+                set(entry) - {"neo4j-image", "neo4j-database-mode"})
 
     def test_per_process_activation_runs_only_out_of_process_with_mongodb(self):
         for arguments in ((), ("--all-providers",)):
@@ -188,6 +188,18 @@ class for_generating_the_matrix(unittest.TestCase):
         self.assertEqual(
             {("inprocess", "mongodb"), ("outofprocess", "sqlite"), ("outofprocess", "postgresql"), ("outofprocess", "mssql")},
             lanes("--all-providers"))
+
+    def test_graph_projections_run_one_extra_lane_on_neo4j_enterprise_with_a_database_per_namespace(self):
+        for arguments in ((), ("--all-providers",)):
+            graph = [entry for entry in _run(*arguments) if entry["namespace"].endswith(".GraphProjections")]
+            enterprise = [entry for entry in graph if "neo4j-image" in entry]
+            self.assertEqual(1, len(enterprise))
+            self.assertEqual("neo4j:5-enterprise", enterprise[0]["neo4j-image"])
+            self.assertEqual("PerNamespace", enterprise[0]["neo4j-database-mode"])
+            self.assertEqual(("inprocess", "mongodb"), (enterprise[0]["mode"], enterprise[0]["database"]))
+            self.assertTrue(enterprise[0]["needs-docker"])
+            # Every other lane stays on the Community edition in single database mode.
+            self.assertEqual(len(graph) - 1, len([entry for entry in graph if "neo4j-database-mode" not in entry]))
 
     def test_an_unknown_backend_fails_the_run(self):
         completed = subprocess.run(

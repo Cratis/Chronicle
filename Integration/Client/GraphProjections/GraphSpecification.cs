@@ -73,5 +73,5 @@ public class GraphSpecification(GraphChronicleFixture fixture) : Specification<G
     /// <returns>Awaitable task.</returns>
     protected async Task ReadGraph(string database) => Graph = await GraphSnapshot.Read(Server.Driver, database);
 
-    async Task Establish() => await Server.Clear();
+    async Task Establish() => await Server.Clear(!IsSingleDatabase);
 }

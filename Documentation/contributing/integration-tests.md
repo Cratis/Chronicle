@@ -60,7 +60,9 @@ Also remove `cratis/chronicle:latest` if you ever ran `dockerize.sh`.
 
 The `GraphProjections` namespace of the Client suite starts `neo4j:5-community` beside the other containers, with a password generated for every run, and connects the silo of the client to it through `Cratis:Chronicle:Neo4j`. Every specification starts on an empty graph and reads the result back from Neo4j with Cypher of its own, never through the sink under test.
 
-The Community edition has one user database, so the sink runs in single database mode and stamps the namespace on every node and edge. Set `CHRONICLE_NEO4J_DATABASE_MODE=PerNamespace` and `CHRONICLE_NEO4J_IMAGE` to run the same specifications against a server with multiple databases; this repository does not ship an Enterprise image.
+The Community edition has one user database, so the sink runs in single database mode and stamps the namespace on every node and edge. Set `CHRONICLE_NEO4J_DATABASE_MODE=PerNamespace` and `CHRONICLE_NEO4J_IMAGE` to run the same specifications against a server with multiple databases. In that mode the sink creates one database per event store and namespace, and every specification starts by clearing all of them.
+
+Multiple databases need the Enterprise edition, so CI runs one extra in-process lane against MongoDB with `CHRONICLE_NEO4J_IMAGE=neo4j:5-enterprise` and `PerNamespace`. When the image name contains `enterprise`, the fixture starts the container with `NEO4J_ACCEPT_LICENSE_AGREEMENT=eval`, which accepts the Neo4j Evaluation Agreement. This is temporary; the license follow-up is tracked in [Cratis/Chronicle#5739](https://github.com/Cratis/Chronicle/issues/5739). Every other lane stays on `neo4j:5-community` in single database mode.
 
 The same organization is declared with model-bound attributes, with the fluent builder and in the projection declaration language, and each declaration must leave the same graph behind. CI runs the namespace in process against MongoDB and out of process against every other storage backend the run selects.
 
