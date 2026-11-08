@@ -21,6 +21,16 @@ public class Tls
     public string? CertificatePassword { get; set; }
 
     /// <summary>
+    /// Gets or sets the path to a file with the certificate authorities (CA) the server certificate must chain to.
+    /// </summary>
+    /// <remarks>
+    /// The file holds one or more CA certificates in PEM or PKCS#7 format. When set, it takes precedence over the
+    /// connection string's <c language="csharp">caCertificatePath</c>. The certificate authorities are used only when
+    /// certificate validation is enabled; the server certificate is then accepted only when its chain builds to one of them.
+    /// </remarks>
+    public string? CaCertificatePath { get; set; }
+
+    /// <summary>
     /// Gets or sets whether to skip TLS certificate validation when connecting.
     /// </summary>
     /// <remarks>

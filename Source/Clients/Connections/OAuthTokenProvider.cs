@@ -3,6 +3,7 @@
 
 using System.Net;
 using System.Net.Security;
+using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 
@@ -50,13 +51,15 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
     /// <param name="clientSecret">The OAuth client secret.</param>
     /// <param name="skipTlsValidation">Whether to skip TLS certificate validation for the token request.</param>
     /// <param name="logger">Logger for logging.</param>
+    /// <param name="certificateAuthorities">Optional certificate authorities the server certificate must chain to when validation is enabled.</param>
     public OAuthTokenProvider(
         ChronicleServerAddress serverAddress,
         string clientId,
         string clientSecret,
         bool skipTlsValidation,
-        ILogger<OAuthTokenProvider> logger)
-        : this(() => serverAddress, clientId, clientSecret, skipTlsValidation, logger)
+        ILogger<OAuthTokenProvider> logger,
+        X509Certificate2Collection? certificateAuthorities = null)
+        : this(() => serverAddress, clientId, clientSecret, skipTlsValidation, logger, certificateAuthorities)
     {
     }
 
@@ -68,13 +71,15 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
     /// <param name="clientSecret">The OAuth client secret.</param>
     /// <param name="skipTlsValidation">Whether to skip TLS certificate validation for the token request.</param>
     /// <param name="logger">Logger for logging.</param>
+    /// <param name="certificateAuthorities">Optional certificate authorities the server certificate must chain to when validation is enabled.</param>
     public OAuthTokenProvider(
         Func<ChronicleServerAddress> serverAddressProvider,
         string clientId,
         string clientSecret,
         bool skipTlsValidation,
-        ILogger<OAuthTokenProvider> logger)
-        : this(serverAddressProvider, clientId, clientSecret, logger, CreateHttpMessageHandler(skipTlsValidation), TimeProvider.System)
+        ILogger<OAuthTokenProvider> logger,
+        X509Certificate2Collection? certificateAuthorities = null)
+        : this(serverAddressProvider, clientId, clientSecret, logger, CreateHttpMessageHandler(skipTlsValidation, certificateAuthorities), TimeProvider.System)
     {
     }
 
@@ -249,12 +254,12 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
         return () => endpoint;
     }
 
-    static SocketsHttpHandler CreateHttpMessageHandler(bool skipTlsValidation) => new()
+    static SocketsHttpHandler CreateHttpMessageHandler(bool skipTlsValidation, X509Certificate2Collection? certificateAuthorities) => new()
     {
         SslOptions = new SslClientAuthenticationOptions
         {
             RemoteCertificateValidationCallback =
-                CertificateLoader.CreateServerCertificateValidationCallback(skipTlsValidation, pinnedCertificateHash: null)
+                CertificateLoader.CreateServerCertificateValidationCallback(skipTlsValidation, pinnedCertificateHash: null, certificateAuthorities)
         }
     };
 

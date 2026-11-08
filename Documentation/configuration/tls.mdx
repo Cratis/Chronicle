@@ -38,6 +38,7 @@ For direct `ChronicleClient` construction, supply the same values through `Chron
 | --- | --- | --- | --- |
 | CertificatePath | string | null | Path to a certificate file, such as a PFX; its certificate hash can pin the server certificate |
 | CertificatePassword | string | null | Password for the certificate file |
+| CaCertificatePath | string | null | Path to a PEM or PKCS#7 file with the certificate authorities that the server certificate must chain to; see [Trusting a private certificate authority](#trusting-a-private-certificate-authority). Takes precedence over the connection string's `caCertificatePath` |
 | SkipCertificateValidation | boolean | true | Allows any server certificate when the connection string also permits skipping validation |
 
 ## Certificate validation
@@ -58,11 +59,23 @@ Skipping validation is not the same as disabling TLS. The separate `disableTls=t
 
 ## Enabling validation
 
-Trust the server's certificate authority (CA) on each client machine. In an application container, mount the CA certificate and add it to the container's trust store. With validation enabled, a certificate that passes standard TLS checks needs no client-side pin.
+Trust the server's certificate authority (CA) on each client machine. In an application container, mount the CA certificate and add it to the container's trust store. With validation enabled, a certificate that passes standard TLS checks needs no client-side pin. To trust a private CA without changing the machine's trust store, see [Trusting a private certificate authority](#trusting-a-private-certificate-authority).
 
 Alternatively, configure `certificatePath` with the matching server certificate to pin it. With validation enabled, a matching pin can allow a certificate whose chain is not trusted, including a self-signed certificate. The pin does not override a host-name mismatch or a missing server certificate.
 
-After preparing trust or pinning, set `skipTlsValidation=false` or `Tls:SkipCertificateValidation=false`. The client logs a startup warning when validation is skipped for a remote host or an SRV lookup, including with omitted settings. Loopback targets do not log it. With `disableTls=true`, certificate validation does not apply and that warning is suppressed.
+After preparing trust, a CA file, or pinning, set `skipTlsValidation=false` or `Tls:SkipCertificateValidation=false`. The client logs a startup warning when validation is skipped for a remote host or an SRV lookup, including with omitted settings. Loopback targets do not log it. With `disableTls=true`, certificate validation does not apply and that warning is suppressed.
+
+### Trusting a private certificate authority
+
+Set `caCertificatePath` to a file with the certificate authorities that issued the server certificate, and enable validation:
+
+<ChronicleClientTabs snippet="configuration/tls/certificate-authority" />
+
+In a hosted .NET application, set `Cratis:Chronicle:Tls:CaCertificatePath` (environment variable `Cratis__Chronicle__Tls__CaCertificatePath`) or `CaCertificatePath` on `ChronicleOptions.Tls` instead. That value takes precedence over the connection-string option.
+
+The file holds one or more CA certificates, either PEM-encoded `CERTIFICATE` blocks or a PKCS#7 bundle (PEM or DER). Include the root CA, and any intermediate CAs that the server does not send. With validation enabled, the client then accepts a server certificate only when its chain builds to one of these root CAs. The machine's trust store is not consulted, and revocation is not checked against these CAs. The other checks still apply: a host-name mismatch or a missing server certificate is rejected. A matching `certificatePath` pin continues to work as described above.
+
+The client reads the file once, when the connection is created, and uses it for the gRPC connection, the load-balancer probes, and token requests to the Chronicle server. Token requests to an external authority keep using the machine's trust store. If the file does not exist, cannot be read, or contains no certificates, creating the client fails with an error that names the problem. The client never falls back to the machine's trust store or to skipping validation. With `skipTlsValidation=true` in effect, or with `disableTls=true`, the file is still read but not used for validation.
 
 ## Development setup
 
@@ -85,7 +98,7 @@ Certificate validation does not supply application credentials or grant access t
 Validation is enabled through the connection string or TLS options. Check the certificate rather than disabling validation:
 
 1. Confirm that the connection-string host name matches the server certificate.
-2. Check the certificate's validity dates and that the client trusts its issuing CA.
+2. Check the certificate's validity dates and that the client trusts its issuing CA. With `caCertificatePath`, confirm that the file contains the root CA of the server certificate's chain, plus any intermediate CAs that the server does not send.
 3. If using a pin, confirm that it matches the current server certificate. A pin still cannot allow a host-name mismatch.
 
 For containers, check trust inside the application container, not only on the host. Return to [Enabling validation](#enabling-validation) to choose trust-store configuration or pinning.

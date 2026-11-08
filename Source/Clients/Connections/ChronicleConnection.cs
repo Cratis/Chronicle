@@ -53,6 +53,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     readonly string? _certificatePassword;
     readonly ITokenProvider _tokenProvider;
     readonly bool _skipTlsValidation;
+    readonly X509Certificate2Collection? _certificateAuthorities;
     readonly bool _skipCompatibilityCheck;
     readonly bool _skipKeepAlive;
     readonly IChronicleServerAddressResolver _serverAddressResolver;
@@ -92,6 +93,9 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     /// <param name="serverAddressResolver">Optional <see cref="IChronicleServerAddressResolver"/> for resolving server addresses. Defaults to <see cref="ChronicleServerAddressResolver"/>.</param>
     /// <param name="loadBalancerStrategy">Optional <see cref="ILoadBalancerStrategy"/> for selecting among multiple servers. Defaults to the strategy named by the connection string, or least-connections.</param>
     /// <param name="timeProvider">Optional <see cref="TimeProvider"/> used to time the back-off after a failed connect. Defaults to the system clock.</param>
+    /// <param name="certificateAuthorities">Optional certificate authorities the server certificate must chain to when validation is enabled. Defaults to those loaded from the connection string's <see cref="ChronicleConnectionString.CaCertificatePath"/>, if any.</param>
+    /// <exception cref="CertificateAuthorityDoesNotExist">Thrown when the connection string's CA certificate file does not exist.</exception>
+    /// <exception cref="InvalidCertificateAuthority">Thrown when the connection string's CA certificate file cannot be read or contains no certificates.</exception>
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 #pragma warning disable CA1068 // CancellationToken parameters must come last
     public ChronicleConnection(
@@ -113,7 +117,8 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         bool skipKeepAlive = false,
         IChronicleServerAddressResolver? serverAddressResolver = null,
         ILoadBalancerStrategy? loadBalancerStrategy = null,
-        TimeProvider? timeProvider = null)
+        TimeProvider? timeProvider = null,
+        X509Certificate2Collection? certificateAuthorities = null)
     {
         if (connectionString.DisableTls && connectionString.AuthenticationMode == AuthenticationMode.ClientCredentials)
         {
@@ -122,6 +127,8 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
 
         _timeProvider = timeProvider ?? TimeProvider.System;
         _skipTlsValidation = skipTlsValidation;
+        _certificateAuthorities = certificateAuthorities ??
+            (string.IsNullOrEmpty(connectionString.CaCertificatePath) ? null : CertificateLoader.LoadCertificateAuthorities(connectionString.CaCertificatePath));
         _skipCompatibilityCheck = skipCompatibilityCheck;
 #pragma warning disable CHRX0001 // The serverless switch is experimental; the connection honours it internally.
         _skipKeepAlive = skipKeepAlive || connectionString.SkipKeepAlive || connectionString.Serverless;
@@ -144,7 +151,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         _certificatePassword = certificatePassword;
         _tokenProvider = tokenProvider ?? new NoOpTokenProvider();
         _serverAddressResolver = serverAddressResolver ?? new ChronicleServerAddressResolver();
-        _loadBalancerStrategy = loadBalancerStrategy ?? LoadBalancerStrategies.Create(connectionString.LoadBalancer, skipTlsValidation, connectionString.DisableTls);
+        _loadBalancerStrategy = loadBalancerStrategy ?? LoadBalancerStrategies.Create(connectionString.LoadBalancer, skipTlsValidation, connectionString.DisableTls, _certificateAuthorities);
         _watchDog = new ConnectionWatchdog(
             tasks,
             OnSessionDropped,
@@ -745,7 +752,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
 #pragma warning restore CA2000
 
             httpHandler.SslOptions.RemoteCertificateValidationCallback =
-                CertificateLoader.CreateServerCertificateValidationCallback(_skipTlsValidation, certificate?.GetCertHashString());
+                CertificateLoader.CreateServerCertificateValidationCallback(_skipTlsValidation, certificate?.GetCertHashString(), _certificateAuthorities);
 
             // With TLS disabled the server speaks HTTP/2 without TLS (h2c); an http:// address makes the gRPC channel
             // use HTTP/2 with prior knowledge.

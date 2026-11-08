@@ -3,6 +3,7 @@
 
 using System.Collections.Concurrent;
 using System.Reactive.Linq;
+using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Cratis.Chronicle.Auditing;
@@ -160,7 +161,11 @@ public class ChronicleClient : IChronicleClient, IDisposable
         var skipTlsValidation = TlsCertificateValidationPolicy.ShouldSkip(options.Tls, options.ConnectionString);
         var skipCompatibilityCheck = CompatibilityCheckPolicy.ShouldSkip(options, options.ConnectionString);
 
-        var tokenProvider = CreateTokenProvider(options, skipTlsValidation);
+        // Loaded once here and shared by every TLS connection the client makes to the Chronicle server.
+        var caCertificatePath = options.Tls.CaCertificatePath ?? options.ConnectionString.CaCertificatePath;
+        var certificateAuthorities = string.IsNullOrEmpty(caCertificatePath) ? null : CertificateLoader.LoadCertificateAuthorities(caCertificatePath);
+
+        var tokenProvider = CreateTokenProvider(options, skipTlsValidation, certificateAuthorities);
         _ownedConnectionCancellation = new();
 
         _connection = new ChronicleConnection(
@@ -180,7 +185,8 @@ public class ChronicleClient : IChronicleClient, IDisposable
             tokenProvider,
             skipCompatibilityCheck: skipCompatibilityCheck,
             skipKeepAlive: options.SkipKeepAlive,
-            loadBalancerStrategy: options.LoadBalancerStrategy);
+            loadBalancerStrategy: options.LoadBalancerStrategy,
+            certificateAuthorities: certificateAuthorities);
         _servicesAccessor = (_connection as IChronicleServicesAccessor)!;
         _connection.Lifecycle.OnDisconnected += _globalSeedRegistration.Reset;
     }
@@ -379,14 +385,15 @@ public class ChronicleClient : IChronicleClient, IDisposable
         return (causationManager, jsonSchemaGenerator, concurrencyScopeStrategies, artifactActivator);
     }
 
-    ITokenProvider CreateTokenProvider(ChronicleOptions options, bool skipTlsValidation) =>
+    ITokenProvider CreateTokenProvider(ChronicleOptions options, bool skipTlsValidation, X509Certificate2Collection? certificateAuthorities) =>
         TokenProviderFactory.Create(
             options,
             () => _connection is ChronicleConnection connection
                 ? connection.CurrentServerAddress
                 : options.ConnectionString.ServerAddress,
             skipTlsValidation,
-            _loggerFactory);
+            _loggerFactory,
+            certificateAuthorities);
 
     void InitializeJsonSerializationOptions()
     {

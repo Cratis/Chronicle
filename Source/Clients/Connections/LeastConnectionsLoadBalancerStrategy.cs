@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Net.Security;
+using System.Security.Cryptography.X509Certificates;
 
 namespace Cratis.Chronicle.Connections;
 
@@ -47,7 +48,8 @@ public class LeastConnectionsLoadBalancerStrategy : ILoadBalancerStrategy, IDisp
     /// <param name="httpClient">Optional <see cref="HttpClient"/> to probe candidate servers with. Defaults to one honoring <paramref name="skipTlsValidation"/>.</param>
     /// <param name="maxSelectionJitter">Optional upper bound for the random delay before every probe. Defaults to 250ms; pass <see cref="TimeSpan.Zero"/> to disable it.</param>
     /// <param name="disableTls">Whether the servers are reached without TLS, speaking HTTP/2 only (h2c).</param>
-    public LeastConnectionsLoadBalancerStrategy(bool skipTlsValidation, HttpClient? httpClient = null, TimeSpan? maxSelectionJitter = null, bool disableTls = false)
+    /// <param name="certificateAuthorities">Optional certificate authorities the server certificate must chain to when validation is enabled. Not used with a supplied <paramref name="httpClient"/>.</param>
+    public LeastConnectionsLoadBalancerStrategy(bool skipTlsValidation, HttpClient? httpClient = null, TimeSpan? maxSelectionJitter = null, bool disableTls = false, X509Certificate2Collection? certificateAuthorities = null)
     {
         _scheme = disableTls ? Uri.UriSchemeHttp : Uri.UriSchemeHttps;
         _maxSelectionJitterMilliseconds = (int)(maxSelectionJitter ?? _defaultMaxSelectionJitter).TotalMilliseconds;
@@ -64,7 +66,7 @@ public class LeastConnectionsLoadBalancerStrategy : ILoadBalancerStrategy, IDisp
                 SslOptions = new SslClientAuthenticationOptions
                 {
                     RemoteCertificateValidationCallback =
-                        CertificateLoader.CreateServerCertificateValidationCallback(skipTlsValidation, pinnedCertificateHash: null)
+                        CertificateLoader.CreateServerCertificateValidationCallback(skipTlsValidation, pinnedCertificateHash: null, certificateAuthorities)
                 }
             };
             _httpClient = new HttpClient(_httpMessageHandler);
