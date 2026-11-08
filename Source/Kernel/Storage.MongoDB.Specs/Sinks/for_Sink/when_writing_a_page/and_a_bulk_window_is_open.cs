@@ -3,7 +3,10 @@
 
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_Sink.when_writing_a_page;
 
-// A replay holds the window; a page written meanwhile joins it rather than writing past it.
+/// <summary>
+/// A replay holds the window; a page written meanwhile joins it rather than writing past it.
+/// </summary>
+/// <param name="fixture">The <see cref="MongoDBFixture"/> supplying the database.</param>
 [Collection(MongoDBCollection.Name)]
 public class and_a_bulk_window_is_open(MongoDBFixture fixture) : given.a_page_sink(fixture)
 {
