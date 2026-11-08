@@ -78,7 +78,7 @@ public sealed class Neo4jGraphServer : IAsyncDisposable
     {
         var password = Convert.ToHexString(RandomNumberGenerator.GetBytes(16)).ToLowerInvariant();
         var image = Environment.GetEnvironmentVariable("CHRONICLE_NEO4J_IMAGE") is { Length: > 0 } named ? named : DefaultImage;
-        var container = new ContainerBuilder(image)
+        var builder = new ContainerBuilder(image)
             .WithImage(image)
             .WithHostname(HostName)
             .WithNetwork(network)
@@ -89,21 +89,40 @@ public sealed class Neo4jGraphServer : IAsyncDisposable
             .WithTmpfsMount("/data")
             .WithWaitStrategy(Wait.ForUnixContainer()
                 .UntilInternalTcpPortIsAvailable(BoltPort)
-                .UntilCommandIsCompleted("cypher-shell", "-u", UserName, "-p", password, "RETURN 1"))
-            .Build();
+                .UntilCommandIsCompleted("cypher-shell", "-u", UserName, "-p", password, "RETURN 1"));
+
+        // The Enterprise edition, the only one with multiple databases, will not start without a license decision.
+        // The Evaluation Agreement is what the per namespace lane runs under for now; the license follow-up is tracked in Cratis/Chronicle#5739.
+        if (image.Contains("enterprise", StringComparison.OrdinalIgnoreCase))
+        {
+            builder = builder.WithEnvironment("NEO4J_ACCEPT_LICENSE_AGREEMENT", "eval");
+        }
+
+        var container = builder.Build();
         container.StartAsync().GetAwaiter().GetResult();
         return new(container, password);
     }
 
     /// <summary>
-    /// Remove everything the specifications wrote, so that every specification starts on an empty graph. Constraints and indexes stay.
+    /// Remove everything the specifications wrote, so that every specification starts on an empty graph. Constraints, indexes and databases stay.
     /// </summary>
+    /// <param name="allDatabases">Whether to clear every user database, which is what a server with a database per namespace needs.</param>
     /// <returns>Awaitable task.</returns>
-    public async Task Clear()
+    public async Task Clear(bool allDatabases = false)
     {
-        await using var session = Driver.AsyncSession(_ => _.WithDatabase(Database));
-        var cursor = await session.RunAsync("MATCH (n) DETACH DELETE n");
-        await cursor.ConsumeAsync();
+        foreach (var database in allDatabases ? await UserDatabases() : [Database])
+        {
+            await using var session = Driver.AsyncSession(_ => _.WithDatabase(database));
+            var cursor = await session.RunAsync("MATCH (n) DETACH DELETE n");
+            await cursor.ConsumeAsync();
+        }
+    }
+
+    async Task<List<string>> UserDatabases()
+    {
+        await using var session = Driver.AsyncSession(_ => _.WithDatabase("system"));
+        var cursor = await session.RunAsync("SHOW DATABASES YIELD name, currentStatus WHERE name <> \"system\" AND currentStatus = \"online\" RETURN name");
+        return [.. (await cursor.ToListAsync()).Select(_ => _["name"].As<string>())];
     }
 
     /// <inheritdoc/>

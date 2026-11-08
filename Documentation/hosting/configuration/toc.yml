@@ -36,6 +36,8 @@
   href: tls.md
 - name: Health Endpoint
   href: health-endpoint.md
+- name: Federation
+  href: federation.md
 - name: Workbench
   href: workbench.md
 - name: Identity Provider Certificate

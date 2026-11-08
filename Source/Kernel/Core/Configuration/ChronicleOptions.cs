@@ -227,6 +227,11 @@ public class ChronicleOptions : IValidatableObject
     public Tls Tls { get; init; } = new Tls();
 
     /// <summary>
+    /// Gets or inits the dedicated federation listener configuration. Federation is off by default.
+    /// </summary>
+    public Federation Federation { get; init; } = new Federation();
+
+    /// <summary>
     /// Gets or inits the bootstrap client configurations.
     /// Clients defined here are registered on startup with hashed secrets.
     /// </summary>
@@ -267,6 +272,13 @@ public class ChronicleOptions : IValidatableObject
             yield return new ValidationResult(
                 "Telemetry:EventSourceIdHashKey must be at least 32 characters when Hashed is used",
                 [$"{nameof(Telemetry)}.{nameof(Telemetry.EventSourceIdHashKey)}"]);
+        }
+
+        if (Federation.Enabled && (Federation.Port == Port || Federation.Port == DedicatedHealthPort))
+        {
+            yield return new ValidationResult(
+                "Federation:Port must differ from the main port and the dedicated health port; federation is served on its own listener.",
+                [$"{nameof(Federation)}.{nameof(Federation.Port)}"]);
         }
 
         if (ReadModels.MaxBatchSize <= 0)
