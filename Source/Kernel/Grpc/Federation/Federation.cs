@@ -14,6 +14,8 @@ namespace Cratis.Chronicle.Services.Federation;
 /// </summary>
 internal sealed class Federation(
     global::Cratis.Arc.Commands.ICommandPipeline commandPipeline,
+    global::Cratis.Chronicle.Federation.IFederationRegistry federationRegistry,
+    global::Cratis.Chronicle.Federation.IFederationStatus federationStatus,
     global::Microsoft.Extensions.Logging.ILogger<global::Cratis.Chronicle.Services.Federation.Federation> logger) : global::Cratis.Chronicle.Contracts.Federation.IFederation
 {
     /// <inheritdoc/>
@@ -46,7 +48,7 @@ internal sealed class Federation(
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Federation.FederationBindingResponse>>(
             async () =>
             {
-                var result = await global::Cratis.Chronicle.Federation.FederationBinding.AllBindings();
+                var result = await global::Cratis.Chronicle.Federation.FederationBinding.AllBindings(federationRegistry, federationStatus);
                 return result.Select(ToFederationBindingResponse).ToList();
             },
             exception => logger.QueryFailed(exception, "Federation", "AllBindings"));
@@ -57,7 +59,7 @@ internal sealed class Federation(
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Federation.FederationGrantInformationResponse>>(
             async () =>
             {
-                var result = await global::Cratis.Chronicle.Federation.FederationGrantInformation.AllGrants();
+                var result = await global::Cratis.Chronicle.Federation.FederationGrantInformation.AllGrants(federationRegistry, federationStatus);
                 return result.Select(ToFederationGrantInformationResponse).ToList();
             },
             exception => logger.QueryFailed(exception, "Federation", "AllGrants"));
