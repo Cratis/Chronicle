@@ -346,7 +346,9 @@ public abstract class EncryptionKeyStorageContract : Specification
     {
         // Model a transport losing the response after the server applied the write. A caller must see the error;
         // it may retry only with the same request id, not turn the ambiguous outcome into a fresh erasure.
-        await Assert.ThrowsAsync<TimeoutException>(() => LoseWriteResponse(() => Raise("lost-response")));
+        // Backends may surface the raw timeout or map it to the fence-unavailable error; either way the caller sees a failure.
+        var failure = await Record.ExceptionAsync(() => LoseWriteResponse(() => Raise("lost-response")));
+        (failure is TimeoutException || failure is EncryptionKeyFenceUnavailable).ShouldBeTrue();
         var applied = await Fence();
         await Raise("lost-response");
         AssertFence(await Fence(), applied);
