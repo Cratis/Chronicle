@@ -464,12 +464,13 @@ public interface IEventSequence : IGrainWithStringKey
 
     /// <summary>
     /// Commits one chunk of an import: each event is validated again and settled on its own, and the chunk is stored in
-    /// one transaction without being handed to live delivery.
+    /// one transaction without being delivered live. Every subscribed observer the chunk is meant for is then handed to
+    /// its catch-up path, as the appended-events queue hands over a lagging observer.
     /// </summary>
     /// <param name="importId">The <see cref="Concepts.Imports.ImportId"/>.</param>
     /// <param name="chunkIndex">The index of the chunk being committed.</param>
     /// <param name="committedFrom">The sequence number from which the log may already hold events of this chunk from an interrupted commit.</param>
-    /// <param name="eventTypes">Every event type in the import; observers of them are held back from live delivery.</param>
+    /// <param name="mayBeCommitted">True when an earlier attempt may have stored events of this chunk: the first chunk after the commit resumes, and every retry. Only then is the log searched for them.</param>
     /// <param name="events">The staged events of the chunk, in staging order.</param>
     /// <returns>The <see cref="Imports.ImportChunkAppendResult"/>.</returns>
     /// <remarks>
@@ -477,12 +478,5 @@ public interface IEventSequence : IGrainWithStringKey
     /// committed. Events of this chunk that an interrupted commit already stored are recognized from their causation
     /// and never appended twice.
     /// </remarks>
-    Task<Imports.ImportChunkAppendResult> AppendImportChunk(Concepts.Imports.ImportId importId, int chunkIndex, EventSequenceNumber committedFrom, IEnumerable<EventTypeId> eventTypes, IReadOnlyList<Imports.ImportEventToAppend> events);
-
-    /// <summary>
-    /// Ends an import's hold on live delivery, starting one catch-up for each observer it held back.
-    /// </summary>
-    /// <param name="importId">The <see cref="Concepts.Imports.ImportId"/>.</param>
-    /// <returns>Awaitable task.</returns>
-    Task CompleteImportCommit(Concepts.Imports.ImportId importId);
+    Task<Imports.ImportChunkAppendResult> AppendImportChunk(Concepts.Imports.ImportId importId, int chunkIndex, EventSequenceNumber committedFrom, bool mayBeCommitted, IReadOnlyList<Imports.ImportEventToAppend> events);
 }

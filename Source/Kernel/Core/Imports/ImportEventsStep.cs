@@ -70,6 +70,11 @@ public class ImportEventsStep(
             await work.Run(cancellationToken);
             return JobStepResult.Succeeded(null);
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // Stopped, not failed: the job stays resumable and the commit continues from the import's checkpoint.
+            return JobStepResult.Failed(PerformJobStepError.CancelledWithNoResult());
+        }
         catch (Exception ex)
         {
             return ex;

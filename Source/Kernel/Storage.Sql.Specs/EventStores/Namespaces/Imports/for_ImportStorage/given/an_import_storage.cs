@@ -27,7 +27,7 @@ public class an_import_storage : Namespaces.given.a_migrated_namespace_database
             $"source-{_}",
             "All",
             "Default",
-            """{"name":"Alice"}""",
+            """{"name":"Alice \"Al\" <al@example.com>"}""",
             ["tag"],
             [new StagedImportNamedTag("customer", "42")],
             DateTimeOffset.UnixEpoch,

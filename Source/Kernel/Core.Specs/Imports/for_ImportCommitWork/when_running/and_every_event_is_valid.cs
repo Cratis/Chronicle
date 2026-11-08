@@ -15,6 +15,6 @@ public class and_every_event_is_valid : given.an_import_being_committed
     [Fact] async Task should_start_the_commit_after_the_tail() => await _import.Received(1).CommitStarted(new EventSequenceNumber(10));
     [Fact] void should_commit_the_chunks_in_staging_order() => _committedChunks.ShouldEqual([0, 1]);
     [Fact] void should_tell_the_second_chunk_where_the_first_ended() => _committedFrom[1].ShouldEqual(new EventSequenceNumber(12));
-    [Fact] async Task should_release_the_held_observers_once() => await _sequence.Received(1).CompleteImportCommit(_key.ImportId);
+    [Fact] void should_only_look_for_an_interrupted_commit_in_the_first_chunk_it_commits() => _mayBeCommitted.ShouldEqual([true, false]);
     [Fact] void should_complete_the_import() => _record.State.ShouldEqual(ImportState.Completed);
 }

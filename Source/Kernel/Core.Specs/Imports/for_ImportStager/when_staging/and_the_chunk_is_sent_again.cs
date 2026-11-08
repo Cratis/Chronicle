@@ -7,7 +7,7 @@ public class and_the_chunk_is_sent_again : given.a_stager
 {
     async Task Establish() => await Stage(0, Event(), Event());
 
-    async Task Because() => _result = await Stage(0, Event(), Event(), Event());
+    async Task Because() => _result = await Stage(0, Event(), Event());
 
     [Fact] void should_report_it_was_staged_before() => _result.AlreadyStaged.ShouldBeTrue();
     [Fact] void should_return_the_first_result() => _result.EventsReceived.ShouldEqual(2);

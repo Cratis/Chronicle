@@ -16,6 +16,6 @@ public class and_validation_rejects_an_event : given.an_import_being_committed
     async Task Because() => await _work.Run(CancellationToken.None);
 
     [Fact] async Task should_reject_the_import_with_the_event() => await _import.Received(1).ValidationRejected(Arg.Is<IEnumerable<ImportRejection>>(_ => _.Single().Index == 1));
-    [Fact] async Task should_commit_nothing() => await _sequence.DidNotReceiveWithAnyArgs().AppendImportChunk(default!, default, default!, default!, default!);
+    [Fact] async Task should_commit_nothing() => await _sequence.DidNotReceiveWithAnyArgs().AppendImportChunk(default!, default, default!, default, default!);
     [Fact] void should_leave_the_import_failed() => _record.State.ShouldEqual(ImportState.Failed);
 }

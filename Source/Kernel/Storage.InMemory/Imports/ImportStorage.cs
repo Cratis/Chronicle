@@ -35,8 +35,13 @@ public sealed class ImportStorage : IImportStorage
     }
 
     /// <inheritdoc/>
-    public Task<bool> AddChunk(StagedImportChunk chunk) =>
-        Task.FromResult(_chunks.TryAdd((chunk.ImportId, chunk.ChunkIndex), (chunk.ToSummary(), ImportStorageSerialization.Serialize(chunk))));
+    public Task<StagedChunkAddition> AddChunk(StagedImportChunk chunk)
+    {
+        var summary = chunk.ToSummary();
+        var stored = _chunks.GetOrAdd((chunk.ImportId, chunk.ChunkIndex), static (_, argument) => (argument.Summary, ImportStorageSerialization.Serialize(argument.Chunk)), (Summary: summary, Chunk: chunk));
+        if (ReferenceEquals(stored.Summary, summary)) return Task.FromResult(StagedChunkAddition.Added);
+        return Task.FromResult(stored.Summary.Matches(chunk.FirstEventIndex, chunk.EventsReceived) ? StagedChunkAddition.AlreadyStaged : StagedChunkAddition.Conflicting);
+    }
 
     /// <inheritdoc/>
     public Task<StagedImportChunk?> GetChunk(ImportId importId, int chunkIndex) =>
@@ -49,6 +54,13 @@ public sealed class ImportStorage : IImportStorage
             .Select(_ => _.Value.Summary)
             .OrderBy(_ => _.ChunkIndex)
             .ToArray());
+
+    /// <inheritdoc/>
+    public Task RemoveChunk(ImportId importId, int chunkIndex)
+    {
+        _chunks.TryRemove((importId, chunkIndex), out _);
+        return Task.CompletedTask;
+    }
 
     /// <inheritdoc/>
     public Task RemoveChunks(ImportId importId)

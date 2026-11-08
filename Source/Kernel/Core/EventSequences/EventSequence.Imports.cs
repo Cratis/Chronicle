@@ -41,15 +41,27 @@ public partial class EventSequence
     /// </summary>
     internal const string ImportSourceSequenceNumberProperty = "sourceSequenceNumber";
 
-    readonly Dictionary<ImportId, ConstraintBatchClaims> _importClaims = [];
+    /// <summary>
+    /// The most imports whose whole-import validation claims one event sequence keeps at once.
+    /// </summary>
+    /// <remarks>
+    /// The claims live in the grain's memory between validation calls. When more imports validate at once, the one
+    /// touched least recently loses its claims and restarts its validation, so the memory stays bounded.
+    /// </remarks>
+    internal const int MaxImportsValidating = 4;
+
+    readonly Dictionary<ImportId, (ConstraintBatchClaims Claims, long Touched)> _importClaims = [];
+    long _importClaimsTouched;
     bool _committingImport;
 
     /// <inheritdoc/>
     public async Task<ImportChunkValidationResult> ValidateImportChunk(ImportId importId, bool first, IReadOnlyList<ImportEventToAppend> events)
     {
         if (!_mayWriteSequence) throw new ReservedEventSequenceName(_eventSequenceId);
-        if (first) _importClaims[importId] = new();
-        if (!_importClaims.TryGetValue(importId, out var claims)) return ImportChunkValidationResult.Restart;
+        if (first) StartImportClaims(importId);
+        if (!_importClaims.TryGetValue(importId, out var entry)) return ImportChunkValidationResult.Restart;
+        var claims = entry.Claims;
+        _importClaims[importId] = (claims, ++_importClaimsTouched);
 
         await RefreshConstraintsIfChanged();
         if (await RefusedByPendingConstraintIndex(events.Select(_ => _.Event.EventType.Id).Distinct().ToArray()))
@@ -94,27 +106,25 @@ public partial class EventSequence
         ImportId importId,
         int chunkIndex,
         EventSequenceNumber committedFrom,
-        IEnumerable<EventTypeId> eventTypes,
+        bool mayBeCommitted,
         IReadOnlyList<ImportEventToAppend> events)
     {
         if (!_mayWriteSequence) throw new ReservedEventSequenceName(_eventSequenceId);
 
-        // Observers of the import's event types leave live delivery before any event of the chunk is durable, so an
-        // ordinary append that interleaves cannot carry their cursors past the imported events.
-        try
-        {
-            await (_appendedEventsQueues?.HoldBack(ImportHoldId(importId), eventTypes) ?? Task.CompletedTask);
-        }
-        catch (Exception ex)
-        {
-            return ImportChunkAppendResult.NotSettled($"Observers could not be held back from live delivery: {ex.Message}");
-        }
-
         var outcomes = new Dictionary<long, ImportEventOutcome>();
-        var found = await FindCommittedImportEvents(importId, committedFrom);
-        foreach (var @event in events.Where(_ => found.ContainsKey(_.Index)))
+        if (mayBeCommitted)
         {
-            outcomes[@event.Index] = new(@event.Index, @event.Event.EventType, ImportEventOutcomeKind.Appended, found[@event.Index], []);
+            var found = await FindCommittedImportEvents(importId, committedFrom);
+            var recovered = new List<AppendedEvent>();
+            foreach (var @event in events.Where(_ => found.ContainsKey(_.Index)))
+            {
+                var stored = found[@event.Index];
+                outcomes[@event.Index] = new(@event.Index, @event.Event.EventType, ImportEventOutcomeKind.Appended, stored.Context.SequenceNumber, []);
+                recovered.Add(stored);
+            }
+
+            // The attempt that stored these may have stopped before handing the observers to catch-up.
+            if (recovered.Count > 0) await HandImportedEventsToCatchup(recovered);
         }
 
         var remaining = events.Where(_ => !outcomes.ContainsKey(_.Index)).ToList();
@@ -151,26 +161,17 @@ public partial class EventSequence
         return new(events.Select(_ => outcomes[_.Index]).ToArray(), []);
     }
 
-    /// <inheritdoc/>
-    public async Task CompleteImportCommit(ImportId importId)
-    {
-        _importClaims.Remove(importId);
-        await (_appendedEventsQueues?.ReleaseHold(ImportHoldId(importId)) ?? Task.CompletedTask);
-    }
-
-    static string ImportHoldId(ImportId importId) => $"import-{importId.Value:D}";
-
     static string DescribeViolation(ConstraintViolation violation) => $"{violation.ConstraintName.Value}: {violation.Message.Value}";
 
     static string[] DescribeFailure(AppendResult result) =>
         [.. result.Errors.Select(_ => _.Value), .. result.ConstraintViolations.Select(DescribeViolation)];
 
-    static bool IsTransient(AppendResult result) =>
+    static bool IsTransient(AppendResult result, Concepts.EventSequences.IdempotencyKey? key) =>
         result.Errors.Any(error =>
             error == AppendError.AppendOutcomeUnknown ||
             error == AppendError.ConstraintIndexUnavailable ||
-            error.Value.Contains("IdempotencyKeyUnsettled", StringComparison.Ordinal) ||
-            error.Value.Contains("could not be committed after one retry", StringComparison.Ordinal));
+            error == AppendError.BatchNotCommittedAfterRetry ||
+            (key is not null && error == IdempotencyRefusals.Unsettled(key)));
 
     static ImportEventOutcome? ToImportOutcome(ImportEventToAppend @event, IdempotentAppendResult result)
     {
@@ -180,9 +181,40 @@ public partial class EventSequence
             return new(@event.Index, @event.Event.EventType, kind, result.Result.SequenceNumber, []);
         }
 
-        return IsTransient(result.Result)
+        return IsTransient(result.Result, @event.IdempotencyKey)
             ? null
             : new(@event.Index, @event.Event.EventType, ImportEventOutcomeKind.Rejected, EventSequenceNumber.Unavailable, DescribeFailure(result.Result));
+    }
+
+    void StartImportClaims(ImportId importId)
+    {
+        _importClaims.Remove(importId);
+        while (_importClaims.Count >= MaxImportsValidating)
+        {
+            // The import that has waited longest loses its claims; its next call restarts its validation.
+            var oldest = _importClaims.MinBy(_ => _.Value.Touched).Key;
+            _importClaims.Remove(oldest);
+        }
+
+        _importClaims[importId] = (new(), ++_importClaimsTouched);
+    }
+
+    /// <summary>
+    /// Hands durable events of an import to the observers they are meant for through their catch-up path, never live.
+    /// </summary>
+    /// <param name="appendedEvents">The imported events that are durable in the log.</param>
+    /// <returns>Awaitable task.</returns>
+    async Task HandImportedEventsToCatchup(List<AppendedEvent> appendedEvents)
+    {
+        try
+        {
+            await (_appendedEventsQueues?.SpillMatchingToCatchup(appendedEvents) ?? Task.CompletedTask);
+        }
+        catch (Exception ex)
+        {
+            logger.FailedEnqueueingAppendedEvents(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId, appendedEvents.Count, ex);
+            await SpillAppendedEventsQueuesToCatchup();
+        }
     }
 
     async Task<(ConstraintValidationContext? Context, ImportRejection? Rejection)> PrepareImportConstraintContext(
@@ -217,9 +249,9 @@ public partial class EventSequence
         }
     }
 
-    async Task<Dictionary<long, EventSequenceNumber>> FindCommittedImportEvents(ImportId importId, EventSequenceNumber committedFrom)
+    async Task<Dictionary<long, AppendedEvent>> FindCommittedImportEvents(ImportId importId, EventSequenceNumber committedFrom)
     {
-        var found = new Dictionary<long, EventSequenceNumber>();
+        var found = new Dictionary<long, AppendedEvent>();
         if (!committedFrom.IsActualValue || committedFrom >= State.SequenceNumber) return found;
 
         var tail = await EventSequenceStorage.GetTailSequenceNumber();
@@ -238,7 +270,7 @@ public partial class EventSequence
                 if (causation?.Properties.TryGetValue(ImportEventIndexProperty, out var index) == true &&
                     long.TryParse(index, NumberStyles.Integer, CultureInfo.InvariantCulture, out var eventIndex))
                 {
-                    found[eventIndex] = @event.Context.SequenceNumber;
+                    found[eventIndex] = @event;
                 }
             }
         }

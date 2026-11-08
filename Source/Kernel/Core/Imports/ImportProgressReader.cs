@@ -38,7 +38,7 @@ internal static class ImportProgressReader
     }
 
     /// <summary>
-    /// Observes the progress of an import, emitting when it changes, and completing once the import reaches a final state.
+    /// Observes the progress of an import, emitting when it changes, and completing once the import reaches a final state or when there is no such import.
     /// </summary>
     /// <param name="storage">The <see cref="IStorage"/>.</param>
     /// <param name="eventStore">The event store.</param>
@@ -61,7 +61,9 @@ internal static class ImportProgressReader
                     previous = progress;
                 }
 
-                if (progress?.State.IsTerminal() == true)
+                // Nothing more comes for an import that ended, or for one that does not exist; an unknown identifier is
+                // not watched for ever.
+                if (progress?.State.IsTerminal() != false)
                 {
                     observer.OnCompleted();
                     return;

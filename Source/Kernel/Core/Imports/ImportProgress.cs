@@ -33,7 +33,7 @@ namespace Cratis.Chronicle.Imports;
 /// <param name="LastSequenceNumber">The last sequence number the import committed, if any.</param>
 /// <param name="FailureReason">Why the import failed or was abandoned, if it was.</param>
 /// <param name="MaxChunkEvents">The most events one chunk may carry.</param>
-/// <param name="MaxChunkBytes">The most bytes of event content one chunk may carry.</param>
+/// <param name="MaxChunkBytes">The most bytes of event content and metadata (tags, named tags, causation, idempotency keys) one chunk may carry.</param>
 /// <param name="AcknowledgedChunks">How many chunks are staged without a gap from the first; a reattached client continues with the chunk of this index.</param>
 /// <param name="AcknowledgedEvents">How many events those chunks carry; a reattached client continues after this many events.</param>
 [ReadModel]

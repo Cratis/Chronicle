@@ -41,6 +41,7 @@ public class a_stager : Specification
 
         _import = Substitute.For<IImport>();
         _import.EnsureAcceptsChunks().Returns(new ImportOperationResult(new ImportRecord(_key.ImportId, EventSequenceId.Log, OnInvalidEvent.Reject, DateTimeOffset.UtcNow)));
+        _import.ChunkStaged(Arg.Any<ImportChunkSummary>()).Returns(true);
         var grainFactory = Substitute.For<IGrainFactory>();
         grainFactory.GetGrain<IImport>((string)_key, null).Returns(_import);
         _stager = new(grainFactory, storage, Options.Create(_options));

@@ -18,4 +18,5 @@ public class and_its_commit_has_started : given.an_import
 
     [Fact] void should_refuse() => _result.IsSuccess.ShouldBeFalse();
     [Fact] void should_keep_committing() => Record.State.ShouldEqual(ImportState.Validating);
+    [Fact] void should_tell_how_to_give_up_a_commit() => _result.Error!.ShouldContain("stop and remove its commit job");
 }

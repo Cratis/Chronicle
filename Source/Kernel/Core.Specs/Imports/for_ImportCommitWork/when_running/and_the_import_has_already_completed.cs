@@ -12,5 +12,6 @@ public class and_the_import_has_already_completed : given.an_import_being_commit
     async Task Because() => await _work.Run(CancellationToken.None);
 
     [Fact] void should_commit_nothing() => _committedChunks.ShouldBeEmpty();
-    [Fact] async Task should_make_sure_no_observer_is_left_held_back() => await _sequence.Received(1).CompleteImportCommit(_key.ImportId);
+    [Fact] async Task should_not_touch_the_event_sequence() => await _sequence.DidNotReceiveWithAnyArgs().AppendImportChunk(default!, default, default!, default, default!);
+    [Fact] async Task should_leave_the_import_as_it_is() => await _import.DidNotReceiveWithAnyArgs().Fail(default!);
 }

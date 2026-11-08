@@ -40,8 +40,10 @@ public class ImportCommitWork(
     /// <param name="cancellationToken">The <see cref="CancellationToken"/>; the work resumes from its checkpoint after it.</param>
     /// <returns>Awaitable task.</returns>
     /// <exception cref="ImportNotFound">The import does not exist.</exception>
+    /// <exception cref="OperationCanceledException">The work was stopped; the import stays where it was and resumes from its checkpoint.</exception>
     public async Task Run(CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var record = await import.Get() ?? throw new ImportNotFound(key.ImportId);
         var sequence = getEventSequence(record.EventSequenceId);
 
@@ -72,16 +74,11 @@ public class ImportCommitWork(
             record = await import.Get() ?? throw new ImportNotFound(key.ImportId);
         }
 
-        if (record.State != ImportState.Committing)
-        {
-            // Settled already; make sure no observer is left held back by an interrupted completion.
-            await sequence.CompleteImportCommit(key.ImportId);
-            return;
-        }
+        if (record.State != ImportState.Committing) return;
 
         try
         {
-            await Commit(record, sequence, cancellationToken);
+            if (!await Commit(record, sequence, cancellationToken)) return;
         }
         catch (OperationCanceledException)
         {
@@ -89,74 +86,95 @@ public class ImportCommitWork(
         }
         catch (Exception ex)
         {
-            await sequence.CompleteImportCommit(key.ImportId);
             await import.Fail($"The commit stopped after chunk {(await import.Get())?.LastCommittedChunk}: {ex.Message}. Committed events stay committed.");
             return;
         }
 
-        await sequence.CompleteImportCommit(key.ImportId);
         await import.CommitCompleted();
     }
 
     async Task<List<ImportRejection>> Validate(ImportRecord record, IEventSequence sequence, CancellationToken cancellationToken)
     {
-        for (var attempt = 1; attempt <= maxAttempts; attempt++)
+        try
         {
-            var rejections = new List<ImportRejection>();
-            var first = true;
-            var restart = false;
-            for (var chunkIndex = 0; chunkIndex < record.ExpectedChunks && !restart; chunkIndex++)
+            for (var attempt = 1; attempt <= maxAttempts; attempt++)
             {
-                foreach (var slice in await Slices(chunkIndex))
+                var rejections = new List<ImportRejection>();
+                var first = true;
+                var restart = false;
+                for (var chunkIndex = 0; chunkIndex < record.ExpectedChunks && !restart; chunkIndex++)
                 {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    var result = await sequence.ValidateImportChunk(key.ImportId, first, slice);
-                    first = false;
-                    if (result.MustRestart)
+                    foreach (var slice in await Slices(chunkIndex))
                     {
-                        restart = true;
-                        break;
+                        cancellationToken.ThrowIfCancellationRequested();
+                        var result = await sequence.ValidateImportChunk(key.ImportId, first, slice);
+                        first = false;
+                        if (result.MustRestart)
+                        {
+                            restart = true;
+                            break;
+                        }
+
+                        rejections.AddRange(result.Rejections);
                     }
-
-                    rejections.AddRange(result.Rejections);
                 }
+
+                if (!restart) return rejections;
+                await Task.Delay(_retryDelay(attempt), _time, cancellationToken);
             }
 
-            if (!restart)
-            {
-                await sequence.EndImportValidation(key.ImportId);
-                return rejections;
-            }
-
-            await Task.Delay(_retryDelay(attempt), _time, cancellationToken);
+            throw new ImportValidationUnavailable(key.ImportId);
         }
-
-        await sequence.EndImportValidation(key.ImportId);
-        throw new ImportValidationUnavailable(key.ImportId);
+        finally
+        {
+            // The claims live in the event sequence's memory; they are released however validation ends.
+            await ForgetClaims(sequence);
+        }
     }
 
-    async Task Commit(ImportRecord record, IEventSequence sequence, CancellationToken cancellationToken)
+    async Task ForgetClaims(IEventSequence sequence)
     {
-        var eventTypes = record.EventTypes.Select(_ => new EventTypeId(_)).ToArray();
+        try
+        {
+            await sequence.EndImportValidation(key.ImportId);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // The event sequence bounds the imports it keeps claims for, so claims that could not be released are
+            // dropped when another import needs the room or the grain deactivates.
+        }
+    }
+
+    async Task<bool> Commit(ImportRecord record, IEventSequence sequence, CancellationToken cancellationToken)
+    {
+        // The first chunk after a (re)start may already be partly in the log from an attempt that stopped before its
+        // checkpoint; later chunks are only searched for when one of their calls is retried.
+        var resuming = true;
         for (var chunkIndex = record.LastCommittedChunk + 1; chunkIndex < record.ExpectedChunks; chunkIndex++)
         {
             var committedFrom = record.CommittedFrom is { } from ? new EventSequenceNumber(from) : EventSequenceNumber.First;
             var outcomes = new List<ImportEventOutcome>();
             foreach (var slice in await Slices(chunkIndex))
             {
-                outcomes.AddRange(await CommitSlice(sequence, chunkIndex, committedFrom, eventTypes, slice, cancellationToken));
+                outcomes.AddRange(await CommitSlice(sequence, chunkIndex, committedFrom, resuming, slice, cancellationToken));
             }
 
+            resuming = false;
             await import.ChunkCommitted(chunkIndex, outcomes);
             record = await import.Get() ?? throw new ImportNotFound(key.ImportId);
+
+            // An operator failed the import, or its retention ran out; nothing more is committed.
+            if (record.State != ImportState.Committing) return false;
         }
+
+        return true;
     }
 
     async Task<IEnumerable<ImportEventOutcome>> CommitSlice(
         IEventSequence sequence,
         int chunkIndex,
         EventSequenceNumber committedFrom,
-        IEnumerable<EventTypeId> eventTypes,
+        bool mayBeCommitted,
         IReadOnlyList<ImportEventToAppend> slice,
         CancellationToken cancellationToken)
     {
@@ -164,9 +182,18 @@ public class ImportCommitWork(
         for (var attempt = 1; attempt <= maxAttempts; attempt++)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var result = await sequence.AppendImportChunk(key.ImportId, chunkIndex, committedFrom, eventTypes, slice);
-            if (result.IsSettled) return result.Outcomes;
-            errors = result.Errors;
+            try
+            {
+                var result = await sequence.AppendImportChunk(key.ImportId, chunkIndex, committedFrom, mayBeCommitted || attempt > 1, slice);
+                if (result.IsSettled) return result.Outcomes;
+                errors = result.Errors;
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                // The call may have committed before it failed, as a timed-out grain call can; the retry looks first.
+                errors = [ex.Message];
+            }
+
             if (attempt < maxAttempts) await Task.Delay(_retryDelay(attempt), _time, cancellationToken);
         }
 

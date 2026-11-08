@@ -38,8 +38,8 @@ public interface IImport : IGrainWithStringKey
     /// Records that a chunk was staged.
     /// </summary>
     /// <param name="summary">The <see cref="ImportChunkSummary"/>.</param>
-    /// <returns>Awaitable task.</returns>
-    Task ChunkStaged(ImportChunkSummary summary);
+    /// <returns>True when the chunk belongs to the import; false when the import closed without it, and the chunk must be removed.</returns>
+    Task<bool> ChunkStaged(ImportChunkSummary summary);
 
     /// <summary>
     /// Closes staging, checks the counts the client declares and starts the commit.
@@ -50,7 +50,7 @@ public interface IImport : IGrainWithStringKey
     Task<ImportOperationResult> Complete(int expectedChunks, long expectedEvents);
 
     /// <summary>
-    /// Abandons the import and discards its staging, when its commit has not started.
+    /// Abandons the import and discards its staging, when it is still staging.
     /// </summary>
     /// <param name="reason">Why the import is abandoned.</param>
     /// <returns>The <see cref="ImportOperationResult"/>.</returns>
@@ -91,9 +91,22 @@ public interface IImport : IGrainWithStringKey
     Task CommitCompleted();
 
     /// <summary>
-    /// Fails the import.
+    /// Fails the import and discards its staging. Events it committed stay committed.
     /// </summary>
     /// <param name="reason">Why.</param>
     /// <returns>Awaitable task.</returns>
     Task Fail(string reason);
+
+    /// <summary>
+    /// Fails the import when it has been validating or committing for longer than the staging retention without
+    /// progress, which means nothing is left to finish it.
+    /// </summary>
+    /// <returns>True when it was failed.</returns>
+    Task<bool> FailIfStalled();
+
+    /// <summary>
+    /// Removes the import and anything left of its staging, when it ended longer ago than the staging retention.
+    /// </summary>
+    /// <returns>True when it was removed.</returns>
+    Task<bool> RemoveIfExpired();
 }

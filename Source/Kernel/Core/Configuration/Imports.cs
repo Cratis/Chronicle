@@ -29,7 +29,7 @@ public class Imports
     public int MaxChunkEvents { get; init; } = 1000;
 
     /// <summary>
-    /// Gets the most bytes of serialized event content one staged chunk may carry.
+    /// Gets the most bytes one staged chunk may carry, counting the content of its events and their tags, named tags, causation and idempotency keys.
     /// </summary>
     public int MaxChunkBytes { get; init; } = 4 * 1024 * 1024;
 }

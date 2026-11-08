@@ -1435,6 +1435,7 @@ enum Cratis.Chronicle.Sequences.ReopenStreamScopeError : int
   NotCompleted = 1
 json Cratis.Chronicle.Storage.Imports.ImportChunkSummary
   chunkIndex: int
+  eventTypes: System.Collections.Generic.IEnumerable<string>
   eventsReceived: int
   eventsRejected: int
   eventsStaged: int

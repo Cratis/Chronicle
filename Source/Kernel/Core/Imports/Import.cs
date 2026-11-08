@@ -77,12 +77,19 @@ public class Import(
     }
 
     /// <inheritdoc/>
-    public async Task ChunkStaged(ImportChunkSummary summary)
+    public async Task<bool> ChunkStaged(ImportChunkSummary summary)
     {
-        // Counts are taken from staging when the import completes, so a chunk reported late changes nothing there.
-        if (Record?.State.AcceptsChunks() != true) return;
+        if (Record is null) return false;
+        if (!Record.State.AcceptsChunks())
+        {
+            // Counts are taken from staging when the import completes, so a chunk that completion counted is kept; any
+            // other chunk arrived after the import closed and would never be committed or removed.
+            return Record.State is ImportState.Validating or ImportState.Committing && summary.ChunkIndex < Record.ExpectedChunks;
+        }
+
         state.State.Record = Record with { State = ImportState.Staging, LastActivity = _time.GetUtcNow() };
         await state.WriteStateAsync();
+        return true;
     }
 
     /// <inheritdoc/>
@@ -110,28 +117,32 @@ public class Import(
                 expectedEvents);
         }
 
+        // The summaries carry the event types and rejection counts; only chunks with rejections are read, and only
+        // until the import retains as many rejections as it keeps.
         var stagingRejections = new List<ImportRejection>();
-        var eventTypes = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var summary in summaries.Where(_ => _.EventsRejected > 0 || _.EventsStaged > 0))
+        foreach (var summary in summaries.Where(_ => _.EventsRejected > 0))
         {
+            if (stagingRejections.Count >= ImportRecord.MaxRetainedRejections) break;
             var chunk = await ImportStorage.GetChunk(_key.ImportId, summary.ChunkIndex);
-            if (chunk is null) continue;
-            stagingRejections.AddRange(chunk.Rejections);
-            eventTypes.UnionWith(chunk.Events.Select(_ => _.EventType.Split('+')[0]));
+            if (chunk is not null) stagingRejections.AddRange(chunk.Rejections);
         }
 
-        state.State.Record = (Record with
+        var rejectedCount = summaries.Sum(_ => (long)_.EventsRejected);
+        var retained = stagingRejections.OrderBy(_ => _.Index).Take(ImportRecord.MaxRetainedRejections).ToArray();
+        state.State.Record = Record with
         {
             ExpectedChunks = expectedChunks,
             ExpectedEvents = expectedEvents,
             EventsStaged = summaries.Sum(_ => (long)_.EventsStaged),
-            EventTypes = [.. eventTypes],
+            EventTypes = [.. summaries.SelectMany(_ => _.EventTypes).Distinct(StringComparer.Ordinal)],
+            Rejections = retained,
+            RejectedCount = rejectedCount,
             LastActivity = _time.GetUtcNow()
-        }).WithRejections(stagingRejections.OrderBy(_ => _.Index));
+        };
 
-        if (stagingRejections.Count > 0 && Record.OnInvalid == OnInvalidEvent.Reject)
+        if (rejectedCount > 0 && Record.OnInvalid == OnInvalidEvent.Reject)
         {
-            return await FailBeforeCommit($"{stagingRejections.Count} events of the import are invalid. Nothing was committed.", expectedChunks, expectedEvents);
+            return await FailBeforeCommit($"{rejectedCount} events of the import are invalid. Nothing was committed.", expectedChunks, expectedEvents);
         }
 
         state.State.Record = Record with { State = ImportState.Validating };
@@ -154,6 +165,13 @@ public class Import(
     {
         if (Record is null) return ImportOperationResult.Refused(null, $"Import '{_key.ImportId}' does not exist.");
         if (Record.State == ImportState.Abandoned) return new(Record);
+        if (Record.State is ImportState.Validating or ImportState.Committing)
+        {
+            return ImportOperationResult.Refused(
+                Record,
+                $"Import '{_key.ImportId}' is {Record.State}; only an import that is still staging can be abandoned. To give up a commit, stop and remove its commit job: the import then fails, keeping what was committed and discarding its staging.");
+        }
+
         if (!Record.State.AcceptsChunks())
         {
             return ImportOperationResult.Refused(Record, $"Import '{_key.ImportId}' is {Record.State}; only an import that is still staging can be abandoned.");
@@ -239,11 +257,35 @@ public class Import(
     public async Task Fail(string reason)
     {
         if (Record?.State.IsTerminal() != false) return;
-        var committedNothing = Record.State != ImportState.Committing;
         state.State.Record = Record with { State = ImportState.Failed, FailureReason = reason, LastActivity = _time.GetUtcNow() };
         await state.WriteStateAsync();
-        if (committedNothing) await ImportStorage.RemoveChunks(_key.ImportId);
+
+        // A failed import is never committed again, so its staging, which may hold personal data in plaintext, goes.
+        await ImportStorage.RemoveChunks(_key.ImportId);
         logger.ImportFailed(_key.ImportId, reason);
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> FailIfStalled()
+    {
+        if (Record?.State is not (ImportState.Validating or ImportState.Committing)) return false;
+        var retention = options.Value.Imports.StagingRetention;
+        if (_time.GetUtcNow() - Record.LastActivity <= retention) return false;
+
+        await Fail($"The import made no progress for longer than the staging retention of {retention}; its commit job is gone or stopped. Committed events stay committed.");
+        return true;
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> RemoveIfExpired()
+    {
+        if (Record?.State.IsTerminal() != true) return false;
+        if (_time.GetUtcNow() - Record.LastActivity <= options.Value.Imports.StagingRetention) return false;
+
+        // Clearing the state removes the record and every chunk left of it; the identifier can then be begun afresh.
+        await state.ClearStateAsync();
+        state.State.Record = null;
+        return true;
     }
 
     async Task<ImportOperationResult> FailBeforeCommit(string reason, int expectedChunks, long expectedEvents)

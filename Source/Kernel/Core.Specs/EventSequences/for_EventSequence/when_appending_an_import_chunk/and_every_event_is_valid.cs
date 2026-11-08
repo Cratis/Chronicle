@@ -15,6 +15,7 @@ public class and_every_event_is_valid : given.an_event_sequence_with_imports
     [Fact] void should_store_the_chunk_in_one_write() => _writes.ShouldEqual(1);
     [Fact] void should_write_every_event() => _written.Count.ShouldEqual(3);
     [Fact] void should_keep_the_import_causation() => _written.ShouldEachConformTo(_ => _.Causation.First().Type == Concepts.Auditing.CausationType.Import);
-    [Fact] async Task should_hold_back_observers_of_the_event_types() => await _appendedEventsQueues.Received(1).HoldBack(Arg.Any<string>(), Arg.Is<IEnumerable<EventTypeId>>(_ => _.Contains(_eventType.Id)));
+    [Fact] async Task should_hand_the_observers_of_the_chunk_to_catch_up() => await _appendedEventsQueues.Received(1).SpillMatchingToCatchup(Arg.Is<IEnumerable<AppendedEvent>>(_ => _.Count() == 3));
+    [Fact] async Task should_not_search_the_log_for_an_interrupted_commit() => await _eventSequenceStorage.DidNotReceiveWithAnyArgs().GetRange(default!, default!, default, default, default, default);
     [Fact] async Task should_not_hand_the_events_to_live_delivery() => await _appendedEventsQueues.DidNotReceive().Enqueue(Arg.Any<IEnumerable<AppendedEvent>>());
 }

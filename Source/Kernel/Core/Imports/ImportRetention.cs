@@ -5,13 +5,16 @@ using Cratis.Chronicle.Concepts.Imports;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.Imports;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.Imports;
 
 /// <summary>
-/// Abandons imports that have stayed open past <see cref="Configuration.Imports.StagingRetention"/> without activity.
+/// Keeps import staging bounded by <see cref="Configuration.Imports.StagingRetention"/>: abandons imports that stayed open
+/// without activity, fails imports whose commit stopped making progress, discards the staging of ended imports and
+/// removes ended imports once they are older than the retention.
 /// </summary>
 /// <param name="storage">The <see cref="IStorage"/> to find imports in.</param>
 /// <param name="grainFactory">The <see cref="IGrainFactory"/>.</param>
@@ -19,7 +22,8 @@ namespace Cratis.Chronicle.Imports;
 /// <param name="logger">The logger.</param>
 /// <param name="timeProvider">The optional <see cref="TimeProvider"/>.</param>
 /// <remarks>
-/// Every silo sweeps; abandoning is decided by the import itself, so a sweep that races another changes nothing.
+/// Every silo sweeps; each change is decided by the import itself, so a sweep that races another changes nothing.
+/// Staged chunks hold event content as received, personal data included, so none outlives the import it belongs to.
 /// </remarks>
 public sealed class ImportRetention(
     IStorage storage,
@@ -42,11 +46,10 @@ public sealed class ImportRetention(
     /// <summary>
     /// Sweeps every namespace of every event store once.
     /// </summary>
-    /// <returns>How many imports were abandoned.</returns>
+    /// <returns>How many imports the sweep ended or removed.</returns>
     public async Task<int> Sweep()
     {
-        var abandoned = 0;
-        var retention = options.Value.Imports.StagingRetention;
+        var swept = 0;
         foreach (var eventStore in await storage.GetEventStores())
         {
             var eventStoreStorage = storage.GetEventStore(eventStore);
@@ -54,13 +57,10 @@ public sealed class ImportRetention(
             {
                 try
                 {
-                    var imports = await eventStoreStorage.GetNamespace(@namespace.Name).Imports.GetAll();
-                    foreach (var import in imports.Where(_ => _.State.AcceptsChunks() && _time.GetUtcNow() - _.LastActivity > retention))
+                    var imports = eventStoreStorage.GetNamespace(@namespace.Name).Imports;
+                    foreach (var import in await imports.GetAll())
                     {
-                        if (await grainFactory.GetGrain<IImport>(new ImportKey(eventStore, @namespace.Name, import.Id)).AbandonIfExpired())
-                        {
-                            abandoned++;
-                        }
+                        if (await Sweep(imports, grainFactory.GetGrain<IImport>(new ImportKey(eventStore, @namespace.Name, import.Id)), import)) swept++;
                     }
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
@@ -70,7 +70,19 @@ public sealed class ImportRetention(
             }
         }
 
-        return abandoned;
+        return swept;
+    }
+
+    async Task<bool> Sweep(IImportStorage imports, IImport grain, ImportRecord import)
+    {
+        var expired = _time.GetUtcNow() - import.LastActivity > options.Value.Imports.StagingRetention;
+        if (import.State.AcceptsChunks()) return expired && await grain.AbandonIfExpired();
+        if (!import.State.IsTerminal()) return expired && await grain.FailIfStalled();
+        if (expired) return await grain.RemoveIfExpired();
+
+        // An ended import never needs its staging. A chunk written while the import ended is removed here.
+        if ((await imports.GetChunkSummaries(import.Id)).Any()) await imports.RemoveChunks(import.Id);
+        return false;
     }
 
     Task Start(CancellationToken cancellationToken)
