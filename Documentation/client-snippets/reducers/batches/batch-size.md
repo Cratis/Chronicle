@@ -8,7 +8,7 @@ public record BatchStockReceived(int Quantity);
 [EventType]
 public record BatchStockShipped(int Quantity);
 
-[BatchSize(MaxEvents = 2000, MaxConcurrency = 2)]
+[BatchSize(MaxEvents = 50, MaxConcurrency = 2)]
 public record BatchStockLevel(int Quantity)
 {
     [Observes<BatchStockReceived>]

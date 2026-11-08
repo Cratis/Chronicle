@@ -11,7 +11,7 @@ public interface IProductSearch
     Task Index(IEnumerable<string> names, CancellationToken cancellationToken);
 }
 
-[BatchSize(MaxEvents = 1000, MaxBytes = 4_194_304, MaxDelayMilliseconds = 50)]
+[BatchSize(MaxEvents = 50, MaxBytes = 1_048_576)]
 public class ProductSearchIndexer(IProductSearch search) : IReactor
 {
     [Observes<ProductListed>]

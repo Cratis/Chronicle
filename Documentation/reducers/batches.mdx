@@ -29,7 +29,9 @@ break the fold. The analyzers in `Cratis.Chronicle.CodeAnalysis` report these mi
 | A batch method has no `[Observes<TEvent>]` | [CHR0070](../code-analysis/CHR0070.mdx) |
 | A per-event method takes a `BatchContext` | [CHR0072](../code-analysis/CHR0072.mdx) |
 | A reducer has two batch methods, or a batch method and per-event methods | [CHR0074](../code-analysis/CHR0074.mdx) |
-| A batch method does not take or return the read model, or is not static on a self-reducing read model | [CHR0075](../code-analysis/CHR0075.mdx) |
+| A batch method does not take or return the read model, takes a parameter Chronicle cannot supply, such as an `EventContext`, or on a self-reducing read model is not public, static and named `Reduce` | [CHR0075](../code-analysis/CHR0075.mdx) |
+
+A self-reducing read model's batch method with another name than `Reduce` is the one mistake registration cannot catch: the client does not discover it, so the read model never runs. Rely on CHR0075 for it.
 
 [CHR0076](../code-analysis/CHR0076.mdx) warns about a pattern on an event type the batch method does not observe, since it never matches.
 
@@ -50,8 +52,8 @@ Declare the page bounds and how many event sources are reduced at once with `[Ba
 | Property | Meaning | Default |
 | --- | --- | --- |
 | `MaxEvents` | The most events in one page | 500 for a reducer with a batch method, 100 for one with per-event methods |
-| `MaxBytes` | The most bytes of event content in one page, counted as the UTF-8 length of each event's JSON content | Left to the kernel |
-| `MaxDelayMilliseconds` | How long the kernel may wait to fill a live page | 0, so a page holds what is already waiting |
+| `MaxBytes` | The most bytes of event content in one page, counted as the UTF-8 length of each event's JSON content | 0, so the kernel's maximum applies |
+| `MaxDelayMilliseconds` | How long the kernel may wait to fill a live page. Accepted, but not applied yet | 0 |
 | `MaxConcurrency` | How many event sources of one page are reduced at the same time | The processor count; `1` reduces them one after another |
 
 `MaxConcurrency` applies to per-event reducers too, since the client folds each event source of a page separately either way.
