@@ -31,7 +31,7 @@ internal sealed class BatchSymbols
         TaskOfT = compilation.GetTypeByMetadataName("System.Threading.Tasks.Task`1");
         CancellationToken = compilation.GetTypeByMetadataName("System.Threading.CancellationToken");
         _evidence = new(() => ExplicitRegistrationEvidence.For(compilation, cancellationToken));
-        _knownEventTypes = new(() => CodeAnalysis.KnownEventTypes.In(compilation, Evidence, cancellationToken));
+        _knownEventTypes = new(() => CodeAnalysis.KnownEventTypes.For(compilation, cancellationToken));
     }
 
     /// <summary>
@@ -85,7 +85,8 @@ internal sealed class BatchSymbols
     internal ExplicitRegistrationEvidence Evidence => _evidence.Value;
 
     /// <summary>
-    /// Gets the event types the compilation and the assemblies it references declare, built the first time they are needed.
+    /// Gets the event types the compilation and the assemblies it references declare, collected once per compilation and
+    /// shared with the other batch analyzers.
     /// </summary>
     internal ImmutableArray<ITypeSymbol> KnownEventTypes => _knownEventTypes.Value;
 

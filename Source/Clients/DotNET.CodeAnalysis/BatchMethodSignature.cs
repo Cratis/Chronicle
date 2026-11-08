@@ -64,9 +64,9 @@ internal static class BatchMethodSignature
 
         foreach (var parameter in method.Parameters)
         {
-            if (parameter.RefKind != RefKind.None || parameter.IsParams || parameter.IsOptional)
+            if (parameter.RefKind != RefKind.None || parameter.IsParams || (parameter.IsOptional && !BatchSymbols.Is(parameter.Type, symbols.CancellationToken)))
             {
-                return $"parameter '{parameter.Name}' must be an ordinary parameter, not ref, out, in, params or optional";
+                return $"parameter '{parameter.Name}' must be an ordinary parameter, not ref, out, in, params or optional; only a CancellationToken may be optional";
             }
         }
 

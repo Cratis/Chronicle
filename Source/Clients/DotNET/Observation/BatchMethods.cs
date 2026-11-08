@@ -130,10 +130,13 @@ internal static class BatchMethods
         }
 
         var parameters = method.GetParameters();
-        var irregular = Array.Find(parameters, parameter => parameter.ParameterType.IsByRef || parameter.IsOptional || parameter.IsDefined(typeof(ParamArrayAttribute), false));
+        var irregular = Array.Find(parameters, parameter =>
+            parameter.ParameterType.IsByRef ||
+            (parameter.IsOptional && parameter.ParameterType != typeof(CancellationToken)) ||
+            parameter.IsDefined(typeof(ParamArrayAttribute), false));
         if (irregular is not null)
         {
-            return $"parameter '{irregular.Name}' must be an ordinary parameter, not ref, out, in, params or optional";
+            return $"parameter '{irregular.Name}' must be an ordinary parameter, not ref, out, in, params or optional; only a CancellationToken may be optional";
         }
 
         return parameters.Skip(leading).Select(ProblemWithResolved).FirstOrDefault(problem => problem is not null);

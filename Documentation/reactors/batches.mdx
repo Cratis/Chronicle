@@ -16,7 +16,8 @@ Here, `Index` receives `UserRegistered` and `UserRenamed` events together, while
 
 A batch method takes an `EventBatch` as its first parameter and declares each event type it observes with
 `[Observes<TEvent>]`, once per type. It may also take a `BatchContext`, a `CancellationToken`, and services from the
-service provider. Inside, pattern-match on the events.
+service provider. The `CancellationToken` can be declared optional, as `CancellationToken cancellationToken = default`;
+no other parameter can. Inside, pattern-match on the events.
 
 Each event type assigned to a batch method must belong to that method alone. The analyzers in `Cratis.Chronicle.CodeAnalysis` report each of these mistakes when you build, and Chronicle refuses to register a reactor that has one:
 

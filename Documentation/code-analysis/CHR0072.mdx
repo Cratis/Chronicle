@@ -9,6 +9,8 @@ description: "CHR0072 reports a Cratis Chronicle per-event reactor or reducer me
 
 For a reducer, CHR0072 reports a method shaped like a reduce method, taking an event and the current read model, whose third parameter is a `BatchContext` where a reduce method takes the `EventContext`. Without the rule such a method would not be a reduce method at all, and its events would be skipped without a word. Other methods that happen to take an event and a `BatchContext` are not reduce methods and are not reported.
 
+A reducer that has a batch method is not reported either. There a method shaped like a reduce method but taking the `BatchContext` is a helper the batch method calls for each event with the context it was given, such as `Account? Apply(Deposited @event, Account? current, BatchContext context)`. Chronicle registers such a reducer and only calls the batch method.
+
 ## Severity
 
 Error
