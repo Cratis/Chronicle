@@ -26,4 +26,10 @@ public class DeleteEncryptionKeyRequest
     /// </summary>
     [ProtoMember(3)]
     public string Identifier { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets an optional opaque retry identity, at most 128 characters.
+    /// </summary>
+    [ProtoMember(4)]
+    public string? RequestId { get; set; }
 }

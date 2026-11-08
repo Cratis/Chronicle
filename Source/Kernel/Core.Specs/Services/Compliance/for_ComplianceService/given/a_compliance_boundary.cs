@@ -49,11 +49,11 @@ public class a_compliance_boundary : Chronicle.Compliance.GDPR.for_PIIManager.gi
         _services = new ServiceCollection().AddScoped(_ => _decisions).AddSingleton(_keyStore).BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
         _storage.GetEventStores().Returns([EventStore, OtherEventStore, ThirdEventStore, EventStoreName.System, (EventStoreName)"system", OtherEventStore]);
         _keys = [EventStore, OtherEventStore, ThirdEventStore, EventStoreName.System];
-        _keyStore.When(store => store.DeleteFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Identifier))
+        _keyStore.When(store => store.DeleteThroughFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Identifier, Arg.Any<string>()))
             .Do(call => _keys.Remove(call.Arg<EventStoreName>()));
         _keyStore.HasFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Identifier, Arg.Any<EncryptionKeyRevision?>()).Returns(true);
         var observedDecisions = _decisions;
-        _keyStore.When(store => store.RecordErasureFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Identifier))
+        _keyStore.When(store => store.RecordErasureFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Identifier, Arg.Any<EncryptionKeyErasureRequest>()))
             .Do(_ => _allDecidedBeforeMutation = observedDecisions.ReceivedCalls().Count(call => call.GetMethodInfo().Name == nameof(IAuthorizationDecisions.Decide)) == 3);
         UseCaller(_principal);
         Configure(enforce: true);
@@ -136,9 +136,9 @@ public class a_compliance_boundary : Chronicle.Compliance.GDPR.for_PIIManager.gi
 
     protected void ShouldNotHaveTouched(EventStoreName eventStore)
     {
-        _keyStore.DidNotReceive().RecordErasureFor(eventStore, Arg.Any<EventStoreNamespaceName>(), Identifier);
-        _keyStore.DidNotReceive().DeleteFor(eventStore, Arg.Any<EventStoreNamespaceName>(), Identifier);
-        _keyStore.DidNotReceive().AllowNewKeyFor(eventStore, Arg.Any<EventStoreNamespaceName>(), Identifier);
+        _keyStore.DidNotReceive().RecordErasureFor(eventStore, Arg.Any<EventStoreNamespaceName>(), Identifier, Arg.Any<EncryptionKeyErasureRequest>());
+        _keyStore.DidNotReceive().DeleteThroughFor(eventStore, Arg.Any<EventStoreNamespaceName>(), Identifier, Arg.Any<string>());
+        _keyStore.DidNotReceive().AuthorizeConfirmedSuccessorFor(eventStore, Arg.Any<EventStoreNamespaceName>(), Identifier);
         _cacheClient.DidNotReceive().Evict(eventStore, Arg.Any<EventStoreNamespaceName>(), Identifier);
     }
 

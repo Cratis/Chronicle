@@ -15,7 +15,7 @@ public class and_the_erasure_is_incomplete : given.a_pii_manager
 {
     void Establish() =>
         _keyStore
-            .DeleteFor(EventStore, EventStoreNamespace, Identifier)
+            .DeleteThroughFor(EventStore, EventStoreNamespace, Identifier, Arg.Any<string>())
             .ThrowsAsync(new StoreUnreachable());
 
     async Task Because() => await Catch.Exception(() => _manager.DeleteEncryptionKeyFor(Identifier));

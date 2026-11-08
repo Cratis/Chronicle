@@ -17,8 +17,8 @@ public class and_the_store_refuses_the_identifier : given.a_pii_manager
 
     void Establish()
     {
-        _keyStore.AllowNewKeyFor(EventStore, EventStoreNamespace, _hostile).Returns(Task.FromException(new EncryptionKeyIdentifierUnderReview()));
-        _keyStore.AllowNewKeyFor(OtherEventStore, EventStoreNamespace, _hostile).Returns(Task.FromException(new StoreUnreachable()));
+        _keyStore.AuthorizeConfirmedSuccessorFor(EventStore, EventStoreNamespace, _hostile).Returns(Task.FromException(new EncryptionKeyIdentifierUnderReview()));
+        _keyStore.AuthorizeConfirmedSuccessorFor(OtherEventStore, EventStoreNamespace, _hostile).Returns(Task.FromException(new StoreUnreachable()));
     }
 
     async Task Because() => _error = await Catch.Exception(() => _manager.AllowNewEncryptionKeyFor(_hostile));

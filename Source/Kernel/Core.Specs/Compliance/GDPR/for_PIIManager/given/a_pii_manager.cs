@@ -30,6 +30,7 @@ public class a_pii_manager : Specification
     protected IStorage _storage;
     protected RecordingLogger<PIIManager> _logger;
     protected PIIManager _manager;
+    protected List<TimeSpan> _delays = [];
 
     /// <summary>
     /// Gets the stable one-way binding the log records the subject as, instead of the identifier itself.
@@ -49,6 +50,11 @@ public class a_pii_manager : Specification
         _keyStore.GetErasureFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Identifier)
             .Returns(new EncryptionKeyErasure(EncryptionKeyRevision.Initial, [Key.Fingerprint], NewKeyAllowed: false));
 
+        _silo.AddService<Func<TimeSpan, Task>>(duration =>
+        {
+            _delays.Add(duration);
+            return Task.CompletedTask;
+        });
         _silo.AddService(_keyStore);
         _silo.AddService(_cacheClient);
         _silo.AddService(_storage);

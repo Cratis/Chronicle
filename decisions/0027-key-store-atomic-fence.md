@@ -50,6 +50,7 @@ so N writers could defeat the guarantees N+1 relies on. The two-release shape an
 - **D2. `ProtocolFloor` = operator attestation + silo-version check.** Both are required. N+1 fails closed when the
 attestation is absent, or when the silo-version check contradicts it (any active silo below N, or without a protocol record).
 Mechanism: Rollout.
+- **D5. Wire request id:** optional opaque string, at most 128 characters. Reject an empty-after-trim value; do not parse a format or normalize the identity. Decided by the requester for slice 5.
 - **D3. `RevocationGrace` default 5 s, configurable** (kernel compliance option), documented with the compliance configuration. C10.
 - **D4. Refuse erasure on stores with no fence guarantee** (Azure Key Vault with InMemory Chronicle storage; Vault on a KV v1
 mount). The error names the store and the supported alternative (Azure Key Vault with MongoDB or SQL Chronicle storage; Vault
@@ -317,7 +318,7 @@ refusal for Azure Key Vault on InMemory storage and Vault KV v1. Still open, wit
 1. Custom or third-party `IEncryptionKeyStorage` without `FenceGuarantees` (D4 covers only the built-in `None` setups): warn in N,
 then refuse erasure in the N+1 switch-on behind `RequireAtomicKeyFence`, or keep warning? Recommended: refuse behind the flag
 (default true, opt-out documented, removed next major), classified with the switch-on under D4's semver rule.
-2. Request id on the wire: opaque string, up to 128 characters (recommended).
+The request-id wire shape is decided in D5.
 
 ## Review resolution (review-r1)
 

@@ -30,12 +30,22 @@ namespace Cratis.Chronicle.Compliance.GDPR;
 /// <param name="cacheClient">The <see cref="IEncryptionKeyCacheClient"/> used to evict the key from every silo's cache.</param>
 /// <param name="storage">The <see cref="IStorage"/> used to enumerate the event stores an erasure has to reach.</param>
 /// <param name="logger">The <see cref="ILogger{TCategoryName}"/> the compliance acts are recorded to.</param>
+/// <param name="erasureOptions">Release grace configuration.</param>
+/// <param name="delay">Optional injectable retry and grace delay.</param>
+/// <param name="random">Optional retry jitter source.</param>
 public class PIIManager(
     IEncryptionKeyStorage keyStore,
     IEncryptionKeyCacheClient cacheClient,
     IStorage storage,
-    ILogger<PIIManager> logger) : Grain, IPIIManager
+    ILogger<PIIManager> logger,
+    EncryptionKeyErasureOptions? erasureOptions = null,
+    Func<TimeSpan, Task>? delay = null,
+    Random? random = null) : Grain, IPIIManager
 {
+    readonly EncryptionKeyErasureOptions _erasureOptions = erasureOptions ?? new();
+    readonly Func<TimeSpan, Task> _delay = delay ?? (duration => Task.Delay(duration));
+    readonly Random _random = random ?? Random.Shared;
+
     /// <inheritdoc/>
     public async Task DeleteEncryptionKeyFor(EncryptionKeyIdentifier identifier)
     {
@@ -43,7 +53,7 @@ public class PIIManager(
         var key = GetKey();
         List<Exception> failures = [];
         var eventStores = await EventStoresToReach(key, failures);
-        await DeleteEncryptionKey(identifier, key, eventStores, failures);
+        await DeleteEncryptionKey(identifier, key, eventStores, failures, null);
     }
 
     /// <inheritdoc/>
@@ -51,7 +61,16 @@ public class PIIManager(
     {
         ThrowIfEncryptedValueIdentifier(identifier);
         var key = GetKey();
-        return DeleteEncryptionKey(identifier, key, AuthorizedStores(key, eventStores), []);
+        return DeleteEncryptionKey(identifier, key, AuthorizedStores(key, eventStores), [], null);
+    }
+
+    /// <inheritdoc/>
+    public Task DeleteEncryptionKeyInWithRequest(EncryptionKeyIdentifier identifier, EventStoreName[] eventStores, string requestId)
+    {
+        ThrowIfEncryptedValueIdentifier(identifier);
+        EncryptionKeyErasureRequestIdentity.Validate(requestId);
+        var key = GetKey();
+        return DeleteEncryptionKey(identifier, key, AuthorizedStores(key, eventStores), [], requestId);
     }
 
     /// <inheritdoc/>
@@ -121,15 +140,44 @@ public class PIIManager(
         }
     }
 
-    async Task DeleteEncryptionKey(EncryptionKeyIdentifier identifier, PIIManagerKey key, IReadOnlyList<EventStoreName> eventStores, List<Exception> failures)
+    async Task DeleteEncryptionKey(EncryptionKeyIdentifier identifier, PIIManagerKey key, IReadOnlyList<EventStoreName> eventStores, List<Exception> failures, string? requestId)
     {
-        // Fence all authorized stores before deleting any key, so a forwarded event cannot restore an erased key.
-        await ForEach(eventStores, failures, eventStore => keyStore.RecordErasureFor(eventStore, key.Namespace, identifier));
-        await ForEach(eventStores, failures, eventStore => keyStore.DeleteFor(eventStore, key.Namespace, identifier));
-        await ForEach(eventStores, failures, eventStore => RemoveUniqueClaimsFor(eventStore, key.Namespace, identifier));
+        requestId ??= await PendingRequest(identifier, key, eventStores) ?? Guid.NewGuid().ToString("N");
+        var request = new EncryptionKeyErasureRequest(requestId);
 
-        // Evict even after a partial storage failure: a durable deletion must not leave a cached key alive.
+        // Fence every reachable store before sweeping any. Never substitute an unbounded delete on failure.
+        await ForEach(eventStores, failures, eventStore => Retry(() => keyStore.RecordErasureFor(eventStore, key.Namespace, identifier, request)));
+        await ForEach(eventStores, failures, async eventStore =>
+        {
+            var recorded = await keyStore.GetErasureRequestFor(eventStore, key.Namespace, identifier, requestId);
+            if (recorded?.Confirmed == true) return;
+            await Retry(() => keyStore.DeleteThroughFor(eventStore, key.Namespace, identifier, requestId));
+            await RemoveUniqueClaimsFor(eventStore, key.Namespace, identifier);
+        });
+
+        // Evict even after a partial storage failure. Confirmation is only legal after eviction and the grace.
         await ForEach(eventStores, failures, eventStore => cacheClient.Evict(eventStore, key.Namespace, identifier));
+        if (failures.Count == 0)
+        {
+            await _delay(_erasureOptions.RevocationGrace);
+            await ForEach(eventStores, failures, eventStore => Retry(() => keyStore.ConfirmErasureFor(eventStore, key.Namespace, identifier, requestId)));
+            if (failures.Count == 0)
+            {
+                // Compaction is housekeeping: a failure cannot undo an acknowledged confirmation.
+                foreach (var eventStore in eventStores)
+                {
+                    try
+                    {
+                        await keyStore.CompactErasureRequestsFor(eventStore, key.Namespace, identifier);
+                    }
+                    catch (Exception)
+                    {
+                        // Leave the confirmed request inline; a future erasure retries archive-then-remove.
+                        logger.CompactionDeferred();
+                    }
+                }
+            }
+        }
         if (failures.Count > 0)
         {
             logger.SubjectErasureIncomplete(BindingFor(identifier), key.Namespace, failures.Count, eventStores.Count, Names(eventStores));
@@ -142,7 +190,7 @@ public class PIIManager(
 
     async Task AllowNewEncryptionKey(EncryptionKeyIdentifier identifier, PIIManagerKey key, IReadOnlyList<EventStoreName> eventStores, List<Exception> failures)
     {
-        await ForEach(eventStores, failures, eventStore => keyStore.AllowNewKeyFor(eventStore, key.Namespace, identifier));
+        await ForEach(eventStores, failures, eventStore => keyStore.AuthorizeConfirmedSuccessorFor(eventStore, key.Namespace, identifier));
 
         // A cached absence must not hide the authorization to provision a fresh key.
         await ForEach(eventStores, failures, eventStore => cacheClient.Evict(eventStore, key.Namespace, identifier));
@@ -154,6 +202,41 @@ public class PIIManager(
         }
 
         logger.AllowedNewEncryptionKey(BindingFor(identifier), key.Namespace, eventStores.Count, Names(eventStores));
+    }
+
+    async Task<string?> PendingRequest(EncryptionKeyIdentifier identifier, PIIManagerKey key, IReadOnlyList<EventStoreName> eventStores)
+    {
+        foreach (var eventStore in eventStores)
+        {
+            try
+            {
+                var fence = await keyStore.GetFenceFor(eventStore, key.Namespace, identifier);
+                if (fence?.Requests?.LastOrDefault(_ => !_.Confirmed) is { } pending) return pending.RequestId;
+            }
+            catch (Exception)
+            {
+                // The normal fan-out records the failure without preventing other stores being fenced.
+                logger.RequestLookupDeferred();
+            }
+        }
+
+        return null;
+    }
+
+    async Task Retry(Func<Task> operation)
+    {
+        for (var attempt = 0; ; attempt++)
+        {
+            try
+            {
+                await operation();
+                return;
+            }
+            catch (Exception error) when (attempt < 7 && error is EncryptionKeyFenceChanged or EncryptionKeyFenceUnavailable or EncryptionKeyStorageUnavailable)
+            {
+                await _delay(TimeSpan.FromMilliseconds(Math.Min(500, 10 * (1 << attempt)) + _random.Next(10)));
+            }
+        }
     }
 
     async Task<IReadOnlyList<EventStoreName>> EventStoresToReach(PIIManagerKey key, List<Exception> failures)
