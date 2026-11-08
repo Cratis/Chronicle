@@ -39,6 +39,11 @@ internal static class AppendFingerprintComparison
             return FingerprintFailure.FingerprintUnsupported;
         }
 
+        if (IsPlainRetry(stored, input, plain))
+        {
+            return new FingerprintComparisonResult(FingerprintComparisonStatus.Verified, stored.EventType);
+        }
+
         var groups = input.ProtectedValues.GroupBy(value => value.Kind).ToDictionary(group => group.Key, group => group.ToArray());
         if (plain != stored.Plain || !stored.ProtectedParts.Select(part => part.Kind).ToHashSet().SetEquals(groups.Keys))
         {
@@ -82,6 +87,9 @@ internal static class AppendFingerprintComparison
 
         return await ReleaseKeys.Complete(() => Settle(stored, candidates));
     }
+
+    static bool IsPlainRetry(StoredAppendFingerprint stored, AppendFingerprintInput input, string plain) =>
+        stored.ProtectedParts.Count == 0 && input.ProtectedValues.Count == 0 && plain == stored.Plain;
 
     static FingerprintComparisonResult Settle(StoredAppendFingerprint stored, List<ComparisonPart> candidates)
     {
