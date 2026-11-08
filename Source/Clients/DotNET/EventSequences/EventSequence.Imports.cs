@@ -7,6 +7,7 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSources;
 using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Imports;
+using Cratis.Chronicle.Transactions;
 
 namespace Cratis.Chronicle.EventSequences;
 
@@ -19,6 +20,7 @@ public partial class EventSequence
         IProgress<ImportProgress>? progress = default,
         CancellationToken cancellationToken = default)
     {
+        ReadProtectionGuard.Append(nameof(Import), "imported events");
         await using var import = await BeginImport(options ?? ImportOptions.Default, cancellationToken);
         using var reporting = Report(import, progress);
         await import.Add(events, cancellationToken);
@@ -32,6 +34,7 @@ public partial class EventSequence
         IProgress<ImportProgress>? progress = default,
         CancellationToken cancellationToken = default)
     {
+        ReadProtectionGuard.Append(nameof(Import), "imported events");
         await using var import = await BeginImport(options ?? ImportOptions.Default, cancellationToken);
         using var reporting = Report(import, progress);
         await import.Add(events, cancellationToken);
@@ -41,6 +44,7 @@ public partial class EventSequence
     /// <inheritdoc/>
     public async Task<IEventImport> BeginImport(ImportOptions? options = default, CancellationToken cancellationToken = default)
     {
+        ReadProtectionGuard.Append(nameof(BeginImport), "imported events");
         options ??= ImportOptions.Default;
         cancellationToken.ThrowIfCancellationRequested();
         Contracts.Imports.BeginImportResponse session;
@@ -68,6 +72,7 @@ public partial class EventSequence
     /// <inheritdoc/>
     public async Task<IEventImport> BeginImport(ImportId importId, ImportOptions? options = default, CancellationToken cancellationToken = default)
     {
+        ReadProtectionGuard.Append(nameof(BeginImport), "imported events");
         cancellationToken.ThrowIfCancellationRequested();
         var progress = (await _servicesAccessor.Services.Imports.GetImport(new()
         {
