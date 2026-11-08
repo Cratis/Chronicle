@@ -129,7 +129,7 @@ The .NET client connects over TLS unless `disableTls=true` is set. When both val
 
 For development only, use `chronicle://localhost:35000?skipTlsValidation=true` to explicitly opt out. The development images (`latest-development` and `latest-development-slim`) generate an untrusted, self-signed certificate on every start when none is configured, with SANs `localhost`, `chronicle`, `127.0.0.1`, and `::1`. The production image (`latest` and version tags) does not generate a certificate and requires one when TLS is enabled; see [Production deployment](../hosting/production.md).
 
-The next major release will enable validation by default. Connection-string builders preserve omitted settings and explicit `true` or `false` through serialization and credential helpers. A startup warning is logged when validation is skipped, including on loopback targets; it is suppressed when TLS is disabled.
+The next major release will enable validation by default. Connection-string builders preserve omitted settings and explicit `true` or `false` through serialization and credential helpers. A startup warning is logged when validation is skipped for a remote host or an SRV lookup, not on loopback targets; it is suppressed when TLS is disabled.
 
 See [TLS configuration (client)](../configuration/tls.mdx) for certificate setup.
 

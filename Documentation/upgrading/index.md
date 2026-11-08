@@ -14,7 +14,7 @@ This minor release makes TLS validation configuration explicit without changing 
 - We recommend explicitly setting `skipTlsValidation=false` after configuring certificate trust or a matching pin. Either that setting or `Tls.SkipCertificateValidation=false` requires validation, even on loopback and even if the other setting is `true`.
 - For development only, explicitly opt out with `chronicle://localhost:35000?skipTlsValidation=true`. Development images generate an untrusted, self-signed certificate on every start when none is configured, with SANs `localhost`, `chronicle`, `127.0.0.1`, and `::1`.
 - Builders preserve omitted settings and explicit `true` or `false` through build/reparse, cloning, and credential helpers. Explicit `true` now remains in serialized connection strings.
-- A startup warning is logged whenever validation is skipped, including on loopback. With `disableTls=true`, certificate validation does not apply and that warning is suppressed.
+- A startup warning is logged when validation is skipped for a remote host or an SRV lookup, not on loopback. With `disableTls=true`, certificate validation does not apply and that warning is suppressed.
 
 See [Client TLS configuration](../configuration/tls) before updating shared connection settings.
 

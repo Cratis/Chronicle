@@ -88,7 +88,7 @@ The .NET client still skips server certificate validation when both settings are
 
 Either setting enables validation. A `true` value in the other setting does not turn it off, so `skipTlsValidation=true` cannot override `Tls:SkipCertificateValidation=false`.
 
-A connection constructed with validation skipped logs a startup warning, including for loopback and DNS SRV targets. With `disableTls=true`, certificate validation does not apply and that warning is suppressed. For development only, use `chronicle://localhost:35000?skipTlsValidation=true` to explicitly opt out, provided the TLS options do not require validation. Development images generate an untrusted, self-signed certificate on every start, with SANs `localhost`, `chronicle`, `127.0.0.1`, and `::1`. Follow [TLS configuration](../configuration/tls) for the trust and pinning requirements.
+A connection constructed with validation skipped logs a startup warning for remote hosts and DNS SRV targets, but not for loopback targets. With `disableTls=true`, certificate validation does not apply and that warning is suppressed. For development only, use `chronicle://localhost:35000?skipTlsValidation=true` to explicitly opt out, provided the TLS options do not require validation. Development images generate an untrusted, self-signed certificate on every start, with SANs `localhost`, `chronicle`, `127.0.0.1`, and `::1`. Follow [TLS configuration](../configuration/tls) for the trust and pinning requirements.
 
 ## Related topics
 

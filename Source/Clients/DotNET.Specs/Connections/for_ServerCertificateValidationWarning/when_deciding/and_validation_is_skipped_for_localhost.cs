@@ -11,5 +11,5 @@ public class and_validation_is_skipped_for_localhost : Specification
 
     void Because() => _result = ServerCertificateValidationWarning.AppliesTo(true, new ChronicleConnectionString("chronicle://LOCALHOST:35000"));
 
-    [Fact] void should_warn() => _result.ShouldBeTrue();
+    [Fact] void should_not_warn() => _result.ShouldBeFalse();
 }

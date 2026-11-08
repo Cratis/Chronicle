@@ -62,7 +62,7 @@ Trust the server's certificate authority (CA) on each client machine. In an appl
 
 Alternatively, configure `certificatePath` with the matching server certificate to pin it. With validation enabled, a matching pin can allow a certificate whose chain is not trusted, including a self-signed certificate. The pin does not override a host-name mismatch or a missing server certificate.
 
-After preparing trust or pinning, set `skipTlsValidation=false` or `Tls:SkipCertificateValidation=false`. The client logs a startup warning whenever validation is skipped, including with omitted settings and loopback targets. With `disableTls=true`, certificate validation does not apply and that warning is suppressed.
+After preparing trust or pinning, set `skipTlsValidation=false` or `Tls:SkipCertificateValidation=false`. The client logs a startup warning when validation is skipped for a remote host or an SRV lookup, including with omitted settings. Loopback targets do not log it. With `disableTls=true`, certificate validation does not apply and that warning is suppressed.
 
 ## Development setup
 
