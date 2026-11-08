@@ -354,6 +354,22 @@ json Cratis.Chronicle.Concepts.Identities.Identity
   onBehalfOf: Cratis.Chronicle.Concepts.Identities.Identity
   subject: string
   userName: string
+concept Cratis.Chronicle.Concepts.Imports.ImportId : System.Guid
+json Cratis.Chronicle.Concepts.Imports.ImportKey
+  eventStore: Cratis.Chronicle.Concepts.EventStoreName
+  importId: Cratis.Chronicle.Concepts.Imports.ImportId
+  namespace: Cratis.Chronicle.Concepts.EventStoreNamespaceName
+enum Cratis.Chronicle.Concepts.Imports.ImportState : int
+  Abandoned = 6
+  Committing = 3
+  Completed = 4
+  Failed = 5
+  Open = 0
+  Staging = 1
+  Validating = 2
+enum Cratis.Chronicle.Concepts.Imports.OnInvalidEvent : int
+  Reject = 0
+  Skip = 1
 custom Cratis.Chronicle.Concepts.Keys.Key
 enum Cratis.Chronicle.Concepts.Observation.AlertDisposition : int
   Active = 0
@@ -1045,6 +1061,71 @@ json Cratis.Chronicle.Events.Constraints.ReindexConstraintsStepState
   status: Cratis.Choreography.Jobs.JobStepStatus
   statusChanges: System.Collections.Generic.IList<Cratis.Choreography.Jobs.JobStepStatusChanged>
   type: Cratis.Choreography.Jobs.JobStepType
+json Cratis.Chronicle.Imports.ImportChunkAppendResult
+  errors: System.Collections.Generic.IEnumerable<string>
+  isSettled: bool
+  outcomes: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Imports.ImportEventOutcome>
+json Cratis.Chronicle.Imports.ImportChunkStagingResult
+  alreadyStaged: bool
+  chunkIndex: int
+  error: string
+  eventsReceived: int
+  eventsStaged: int
+  rejections: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Storage.Imports.ImportRejection>
+json Cratis.Chronicle.Imports.ImportChunkValidationResult
+  mustRestart: bool
+  rejections: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Storage.Imports.ImportRejection>
+json Cratis.Chronicle.Imports.ImportEvent
+  causation: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Sequences.Causation>
+  causedBy: Cratis.Chronicle.Sequences.Identity
+  content: string
+  correlationId: System.Guid?
+  eventSource: string
+  eventSourceId: string
+  eventSourceType: string
+  eventStreamId: string
+  eventStreamType: string
+  eventType: Cratis.Chronicle.Sequences.EventType
+  idempotencyKey: string
+  namedTags: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Sequences.NamedTag>
+  occurred: System.DateTimeOffset?
+  sourceSequenceNumber: ulong?
+  subject: string
+  tags: System.Collections.Generic.IEnumerable<string>
+json Cratis.Chronicle.Imports.ImportEventOutcome
+  eventType: string
+  index: long
+  kind: Cratis.Chronicle.Imports.ImportEventOutcomeKind
+  reasons: System.Collections.Generic.IEnumerable<string>
+  sequenceNumber: Cratis.Chronicle.Concepts.Events.EventSequenceNumber
+enum Cratis.Chronicle.Imports.ImportEventOutcomeKind : int
+  AlreadyAppended = 1
+  Appended = 0
+  Rejected = 2
+json Cratis.Chronicle.Imports.ImportEventToAppend
+  causedBy: Cratis.Chronicle.Concepts.Identities.Identity
+  correlationId: Cratis.Execution.CorrelationId
+  event: Cratis.Chronicle.EventSequences.EventToAppend
+  idempotencyKey: Cratis.Chronicle.Concepts.EventSequences.IdempotencyKey
+  index: long
+json Cratis.Chronicle.Imports.ImportEventsRequest
+  importId: Cratis.Chronicle.Concepts.Imports.ImportId
+json Cratis.Chronicle.Imports.ImportEventsStepState
+  attempt: int
+  id: Cratis.Choreography.Jobs.JobStepIdentifier
+  importId: Cratis.Chronicle.Concepts.Imports.ImportId
+  isPrepared: bool
+  lease: Cratis.Choreography.Storage.Jobs.JobStepLease
+  name: Cratis.Choreography.Jobs.JobStepName
+  progress: Cratis.Choreography.Jobs.JobStepProgress
+  stage: Cratis.Choreography.Jobs.Stages.JobStepStage
+  status: Cratis.Choreography.Jobs.JobStepStatus
+  statusChanges: System.Collections.Generic.IList<Cratis.Choreography.Jobs.JobStepStatusChanged>
+  type: Cratis.Choreography.Jobs.JobStepType
+json Cratis.Chronicle.Imports.ImportOperationResult
+  error: string
+  isSuccess: bool
+  record: Cratis.Chronicle.Storage.Imports.ImportRecord
 json Cratis.Chronicle.Observation.Alerts.ObserverAlertReceipt
   lifecycleId: System.Guid
   outcome: Cratis.Chronicle.Observation.Alerts.ObserverAlertReconciliation
@@ -1321,6 +1402,10 @@ json Cratis.Chronicle.Seeding.SeedingEntry
   tags: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.Tag>
 json Cratis.Chronicle.Seeding.SeedingResult
   allEntriesSeeded: bool
+json Cratis.Chronicle.Sequences.Causation
+  occurred: System.DateTimeOffset
+  properties: System.Collections.Generic.IDictionary<string,string>
+  type: string
 json Cratis.Chronicle.Sequences.ConcurrencyScope
   eventSourceId: bool
   eventSourceType: string
@@ -1334,10 +1419,51 @@ json Cratis.Chronicle.Sequences.EventType
   generation: uint
   id: string
   tombstone: bool
+json Cratis.Chronicle.Sequences.Identity
+  name: string
+  onBehalfOf: Cratis.Chronicle.Sequences.Identity
+  subject: string
+  userName: string
+json Cratis.Chronicle.Sequences.NamedTag
+  name: string
+  value: string
 enum Cratis.Chronicle.Sequences.ReopenStreamScopeError : int
   ClosedByEvent = 2
   None = 0
   NotCompleted = 1
+json Cratis.Chronicle.Storage.Imports.ImportChunkSummary
+  chunkIndex: int
+  eventsReceived: int
+  eventsRejected: int
+  eventsStaged: int
+  firstEventIndex: long
+json Cratis.Chronicle.Storage.Imports.ImportCommittedRange
+  chunkIndex: int
+  first: ulong
+  last: ulong
+json Cratis.Chronicle.Storage.Imports.ImportRecord
+  alreadyAppended: long
+  commitStartedAt: ulong?
+  committedRanges: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Storage.Imports.ImportCommittedRange>
+  created: System.DateTimeOffset
+  eventSequenceId: Cratis.Chronicle.Concepts.EventSequences.EventSequenceId
+  eventTypes: System.Collections.Generic.IEnumerable<string>
+  eventsCommitted: long
+  eventsStaged: long
+  expectedChunks: int
+  expectedEvents: long
+  failureReason: string
+  id: Cratis.Chronicle.Concepts.Imports.ImportId
+  lastActivity: System.DateTimeOffset
+  lastCommittedChunk: int
+  onInvalid: Cratis.Chronicle.Concepts.Imports.OnInvalidEvent
+  rejectedCount: long
+  rejections: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Storage.Imports.ImportRejection>
+  state: Cratis.Chronicle.Concepts.Imports.ImportState
+json Cratis.Chronicle.Storage.Imports.ImportRejection
+  eventType: string
+  index: long
+  reasons: System.Collections.Generic.IEnumerable<string>
 concept Cratis.Chronicle.Storage.Observation.ClaimEpoch : ulong
 enum Cratis.Chronicle.Storage.Observation.ClaimHolderKind : int
   FailureRecovery = 3

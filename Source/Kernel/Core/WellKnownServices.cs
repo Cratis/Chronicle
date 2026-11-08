@@ -138,4 +138,9 @@ public static class WellKnownServices
     /// The name of the EventSources service, holding the registered event source definitions.
     /// </summary>
     public const string EventSources = "EventSources";
+
+    /// <summary>
+    /// The name of the Imports service, holding bulk event import sessions.
+    /// </summary>
+    public const string Imports = "Imports";
 }

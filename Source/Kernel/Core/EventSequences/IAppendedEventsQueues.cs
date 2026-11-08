@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
+using Orleans.CodeGeneration;
 using Orleans.Concurrency;
 
 namespace Cratis.Chronicle.EventSequences;
@@ -10,6 +11,7 @@ namespace Cratis.Chronicle.EventSequences;
 /// <summary>
 /// Defines the system that manages the queues for appended events.
 /// </summary>
+[Version(1)]
 public interface IAppendedEventsQueues : IGrainWithStringKey
 {
     /// <summary>
@@ -74,4 +76,24 @@ public interface IAppendedEventsQueues : IGrainWithStringKey
     /// observer that believes it is subscribed uses this to tell "still being delivered to" from "silently dropped".
     /// </remarks>
     Task<bool> IsSubscribed(ObserverKey observerKey);
+
+    /// <summary>
+    /// Holds observers back from live delivery of the given event types until the hold is released.
+    /// </summary>
+    /// <param name="holdId">The identity of the hold; holding again under the same identity is harmless.</param>
+    /// <param name="eventTypes">The event types the hold covers.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// Used by an import commit (decision 0023): its events are not delivered live, so every subscription that could
+    /// see them leaves live delivery, keeping its cursor where it is, instead of being carried past them by an ordinary
+    /// append that interleaves with the import. An observer that subscribes while the hold stands is held too.
+    /// </remarks>
+    Task HoldBack(string holdId, IEnumerable<EventTypeId> eventTypes);
+
+    /// <summary>
+    /// Releases a hold and starts one catch-up for each observer it no longer holds back.
+    /// </summary>
+    /// <param name="holdId">The identity of the hold.</param>
+    /// <returns>Awaitable task.</returns>
+    Task ReleaseHold(string holdId);
 }
