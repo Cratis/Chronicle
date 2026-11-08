@@ -36,6 +36,10 @@ the same way (`compliance.encryption.migrateFromDefaultStorage` becomes
 | Cratis__Chronicle__Telemetry__GrpcClientTracing | Enable kernel gRPC client tracing (default `false`); see [OpenTelemetry trace volume defaults](open-telemetry.md#trace-volume-defaults) |
 | Cratis__Chronicle__Health__Port | Dedicated HTTP/1.1 port for the health endpoint |
 | Cratis__Chronicle__Health__Tls | Whether the dedicated health port uses TLS (default `true`) |
+| Cratis__Chronicle__Federation__Enabled | Opens the dedicated federation listener and runs consumer bindings (default `false`); see [Federation](federation.md) |
+| Cratis__Chronicle__Federation__Port | Port of the federation listener (default `35100`) |
+| Cratis__Chronicle__Federation__CertificatePath | PKCS#12 certificate of the federation listener |
+| Cratis__Chronicle__Federation__CertificatePasswordPath | File holding the federation certificate password |
 | Cratis__Chronicle__Features__Api | Enable REST API endpoint |
 | Cratis__Chronicle__Features__Workbench | Enable Workbench UI |
 | Cratis__Chronicle__Features__ChangesetStorage | Enable changeset storage |

@@ -18,7 +18,12 @@ public static class FederationPortPolicy
     /// <summary>
     /// The path prefix of the federation service.
     /// </summary>
-    public const string ServicePathPrefix = "/Cratis.Chronicle.Contracts.Federation.";
+    public const string ServicePathPrefix = "/Cratis.Chronicle.Contracts.Federation.FederationPull/";
+
+    /// <summary>
+    /// The route Arc exposes the pull query on over HTTP. It is never served on any port.
+    /// </summary>
+    public const string HttpRoute = "/api/federation/pull";
 
     /// <summary>
     /// Determines whether a request must be rejected.
@@ -31,11 +36,33 @@ public static class FederationPortPolicy
     {
         ArgumentNullException.ThrowIfNull(options);
 
-        if (!options.Federation.Enabled || localPort != options.Federation.Port)
+        // Routing matches paths case-insensitively, so this must too, or a differently-cased path would slip past.
+        var servesPull = path?.StartsWith(ServicePathPrefix, StringComparison.OrdinalIgnoreCase) == true;
+        var isPull = servesPull || IsHttpRoute(path);
+        var onFederationPort = IsFederationPort(options, localPort);
+
+        // The pull service is anonymous with respect to OAuth because a peer authenticates with its client certificate,
+        // so it may only ever be reached through the federation listener, and never over the HTTP route.
+        if (isPull)
         {
-            return false;
+            return !(servesPull && onFederationPort);
         }
 
-        return path?.StartsWith(ServicePathPrefix, StringComparison.Ordinal) != true;
+        return onFederationPort;
     }
+
+    /// <summary>
+    /// Determines whether a connection was accepted by the federation listener, where a client certificate is mandatory.
+    /// </summary>
+    /// <param name="options">The <see cref="ChronicleOptions"/> in effect.</param>
+    /// <param name="localPort">The local port the connection was accepted on.</param>
+    /// <returns>True when the connection is on the federation listener.</returns>
+    public static bool IsFederationPort(ChronicleOptions options, int localPort)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        return options.Federation.Enabled && localPort == options.Federation.Port;
+    }
+
+    static bool IsHttpRoute(string? path) =>
+        path?.TrimEnd('/').Equals(HttpRoute, StringComparison.OrdinalIgnoreCase) == true;
 }

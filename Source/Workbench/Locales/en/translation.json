@@ -96,6 +96,7 @@
             "applications": "Applications",
             "connectedClients": "Connected Clients",
             "servers": "Servers",
+            "federation": "Federation",
             "developmentTools": "Development Tools"
         },
         "dashboard": "Dashboard"
@@ -1155,5 +1156,98 @@
         "causedByCommand": "Caused by",
         "lessActive": "Less active",
         "moreActive": "More active"
+    },
+    "federation": {
+        "title": "Federation",
+        "refresh": "Refresh",
+        "bindings": {
+            "tab": "Consumer bindings",
+            "title": "Consumer bindings (inbound)",
+            "direction": "Inbound: this kernel pulls events from the peers listed here.",
+            "empty": "No consumer bindings",
+            "actions": {
+                "add": "Add binding",
+                "edit": "Edit binding",
+                "remove": "Remove binding"
+            },
+            "remove": {
+                "title": "Remove binding",
+                "message": "Remove the binding '{id}'? This kernel stops pulling from that peer."
+            },
+            "columns": {
+                "id": "Binding",
+                "logicalSource": "Logical source",
+                "endpoint": "Endpoint",
+                "remote": "Remote store / namespace",
+                "local": "Local store / namespace",
+                "origin": "Origin",
+                "state": "State",
+                "lag": "Lag (consumed / remote tail)",
+                "lastDelivery": "Last delivery",
+                "lastError": "Last error"
+            },
+            "dialog": {
+                "addTitle": "Add consumer binding",
+                "editTitle": "Edit consumer binding",
+                "direction": "Inbound: this kernel pulls events from the peer.",
+                "id": "Binding id",
+                "logicalSource": "Logical source",
+                "endpoint": "Peer endpoint (https)",
+                "endpointInvalid": "The endpoint must be an absolute https URL.",
+                "serverPin": "Server certificate pin",
+                "pinInvalid": "A pin is 'sha256:' followed by a 44-character base64 digest.",
+                "clientCertificate": "Client certificate name",
+                "clientCertificateHelp": "The name of a certificate configured on this kernel, never the certificate or its secret.",
+                "remoteEventStore": "Remote event store",
+                "remoteNamespace": "Remote namespace",
+                "targetEventStore": "Local event store",
+                "targetNamespace": "Local namespace"
+            }
+        },
+        "grants": {
+            "tab": "Producer grants",
+            "title": "Producer grants (outbound)",
+            "direction": "Outbound: the peers listed here pull events from this kernel.",
+            "empty": "No producer grants",
+            "allPublic": "All public event types",
+            "activeState": "Active",
+            "revokedState": "Revoked",
+            "actions": {
+                "add": "Add grant",
+                "edit": "Edit grant",
+                "revoke": "Revoke",
+                "reinstate": "Reinstate"
+            },
+            "revoke": {
+                "title": "Revoke link",
+                "message": "Revoke '{id}'? The peer stops receiving events until the grant is reinstated."
+            },
+            "columns": {
+                "id": "Link",
+                "clientPin": "Client pin",
+                "eventStore": "Event store",
+                "namespaces": "Namespaces",
+                "scope": "Scope",
+                "state": "State",
+                "origin": "Origin",
+                "lastPull": "Last pull",
+                "eventsDelivered": "Events delivered",
+                "bytesDelivered": "Delivered",
+                "throttled": "Throttled"
+            },
+            "dialog": {
+                "addTitle": "Add producer grant",
+                "editTitle": "Edit producer grant",
+                "direction": "Outbound: the peer pulls events from this kernel.",
+                "id": "Link id",
+                "clientPin": "Client certificate pin",
+                "pinInvalid": "A pin is 'sha256:' followed by a 44-character base64 digest.",
+                "eventStore": "Event store",
+                "namespaces": "Namespaces",
+                "allPublic": "All public event types",
+                "eventTypes": "Event types",
+                "listHelp": "Separate entries with commas."
+            }
+        }
     }
 }

@@ -35,6 +35,7 @@ import { SequenceEventDetails } from './Namespaces/Sequences/SequenceEventDetail
 import { useRelativePath } from '../../Utils/useRelativePath';
 import { Users } from './System/Users/Users';
 import { Applications } from './System/Applications/Applications';
+import { Federation } from './System/Federation/Federation';
 import { ConnectedClients } from './System/ConnectedClients/ConnectedClients';
 import { Servers } from './System/Servers/Servers';
 import { DevelopmentTools } from './System/DevelopmentTools/DevelopmentTools';
@@ -97,6 +98,7 @@ export const EventStore = () => {
                 { label: strings.mainMenu.system.applications, url: 'applications', icon: mdIcons.MdSecurity },
                 { label: strings.mainMenu.system.connectedClients, url: 'connected-clients', icon: mdIcons.MdDevices },
                 { label: strings.mainMenu.system.servers, url: 'servers', icon: mdIcons.MdDns },
+                { label: strings.mainMenu.system.federation, url: 'federation', icon: mdIcons.MdSyncAlt },
                 ...(areDevelopmentToolsAvailable
                     ? [{ label: strings.mainMenu.system.developmentTools, url: 'development-tools', icon: mdIcons.MdConstruction }]
                     : [])
@@ -131,6 +133,7 @@ export const EventStore = () => {
                 <Route path={'applications'} element={<Applications />} />
                 <Route path={'connected-clients'} element={<ConnectedClients />} />
                 <Route path={'servers'} element={<Servers />} />
+                <Route path={'federation'} element={<Federation />} />
                 <Route path={'development-tools'} element={<DevelopmentTools />} />
 
                 <Route path={':namespace'}>

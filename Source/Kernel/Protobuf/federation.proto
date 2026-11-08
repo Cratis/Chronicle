@@ -1,0 +1,148 @@
+syntax = "proto3";
+package Cratis.Chronicle.Contracts.Federation;
+import "google/protobuf/empty.proto";
+import "protobuf-net/bcl.proto"; // schema for protobuf-net's handling of core .NET types
+
+message BindFederationPeerRequest {
+   string Id = 1;
+   string LogicalSource = 2;
+   string Endpoint = 3;
+   string ServerPin = 4;
+   string ClientCertificate = 5;
+   string RemoteEventStore = 6;
+   string RemoteNamespace = 7;
+   string TargetEventStore = 8;
+   string TargetNamespace = 9;
+}
+message CommandResult {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2;
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   string AuthorizationFailureReason = 6;
+}
+message FederatedEvent {
+   uint64 SequenceNumber = 1;
+   string EventType = 2;
+   uint32 Generation = 3;
+   string EventSourceType = 4;
+   string EventSourceId = 5;
+   string EventStreamType = 6;
+   string EventStreamId = 7;
+   SerializableDateTimeOffset Occurred = 8;
+   string CorrelationId = 9;
+   string Subject = 10;
+   string Content = 11;
+   repeated string Tags = 12;
+}
+message FederatedEventBatchResponse {
+   string Status = 1;
+   string OriginEventStore = 2;
+   repeated FederatedEvent Events = 3;
+   uint64 NextSequenceNumber = 4;
+   uint64 TailSequenceNumber = 5;
+}
+message FederationBindingResponse {
+   string Id = 1;
+   string LogicalSource = 2;
+   string Endpoint = 3;
+   string ServerPin = 4;
+   string ClientCertificate = 5;
+   string RemoteEventStore = 6;
+   string RemoteNamespace = 7;
+   string TargetEventStore = 8;
+   string TargetNamespace = 9;
+   string Origin = 10;
+   string State = 11;
+   uint64 LastSourceSequenceNumber = 12;
+   uint64 RemoteTailSequenceNumber = 13;
+   uint64 Lag = 14;
+   SerializableDateTimeOffset LastDelivery = 15;
+   string LastError = 16;
+}
+message FederationGrantInformationResponse {
+   string Id = 1;
+   string ClientPin = 2;
+   string EventStore = 3;
+   repeated string Namespaces = 4;
+   bool AllPublic = 5;
+   repeated string EventTypes = 6;
+   bool Revoked = 7;
+   string Origin = 8;
+   SerializableDateTimeOffset LastPull = 9;
+   uint64 EventsDelivered = 10;
+   uint64 BytesDelivered = 11;
+   uint64 Throttled = 12;
+}
+message PullRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+   uint64 FromSequenceNumber = 3;
+   int32 Limit = 4;
+   repeated string EventTypes = 5;
+}
+message QueryResult_FederatedEventBatchResponse {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2;
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   FederatedEventBatchResponse Data = 6;
+}
+message QueryResult_IEnumerable_FederationBindingResponse {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2;
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   repeated FederationBindingResponse Data = 6;
+}
+message QueryResult_IEnumerable_FederationGrantInformationResponse {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2;
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   repeated FederationGrantInformationResponse Data = 6;
+}
+message RevokeFederationLinkRequest {
+   string Id = 1;
+}
+// Represents a DateTimeOffset value as an ISO 8601 string (e.g., "2024-01-15T12:30:00.0000000+02:00").
+message SerializableDateTimeOffset {
+   string Value = 1;
+}
+message SetFederationGrantRequest {
+   string Id = 1;
+   string ClientPin = 2;
+   string EventStore = 3;
+   repeated string Namespaces = 4;
+   bool AllPublic = 5;
+   repeated string EventTypes = 6;
+}
+message UnbindFederationPeerRequest {
+   string Id = 1;
+}
+message ValidationResult {
+   ValidationResultSeverity Severity = 1; // default value could not be applied: Error
+   string Message = 2;
+   repeated string Members = 3;
+}
+enum ValidationResultSeverity {
+   Unknown = 0;
+   Information = 1;
+   Warning = 2;
+   Error = 3;
+}
+service Federation {
+   rpc AllBindings (.google.protobuf.Empty) returns (QueryResult_IEnumerable_FederationBindingResponse);
+   rpc AllGrants (.google.protobuf.Empty) returns (QueryResult_IEnumerable_FederationGrantInformationResponse);
+   rpc BindFederationPeer (BindFederationPeerRequest) returns (CommandResult);
+   rpc RevokeFederationLink (RevokeFederationLinkRequest) returns (CommandResult);
+   rpc SetFederationGrant (SetFederationGrantRequest) returns (CommandResult);
+   rpc UnbindFederationPeer (UnbindFederationPeerRequest) returns (CommandResult);
+}
+service FederationPull {
+   rpc Pull (PullRequest) returns (QueryResult_FederatedEventBatchResponse);
+}

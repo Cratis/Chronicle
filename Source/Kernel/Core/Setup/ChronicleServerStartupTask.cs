@@ -47,6 +47,7 @@ namespace Orleans.Hosting;
 /// <param name="timeProvider">Optional <see cref="TimeProvider"/> the retry backoff waits on; defaults to <see cref="TimeProvider.System"/>.</param>
 /// <param name="generationFloorAdmission">Optional read-only generation admission; defaults to the real storage-backed admission.</param>
 /// <param name="storeEntitlementsCache">The local silo's entitlement snapshot cache.</param>
+/// <param name="federationRegistry">Optional federation registry whose configured bindings and grants are bootstrapped at startup.</param>
 /// <remarks>
 /// Every step in <see cref="Execute"/> is a grain call that can land on a sibling silo, and every
 /// silo runs this task as it starts. A sibling that has not stabilized yet answers none of them, and
@@ -81,7 +82,8 @@ internal sealed class ChronicleServerStartupTask(
     ILogger<ChronicleServerStartupTask> logger,
     TimeProvider? timeProvider = null,
     IGenerationFloorAdmission? generationFloorAdmission = null,
-    Cratis.Chronicle.Security.IStoreEntitlementsCache? storeEntitlementsCache = null) : ILifecycleParticipant<ISiloLifecycle>
+    Cratis.Chronicle.Security.IStoreEntitlementsCache? storeEntitlementsCache = null,
+    Cratis.Chronicle.Federation.IFederationRegistry? federationRegistry = null) : ILifecycleParticipant<ISiloLifecycle>
 {
     /// <summary>
     /// How many times a step is attempted before its failure is believed.
@@ -245,6 +247,11 @@ internal sealed class ChronicleServerStartupTask(
         }
 
         await EnsureAdministrator(cancellationToken);
+        if (federationRegistry is not null)
+        {
+            await Step(nameof(Cratis.Chronicle.Federation.IFederationRegistry.BootstrapFromConfiguration), federationRegistry.BootstrapFromConfiguration);
+        }
+
         await Step(nameof(IAuthenticationService.EnsureBootstrapClients), authenticationService.EnsureBootstrapClients);
 #if DEVELOPMENT
         await Step(nameof(IAuthenticationService.EnsureDefaultClientCredentials), authenticationService.EnsureDefaultClientCredentials);

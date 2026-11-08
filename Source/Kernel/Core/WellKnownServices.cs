@@ -138,4 +138,14 @@ public static class WellKnownServices
     /// The name of the EventSources service, holding the registered event source definitions.
     /// </summary>
     public const string EventSources = "EventSources";
+
+    /// <summary>
+    /// The administrative federation service: peer bindings, producer grants and link state.
+    /// </summary>
+    public const string Federation = "Federation";
+
+    /// <summary>
+    /// The narrow service served on the dedicated federation listener that peers pull events from.
+    /// </summary>
+    public const string FederationPull = "FederationPull";
 }

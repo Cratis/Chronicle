@@ -195,6 +195,12 @@ class [GrainType("reindexconstraints")] Cratis.Chronicle.Events.Constraints.Rein
 
 class [GrainType("reindexconstraintsstep")] Cratis.Chronicle.Events.Constraints.ReindexConstraintsStep
 
+class [GrainType("federationconsumer")] Cratis.Chronicle.Federation.FederationConsumer
+
+interface [GrainInterfaceType("Cratis.Chronicle.Federation.IFederationConsumer")] Cratis.Chronicle.Federation.IFederationConsumer [Version(1)]
+  4939B1CE: Ensure() -> Task
+  5067D72A: Stop() -> Task
+
 class [GrainType("generationinitializer")] Cratis.Chronicle.Generations.Enablement.GenerationInitializer
 
 interface [GrainInterfaceType("Cratis.Chronicle.Generations.Enablement.IGenerationInitializer")] Cratis.Chronicle.Generations.Enablement.IGenerationInitializer [Version(0)]
