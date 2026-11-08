@@ -70,6 +70,14 @@ internal sealed partial class FencedAzureKeyVaultEncryptionKeyStorage(
 
     static bool IsLatest(EncryptionKeyRevision? revision) => revision is null || revision == EncryptionKeyRevision.Latest;
 
+    static bool IsLegacyVersion(SecretProperties properties) => !properties.Tags.ContainsKey(StagedLifecycleTag);
+
+    static EncryptionKeyUnavailable LegacyVersionUnavailable()
+    {
+        EncryptionKeyUpgradeMetrics.Unavailable();
+        return new();
+    }
+
     async Task<EncryptionKeyAtRevision> StageAndPublish(Address address, EncryptionKey key, EncryptionKeyRevision? revision, bool provision)
     {
         var observed = await ReadState(address);
@@ -171,22 +179,33 @@ internal sealed partial class FencedAzureKeyVaultEncryptionKeyStorage(
     {
         var latest = await TryRead(name);
         if (latest is null) return null;
-        if (!latest.Properties.Tags.ContainsKey(StagedLifecycleTag)) return await legacy.ReadKey(name);
         var versions = new List<SecretProperties>();
         await foreach (var properties in client.GetPropertiesOfSecretVersionsAsync(name))
         {
-            if (!properties.Tags.ContainsKey(StagedLifecycleTag)) versions.Add(properties);
+            if (IsLegacyVersion(properties)) versions.Add(properties);
         }
 
-        if (versions.Exists(_ => _.Enabled == false)) throw new EncryptionKeyUnavailable();
-        var previous = versions.OrderByDescending(_ => _.CreatedOn).ThenByDescending(_ => _.Version, StringComparer.Ordinal).FirstOrDefault();
-        if (previous is null) return null;
-        if (ProvisioningCandidateElection.IsCandidate(previous))
+        if (versions.Exists(_ => _.Enabled == false)) throw LegacyVersionUnavailable();
+        if (!IsLegacyVersion(latest.Properties))
         {
-            return await new ProvisioningCandidateElection(client, TimeProvider.System, LegacyAzureKeyVaultEncryptionKeyStorage.Deserialize).Elect(name);
+            var previous = versions.OrderByDescending(_ => _.CreatedOn).ThenByDescending(_ => _.Version, StringComparer.Ordinal).FirstOrDefault();
+            latest = previous is null ? null : await TryRead(name, previous.Version);
         }
 
-        return LegacyAzureKeyVaultEncryptionKeyStorage.Deserialize((await client.GetSecretAsync(name, previous.Version)).Value.Value);
+        return latest is null ? null : await ReadInspectedLegacyVersion(latest);
+    }
+
+    async Task<EncryptionKey?> ReadInspectedLegacyVersion(KeyVaultSecret secret)
+    {
+        if (!IsLegacyVersion(secret.Properties)) return null;
+        if (secret.Properties.Enabled == false) throw LegacyVersionUnavailable();
+        if (ProvisioningCandidateElection.IsCandidate(secret.Properties))
+        {
+            return await new ProvisioningCandidateElection(client, TimeProvider.System, LegacyAzureKeyVaultEncryptionKeyStorage.Deserialize, IsLegacyVersion).Elect(secret.Name);
+        }
+
+        // Keep the value whose tags were inspected. An unversioned reread could observe an unpublished stage.
+        return LegacyAzureKeyVaultEncryptionKeyStorage.Deserialize(secret.Value);
     }
 
     async Task<EncryptionKeyRevision> NextRevision(Address address, EncryptionKeyFenceState state)

@@ -17,6 +17,7 @@ public class VersionedSecretClient : SecretClient
 
     public Func<Task>? AfterStage { get; set; }
     public Func<Task>? BeforeStage { get; set; }
+    public Func<KeyVaultSecret, Task>? AfterUnversionedRead { get; set; }
     public bool FailLegacyWrites { get; set; }
     public bool FailPurge { get; set; }
     public List<(string Name, string Version)> Disabled { get; } = [];
@@ -49,11 +50,13 @@ public class VersionedSecretClient : SecretClient
         return Response.FromValue(Clone(stored), Substitute.For<Response>());
     }
 
-    public override Task<Response<KeyVaultSecret>> GetSecretAsync(string name, string? version = null, SecretContentType? outContentType = null, CancellationToken cancellationToken = default)
+    public override async Task<Response<KeyVaultSecret>> GetSecretAsync(string name, string? version = null, SecretContentType? outContentType = null, CancellationToken cancellationToken = default)
     {
         var secret = Find(name, version);
         if (secret.Properties.Enabled == false) throw new RequestFailedException(403, "Disabled");
-        return Task.FromResult(Response.FromValue(Clone(secret), Substitute.For<Response>()));
+        var inspected = Clone(secret);
+        if (version is null && AfterUnversionedRead is { } hook) await hook(inspected);
+        return Response.FromValue(inspected, Substitute.For<Response>());
     }
 
     public override Task<Response<SecretProperties>> UpdateSecretPropertiesAsync(SecretProperties properties, CancellationToken cancellationToken = default)
