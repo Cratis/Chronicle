@@ -5,13 +5,13 @@ using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage.Compliance;
 using Cratis.Chronicle.Storage.MongoDB;
-using Cratis.Chronicle.Storage.MongoDB.Sinks;
+using Cratis.Chronicle.Storage.MongoDB.EventSequences;
 using MongoDB.Driver;
 
 namespace Cratis.Compliance.MongoDB.for_EncryptionKeyStorage.when_getting_or_adding_with_revision;
 
-[Collection(MongoDBCollection.Name)]
-public class and_an_erasure_allowed_a_new_lifecycle(MongoDBFixture fixture) : Specification
+[Collection(ReplicaSetMongoDBCollection.Name)]
+public class and_an_erasure_allowed_a_new_lifecycle(ReplicaSetMongoDBFixture fixture) : Specification
 {
     IEncryptionKeyStorage _store;
     EncryptionKeyIdentifier _identifier = Guid.NewGuid().ToString();

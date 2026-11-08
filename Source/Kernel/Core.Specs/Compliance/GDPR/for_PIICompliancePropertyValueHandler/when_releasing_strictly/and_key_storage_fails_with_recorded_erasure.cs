@@ -18,10 +18,10 @@ public class and_key_storage_fails_with_recorded_erasure : given.a_property_hand
     {
         _value = JsonValue.Create(Convert.ToBase64String(new byte[256]));
         _encryption.IsEncrypted(Arg.Any<byte[]>()).Returns(true);
-        _keyStore.GetErasureFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, Identifier).Returns(new EncryptionKeyErasure(1, [], true));
+        _keyStore.GetErasureForRelease(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, Identifier).Returns(new EncryptionKeyErasure(1, [], true));
 
         // Even a cryptographic failure originating in key storage is not a ciphertext unwrap failure.
-        _keyStore.TryGetFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, Identifier).ThrowsAsync(new CryptographicException());
+        _keyStore.TryGetLatestFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, Identifier).ThrowsAsync(new CryptographicException());
     }
 
     async Task Because() => _error = await Catch.Exception(() => _handler.ReleaseStrict(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, Identifier, _value));

@@ -8,6 +8,9 @@ namespace Cratis.Chronicle.Configuration;
 /// </summary>
 public class Encryption
 {
+    /// <summary>Gets the grace allowed for a release already holding key material before erasure confirmation.</summary>
+    public TimeSpan RevocationGrace { get; init; } = TimeSpan.FromSeconds(5);
+
     /// <summary>
     /// Gets the optional storage configuration for encryption keys.
     /// When not configured, the general <see cref="Storage"/> is used as the default.

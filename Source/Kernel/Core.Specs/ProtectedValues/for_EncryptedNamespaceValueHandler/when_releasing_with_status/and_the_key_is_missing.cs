@@ -15,7 +15,7 @@ public class and_the_key_is_missing : given.a_property_handler
     {
         _value = JsonValue.Create(Convert.ToBase64String(new byte[256]));
         _encryption.IsEncrypted(Arg.Any<byte[]>()).Returns(true);
-        _keyStore.TryGetFor(EventStore, EventStoreNamespace, KeyIdentifier).Returns(Task.FromResult<EncryptionKey?>(null));
+        _keyStore.TryGetLatestFor(EventStore, EventStoreNamespace, KeyIdentifier).Returns(Task.FromResult<EncryptionKeyAtRevision?>(null));
         _keyStore.GetErasureFor(EventStore, EventStoreNamespace, KeyIdentifier).Returns(new EncryptionKeyErasure(1, [], false));
     }
 

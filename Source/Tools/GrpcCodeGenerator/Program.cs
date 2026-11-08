@@ -82,8 +82,9 @@ catch (Exception ex)
 
 var typeDiscovery = new TypeDiscovery(assembly);
 var serviceGroups = typeDiscovery.DiscoverServices();
+var wireContracts = new WireContractDiscovery(assembly).Discover();
 
-if (serviceGroups.Count == 0)
+if (serviceGroups.Count == 0 && wireContracts.Count == 0)
 {
     Console.WriteLine("No services found. Make sure commands and queries have [BelongsTo] attribute.");
     return;
@@ -98,6 +99,10 @@ var generated = new List<GeneratedService>();
 var hasError = false;
 
 SharedTypeRegistry.Configure(skipNamespaces, baseNamespace);
+foreach (var wireContract in wireContracts)
+{
+    SharedTypeRegistry.QualifiedNameFor(wireContract);
+}
 
 foreach (var (_, serviceDefinition) in serviceGroups)
 {

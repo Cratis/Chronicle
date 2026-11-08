@@ -11,7 +11,7 @@ public class and_the_listing_contains_the_system_store : given.a_pii_manager
 
     Task Because() => _manager.DeleteEncryptionKeyFor(Identifier);
 
-    [Fact] void should_erase_the_requested_store() => _keyStore.Received(1).DeleteFor(EventStore, EventStoreNamespace, Identifier);
-    [Fact] void should_never_fence_the_system_store() => _keyStore.DidNotReceive().RecordErasureFor(Arg.Is<EventStoreName>(store => store.Value.Equals("system", StringComparison.OrdinalIgnoreCase)), EventStoreNamespace, Identifier);
-    [Fact] void should_never_erase_the_system_store() => _keyStore.DidNotReceive().DeleteFor(Arg.Is<EventStoreName>(store => store.Value.Equals("system", StringComparison.OrdinalIgnoreCase)), EventStoreNamespace, Identifier);
+    [Fact] void should_erase_the_requested_store() => _keyStore.Received(1).DeleteThroughFor(EventStore, EventStoreNamespace, Identifier, Arg.Any<string>());
+    [Fact] void should_never_fence_the_system_store() => _keyStore.DidNotReceive().RecordErasureFor(Arg.Is<EventStoreName>(store => store.Value.Equals("system", StringComparison.OrdinalIgnoreCase)), EventStoreNamespace, Identifier, Arg.Any<Storage.Compliance.EncryptionKeyErasureRequest>());
+    [Fact] void should_never_erase_the_system_store() => _keyStore.DidNotReceive().DeleteThroughFor(Arg.Is<EventStoreName>(store => store.Value.Equals("system", StringComparison.OrdinalIgnoreCase)), EventStoreNamespace, Identifier, Arg.Any<string>());
 }

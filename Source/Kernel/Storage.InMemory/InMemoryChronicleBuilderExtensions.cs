@@ -48,7 +48,9 @@ public static class InMemoryChronicleBuilderExtensions
             services.AddSingleton<EventStoreStorages>();
             services.AddSingleton<ISystemStorage, SystemStorage>();
             services.AddSingleton<IClusterStorage, ClusterStorage>();
-            services.AddSingleton<IEncryptionKeyStorage, EncryptionKeyStorage>();
+            services.AddSingleton<EncryptionKeyStorage>();
+            services.AddSingleton<IEncryptionKeyStorage>(sp => sp.GetRequiredService<EncryptionKeyStorage>());
+            services.AddSingleton<IEncryptionKeyFence>(sp => sp.GetRequiredService<EncryptionKeyStorage>());
             services.AddSingleton<IStorage, Cratis.Chronicle.Storage.InMemory.Storage>();
             services.AddSingleton<IStorageErrorClassifier, InMemoryStorageErrorClassifier>();
             services.AddSingleton<IReservedEventSequenceIds, InMemoryReservedEventSequenceIds>();

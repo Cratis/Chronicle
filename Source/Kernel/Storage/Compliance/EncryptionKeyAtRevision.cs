@@ -10,4 +10,5 @@ namespace Cratis.Chronicle.Storage.Compliance;
 /// </summary>
 /// <param name="Key">The encryption key.</param>
 /// <param name="Revision">The revision holding the key.</param>
-public record EncryptionKeyAtRevision(EncryptionKey Key, EncryptionKeyRevision Revision);
+/// <param name="StagedLifecycle">The lifecycle observed before staging, or null for a pre-protocol row.</param>
+public record EncryptionKeyAtRevision(EncryptionKey Key, EncryptionKeyRevision Revision, uint? StagedLifecycle = null);

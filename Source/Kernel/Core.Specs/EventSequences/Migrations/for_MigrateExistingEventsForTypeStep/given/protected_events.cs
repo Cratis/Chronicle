@@ -53,11 +53,7 @@ public class protected_events : Specification
     async Task Establish()
     {
         _keys = new InMemoryEncryptionKeyStorage();
-        _keyAccess = Substitute.For<IEncryptionKeyStorage>();
-        _keyAccess.TryGetFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>(), Arg.Any<EncryptionKeyRevision?>())
-            .Returns(call => _keys.TryGetFor(call.ArgAt<EventStoreName>(0), call.ArgAt<EventStoreNamespaceName>(1), call.ArgAt<EncryptionKeyIdentifier>(2), call.ArgAt<EncryptionKeyRevision?>(3)));
-        _keyAccess.GetErasureFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>())
-            .Returns(call => _keys.GetErasureFor(call.ArgAt<EventStoreName>(0), call.ArgAt<EventStoreNamespaceName>(1), call.ArgAt<EncryptionKeyIdentifier>(2)));
+        ConfigureKeyAccess();
         var encryption = new Encryption();
         _manager = new JsonSchemaMetadataManager(
             new KnownInstancesOf<IJsonSchemaMetadataValueHandler>(new PIICompliancePropertyValueHandler(new ManagedEncryptionKeyProvisioner(_keys, encryption), _keyAccess, encryption)),
@@ -135,4 +131,15 @@ public class protected_events : Specification
         .GetMethod("PerformStep", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(_step, [_state, CancellationToken.None])!;
 
     protected JsonObject Target(ulong number) => _converter.ToJsonObject(_stored[number][2], _targetSchema);
+
+    void ConfigureKeyAccess()
+    {
+        _keyAccess = Substitute.For<IEncryptionKeyStorage>();
+        _keyAccess.TryGetFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>(), Arg.Any<EncryptionKeyRevision?>())
+            .Returns(call => _keys.TryGetFor(call.ArgAt<EventStoreName>(0), call.ArgAt<EventStoreNamespaceName>(1), call.ArgAt<EncryptionKeyIdentifier>(2), call.ArgAt<EncryptionKeyRevision?>(3)));
+        _keyAccess.TryGetLatestFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>())
+            .Returns(call => _keys.TryGetLatestFor(call.ArgAt<EventStoreName>(0), call.ArgAt<EventStoreNamespaceName>(1), call.ArgAt<EncryptionKeyIdentifier>(2)));
+        _keyAccess.GetErasureForRelease(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>())
+            .Returns(call => _keys.GetErasureForRelease(call.ArgAt<EventStoreName>(0), call.ArgAt<EventStoreNamespaceName>(1), call.ArgAt<EncryptionKeyIdentifier>(2)));
+    }
 }

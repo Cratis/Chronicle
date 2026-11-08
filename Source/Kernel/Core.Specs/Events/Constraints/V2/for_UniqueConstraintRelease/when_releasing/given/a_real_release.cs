@@ -4,6 +4,7 @@
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Compliance.GDPR;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Json;
@@ -25,13 +26,19 @@ public class a_real_release : a_factory
     protected JsonSchemaMetadataManager _manager;
     protected JsonSchema _ownSchema;
     protected JsonSchema _protectionSchema;
+    bool _materialMissing;
 
     void Establish()
     {
         var encryption = new Encryption();
         _keys = new();
         var provisioner = new ManagedEncryptionKeyProvisioner(_keys, encryption);
-        _manager = new(new KnownInstancesOf<IJsonSchemaMetadataValueHandler>(new PIICompliancePropertyValueHandler(provisioner, _keys, encryption)), NullLogger<JsonSchemaMetadataManager>.Instance);
+        var access = Substitute.For<IEncryptionKeyStorage>();
+        access.TryGetLatestFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>())
+            .Returns(call => _materialMissing ? Task.FromResult<EncryptionKeyAtRevision?>(null) : _keys.TryGetLatestFor(call.ArgAt<EventStoreName>(0), call.ArgAt<EventStoreNamespaceName>(1), call.ArgAt<EncryptionKeyIdentifier>(2)));
+        access.GetErasureForRelease(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>())
+            .Returns(call => _keys.GetErasureForRelease(call.ArgAt<EventStoreName>(0), call.ArgAt<EventStoreNamespaceName>(1), call.ArgAt<EncryptionKeyIdentifier>(2)));
+        _manager = new(new KnownInstancesOf<IJsonSchemaMetadataValueHandler>(new PIICompliancePropertyValueHandler(provisioner, access, encryption)), NullLogger<JsonSchemaMetadataManager>.Instance);
         _ownSchema = JsonSchema.FromJson("""{"type":"object","properties":{"name":{"type":"string"}}}""");
         _protectionSchema = JsonSchema.FromJson("""{"type":"object","properties":{"name":{"type":"string","compliance":[{"metadataType":"PII","details":""}]}}}""");
         _schemas.GetFor("event", 2).Returns(new EventTypeSchema(new("event", 2), EventTypeOwner.Server, EventTypeSource.Code, _ownSchema));
@@ -48,7 +55,11 @@ public class a_real_release : a_factory
 
     protected Task Erase() => EraseSubject(recordErasure: true);
 
-    protected Task DeleteKeyWithoutErasure() => EraseSubject(recordErasure: false);
+    protected Task DeleteKeyWithoutErasure()
+    {
+        _materialMissing = true;
+        return Task.CompletedTask;
+    }
 
     async Task EraseSubject(bool recordErasure)
     {

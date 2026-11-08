@@ -17,8 +17,8 @@ public class when_destructive_operations_are_not_enforced : given.a_compliance_b
         (await Operate(allowNew)).ShouldBeEmpty();
         foreach (var store in new[] { EventStore, OtherEventStore, ThirdEventStore })
         {
-            if (allowNew) await _keyStore.Received(1).AllowNewKeyFor(store, EventStoreNamespace, Identifier);
-            else await _keyStore.Received(1).DeleteFor(store, EventStoreNamespace, Identifier);
+            if (allowNew) await _keyStore.Received(1).AuthorizeConfirmedSuccessorFor(store, EventStoreNamespace, Identifier);
+            else await _keyStore.Received(1).DeleteThroughFor(store, EventStoreNamespace, Identifier, Arg.Any<string>());
         }
 
         _audit.Entries.ShouldEqual(1);
