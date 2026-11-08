@@ -70,6 +70,18 @@ public class Observers
     public int MaxEventsPerSubscriberCall { get; init; } = 100;
 
     /// <summary>
+    /// Gets the most bytes of event content handed to a client reactor or reducer that declared page delivery, in one
+    /// call, on every path. Zero or less leaves pages unbounded by size.
+    /// </summary>
+    /// <remarks>
+    /// An event's size is the UTF-8 length of its JSON content. A client may declare a smaller bound and is capped by
+    /// this one; a client that declares none gets this one. An event larger than the bound is still delivered, alone in
+    /// its page, so an oversize event never stalls its partition. <see cref="MaxEventsPerSubscriberCall"/> caps the
+    /// declared event count the same way. Defaults to 4 MiB.
+    /// </remarks>
+    public int MaxBytesPerSubscriberCall { get; init; } = 4 * 1024 * 1024;
+
+    /// <summary>
     /// Gets the timeout in seconds to wait for an event store subscription to become ready before returning to the client.
     /// </summary>
     /// <remarks>
