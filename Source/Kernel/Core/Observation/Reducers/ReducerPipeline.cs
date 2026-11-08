@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Json;
+using Cratis.Chronicle.Observation.Reducers.Clients;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
@@ -30,7 +31,7 @@ namespace Cratis.Chronicle.Observation.Reducers;
 /// <param name="guardWritesOnWatermark">Whether a write may be made conditional on advancing the read model's watermark.</param>
 /// <param name="expandoObjectConverter">The converter used to serialize committed state for watchers.</param>
 /// <param name="memoryGate">Optional <see cref="ReducerMemoryGate"/> that makes reduces of large states wait for room in the memory budget.</param>
-public class ReducerPipeline(
+public partial class ReducerPipeline(
     ReadModelDefinition readModel,
     ISink sink,
     IObjectComparer objectComparer,
@@ -67,30 +68,61 @@ public class ReducerPipeline(
     public async Task<ReadModelChangeNotification?> Reduce(ReducerContext context, ReducerDelegate reducer, bool createNotification = true)
     {
         using var memoryTicket = memoryGate is null ? ReducerMemoryTicket.None : await memoryGate.Enter(_memoryScope, context.Key);
-        var schema = ReadModel.GetTargetSchema();
         var storedInitial = await Sink.FindOrDefault(context.Key);
         if (memoryGate is not null)
         {
             await memoryGate.Observe(memoryTicket, _memoryScope, context.Key, storedInitial);
         }
 
-        var initial = storedInitial;
-        object? storedSubject = null;
+        var stored = await Release(storedInitial);
 
-        if (initial is not null)
-        {
-            ((IDictionary<string, object?>)initial).TryGetValue(WellKnownProperties.Subject, out storedSubject);
-            initial = await readModelsCompliance.Release(
-                eventStore,
-                eventStoreNamespace,
-                schema,
-                initial);
-        }
-
-        var result = await reducer(context.Events, initial);
+        var result = await reducer(context.Events, stored.Released);
 
         if (result.ObserverResult.State != ObserverSubscriberState.Ok) return null;
 
+        var (notification, failures) = await Write(context, stored, result, createNotification);
+        if (failures.Length > 0)
+        {
+            throw new ReducerSinkWriteFailed(failures);
+        }
+
+        return notification;
+    }
+
+    /// <summary>
+    /// Releases the state a partition's read model holds for the reducer.
+    /// </summary>
+    /// <param name="storedInitial">The state as the sink holds it, or null when there is none.</param>
+    /// <returns>The <see cref="StoredState"/> of the partition.</returns>
+    async Task<StoredState> Release(ExpandoObject? storedInitial)
+    {
+        if (storedInitial is null)
+        {
+            return new(null, null, null);
+        }
+
+        ((IDictionary<string, object?>)storedInitial).TryGetValue(WellKnownProperties.Subject, out var storedSubject);
+        var released = await readModelsCompliance.Release(
+            eventStore,
+            eventStoreNamespace,
+            ReadModel.GetTargetSchema(),
+            storedInitial);
+        return new(storedInitial, released, storedSubject);
+    }
+
+    /// <summary>
+    /// Writes the state the reducer returned for a partition.
+    /// </summary>
+    /// <param name="context">The <see cref="ReducerContext"/> of the partition.</param>
+    /// <param name="stored">The <see cref="StoredState"/> the partition was reduced from.</param>
+    /// <param name="result">The <see cref="ReducerSubscriberResult"/> the reducer returned.</param>
+    /// <param name="createNotification">Whether to build the notification of the change.</param>
+    /// <returns>The change to notify watchers of, if any, and the partitions the sink reported as failed.</returns>
+    async Task<(ReadModelChangeNotification? Notification, FailedPartition[] Failures)> Write(ReducerContext context, StoredState stored, ReducerSubscriberResult result, bool createNotification)
+    {
+        var schema = ReadModel.GetTargetSchema();
+        var storedInitial = stored.Stored;
+        var initial = stored.Released;
         var identifier = context.Events.First().Context.ResolveComplianceIdentifier(context.Key);
 
         // Sinks apply encrypted differences to the stored snapshot, not the released schema-only state.
@@ -126,9 +158,9 @@ public class ReducerPipeline(
                 {
                     ((IDictionary<string, object?>)initialForComparison)[name] = value;
                 }
-                if (storedSubject is not null)
+                if (stored.Subject is not null)
                 {
-                    ((IDictionary<string, object?>)initialForComparison)[WellKnownProperties.Subject] = storedSubject;
+                    ((IDictionary<string, object?>)initialForComparison)[WellKnownProperties.Subject] = stored.Subject;
                 }
             }
 
@@ -140,7 +172,7 @@ public class ReducerPipeline(
             }
         }
 
-        if (!changeset.HasChanges) return null;
+        if (!changeset.HasChanges) return (null, []);
 
         // A reducer read model is always keyed by event source id, so its per-document event stream is
         // monotonic and a redelivered batch can be recognized by the sequence number it carries. The batch
@@ -158,16 +190,14 @@ public class ReducerPipeline(
         var mode = guardWritesOnWatermark && initial is not null
             ? SinkWriteMode.OnlyWhenAdvancingWatermark
             : SinkWriteMode.Always;
-        var failedPartitions = await Sink.ApplyChanges(context.Key, changeset, context.Events.Last().Context.SequenceNumber, mode);
-
-        var failures = failedPartitions.ToArray();
+        var failures = (await Sink.ApplyChanges(context.Key, changeset, context.Events.Last().Context.SequenceNumber, mode)).ToArray();
         if (failures.Length > 0)
         {
-            throw new ReducerSinkWriteFailed(failures);
+            return (null, failures);
         }
 
         // The notification is a whole new copy of the state, so it is only built when something is watching.
-        return createNotification ? CreateNotification(context, result.ReadModelState, initial, storedState) : null;
+        return (createNotification ? CreateNotification(context, result.ReadModelState, initial, storedState) : null, []);
     }
 
     ReadModelChangeNotification CreateNotification(ReducerContext context, ExpandoObject? result, ExpandoObject? initial, ExpandoObject? storedState)
@@ -193,4 +223,12 @@ public class ReducerPipeline(
                 Subjects = subjects
             });
     }
+
+    /// <summary>
+    /// Represents the state a partition's read model holds when it is reduced.
+    /// </summary>
+    /// <param name="Stored">The state as the sink holds it, or null when there is none.</param>
+    /// <param name="Released">The state released for the reducer, or null when there is none.</param>
+    /// <param name="Subject">The subject the stored state carries, if any.</param>
+    sealed record StoredState(ExpandoObject? Stored, ExpandoObject? Released, object? Subject);
 }

@@ -191,6 +191,9 @@ public partial class Sink(
     public SinkTypeId TypeId => WellKnownSinkTypes.MongoDB;
 
     /// <inheritdoc/>
+    public bool IsInBulkMode => _isBulkMode;
+
+    /// <inheritdoc/>
     public void Dispose() => _bulkCancellation.Dispose();
 
     /// <summary>

@@ -402,6 +402,8 @@ interface [GrainInterfaceType("Cratis.Chronicle.Observation.Reducers.Clients.IRe
 
 interface [GrainInterfaceType("Cratis.Chronicle.Observation.Reducers.Clients.IReducerObserverSubscriber")] Cratis.Chronicle.Observation.Reducers.Clients.IReducerObserverSubscriber [Version(0)]
 
+interface [GrainInterfaceType("Cratis.Chronicle.Observation.Reducers.Clients.IReducerPageObserverSubscriber")] Cratis.Chronicle.Observation.Reducers.Clients.IReducerPageObserverSubscriber [Version(0)]
+
 interface [GrainInterfaceType("Cratis.Chronicle.Observation.Reducers.Clients.IReducersManager")] Cratis.Chronicle.Observation.Reducers.Clients.IReducersManager [Version(0)]
   0E9E79CB: Register(Cratis.Chronicle.Concepts.Clients.ConnectionId, System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Observation.Reducers.ReducerDefinition>) -> Task
 
