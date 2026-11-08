@@ -25,5 +25,5 @@ public class and_a_reserved_new_destination_is_used_again : given.a_sink
     [Fact] void should_fail_the_first_call() => _firstFailures.Count().ShouldEqual(1);
     [Fact] void should_fail_the_second_call() => _secondFailures.Count().ShouldEqual(1);
     [Fact] void should_not_append_anything() => _destinations.AppendAttempts.ShouldEqual(0);
-    [Fact] void should_check_storage_only_once() => _destinations.Storage.Received(1).GetEventStores();
+    [Fact] void should_not_consult_storage() => _destinations.Storage.DidNotReceive().GetEventStores();
 }

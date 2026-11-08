@@ -9,7 +9,7 @@ public class and_the_namespace_is_whitespace : given.a_reserved_name_check
 
     void Establish() => Reserve("observers");
 
-    async Task Because() => _result = await ReservedEventSequenceRules.MayBeWritten(_storage, _reservedEventSequenceIds, EventStore, " ", "observers");
+    void Because() => _result = ReservedEventSequenceRules.MayBeWritten(_reservedEventSequenceIds, EventStore, " ", "observers");
 
     [Fact] void should_leave_the_refusal_to_the_namespace_rule() => _result.ShouldBeTrue();
     [Fact] void should_not_call_storage() => _storage.ReceivedCalls().ShouldBeEmpty();

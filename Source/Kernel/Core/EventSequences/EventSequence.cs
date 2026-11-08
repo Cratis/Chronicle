@@ -130,7 +130,8 @@ public partial class EventSequence(
         _eventSequenceId = _eventSequenceKey.EventSequenceId;
         if (ReservedEventSequenceRules.MayBeReserved(reservedEventSequenceIds, _eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId))
         {
-            _mayWriteSequence = await ReservedEventSequenceRules.Exists(storage, _eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId);
+            _mayWriteSequence = false;
+            logger.RefusedReservedEventSequenceName(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId);
         }
         _metrics = meter.BeginEventSequenceScope(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, options.Value.Telemetry.MetricNames);
         if (!_mayWriteSequence)

@@ -39,7 +39,7 @@ namespace Cratis.Chronicle.Sinks;
 /// never rewritten and never removed. Removal of state cannot be expressed as a public fact and fails explicitly.
 /// </para>
 /// <para>
-/// A destination reserved by storage and not yet existing is refused once per sink instance.
+/// A destination reserved by storage is refused once per sink instance.
 /// </para>
 /// </remarks>
 /// <param name="eventStore">The <see cref="EventStoreName"/> the sink belongs to.</param>
@@ -274,9 +274,9 @@ public class EventSequenceSink(
         _ => new(VerifyDestination())
     };
 
-    async Task<bool> VerifyDestination()
+    bool VerifyDestination()
     {
-        var allowed = await ReservedEventSequenceRules.MayBeWritten(storage, reservedEventSequenceIds, eventStore.Value, @namespace.Value, configuration.Destination.Value);
+        var allowed = ReservedEventSequenceRules.MayBeWritten(reservedEventSequenceIds, eventStore.Value, @namespace.Value, configuration.Destination.Value);
         _destinationVerdict = allowed ? DestinationVerdict.Allowed : DestinationVerdict.Refused;
         return allowed;
     }

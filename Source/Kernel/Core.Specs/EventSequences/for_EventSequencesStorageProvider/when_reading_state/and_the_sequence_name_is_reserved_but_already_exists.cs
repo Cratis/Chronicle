@@ -23,7 +23,7 @@ public class and_the_sequence_name_is_reserved_but_already_exists : given.the_pr
 
     Task Because() => provider.ReadStateAsync("name", GrainId.Create("type", _key.ToString()), _state);
 
-    [Fact] void should_read_sequence_state() => eventSequenceStorage.Received(1).GetState();
-    [Fact] void should_read_the_tail() => eventSequenceStorage.Received(1).GetTailSequenceNumber();
+    [Fact] void should_not_read_sequence_state() => eventSequenceStorage.DidNotReceive().GetState();
+    [Fact] void should_not_read_the_tail() => eventSequenceStorage.DidNotReceive().GetTailSequenceNumber();
     [Fact] void should_leave_the_next_position_at_first() => _state.State.SequenceNumber.ShouldEqual(EventSequenceNumber.First);
 }
