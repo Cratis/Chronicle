@@ -13,16 +13,18 @@ namespace Cratis.Chronicle.Services.Federation;
 /// Represents the generated implementation of <see cref="global::Cratis.Chronicle.Contracts.Federation.IFederationPull"/>.
 /// </summary>
 internal sealed class FederationPull(
+    global::Cratis.Chronicle.Federation.IFederationPullService federationPullService,
     global::Microsoft.Extensions.Logging.ILogger<global::Cratis.Chronicle.Services.Federation.FederationPull> logger) : global::Cratis.Chronicle.Contracts.Federation.IFederationPull
 {
     /// <inheritdoc/>
+    [global::Microsoft.AspNetCore.Authorization.AllowAnonymous]
     public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<global::Cratis.Chronicle.Contracts.Federation.FederatedEventBatchResponse>> Pull(global::Cratis.Chronicle.Contracts.Federation.PullRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<global::Cratis.Chronicle.Contracts.Federation.FederatedEventBatchResponse>(
             callContext,
             new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: request.Namespace),
             async () =>
             {
-                var result = await global::Cratis.Chronicle.Federation.FederatedEventBatch.Pull(request.EventStore, request.Namespace, request.FromSequenceNumber, request.Limit, request.EventTypes);
+                var result = await global::Cratis.Chronicle.Federation.FederatedEventBatch.Pull(request.EventStore, request.Namespace, request.FromSequenceNumber, request.Limit, request.EventTypes, federationPullService);
                 return ToFederatedEventBatchResponse(result);
             },
             exception => logger.QueryFailed(exception, "FederationPull", "Pull"));
