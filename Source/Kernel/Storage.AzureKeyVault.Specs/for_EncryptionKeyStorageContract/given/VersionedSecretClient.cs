@@ -20,6 +20,7 @@ public class VersionedSecretClient : SecretClient
     public Func<KeyVaultSecret, Task>? AfterUnversionedRead { get; set; }
     public bool FailLegacyWrites { get; set; }
     public bool FailPurge { get; set; }
+    public bool VersionListingNotFound { get; set; }
     public List<(string Name, string Version)> Disabled { get; } = [];
     public List<string> Purged { get; } = [];
 
@@ -71,7 +72,7 @@ public class VersionedSecretClient : SecretClient
         Pages(_secrets.Values.Select(_ => Clone(_[^1]).Properties).ToArray());
 
     public override AsyncPageable<SecretProperties> GetPropertiesOfSecretVersionsAsync(string name, CancellationToken cancellationToken = default) =>
-        Pages(_secrets.TryGetValue(name, out var versions) ? versions.Select(_ => Clone(_).Properties).ToArray() : []);
+        VersionListingNotFound ? throw new RequestFailedException(404, "Missing") : Pages(_secrets.TryGetValue(name, out var versions) ? versions.Select(_ => Clone(_).Properties).ToArray() : []);
 
     public override AsyncPageable<DeletedSecret> GetDeletedSecretsAsync(CancellationToken cancellationToken = default) =>
         Pages(_deleted.Values.Select(_ => SecretModelFactory.DeletedSecret(Clone(_[^1]).Properties, _[^1].Value)).ToArray());

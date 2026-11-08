@@ -180,9 +180,17 @@ internal sealed partial class FencedAzureKeyVaultEncryptionKeyStorage(
         var latest = await TryRead(name);
         if (latest is null) return null;
         var versions = new List<SecretProperties>();
-        await foreach (var properties in client.GetPropertiesOfSecretVersionsAsync(name))
+        try
         {
-            if (IsLegacyVersion(properties)) versions.Add(properties);
+            await foreach (var properties in client.GetPropertiesOfSecretVersionsAsync(name))
+            {
+                if (IsLegacyVersion(properties)) versions.Add(properties);
+            }
+        }
+        catch (RequestFailedException exception) when (exception.Status == 404)
+        {
+            // The name may disappear between reading latest and enumerating versions during an erasure.
+            return null;
         }
 
         if (versions.Exists(_ => _.Enabled == false)) throw LegacyVersionUnavailable();
