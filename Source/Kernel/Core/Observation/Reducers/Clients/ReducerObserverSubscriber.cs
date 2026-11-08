@@ -78,7 +78,53 @@ public partial class ReducerObserverSubscriber(
     }
 
     /// <inheritdoc/>
-    public async Task<ObserverSubscriberResult> OnNext(Key partition, IEnumerable<AppendedEvent> events, ObserverSubscriberContext context)
+    public Task<ObserverSubscriberResult> OnNext(Key partition, IEnumerable<AppendedEvent> events, ObserverSubscriberContext context) =>
+        BoundedPageDelivery.Deliver(PageBoundsFor(context), events, page => DeliverPartition(partition, page, context));
+
+    /// <summary>
+    /// Reports only what the read model actually holds.
+    /// </summary>
+    /// <remarks>
+    /// A reducer folds a whole batch into one state, and the pipeline writes that state only for a successful result.
+    /// A failed result can still report a successful prefix of the batch as handled, but nothing of that prefix was
+    /// written. Passing it on would move the observer past events the read model never received, and recovery would
+    /// then start from the failing event on top of the stale state - losing the prefix's fold for good. Reporting no
+    /// events as handled makes the observer record the failure at the batch's first event, so every path that drives
+    /// this subscriber - live handling, catch-up, replay and retry - starts the batch over from the stored state.
+    /// </remarks>
+    /// <param name="result">The <see cref="ObserverSubscriberResult"/> the client reported.</param>
+    /// <param name="events">The events the client was asked to reduce.</param>
+    /// <returns>The <see cref="ObserverSubscriberResult"/> to report to the observer.</returns>
+    static ObserverSubscriberResult AsHandledByThePipeline(ObserverSubscriberResult result, IEnumerable<AppendedEvent> events) =>
+        result.State switch
+        {
+            ObserverSubscriberState.Failed => result with { LastSuccessfulObservation = EventSequenceNumber.Unavailable },
+
+            // A reducer writes no state for a deferred batch either, so the whole batch is delivered again.
+            ObserverSubscriberState.Deferred => (result with
+            {
+                LastSuccessfulObservation = EventSequenceNumber.Unavailable,
+                Deferral = result.Deferral is { } deferral ? deferral with { ResumeFrom = EventSequenceNumber.Unavailable } : null
+            }).ResumingDeferralWithin(events),
+            _ => result
+        };
+
+    /// <summary>
+    /// Gets the bounds of the pages the connection receives: the bounds the client declared, capped by the kernel's maximums.
+    /// </summary>
+    /// <remarks>
+    /// A partition split across pages is reduced page by page, each from the state the page before it wrote.
+    /// </remarks>
+    /// <param name="context">The <see cref="ObserverSubscriberContext"/> of the delivery.</param>
+    /// <returns>The <see cref="PageBounds"/>; unbounded for a client that did not declare page delivery.</returns>
+    PageBounds PageBoundsFor(ObserverSubscriberContext context) =>
+        context.Metadata is ConnectedClient connectedClient
+            ? PageBounds.For(
+                reducerMediator.GetPageDelivery(_key.ObserverId, connectedClient.ConnectionId, _key.EventStore, _key.Namespace),
+                options?.Value?.Observers ?? new Observers())
+            : PageBounds.Unbounded;
+
+    async Task<ObserverSubscriberResult> DeliverPartition(Key partition, IEnumerable<AppendedEvent> events, ObserverSubscriberContext context)
     {
         var deliveryWait = new ClientDeliveryWait(_clock, logger, _key, partition, _metrics);
         if (!await PrepareDelivery(deliveryWait, context))
@@ -125,34 +171,6 @@ public partial class ReducerObserverSubscriber(
             return await RecordSinkWriteFailures(partition, failed, tcs.Task);
         }
     }
-
-    /// <summary>
-    /// Reports only what the read model actually holds.
-    /// </summary>
-    /// <remarks>
-    /// A reducer folds a whole batch into one state, and the pipeline writes that state only for a successful result.
-    /// A failed result can still report a successful prefix of the batch as handled, but nothing of that prefix was
-    /// written. Passing it on would move the observer past events the read model never received, and recovery would
-    /// then start from the failing event on top of the stale state - losing the prefix's fold for good. Reporting no
-    /// events as handled makes the observer record the failure at the batch's first event, so every path that drives
-    /// this subscriber - live handling, catch-up, replay and retry - starts the batch over from the stored state.
-    /// </remarks>
-    /// <param name="result">The <see cref="ObserverSubscriberResult"/> the client reported.</param>
-    /// <param name="events">The events the client was asked to reduce.</param>
-    /// <returns>The <see cref="ObserverSubscriberResult"/> to report to the observer.</returns>
-    static ObserverSubscriberResult AsHandledByThePipeline(ObserverSubscriberResult result, IEnumerable<AppendedEvent> events) =>
-        result.State switch
-        {
-            ObserverSubscriberState.Failed => result with { LastSuccessfulObservation = EventSequenceNumber.Unavailable },
-
-            // A reducer writes no state for a deferred batch either, so the whole batch is delivered again.
-            ObserverSubscriberState.Deferred => (result with
-            {
-                LastSuccessfulObservation = EventSequenceNumber.Unavailable,
-                Deferral = result.Deferral is { } deferral ? deferral with { ResumeFrom = EventSequenceNumber.Unavailable } : null
-            }).ResumingDeferralWithin(events),
-            _ => result
-        };
 
     async Task<bool> IsWatched()
     {

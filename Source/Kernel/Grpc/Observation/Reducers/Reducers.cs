@@ -280,7 +280,8 @@ internal sealed class Reducers(
                                 registration.ConnectionId,
                                 registration.EventStore,
                                 registration.Namespace,
-                                deliverPage);
+                                deliverPage,
+                                registration.PageDelivery.ToChronicle());
                         }
 
                         reducerMediator.SubscribeReplayNotifications(

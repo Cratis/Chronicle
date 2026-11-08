@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Reducers;
 
 namespace Cratis.Chronicle.Observation.Reducers.Clients;
@@ -53,7 +54,18 @@ public interface IReducerMediator
     /// <param name="eventStore"><see cref="EventStoreName"/> to subscribe for.</param>
     /// <param name="namespace"><see cref="EventStoreNamespaceName"/> to subscribe for.</param>
     /// <param name="target"><see cref="ReducerPageObserver"/> delegate that will be called with pages.</param>
-    void SubscribePages(ReducerId reducerId, ConnectionId connectionId, EventStoreName eventStore, EventStoreNamespaceName @namespace, ReducerPageObserver target);
+    /// <param name="pageDelivery">The <see cref="PageDeliveryDefinition"/> bounds the client declared, if any.</param>
+    void SubscribePages(ReducerId reducerId, ConnectionId connectionId, EventStoreName eventStore, EventStoreNamespaceName @namespace, ReducerPageObserver target, PageDeliveryDefinition? pageDelivery = null);
+
+    /// <summary>
+    /// Gets the page bounds a connection declared when it subscribed to pages.
+    /// </summary>
+    /// <param name="reducerId"><see cref="ReducerId"/> to get for.</param>
+    /// <param name="connectionId"><see cref="ConnectionId"/> to get for.</param>
+    /// <param name="eventStore"><see cref="EventStoreName"/> to get for.</param>
+    /// <param name="namespace"><see cref="EventStoreNamespaceName"/> to get for.</param>
+    /// <returns>The <see cref="PageDeliveryDefinition"/>, or null when the connection does not receive pages.</returns>
+    PageDeliveryDefinition? GetPageDelivery(ReducerId reducerId, ConnectionId connectionId, EventStoreName eventStore, EventStoreNamespaceName @namespace);
 
     /// <summary>
     /// Notify that a page of partitions should be reduced.

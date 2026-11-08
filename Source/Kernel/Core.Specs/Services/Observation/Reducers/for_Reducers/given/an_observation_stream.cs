@@ -49,7 +49,7 @@ public class an_observation_stream : Specification
                 _deliver = call.Arg<ReducerEventsObserver>();
                 subscribed.TrySetResult();
             });
-        mediator.When(_ => _.SubscribePages(Arg.Any<ReducerId>(), Arg.Any<ConnectionId>(), Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<ReducerPageObserver>()))
+        mediator.When(_ => _.SubscribePages(Arg.Any<ReducerId>(), Arg.Any<ConnectionId>(), Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<ReducerPageObserver>(), Arg.Any<Concepts.Observation.PageDeliveryDefinition?>()))
             .Do(call =>
             {
                 _deliverPage = call.Arg<ReducerPageObserver>();

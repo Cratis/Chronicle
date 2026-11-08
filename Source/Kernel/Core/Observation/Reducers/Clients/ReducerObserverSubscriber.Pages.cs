@@ -14,7 +14,13 @@ namespace Cratis.Chronicle.Observation.Reducers.Clients;
 public partial class ReducerObserverSubscriber
 {
     /// <inheritdoc/>
-    public async Task<ObserverPageResult> OnNextPartitions(IReadOnlyList<ObserverPartitionBatch> batches, ObserverSubscriberContext context)
+    public Task<ObserverPageResult> OnNextPartitions(IReadOnlyList<ObserverPartitionBatch> batches, ObserverSubscriberContext context) =>
+        BoundedPageDelivery.Deliver(PageBoundsFor(context), batches, page => DeliverPartitions(page, context));
+
+    static ObserverPageResult Settled(IReadOnlyList<ObserverPartitionBatch> batches, ObserverSubscriberResult result) =>
+        new(batches.ToDictionary(_ => _.Partition, _ => result));
+
+    async Task<ObserverPageResult> DeliverPartitions(IReadOnlyList<ObserverPartitionBatch> batches, ObserverSubscriberContext context)
     {
         var deliveryWait = new ClientDeliveryWait(_clock, logger, _key, ObserverSubscriberKey.AllPartitions, _metrics);
         if (!await PrepareDelivery(deliveryWait, context))
@@ -58,9 +64,6 @@ public partial class ReducerObserverSubscriber
             return Settled(batches, ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, "Task was cancelled"));
         }
     }
-
-    static ObserverPageResult Settled(IReadOnlyList<ObserverPartitionBatch> batches, ObserverSubscriberResult result) =>
-        new(batches.ToDictionary(_ => _.Partition, _ => result));
 
     ReducerPageDelegate CreatePageReducerDelegate(ConnectedClient client, ObserverSubscriberContext context) =>
         async partitions =>

@@ -127,8 +127,11 @@ public class two_observation_streams_for_the_same_connection : Specification
             _subscribed[Interlocked.Increment(ref _subscribeCount) - 1].TrySetResult();
         }
 
-        public void SubscribePages(ReducerId reducerId, ConnectionId connectionId, EventStoreName eventStore, EventStoreNamespaceName @namespace, ReducerPageObserver target) =>
-            inner.SubscribePages(reducerId, connectionId, eventStore, @namespace, target);
+        public void SubscribePages(ReducerId reducerId, ConnectionId connectionId, EventStoreName eventStore, EventStoreNamespaceName @namespace, ReducerPageObserver target, Concepts.Observation.PageDeliveryDefinition? pageDelivery = null) =>
+            inner.SubscribePages(reducerId, connectionId, eventStore, @namespace, target, pageDelivery);
+
+        public Concepts.Observation.PageDeliveryDefinition? GetPageDelivery(ReducerId reducerId, ConnectionId connectionId, EventStoreName eventStore, EventStoreNamespaceName @namespace) =>
+            inner.GetPageDelivery(reducerId, connectionId, eventStore, @namespace);
 
         public void OnNextPage(ReducerId reducerId, ConnectionId connectionId, EventStoreName eventStore, EventStoreNamespaceName @namespace, IReadOnlyList<ReduceOperation> operations, IReadOnlyDictionary<Key, TaskCompletionSource<ReducerSubscriberResult>> completions) =>
             inner.OnNextPage(reducerId, connectionId, eventStore, @namespace, operations, completions);
