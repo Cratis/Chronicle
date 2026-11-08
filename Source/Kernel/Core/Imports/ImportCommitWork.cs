@@ -199,15 +199,17 @@ public class ImportCommitWork(
         for (var chunkIndex = record.LastCommittedChunk + 1; chunkIndex < record.ExpectedChunks; chunkIndex++)
         {
             // Chunk N is only attempted once chunk N-1 is recorded, so none of its events is below the last recorded
-            // range, and none of a slice's events is below what the slices before it were given. A search for events
-            // an interrupted call stored therefore starts there, never at the start of the commit.
+            // range, and a search for events an interrupted call stored starts there, never at the start of the commit.
+            // On a fresh chunk none of a slice's events is below what the slices before it were given, so the search
+            // moves past them. A resumed chunk may hold events an earlier attempt stored for later slices below what
+            // this attempt's first slices were given, so its search stays at the recorded range.
             var searchFrom = record.CommittedFrom is { } from ? new EventSequenceNumber(from) : EventSequenceNumber.First;
             var outcomes = new List<ImportEventOutcome>();
             foreach (var slice in await Slices(chunkIndex))
             {
                 var settled = (await CommitSlice(sequence, chunkIndex, searchFrom, resuming, slice, cancellationToken)).ToArray();
                 outcomes.AddRange(settled);
-                searchFrom = After(searchFrom, settled);
+                if (!resuming) searchFrom = After(searchFrom, settled);
             }
 
             resuming = false;
