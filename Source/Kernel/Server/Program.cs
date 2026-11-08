@@ -9,6 +9,7 @@ using Cratis.Chronicle.Clients;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Diagnostics;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry;
+using Cratis.Chronicle.Federation;
 using Cratis.Chronicle.Observation.Webhooks;
 using Cratis.Chronicle.Server;
 using Cratis.Chronicle.Server.Authentication;
@@ -179,11 +180,15 @@ var certificate = KernelCertificateSelection.Select(chronicleOptions, logger, de
 var listeners = new List<(int Port, HttpProtocols Protocols, X509Certificate2? Certificate)>();
 KernelListeners.Configure(chronicleOptions, certificate, logger, (port, protocols, listenerCertificate) =>
     listeners.Add((port, protocols, listenerCertificate)));
+var federationCertificate = FederationListener.LoadCertificate(chronicleOptions);
+var federationListeners = new List<(int Port, X509Certificate2 Certificate)>();
+FederationListener.Configure(chronicleOptions, federationCertificate, (port, listenerCertificate) =>
+    federationListeners.Add((port, listenerCertificate)));
 logger.ServerListening(chronicleOptions.Port);
 
 // Bind the listener ports before the host is built: building and starting it opens outgoing connections
 // (MongoDB among them), and one of those can be given a listener port as its ephemeral source port. (#5399)
-using var reservedListenSockets = ReservedListenSockets.Reserve(listeners.Select(_ => _.Port));
+using var reservedListenSockets = ReservedListenSockets.Reserve(listeners.Select(_ => _.Port).Concat(federationListeners.Select(_ => _.Port)));
 
 builder.Services.AddOptions<SocketTransportOptions>().Configure<IHostApplicationLifetime>((options, lifetime) =>
     options.CreateBoundListenSocket = endpoint => reservedListenSockets.Take(endpoint)
@@ -200,6 +205,26 @@ builder.WebHost.UseKestrel(options =>
             {
                 listenOptions.UseHttps(listener.Certificate);
             }
+        });
+    }
+
+    // The federation listener is HTTP/2 only, TLS 1.3 only, and demands a client certificate. Identity is decided by
+    // pin, never by chain, so the handshake accepts a presented certificate and the federation service authenticates it
+    // against the pinned links. No link exists yet, so nothing is served on this listener.
+    foreach (var federation in federationListeners)
+    {
+        options.ListenAnyIP(federation.Port, listenOptions =>
+        {
+            listenOptions.Protocols = HttpProtocols.Http2;
+            listenOptions.UseHttps(https =>
+            {
+                https.ServerCertificate = federation.Certificate;
+#pragma warning disable CA5398 // Federation deliberately accepts TLS 1.3 only (decision 0027), never what the OS happens to choose.
+                https.SslProtocols = System.Security.Authentication.SslProtocols.Tls13;
+#pragma warning restore CA5398
+                https.ClientCertificateMode = Microsoft.AspNetCore.Server.Kestrel.Https.ClientCertificateMode.RequireCertificate;
+                https.AllowAnyClientCertificate();
+            });
         });
     }
 
@@ -420,6 +445,18 @@ if (workbenchBasePath.Length > 0)
 app.Use(async (context, next) =>
 {
     if (HealthOnlyPortPolicy.ShouldReject(chronicleOptions, context.Connection.LocalPort, context.Request.Path.Value))
+    {
+        context.Response.StatusCode = StatusCodes.Status404NotFound;
+        return;
+    }
+
+    await next(context);
+});
+
+// The federation port serves the federation service and nothing else. (#5734)
+app.Use(async (context, next) =>
+{
+    if (FederationPortPolicy.ShouldReject(chronicleOptions, context.Connection.LocalPort, context.Request.Path.Value))
     {
         context.Response.StatusCode = StatusCodes.Status404NotFound;
         return;
