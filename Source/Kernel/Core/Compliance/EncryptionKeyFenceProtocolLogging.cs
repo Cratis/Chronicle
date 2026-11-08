@@ -14,6 +14,9 @@ internal static partial class EncryptionKeyFenceProtocolLogging
     [LoggerMessage(LogLevel.Information, "Encryption key storage {StorageType} advertises {Guarantees}.")]
     internal static partial void StorageCapability(this ILogger<EncryptionKeyFenceProtocol> logger, string storageType, EncryptionKeyFenceGuarantees guarantees);
 
+    [LoggerMessage(LogLevel.Warning, "Encryption key storage {StorageType} provides no atomic fence guarantee. Release N retains legacy erasure without protocol confirmation; Release N+1 will refuse erasure. Configure a store supporting MonotonicFence and FencedSave.")]
+    internal static partial void UnsupportedStorage(this ILogger<EncryptionKeyFenceProtocol> logger, string storageType);
+
     [LoggerMessage(LogLevel.Information, "Encryption key revocation grace is {Grace}.")]
     internal static partial void RevocationGrace(this ILogger<EncryptionKeyFenceProtocol> logger, TimeSpan grace);
 

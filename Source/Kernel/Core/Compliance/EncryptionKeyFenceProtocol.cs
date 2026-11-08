@@ -80,11 +80,21 @@ public sealed class EncryptionKeyFenceProtocol(
         }
     }
 
+    /// <summary>Report the actual guarantees and the release-N warning for each unsupported member.</summary>
+    internal void ReportCapabilities()
+    {
+        foreach (var capability in keys.Capabilities)
+        {
+            logger.StorageCapability(capability.Type, capability.Guarantees);
+            if (capability.Guarantees == EncryptionKeyFenceGuarantees.None) logger.UnsupportedStorage(capability.Type);
+        }
+    }
+
     async Task Start(CancellationToken cancellationToken)
     {
         logger.RolloutWarning();
         logger.RevocationGrace(options.Value.Compliance.Encryption.RevocationGrace);
-        foreach (var capability in keys.Capabilities) logger.StorageCapability(capability.Type, capability.Guarantees);
+        ReportCapabilities();
         await PublishSafely();
         _heartbeats = Heartbeat();
     }
