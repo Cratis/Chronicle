@@ -195,6 +195,18 @@ public interface IEncryptionKeyStorage
     Task<EncryptionKeyAtRevision?> TryGetLatestFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier);
 
     /// <summary>
+    /// Read a published revision together with its staged lifecycle.
+    /// </summary>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="eventStoreNamespace">The namespace.</param>
+    /// <param name="identifier">The key identifier.</param>
+    /// <param name="revision">The stored revision.</param>
+    /// <returns>The stored pair, or null if absent.</returns>
+    /// <remarks>Legacy stores have no staged lifecycle; protocol stores must override this read.</remarks>
+    async Task<EncryptionKeyAtRevision?> TryGetAtRevisionFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyRevision revision) =>
+        await TryGetFor(eventStore, eventStoreNamespace, identifier, revision) is { } key ? new(key, revision) : null;
+
+    /// <summary>
     /// Get the existing key and revision, or persist a key above any authorized erasure floor.
     /// </summary>
     /// <param name="eventStore">The event store.</param>

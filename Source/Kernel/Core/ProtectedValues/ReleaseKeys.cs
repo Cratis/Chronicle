@@ -108,6 +108,13 @@ public static class ReleaseKeys
                 checkedReads.Add(snapshot);
             }
 
+            foreach (var (key, observe) in memo.Observations?.AsEnumerable() ?? [])
+            {
+                var snapshot = await memo.Read(key);
+                observe(snapshot.Fence);
+                checkedReads.Add(snapshot);
+            }
+
             // Refresh can itself stall. All reads must still be inside the lease at the actual hand-off.
             if (checkedReads.TrueForAll(memo.IsFresh)) return handoff();
         }
@@ -122,6 +129,19 @@ public static class ReleaseKeys
         if (_current.Value is { } memo) memo.Uses[(new(storage, address.EventStore, address.Namespace, address.Identifier), pair)] = true;
     }
 
+    /// <summary>
+    /// Observe a lease-validated fence at completion without treating erasure as an exception.
+    /// </summary>
+    /// <param name="storage">The authoritative key storage.</param>
+    /// <param name="address">The protected key address.</param>
+    /// <param name="observe">The synchronous settlement observation, refreshed whenever its lease expires.</param>
+    /// <exception cref="InvalidOperationException">No release scope is active.</exception>
+    internal static void ObserveForCompletion(IEncryptionKeyStorage storage, (EventStoreName EventStore, EventStoreNamespaceName Namespace, EncryptionKeyIdentifier Identifier) address, Action<EncryptionKeyErasure?> observe)
+    {
+        var memo = _current.Value ?? throw new InvalidOperationException("A release scope is required.");
+        (memo.Observations ??= []).Add((new(storage, address.EventStore, address.Namespace, address.Identifier), observe));
+    }
+
     sealed record FenceKey(IEncryptionKeyStorage Storage, EventStoreName EventStore, EventStoreNamespaceName Namespace, EncryptionKeyIdentifier Identifier);
     sealed record Snapshot(EncryptionKeyErasure? Fence, ulong Version, long Started, DateTimeOffset WallStarted);
 
@@ -132,6 +152,8 @@ public static class ReleaseKeys
         Exception? _failure;
 
         public ConcurrentDictionary<(FenceKey Key, EncryptionKeyAtRevision Pair), bool> Uses { get; } = new();
+
+        public List<(FenceKey Key, Action<EncryptionKeyErasure?> Observe)>? Observations { get; set; }
 
         public bool IsFresh(Snapshot snapshot) =>
             clock.GetElapsedTime(snapshot.Started) <= _lease && clock.GetUtcNow() - snapshot.WallStarted <= _lease;

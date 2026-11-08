@@ -45,6 +45,10 @@ public sealed class EncryptionKeyStorage : IEncryptionKeyStorage, IEncryptionKey
         _storage.TryGetLatestFor(eventStore, eventStoreNamespace, identifier);
 
     /// <inheritdoc/>
+    public Task<EncryptionKeyAtRevision?> TryGetAtRevisionFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyRevision revision) =>
+        _storage.TryGetAtRevisionFor(eventStore, eventStoreNamespace, identifier, revision);
+
+    /// <inheritdoc/>
     public Task<EncryptionKeyAtRevision> GetOrAddWithRevisionFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKey key) =>
         _storage.GetOrAddWithRevisionFor(eventStore, eventStoreNamespace, identifier, key);
 

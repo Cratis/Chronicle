@@ -244,48 +244,12 @@ public class CompositeEncryptionKeyStorage : IEncryptionKeyStorage, IEvictEncryp
     }
 
     /// <inheritdoc/>
-    public async Task<EncryptionKeyAtRevision?> TryGetLatestFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
-    {
-        List<Exception>? failures = null;
-        var missing = new List<IEncryptionKeyStorage>();
-        foreach (var store in _inner)
-        {
-            EncryptionKeyAtRevision? pair;
-            try
-            {
-                pair = await store.TryGetLatestFor(eventStore, eventStoreNamespace, identifier);
-            }
-            catch (Exception error)
-            {
-                (failures ??= []).Add(error);
-                LogFailure(error, () => _logger.ReadingFromInnerStoreFailed(identifier, error));
-                continue;
-            }
+    public Task<EncryptionKeyAtRevision?> TryGetLatestFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier) =>
+        ReadPairFor(eventStore, eventStoreNamespace, identifier, null);
 
-            if (pair is null)
-            {
-                missing.Add(store);
-                continue;
-            }
-
-            if (await AnyStoreDestroyed(eventStore, eventStoreNamespace, identifier, pair))
-            {
-                _logger.ErasedKeySurvivedInAnotherStore(identifier);
-                return null;
-            }
-
-            await Heal(missing, eventStore, eventStoreNamespace, identifier, pair.Key, pair.Revision);
-            return pair;
-        }
-
-        if (failures is not null)
-        {
-            failures.ThrowIfUnderReview();
-            throw new EncryptionKeyStorageUnavailable(identifier, failures);
-        }
-
-        return null;
-    }
+    /// <inheritdoc/>
+    public Task<EncryptionKeyAtRevision?> TryGetAtRevisionFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyRevision revision) =>
+        ReadPairFor(eventStore, eventStoreNamespace, identifier, revision);
 
     /// <inheritdoc/>
     public async Task<EncryptionKeyAtRevision> GetOrAddWithRevisionFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKey key)
@@ -505,6 +469,54 @@ public class CompositeEncryptionKeyStorage : IEncryptionKeyStorage, IEvictEncryp
             erasures.Max(_ => _.ErasedThrough.Value),
             [.. erasures.SelectMany(_ => _.ErasedKeyFingerprints).Distinct(StringComparer.Ordinal)],
             erasures.TrueForAll(_ => _.NewKeyAllowed));
+    }
+
+    static Task<EncryptionKeyAtRevision?> ReadPairFrom(IEncryptionKeyStorage store, (EventStoreName Store, EventStoreNamespaceName Namespace, EncryptionKeyIdentifier Identifier) address, EncryptionKeyRevision? revision) =>
+        revision is null
+            ? store.TryGetLatestFor(address.Store, address.Namespace, address.Identifier)
+            : store.TryGetAtRevisionFor(address.Store, address.Namespace, address.Identifier, revision);
+
+    async Task<EncryptionKeyAtRevision?> ReadPairFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyRevision? revision)
+    {
+        List<Exception>? failures = null;
+        var missing = new List<IEncryptionKeyStorage>();
+        foreach (var store in _inner)
+        {
+            EncryptionKeyAtRevision? pair;
+            try
+            {
+                pair = await ReadPairFrom(store, (eventStore, eventStoreNamespace, identifier), revision);
+            }
+            catch (Exception error)
+            {
+                (failures ??= []).Add(error);
+                LogFailure(error, () => _logger.ReadingFromInnerStoreFailed(identifier, error));
+                continue;
+            }
+
+            if (pair is null)
+            {
+                missing.Add(store);
+                continue;
+            }
+
+            if (await AnyStoreDestroyed(eventStore, eventStoreNamespace, identifier, pair))
+            {
+                _logger.ErasedKeySurvivedInAnotherStore(identifier);
+                return null;
+            }
+
+            await Heal(missing, eventStore, eventStoreNamespace, identifier, pair.Key, pair.Revision);
+            return pair;
+        }
+
+        if (failures is not null)
+        {
+            failures.ThrowIfUnderReview();
+            throw new EncryptionKeyStorageUnavailable(identifier, failures);
+        }
+
+        return null;
     }
 
     async Task EraseEvery(Func<IEncryptionKeyStorage, Task> operation, EncryptionKeyIdentifier identifier)

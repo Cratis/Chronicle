@@ -87,6 +87,17 @@ public partial class InMemoryEncryptionKeyStorage : IEncryptionKeyStorage, IEncr
     }
 
     /// <inheritdoc/>
+    public Task<EncryptionKeyAtRevision?> TryGetAtRevisionFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyRevision revision)
+    {
+        lock (_lock)
+        {
+            var scope = new Scope(eventStore, eventStoreNamespace, identifier);
+            var pair = _keys.GetValueOrDefault(new(scope, revision));
+            return Task.FromResult(pair is not null && !ErasureFor(scope).Covers(pair) ? pair : null);
+        }
+    }
+
+    /// <inheritdoc/>
     public async Task<EncryptionKey> GetFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyRevision? revision = null) =>
         await TryGetFor(eventStore, eventStoreNamespace, identifier, revision) ?? throw new MissingEncryptionKey(identifier);
 

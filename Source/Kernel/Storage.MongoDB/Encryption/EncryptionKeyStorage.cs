@@ -87,6 +87,13 @@ public partial class EncryptionKeyStorage(IDatabase database) : IEncryptionKeySt
     }
 
     /// <inheritdoc/>
+    public async Task<EncryptionKeyAtRevision?> TryGetAtRevisionFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyRevision revision)
+    {
+        var document = await TryReadPublishedFor(eventStore, eventStoreNamespace, identifier, revision);
+        return document is null ? null : AtRevision(document);
+    }
+
+    /// <inheritdoc/>
     public async Task<EncryptionKeyAtRevision> GetOrAddWithRevisionFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKey key)
     {
         var collection = await GetCollection(eventStore, eventStoreNamespace);

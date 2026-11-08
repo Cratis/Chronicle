@@ -60,6 +60,7 @@ public class CacheEncryptionKeyStorage(
 
     readonly Dictionary<Key, EncryptionKey> _keys = [];
     readonly Dictionary<KeyScope, EncryptionKeyAtRevision> _latestPairs = [];
+    readonly Dictionary<Key, EncryptionKeyAtRevision> _revisionPairs = [];
     readonly Dictionary<Key, DateTimeOffset> _absentKeys = [];
     readonly Dictionary<KeyScope, long> _generations = [];
     readonly Lock _lock = new();
@@ -243,6 +244,33 @@ public class CacheEncryptionKeyStorage(
     }
 
     /// <inheritdoc/>
+    public async Task<EncryptionKeyAtRevision?> TryGetAtRevisionFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyRevision revision)
+    {
+        var scope = new KeyScope(eventStore, eventStoreNamespace, identifier);
+        var cacheKey = new Key(scope, revision);
+        long generation;
+        lock (_lock)
+        {
+            if (_revisionPairs.TryGetValue(cacheKey, out var cached)) return cached;
+            if (_latestPairs.TryGetValue(scope, out var latest) && latest.Revision == revision) return latest;
+            if (IsRememberedAbsent(cacheKey)) return null;
+            generation = GenerationFor(scope);
+        }
+
+        var pair = await actualKeyStore.TryGetAtRevisionFor(eventStore, eventStoreNamespace, identifier, revision);
+        lock (_lock)
+        {
+            if (generation == GenerationFor(scope))
+            {
+                if (pair is not null) _revisionPairs[cacheKey] = pair;
+                else RememberAbsent(cacheKey);
+            }
+        }
+
+        return generation == GenerationForRead(scope) ? pair : await TryGetAtRevisionFor(eventStore, eventStoreNamespace, identifier, revision);
+    }
+
+    /// <inheritdoc/>
     public async Task<EncryptionKeyAtRevision> GetOrAddWithRevisionFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKey key)
     {
         var scope = new KeyScope(eventStore, eventStoreNamespace, identifier);
@@ -415,6 +443,7 @@ public class CacheEncryptionKeyStorage(
             if (IsLatest(revision))
             {
                 RemoveAllFor(_keys, scope);
+                RemoveAllFor(_revisionPairs, scope);
                 RemoveAllFor(_absentKeys, scope);
                 return;
             }
@@ -422,6 +451,7 @@ public class CacheEncryptionKeyStorage(
             var specific = new Key(scope, revision!);
             var latest = new Key(scope, EncryptionKeyRevision.Latest);
             _keys.Remove(specific);
+            _revisionPairs.Remove(specific);
             _keys.Remove(latest);
             _absentKeys.Remove(specific);
             _absentKeys.Remove(latest);

@@ -71,6 +71,10 @@ public partial class EncryptionKeyStorage(IDatabase database, ILogger<Encryption
         await ReadPublished(eventStore, eventStoreNamespace, identifier, null);
 
     /// <inheritdoc/>
+    public Task<EncryptionKeyAtRevision?> TryGetAtRevisionFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyRevision revision) =>
+        ReadPublished(eventStore, eventStoreNamespace, identifier, revision);
+
+    /// <inheritdoc/>
     public async Task<EncryptionKeyAtRevision> GetOrAddWithRevisionFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, StoredEncryptionKey key)
     {
         var hit = await ReadPublished(eventStore, eventStoreNamespace, identifier, null);
