@@ -10,9 +10,9 @@ Chronicle calls a batch method with arguments it knows how to supply, and reads 
 - A reactor batch method takes `(EventBatch batch, BatchContext context)`.
 - A reducer batch method takes `(EventBatch events, TReadModel? current, BatchContext context)` and returns `TReadModel?` or `Task<TReadModel?>`. Returning `null` removes the read model.
 - On a self-reducing read model the batch method is `public static` and named `Reduce`.
-- After those, a batch method can take a `CancellationToken` and services from the service provider. `BatchContext` is optional.
+- After those, a batch method can take a `CancellationToken` and services from the service provider. `BatchContext` is optional. The `CancellationToken` can be declared optional, as `CancellationToken cancellationToken = default`.
 
-CHR0075 reports a batch method that takes an `EventContext` (each event in the batch carries its own), a second `EventBatch`, a primitive, value type or string, a `ref`, `out`, `in`, `params` or optional parameter, or is generic. For a reducer it also reports a missing or mistyped current read model, a result that is not the read model, and a batch method on a self-reducing read model that is not public, not static or not named `Reduce`.
+CHR0075 reports a batch method that takes an `EventContext` (each event in the batch carries its own), a second `EventBatch`, a primitive, value type or string, a `ref`, `out`, `in` or `params` parameter, an optional parameter other than a `CancellationToken`, or is generic. For a reducer it also reports a missing or mistyped current read model, a result that is not the read model, and a batch method on a self-reducing read model that is not public, not static or not named `Reduce`.
 
 The client discovers a self-reducing read model's batch method only as a `public static` method named `Reduce`. The analyzer recognizes a method taking an `EventBatch` first and the read model second as a self-reducing batch method the client would not discover when it is:
 

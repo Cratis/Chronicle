@@ -15,7 +15,7 @@ Chronicle delivers events in pages. A partition groups events for one event sour
 
 The account example applies deposits and withdrawals to the balance so far. Each item exposes the event through `Event`, allowing the method to choose the transition by event type.
 
-A batch method takes an `EventBatch` first and the nullable current read model second, and returns the read model or a task of it. The current model is `null` before the partition has state; returning `null` removes the read model. Declare each observed event type with `[Observes<TEvent>]`. Optional parameters can receive `BatchContext`, `CancellationToken`, and services.
+A batch method takes an `EventBatch` first and the nullable current read model second, and returns the read model or a task of it. The current model is `null` before the partition has state; returning `null` removes the read model. Declare each observed event type with `[Observes<TEvent>]`. After the current read model the method can take a `BatchContext`, a `CancellationToken` and services. The `CancellationToken` can be declared optional, as `CancellationToken cancellationToken = default`; no other parameter can.
 
 On a [self-reducing read model](self-reducing-read-models) the batch method is a public static method named `Reduce`.
 On a separate reducer implementing `IReducerFor<TReadModel>` it can have any name.

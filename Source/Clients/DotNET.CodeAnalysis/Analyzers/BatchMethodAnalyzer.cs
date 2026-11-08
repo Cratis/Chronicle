@@ -56,7 +56,7 @@ public class BatchMethodAnalyzer : DiagnosticAnalyzer
         category: "Usage",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true,
-        description: "A reactor batch method takes (EventBatch batch, BatchContext context). A reducer batch method takes (EventBatch events, TReadModel? current, BatchContext context) and returns TReadModel? or Task<TReadModel?>; on a self-reducing read model it is public, static and named Reduce, the only name the client discovers. Further parameters are a CancellationToken or services resolved from the service provider.");
+        description: "A reactor batch method takes (EventBatch batch, BatchContext context). A reducer batch method takes (EventBatch events, TReadModel? current, BatchContext context) and returns TReadModel? or Task<TReadModel?>; on a self-reducing read model it is public, static and named Reduce, the only name the client discovers. Further parameters are a CancellationToken, which may be optional, or services resolved from the service provider; no other parameter is optional.");
 
     /// <inheritdoc/>
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
