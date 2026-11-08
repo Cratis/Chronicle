@@ -263,6 +263,7 @@ message SinkDefinition {
    .bcl.Guid ConfigurationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
    string TypeId = 2;
    EventSequenceSinkConfiguration EventSequence = 3;
+   string Name = 4;
 }
 service Projections {
    rpc GetAllDeclarations (GetAllDeclarationsRequest) returns (IEnumerable_ProjectionWithDeclaration);

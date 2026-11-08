@@ -9,6 +9,7 @@ using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Projections.Engine.Pipelines;
+using Cratis.Chronicle.Storage.Sinks;
 using Orleans.TestKit;
 
 namespace Cratis.Chronicle.ReadModels.for_ReadModelsManager.given;
@@ -21,8 +22,11 @@ public class a_read_models_manager : Specification
     protected IProjectionsManager _projectionsManagerGrain;
     protected INamespaces _namespacesGrain;
     protected IProjectionPipelineManager _projectionPipelines;
+    protected ISinkChangeReplays _sinkChangeReplays;
 
     protected static readonly EventStoreName _eventStore = "some-event-store";
+
+    protected virtual ISinkConfigurations SinkConfigurations => DefaultSinkConfigurations.Instance;
 
     async Task Establish()
     {
@@ -39,6 +43,11 @@ public class a_read_models_manager : Specification
 
         _projectionPipelines = Substitute.For<IProjectionPipelineManager>();
         _silo.AddService(_projectionPipelines);
+        _silo.AddService(SinkConfigurations);
+        _sinkChangeReplays = Substitute.For<ISinkChangeReplays>();
+        _sinkChangeReplays.Request(Arg.Any<EventStoreName>(), Arg.Any<ReadModelIdentifier>())
+            .Returns(call => new SinkChangeReplay(call.ArgAt<EventStoreName>(0), call.ArgAt<ReadModelIdentifier>(1), []));
+        _silo.AddService(_sinkChangeReplays);
 
         _manager = await _silo.CreateGrainAsync<ReadModelsManager>(_eventStore.Value);
     }

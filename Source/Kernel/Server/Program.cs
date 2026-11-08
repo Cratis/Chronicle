@@ -151,6 +151,16 @@ if (chronicleOptions.Storage.SchemaMode == SchemaMode.Verify && string.Equals(ch
 }
 
 ClusteringStorageValidation.Validate(chronicleOptions);
+try
+{
+    chronicleOptions.Sinks.Validate();
+}
+catch (InvalidSinkConfiguration exception)
+{
+    await Console.Error.WriteLineAsync(exception.Message);
+    return 4;
+}
+
 KernelStartupDiagnostics.ReportIdentityProviderCertificate(chronicleOptions, logger);
 KernelStartupDiagnostics.ReportSubscriberTimeout(chronicleOptions, logger);
 KernelStartupDiagnostics.ReportGrainDirectory(chronicleOptions, logger);
