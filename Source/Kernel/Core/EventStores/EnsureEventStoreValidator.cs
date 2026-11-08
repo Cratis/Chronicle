@@ -23,5 +23,9 @@ internal class EnsureEventStoreValidator : CommandValidator<EnsureEventStore>
         RuleFor(_ => _.Name)
             .Must(name => !string.Equals(name, EventStoreName.System.Value, StringComparison.OrdinalIgnoreCase))
             .WithMessage("The System event store is reserved for the kernel and cannot be created through the public API.");
+        RuleFor(_ => _.Name)
+            .Must(name => string.IsNullOrEmpty(name) || string.Equals(name, EventStoreName.System.Value, StringComparison.OrdinalIgnoreCase) ||
+                !ReservedEventStoreNames.IsReserved(name))
+            .WithMessage("The event store name is not allowed.");
     }
 }

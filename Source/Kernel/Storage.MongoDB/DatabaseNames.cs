@@ -4,6 +4,7 @@
 using System.Buffers;
 using System.Text;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.EventStores;
 using Cratis.Chronicle.ProtectedValues;
 
 namespace Cratis.Chronicle.Storage.MongoDB;
@@ -112,6 +113,11 @@ public static class DatabaseNames
             throw new InvalidDatabaseName(eventStore.Value, "the name is reserved for the System event store's databases", eventStore, null);
         }
 
+        if (ReservedEventStoreNames.IsReserved(eventStore.Value, systemDatabaseName))
+        {
+            throw new InvalidDatabaseName(eventStore.Value, "the name is reserved", eventStore, null);
+        }
+
         return eventStore.Value;
     }
 
@@ -124,6 +130,11 @@ public static class DatabaseNames
         else if (databaseName.Contains(ReservedPhysicalMarker, StringComparison.OrdinalIgnoreCase))
         {
             throw new InvalidDatabaseName(databaseName, "it uses the physical name space reserved for confidentiality keys", eventStore, @namespace?.Value);
+        }
+
+        if (ReservedEventStoreNames.IsInternalDatabaseName(databaseName))
+        {
+            throw new InvalidDatabaseName(databaseName, "the name is reserved", eventStore, @namespace?.Value);
         }
 
         var reason = GetInvalidReason(databaseName);
