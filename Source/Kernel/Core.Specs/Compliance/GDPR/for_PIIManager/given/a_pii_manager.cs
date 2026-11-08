@@ -41,6 +41,7 @@ public class a_pii_manager : Specification
     async Task Establish()
     {
         _keyStore = Substitute.For<IEncryptionKeyStorage>();
+        _keyStore.FenceGuarantees.Returns(EncryptionKeyFenceGuarantees.MonotonicFence | EncryptionKeyFenceGuarantees.FencedSave);
         _cacheClient = Substitute.For<IEncryptionKeyCacheClient>();
         _storage = Substitute.For<IStorage>();
         _logger = new RecordingLogger<PIIManager>();

@@ -142,6 +142,25 @@ public class PIIManager(
 
     async Task DeleteEncryptionKey(EncryptionKeyIdentifier identifier, PIIManagerKey key, IReadOnlyList<EventStoreName> eventStores, List<Exception> failures, string? requestId)
     {
+        if (SupportsProtocolErasure())
+        {
+            await DeleteProtocolEncryptionKey(identifier, key, eventStores, failures, requestId);
+            return;
+        }
+
+        if (requestId is not null)
+        {
+            // Retry identities promise immutable boundaries. A legacy provider cannot make that promise.
+            failures.Add(new EncryptionKeyFenceUnavailable(identifier));
+            CompleteErasure(identifier, key, eventStores, failures);
+            return;
+        }
+
+        await DeleteLegacyEncryptionKey(identifier, key, eventStores, failures);
+    }
+
+    async Task DeleteProtocolEncryptionKey(EncryptionKeyIdentifier identifier, PIIManagerKey key, IReadOnlyList<EventStoreName> eventStores, List<Exception> failures, string? requestId)
+    {
         requestId ??= await PendingRequest(identifier, key, eventStores) ?? Guid.NewGuid().ToString("N");
         var request = new EncryptionKeyErasureRequest(requestId);
 
@@ -178,6 +197,23 @@ public class PIIManager(
                 }
             }
         }
+        CompleteErasure(identifier, key, eventStores, failures);
+    }
+
+    async Task DeleteLegacyEncryptionKey(EncryptionKeyIdentifier identifier, PIIManagerKey key, IReadOnlyList<EventStoreName> eventStores, List<Exception> failures)
+    {
+        // Release N retains the old provider contract. This path deliberately makes no protocol-confirmation claim.
+        await ForEach(eventStores, failures, eventStore => keyStore.RecordErasureFor(eventStore, key.Namespace, identifier));
+        await ForEach(eventStores, failures, eventStore => keyStore.DeleteFor(eventStore, key.Namespace, identifier));
+        await ForEach(eventStores, failures, eventStore => RemoveUniqueClaimsFor(eventStore, key.Namespace, identifier));
+        await ForEach(eventStores, failures, eventStore => cacheClient.Evict(eventStore, key.Namespace, identifier));
+        CompleteErasure(identifier, key, eventStores, failures);
+    }
+
+    bool SupportsProtocolErasure() => keyStore.FenceGuarantees == (EncryptionKeyFenceGuarantees.MonotonicFence | EncryptionKeyFenceGuarantees.FencedSave);
+
+    void CompleteErasure(EncryptionKeyIdentifier identifier, PIIManagerKey key, IReadOnlyList<EventStoreName> eventStores, List<Exception> failures)
+    {
         if (failures.Count > 0)
         {
             logger.SubjectErasureIncomplete(BindingFor(identifier), key.Namespace, failures.Count, eventStores.Count, Names(eventStores));
@@ -190,7 +226,9 @@ public class PIIManager(
 
     async Task AllowNewEncryptionKey(EncryptionKeyIdentifier identifier, PIIManagerKey key, IReadOnlyList<EventStoreName> eventStores, List<Exception> failures)
     {
-        await ForEach(eventStores, failures, eventStore => keyStore.AuthorizeConfirmedSuccessorFor(eventStore, key.Namespace, identifier));
+        await ForEach(eventStores, failures, eventStore => SupportsProtocolErasure()
+            ? keyStore.AuthorizeConfirmedSuccessorFor(eventStore, key.Namespace, identifier)
+            : keyStore.AllowNewKeyFor(eventStore, key.Namespace, identifier));
 
         // A cached absence must not hide the authorization to provision a fresh key.
         await ForEach(eventStores, failures, eventStore => cacheClient.Evict(eventStore, key.Namespace, identifier));
