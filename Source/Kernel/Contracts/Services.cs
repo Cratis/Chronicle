@@ -90,6 +90,7 @@ public sealed record Services(
 {
     Security.IAdministrators? _administrators;
     Occurrences.IOccurrences? _occurrences;
+    Imports.IImports? _imports;
 
     /// <inheritdoc/>
     public Security.IAdministrators Administrators
@@ -103,5 +104,15 @@ public sealed record Services(
     {
         get => _occurrences ?? throw new NotSupportedException("Occurrences are not supported by this service container.");
         init => _occurrences = value;
+    }
+
+    /// <summary>
+    /// Gets the import sessions service.
+    /// </summary>
+    /// <exception cref="NotSupportedException">The service container does not provide imports.</exception>
+    public Imports.IImports Imports
+    {
+        get => _imports ?? throw new NotSupportedException("Imports are not supported by this service container.");
+        init => _imports = value;
     }
 }
