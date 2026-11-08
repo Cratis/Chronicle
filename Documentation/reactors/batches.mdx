@@ -42,10 +42,12 @@ Chronicle decides when to send a page; the reactor's bounds decide how big it ca
 | Property | Meaning | Default |
 | --- | --- | --- |
 | `MaxEvents` | The most events in one page | 500 for a reactor with a batch method, 100 for a reactor with only per-event methods |
-| `MaxBytes` | The most bytes of event content in one page | Left to the kernel |
+| `MaxBytes` | The most bytes of event content in one page, counted as the UTF-8 length of each event's JSON content | Left to the kernel |
 | `MaxDelayMilliseconds` | How long the kernel may wait to fill a live page | 0, so a page holds what is already waiting |
 
-The kernel caps every bound with its own maximums, so a page can be smaller than declared. Under light load a live page holds one event, because nothing else is waiting. A delay trades latency for fuller pages, so keep it at zero unless the downstream system works better with fewer, larger requests. Chronicle refuses to register a reactor with a negative bound.
+The kernel honors `MaxEvents` and `MaxBytes` on every path: live, catch-up, replay and retry. It caps them with its own maximums, `maxEventsPerSubscriberCall` (100 by default) and `maxBytesPerSubscriberCall` (4 MiB by default), and a bound of zero takes the kernel's maximum. With the default configuration a page therefore holds at most 100 events, even for a reactor that declares 500; see [page bounds](../hosting/configuration/observers.md#page-bounds) to raise it. An event larger than `MaxBytes` is sent alone in its own page, so it never stalls its partition.
+
+The kernel does not yet apply `MaxDelayMilliseconds`: a live page holds what is already waiting, so under light load it holds one event. Chronicle refuses to register a reactor with a negative bound.
 
 ## Order
 

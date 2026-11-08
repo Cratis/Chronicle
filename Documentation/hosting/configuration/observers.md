@@ -13,6 +13,7 @@ Observer configuration controls retry behavior, timeouts, watchdog monitoring, a
     "liveDeliveryBudget": 100,
     "abandonedDeliveryHold": 300,
     "maxEventsPerSubscriberCall": 100,
+    "maxBytesPerSubscriberCall": 4194304,
     "maxRetryAttempts": 10,
     "backoffDelay": 1,
     "exponentialBackoffDelayFactor": 2,
@@ -33,7 +34,8 @@ Observer configuration controls retry behavior, timeouts, watchdog monitoring, a
 | subscriberTimeout | number | 30 | How many seconds an observer waits for its subscriber to answer a batch before giving up on it. Not capped by `clustering.responseTimeout` during catch-up, replay and partition recovery; bounded at 1 hour. Live delivery stays below the Orleans response timeout. `0` waits indefinitely (up to that bound). See [Subscriber timeout](#subscriber-timeout) |
 | liveDeliveryBudget | number | 100 | Maximum events delivered inline in one live call. Larger batches are deferred to partition catch-up without advancing the live position. `0` or less disables the limit. Catch-up and replay are unaffected |
 | abandonedDeliveryHold | number | 300 | Maximum additional seconds to hold an abandoned gRPC client delivery. Positive values are at least `subscriberTimeout`. `0` or less disables fencing; a disabled subscriber timeout also disables it. See [Abandoned client deliveries](#abandoned-client-deliveries) |
-| maxEventsPerSubscriberCall | number | 100 | The most events handed to a gRPC client (reactor or reducer) or webhook subscriber in one call during catch-up, replay and partition recovery. `0` or less hands over storage batches as read. See [Bounded subscriber calls](#bounded-subscriber-calls) |
+| maxEventsPerSubscriberCall | number | 100 | The most events handed to a gRPC client (reactor or reducer) or webhook subscriber in one call during catch-up, replay and partition recovery. Also the most events in one page for a client reactor or reducer that declared page bounds, on every path. `0` or less hands over storage batches as read. See [Bounded subscriber calls](#bounded-subscriber-calls) and [Page bounds](#page-bounds) |
+| maxBytesPerSubscriberCall | number | 4194304 | The most bytes of event content in one page for a client reactor or reducer that declared page bounds, on every path. `0` or less sets no size limit. See [Page bounds](#page-bounds) |
 | maxRetryAttempts | number | 10 | Maximum retry attempts for failed partitions (0 = infinite). The limit applies per retry budget: clearing the quarantine of a partition starts a new budget, so it gets this many attempts again. An attempt that fails at a later event than the previous one made progress and also starts a new budget, so only a partition that keeps failing at the same event is quarantined |
 | quarantineOnFailedPartitionCount | number | 0 | Quarantine the observer once this many of its partitions have failed (0 = never) |
 | quarantineOnFailedPartitionPercentage | number | 0.0 | Quarantine the observer once this share of its observed partitions have failed (0.0 = never) |
@@ -156,6 +158,36 @@ Kernel-owned subscribers, such as projections, keep the storage batches they are
 Every batch sent to a gRPC client also says how long the kernel waits for its result (`DeliverWithinMilliseconds`,
 counted from when the client receives it). A client that only gets to the batch after that time can answer it as
 failed right away instead of doing work the kernel has already given up on.
+
+## Page bounds
+
+A client reactor or reducer that receives pages can declare how big a page may be: the .NET client takes the bounds
+from `[BatchSize]` (see [reactor batches](../../reactors/batches.mdx#page-size) and
+[reducer batches](../../reducers/batches.mdx#page-size-and-concurrency)). The kernel honors them on every path, live,
+catch-up, replay and retry:
+
+| Declared | Kernel maximum | Page bound |
+| --- | --- | --- |
+| Events above `0` | `maxEventsPerSubscriberCall` | The declared number, capped by the maximum |
+| Events `0` | `maxEventsPerSubscriberCall` | The maximum |
+| Bytes above `0` | `maxBytesPerSubscriberCall` | The declared number, capped by the maximum |
+| Bytes `0` | `maxBytesPerSubscriberCall` | The maximum |
+
+A maximum of `0` or less means the kernel sets none, so the declared bound applies as it is.
+
+- An event's size is the UTF-8 length of its JSON content. A reducer page's initial states do not count toward it.
+- An event larger than the byte bound is sent alone in its own page, so it never stalls its partition.
+- A page larger than the bounds is sent as several pages, one after another. A partition that spans them stops at the
+  first page it fails or is deferred in; its later events are delivered again once the partition is recovered, and
+  events it handled in earlier pages stay handled. A reducer reduces each page from the state the page before it
+  wrote.
+- The kernel never makes a page larger than it would otherwise send: during catch-up, replay and retry that is
+  `maxEventsPerSubscriberCall` events, and live it is what has been appended and waiting, up to `liveDeliveryBudget`.
+  Raise `maxEventsPerSubscriberCall` to let a declared bound above 100 take effect.
+- The declared delay (`MaxDelayMilliseconds`) is accepted but not applied yet: a live page holds what is already
+  waiting.
+- A client that does not receive pages is delivered one partition at a time, bounded only by
+  `maxEventsPerSubscriberCall` during catch-up, replay and retry.
 
 ## Abandoned client deliveries
 
