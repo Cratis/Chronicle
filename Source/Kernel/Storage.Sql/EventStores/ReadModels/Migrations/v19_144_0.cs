@@ -10,8 +10,8 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.ReadModels.Migrations;
 #pragma warning disable SA1600, SA1402, MA0048
 
 [DbContext(typeof(EventStoreDbContext))]
-[Migration($"ES-{WellKnownTableNames.ReadModelDefinitions}-{nameof(v19_143_0)}")]
-public class v19_143_0 : Migration
+[Migration($"ES-{WellKnownTableNames.ReadModelDefinitions}-{nameof(v19_144_0)}")]
+public class v19_144_0 : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder) => migrationBuilder.AddColumn<string>(
         name: nameof(ReadModelDefinition.SinkName), table: WellKnownTableNames.ReadModelDefinitions, nullable: false, defaultValue: string.Empty);

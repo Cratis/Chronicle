@@ -45,7 +45,7 @@ public class when_upgrading_sink_names : Specification
 
     async Task Because()
     {
-        await Apply(new v19_143_0());
+        await Apply(new v19_144_0());
         _context.ReadModels.Add(_definition.ToSql());
         await _context.SaveChangesAsync();
         _context.ChangeTracker.Clear();
