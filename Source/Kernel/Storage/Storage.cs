@@ -37,6 +37,10 @@ public class Storage(
         systemEventStoreRelocation?.FindMisplacedData() ?? Task.FromResult<string?>(null);
 
     /// <inheritdoc/>
+    public Task<string?> FindRetainedLegacySystemEventStoreData() =>
+        systemEventStoreRelocation?.FindRetainedLegacyData() ?? Task.FromResult<string?>(null);
+
+    /// <inheritdoc/>
     public Task MoveSystemEventStoreTo(SystemEventStoreLocation location) =>
         systemEventStoreRelocation?.MoveTo(location) ?? Task.CompletedTask;
 
