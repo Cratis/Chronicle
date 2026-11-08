@@ -1,11 +1,14 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Choreography.Jobs;
+using Cratis.Choreography.Storage.Jobs;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Imports;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Jobs;
+using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Imports;
 using Microsoft.Extensions.Logging;
@@ -220,7 +223,11 @@ public class Import(
     /// <inheritdoc/>
     public async Task ChunkCommitted(int chunkIndex, IEnumerable<ImportEventOutcome> outcomes)
     {
-        if (Record is null || Record.State != ImportState.Committing || chunkIndex <= Record.LastCommittedChunk) return;
+        // A chunk the commit settled after the import was failed mid-commit is in the log all the same, so it is recorded
+        // for the counts and ranges to tell the truth; the state stays as it is.
+        var committing = Record?.State == ImportState.Committing ||
+            (Record?.State == ImportState.Failed && Record.CommitStartedAt is not null);
+        if (Record is null || !committing || chunkIndex <= Record.LastCommittedChunk) return;
         var settled = outcomes.ToArray();
         var appended = settled.Where(_ => _.Kind == ImportEventOutcomeKind.Appended).Select(_ => _.SequenceNumber.Value).ToArray();
         var rejected = settled
@@ -271,7 +278,11 @@ public class Import(
         var retention = options.Value.Imports.StagingRetention;
         if (_time.GetUtcNow() - Record.LastActivity <= retention) return false;
 
-        await Fail($"The import made no progress for longer than the staging retention of {retention}; its commit job is gone or stopped. Committed events stay committed.");
+        // The clock alone cannot tell a stalled commit from one whose kernel was down: a commit job that is still there,
+        // running or stopped, resumes the commit from its checkpoint and owns the import until it ends.
+        if (await CommitJobMayResume()) return false;
+
+        await Fail($"The import made no progress for longer than the staging retention of {retention}; its commit job is gone or ended. Committed events stay committed.");
         return true;
     }
 
@@ -285,6 +296,17 @@ public class Import(
         await state.ClearStateAsync();
         state.State.Record = null;
         return true;
+    }
+
+    async Task<bool> CommitJobMayResume()
+    {
+        var jobs = await storage.GetEventStore(_key.EventStore).GetNamespace(_key.Namespace).Jobs.GetJobs<IImportEvents, JobState>();
+        return jobs.Match(
+            all => all.Any(job => job.Request is ImportEventsRequest request && request.ImportId == _key.ImportId && !job.Status.HasFinished()),
+
+            // Not knowing is not evidence that the job is gone; the next sweep asks again.
+            _ => true,
+            _ => true);
     }
 
     async Task<ImportOperationResult> FailBeforeCommit(string reason, int expectedChunks, long expectedEvents)
