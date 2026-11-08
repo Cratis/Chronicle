@@ -1,6 +1,6 @@
 ---
 title: Configure memory management in Cratis Chronicle Server
-description: Configure the Chronicle memory budget that makes work with a large footprint, such as reducing large read models, wait for room, and the memory metrics Chronicle reports.
+description: "Configure the Chronicle memory budget so heavy work, such as reducing large read models, waits for room, and learn which memory metrics the server reports."
 ---
 The `memory` section controls the memory budget. Work that needs a lot of memory for a short time, such as reducing a read model whose state is tens of megabytes, reserves memory from the budget before it runs. When the budget is full the work waits its turn, so many large reductions no longer run at once and exhaust the heap.
 
