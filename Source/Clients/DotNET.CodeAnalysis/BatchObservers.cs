@@ -242,7 +242,21 @@ internal static class BatchObservers
     static bool CanBeShared(ITypeSymbol type) =>
         type is { SpecialType: not SpecialType.System_Object, IsSealed: false, TypeKind: TypeKind.Class or TypeKind.Interface };
 
+    /// <summary>
+    /// Gets whether a method of a type is meant as the batch method of a self-reducing read model.
+    /// </summary>
+    /// <param name="method">The method.</param>
+    /// <param name="type">The candidate read model.</param>
+    /// <param name="symbols">The <see cref="BatchSymbols"/> of the compilation.</param>
+    /// <returns>True when it takes an EventBatch and the read model, and is static or declares [Observes&lt;T&gt;].</returns>
+    /// <remarks>
+    /// The client only discovers a public static Reduce, so an instance or non-public batch method is never called. A static
+    /// one taking the model as current state is meant as a self-reducing batch method. An instance one is too when it
+    /// declares [Observes&lt;T&gt;], which only batch methods carry; without that, a method taking the model is an ordinary
+    /// helper. Recognizing both lets the signature rule report what registration would otherwise skip without a word.
+    /// </remarks>
     static bool IsSelfBatchShaped(IMethodSymbol method, INamedTypeSymbol type, BatchSymbols symbols) =>
-        method.IsStatic && IsBatchMethod(method, symbols) && method.Parameters.Length > 1 &&
-        SymbolEqualityComparer.Default.Equals(method.Parameters[1].Type, type);
+        IsBatchMethod(method, symbols) && method.Parameters.Length > 1 &&
+        SymbolEqualityComparer.Default.Equals(method.Parameters[1].Type, type) &&
+        (method.IsStatic || Observed(method, symbols).Any());
 }
