@@ -118,6 +118,7 @@ public static class MongoDBChronicleBuilderExtensions
             // the host having run convention binding; convention binding leaves an already registered service alone.
             services.TryAddSingleton<IReadModelChangeStreams, ReadModelChangeStreams>();
             services.AddSingleton<IMongoDBClientManager, MongoDBClientManager>();
+            services.TryAddSingleton<IMongoDBTopology, MongoDBTopology>();
             services.AddSingleton<EncryptionKeyStorage>();
             services.AddSingleton<IEncryptionKeyFence>(sp => sp.GetRequiredService<EncryptionKeyStorage>());
             services.AddSingleton<IEncryptionKeyStorage>(sp => new CacheEncryptionKeyStorage(sp.GetRequiredService<EncryptionKeyStorage>()));

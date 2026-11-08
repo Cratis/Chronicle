@@ -6,6 +6,7 @@ using System.Text.Json;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Storage.Compliance;
 using MongoDB.Driver;
+using MongoDB.Driver.Linq;
 
 namespace Cratis.Compliance.MongoDB;
 
@@ -56,6 +57,19 @@ internal static class EncryptionKeyFenceUpdates
     }
 
     /// <summary>
+    /// Match a fence whose inline request log holds the request.
+    /// </summary>
+    /// <remarks>
+    /// Element names come from the class maps, never from string paths: the fence document's own names follow the host's
+    /// naming policy while the request's follow the Chronicle storage convention, so a hand-written path such as
+    /// "requests.requestId" silently matches nothing under a host that does not camel-case every type.
+    /// </remarks>
+    /// <param name="requestId">The request identity.</param>
+    /// <returns>The request predicate.</returns>
+    internal static FilterDefinition<EncryptionKeyErasureForIdentifier> HasRequest(string requestId) =>
+        _filters.ElemMatch(_ => _.Requests, _ => _.RequestId == requestId);
+
+    /// <summary>
     /// Initialize only an absent fence; existing documents are never overwritten.
     /// </summary>
     /// <param name="identifier">The subject.</param>
@@ -104,7 +118,7 @@ internal static class EncryptionKeyFenceUpdates
     /// <returns>The request update.</returns>
     internal static UpdateDefinition<EncryptionKeyErasureForIdentifier> UpdateRequest(EncryptionKeyErasure next, EncryptionKeyErasureRequest request) =>
         Advance(next)
-            .Set("requests.$", request)
+            .Set(_ => _.Requests.FirstMatchingElement(), request)
             .AddToSetEach(_ => _.ErasedKeyFingerprints, next.ErasedKeyFingerprints);
 
     /// <summary>Replace the inline log only after acknowledged archival, under the observed Version predicate.</summary>

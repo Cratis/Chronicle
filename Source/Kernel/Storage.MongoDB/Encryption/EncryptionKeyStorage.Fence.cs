@@ -12,7 +12,8 @@ namespace Cratis.Compliance.MongoDB;
 public partial class EncryptionKeyStorage
 {
     /// <inheritdoc/>
-    public bool IsDurable => true;
+    /// <remarks>A standalone server cannot give the linearizable reads an external key store's fence relies on.</remarks>
+    public bool IsDurable => !_topology.IsStandalone;
 
     /// <inheritdoc/>
     public async Task<EncryptionKeyFenceState> ReadFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
@@ -27,14 +28,14 @@ public partial class EncryptionKeyStorage
                 {
                     { "version", new Decimal128(0m) }, { "state", empty }, { "seal", EncryptionKeyFenceState.Seal(empty) }
                 });
-                await collection.WithWriteConcern(WriteConcern.WMajority).UpdateOneAsync(new BsonDocument("_id", identifier.Value), insert, new UpdateOptions { IsUpsert = true });
+                await collection.WithWriteConcern(Durability).UpdateOneAsync(new BsonDocument("_id", identifier.Value), insert, new UpdateOptions { IsUpsert = true });
             }
             catch (MongoWriteException exception) when (IsDuplicate(exception))
             {
                 // A definite non-write; read the winner linearly.
             }
 
-            var row = await collection.WithReadConcern(ReadConcern.Linearizable).WithReadPreference(ReadPreference.Primary)
+            var row = await collection.WithReadConcern(Linearizability).WithReadPreference(ReadPreference.Primary)
                 .Find(new BsonDocument("_id", identifier.Value), new FindOptions { MaxTime = _readTimeout }).SingleOrDefaultAsync();
             if (row?.Contains("version") != true || !row.Contains("state") || !row.Contains("seal")) throw new EncryptionKeyFenceUnavailable(identifier);
             var version = Decimal128.ToDecimal(row["version"].AsDecimal128);
@@ -54,7 +55,7 @@ public partial class EncryptionKeyStorage
         try
         {
             var state = next.Serialize();
-            var result = await ExternalFences(eventStore, eventStoreNamespace).WithWriteConcern(WriteConcern.WMajority).UpdateOneAsync(
+            var result = await ExternalFences(eventStore, eventStoreNamespace).WithWriteConcern(Durability).UpdateOneAsync(
                 new BsonDocument { { "_id", identifier.Value }, { "version", new Decimal128((decimal)observed.Erasure.Version) }, { "seal", EncryptionKeyFenceState.Seal(observed.Serialize()) } },
                 new BsonDocument("$set", new BsonDocument
                 {

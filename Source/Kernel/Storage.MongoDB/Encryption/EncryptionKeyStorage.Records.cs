@@ -18,7 +18,7 @@ public partial class EncryptionKeyStorage : IEncryptionKeyFenceRecords
     /// <inheritdoc/>
     public async Task<string?> ReadRecord(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string id)
     {
-        var row = await Records(eventStore, eventStoreNamespace).WithReadConcern(ReadConcern.Linearizable).WithReadPreference(ReadPreference.Primary)
+        var row = await Records(eventStore, eventStoreNamespace).WithReadConcern(Linearizability).WithReadPreference(ReadPreference.Primary)
             .Find(new BsonDocument("_id", id), new FindOptions { MaxTime = _readTimeout }).SingleOrDefaultAsync();
         if (row is null) return null;
         var value = row["value"].AsString;
@@ -31,7 +31,7 @@ public partial class EncryptionKeyStorage : IEncryptionKeyFenceRecords
     {
         try
         {
-            await Records(eventStore, eventStoreNamespace).WithWriteConcern(WriteConcern.WMajority).UpdateOneAsync(
+            await Records(eventStore, eventStoreNamespace).WithWriteConcern(Durability).UpdateOneAsync(
                 new BsonDocument("_id", id),
                 new BsonDocument(replace ? "$set" : "$setOnInsert", new BsonDocument { { "value", value }, { "seal", EncryptionKeyFenceState.Seal(value) } }),
                 new UpdateOptions { IsUpsert = true });
