@@ -50,12 +50,12 @@ so N writers could defeat the guarantees N+1 relies on. The two-release shape an
 - **D2. `ProtocolFloor` = operator attestation + silo-version check.** Both are required. N+1 fails closed when the
 attestation is absent, or when the silo-version check contradicts it (any active silo below N, or without a protocol record).
 Mechanism: Rollout.
-- **D5. Wire request id:** optional opaque string, at most 128 characters. Reject an empty-after-trim value; do not parse a format or normalize the identity. Decided by the requester for slice 5.
+- **D5. Wire request id:** optional opaque string, at most 128 characters. Reject an empty-after-trim value; do not parse a format or normalize the identity. Decided by the requester for slice 5. Core owns `Compliance.DeleteEncryptionKeyRequest`; `[WireContract]` opts the existing legacy service's request into the shared-contract generator without replacing that service's interface. Generation retains existing field numbers; an absent identity retains old-client semantics.
 - **D3. `RevocationGrace` default 5 s, configurable** (kernel compliance option), documented with the compliance configuration. C10.
 - **D4. Refuse erasure on stores with no fence guarantee** (Azure Key Vault with InMemory Chronicle storage; Vault on a KV v1
 mount). The error names the store and the supported alternative (Azure Key Vault with MongoDB or SQL Chronicle storage; Vault
 KV v2). Refusal takes effect only with the N+1 switch-on PR. Release N keeps today's behaviour and logs a startup warning
-(non-breaking). If the switch-on is semver-breaking for supported setups it goes to woksin as a major; otherwise it is a minor.
+(non-breaking). In N, callers without a request identity use the legacy fence/delete/authorization APIs when the storage composition lacks protocol guarantees; that path does not claim protocol confirmation. Explicit retry identities require bounded erasure and must not fall back to an unbounded delete. The startup warning names every unsupported store. If the switch-on is semver-breaking for supported setups it goes to woksin as a major; otherwise it is a minor.
 
 ## Decision
 
