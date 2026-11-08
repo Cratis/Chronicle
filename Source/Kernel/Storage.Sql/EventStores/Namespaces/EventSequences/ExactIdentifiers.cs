@@ -46,6 +46,25 @@ static class ExactIdentifiers
     }
 
     /// <summary>
+    /// Narrow a query to the events of an event source type.
+    /// </summary>
+    /// <param name="query">The query to narrow.</param>
+    /// <param name="context">The context the query runs on.</param>
+    /// <param name="eventSourceType">The <see cref="EventSourceType"/> to match.</param>
+    /// <returns>The narrowed query.</returns>
+    internal static IQueryable<EventEntry> WhereSourceType(this IQueryable<EventEntry> query, DbContext context, EventSourceType eventSourceType)
+    {
+        var narrowed = query.Where(e => e.EventSourceType == eventSourceType);
+        if (!context.Database.IsSqlServer())
+        {
+            return narrowed;
+        }
+
+        var bytes = eventSourceType.Value.Length * BytesPerCharacter;
+        return narrowed.Where(e => EF.Functions.Collate(e.EventSourceType, BinaryCollation) == eventSourceType && ByteLength(e.EventSourceType) == bytes);
+    }
+
+    /// <summary>
     /// Narrow a query to the events of an event stream type.
     /// </summary>
     /// <param name="query">The query to narrow.</param>
@@ -162,6 +181,10 @@ static class ExactIdentifiers
 
     /// <inheritdoc cref="ByteLength(EventSourceId)"/>
     /// <param name="value">The stored value.</param>
+    internal static int ByteLength(EventSourceType value) => throw new NotSupportedException();
+
+    /// <inheritdoc cref="ByteLength(EventSourceId)"/>
+    /// <param name="value">The stored value.</param>
     internal static int ByteLength(EventStreamType value) => throw new NotSupportedException();
 
     /// <inheritdoc cref="ByteLength(EventSourceId)"/>
@@ -182,7 +205,7 @@ static class ExactIdentifiers
     /// <param name="modelBuilder">The <see cref="ModelBuilder"/> to register on.</param>
     internal static void RegisterByteLength(ModelBuilder modelBuilder)
     {
-        foreach (var type in new[] { typeof(EventSourceId), typeof(EventStreamType), typeof(EventStreamId), typeof(string), typeof(ProjectionId) })
+        foreach (var type in new[] { typeof(EventSourceId), typeof(EventSourceType), typeof(EventStreamType), typeof(EventStreamId), typeof(string), typeof(ProjectionId) })
         {
             modelBuilder
                 .HasDbFunction(typeof(ExactIdentifiers).GetMethod(nameof(ByteLength), System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic, [type])!)
