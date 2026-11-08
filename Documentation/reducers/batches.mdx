@@ -30,4 +30,6 @@ Throwing or calling `Fail` on the batch fails the partition without writing its 
 
 Other partitions in the page can still succeed. The client reduces partitions in parallel, while keeping each partition's events in order. Keep state changes local to the partition rather than relying on another partition finishing first.
 
+Pages reach a reducer on every path: as events are appended, while it catches up, during a replay and when a failed partition is retried. A page can hold many event sources, and the kernel loads their current read models together and writes the new states of the partitions that succeeded together. A partition that fails or is deferred writes nothing and is delivered again from its stored state, while the others in the page are written.
+
 For the per-event alternative and replay behavior, continue with [reducer event processing](event-processing).
