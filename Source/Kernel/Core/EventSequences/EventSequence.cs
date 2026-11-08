@@ -92,6 +92,8 @@ public partial class EventSequence(
     IEncryptionKeyStorage? encryptionKeyStorage = null,
     TimeProvider? timeProvider = null) : Grain<EventSequenceState>, IEventSequence, IOnBroadcastChannelSubscribed
 {
+    static readonly System.Collections.Concurrent.ConcurrentDictionary<string, bool> _warnedReservedSequences = new();
+
     readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
     readonly IdentifierTelemetry _spanIdentifiers = new(options.Value.Telemetry);
     readonly HashSet<EventTypeId> _unspecifiedVisibilityWarned = [];
@@ -131,7 +133,10 @@ public partial class EventSequence(
         if (ReservedEventSequenceRules.MayBeReserved(reservedEventSequenceIds, _eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId))
         {
             _mayWriteSequence = false;
-            logger.RefusedReservedEventSequenceName(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId);
+            if (_warnedReservedSequences.TryAdd($"{_eventSequenceKey.EventStore}/{_eventSequenceKey.Namespace}/{_eventSequenceId}", true))
+            {
+                logger.RefusedReservedEventSequenceName(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId);
+            }
         }
         _metrics = meter.BeginEventSequenceScope(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, options.Value.Telemetry.MetricNames);
         if (!_mayWriteSequence)

@@ -78,6 +78,7 @@ public static class DatabaseNames
     /// <param name="prefix">The prefix, or empty to preserve the database name.</param>
     /// <param name="systemDatabaseName">The name the System event store's databases are named by.</param>
     /// <returns>The database name.</returns>
+    /// <exception cref="InvalidDatabaseName">The name resolves to a database that is reserved.</exception>
     /// <remarks>
     /// Unlike the event sequence databases, the default namespace is not suffixed — its read models live in the
     /// bare event store name. A reader that suffixes unconditionally therefore resolves a database that simply
@@ -86,10 +87,13 @@ public static class DatabaseNames
     public static string ForReadModels(EventStoreName eventStore, EventStoreNamespaceName @namespace, string prefix = "", string systemDatabaseName = Configuration.Storage.DefaultSystemDatabaseName)
     {
         var name = NameFor(eventStore, systemDatabaseName);
-        return Validated(
-            @namespace == EventStoreNamespaceName.Default ? $"{prefix}{name}" : $"{prefix}{name}+{@namespace}",
-            eventStore,
-            @namespace);
+        var databaseName = @namespace == EventStoreNamespaceName.Default ? $"{prefix}{name}" : $"{prefix}{name}+{@namespace}";
+        if (IsClusterDatabaseName(databaseName, prefix))
+        {
+            throw new InvalidDatabaseName(databaseName, "the name is reserved", eventStore, @namespace.Value);
+        }
+
+        return Validated(databaseName, eventStore, @namespace);
     }
 
     /// <summary>
@@ -100,6 +104,11 @@ public static class DatabaseNames
     /// <returns>The <see cref="EventStoreName"/>.</returns>
     public static EventStoreName EventStoreFor(string name, string systemDatabaseName = Configuration.Storage.DefaultSystemDatabaseName) =>
         string.Equals(name, systemDatabaseName, StringComparison.OrdinalIgnoreCase) ? EventStoreName.System : new EventStoreName(name);
+
+    static bool IsClusterDatabaseName(string databaseName, string prefix) =>
+        databaseName.Length == prefix.Length + WellKnownDatabaseNames.Chronicle.Length &&
+        databaseName.StartsWith(prefix, StringComparison.Ordinal) &&
+        databaseName.EndsWith(WellKnownDatabaseNames.Chronicle, StringComparison.OrdinalIgnoreCase);
 
     static string NameFor(EventStoreName eventStore, string systemDatabaseName)
     {
