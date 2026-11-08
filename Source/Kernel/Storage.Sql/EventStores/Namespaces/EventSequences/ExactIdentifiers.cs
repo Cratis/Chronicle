@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Linq.Expressions;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.InFlightEvents;
 using Microsoft.EntityFrameworkCore;
@@ -23,6 +24,7 @@ static class ExactIdentifiers
     /// </summary>
     internal const string BinaryCollation = "Latin1_General_100_BIN2";
     const int BytesPerCharacter = 2;
+    static readonly System.Reflection.MethodInfo _byteLengthOfString = typeof(ExactIdentifiers).GetMethod(nameof(ByteLength), System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic, [typeof(string)])!;
 
     /// <summary>
     /// Narrow a query to the events of an event source.
@@ -98,6 +100,41 @@ static class ExactIdentifiers
 
         var bytes = partition.Length * BytesPerCharacter;
         return narrowed.Where(e => EF.Functions.Collate(e.Partition, BinaryCollation) == partition && ByteLength(e.Partition) == bytes);
+    }
+
+    /// <summary>
+    /// Narrow a query to the rows whose identifier column holds exactly one spelling of a value.
+    /// </summary>
+    /// <typeparam name="TEntity">The type of entity queried.</typeparam>
+    /// <param name="query">The query to narrow.</param>
+    /// <param name="context">The context the query runs on.</param>
+    /// <param name="column">Selects the identifier column. It must be a string column of Unicode type.</param>
+    /// <param name="value">The value to match.</param>
+    /// <returns>The narrowed query.</returns>
+    internal static IQueryable<TEntity> WhereExact<TEntity>(this IQueryable<TEntity> query, DbContext context, Expression<Func<TEntity, string?>> column, string value)
+    {
+        var parameter = column.Parameters[0];
+        var holder = Expression.Constant(new ExactValue(value, value.Length * BytesPerCharacter));
+        var stored = column.Body;
+        var plain = Expression.Equal(stored, Expression.Property(holder, nameof(ExactValue.Value)));
+        if (!context.Database.IsSqlServer())
+        {
+            return query.Where(Expression.Lambda<Func<TEntity, bool>>(plain, parameter));
+        }
+
+        var collate = Expression.Call(
+            typeof(RelationalDbFunctionsExtensions),
+            nameof(RelationalDbFunctionsExtensions.Collate),
+            [typeof(string)],
+            Expression.Constant(EF.Functions),
+            stored,
+            Expression.Constant(BinaryCollation));
+        var binary = Expression.Equal(collate, Expression.Property(holder, nameof(ExactValue.Value)));
+        var length = Expression.Equal(
+            Expression.Call(_byteLengthOfString, stored),
+            Expression.Property(holder, nameof(ExactValue.Bytes)));
+        var exact = Expression.AndAlso(plain, Expression.AndAlso(binary, length));
+        return query.Where(Expression.Lambda<Func<TEntity, bool>>(exact, parameter));
     }
 
     /// <summary>

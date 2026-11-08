@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Projections.Generations.Enablement;
 using Cratis.Chronicle.Storage.Generations;
+using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Generations;
@@ -49,7 +50,7 @@ public sealed class GenerationInitializationStorage(Func<Task<DbContextScope<Eve
     public async Task RecordBlocker(GenerationInitializationBlocker blocker)
     {
         await using var scope = await open();
-        var rows = scope.DbContext.GenerationInitializationBlockers.Where(row => row.Kind == (int)blocker.Kind && row.Subject == blocker.Subject);
+        var rows = scope.DbContext.GenerationInitializationBlockers.Where(row => row.Kind == (int)blocker.Kind).WhereExact(scope.DbContext, row => row.Subject, blocker.Subject);
         if (await rows.Where(row => row.ResolvedAt == null).ExecuteUpdateAsync(set => set.SetProperty(row => row.Detail, blocker.Detail)) == 1)
         {
             return;
@@ -73,7 +74,7 @@ public sealed class GenerationInitializationStorage(Func<Task<DbContextScope<Eve
     public async Task ResolveBlocker(GenerationInitializationBlockerKind kind, string subject, DateTimeOffset at)
     {
         await using var scope = await open();
-        await scope.DbContext.GenerationInitializationBlockers.Where(row => row.Kind == (int)kind && row.Subject == subject && row.ResolvedAt == null)
+        await scope.DbContext.GenerationInitializationBlockers.Where(row => row.Kind == (int)kind).WhereExact(scope.DbContext, row => row.Subject, subject).Where(row => row.ResolvedAt == null)
             .ExecuteUpdateAsync(set => set.SetProperty(row => row.ResolvedAt, at));
     }
 }

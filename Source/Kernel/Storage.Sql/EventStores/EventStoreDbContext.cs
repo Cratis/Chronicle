@@ -9,6 +9,7 @@ using Cratis.Chronicle.Storage.Sql.EventStores.EventStoreSubscriptions;
 using Cratis.Chronicle.Storage.Sql.EventStores.EventTypes;
 using Cratis.Chronicle.Storage.Sql.EventStores.ExternalServices;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
+using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.Seeding;
 using Cratis.Chronicle.Storage.Sql.EventStores.Observers;
 using Cratis.Chronicle.Storage.Sql.EventStores.Projections;
@@ -194,6 +195,11 @@ public class EventStoreDbContext(DbContextOptions<EventStoreDbContext> options) 
         modelBuilder.Entity<Generations.GenerationFloorHistoryEntry>().Property(_ => _.Revision).ValueGeneratedNever();
 
         base.OnModelCreating(modelBuilder);
+        if (Database.IsSqlServer())
+        {
+            ExactIdentifiers.RegisterByteLength(modelBuilder);
+        }
+
         Occurrences.OccurrenceModel.Configure(modelBuilder);
         modelBuilder.Entity<Occurrences.LifecycleFanOutEntry>(entity =>
         {

@@ -6,6 +6,7 @@ using System.Reactive.Subjects;
 using System.Text.Json;
 using Cratis.Chronicle.Concepts.Security;
 using Cratis.Chronicle.Storage.Security;
+using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 using Microsoft.EntityFrameworkCore;
 using ApplicationId = Cratis.Chronicle.Concepts.Security.ApplicationId;
 
@@ -42,7 +43,7 @@ public class ApplicationStorage(IDatabase database) : IApplicationStorage, IDisp
     public async Task<Application?> GetByClientId(ClientId clientId, CancellationToken cancellationToken = default)
     {
         await using var scope = await database.Cluster();
-        var entity = await scope.DbContext.Applications.FirstOrDefaultAsync(a => a.ClientId == clientId.Value, cancellationToken);
+        var entity = await scope.DbContext.Applications.WhereExact(scope.DbContext, a => a.ClientId, clientId.Value).FirstOrDefaultAsync(cancellationToken);
         return entity is null ? null : ToApplication(entity);
     }
 
