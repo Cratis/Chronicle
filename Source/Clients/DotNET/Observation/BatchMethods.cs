@@ -102,6 +102,66 @@ internal static class BatchMethods
         }
     }
 
+    /// <summary>
+    /// Throws when a batch method declares a parameter Chronicle cannot supply when it calls the method.
+    /// </summary>
+    /// <param name="observerType">The observer <see cref="Type"/>.</param>
+    /// <param name="method">The batch method.</param>
+    /// <param name="leading">How many leading parameters Chronicle passes, starting with the <see cref="EventBatch"/>.</param>
+    /// <exception cref="BatchMethodParameterCannotBeSupplied">A parameter cannot be supplied.</exception>
+    /// <remarks>
+    /// Mirrors what the analyzer reports as CHR0075, so a method the analyzer refuses is also refused at registration instead
+    /// of failing every page it is called for.
+    /// </remarks>
+    public static void ThrowIfParametersCannotBeSupplied(Type observerType, MethodInfo method, int leading)
+    {
+        var problem = ProblemWithParameters(method, leading);
+        if (problem is not null)
+        {
+            throw new BatchMethodParameterCannotBeSupplied(observerType, method.Name, problem);
+        }
+    }
+
+    static string? ProblemWithParameters(MethodInfo method, int leading)
+    {
+        if (method.IsGenericMethodDefinition || method.ContainsGenericParameters)
+        {
+            return "a batch method cannot be generic";
+        }
+
+        var parameters = method.GetParameters();
+        var irregular = Array.Find(parameters, parameter => parameter.ParameterType.IsByRef || parameter.IsOptional || parameter.IsDefined(typeof(ParamArrayAttribute), false));
+        if (irregular is not null)
+        {
+            return $"parameter '{irregular.Name}' must be an ordinary parameter, not ref, out, in, params or optional";
+        }
+
+        return parameters.Skip(leading).Select(ProblemWithResolved).FirstOrDefault(problem => problem is not null);
+    }
+
+    static string? ProblemWithResolved(ParameterInfo parameter)
+    {
+        var type = parameter.ParameterType;
+        if (type == typeof(BatchContext) || type == typeof(CancellationToken))
+        {
+            return null;
+        }
+
+        if (type == typeof(EventContext))
+        {
+            return $"parameter '{parameter.Name}' is an EventContext; each event in the batch carries its own context";
+        }
+
+        if (type == typeof(EventBatch))
+        {
+            return $"parameter '{parameter.Name}' is a second EventBatch; a batch method takes one, first";
+        }
+
+        return type.IsValueType || type == typeof(string)
+            ? $"parameter '{parameter.Name}' of type '{type.FullName}' cannot be resolved"
+            : null;
+    }
+
     static IEnumerable<MethodInfo> AllMethodsOf(Type type)
     {
         for (var current = type; current is not null && current != typeof(object); current = current.BaseType)
