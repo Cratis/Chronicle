@@ -238,6 +238,8 @@ To name a sink for everything without `[Sink]`, set `DefaultSinkName` and `Defau
 
 A passive read model has no sink, so `[Passive]` cannot be combined with `[Sink]`; the analyzer reports it as [CHR0069](../code-analysis/CHR0069.mdx). Event targets ignore sink names, because they publish to an event sequence.
 
+Moving a read model to another sink - a different `[Sink]`, client default or Kernel default - rebuilds it there: the Kernel replays the projections and reducers that fill it into the new sink, as it does when their definitions change. The `observers.definitionEvolution` policy applies, so a `Manual` policy recommends the replay instead. A read model whose sink is unchanged is not replayed.
+
 The Kernel refuses a read model that names a sink it has no configuration for, with `UnknownSinkName` naming the read model and the sink. A read model naming a graph sink, or a graph naming a read-model sink, is refused with `SinkConfigurationIsForAnotherKindOfReadModel`.
 
 ## Choosing a Sink

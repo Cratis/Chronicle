@@ -122,6 +122,8 @@ The Kernel validates the section before it starts and refuses to start with a me
 
 A read model that names a sink the Kernel has no configuration for is refused when the client registers it.
 
+Changing `readModels` or `graphs` moves the read models and graphs that name no sink. When their clients register again, the Kernel replays them into the new sink, following the `observers.definitionEvolution` policy.
+
 ## Connections
 
 A named SQL or Neo4j sink resolves its connections through [storage connection resolution](storage-connection-resolution.md) when it is configured, with the sink's engine as the requested storage. A named MongoDB sink connects with its `connectionDetails` directly.

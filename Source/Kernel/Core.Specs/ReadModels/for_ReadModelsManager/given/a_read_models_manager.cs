@@ -22,8 +22,11 @@ public class a_read_models_manager : Specification
     protected IProjectionsManager _projectionsManagerGrain;
     protected INamespaces _namespacesGrain;
     protected IProjectionPipelineManager _projectionPipelines;
+    protected ISinkChangeReplays _sinkChangeReplays;
 
     protected static readonly EventStoreName _eventStore = "some-event-store";
+
+    protected virtual ISinkConfigurations SinkConfigurations => DefaultSinkConfigurations.Instance;
 
     async Task Establish()
     {
@@ -40,7 +43,9 @@ public class a_read_models_manager : Specification
 
         _projectionPipelines = Substitute.For<IProjectionPipelineManager>();
         _silo.AddService(_projectionPipelines);
-        _silo.AddService<ISinkConfigurations>(DefaultSinkConfigurations.Instance);
+        _silo.AddService(SinkConfigurations);
+        _sinkChangeReplays = Substitute.For<ISinkChangeReplays>();
+        _silo.AddService(_sinkChangeReplays);
 
         _manager = await _silo.CreateGrainAsync<ReadModelsManager>(_eventStore.Value);
     }
