@@ -335,6 +335,18 @@ public class ChronicleOptions(
     public SinkTypeId DefaultGraphSinkTypeId { get; set; } = WellKnownSinkTypes.Neo4j;
 
     /// <summary>
+    /// Gets or sets the name of the sink configuration read models store to when they have no <see cref="SinkAttribute"/>.
+    /// Empty, the default, leaves the choice to the kernel: its configured default for read models, or its own storage.
+    /// </summary>
+    public string DefaultSinkName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the name of the sink configuration graphs store to when they have no <see cref="SinkAttribute"/>.
+    /// Empty, the default, leaves the choice to the kernel: its configured default for graphs, or its Neo4j server.
+    /// </summary>
+    public string DefaultGraphSinkName { get; set; } = string.Empty;
+
+    /// <summary>
     /// Create a <see cref="ChronicleOptions"/> from a connection string.
     /// </summary>
     /// <param name="connectionString">Connection string to create from.</param>

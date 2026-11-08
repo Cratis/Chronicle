@@ -27,8 +27,9 @@ internal class GraphDefinitionBuilder(INamingPolicy namingPolicy, IEventTypes ev
     /// <param name="model">The <see cref="GraphModel"/>.</param>
     /// <param name="projectionId">The identifier of the projection that fills the graph.</param>
     /// <param name="sinkTypeId">The identifier of the sink type that stores the graph.</param>
+    /// <param name="sinkName">The name of the sink configuration that stores the graph; empty for the default.</param>
     /// <returns>The <see cref="GraphRegistration"/>.</returns>
-    public GraphRegistration Build(GraphModel model, string projectionId, string sinkTypeId)
+    public GraphRegistration Build(GraphModel model, string projectionId, string sinkTypeId, string sinkName = "")
     {
         var nodes = model.Nodes.ToDictionary(_ => _.Label, Node);
         var edges = model.Edges.ToDictionary(_ => _.EdgeType, Edge);
@@ -39,7 +40,7 @@ internal class GraphDefinitionBuilder(INamingPolicy namingPolicy, IEventTypes ev
                 Type = new() { Identifier = model.Name, Generation = ReadModelGeneration.First },
                 ContainerName = model.Name,
                 DisplayName = model.Name,
-                Sink = new() { ConfigurationId = Guid.Empty, TypeId = sinkTypeId },
+                Sink = new() { ConfigurationId = Guid.Empty, TypeId = sinkTypeId, Name = sinkName },
                 Schema = _schemaWriter.Write(model),
                 Indexes = [],
                 ObserverType = ReadModelObserverType.Projection,

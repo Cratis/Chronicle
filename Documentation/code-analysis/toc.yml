@@ -122,3 +122,5 @@
   href: CHR0067.mdx
 - name: CHR0068 - A node or an edge cannot be a read model
   href: CHR0068.mdx
+- name: CHR0069 - [Sink] cannot be combined with [Passive]
+  href: CHR0069.mdx

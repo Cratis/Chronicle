@@ -17,11 +17,13 @@ namespace Cratis.Chronicle.Storage;
 /// <param name="systemStorage">The <see cref="ISystemStorage"/> instance.</param>
 /// <param name="sinkFactories"><see cref="ISinkFactory"/> instances.</param>
 /// <param name="systemEventStoreRelocation">The <see cref="ISystemEventStoreRelocation"/> of the storage provider, when it has one.</param>
+/// <param name="sinkConfigurations">The <see cref="ISinkConfigurations"/> resolving named sinks; none configured when omitted.</param>
 public class Storage(
     IClusterStorage clusterStorage,
     ISystemStorage systemStorage,
     IInstancesOf<ISinkFactory> sinkFactories,
-    ISystemEventStoreRelocation? systemEventStoreRelocation = null) : IStorage
+    ISystemEventStoreRelocation? systemEventStoreRelocation = null,
+    ISinkConfigurations? sinkConfigurations = null) : IStorage
 {
     readonly ConcurrentDictionary<EventStoreName, IEventStoreStorage> _eventStores = new(CaseInsensitiveEventStoreNameComparer.Instance);
 
@@ -84,7 +86,7 @@ public class Storage(
         var created = clusterStorage.CreateStorageForEventStore(
             eventStore,
             (eventStoreNamespaceName) =>
-                new Sinks.Sinks(eventStore, eventStoreNamespaceName, sinkFactories));
+                new Sinks.Sinks(eventStore, eventStoreNamespaceName, sinkFactories, sinkConfigurations));
 
         return _eventStores.GetOrAdd(eventStore, created);
     }

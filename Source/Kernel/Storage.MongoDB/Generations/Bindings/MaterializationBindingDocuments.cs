@@ -5,6 +5,7 @@ using System.Globalization;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Generations;
 using Cratis.Chronicle.Concepts.Projections.Generations.Bindings;
+using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Storage.Generations.Bindings;
 using MongoDB.Bson;
 
@@ -21,15 +22,26 @@ internal static class MaterializationBindingDocuments
     /// <param name="key">The key.</param>
     /// <param name="record">The record.</param>
     /// <returns>The stored representation or decoded value.</returns>
-    internal static BsonDocument First(MaterializationKey key, MaterializationGenerationRecord record) => new()
+    internal static BsonDocument First(MaterializationKey key, MaterializationGenerationRecord record)
     {
-        { "_id", key.Value }, { "incarnation", new BsonBinaryData(key.Incarnation.Value, GuidRepresentation.Standard) },
-        { "namespace", key.Namespace.Value }, { "projection", key.Projection.Value }, { "sinkType", key.SinkType.Value },
-        { "sinkConfiguration", new BsonBinaryData(key.SinkConfiguration.Value, GuidRepresentation.Standard) },
-        { "container", record.Identity.Destination.Value }, { "active", 1 }, { "destination", record.Identity.Destination.Value },
-        { "epoch", 0L }, { "next", 1 }, { "fence", BsonNull.Value }, { "lastReceipt", BsonNull.Value },
-        { "generations", new BsonArray { Encode(record) } }
-    };
+        var document = new BsonDocument
+        {
+            { "_id", key.Value }, { "incarnation", new BsonBinaryData(key.Incarnation.Value, GuidRepresentation.Standard) },
+            { "namespace", key.Namespace.Value }, { "projection", key.Projection.Value }, { "sinkType", key.SinkType.Value },
+            { "sinkConfiguration", new BsonBinaryData(key.SinkConfiguration.Value, GuidRepresentation.Standard) },
+            { "container", record.Identity.Destination.Value }, { "active", 1 }, { "destination", record.Identity.Destination.Value },
+            { "epoch", 0L }, { "next", 1 }, { "fence", BsonNull.Value }, { "lastReceipt", BsonNull.Value },
+            { "generations", new BsonArray { Encode(record) } }
+        };
+
+        // The implicit default sink stores no name, so its document is exactly what it was before sinks could be named.
+        if (!key.SinkName.IsDefault)
+        {
+            document.Add("sinkName", key.SinkName.Value);
+        }
+
+        return document;
+    }
 
     /// <summary>
     /// Converts or prepares materialization storage values.
@@ -76,7 +88,10 @@ internal static class MaterializationBindingDocuments
             new(document["namespace"].AsString),
             new(document["projection"].AsString),
             new(document["sinkType"].AsString),
-            new(document["sinkConfiguration"].AsBsonBinaryData.ToGuid(GuidRepresentation.Standard)));
+            new(document["sinkConfiguration"].AsBsonBinaryData.ToGuid(GuidRepresentation.Standard)))
+        {
+            SinkName = document.TryGetValue("sinkName", out var sinkName) && sinkName.IsString ? sinkName.AsString : SinkName.Default
+        };
         var active = new MaterializationGeneration(checked((uint)document["active"].AsInt32));
         return new(
             key,
