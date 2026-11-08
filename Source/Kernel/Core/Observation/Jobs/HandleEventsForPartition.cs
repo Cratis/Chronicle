@@ -60,6 +60,7 @@ public partial class HandleEventsForPartition(
     IObserver _observer = null!;
     EventSourceId _eventSourceId = EventSourceId.Unspecified;
     IObserverSubscriber? _subscriber;
+    ObserverSubscriberKey? _subscriberKey;
     IGrainFactory _grainFactory = null!;
     ObserverSubscriberTarget _deliveryTarget = null!;
     ObserverSubscription _deliverySubscription = ObserverSubscription.Unsubscribed;
@@ -93,6 +94,8 @@ public partial class HandleEventsForPartition(
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
+        _grainFactory = GrainFactory;
+
         // Steps are read one by one from storage, each with its own copy of the event types its observer reads.
         State.EventTypes = EventTypeInterner.Intern(State.EventTypes);
         State.ReaderScope = EventTypeInterner.Intern(State.ReaderScope);
@@ -108,7 +111,8 @@ public partial class HandleEventsForPartition(
             // reaching PerformStep, which reports the disconnection the job knows how to handle.
             if (subscription.IsSubscribed)
             {
-                _subscriber = GrainFactory.GetGrain(subscription.SubscriberType, GetObserverSubscriberKey(subscription, State.Partition)) as IObserverSubscriber;
+                _subscriberKey = GetObserverSubscriberKey(subscription, State.Partition);
+                _subscriber = GrainFactory.GetGrain(subscription.SubscriberType, _subscriberKey) as IObserverSubscriber;
                 _isCollapsingProjection = subscription.IsCollapsingProjection;
             }
         }
@@ -158,13 +162,15 @@ public partial class HandleEventsForPartition(
         try
         {
             logger.Preparing(request.Partition, request.StartEventSequenceNumber, request.EndEventSequenceNumber);
+            _grainFactory = GrainFactory;
             _observer = GrainFactory.GetGrain<IObserver>(request.ObserverKey);
             var subscription = await _observer.GetSubscription();
             _eventSourceId = request.Partition.ToString() ?? EventSourceId.Unspecified;
 
             if (subscription.IsSubscribed)
             {
-                _subscriber = GrainFactory.GetGrain(subscription.SubscriberType, GetObserverSubscriberKey(subscription, request.Partition)) as IObserverSubscriber;
+                _subscriberKey = GetObserverSubscriberKey(subscription, request.Partition);
+                _subscriber = GrainFactory.GetGrain(subscription.SubscriberType, _subscriberKey) as IObserverSubscriber;
                 _isCollapsingProjection = subscription.IsCollapsingProjection;
                 logger.SuccessfullyPrepared(request.Partition);
                 return Result.Success<PrepareJobStepError>();
@@ -186,6 +192,23 @@ public partial class HandleEventsForPartition(
         var lastSuccessfullyHandledEventSequenceNumber = EventSequenceNumber.Unavailable;
         var subscription = await _observer.GetSubscription();
         _generationDelivery = subscription.GenerationDelivery;
+
+        // A step is prepared, and its grain activated, when its job starts, but a job keeps only a window of its steps
+        // running, so a step can start long after. The client that was subscribed when it was prepared may be gone by
+        // then, and delivering through its connection would find nobody. This runs on the step's background task, which
+        // has no access to the grain's own services, hence the factory kept from when the step was prepared or activated.
+        if (subscription.IsSubscribed)
+        {
+            var subscriberKey = GetObserverSubscriberKey(subscription, currentState.Partition);
+            if (_subscriberKey is not null && _subscriberKey != subscriberKey)
+            {
+                _subscriber = _grainFactory.GetGrain(subscription.SubscriberType, subscriberKey) as IObserverSubscriber;
+            }
+
+            _subscriberKey = subscriberKey;
+            _isCollapsingProjection = subscription.IsCollapsingProjection;
+        }
+
         try
         {
             lastSuccessfullyHandledEventSequenceNumber = currentState.LastSuccessfullyHandledEventSequenceNumber;
@@ -596,7 +619,7 @@ public partial class HandleEventsForPartition(
 
     ObserverSubscriberKey GetObserverSubscriberKey(ObserverSubscription subscription, Key partition)
     {
-        _grainFactory = GrainFactory;
+        _grainFactory ??= GrainFactory;
         _deliverySubscription = subscription;
         _deliveryTarget = typeof(IWebhookObserverSubscriber).IsAssignableFrom(subscription.SubscriberType)
             ? new ObserverSubscriberTarget(SiloAddress.Zero)
