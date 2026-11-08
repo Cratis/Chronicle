@@ -36,6 +36,6 @@ public static class FederationPortPolicy
             return false;
         }
 
-        return path is null || !path.StartsWith(ServicePathPrefix, StringComparison.Ordinal);
+        return path?.StartsWith(ServicePathPrefix, StringComparison.Ordinal) != true;
     }
 }
