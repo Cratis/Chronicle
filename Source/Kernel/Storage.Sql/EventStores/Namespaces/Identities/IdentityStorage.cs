@@ -6,6 +6,7 @@ using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Storage.Identities;
+using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.Identities;
@@ -136,7 +137,7 @@ public class IdentityStorage(EventStoreName eventStore, EventStoreNamespaceName 
     public async Task Rename(string subject, string name)
     {
         await using var scope = await database.Namespace(eventStore, @namespace);
-        var entity = await scope.DbContext.Identities.FirstOrDefaultAsync(_ => _.Subject == subject);
+        var entity = await scope.DbContext.Identities.WhereExact(scope.DbContext, _ => _.Subject, subject).FirstOrDefaultAsync();
         if (entity is not null)
         {
             entity.Name = name;

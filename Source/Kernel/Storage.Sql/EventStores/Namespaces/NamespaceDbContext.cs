@@ -121,6 +121,11 @@ public class NamespaceDbContext(DbContextOptions<NamespaceDbContext> options) : 
     {
         base.OnModelCreating(modelBuilder);
         EventStores.Occurrences.OccurrenceModel.Configure(modelBuilder);
+        if (Database.IsSqlServer())
+        {
+            Namespaces.EventSequences.ExactIdentifiers.RegisterByteLength(modelBuilder);
+        }
+
         EventStores.Occurrences.OccurrenceModel.ConfigureReceipts(modelBuilder);
         modelBuilder
             .Entity<Observers.ObserverDefinitionChangeEntry>(entity =>

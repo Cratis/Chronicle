@@ -9,6 +9,7 @@ using Cratis.Chronicle.Storage.Sql.EventStores.EventStoreSubscriptions;
 using Cratis.Chronicle.Storage.Sql.EventStores.EventTypes;
 using Cratis.Chronicle.Storage.Sql.EventStores.ExternalServices;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
+using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.Seeding;
 using Cratis.Chronicle.Storage.Sql.EventStores.Observers;
 using Cratis.Chronicle.Storage.Sql.EventStores.Projections;
@@ -100,7 +101,7 @@ public class EventStoreDbContext(DbContextOptions<EventStoreDbContext> options) 
     /// <summary>
     /// Gets or sets the webhook signing keys DbSet.
     /// </summary>
-    public DbSet<Webhooks.WebhookSigningKey> WebhookSigningKeys { get; set; }
+    public DbSet<WebhookSigningKey> WebhookSigningKeys { get; set; }
 
     /// <summary>
     /// Gets or sets the event source definitions DbSet.
@@ -171,7 +172,7 @@ public class EventStoreDbContext(DbContextOptions<EventStoreDbContext> options) 
         // whose read model type is named "ReadModel" (pluralized to "ReadModels" by DefaultNamingPolicy).
         modelBuilder.Entity<ReadModelDefinition>().ToTable(WellKnownTableNames.ReadModelDefinitions);
 
-        modelBuilder.Entity<Webhooks.WebhookSigningKey>()
+        modelBuilder.Entity<WebhookSigningKey>()
             .ToTable(WellKnownTableNames.WebhookSigningKeys)
             .HasKey(row => row.KeyId);
 
@@ -194,6 +195,11 @@ public class EventStoreDbContext(DbContextOptions<EventStoreDbContext> options) 
         modelBuilder.Entity<Generations.GenerationFloorHistoryEntry>().Property(_ => _.Revision).ValueGeneratedNever();
 
         base.OnModelCreating(modelBuilder);
+        if (Database.IsSqlServer())
+        {
+            ExactIdentifiers.RegisterByteLength(modelBuilder);
+        }
+
         Occurrences.OccurrenceModel.Configure(modelBuilder);
         modelBuilder.Entity<Occurrences.LifecycleFanOutEntry>(entity =>
         {

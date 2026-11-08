@@ -42,31 +42,57 @@ public class SequenceQueryStorage(IEventStoreDatabase eventStoreDatabase) : ISeq
     }
 
     /// <inheritdoc/>
-    /// <remarks>
-    /// The driver's result is deliberately awaited and dropped rather than returned as the task's
-    /// value. The interface promises a plain <see cref="Task"/>, and a caller that reflects over
-    /// what it actually got - Arc does, when turning a command handler's return into a response -
-    /// would otherwise surface a MongoDB driver type to the client.
-    /// </remarks>
-    public async Task Save(Concepts.SequenceQueries.SequenceQueryDefinition definition)
+    public async Task<Concepts.SequenceQueries.SequenceQueryDefinition?> Get(SequenceQueryId id)
     {
-        var id = definition.Id.Value;
+        var value = id.Value;
+        using var result = await Collection.FindAsync(_ => _.Id == value);
+        var definition = await result.FirstOrDefaultAsync();
 
-        await Collection.ReplaceOneAsync(
-            filter: _ => _.Id == id,
-            replacement: definition.ToMongoDB(),
-            options: new ReplaceOptions { IsUpsert = true });
+        return definition?.ToKernel();
+    }
+
+    /// <inheritdoc/>
+    public async Task<SequenceQueryFolderDefinition?> GetFolder(SequenceQueryFolderId id)
+    {
+        var value = id.Value;
+        using var result = await FolderCollection.FindAsync(_ => _.Id == value);
+        var folder = await result.FirstOrDefaultAsync();
+
+        return folder?.ToKernel();
     }
 
     /// <inheritdoc/>
     /// <remarks>
-    /// Awaited rather than returned for the same reason as <see cref="Save"/>.
+    /// The driver's result is deliberately awaited and dropped, and only the outcome is returned.
+    /// A caller that reflects over what it actually got - Arc does, when turning a command
+    /// handler's return into a response - would otherwise surface a MongoDB driver type to the client.
     /// </remarks>
-    public async Task Delete(SequenceQueryId id)
+    public async Task<SequenceQueryWriteOutcome> Insert(Concepts.SequenceQueries.SequenceQueryDefinition definition) =>
+        await InsertOnce(Collection, definition.ToMongoDB());
+
+    /// <inheritdoc/>
+    public async Task<SequenceQueryWriteOutcome> Update(Concepts.SequenceQueries.SequenceQueryDefinition definition, SequenceQueryOwner expectedOwner)
+    {
+        var id = definition.Id.Value;
+        var owner = expectedOwner.Value;
+
+        var result = await Collection.ReplaceOneAsync(
+            filter: _ => _.Id == id && _.Owner == owner,
+            replacement: (definition with { Owner = expectedOwner }).ToMongoDB());
+
+        return result.MatchedCount == 0 ? SequenceQueryWriteOutcome.Conflict : SequenceQueryWriteOutcome.Applied;
+    }
+
+    /// <inheritdoc/>
+    public async Task<SequenceQueryWriteOutcome> Delete(SequenceQueryId id, SequenceQueryOwner expectedOwner)
     {
         var value = id.Value;
+        var owner = expectedOwner.Value;
 
-        await Collection.DeleteOneAsync(_ => _.Id == value);
+        var result = await Collection.DeleteOneAsync(_ => _.Id == value && _.Owner == owner);
+        if (result.DeletedCount > 0) return SequenceQueryWriteOutcome.Applied;
+
+        return await Get(id) is null ? SequenceQueryWriteOutcome.Applied : SequenceQueryWriteOutcome.Conflict;
     }
 
     /// <inheritdoc/>
@@ -80,27 +106,44 @@ public class SequenceQueryStorage(IEventStoreDatabase eventStoreDatabase) : ISeq
     }
 
     /// <inheritdoc/>
-    /// <remarks>
-    /// Awaited rather than returned for the same reason as <see cref="Save"/>.
-    /// </remarks>
-    public async Task SaveFolder(SequenceQueryFolderDefinition definition)
+    public async Task<SequenceQueryWriteOutcome> InsertFolder(SequenceQueryFolderDefinition definition) =>
+        await InsertOnce(FolderCollection, definition.ToMongoDB());
+
+    /// <inheritdoc/>
+    public async Task<SequenceQueryWriteOutcome> UpdateFolder(SequenceQueryFolderDefinition definition, SequenceQueryOwner expectedOwner)
     {
         var id = definition.Id.Value;
+        var owner = expectedOwner.Value;
 
-        await FolderCollection.ReplaceOneAsync(
-            filter: _ => _.Id == id,
-            replacement: definition.ToMongoDB(),
-            options: new ReplaceOptions { IsUpsert = true });
+        var result = await FolderCollection.ReplaceOneAsync(
+            filter: _ => _.Id == id && _.Owner == owner,
+            replacement: (definition with { Owner = expectedOwner }).ToMongoDB());
+
+        return result.MatchedCount == 0 ? SequenceQueryWriteOutcome.Conflict : SequenceQueryWriteOutcome.Applied;
     }
 
     /// <inheritdoc/>
-    /// <remarks>
-    /// Awaited rather than returned for the same reason as <see cref="Save"/>.
-    /// </remarks>
-    public async Task DeleteFolder(SequenceQueryFolderId id)
+    public async Task<SequenceQueryWriteOutcome> DeleteFolder(SequenceQueryFolderId id, SequenceQueryOwner expectedOwner)
     {
         var value = id.Value;
+        var owner = expectedOwner.Value;
 
-        await FolderCollection.DeleteOneAsync(_ => _.Id == value);
+        var result = await FolderCollection.DeleteOneAsync(_ => _.Id == value && _.Owner == owner);
+        if (result.DeletedCount > 0) return SequenceQueryWriteOutcome.Applied;
+
+        return await GetFolder(id) is null ? SequenceQueryWriteOutcome.Applied : SequenceQueryWriteOutcome.Conflict;
+    }
+
+    static async Task<SequenceQueryWriteOutcome> InsertOnce<TDocument>(IMongoCollection<TDocument> collection, TDocument document)
+    {
+        try
+        {
+            await collection.InsertOneAsync(document);
+            return SequenceQueryWriteOutcome.Applied;
+        }
+        catch (MongoWriteException ex) when (ex.WriteError.Category == ServerErrorCategory.DuplicateKey)
+        {
+            return SequenceQueryWriteOutcome.Conflict;
+        }
     }
 }

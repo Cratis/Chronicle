@@ -31,21 +31,38 @@ public class SequenceQueryStorage : ISequenceQueryStorage, IDisposable
     }
 
     /// <inheritdoc/>
-    public Task Save(SequenceQueryDefinition definition)
-    {
-        _definitions[definition.Id.Value] = definition;
-        NotifyChange();
+    public Task<SequenceQueryDefinition?> Get(SequenceQueryId id) =>
+        Task.FromResult(_definitions.TryGetValue(id.Value, out var definition) ? definition : null);
 
-        return Task.CompletedTask;
+    /// <inheritdoc/>
+    public Task<SequenceQueryFolderDefinition?> GetFolder(SequenceQueryFolderId id) =>
+        Task.FromResult(_folders.TryGetValue(id.Value, out var folder) ? folder : null);
+
+    /// <inheritdoc/>
+    public Task<SequenceQueryWriteOutcome> Insert(SequenceQueryDefinition definition)
+    {
+        var outcome = ConditionalWrite.Insert(_definitions, definition.Id.Value, definition);
+        if (outcome == SequenceQueryWriteOutcome.Applied) NotifyChange();
+
+        return Task.FromResult(outcome);
     }
 
     /// <inheritdoc/>
-    public Task Delete(SequenceQueryId id)
+    public Task<SequenceQueryWriteOutcome> Update(SequenceQueryDefinition definition, SequenceQueryOwner expectedOwner)
     {
-        _definitions.TryRemove(id.Value, out _);
-        NotifyChange();
+        var outcome = ConditionalWrite.Update(_definitions, definition.Id.Value, expectedOwner, _ => _.Owner, definition with { Owner = expectedOwner });
+        if (outcome == SequenceQueryWriteOutcome.Applied) NotifyChange();
 
-        return Task.CompletedTask;
+        return Task.FromResult(outcome);
+    }
+
+    /// <inheritdoc/>
+    public Task<SequenceQueryWriteOutcome> Delete(SequenceQueryId id, SequenceQueryOwner expectedOwner)
+    {
+        var outcome = ConditionalWrite.Delete(_definitions, id.Value, expectedOwner, _ => _.Owner);
+        if (outcome == SequenceQueryWriteOutcome.Applied) NotifyChange();
+
+        return Task.FromResult(outcome);
     }
 
     /// <inheritdoc/>
@@ -58,20 +75,16 @@ public class SequenceQueryStorage : ISequenceQueryStorage, IDisposable
         ]);
 
     /// <inheritdoc/>
-    public Task SaveFolder(SequenceQueryFolderDefinition definition)
-    {
-        _folders[definition.Id.Value] = definition;
-
-        return Task.CompletedTask;
-    }
+    public Task<SequenceQueryWriteOutcome> InsertFolder(SequenceQueryFolderDefinition definition) =>
+        Task.FromResult(ConditionalWrite.Insert(_folders, definition.Id.Value, definition));
 
     /// <inheritdoc/>
-    public Task DeleteFolder(SequenceQueryFolderId id)
-    {
-        _folders.TryRemove(id.Value, out _);
+    public Task<SequenceQueryWriteOutcome> UpdateFolder(SequenceQueryFolderDefinition definition, SequenceQueryOwner expectedOwner) =>
+        Task.FromResult(ConditionalWrite.Update(_folders, definition.Id.Value, expectedOwner, _ => _.Owner, definition with { Owner = expectedOwner }));
 
-        return Task.CompletedTask;
-    }
+    /// <inheritdoc/>
+    public Task<SequenceQueryWriteOutcome> DeleteFolder(SequenceQueryFolderId id, SequenceQueryOwner expectedOwner) =>
+        Task.FromResult(ConditionalWrite.Delete(_folders, id.Value, expectedOwner, _ => _.Owner));
 
     /// <inheritdoc/>
     public void Dispose()
