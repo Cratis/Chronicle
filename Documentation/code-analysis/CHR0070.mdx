@@ -1,0 +1,26 @@
+---
+title: "CHR0070: Batch method observes no event types"
+description: "CHR0070 reports a Cratis Chronicle reactor or reducer batch method that takes an EventBatch but declares no [Observes<T>]."
+---
+
+## Rule description
+
+A method whose first parameter is an `EventBatch` is a batch method, whatever its name. It receives only the events of the types its `[Observes<TEvent>]` attributes name, so without one it would never be called. Chronicle refuses to register the observer.
+
+## Severity
+
+Error
+
+## How to fix
+
+Add `[Observes<TEvent>]` to the method once for each event type it handles. If the method is a helper that happens to take an `EventBatch`, move it out of the reactor or reducer, or take the events as another type.
+
+## Related rules
+
+- [CHR0069](CHR0069.mdx): `[Observes<T>]` is only for batch methods.
+- [CHR0076](CHR0076.mdx): Batch method matches an event type it does not observe.
+
+## Related topics
+
+- [Reactor batch methods](../reactors/batches.mdx)
+- [Reducer batch methods](../reducers/batches.mdx)

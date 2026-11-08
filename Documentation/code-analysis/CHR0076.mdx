@@ -1,0 +1,25 @@
+---
+title: "CHR0076: Batch method matches an event type it does not observe"
+description: "CHR0076 warns when a Cratis Chronicle batch method pattern-matches on an event type missing from its [Observes<T>] list."
+---
+
+## Rule description
+
+A batch method receives only the events of the types its `[Observes<TEvent>]` attributes name. A `switch` case, an `is` check or another type pattern on any other event type can never match, which usually means an `[Observes<TEvent>]` is missing. CHR0076 reports declaration, type and recursive patterns and `is` checks on an event type that no `[Observes<TEvent>]` of the method covers. A pattern on an event type that implements or derives from an observed type is covered.
+
+## Severity
+
+Warning
+
+## How to fix
+
+Add `[Observes<TEvent>]` for the event type, or remove the case.
+
+## Related rules
+
+- [CHR0070](CHR0070.mdx): Batch method observes no event types.
+
+## Related topics
+
+- [Reactor batch methods](../reactors/batches.mdx)
+- [Reducer batch methods](../reducers/batches.mdx)
