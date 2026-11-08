@@ -140,6 +140,37 @@ public class PIIManager(
         }
     }
 
+    static EventStoreName[] Reachable(IEnumerable<EventStoreName> eventStores, HashSet<EventStoreName> unreachable) =>
+        [.. eventStores.Where(eventStore => !unreachable.Contains(eventStore))];
+
+    static bool IsUnavailable(Exception error) => error is EncryptionKeyFenceUnavailable or EncryptionKeyStorageUnavailable;
+
+    /// <summary>
+    /// Decide whether a failed erasure step is tried again.
+    /// </summary>
+    /// <remarks>
+    /// Contention clears within milliseconds. An unavailable store has already spent a bounded wait, so it gets one more
+    /// try rather than seven: retries multiplied by that wait are what held a grain past its call timeout.
+    /// </remarks>
+    /// <param name="error">The failure.</param>
+    /// <param name="attempt">The zero-based attempt that failed.</param>
+    /// <returns><see langword="true"/> to try again.</returns>
+    static bool ShouldRetry(Exception error, int attempt) =>
+        (error is EncryptionKeyFenceChanged && attempt < 7) || (IsUnavailable(error) && attempt < 1);
+
+    static async Task Reaching(EventStoreName eventStore, HashSet<EventStoreName> unreachable, Func<Task> operation)
+    {
+        try
+        {
+            await operation();
+        }
+        catch (Exception error) when (IsUnavailable(error))
+        {
+            unreachable.Add(eventStore);
+            throw;
+        }
+    }
+
     async Task DeleteEncryptionKey(EncryptionKeyIdentifier identifier, PIIManagerKey key, IReadOnlyList<EventStoreName> eventStores, List<Exception> failures, string? requestId)
     {
         if (SupportsProtocolErasure())
@@ -161,18 +192,21 @@ public class PIIManager(
 
     async Task DeleteProtocolEncryptionKey(EncryptionKeyIdentifier identifier, PIIManagerKey key, IReadOnlyList<EventStoreName> eventStores, List<Exception> failures, string? requestId)
     {
-        requestId ??= await PendingRequest(identifier, key, eventStores) ?? Guid.NewGuid().ToString("N");
+        // A store whose fence did not answer in time is not asked again during this call: each further step would wait
+        // for the same timeout, and together they would outlast the caller. The erasure reports it as incomplete instead.
+        var unreachable = new HashSet<EventStoreName>();
+        requestId ??= await PendingRequest(identifier, key, eventStores, unreachable, failures) ?? Guid.NewGuid().ToString("N");
         var request = new EncryptionKeyErasureRequest(requestId);
 
         // Fence every reachable store before sweeping any. Never substitute an unbounded delete on failure.
-        await ForEach(eventStores, failures, eventStore => Retry(() => keyStore.RecordErasureFor(eventStore, key.Namespace, identifier, request)));
-        await ForEach(eventStores, failures, async eventStore =>
+        await ForEach(Reachable(eventStores, unreachable), failures, eventStore => Reaching(eventStore, unreachable, () => Retry(() => keyStore.RecordErasureFor(eventStore, key.Namespace, identifier, request))));
+        await ForEach(Reachable(eventStores, unreachable), failures, eventStore => Reaching(eventStore, unreachable, async () =>
         {
             var recorded = await keyStore.GetErasureRequestFor(eventStore, key.Namespace, identifier, requestId);
             if (recorded?.Confirmed == true) return;
             await Retry(() => keyStore.DeleteThroughFor(eventStore, key.Namespace, identifier, requestId));
             await RemoveUniqueClaimsFor(eventStore, key.Namespace, identifier);
-        });
+        }));
 
         // Evict even after a partial storage failure. Confirmation is only legal after eviction and the grace.
         await ForEach(eventStores, failures, eventStore => cacheClient.Evict(eventStore, key.Namespace, identifier));
@@ -242,7 +276,7 @@ public class PIIManager(
         logger.AllowedNewEncryptionKey(BindingFor(identifier), key.Namespace, eventStores.Count, Names(eventStores));
     }
 
-    async Task<string?> PendingRequest(EncryptionKeyIdentifier identifier, PIIManagerKey key, IReadOnlyList<EventStoreName> eventStores)
+    async Task<string?> PendingRequest(EncryptionKeyIdentifier identifier, PIIManagerKey key, IReadOnlyList<EventStoreName> eventStores, HashSet<EventStoreName> unreachable, List<Exception> failures)
     {
         foreach (var eventStore in eventStores)
         {
@@ -250,6 +284,12 @@ public class PIIManager(
             {
                 var fence = await keyStore.GetFenceFor(eventStore, key.Namespace, identifier);
                 if (fence?.Requests?.LastOrDefault(_ => !_.Confirmed) is { } pending) return pending.RequestId;
+            }
+            catch (Exception error) when (IsUnavailable(error))
+            {
+                // The fence did not answer within its timeout; asking it to record the erasure would wait again.
+                unreachable.Add(eventStore);
+                failures.Add(error);
             }
             catch (Exception)
             {
@@ -270,7 +310,7 @@ public class PIIManager(
                 await operation();
                 return;
             }
-            catch (Exception error) when (attempt < 7 && error is EncryptionKeyFenceChanged or EncryptionKeyFenceUnavailable or EncryptionKeyStorageUnavailable)
+            catch (Exception error) when (ShouldRetry(error, attempt))
             {
                 await _delay(TimeSpan.FromMilliseconds(Math.Min(500, 10 * (1 << attempt)) + _random.Next(10)));
             }

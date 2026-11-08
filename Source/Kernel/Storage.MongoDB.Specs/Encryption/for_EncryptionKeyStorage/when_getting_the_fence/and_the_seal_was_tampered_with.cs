@@ -23,5 +23,5 @@ public class and_the_seal_was_tampered_with : racing_encryption_key_collections
     [Fact] void should_refuse_to_attest_the_fence() => _result.ShouldBeOfExactType<EncryptionKeyFenceUnavailable>();
     [Fact] void should_read_linearly() => _erasures.Received(1).WithReadConcern(ReadConcern.Linearizable);
     [Fact] void should_read_from_the_primary() => _erasures.Received(1).WithReadPreference(ReadPreference.Primary);
-    [Fact] void should_bound_the_read_time() => _erasures.Received(1).FindAsync(Arg.Any<FilterDefinition<EncryptionKeyErasureForIdentifier>>(), Arg.Is<FindOptions<EncryptionKeyErasureForIdentifier, EncryptionKeyErasureForIdentifier>>(_ => _.MaxTime == TimeSpan.FromSeconds(10)), Arg.Any<CancellationToken>());
+    [Fact] void should_bound_the_read_time() => _erasures.Received(1).FindAsync(Arg.Any<FilterDefinition<EncryptionKeyErasureForIdentifier>>(), Arg.Is<FindOptions<EncryptionKeyErasureForIdentifier, EncryptionKeyErasureForIdentifier>>(_ => _.MaxTime == new EncryptionKeyErasureOptions().FenceTimeout), Arg.Any<CancellationToken>());
 }

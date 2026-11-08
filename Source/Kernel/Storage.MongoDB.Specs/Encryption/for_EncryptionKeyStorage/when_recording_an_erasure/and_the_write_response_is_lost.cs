@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Storage.Compliance;
 using Cratis.Compliance.MongoDB.for_EncryptionKeyStorage.given;
 using MongoDB.Driver;
 
@@ -17,6 +18,6 @@ public class and_the_write_response_is_lost : racing_encryption_key_collections
 
     async Task Because() => _result = await Catch.Exception(() => _storage.RecordErasureFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, "identifier", new("request")));
 
-    [Fact] void should_surface_the_unknown_outcome() => _result.ShouldBeOfExactType<TimeoutException>();
+    [Fact] void should_surface_the_unknown_outcome_as_an_unavailable_fence() => _result.ShouldBeOfExactType<EncryptionKeyFenceUnavailable>();
     [Fact] void should_not_retry_an_ambiguous_write() => _erasures.Received(1).FindOneAndUpdateAsync(Arg.Any<FilterDefinition<EncryptionKeyErasureForIdentifier>>(), Arg.Any<UpdateDefinition<EncryptionKeyErasureForIdentifier>>(), Arg.Any<FindOneAndUpdateOptions<EncryptionKeyErasureForIdentifier>>(), Arg.Any<CancellationToken>());
 }

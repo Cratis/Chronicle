@@ -45,5 +45,5 @@ public class and_a_new_key_is_published : racing_encryption_key_collections
     [Fact] void should_attach_the_observed_lifecycle() => _stage.StagedLifecycle.ShouldEqual(1u);
     [Fact] void should_return_the_persisted_lifecycle() => _result.StagedLifecycle.ShouldEqual(_stage.StagedLifecycle);
     [Fact] void should_assign_a_writer_nonce() => string.IsNullOrEmpty(_stage.WriterNonce).ShouldBeFalse();
-    [Fact] void should_use_majority_write_concern() => _keys.Received().WithWriteConcern(WriteConcern.WMajority);
+    [Fact] void should_use_majority_write_concern() => _keys.Received().WithWriteConcern(Arg.Is<WriteConcern>(_ => _.W == WriteConcern.WMajority.W));
 }

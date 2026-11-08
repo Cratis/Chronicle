@@ -13,6 +13,7 @@ public class racing_encryption_key_collections : Specification
     protected IMongoCollection<EncryptionKeyForIdentifier> _keys;
     protected IMongoCollection<EncryptionKeyErasureForIdentifier> _erasures;
     protected EncryptionKeyStorage _storage;
+    protected IMongoDBTopology _topology;
     protected EncryptionKeyErasureForIdentifier _fence = new("identifier", 0u, [], true);
     protected bool _sealFence = true;
 
@@ -41,6 +42,7 @@ public class racing_encryption_key_collections : Specification
         eventStore.GetNamespaceDatabase(EventStoreNamespaceName.NotSet).Returns(namespaceDatabase);
         namespaceDatabase.GetCollection<EncryptionKeyForIdentifier>("encryption-keys").Returns(_keys);
         namespaceDatabase.GetCollection<EncryptionKeyErasureForIdentifier>("encryption-key-erasures").Returns(_erasures);
-        _storage = new(database);
+        _topology = Substitute.For<IMongoDBTopology>();
+        _storage = new(database, _topology);
     }
 }
