@@ -7,6 +7,7 @@ using Cratis.Chronicle.Storage.Alerts;
 using Cratis.Chronicle.Storage.Changes;
 using Cratis.Chronicle.Storage.Events.Constraints;
 using Cratis.Chronicle.Storage.EventSequences;
+using Cratis.Chronicle.Storage.EventSequences.Mutations;
 using Cratis.Chronicle.Storage.Identities;
 using Cratis.Chronicle.Storage.Keys;
 using Cratis.Chronicle.Storage.Observation;
@@ -125,6 +126,11 @@ public interface IEventStoreNamespaceStorage
     /// Gets the <see cref="IProjectionFuturesStorage"/> for the event store namespace.
     /// </summary>
     IProjectionFuturesStorage ProjectionFutures { get; }
+
+    /// <summary>
+    /// Gets the namespace-scoped permanent event sequence mutation registry.
+    /// </summary>
+    IEventSequenceMutationRegistry EventSequenceMutations => UnsupportedEventSequenceMutationRegistry.Instance;
 
     /// <summary>
     /// Get the event sequences that exist for the event store namespace.

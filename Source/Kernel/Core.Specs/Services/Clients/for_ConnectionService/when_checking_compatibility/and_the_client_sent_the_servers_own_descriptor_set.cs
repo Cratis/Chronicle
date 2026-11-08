@@ -30,6 +30,8 @@ public class and_the_client_sent_the_servers_own_descriptor_set : Specification
             Substitute.For<ILocalSiloDetails>(),
             new ConnectedClientsQuery(Substitute.For<IGrainFactory>(), Options.Create(new ChronicleOptions())),
             new OpenConnections(),
+            AllowingConnectionOwnership.Create(),
+            Substitute.For<IConnectedClientsVisibility>(),
             NullLogger<KernelConnectionService>.Instance,
             Options.Create(new ChronicleOptions()));
 

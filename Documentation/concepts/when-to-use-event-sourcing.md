@@ -1,40 +1,48 @@
 ---
-title: When to use event sourcing
-description: An honest look at why event sourcing is the Cratis default for information systems, where it pays off, and where a current-state slice can stay simpler.
+title: When to use event sourcing with Cratis Chronicle
+description: Use event sourcing when business history and transitions matter. Weigh modeling, replay, and consistency costs before choosing it over current-state storage.
 ---
 
-Event sourcing is the Cratis default for information systems, but it is not free. The useful question is not "can this be event-sourced?" It is "which parts of this system carry meaningful facts over time, and which parts are genuinely just current-state data?" [Why Event Sourcing](../why-event-sourcing.md) makes the case for the default; this page names the boundaries.
+Use event sourcing when the changes that led to the current state are part of the information your system needs to preserve. Cratis Chronicle stores those changes as events so you can explain past decisions, build different read models, and react to business facts. If only the latest value matters, current-state storage may be simpler.
+
+Event sourcing is the Cratis default for information systems, not a requirement for every table or screen. [Why Event Sourcing](../why-event-sourcing.md) explains that default; the decision here is which parts of your system benefit enough to justify the modeling and operational work.
 
 ## Where it pays off by default
 
-Event sourcing earns its keep when **history and change are part of the problem**, which is true for most business-facing information systems:
+Consider an order whose price is disputed after the product catalog changes. The current catalog cannot explain the amount accepted at checkout. Events that record the accepted price, later adjustments, and cancellation preserve the facts needed to answer that question.
 
-- **Audit and compliance** — you need a complete, tamper-evident record of what happened and when. The event log *is* the audit trail.
-- **Process-heavy domains** — orders, claims, onboarding, logistics: things move through states and the transitions matter.
-- **"How did we get here?" is a real question** — debugging, dispute resolution, or analytics that need the past, not just the present.
-- **Multiple read shapes from the same facts** — you want several specialized [read models](../read-models/) over one stream of truth.
-- **Integration and reactions** — other parts of the system need to act when something happens.
+The same approach is useful when:
+
+- A process has meaningful transitions, such as a claim being submitted, assessed, and settled.
+- Support or reporting needs to explain how the system reached a state, not just display that state.
+- Several screens or reports need different [read models](../read-models/) derived from the same history.
+- Another part of the system needs to act on a specific business change.
+
+An event log can support an audit trail, but it records the facts you choose to capture. It does not by itself establish regulatory compliance or prove that all relevant activity was recorded.
 
 ## Where to be skeptical
 
-Be skeptical when:
+A table of display settings may need only its latest values. If there is no requirement to explain changes, rebuild views from history, or react to meaningful transitions, a relational or document store avoids work that brings little value to that slice.
 
-- **The domain is genuinely CRUD.** A few forms over a table where the current state is the whole story and nobody will ever ask what changed — a relational or document database is simpler and you should use one.
-- **There is no meaningful behavior.** If every "change" is just "overwrite this field," you're modeling state, not events.
-- **The team has no appetite for the concepts.** Events, projections, and eventual consistency are a real learning curve. If the problem doesn't justify it, the curve is pure cost.
+Also consider who will maintain the system. Event names, schema evolution, projection lag, and replay become part of development and support. If the team cannot budget time to learn and operate them, choose a smaller event-sourced boundary rather than applying the approach everywhere at once.
 
 ## The trade-offs to weigh
 
-- **Eventual consistency.** Read models are built *after* events are appended, so a read immediately after a write may not reflect it yet. This is usually fine — but it's a shift if you expect read-after-write everywhere. See [Read Models](../read-models/).
-- **Modeling discipline.** Events are immutable facts; getting their granularity and naming right takes thought, and changing them later means [event type migrations](./event-type-migrations), not an `ALTER TABLE`.
-- **More moving parts.** Commands, events, projections, and reactors are more concepts than "save the row" — the framework removes the boilerplate, but the mental model is larger.
-- **Privacy.** Immutable history and "the right to be forgotten" need a deliberate strategy — see [Compliance](../compliance/).
+Materialized read models update after an append, so an immediate query may return older state. Decide which screens can tolerate that lag and which decisions need a fresh, guarded read. Chronicle also supports on-demand reads; [Read Models](../read-models/) explains the consistency choices. Event sourcing does not require every read to be eventually consistent.
+
+Events become contracts for their consumers. Their names and payloads need to preserve business meaning, and changes to an existing event shape need [event type migrations](./event-type-migrations). That is more deliberate work than overwriting a field in a row.
+
+Replay makes it possible to rebuild derived views, but it consumes processing and storage work. Plan how readers use the model during a rebuild, and keep external effects out of the state-building path. [Choosing an observer](./observer-patterns.md) separates rebuilding a view from repeating an action.
+
+Historical data also needs a privacy strategy. Decide which event values contain personal information and how they will be protected or erased before collecting them. [Compliance](../compliance/) covers Chronicle's mechanisms; choosing event sourcing does not remove those responsibilities.
 
 ## A middle path
 
-You don't have to choose globally. Event-source the core domain and the processes that define the system, and keep plain CRUD for parts that are genuinely just current-state data: reference tables, settings, or small admin surfaces. Cratis is happy alongside a relational or document store for those bits, and Arc can put the same CQRS boundary over them.
+You can event-source an order process while keeping display settings in current-state storage. Choose the boundary by the information each part must preserve, not by a rule that every persistence operation must use the same approach.
+
+Keep ownership clear: an event-derived read model should be rebuilt from events, not maintained by a second CRUD write path. If a reference table's changes later become meaningful business history, revisit its boundary then.
 
 ## Next
 
 - Convinced it fits? Start with [Get started](../get-started/) and the [tutorial](../tutorial/).
-- Comparing with a CRUD/EF Core model? Read [CRUD, EF Core, and Chronicle](../coming-from-crud).
+- Comparing with a CRUD model? Read [From CRUD to Chronicle](../coming-from-crud).

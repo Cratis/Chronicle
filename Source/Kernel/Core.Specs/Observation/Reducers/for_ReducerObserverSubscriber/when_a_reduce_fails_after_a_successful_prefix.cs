@@ -38,8 +38,8 @@ public class when_a_reduce_fails_after_a_successful_prefix : given.a_subscriber_
             _key.EventStore,
             _key.Namespace);
 
-        _firstPipeline.Reduce(Arg.Any<ReducerContext>(), Arg.Any<ReducerDelegate>())
-            .Returns(callInfo => pipeline.Reduce(callInfo.Arg<ReducerContext>(), callInfo.Arg<ReducerDelegate>()));
+        _firstPipeline.Reduce(Arg.Any<ReducerContext>(), Arg.Any<ReducerDelegate>(), Arg.Any<bool>())
+            .Returns(callInfo => pipeline.Reduce(callInfo.Arg<ReducerContext>(), callInfo.Arg<ReducerDelegate>(), callInfo.Arg<bool>()));
 
         _mediator.ClearSubstitute();
         _mediator.When(_ => _.OnNext(

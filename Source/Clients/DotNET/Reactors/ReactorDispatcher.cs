@@ -44,6 +44,11 @@ internal sealed class ReactorDispatcher(
     ILogger<Reactors> logger,
     ILoggerFactory loggerFactory)
 {
+    /// <summary>
+    /// Gets or sets the client span naming convention.
+    /// </summary>
+    internal ClientSpanNames SpanNames { get; set; }
+
 #if CHRONICLE_ROLLING_DIAGNOSTICS
     /// <summary>
     /// Dispatches an isolated diagnostic candidate's batch with stream-local correlation.
@@ -94,16 +99,14 @@ internal sealed class ReactorDispatcher(
         {
             if (handle is null)
             {
-                await HandleReplayNotification(handler, events.ReplayState, events.Partition);
+                await HandleReplayNotification(handler, @namespace, events.ReplayState, events.Partition);
             }
             return;
         }
 
         using var span = activitySource.Handle(
-            eventStore.Name,
-            @namespace,
-            handler.EventSequenceId,
-            handler.Id);
+            new(eventStore.Name, @namespace, handler.EventSequenceId, handler.Id),
+            SpanNames);
 
         var partitions = events.PartitionsOf();
         var outcomes = new List<PartitionOutcome>(partitions.Count);
@@ -128,6 +131,20 @@ internal sealed class ReactorDispatcher(
             return;
         }
 
+        ObserverDeliveryScope delivery;
+        try
+        {
+            delivery = ObserverDeliveryScope.Enter(serviceProvider, DeliveryContextFor(handler, @namespace));
+        }
+        catch (Exception enterException)
+        {
+            span?.Activity?.RecordFailure(enterException);
+            outcomes.AddRange(partitions.Select(_ => PartitionOutcome.Failed(_.Partition ?? string.Empty, enterException)));
+            PublishResult();
+            return;
+        }
+
+        using var deliveryScope = delivery;
         await using var serviceProviderScope = serviceProvider.CreateAsyncScope();
         var activatedReactorResult = artifactActivator.Activate(serviceProviderScope.ServiceProvider, handler.ReactorType);
         if (activatedReactorResult.TryGetException(out var exception))
@@ -423,8 +440,23 @@ internal sealed class ReactorDispatcher(
         }
     }
 
-    async Task HandleReplayNotification(ReactorHandler handler, ReplayState replayState, string partition)
+    ObserverDeliveryContext DeliveryContextFor(ReactorHandler handler, EventStoreNamespaceName @namespace) =>
+        new(eventStore.Name, @namespace, new(handler.Id.Value), ObserverDeliveryKind.Reactor, handler.ReactorType);
+
+    async Task HandleReplayNotification(ReactorHandler handler, EventStoreNamespaceName @namespace, ReplayState replayState, string partition)
     {
+        ObserverDeliveryScope delivery;
+        try
+        {
+            delivery = ObserverDeliveryScope.Enter(serviceProvider, DeliveryContextFor(handler, @namespace));
+        }
+        catch (Exception enterException)
+        {
+            logger.FailedEnteringDeliveryScopeForReactorReplayNotification(enterException, handler.Id, replayState);
+            return;
+        }
+
+        using var deliveryScope = delivery;
         await using var serviceProviderScope = serviceProvider.CreateAsyncScope();
         var activatedReactorResult = artifactActivator.Activate(serviceProviderScope.ServiceProvider, handler.ReactorType);
         if (activatedReactorResult.TryGetException(out var ex))

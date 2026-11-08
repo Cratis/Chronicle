@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts.Patching;
 using Cratis.Chronicle.Concepts.System;
 using Cratis.Chronicle.Storage.Patching;
+using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cratis.Chronicle.Storage.Sql.Cluster.Patching;
@@ -39,7 +40,7 @@ public class PatchStorage(IDatabase database) : IPatchStorage
     public async Task<bool> Has(string patchName)
     {
         await using var scope = await database.Cluster();
-        return await scope.DbContext.Patches.AnyAsync(p => p.Name == patchName);
+        return await scope.DbContext.Patches.WhereExact(scope.DbContext, p => p.Name, patchName).AnyAsync();
     }
 
     /// <inheritdoc/>

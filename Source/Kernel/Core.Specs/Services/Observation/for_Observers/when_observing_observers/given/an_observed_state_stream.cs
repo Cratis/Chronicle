@@ -17,6 +17,7 @@ public class an_observed_state_stream : for_Observers.given.all_dependencies
     protected readonly DateTimeOffset _initialTimestamp = new(2026, 1, 2, 3, 4, 5, TimeSpan.Zero);
     protected readonly DateTimeOffset _changedTimestamp = new(2026, 1, 2, 3, 5, 6, TimeSpan.Zero);
     protected Subject<IEnumerable<ObserverState>> _states = new();
+    protected BehaviorSubject<IEnumerable<ObserverDefinition>> _definitions = new([Definition("first"), Definition("second")]);
     protected List<ObserverInformation[]> _emitted = [];
     readonly object _emissionLock = new();
     TaskCompletionSource _nextEmission = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -24,10 +25,14 @@ public class an_observed_state_stream : for_Observers.given.all_dependencies
 
     protected int TimestampQueries => _observerStateStorage.ReceivedCalls().Count(_ => _.GetMethodInfo().Name == nameof(IObserverStateStorage.GetRunningStatesChangedAt));
 
+    protected int DefinitionReads => _observerDefinitionsStorage.ReceivedCalls().Count(_ => _.GetMethodInfo().Name == nameof(IObserverDefinitionsStorage.GetAll));
+
+    protected void EmitDefinitions(params string[] ids) => _definitions.OnNext(ids.Select(Definition).ToArray());
+
     void Establish()
     {
         _observerStateStorage.ObserveAll().Returns(_states);
-        _observerDefinitionsStorage.GetAll().Returns([Definition("first"), Definition("second")]);
+        _observerDefinitionsStorage.ObserveAll().Returns(_definitions);
         _subscription = _observers.ObserveObservers(new AllObserversRequest { EventStore = "some-event-store", Namespace = "some-namespace" })
             .Subscribe(observers =>
             {
@@ -75,9 +80,10 @@ public class an_observed_state_stream : for_Observers.given.all_dependencies
     {
         _subscription.Dispose();
         _states.Dispose();
+        _definitions.Dispose();
     }
 
-    static ObserverDefinition Definition(string id) => new(
+    protected static ObserverDefinition Definition(string id) => new(
         id,
         [],
         EventSequenceId.Log,

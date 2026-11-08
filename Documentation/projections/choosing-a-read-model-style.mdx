@@ -1,17 +1,20 @@
 ---
-title: Choose how to build a read model
-description: Choose between projection mappings and reducer code, compare the same library view four ways, and plan a safe change of style.
+title: Chronicle read models — choose a projection or reducer
+description: Choose projection mappings or reducer code for a Chronicle read model. Compare the same view four ways and plan identity, consistency, and replay.
 ---
 
-Your library screen needs a book's title and current borrower. The events tell you that the book was
-registered, borrowed, and returned, but the screen needs one answer: **given the events so far, what
-should this view read now?** You should not have to write a fold just to copy a title, or squeeze a
-state-dependent calculation into mapping attributes.
+Use a Chronicle projection when events map directly to a read model's fields; use a reducer when
+the next state is clearer as code that reads the previous state. Choose whether to store the result
+or compute it on demand separately from that authoring decision.
+
+Suppose your library screen needs a book's title and current borrower. Registration, borrowing, and
+return events contain the history, but the screen needs one current answer. Copying the title fits a
+mapping. A calculation that branches on the previous loan state may be clearer in a reducer.
 
 Chronicle offers two families. **Projections** describe mappings that the kernel executes: attributes
 on the model, a fluent `IProjectionFor<T>` definition, or Projection Declaration Language (PDL).
-**Reducers** run your code, passing each event and the previous state to a method that returns the
-next state: static `Reduce` methods on the model, a separate `IReducerFor<T>`, or an explicitly
+**Reducers** run your code as a fold: each event and the previous state produce the
+next state through static `Reduce` methods on the model, a separate `IReducerFor<T>`, or an explicitly
 nominated plain class. Authoring placement changes within each family; moving between families also
 changes execution and capabilities.
 
@@ -148,7 +151,7 @@ The separate column covers both `IReducerFor<T>` and a nominated plain instance 
 | [Passive reads](../read-models/consistency.md) | `[Passive]` on model | `.Passive()` | No native passive clause | `[Passive]` on model | `[Passive]` on model |
 | [Append-metadata filters](filtering.mdx) | No | No | No | Tags, source type, stream type | Tags, source type, stream type |
 | [Replay lifecycle hooks](../reducers/self-reducing-read-models.mdx#optional-replay-hooks) | No handler hooks | No handler hooks | No hook clauses | Static `Task` hooks; hook services allowed | Replay notification interfaces |
-| [Decision reads](../read-models/decision-reads.mdx) | Admitted shapes only | Admitted shapes only | No direct .NET client-catalog registration path | Admitted without filters or constructor dependencies | Admitted without filters |
+| [Decision reads](../read-models/decision-reads.mdx) | Admitted shapes only | Admitted shapes only | No direct .NET client-catalog registration path | Admitted shapes without filters | Admitted shapes without filters; constructor dependencies limited to `ILogger<T>` |
 | [ReadModelScenario](../testing/read-models/scenario.mdx) | Yes | Yes | No direct PDL overload | Yes | Yes, including nominated plain classes |
 
 Metadata subscription filters have no stream-ID option. Observer tags are descriptive labels, not
@@ -159,16 +162,23 @@ do not assume a declaration has every configuration option of a code-authored pr
 
 ## When it is the wrong fit
 
-**A projection is the wrong fit when its mappings hide the state transition.** If you need several
-branches over previous state or guarded calculations, use a reducer. Adding a fluent class does not
-turn the mapping engine into arbitrary per-event code. PDL likewise accepts Chronicle's supported
-projection expressions, not every expression accepted by Screenplay.
+If a mapping hides several branches over previous state or guarded calculations, use a reducer.
+Adding a fluent class does not turn the mapping engine into arbitrary per-event code. PDL likewise
+accepts Chronicle's supported projection expressions, not every expression accepted by Screenplay.
 
-**A reducer is the wrong fit when you are rebuilding projection features yourself.** Counts and sums
-already have mapping operations. Cross-source joins, custom aggregation keys, and mutually exclusive
-variant groups belong to projections. Reducers are event-source keyed. A classic reducer with filters or constructor dependencies other than `ILogger<T>` cannot be read as a protected decision read; a self-reducing read model is exempt from the dependency rule. See [Reducers as decision reads](../read-models/decision-reads.mdx#reducers). Choose an instance reducer over a self reducer only when its separation,
-DI, or instance behavior is useful; do not hide durable state in the service instance. Replay invokes
-your code again, and none of the reducer forms promises exactly-once execution or external effects.
+Keep a projection when a reducer would make you rebuild mapping features yourself. Counts and sums
+already have operations. Cross-source joins, custom aggregation keys, and mutually exclusive variant
+groups belong to projections; reducers are event-source keyed.
+
+A reducer's dependencies also affect where you can read it. A classic reducer with filters or
+constructor dependencies other than `ILogger<T>` cannot serve a protected decision read. A
+self-reducing model has no constructor-dependency restriction. Check
+[reducer decision-read admission](../read-models/decision-reads.mdx#reducers) before choosing the form
+for a command's state check.
+
+Choose an instance reducer when its separation, dependency injection, or instance behavior is useful.
+Keep durable state in the read model, not the service instance. Replay invokes your code again, and
+none of the reducer forms promises exactly-once execution or external effects.
 
 Choose [materialized or passive reads](../read-models/consistency.md) separately from authoring style.
 Passive by-ID projection reads select one event source, so cross-source joins and custom-key
@@ -188,10 +198,10 @@ when the new form expresses the same behavior. Storage continuity takes more car
 | Replay or rebuild | Definition and reducer-implementation changes are evaluated under the configured evolution policy. Expect replay work or a recommendation; not every source edit triggers a full rebuild. Reusing an ID across projection and reducer kinds is not a state or schema migration. |
 | Compliance lineage | A projection's per-property subject tracking and a reducer's batch/default subject protection differ. Keep model PII annotations and verify subject ownership, release, and erasure after a family change. |
 
-For a safe switch, record the existing IDs, scope, container, and configuration first. Preserve the
-identifiers you intend to keep and remove the previous builder; a self model cannot share ownership
-with another reducer or projection in the same catalog. When moving a fold to static methods, also
-replace constructor dependencies and replay interfaces deliberately.
+Before switching, record the existing IDs, scope, container, and configuration. Preserve the
+identifiers you intend to keep and remove the previous builder; a self-reducing model cannot share
+ownership with another reducer or projection in the same catalog. When moving a fold to static
+methods, decide how to replace constructor dependencies and replay interfaces as part of the change.
 
 Run the same event histories against the replacement, then exercise registration and replay against
 a real kernel and the intended sink. Verify stored-state compatibility, catch-up, query results,

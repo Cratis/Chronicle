@@ -2,13 +2,14 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Contracts.Occurrences;
+using Cratis.Chronicle.Occurrences.given;
 using ProtoBuf.Grpc;
 
 namespace Cratis.Chronicle.Occurrences.for_OccurrenceAttempt;
 
-public class when_completing_a_handler : given.an_occurrence_client
+public class when_completing_a_handler : an_occurrence_client
 {
-    given.TestTrigger _trigger;
+    TestTrigger _trigger;
     OccurrenceContext _context;
 
     void Establish() => _handler.OnHandle = (trigger, context, _) =>
@@ -18,7 +19,7 @@ public class when_completing_a_handler : given.an_occurrence_client
         return Task.CompletedTask;
     };
 
-    Task Because() => CreateAttempt(TimeProvider.System).Run(_claim, CancellationToken.None);
+    Task Because() => CreateAttempt(TimeProvider.System).Run(_claim, TimeProvider.System.GetTimestamp(), CancellationToken.None);
 
     [Fact] void should_deserialize_the_payload() => _trigger.Value.ShouldEqual("hello");
     [Fact] void should_supply_the_attempt_number() => _context.Attempt.ShouldEqual(2);

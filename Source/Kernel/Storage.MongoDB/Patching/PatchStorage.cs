@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.Patching;
 /// <param name="database">The MongoDB <see cref="IDatabase"/>.</param>
 public class PatchStorage(IDatabase database) : IPatchStorage
 {
-    const string CollectionName = "patches";
+    const string CollectionName = WellKnownCollectionNames.Patches;
 
     IMongoCollection<Patch> Collection => database.GetCollection<Patch>(CollectionName);
 

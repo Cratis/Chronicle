@@ -1,8 +1,7 @@
 ---
-description: Limit parallel job steps in Chronicle Server with the MaxParallelSteps option to prevent excessive CPU usage.
+title: Configure job throttling in Cratis Chronicle Server
+description: Configure Cratis Chronicle Server job throttling with MaxParallelSteps to limit concurrent job steps during replays and catch-up work.
 ---
-# Job Throttling
-
 Chronicle Server's job system can be configured to limit the number of parallel job steps to prevent excessive CPU usage.
 
 ## Configuration
@@ -26,6 +25,7 @@ The maximum number of parallel job steps can be configured using the `MaxParalle
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
 | MaxParallelSteps | number | Environment.ProcessorCount - 1 | Maximum number of parallel job steps (minimum 1) |
+| MaxActiveStepsPerJob | number | 4 × the effective maximum parallel steps, at least 32 | Maximum number of steps a single job keeps active at once (minimum 1) |
 
 The limit that applies is the smaller of `Jobs:MaxParallelSteps` and `Observers:MaxConcurrentPartitions` (default 32, see [Observers](observers.md)). With the defaults, `Jobs:MaxParallelSteps` only has an effect below 32, so raising it above 32 needs `Observers:MaxConcurrentPartitions` raised as well.
 
@@ -33,6 +33,18 @@ Alternatively, you can use environment variables:
 
 ```bash
 Cratis__Chronicle__Jobs__MaxParallelSteps=4
+```
+
+## Active steps per job
+
+A job with thousands of steps, such as the catch-up of an observer with thousands of partitions, does not activate a
+grain for every step at once. It keeps `Jobs:MaxActiveStepsPerJob` steps active and starts the next one each time a
+step reaches an outcome; the steps not yet started stay in storage. Only `MaxParallelSteps` of the active steps run at
+a time, so the limit only needs to keep those slots fed. Lower it to hold less memory during a large catch-up, or
+raise it if steps are short and the slots sit idle between them.
+
+```bash
+Cratis__Chronicle__Jobs__MaxActiveStepsPerJob=64
 ```
 
 ## Default Behavior

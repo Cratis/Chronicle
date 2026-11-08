@@ -86,6 +86,16 @@ public static class WellKnownCollectionNames
     public const string EventSequences = "event-sequences";
 
     /// <summary>
+    /// The collection that holds event sequence mutation heads.
+    /// </summary>
+    public const string EventSequenceMutationHeads = "event-sequence-mutation-heads";
+
+    /// <summary>
+    /// The collection that holds event sequence mutation history.
+    /// </summary>
+    public const string EventSequenceMutationHistory = "event-sequence-mutation-history";
+
+    /// <summary>
     /// The collection that holds connected clients state.
     /// </summary>
     public const string ConnectedClients = "connected-clients";
@@ -154,6 +164,11 @@ public static class WellKnownCollectionNames
     /// The collection that holds webhook definitions.
     /// </summary>
     public const string WebhookDefinitions = "webhooks";
+
+    /// <summary>
+    /// The collection that holds webhook signing keys.
+    /// </summary>
+    public const string WebhookSigningKeys = "webhook-signing-keys";
 
     /// <summary>
     /// The collection that holds registered event source definitions.
@@ -264,4 +279,109 @@ public static class WellKnownCollectionNames
     /// The collection that holds data protection keys.
     /// </summary>
     public const string DataProtectionKeys = "data-protection-keys";
+
+    /// <summary>
+    /// The collection that holds infrastructure occurrences.
+    /// </summary>
+    public const string Occurrences = "occurrences";
+
+    /// <summary>
+    /// The collection that holds occurrence claim fences.
+    /// </summary>
+    public const string OccurrenceClaimFences = "occurrence-claim-fences";
+
+    /// <summary>
+    /// The collection that holds schedule definitions.
+    /// </summary>
+    public const string ScheduleDefinitions = "schedule-definitions";
+
+    /// <summary>
+    /// The collection that holds schedule cursors.
+    /// </summary>
+    public const string ScheduleCursors = "schedule-cursors";
+
+    /// <summary>
+    /// The collection that holds skipped schedule ranges.
+    /// </summary>
+    public const string SkippedRanges = "skipped-ranges";
+
+    /// <summary>
+    /// The collection that holds effect receipts.
+    /// </summary>
+    public const string EffectReceipts = "effect-receipts";
+
+    /// <summary>
+    /// The collection that holds encryption keys.
+    /// </summary>
+    public const string EncryptionKeys = "encryption-keys";
+
+    /// <summary>
+    /// The collection that holds internal secrets separately from subject encryption keys.
+    /// </summary>
+    public const string InternalSecrets = "internal-secrets";
+
+    /// <summary>
+    /// The collection that holds encryption key erasures.
+    /// </summary>
+    public const string EncryptionKeyErasures = "encryption-key-erasures";
+
+    /// <summary>
+    /// The collection that holds generation initialization receipts.
+    /// </summary>
+    public const string GenerationInitialization = "generation-initialization";
+
+    /// <summary>
+    /// The collection that holds trigger definitions.
+    /// </summary>
+    public const string TriggerDefinitions = "trigger-definitions";
+
+    /// <summary>
+    /// The collection that holds lifecycle fan-out intents.
+    /// </summary>
+    public const string LifecycleFanOutIntents = "lifecycle-fan-out-intents";
+
+    /// <summary>
+    /// The collection that holds the generation floor.
+    /// </summary>
+    public const string GenerationFloor = "generation-floor";
+
+    /// <summary>
+    /// The collection that holds the unique-constraint encoding key.
+    /// </summary>
+    public const string UniqueConstraintEncodingKey = "unique-constraint-encoding-key";
+
+    /// <summary>
+    /// The collection that holds initialization markers.
+    /// </summary>
+    public const string Initialization = "initialization";
+
+    /// <summary>
+    /// The collection that holds applied patches.
+    /// </summary>
+    public const string Patches = "patches";
+
+    /// <summary>
+    /// The collection that holds system information.
+    /// </summary>
+    public const string SystemInformation = "system-information";
+
+    /// <summary>
+    /// The collection that holds generation fence gates.
+    /// </summary>
+    public const string FenceGates = "fence-gates";
+
+    /// <summary>
+    /// The collection that holds generation fence receipts.
+    /// </summary>
+    public const string FenceReceipts = "fence-receipts";
+
+    /// <summary>
+    /// The collection that holds materialization bindings.
+    /// </summary>
+    public const string MaterializationBindings = "materialization-bindings";
+
+    /// <summary>
+    /// The collection that holds materialization publication receipts.
+    /// </summary>
+    public const string MaterializationPublicationReceipts = "materialization-publication-receipts";
 }

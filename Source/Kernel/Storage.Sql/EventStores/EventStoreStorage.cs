@@ -5,6 +5,7 @@ using System.Text.Json;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage.Captures;
 using Cratis.Chronicle.Storage.Events.Constraints;
+using Cratis.Chronicle.Storage.EventSequences.Mutations;
 using Cratis.Chronicle.Storage.EventSources;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.ExternalServices;
@@ -36,27 +37,39 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores;
 /// <param name="jsonSerializerOptions">The global <see cref="JsonSerializerOptions"/>.</param>
 /// <param name="converter">The schema-aware content converter.</param>
 /// <param name="loggerFactory">Optional <see cref="ILoggerFactory"/> used for logging inside the storages.</param>
-public class EventStoreStorage(EventStoreName eventStore, IDatabase database, IInstancesOf<ISinkFactory> sinkFactories, Cratis.Choreography.Storage.IJobsStorage jobsStorage, JsonSerializerOptions jsonSerializerOptions, Json.IExpandoObjectConverter converter, ILoggerFactory? loggerFactory = null) : IEventStoreStorage
+/// <param name="mutationDigestKeys">The source of mutation digest keys; without one, every mutation fails closed.</param>
+public class EventStoreStorage(
+    EventStoreName eventStore,
+    IDatabase database,
+    IInstancesOf<ISinkFactory> sinkFactories,
+    Cratis.Choreography.Storage.IJobsStorage jobsStorage,
+    JsonSerializerOptions jsonSerializerOptions,
+    Json.IExpandoObjectConverter converter,
+    ILoggerFactory? loggerFactory = null,
+    IEventSequenceMutationDigestKeys? mutationDigestKeys = null) : IEventStoreStorage
 {
-    readonly Occurrences.OccurrencesStorage<EventStoreDbContext> _occurrences = new(() => database.EventStore(eventStore));
+    readonly Occurrences.OccurrencesStorage<EventStoreDbContext> _occurrences = new(() => database.EventStore(eventStore), database);
 
     /// <inheritdoc/>
     public Chronicle.Storage.Generations.IGenerationInitializationStorage GenerationInitialization { get; } = new Generations.GenerationInitializationStorage(() => database.EventStore(eventStore));
 
     /// <inheritdoc/>
-    public Chronicle.Storage.Occurrences.ITriggerDefinitionsStorage TriggerDefinitions { get; } = new Occurrences.TriggerDefinitionsStorage(() => database.EventStore(eventStore));
+    public Chronicle.Storage.Occurrences.ITriggerDefinitionsStorage TriggerDefinitions { get; } = new Occurrences.TriggerDefinitionsStorage(() => database.EventStore(eventStore), database);
 
     /// <inheritdoc/>
     public Chronicle.Storage.Occurrences.IOccurrencesStorage Occurrences => _occurrences;
 
     /// <inheritdoc/>
-    public Chronicle.Storage.Occurrences.ILifecycleFanOutStorage LifecycleFanOut { get; } = new Occurrences.LifecycleFanOutStorage(() => database.EventStore(eventStore));
+    public Chronicle.Storage.Occurrences.ILifecycleFanOutStorage LifecycleFanOut { get; } = new Occurrences.LifecycleFanOutStorage(() => database.EventStore(eventStore), database);
 
     /// <inheritdoc/>
     public Chronicle.Storage.Occurrences.IScheduleStorage Schedules => _occurrences;
 
     /// <inheritdoc/>
     public Chronicle.Storage.Generations.IGenerationFloorStorage GenerationFloor { get; } = new Generations.GenerationFloorStorage(() => database.EventStore(eventStore));
+
+    /// <inheritdoc/>
+    public IUniqueConstraintEncodingStorage UniqueConstraintEncoding { get; } = new Constraints.UniqueConstraintEncodingStorage(() => database.EventStore(eventStore));
 
     /// <inheritdoc/>
     public EventStoreName EventStore { get; } = eventStore.Value;
@@ -90,6 +103,9 @@ public class EventStoreStorage(EventStoreName eventStore, IDatabase database, II
 
     /// <inheritdoc/>
     public IWebhookDefinitionsStorage Webhooks { get; } = new Webhooks.WebhookDefinitionsStorage(eventStore, database);
+
+    /// <inheritdoc/>
+    public IWebhookSigningKeysStorage WebhookSigningKeys { get; } = new Webhooks.WebhookSigningKeysStorage(eventStore, database);
 
     /// <inheritdoc/>
     public IExternalServiceDefinitionsStorage ExternalServices { get; } = new ExternalServices.ExternalServiceDefinitionsStorage(eventStore, database);
@@ -138,6 +154,13 @@ public class EventStoreStorage(EventStoreName eventStore, IDatabase database, II
     }
 
     /// <inheritdoc/>
+    public async Task<bool> HasOwnNamespaceData(EventStoreNamespaceName @namespace)
+    {
+        await using var scope = await database.ExistingNamespace(eventStore, @namespace);
+        return scope is not null;
+    }
+
+    /// <inheritdoc/>
     public IEventStoreNamespaceStorage GetNamespace(EventStoreNamespaceName @namespace)
-        => new Namespaces.EventStoreNamespaceStorage(eventStore, @namespace, database, sinkFactories, jobsStorage, jsonSerializerOptions, EventTypes, converter);
+        => new Namespaces.EventStoreNamespaceStorage(eventStore, @namespace, database, sinkFactories, jobsStorage, jsonSerializerOptions, EventTypes, converter, mutationDigestKeys);
 }

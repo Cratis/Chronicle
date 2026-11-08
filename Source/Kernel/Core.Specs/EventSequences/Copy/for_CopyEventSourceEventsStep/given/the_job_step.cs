@@ -11,6 +11,7 @@ using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Identities;
+using Cratis.Chronicle.EventTypes;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
@@ -96,6 +97,7 @@ public class the_job_step : Specification
             });
         _silo.AddProbe<IEventSequence>(_ => _sequence);
 
+        _silo.AddService<IEventTypeSchemaCache>(new OwnGenerationSchemaCache());
         _silo.AddService(storage);
         _silo.AddService(Substitute.For<IJsonSchemaMetadataManager>());
         _silo.AddService<IExpandoObjectConverter>(new ExpandoObjectConverter(new TypeFormats()));

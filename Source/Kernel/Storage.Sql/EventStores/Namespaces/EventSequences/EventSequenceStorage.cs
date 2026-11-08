@@ -42,6 +42,8 @@ public partial class EventSequenceStorage(
     Chronicle.Storage.EventTypes.IEventTypesStorage eventTypesStorage,
     Json.IExpandoObjectConverter converter) : IEventSequenceStorage, IEventPublicationStorage
 {
+    readonly SqlStorageTelemetry _telemetry = SqlStorageTelemetry.For(database);
+
     /// <inheritdoc/>
     public bool SupportsRevisionTracking => false;
 
@@ -165,11 +167,9 @@ public partial class EventSequenceStorage(
             // tighter cap.
             occurred = TruncateToMicrosecond(occurred);
 
+            // Existence only: a member-init projection here costs ~2 KB of query-pipeline allocation per append.
             var seqNumValue = sequenceNumber.Value;
-            var existingEvent = await scope.DbContext.Events
-                .FirstOrDefaultAsync(e => e.SequenceNumber == seqNumValue);
-
-            if (existingEvent is not null)
+            if (await scope.DbContext.Events.AnyAsync(e => e.SequenceNumber == seqNumValue))
             {
                 return new DuplicateEventSequenceNumber(await GetNextAvailableSequenceNumber(scope));
             }
@@ -215,7 +215,8 @@ public partial class EventSequenceStorage(
                 await identityStorage.GetFor(causedByChain),
                 tags,
                 eventHash,
-                Subject: resolvedSubject) { NamedTags = namedTags, AppendedGeneration = eventType.Generation };
+                Subject: resolvedSubject)
+            { NamedTags = namedTags, AppendedGeneration = eventType.Generation };
 
             var generationalContent = EventEntryConverter.BuildGenerationalContent(content);
             return new AppendedEvent(eventContext, returnContent)
@@ -247,20 +248,8 @@ public partial class EventSequenceStorage(
         ExpandoObject content,
         EventHash hash)
     {
-        await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
-
-        var seqNumRevise = sequenceNumber.Value;
-        var eventEntry = await scope.DbContext.Events.FirstOrDefaultAsync(e => e.SequenceNumber == seqNumRevise);
-        if (eventEntry is null)
-        {
-            return;
-        }
-
-        EventEntryConverter.UpdateContentForGeneration(eventEntry, eventType.Generation, content);
-        EventEntryConverter.UpdateHashForGeneration(eventEntry, eventType.Generation, hash);
-        eventEntry.RevisedGeneration = eventType.Generation.Value;
-        scope.DbContext.Events.Update(eventEntry);
-        await scope.DbContext.SaveChangesAsync();
+        var revision = new EventRevisionEntry(eventType.Generation.Value, correlationId.Value, causation.ToArray(), causedByChain.Select(_ => _.Value).ToArray(), occurred, EventEntryConverter.SerializeContent(content), hash.Value);
+        await ReviseWithHistory(sequenceNumber, eventType.Generation, content, revision);
     }
 
     /// <inheritdoc/>
@@ -295,7 +284,7 @@ public partial class EventSequenceStorage(
         var firstValue = first.Value;
         var lastValue = last.Value;
         var entries = await scope.DbContext.Events.AsNoTracking().Where(e => e.SequenceNumber >= firstValue && e.SequenceNumber <= lastValue)
-            .OrderBy(e => e.SequenceNumber).ToListAsync(cancellationToken);
+            .OrderBy(e => e.SequenceNumber).WithoutHistory().ToListAsync(cancellationToken);
         var events = new List<AppendedEvent>();
         foreach (var entry in entries) events.Add(await ToAppendedEvent(entry, scope));
         return new MaterializedEventCursor(events);
@@ -318,6 +307,12 @@ public partial class EventSequenceStorage(
         // already triggered its own rewind, producing duplicate EventRedacted notifications.
         if (eventEntry.Type == GlobalEventTypes.Redaction)
         {
+            if (ClearLeftoverHistory(eventEntry))
+            {
+                scope.DbContext.Events.Update(eventEntry);
+                await scope.DbContext.SaveChangesAsync();
+            }
+
             return await BuildAppendedEventFromRedactionEntry(eventEntry, scope);
         }
 
@@ -337,6 +332,8 @@ public partial class EventSequenceStorage(
         eventEntry.Content = redactionContent;
         eventEntry.ContentHashes = string.Empty;
         eventEntry.RevisedGeneration = null;
+        eventEntry.OriginalContent = null;
+        eventEntry.Revisions = null;
 
         scope.DbContext.Events.Update(eventEntry);
         await scope.DbContext.SaveChangesAsync();
@@ -378,7 +375,7 @@ public partial class EventSequenceStorage(
     {
         await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
 
-        var query = scope.DbContext.Events.Where(e => e.EventSourceId == eventSourceId);
+        var query = scope.DbContext.Events.WhereEventSource(scope.DbContext, eventSourceId);
 
         if (eventTypes?.Any() == true)
         {
@@ -393,6 +390,11 @@ public partial class EventSequenceStorage(
         {
             if (eventEntry.Type == GlobalEventTypes.Redaction)
             {
+                if (ClearLeftoverHistory(eventEntry))
+                {
+                    scope.DbContext.Events.Update(eventEntry);
+                }
+
                 continue;
             }
 
@@ -409,6 +411,8 @@ public partial class EventSequenceStorage(
             eventEntry.Content = redactionContent;
             eventEntry.ContentHashes = string.Empty;
             eventEntry.RevisedGeneration = null;
+            eventEntry.OriginalContent = null;
+            eventEntry.Revisions = null;
 
             scope.DbContext.Events.Update(eventEntry);
         }
@@ -431,7 +435,7 @@ public partial class EventSequenceStorage(
 
         if (eventSourceId?.IsSpecified == true)
         {
-            query = query.Where(e => e.EventSourceId == eventSourceId);
+            query = query.WhereEventSource(scope.DbContext, eventSourceId);
         }
 
         var firstEvent = await query
@@ -463,22 +467,22 @@ public partial class EventSequenceStorage(
 
         if (eventSourceId?.IsSpecified == true)
         {
-            query = query.Where(e => e.EventSourceId == eventSourceId);
+            query = query.WhereEventSource(scope.DbContext, eventSourceId);
         }
 
         if (eventSourceType?.IsDefaultOrUnspecified == false)
         {
-            query = query.Where(e => e.EventSourceType == eventSourceType);
+            query = query.WhereSourceType(scope.DbContext, eventSourceType);
         }
 
         if (eventStreamId?.IsDefault == false)
         {
-            query = query.Where(e => e.EventStreamId == eventStreamId);
+            query = query.WhereStreamId(scope.DbContext, eventStreamId);
         }
 
         if (eventStreamType?.IsAll == false)
         {
-            query = query.Where(e => e.EventStreamType == eventStreamType);
+            query = query.WhereStreamType(scope.DbContext, eventStreamType);
         }
 
         var lastEvent = await query
@@ -564,7 +568,7 @@ public partial class EventSequenceStorage(
 
         if (eventSourceId?.IsSpecified == true)
         {
-            query = query.Where(e => e.EventSourceId == eventSourceId);
+            query = query.WhereEventSource(scope.DbContext, eventSourceId);
         }
 
         var nextEvent = await query
@@ -581,7 +585,7 @@ public partial class EventSequenceStorage(
     {
         await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
 
-        return await scope.DbContext.Events.AnyAsync(e => e.EventSourceId == eventSourceId);
+        return await scope.DbContext.Events.WhereEventSource(scope.DbContext, eventSourceId).AnyAsync();
     }
 
     /// <inheritdoc/>
@@ -593,11 +597,12 @@ public partial class EventSequenceStorage(
 
             var currentSequenceNumberValue = currentSequenceNumber.Value;
             var eventEntry = await scope.DbContext.Events
+                .WhereEventSource(scope.DbContext, eventSourceId)
                 .Where(e =>
                     e.Type == eventTypeId
-                    && e.EventSourceId == eventSourceId
                     && e.SequenceNumber < currentSequenceNumberValue)
                 .OrderByDescending(e => e.SequenceNumber)
+                .WithoutHistory()
                 .FirstOrDefaultAsync();
 
             if (eventEntry is null)
@@ -679,10 +684,10 @@ public partial class EventSequenceStorage(
         var eventTypeIds = eventTypes.ToArray();
 
         var eventEntry = await scope.DbContext.Events
-            .Where(e =>
-                e.EventSourceId == eventSourceId
-                && eventTypeIds.Contains(e.Type))
+            .WhereEventSource(scope.DbContext, eventSourceId)
+            .Where(e => eventTypeIds.Contains(e.Type))
             .OrderByDescending(e => e.SequenceNumber)
+            .WithoutHistory()
             .FirstOrDefaultAsync();
 
         if (eventEntry is null)
@@ -694,93 +699,24 @@ public partial class EventSequenceStorage(
     }
 
     /// <inheritdoc/>
-    public async Task<IEventCursor> GetFromSequenceNumber(EventSequenceNumber sequenceNumber, EventSourceId? eventSourceId = default, EventSourceType? eventSourceType = default, EventStreamType? eventStreamType = default, EventStreamId? eventStreamId = default, IEnumerable<EventType>? eventTypes = default, IEnumerable<Tag>? tags = default, CancellationToken cancellationToken = default)
-    {
-        var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
+    public Task<IEventCursor> GetFromSequenceNumber(EventSequenceNumber sequenceNumber, EventSourceId? eventSourceId = default, EventSourceType? eventSourceType = default, EventStreamType? eventStreamType = default, EventStreamId? eventStreamId = default, IEnumerable<EventType>? eventTypes = default, IEnumerable<Tag>? tags = default, CancellationToken cancellationToken = default) =>
+        ReadFromSequenceNumber(sequenceNumber, eventSourceId, eventSourceType, eventStreamType, eventStreamId, eventTypes, tags, false, cancellationToken);
 
-        var fromSeqNumValue = sequenceNumber.Value;
-        var query = scope.DbContext.Events.Where(e => e.SequenceNumber >= fromSeqNumValue);
-
-        if (eventSourceId?.IsSpecified == true)
-        {
-            query = query.Where(e => e.EventSourceId == eventSourceId);
-        }
-
-        if (eventSourceType?.IsDefaultOrUnspecified == false)
-        {
-            var resolvedEventSourceType = eventSourceType.Value;
-            query = query.Where(e => e.EventSourceType == resolvedEventSourceType);
-        }
-
-        if (eventStreamType?.IsAll == false)
-        {
-            query = query.Where(e => e.EventStreamType == eventStreamType);
-        }
-
-        if (eventStreamId?.IsDefault == false)
-        {
-            query = query.Where(e => e.EventStreamId == eventStreamId);
-        }
-
-        if (eventTypes?.Any() == true)
-        {
-            var eventTypeIds = eventTypes.Select(et => et.Id).ToArray();
-            query = query.Where(e => eventTypeIds.Contains(e.Type));
-        }
-
-        query = ApplyTagsFilter(query, tags);
-
-        return CreateCursor(query, scope, cancellationToken);
-    }
+    /// <inheritdoc/>
+    public Task<IEventCursor> GetFromSequenceNumberWithHistory(EventSequenceNumber sequenceNumber, EventSourceId? eventSourceId = default, EventSourceType? eventSourceType = default, EventStreamType? eventStreamType = default, EventStreamId? eventStreamId = default, IEnumerable<EventType>? eventTypes = default, IEnumerable<Tag>? tags = default, CancellationToken cancellationToken = default) =>
+        ReadFromSequenceNumber(sequenceNumber, eventSourceId, eventSourceType, eventStreamType, eventStreamId, eventTypes, tags, true, cancellationToken);
 
     /// <inheritdoc/>
     public Task<IEventCursor> GetRange(EventSequenceNumber start, EventSequenceNumber end, EventSourceId? eventSourceId = default, IEnumerable<EventType>? eventTypes = default, IEnumerable<Tag>? tags = default, CancellationToken cancellationToken = default) =>
         GetRange(start, end, eventSourceId, eventTypes, tags, null, null, cancellationToken);
 
     /// <inheritdoc/>
-    public async Task<IEventCursor> GetRange(EventSequenceNumber start, EventSequenceNumber end, EventSourceId? eventSourceId, IEnumerable<EventType>? eventTypes, IEnumerable<Tag>? tags, EventSourceType? eventSourceType, EventStreamType? eventStreamType, CancellationToken cancellationToken)
-    {
-        var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
+    public Task<IEventCursor> GetRangeWithHistory(EventSequenceNumber start, EventSequenceNumber end, EventSourceId? eventSourceId = default, IEnumerable<EventType>? eventTypes = default, IEnumerable<Tag>? tags = default, CancellationToken cancellationToken = default) =>
+        ReadRange(start, end, eventSourceId, eventTypes, tags, null, null, true, cancellationToken);
 
-        var startValue = start.Value;
-        var query = scope.DbContext.Events.Where(e => e.SequenceNumber >= startValue);
-
-        // EventSequenceNumber.Max (ulong.MaxValue - 1) means "no upper bound". The SQL column
-        // is BIGINT (signed int64) so the ulong value wraps to -2 when EF binds the parameter,
-        // and the original Where clause matched zero rows. Skip the upper-bound predicate
-        // entirely when the caller signals "unbounded" by passing Max.
-        if (end != EventSequenceNumber.Max)
-        {
-            var endValue = end.Value;
-            query = query.Where(e => e.SequenceNumber <= endValue);
-        }
-
-        if (eventSourceId?.IsSpecified == true)
-        {
-            query = query.Where(e => e.EventSourceId == eventSourceId);
-        }
-
-        if (eventSourceType?.IsDefaultOrUnspecified == false)
-        {
-            var resolvedEventSourceType = eventSourceType.Value;
-            query = query.Where(e => e.EventSourceType == resolvedEventSourceType);
-        }
-
-        if (eventStreamType?.IsAll == false)
-        {
-            query = query.Where(e => e.EventStreamType == eventStreamType);
-        }
-
-        if (eventTypes?.Any() == true)
-        {
-            var eventTypeIds = eventTypes.Select(et => et.Id).ToArray();
-            query = query.Where(e => eventTypeIds.Contains(e.Type));
-        }
-
-        query = ApplyTagsFilter(query, tags);
-
-        return CreateCursor(query, scope, cancellationToken);
-    }
+    /// <inheritdoc/>
+    public Task<IEventCursor> GetRange(EventSequenceNumber start, EventSequenceNumber end, EventSourceId? eventSourceId, IEnumerable<EventType>? eventTypes, IEnumerable<Tag>? tags, EventSourceType? eventSourceType, EventStreamType? eventStreamType, CancellationToken cancellationToken) =>
+        ReadRange(start, end, eventSourceId, eventTypes, tags, eventSourceType, eventStreamType, false, cancellationToken);
 
     /// <inheritdoc/>
     public async Task<IEventCursor> GetEventsWithLimit(
@@ -800,17 +736,17 @@ public partial class EventSequenceStorage(
 
         if (eventSourceId?.IsSpecified == true)
         {
-            query = query.Where(e => e.EventSourceId == eventSourceId);
+            query = query.WhereEventSource(scope.DbContext, eventSourceId);
         }
 
         if (eventStreamType?.IsAll == false)
         {
-            query = query.Where(e => e.EventStreamType == eventStreamType);
+            query = query.WhereStreamType(scope.DbContext, eventStreamType);
         }
 
         if (eventStreamId?.IsDefault == false)
         {
-            query = query.Where(e => e.EventStreamId == eventStreamId);
+            query = query.WhereStreamId(scope.DbContext, eventStreamId);
         }
 
         if (eventTypes?.Any() == true)
@@ -823,7 +759,7 @@ public partial class EventSequenceStorage(
 
         query = query.Take(limit);
 
-        return CreateCursor(query, scope, cancellationToken);
+        return CreateCursor(query, scope, false, cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -907,7 +843,7 @@ public partial class EventSequenceStorage(
         if (eventStreamId is { Value.Length: > 0, IsDefault: false })
         {
             var streamId = eventStreamId.Value;
-            query = query.Where(e => e.EventStreamId == streamId);
+            query = query.WhereStreamId(scope.DbContext, streamId);
         }
 
         query = descending ? query.OrderByDescending(e => e.SequenceNumber) : query.OrderBy(e => e.SequenceNumber);
@@ -953,19 +889,19 @@ public partial class EventSequenceStorage(
         if (criteria.HasEventSourceId)
         {
             var eventSourceId = criteria.EventSourceId!.Value;
-            query = query.Where(e => e.EventSourceId == eventSourceId);
+            query = query.WhereEventSource(context, eventSourceId);
         }
 
         if (criteria.HasEventSourceType)
         {
             var eventSourceType = criteria.EventSourceType!.Value;
-            query = query.Where(e => e.EventSourceType == eventSourceType);
+            query = query.WhereSourceType(context, eventSourceType);
         }
 
         if (criteria.HasEventStreamType)
         {
             var eventStreamType = criteria.EventStreamType!.Value;
-            query = query.Where(e => e.EventStreamType == eventStreamType);
+            query = query.WhereStreamType(context, eventStreamType);
         }
 
         if (criteria.HasCorrelationId)
@@ -1054,17 +990,117 @@ public partial class EventSequenceStorage(
         _ => false
     };
 
-    EventCursor CreateCursor(IQueryable<EventEntry> query, DbContextScope<EventSequenceDbContext> scope, CancellationToken cancellationToken)
+    static bool ClearLeftoverHistory(EventEntry eventEntry)
+    {
+        if (eventEntry.OriginalContent is null && eventEntry.Revisions is null)
+        {
+            return false;
+        }
+
+        eventEntry.OriginalContent = null;
+        eventEntry.Revisions = null;
+        return true;
+    }
+
+    async Task<IEventCursor> ReadFromSequenceNumber(EventSequenceNumber sequenceNumber, EventSourceId? eventSourceId, EventSourceType? eventSourceType, EventStreamType? eventStreamType, EventStreamId? eventStreamId, IEnumerable<EventType>? eventTypes, IEnumerable<Tag>? tags, bool includeHistory, CancellationToken cancellationToken)
+    {
+        var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
+
+        var fromSeqNumValue = sequenceNumber.Value;
+        var query = scope.DbContext.Events.Where(e => e.SequenceNumber >= fromSeqNumValue);
+
+        if (eventSourceId?.IsSpecified == true)
+        {
+            query = query.WhereEventSource(scope.DbContext, eventSourceId);
+        }
+
+        if (eventSourceType?.IsDefaultOrUnspecified == false)
+        {
+            var resolvedEventSourceType = eventSourceType.Value;
+            query = query.WhereSourceType(scope.DbContext, resolvedEventSourceType);
+        }
+
+        if (eventStreamType?.IsAll == false)
+        {
+            query = query.WhereStreamType(scope.DbContext, eventStreamType);
+        }
+
+        if (eventStreamId?.IsDefault == false)
+        {
+            query = query.WhereStreamId(scope.DbContext, eventStreamId);
+        }
+
+        if (eventTypes?.Any() == true)
+        {
+            var eventTypeIds = eventTypes.Select(et => et.Id).ToArray();
+            query = query.Where(e => eventTypeIds.Contains(e.Type));
+        }
+
+        query = ApplyTagsFilter(query, tags);
+
+        return CreateCursor(query, scope, includeHistory, cancellationToken);
+    }
+
+    async Task<IEventCursor> ReadRange(EventSequenceNumber start, EventSequenceNumber end, EventSourceId? eventSourceId, IEnumerable<EventType>? eventTypes, IEnumerable<Tag>? tags, EventSourceType? eventSourceType, EventStreamType? eventStreamType, bool includeHistory, CancellationToken cancellationToken)
+    {
+        var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
+
+        var startValue = start.Value;
+        var query = scope.DbContext.Events.Where(e => e.SequenceNumber >= startValue);
+
+        // EventSequenceNumber.Max (ulong.MaxValue - 1) means "no upper bound". The SQL column
+        // is BIGINT (signed int64) so the ulong value wraps to -2 when EF binds the parameter,
+        // and the original Where clause matched zero rows. Skip the upper-bound predicate
+        // entirely when the caller signals "unbounded" by passing Max.
+        if (end != EventSequenceNumber.Max)
+        {
+            var endValue = end.Value;
+            query = query.Where(e => e.SequenceNumber <= endValue);
+        }
+
+        if (eventSourceId?.IsSpecified == true)
+        {
+            query = query.WhereEventSource(scope.DbContext, eventSourceId);
+        }
+
+        if (eventSourceType?.IsDefaultOrUnspecified == false)
+        {
+            var resolvedEventSourceType = eventSourceType.Value;
+            query = query.WhereSourceType(scope.DbContext, resolvedEventSourceType);
+        }
+
+        if (eventStreamType?.IsAll == false)
+        {
+            query = query.WhereStreamType(scope.DbContext, eventStreamType);
+        }
+
+        if (eventTypes?.Any() == true)
+        {
+            var eventTypeIds = eventTypes.Select(et => et.Id).ToArray();
+            query = query.Where(e => eventTypeIds.Contains(e.Type));
+        }
+
+        query = ApplyTagsFilter(query, tags);
+
+        return CreateCursor(query, scope, includeHistory, cancellationToken);
+    }
+
+    EventCursor CreateCursor(IQueryable<EventEntry> query, DbContextScope<EventSequenceDbContext> scope, bool includeHistory, CancellationToken cancellationToken)
     {
         var schemas = new EventSchemaResolver(eventTypesStorage);
         return new(query, scope, eventStore, @namespace, identityStorage, 100, cancellationToken)
         {
+            IncludeHistory = includeHistory,
             ConvertEntry = (entry, tags) => EventEntryConverter.ToAppendedEvent(entry, eventStore, @namespace, identityStorage, tags, schemas.GetFor, converter)
         };
     }
 
     async Task<AppendedEvent> ToAppendedEvent(EventEntry entry, DbContextScope<EventSequenceDbContext> scope)
     {
+        if (entry.Type != GlobalEventTypes.Redaction && entry.Revisions is not null && !RevisionHistory.IsCurrent(entry))
+        {
+            logger.IncompleteRevisionHistory(entry.SequenceNumber);
+        }
         var namedTags = await NamedTagEntries.LoadFor(scope.DbContext, eventSequenceId.Value, [entry.SequenceNumber]);
         var schemas = new EventSchemaResolver(eventTypesStorage);
         return await EventEntryConverter.ToAppendedEvent(entry, eventStore, @namespace, identityStorage, NamedTagEntries.At(namedTags, entry.SequenceNumber), schemas.GetFor, converter);

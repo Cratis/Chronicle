@@ -10,6 +10,8 @@ namespace Cratis.Chronicle.Observation;
 /// </summary>
 /// <param name="Policy">The webhook recovery policy; the default retries normally.</param>
 /// <param name="DeliveryFence">The optional original delivery identity and deadline.</param>
+/// <param name="ReplayEpoch">The replay operation that made the delivery, or null for live and catch-up deliveries.</param>
 public readonly record struct PartitionFailureContext(
     WebhookDeliveryFailurePolicy Policy = WebhookDeliveryFailurePolicy.Retry,
-    DeliveryFenceContext? DeliveryFence = null);
+    DeliveryFenceContext? DeliveryFence = null,
+    ReplayEpoch? ReplayEpoch = null);

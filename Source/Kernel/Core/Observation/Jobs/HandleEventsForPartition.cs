@@ -60,6 +60,7 @@ public partial class HandleEventsForPartition(
     IObserver _observer = null!;
     EventSourceId _eventSourceId = EventSourceId.Unspecified;
     IObserverSubscriber? _subscriber;
+    ObserverSubscriberKey? _subscriberKey;
     IGrainFactory _grainFactory = null!;
     ObserverSubscriberTarget _deliveryTarget = null!;
     ObserverSubscription _deliverySubscription = ObserverSubscription.Unsubscribed;
@@ -93,6 +94,12 @@ public partial class HandleEventsForPartition(
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
+        _grainFactory = GrainFactory;
+
+        // Steps are read one by one from storage, each with its own copy of the event types its observer reads.
+        State.EventTypes = EventTypeInterner.Intern(State.EventTypes);
+        State.ReaderScope = EventTypeInterner.Intern(State.ReaderScope);
+
         if (State.IsPrepared)
         {
             _observer = GrainFactory.GetGrain<IObserver>(State.ObserverKey);
@@ -104,7 +111,8 @@ public partial class HandleEventsForPartition(
             // reaching PerformStep, which reports the disconnection the job knows how to handle.
             if (subscription.IsSubscribed)
             {
-                _subscriber = GrainFactory.GetGrain(subscription.SubscriberType, GetObserverSubscriberKey(subscription, State.Partition)) as IObserverSubscriber;
+                _subscriberKey = GetObserverSubscriberKey(subscription, State.Partition);
+                _subscriber = GrainFactory.GetGrain(subscription.SubscriberType, _subscriberKey) as IObserverSubscriber;
                 _isCollapsingProjection = subscription.IsCollapsingProjection;
             }
         }
@@ -133,10 +141,11 @@ public partial class HandleEventsForPartition(
     {
         State.EpisodeId = request.EpisodeId;
         State.DeferralId = request.DeferralId;
+        State.ReplayEpoch = request.ReplayEpoch;
         State.ObserverKey = request.ObserverKey;
         State.EventObservationState = request.EventObservationState;
-        State.EventTypes = request.EventTypes.ToArray();
-        State.ReaderScope = request.ReaderScope;
+        State.EventTypes = EventTypeInterner.Intern(request.EventTypes);
+        State.ReaderScope = EventTypeInterner.Intern(request.ReaderScope);
         State.Partition = request.Partition;
         State.StartEventSequenceNumber = request.StartEventSequenceNumber;
         State.EndEventSequenceNumber = request.EndEventSequenceNumber;
@@ -153,13 +162,15 @@ public partial class HandleEventsForPartition(
         try
         {
             logger.Preparing(request.Partition, request.StartEventSequenceNumber, request.EndEventSequenceNumber);
+            _grainFactory = GrainFactory;
             _observer = GrainFactory.GetGrain<IObserver>(request.ObserverKey);
             var subscription = await _observer.GetSubscription();
             _eventSourceId = request.Partition.ToString() ?? EventSourceId.Unspecified;
 
             if (subscription.IsSubscribed)
             {
-                _subscriber = GrainFactory.GetGrain(subscription.SubscriberType, GetObserverSubscriberKey(subscription, request.Partition)) as IObserverSubscriber;
+                _subscriberKey = GetObserverSubscriberKey(subscription, request.Partition);
+                _subscriber = GrainFactory.GetGrain(subscription.SubscriberType, _subscriberKey) as IObserverSubscriber;
                 _isCollapsingProjection = subscription.IsCollapsingProjection;
                 logger.SuccessfullyPrepared(request.Partition);
                 return Result.Success<PrepareJobStepError>();
@@ -181,6 +192,23 @@ public partial class HandleEventsForPartition(
         var lastSuccessfullyHandledEventSequenceNumber = EventSequenceNumber.Unavailable;
         var subscription = await _observer.GetSubscription();
         _generationDelivery = subscription.GenerationDelivery;
+
+        // A step is prepared, and its grain activated, when its job starts, but a job keeps only a window of its steps
+        // running, so a step can start long after. The client that was subscribed when it was prepared may be gone by
+        // then, and delivering through its connection would find nobody. This runs on the step's background task, which
+        // has no access to the grain's own services, hence the factory kept from when the step was prepared or activated.
+        if (subscription.IsSubscribed)
+        {
+            var subscriberKey = GetObserverSubscriberKey(subscription, currentState.Partition);
+            if (_subscriberKey is not null && _subscriberKey != subscriberKey)
+            {
+                _subscriber = _grainFactory.GetGrain(subscription.SubscriberType, subscriberKey) as IObserverSubscriber;
+            }
+
+            _subscriberKey = subscriberKey;
+            _isCollapsingProjection = subscription.IsCollapsingProjection;
+        }
+
         try
         {
             lastSuccessfullyHandledEventSequenceNumber = currentState.LastSuccessfullyHandledEventSequenceNumber;
@@ -302,7 +330,7 @@ public partial class HandleEventsForPartition(
                                 await ReportHandledEvents(currentState.Partition, handledEvents, eventObserverResult.LastSuccessfulObservation, cancellationToken);
                             }
 
-                            await _observer.PartitionDeferred(currentState.Partition, eventObserverResult.Deferral!, currentState.EpisodeId, currentState.DeferralId);
+                            await ReportPartitionDeferred(currentState, eventObserverResult.Deferral!);
                             return JobStepResult.Failed(PerformJobStepError.CancelledWithPartialResult(CreateResult(lastSuccessfullyHandledEventSequenceNumber) with { Deferral = eventObserverResult.Deferral }));
                         case ObserverSubscriberState.Failed:
                             failed = true;
@@ -360,7 +388,7 @@ public partial class HandleEventsForPartition(
                             string.Empty));
                     }
 
-                    await _observer.PartitionFailed(_eventSourceId, failedAt, exceptionMessages, exceptionStackTrace, failureKind, currentState.EpisodeId, currentState.DeferralId, failurePolicy);
+                    await ReportPartitionFailed(currentState, failedAt, exceptionMessages, exceptionStackTrace, failureKind, failurePolicy);
                     return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(
                         CreateResult(lastSuccessfullyHandledEventSequenceNumber),
                         TransientTimeouts.ShortenForStep(exceptionMessages),
@@ -467,11 +495,21 @@ public partial class HandleEventsForPartition(
         return lastScanned;
     }
 
+    Task ReportPartitionDeferred(HandleEventsForPartitionState state, PartitionDeferral deferral) =>
+        state.ReplayEpoch is { } replayEpoch
+            ? _observer.PartitionDeferred(state.Partition, deferral, state.EpisodeId, state.DeferralId, replayEpoch)
+            : _observer.PartitionDeferred(state.Partition, deferral, state.EpisodeId, state.DeferralId);
+
+    Task ReportPartitionFailed(HandleEventsForPartitionState state, EventSequenceNumber failedAt, IEnumerable<string> messages, string stackTrace, FailureKind kind, WebhookDeliveryFailurePolicy policy) =>
+        state.ReplayEpoch is { } replayEpoch
+            ? _observer.PartitionFailed(_eventSourceId, failedAt, messages, stackTrace, kind, state.EpisodeId, state.DeferralId, new PartitionFailureContext(policy, null, replayEpoch))
+            : _observer.PartitionFailed(_eventSourceId, failedAt, messages, stackTrace, kind, state.EpisodeId, state.DeferralId, policy);
+
     async Task<bool> TryReportPartitionFailed(EventSequenceNumber failedAt, Exception error)
     {
         try
         {
-            await _observer.PartitionFailed(_eventSourceId, failedAt, error.GetAllMessages(), error.StackTrace ?? string.Empty, error.ToFailureKind(), State.EpisodeId, State.DeferralId);
+            await ReportPartitionFailed(State, failedAt, error.GetAllMessages(), error.StackTrace ?? string.Empty, error.ToFailureKind(), WebhookDeliveryFailurePolicy.Retry);
             return true;
         }
         catch (Exception reportError)
@@ -510,6 +548,7 @@ public partial class HandleEventsForPartition(
             : subscriberSelector.Select(subscription, state.Partition);
         return new(deliveryTarget.ConnectedClient ?? subscription.Arguments)
         {
+            ReplayEpoch = state.ReplayEpoch,
             Origin = state.EpisodeId is not null || state.DeferralId is not null
                 ? ObservationOrigin.Retry
                 : state.EventObservationState.ToObservationOrigin()
@@ -580,7 +619,7 @@ public partial class HandleEventsForPartition(
 
     ObserverSubscriberKey GetObserverSubscriberKey(ObserverSubscription subscription, Key partition)
     {
-        _grainFactory = GrainFactory;
+        _grainFactory ??= GrainFactory;
         _deliverySubscription = subscription;
         _deliveryTarget = typeof(IWebhookObserverSubscriber).IsAssignableFrom(subscription.SubscriberType)
             ? new ObserverSubscriberTarget(SiloAddress.Zero)

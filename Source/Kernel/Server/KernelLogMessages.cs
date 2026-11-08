@@ -61,9 +61,15 @@ internal static partial class KernelLogMessages
     [LoggerMessage(LogLevel.Warning, "Localhost clustering is configured while storage points at a non-local host and the single-writer lease is disabled. Another node sharing this storage can silently process the same data. Enable Clustering.SingleWriterLease, or use MongoDB clustering on every node with MongoDB storage for them to join as one cluster")]
     internal static partial void LocalhostClusteringAgainstSharedStorage(this ILogger<Kernel> logger);
 
+    [LoggerMessage(LogLevel.Warning, "The experimental Orleans distributed grain directory is enabled (Clustering.DistributedGrainDirectoryEnabled). Every node in the cluster must use the same setting; change it only by stopping and starting the whole cluster, never in a rolling upgrade")]
+    internal static partial void DistributedGrainDirectoryEnabled(this ILogger<Kernel> logger);
+
     [LoggerMessage(LogLevel.Critical, "Unhandled exception occurred (terminating: {IsTerminating})")]
     internal static partial void UnhandledException(this ILogger<Kernel> logger, Exception exception, bool isTerminating);
 
-    [LoggerMessage(LogLevel.Error, "Unobserved task exception occurred")]
-    internal static partial void UnobservedTaskException(this ILogger<Kernel> logger, Exception exception);
+    [LoggerMessage(LogLevel.Error, "Unobserved task exception occurred; owner: {Owner}")]
+    internal static partial void UnobservedTaskException(this ILogger<Kernel> logger, Exception exception, string owner);
+
+    [LoggerMessage(LogLevel.Warning, "Unobserved transient task exception occurred and was ignored; owner: {Owner}")]
+    internal static partial void UnobservedTransientTaskException(this ILogger<Kernel> logger, Exception exception, string owner);
 }

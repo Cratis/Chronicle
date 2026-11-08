@@ -9,6 +9,10 @@ public static class administrator_surface_policy
     {
         ["Cratis.Chronicle.Security.GrantAdministrator"] = WellKnownAuthorizationPolicies.Administrator,
         ["Cratis.Chronicle.Security.RevokeAdministrator"] = WellKnownAuthorizationPolicies.Administrator,
+        ["Cratis.Chronicle.Security.GrantEventStoreAccess"] = WellKnownAuthorizationPolicies.Administrator,
+        ["Cratis.Chronicle.Security.RevokeEventStoreAccess"] = WellKnownAuthorizationPolicies.Administrator,
+        ["Cratis.Chronicle.Security.EventStoreAccessGrants"] = WellKnownAuthorizationPolicies.Administrator,
+        ["Cratis.Chronicle.Security.EventStoreAccessPreflight"] = WellKnownAuthorizationPolicies.Administrator,
         ["Cratis.Chronicle.Security.Administrator"] = WellKnownAuthorizationPolicies.Administrator,
         ["Cratis.Chronicle.Security.User"] = WellKnownAuthorizationPolicies.Administrator,
         ["Cratis.Chronicle.Security.Application"] = WellKnownAuthorizationPolicies.Administrator,
@@ -62,6 +66,7 @@ public static class administrator_surface_policy
         ["Captures.CaptureDetails"] = "read-only capture inspection",
         ["Clients.ConnectedClientDetails"] = "read-only client diagnostics",
         ["DevelopmentTools.DevelopmentToolsAvailability"] = "read-only feature availability",
+        ["Diagnostics.StorageAuthorizationDiagnostic"] = "read-only cluster-wide storage authorization diagnostics",
         ["EventSources.EventSourceDetails"] = "read-only event-source inspection",
         ["EventStores.EventStoreDeployment"] = "read-only deployment diagnostics; generation and artifact fingerprint only",
         ["EventStores.EventStoreNames"] = "read-only store discovery",

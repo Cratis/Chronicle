@@ -409,9 +409,12 @@ dotnet restore
 if ($LASTEXITCODE -ne 0) { throw "Restore failed; do not use stale assets." }
 dotnet build --no-restore -m
 if ($LASTEXITCODE -ne 0) { throw "Build failed; do not test stale outputs." }
-dotnet test --no-build
+./<project-dir>/bin/<Config>/<TFM>/<AssemblyName> # built spec executable
 ```
 
+Use the evaluated output without rebuilding (see [running-specs](../../cratis-specifications-csharp/references/running-specs.md));
+only VSTest uses `dotnet test <project> --no-build`. The executable step itself
+produces no MSBuild binlog.
 Use matching configuration/TFM/RID and restore-affecting properties in each stage.
 `--no-restore` requires current assets; `--no-build` requires successfully built
 matching test outputs. Keep restore-inclusive and build-only timings separate.

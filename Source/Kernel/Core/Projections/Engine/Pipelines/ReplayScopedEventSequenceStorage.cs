@@ -252,12 +252,20 @@ internal sealed partial class ReplayScopedEventSequenceStorage(IEventSequenceSto
         inner.GetFromSequenceNumber(sequenceNumber, eventSourceId, eventSourceType, eventStreamType, eventStreamId, eventTypes, tags, cancellationToken);
 
     /// <inheritdoc/>
+    public Task<IEventCursor> GetFromSequenceNumberWithHistory(EventSequenceNumber sequenceNumber, EventSourceId? eventSourceId = default, EventSourceType? eventSourceType = default, EventStreamType? eventStreamType = default, EventStreamId? eventStreamId = default, IEnumerable<EventType>? eventTypes = default, IEnumerable<Tag>? tags = default, CancellationToken cancellationToken = default) =>
+        inner.GetFromSequenceNumberWithHistory(sequenceNumber, eventSourceId, eventSourceType, eventStreamType, eventStreamId, eventTypes, tags, cancellationToken);
+
+    /// <inheritdoc/>
     public Task<IEventCursor> GetWindow(EventSequenceNumber from, EventSequenceNumber until, int limit, bool descending, EventSourceId? eventSourceId = default, EventSourceType? eventSourceType = default, EventStreamType? eventStreamType = default, EventStreamId? eventStreamId = default, IEnumerable<EventType>? eventTypes = default, IEnumerable<Tag>? tags = default, CancellationToken cancellationToken = default) =>
         inner.GetWindow(from, until, limit, descending, eventSourceId, eventSourceType, eventStreamType, eventStreamId, eventTypes, tags, cancellationToken);
 
     /// <inheritdoc/>
     public Task<IEventCursor> GetRange(EventSequenceNumber start, EventSequenceNumber end, EventSourceId? eventSourceId = default, IEnumerable<EventType>? eventTypes = default, IEnumerable<Tag>? tags = default, CancellationToken cancellationToken = default) =>
         inner.GetRange(start, end, eventSourceId, eventTypes, tags, cancellationToken);
+
+    /// <inheritdoc/>
+    public Task<IEventCursor> GetRangeWithHistory(EventSequenceNumber start, EventSequenceNumber end, EventSourceId? eventSourceId = default, IEnumerable<EventType>? eventTypes = default, IEnumerable<Tag>? tags = default, CancellationToken cancellationToken = default) =>
+        inner.GetRangeWithHistory(start, end, eventSourceId, eventTypes, tags, cancellationToken);
 
     /// <inheritdoc/>
     public Task<IEventCursor> GetRange(EventSequenceNumber start, EventSequenceNumber end, EventSourceId? eventSourceId, IEnumerable<EventType>? eventTypes, IEnumerable<Tag>? tags, EventSourceType? eventSourceType, EventStreamType? eventStreamType, CancellationToken cancellationToken) =>

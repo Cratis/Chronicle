@@ -1,8 +1,7 @@
 ---
+title: Configure health endpoints in Cratis Chronicle Server
 description: Configure Chronicle's health check endpoint, served on the main port by default or on an optional dedicated port for orchestrator probes.
 ---
-# Health Endpoint
-
 By default Chronicle serves its health check on the main port (35000) — the same port that carries gRPC, the Workbench, the REST API and OAuth. The main port uses TLS by default, multiplexing HTTP/2 and HTTP/1.1 via ALPN. In development that TLS certificate is self-signed and generated automatically. If `tls.enabled=false`, the main port instead serves cleartext HTTP/2 only; probes on it must support HTTP/2.
 
 That is exactly where orchestrator and load-balancer probes run into trouble. A health probe that has to speak TLS — and sometimes validate the certificate — against a port that may be serving a self-signed certificate is awkward at best and broken at worst. The dedicated health port removes that friction: it publishes the health endpoint on its own HTTP/1.1 port where you can turn TLS off.
@@ -81,6 +80,12 @@ shutdown. It is not registered for `MongoDB` clustering, `InMemory` storage or a
 
 A node still waiting for acquisition has not completed silo startup and is not ready. The lease does not
 bind an early health listener or advertise a ready standby. See [Clustering](clustering.md#single-writer-lease).
+
+## Storage authorization
+
+The `storage-authorization` check (tagged `ready`) reports `Degraded` while a storage permission failure is recorded. HTTP stays **200**, keeping the kernel in rotation. The log entry names the database, collection, and refused operation without exposing connection details.
+
+The failure clears after the next successful access completes index setup for that collection. If database names differ from those granted to the storage user, check [the database-name prefix](storage.mdx).
 
 ## Restricting the dedicated port to health only
 

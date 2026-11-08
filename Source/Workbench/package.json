@@ -69,7 +69,7 @@
         "@typescript-eslint/eslint-plugin": "8.68.0",
         "@typescript-eslint/parser": "8.68.0",
         "@vitejs/plugin-react": "6.1.0",
-        "@vitest/coverage-v8": "4.1.11",
+        "@vitest/coverage-v8": "4.1.12",
         "autoprefixer": "10.5.4",
         "chai": "6.2.2",
         "chai-as-promised": "8.0.2",
@@ -100,7 +100,7 @@
         "vite": "8.2.4",
         "vite-plugin-commonjs": "0.10.4",
         "vite-tsconfig-paths": "6.1.1",
-        "vitest": "4.1.11"
+        "vitest": "4.1.12"
     },
     "resolutions": {
         "@cratis/arc.react": "^22.156.4",

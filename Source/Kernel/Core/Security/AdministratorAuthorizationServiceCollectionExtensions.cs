@@ -27,10 +27,11 @@ public static class AdministratorAuthorizationServiceCollectionExtensions
     {
         services.AddAuthorizationCore();
         services.AddHttpContextAccessor();
-        services.TryAddScoped<IAdministratorAuthorization, AdministratorAuthorization>();
-        services.TryAddScoped<ISystemStoreAccess, SystemStoreAccessVerdict>();
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAuthorizationHandler, AdministratorAuthorizationHandler>());
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAuthorizationHandler, SystemStoreOperationAuthorizationHandler>());
+        services.TryAddSingleton<IAdministratorAuthorization, AdministratorAuthorization>();
+        services.TryAddSingleton<IAuthorizationDecisions, AuthorizationDecisions>();
+        services.TryAddSingleton<ISystemStoreAccess, SystemStoreAccessVerdict>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IAuthorizationHandler, AdministratorAuthorizationHandler>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IAuthorizationHandler, SystemStoreOperationAuthorizationHandler>());
         services.PostConfigure<AuthorizationOptions>(options =>
         {
             EnsurePolicy<AdministratorRequirement>(options, WellKnownAuthorizationPolicies.Administrator);

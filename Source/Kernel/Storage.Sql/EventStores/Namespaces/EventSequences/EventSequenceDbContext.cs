@@ -4,6 +4,7 @@
 using Cratis.Arc.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Metadata;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 
@@ -68,6 +69,10 @@ public class EventSequenceDbContext(DbContextOptions<EventSequenceDbContext> opt
     {
         base.OnModelCreating(modelBuilder);
         EventStores.Occurrences.OccurrenceModel.ConfigureReceipts(modelBuilder);
+        if (Database.IsSqlServer())
+        {
+            ExactIdentifiers.RegisterByteLength(modelBuilder);
+        }
 
 #pragma warning disable RCS1201 // Separate EF entity configurations cannot be combined into a fluent chain.
         modelBuilder.Entity<NamedTagEntry>(entity =>
@@ -104,6 +109,8 @@ public class EventSequenceDbContext(DbContextOptions<EventSequenceDbContext> opt
             entity.Property(e => e.EventStreamType).IsRequired();
             entity.Property(e => e.Type).IsRequired();
             entity.Property(e => e.Content).IsRequired();
+            entity.Property(e => e.OriginalContent).Metadata.SetBeforeSaveBehavior(PropertySaveBehavior.Ignore);
+            entity.Property(e => e.Revisions).Metadata.SetBeforeSaveBehavior(PropertySaveBehavior.Ignore);
             entity.Property(e => e.Occurred).IsRequired();
         });
     }

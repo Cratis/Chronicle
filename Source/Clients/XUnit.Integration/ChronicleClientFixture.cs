@@ -57,16 +57,10 @@ public abstract partial class ChronicleClientFixture<TChronicleFixture> : IDispo
         }
 
         TestAssembly ??= TestAssemblyLocator.GetTestAssembly();
-        if (ContentRoot is null)
-        {
-            var codeBaseUri = new Uri(TestAssembly!.Location);
-            ContentRoot = Path.GetDirectoryName(codeBaseUri.LocalPath)!;
 
-            while (!Directory.EnumerateFiles(ContentRoot, "*.csproj").Any())
-            {
-                ContentRoot = Path.GetDirectoryName(ContentRoot)!;
-            }
-        }
+        // Fixtures are constructed concurrently. Walk to the project directory in a local and publish only the
+        // finished result, so no fixture ever reads a partially walked path from the shared static.
+        ContentRoot ??= ContentRootLocator.FindFor(TestAssembly!);
     }
 
     /// <summary>
@@ -128,6 +122,18 @@ public abstract partial class ChronicleClientFixture<TChronicleFixture> : IDispo
 
     /// <inheritdoc/>
     public virtual IEnumerable<Type> ModelBoundProjections => GetArtifactTypes(provider => provider.ModelBoundProjections);
+
+    /// <inheritdoc/>
+    public virtual IEnumerable<Type> GraphElements => GetArtifactTypes(provider => provider.GraphElements);
+
+    /// <inheritdoc/>
+    public virtual IEnumerable<Type> GraphProjections => GetArtifactTypes(provider => provider.GraphProjections);
+
+    /// <inheritdoc/>
+    public virtual IReadOnlyDictionary<string, string?>? AdditionalHostConfiguration => null;
+
+    /// <inheritdoc/>
+    public virtual Action<IServiceCollection>? ConfigureHostServices => null;
 
     /// <inheritdoc/>
     public virtual IEnumerable<Type> Reactors => GetArtifactTypes(provider => provider.Reactors);

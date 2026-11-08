@@ -99,18 +99,16 @@ use an appropriate constraint or explicit concurrency scope for them.
 
 ## Specify the collision
 
-Use `new CommandScenario<TCommand>()`; it selects the in-process log from the
-command's read-protection mode and dependencies before seeding. If a seeded
-collision throws `GeneratedIdentifierCollisionRequiresDecisionReads`, the
-scenario stayed in legacy mode: call the compatibility switch `UseDecisionReads()`
-before seeding. Then `PinGeneratedValue(name, id)` and `Given.ForEventSource(id).Events(existingEvent)`.
-Assert the concurrency reason and collision detail, unchanged append tail and
-one handler execution. Also cover an empty source receiving two events through
-the chosen write API, an occupied source whose events belong to another stream,
-mixed returned/direct writes, and a nested rejection rolling back the outer unit.
+The generated-value collision guard and its route, append and rollback matrix
+belong in Arc/Chronicle specs, not every application. Follow the
+[scenario rule](../../../rules/specs.scenarios.csharp.md): application authors
+supply state and assert business decisions without configuring decision reads
+or seeding events solely to satisfy infrastructure.
 
-Requires Arc 22.95.1 for `GeneratedIdentifierCollisionRequiresDecisionReads`:
-default scenario mode fails fast when given events and a guarded pin share an id.
-Older default mode silently leaves the append log empty; it cannot prove occupancy.
-Run `dotnet build -c Debug` and the affected specification project with
-`dotnet test`; all collision and empty-source facts must pass.
+Add a scenario only for an application-owned collision/retry policy or generated
+parameter pipeline wiring that a direct call cannot prove. `PinGeneratedValue(name, id)`
+can make that domain example deterministic; assert its specified outcome, not
+the platform guard matrix. If a harness rejects the state setup (for example
+`GeneratedIdentifierCollisionRequiresDecisionReads`), report the upstream gap
+rather than calling compatibility switches or weakening production guards.
+Build the affected project and run its specifications with the project runner.

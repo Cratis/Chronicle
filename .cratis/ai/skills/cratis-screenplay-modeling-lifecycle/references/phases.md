@@ -131,7 +131,7 @@ phase, a decision important enough that a later reader could misread the model (
 - **Input**: the accepted identity.
 - **Carry-forward**: the admission result; render output and named gaps in `Customizations/`;
   non-renderable scope handed to a code agent with the model as contract, plus a fallback record
-  naming the blocking codes. Stage 4.89.1 renders supported event-triggered Automation; Translate/captures and refused reactions remain gap-fill (mixed effects keep one modeled reaction; `STAGE-ESM-037` is a redelivery-safety refusal, not a reason to split it). Three cases stay distinct: admission failure (nothing rendered); an
+  naming the blocking codes. Stage 4.89.1 renders supported event-triggered Automation; newer Stage also renders bounded source-event capture/outbound Translate paths (see its `references/current-boundaries.md`); refused shapes remain gap-fill (mixed effects keep one modeled reaction; `STAGE-ESM-037` is a redelivery-safety refusal, not a reason to split it). Three cases stay distinct: admission failure (nothing rendered); an
   existing generated base plus separately authorized gap-fill; fully hand-written delivery.
 - **Gate**: V5 sub-results, or a fallback entry per non-renderable scope. A customization never
   makes a rejected model renderable; no whole-application V5 from a subset.

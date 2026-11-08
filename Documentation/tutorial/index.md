@@ -1,13 +1,13 @@
 ---
-title: "Tutorial: Build a library"
-description: Build a small event-sourced library with Chronicle, one concept at a time — and finish understanding events, read models, and reactions from the inside out.
+title: Build an event-sourced library with Cratis Chronicle
+description: "Build an event-sourced library with Cratis Chronicle: record books, project a catalog, and react to returns using a running kernel and connected client."
 ---
 
-Imagine you're building the system for a small town library. Books arrive, members borrow them, and eventually bring them back — and when a popular title comes back, the next person on the waitlist should hear about it. It's a small domain, but it has everything event sourcing is good at: things *happen*, in order, over time, and you care about the history, not just the latest state.
+This Cratis Chronicle tutorial builds a small library system to teach event sourcing one task at a time. You will record a book arriving, derive a catalog you can query, and react when a borrowed book comes back. Each chapter adds one part to the same model, so you can see how storing a fact differs from updating a row.
 
-Over the next three short chapters we'll build it together with Chronicle. We won't rush to the finish — at each step we'll stop to look at what just happened and why, so that by the end you don't just have working code, you understand the model well enough to build your own.
+The library needs both a history of changes and a current view: which books arrived, which are on loan, and who should hear when a title returns. We will record those changes as events, then use them to build the catalog and notify the next member waiting for a book.
 
-Here's the whole system we're heading toward, drawn as an **[event model](/event-modeling/)** — read it left to right like a comic strip: facts happen over time, get folded into a read model you can query, and trigger a reaction. Don't worry if the pieces aren't familiar yet; we'll meet each one in turn.
+The diagram shows the flow we will build. `BookAdded`, `BookBorrowed`, and `BookReturned` feed the `Book` read model. `WaitlistNotifier` represents the code that acts on a return. You can follow the tutorial without knowing the diagram notation; [the event-modeling guide](/event-modeling/) explains it if you want to use it for your own designs.
 
 ```mermaid
 eventmodeling
@@ -19,14 +19,15 @@ tf 04 readmodel Library.Book ->> 01 ->> 02 ->> 03
 tf 05 processor Library.WaitlistNotifier
 ```
 
-Every block is a real Chronicle primitive — which is what makes an event model such a good plan. The three **events** become `[EventType]` records, the **read model** becomes a queryable `Book` projected from all three of them, and the **processor** becomes a **reactor** — an `IReactor` that acts when something happens. You'll build them in that order. There's no screen or command here because Chronicle appends events directly — put a UI and commands on top with [Arc](/arc/) and the model gains those blocks too, as [the full-stack capstone](/build-a-full-app/) shows.
+In C#, the events become records marked with `[EventType]`. The **read model** is a queryable `Book`, derived from the events by a projection. The **reactor** implements `IReactor` and runs application code when a matching event arrives. The chapters introduce those APIs as you need them.
+
+This tutorial calls Chronicle directly rather than building screens and commands. For that application layer, [Arc](/arc/) builds on Chronicle; [the full-stack capstone](/build-a-full-app/) shows how the pieces connect.
 
 ## What you'll need
 
-Start the Chronicle kernel and pick a client. The worked narrative follows C#, while the client tabs show the supported equivalents for the other Chronicle clients.
+You need a [locally running kernel](/chronicle/get-started/#start-chronicle) and a project connected to a Chronicle client. For C#, [choose an application host model](/chronicle/get-started/choose-hosting-model/) and follow its console, worker, or ASP.NET Core quickstart. For another language, use the [client choices in Get started](/chronicle/get-started/#pick-a-client) to find the setup guide.
 
-- [Get started](/chronicle/get-started/) walks through starting the kernel.
-- [Choose an application host model](/chronicle/get-started/choose-hosting-model/) picks the level your code runs at — console, worker, or ASP.NET Core.
+The narrative follows C#. The snippets also show Kotlin, Elixir, and TypeScript; Kotlin and Java use the same JVM client, with Kotlin syntax shown here. Select your language on a snippet and follow its registration instructions from setup. Client capabilities differ, and the chapters name missing operations where they affect an example.
 
 ## The tour
 
@@ -34,6 +35,6 @@ Start the Chronicle kernel and pick a client. The worked narrative follows C#, w
 2. **[Building a read model](./read-model)** — turn that stream of facts into something you can actually query.
 3. **[Reacting to events](./reacting)** — do something useful when a book comes back.
 
-By the end you'll have built the loop at the heart of every Chronicle app — *append a fact, project it into state, react to it* — and you'll know it well enough to leave the library behind and model your own domain. After the tour, use the [Scenarios](../scenarios/) recipes when you need to solve a focused Chronicle task.
+Start with [your first event](./first-event). That chapter records a book but does not yet produce a queryable catalog. The read-model chapter adds the catalog; the reactor chapter then adds the notification. Each step explains what changed and what is still missing.
 
-Ready? [Let's record the first thing that happens →](./first-event)
+After the tour, use the [Scenarios](../scenarios/) recipes for focused Chronicle tasks.

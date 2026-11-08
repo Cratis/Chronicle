@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
+using Cratis.Chronicle.Clients;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Integration.for_Reactors;
@@ -39,6 +40,7 @@ public class an_independently_owned_reactor(ChronicleFixture fixture) : Specific
         services.AddSingleton(Reactor);
         services.AddSingleton(Services.GetRequiredService<IGrainFactory>());
         services.AddSingleton(Services.GetRequiredService<ILocalSiloDetails>());
+        services.AddSingleton(Services.GetRequiredService<IConnectionOwnership>());
         services.AddSingleton(Services.GetRequiredService<IServices>());
         services.AddSingleton(Services.GetRequiredService<ILoggerFactory>());
         services.AddSingleton<IOptions<ChronicleOptions>>(Options.Create(new ChronicleOptions

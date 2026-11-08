@@ -75,7 +75,7 @@ public class when_resolving_a_future_after_reload : given.a_futures_storage
             new Changeset<AppendedEvent, ExpandoObject>(comparer, rootEvent, root),
             ProjectionOperationType.None,
             NeedsInitialState: false);
-        _step = new(_futures, new ProjectionFuturesTracker(), Substitute.For<ITypeFormats>(), comparer, Substitute.For<ILogger<ResolveFutures>>(), Substitute.For<IEventSequenceStorage>(), Substitute.For<ISink>());
+        _step = new(_futures, new ProjectionFuturesTracker(), Substitute.For<ITypeFormats>(), comparer, Substitute.For<ICanProtectFutureChangesets>(), Substitute.For<ILogger<ResolveFutures>>(), Substitute.For<IEventSequenceStorage>(), Substitute.For<ISink>());
     }
 
     async Task Because() => _result = await _step.Perform(_projection, _context);

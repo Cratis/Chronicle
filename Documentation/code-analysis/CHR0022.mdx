@@ -1,8 +1,7 @@
 ---
+title: "CHR0022: Reactor methods returning event side effects must be marked with [OnceOnly]"
 description: Chronicle analyzer rule CHR0022 reports reactor methods that return events as side effects without [OnceOnly], which can append duplicates on replay.
 ---
-# CHR0022: Reactor methods returning event side effects must be marked with [OnceOnly]
-
 ## Rule Description
 
 A reactor handler method that returns event(s) as a side effect causes Chronicle to append those events to the event log. Unless the method is marked with `[OnceOnly]`, it runs again during replay operations — appending duplicate events.

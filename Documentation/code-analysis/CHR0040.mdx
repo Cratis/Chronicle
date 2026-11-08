@@ -1,8 +1,7 @@
 ---
+title: "CHR0040: Several [SetFromContext] for the same event type on one member"
 description: Chronicle analyzer rule CHR0040 reports several [SetFromContext] attributes for the same event type on one member, where only the last one applies.
 ---
-# CHR0040: Several [SetFromContext] for the same event type on one member
-
 ## Rule Description
 
 One read model member carries more than one `[SetFromContext<TEvent>]` for the *same* event type. They write the same property in the projection definition, so only the last declared is kept — the earlier capture is silently discarded, with no build, registration, or runtime signal.

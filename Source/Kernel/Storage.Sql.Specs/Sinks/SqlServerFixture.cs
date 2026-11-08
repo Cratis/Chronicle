@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Threading.Channels;
 using Cratis.Chronicle.Diagnostics;
 using Cratis.Chronicle.Integration;
 using Cratis.Chronicle.Storage.Sql.Diagnostics;
@@ -18,11 +19,20 @@ public sealed class SqlServerFixture : IAsyncLifetime
 {
     const int Port = 1433;
     const int DatabaseInUse = 3702;
+    const int SessionNotActive = 6106;
+    static readonly TimeSpan _prefetchTimeout = TimeSpan.FromSeconds(60);
     const string Password = "Chronicle4476!Test";
+    readonly Channel<(string? Name, TaskCompletionSource? Flush)> _drops = Channel.CreateUnbounded<(string? Name, TaskCompletionSource? Flush)>(new() { SingleReader = true });
+    readonly Channel<string> _ready = Channel.CreateBounded<string>(2);
+    readonly CancellationTokenSource _stop = new();
 #pragma warning disable CA2213 // DisposeAsync disposes the container through Timings.Run, which the analyzer cannot follow.
     IContainer _container;
 #pragma warning restore CA2213
     SqlCommandTimings? _commandTimings;
+    Task _dropWorker = Task.CompletedTask;
+    Task _producer = Task.CompletedTask;
+    int _dropFallbacks;
+    int _dropFailures;
 
     internal IntegrationTimings Timings { get; } = new(nameof(SqlServerFixture), "sql-specs", "mssql");
 
@@ -46,34 +56,46 @@ public sealed class SqlServerFixture : IAsyncLifetime
     /// <returns>The database connection string.</returns>
     public async Task<string> CreateDatabase()
     {
-        var name = $"spec_{Guid.NewGuid():N}";
-        await Timings.Run("sql-database-create", () => Execute($"CREATE DATABASE [{name}]"));
+        var name = string.Empty;
+        await Timings.Run("sql-database-wait", async () => name = await TakePrefetched());
         return new SqlConnectionStringBuilder(ConnectionString) { InitialCatalog = name }.ConnectionString;
     }
 
     /// <summary>
-    /// Drops a specification's database after closing its pooled connections, falling back to evicting open connections.
+    /// Drops a specification's database, completing only after deletion and propagating any failure.
+    /// </summary>
+    /// <param name="connectionString">The connection string returned by <see cref="CreateDatabase"/>.</param>
+    /// <returns>A task that completes after the database is dropped.</returns>
+    public Task DropDatabase(string connectionString)
+    {
+        var name = new SqlConnectionStringBuilder(connectionString).InitialCatalog;
+        return Timings.Run("sql-database-drop", () => Drop(name));
+    }
+
+    /// <summary>
+    /// Queues teardown without waiting for deletion. Failures are logged; pending drops are discarded on disposal.
     /// </summary>
     /// <param name="connectionString">The connection string returned by <see cref="CreateDatabase"/>.</param>
     /// <returns>Awaitable task.</returns>
-    public async Task DropDatabase(string connectionString)
+    public Task QueueDatabaseDrop(string connectionString)
     {
-        // Specs open the database through differently configured connection strings, so clearing one pool is not enough.
-        SqlConnection.ClearAllPools();
+        var name = new SqlConnectionStringBuilder(connectionString).InitialCatalog;
+        _drops.Writer.TryWrite((name, null));
+        return Task.CompletedTask;
+    }
 
-        var name = new SqlConnectionStringBuilder(connectionString).InitialCatalog.Replace("]", "]]", StringComparison.Ordinal);
-        await Timings.Run("sql-database-drop", async () =>
+    /// <summary>
+    /// Completes when every drop queued before the call has finished.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    internal Task FlushDrops()
+    {
+        var flush = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        if (!_drops.Writer.TryWrite((null, flush)))
         {
-            try
-            {
-                await Execute($"DROP DATABASE [{name}]");
-            }
-            catch (SqlException ex) when (ex.Number == DatabaseInUse)
-            {
-                // A connection outside the pool is still open; SINGLE_USER ... ROLLBACK IMMEDIATE evicts it, at a cost of seconds.
-                await Execute($"ALTER DATABASE [{name}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE; DROP DATABASE [{name}]");
-            }
-        });
+            flush.TrySetResult();
+        }
+        return flush.Task;
     }
 
     /// <inheritdoc/>
@@ -88,6 +110,11 @@ public sealed class SqlServerFixture : IAsyncLifetime
                 wait => wait.WithTimeout(TimeSpan.FromSeconds(90))));
         await Timings.Run("sql-container-start", async () =>
             _container = await ContainerStartup.ForDocker(builder.Build).Start(c => _container = c, null, CancellationToken.None));
+
+        // New databases inherit model's options. Only crash durability changes, and the spec container is never crashed.
+        await Timings.Run("sql-model-durability", () => Execute("ALTER DATABASE model SET DELAYED_DURABILITY = FORCED"));
+        _dropWorker = StartDetached(RunDrops);
+        _producer = StartDetached(ProduceDatabases);
     }
 
     /// <inheritdoc/>
@@ -95,6 +122,19 @@ public sealed class SqlServerFixture : IAsyncLifetime
     {
         try
         {
+            _drops.Writer.TryComplete();
+            _ready.Writer.TryComplete();
+            await _stop.CancelAsync();
+            try
+            {
+                await Task.WhenAll(_dropWorker, _producer);
+            }
+            catch (OperationCanceledException)
+            {
+                // Cancelled on purpose; the container is discarded with whatever was still queued.
+            }
+
+            await Console.Error.WriteLineAsync($"SqlServerFixture background drops: fallbacks={_dropFallbacks}, failures={_dropFailures}");
             if (_container is not null)
             {
                 await Timings.Run("sql-container-disposal", () => _container.DisposeAsync().AsTask());
@@ -103,18 +143,136 @@ public sealed class SqlServerFixture : IAsyncLifetime
         finally
         {
             _commandTimings?.Dispose();
+            _stop.Dispose();
             Timings.Complete();
         }
     }
 
-    async Task Execute(string sql)
+    /// <summary>
+    /// Runs work detached from the caller's execution context so the worker's timing phases are not parented to whichever spec phase is current.
+    /// </summary>
+    /// <param name="work">The work to run.</param>
+    /// <returns>The running task.</returns>
+    static Task StartDetached(Func<Task> work)
+    {
+        Task task;
+        using (ExecutionContext.SuppressFlow())
+        {
+            task = Task.Run(work);
+        }
+
+        return task;
+    }
+
+    async Task<string> TakePrefetched()
+    {
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(_stop.Token);
+        timeout.CancelAfter(_prefetchTimeout);
+        try
+        {
+            return await _ready.Reader.ReadAsync(timeout.Token);
+        }
+        catch (OperationCanceledException) when (!_stop.IsCancellationRequested)
+        {
+            throw new TimeoutException($"No prefetched SQL Server database became ready within {_prefetchTimeout.TotalSeconds} seconds; the producer task is {_producer.Status}.");
+        }
+    }
+
+    async Task ProduceDatabases()
+    {
+        try
+        {
+            while (!_stop.IsCancellationRequested)
+            {
+                var name = $"spec_{Guid.NewGuid():N}";
+                await Timings.Run("sql-database-create", () => Execute($"CREATE DATABASE [{name}]", cancellationToken: _stop.Token));
+                await _ready.Writer.WriteAsync(name, _stop.Token);
+            }
+        }
+        catch (Exception) when (_stop.IsCancellationRequested)
+        {
+            // Disposing; prefetched databases are discarded together with the container.
+        }
+        catch (Exception ex)
+        {
+            // Faults the next CreateDatabase so specs fail loudly instead of waiting for a database that never comes.
+            _ready.Writer.TryComplete(ex);
+        }
+    }
+
+    async Task RunDrops()
+    {
+        try
+        {
+            await foreach (var (name, flush) in _drops.Reader.ReadAllAsync(_stop.Token))
+            {
+                if (flush is not null)
+                {
+                    flush.TrySetResult();
+                    continue;
+                }
+
+                try
+                {
+                    await Timings.Run("sql-database-drop-background", () => Drop(name!));
+                }
+                catch (Exception ex) when (!_stop.IsCancellationRequested)
+                {
+                    Interlocked.Increment(ref _dropFailures);
+                    await Console.Error.WriteLineAsync($"SqlServerFixture could not drop '{name}': {ex.Message}");
+                }
+            }
+        }
+        catch (Exception) when (_stop.IsCancellationRequested)
+        {
+            // Disposing; remaining drops are discarded together with the container.
+        }
+    }
+
+    async Task Drop(string name)
+    {
+        var escaped = name.Replace("]", "]]", StringComparison.Ordinal);
+
+        // Evicts only this database's sessions on the server, so unrelated pools stay warm. The name is unique per specification.
+        // A session can end between the lookup and its KILL, so each KILL ignores its own failure and DROP still runs.
+        var sql = $"DECLARE @k nvarchar(max) = N''; SELECT @k += N'BEGIN TRY KILL ' + CAST(session_id AS nvarchar(10)) + N'; END TRY BEGIN CATCH END CATCH;' FROM (SELECT session_id FROM sys.dm_exec_sessions WHERE database_id = DB_ID(@name) UNION SELECT request_session_id FROM sys.dm_tran_locks WHERE resource_type = 'DATABASE' AND resource_database_id = DB_ID(@name)) s WHERE session_id <> @@SPID; EXEC (@k); DROP DATABASE [{escaped}]";
+        if (await TryDrop(sql, name) || await TryDrop(sql, name))
+        {
+            return;
+        }
+
+        // A connection outside the pool is still open; SINGLE_USER ... ROLLBACK IMMEDIATE evicts it, at a cost of seconds.
+        Interlocked.Increment(ref _dropFallbacks);
+        await Execute($"ALTER DATABASE [{escaped}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE; DROP DATABASE [{escaped}]", cancellationToken: _stop.Token);
+    }
+
+    async Task<bool> TryDrop(string sql, string name)
+    {
+        try
+        {
+            await Execute(sql, name, _stop.Token);
+            return true;
+        }
+        catch (SqlException ex) when (ex.Number is DatabaseInUse or SessionNotActive)
+        {
+            // Killed sessions may still be rolling back, or a session ended before it was killed.
+            await Task.Delay(100, _stop.Token);
+            return false;
+        }
+    }
+
+    async Task Execute(string sql, string? name = null, CancellationToken cancellationToken = default)
     {
         await using var connection = new SqlConnection(ConnectionString);
-        await connection.OpenAsync();
+        await connection.OpenAsync(cancellationToken);
         await using var command = connection.CreateCommand();
 #pragma warning disable CA2100 // Only fixture-owned database identifiers, delimited and escaped by the callers.
         command.CommandText = sql;
 #pragma warning restore CA2100
-        await command.ExecuteNonQueryAsync();
+        if (name is not null)
+        {
+            command.Parameters.Add(new SqlParameter("@name", name));
+        }
+        await command.ExecuteNonQueryAsync(cancellationToken);
     }
 }

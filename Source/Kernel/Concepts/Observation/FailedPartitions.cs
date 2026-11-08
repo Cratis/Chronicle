@@ -22,6 +22,8 @@ public class FailedPartitions
     const int MaxResolvedPartitions = 100;
 
     readonly List<FailedPartition> _resolvedPartitions = [];
+    readonly Dictionary<FailedPartitionId, Snapshot> _persisted = [];
+    readonly HashSet<FailedPartitionId> _persistedRemovals = [];
     Dictionary<FailedPartitionId, FailedPartition> _partitions = [];
 
     /// <summary>
@@ -191,6 +193,82 @@ public class FailedPartitions
         return true;
     }
 
+    /// <summary>
+    /// Gets what has to be written to storage for it to match what is held here: the partitions that are new or have changed since
+    /// they were last persisted, and the resolved partitions that have not been removed from storage yet.
+    /// </summary>
+    /// <returns>A <see cref="FailedPartitions"/> holding only the changes, to hand to storage, then to <see cref="MarkPersisted(FailedPartitions)"/> once written.</returns>
+    /// <remarks>
+    /// Storage is handed everything an observer holds on every save, and a recovery saves several times per partition, so
+    /// writing it all every time is quadratic in the number of failed partitions. This is independent of the storage target.
+    /// </remarks>
+    public FailedPartitions GetChangesSincePersisted()
+    {
+        var changes = new FailedPartitions();
+        var changed = new List<FailedPartition>();
+        foreach (var partition in _partitions.Values)
+        {
+            if (!_persisted.TryGetValue(partition.Id, out var persisted) || !persisted.Matches(partition))
+            {
+                changed.Add(partition);
+            }
+        }
+
+        changes.Partitions = changed;
+        foreach (var resolved in _resolvedPartitions)
+        {
+            if (!_persistedRemovals.Contains(resolved.Id))
+            {
+                changes._resolvedPartitions.Add(resolved);
+            }
+        }
+
+        return changes;
+    }
+
+    /// <summary>
+    /// Remember that changes obtained from <see cref="GetChangesSincePersisted"/> have been written to storage.
+    /// </summary>
+    /// <param name="changes">The changes that were written.</param>
+    public void MarkPersisted(FailedPartitions changes)
+    {
+        foreach (var partition in changes.Partitions)
+        {
+            _persisted[partition.Id] = Snapshot.Of(partition);
+            _persistedRemovals.Remove(partition.Id);
+        }
+
+        foreach (var resolved in changes.ResolvedPartitions)
+        {
+            _persisted.Remove(resolved.Id);
+            _persistedRemovals.Add(resolved.Id);
+        }
+
+        Prune();
+    }
+
+    /// <summary>
+    /// Remember that everything held here is what storage holds, as it is right after it was read from storage.
+    /// </summary>
+    public void MarkAllPersisted()
+    {
+        _persisted.Clear();
+        _persistedRemovals.Clear();
+        foreach (var partition in _partitions.Values)
+        {
+            _persisted[partition.Id] = Snapshot.Of(partition);
+        }
+    }
+
+    /// <summary>
+    /// Forget what is known to be in storage, so the next save writes everything held here.
+    /// </summary>
+    public void ForgetPersisted()
+    {
+        _persisted.Clear();
+        _persistedRemovals.Clear();
+    }
+
     static bool AdvancedSincePreviousAttempt(FailedPartition failure, EventSequenceNumber sequenceNumber)
     {
         var previous = failure.LastAttempt.SequenceNumber;
@@ -201,4 +279,77 @@ public class FailedPartitions
     }
 
     void Add(FailedPartition failedPartition) => _partitions[failedPartition.Id] = failedPartition;
+
+    void Prune()
+    {
+        // Only what is still held, resolved or not, is worth remembering about.
+        if (_persisted.Count > _partitions.Count)
+        {
+            foreach (var id in _persisted.Keys.Where(_ => !_partitions.ContainsKey(_)).ToArray())
+            {
+                _persisted.Remove(id);
+            }
+        }
+
+        if (_persistedRemovals.Count > _resolvedPartitions.Count)
+        {
+            _persistedRemovals.IntersectWith(_resolvedPartitions.Select(_ => _.Id));
+        }
+    }
+
+    /// <summary>
+    /// What was persisted of a failed partition, kept to tell whether it has changed since. Equality is by value for what
+    /// can change in place, and by reference for the attempts, which are only ever added.
+    /// </summary>
+    /// <param name="Partition">The partition.</param>
+    /// <param name="ObserverId">The observer it belongs to.</param>
+    /// <param name="AttemptCount">The number of attempts.</param>
+    /// <param name="FirstAttempt">The first attempt.</param>
+    /// <param name="LastAttempt">The last attempt.</param>
+    /// <param name="IsResolved">Whether it is resolved.</param>
+    /// <param name="IsQuarantined">Whether it is quarantined.</param>
+    /// <param name="AttemptsBeforeBudgetReset">The attempts before the retry budget was reset.</param>
+    /// <param name="RecoveryCursor">The recovery cursor.</param>
+    /// <param name="RecoveryOwner">The recovery owner.</param>
+    /// <param name="Hold">The hold.</param>
+    /// <param name="Deferral">The deferral.</param>
+    /// <param name="ReplayEpoch">The replay epoch.</param>
+    /// <param name="WebhookDisposition">The webhook failure disposition.</param>
+    /// <param name="WebhookRecoveryId">The webhook recovery identifier.</param>
+    sealed record Snapshot(
+        Key Partition,
+        ObserverId ObserverId,
+        int AttemptCount,
+        FailedPartitionAttempt? FirstAttempt,
+        FailedPartitionAttempt? LastAttempt,
+        bool IsResolved,
+        bool IsQuarantined,
+        int AttemptsBeforeBudgetReset,
+        FailedPartitionRecoveryCursor? RecoveryCursor,
+        FailedPartitionRecoveryOwner? RecoveryOwner,
+        FailedPartitionHold? Hold,
+        PartitionDeferral? Deferral,
+        ReplayEpoch? ReplayEpoch,
+        WebhookFailureDisposition? WebhookDisposition,
+        Guid? WebhookRecoveryId)
+    {
+        internal static Snapshot Of(FailedPartition failedPartition) => new(
+            failedPartition.Partition,
+            failedPartition.ObserverId,
+            failedPartition.Attempts.Count(),
+            failedPartition.Attempts.FirstOrDefault(),
+            failedPartition.Attempts.LastOrDefault(),
+            failedPartition.IsResolved,
+            failedPartition.IsQuarantined,
+            failedPartition.AttemptsBeforeBudgetReset,
+            failedPartition.RecoveryCursor,
+            failedPartition.RecoveryOwner,
+            failedPartition.Hold,
+            failedPartition.Deferral,
+            failedPartition.ReplayEpoch,
+            failedPartition.WebhookDisposition,
+            failedPartition.WebhookRecoveryId);
+
+        internal bool Matches(FailedPartition failedPartition) => Equals(Of(failedPartition));
+    }
 }

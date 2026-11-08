@@ -143,12 +143,13 @@ not prove an entire list is empty: assert the unkeyed list query itself (an unke
 - **Projection lag**: a spec asserts the settled state. If a screen decision depends on the view
   being current (a booking screen that must not offer a taken berth), that is not protection:
   the command needs its own constraint, or the rule is `recorded` as target-enforced.
-- **Rebuild**: a view rebuilt from all facts must give the same rows. Mappings from
-  `$eventContext.occurred` or other occurrence data cannot be executed:
-  the reference runner refuses every event-context path except the event source id
-  (`UnsupportedEventContext`), so specifications that reach that projection report unsupported. `given clock` does not change that; it supplies `$context.occurred`
-  to command productions only. Record such projection cases as capability gaps (keep the
-  mapping and the intended spec in design mode).
+- **Rebuild**: a view rebuilt from all facts must give the same rows. The reference runner
+  refuses every event-context path except the event source id and, from Screenplay 4.254.0,
+  `$eventContext.occurred` in `from`, `every` and `children` blocks
+  (`UnsupportedEventContext` otherwise). `occurred` executes only for a fact appended during
+  the run under `given clock` (`when append` or a command's production); a `given` fact
+  carries no occurrence time and the specification reports unsupported. Record the
+  remaining cases as capability gaps (keep the mapping and the intended spec in design mode).
 - **Corrections and backdated facts**: a correction is a new fact; specify the view after it.
   If a fact carries a business date earlier than its occurrence, specify which date the view
   shows.

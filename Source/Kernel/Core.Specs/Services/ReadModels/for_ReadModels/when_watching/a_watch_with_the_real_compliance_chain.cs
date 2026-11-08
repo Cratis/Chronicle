@@ -87,7 +87,8 @@ public class a_watch_with_the_real_compliance_chain : given.all_dependencies
                     NullLogger<JsonSchemaMetadataManager>.Instance),
                 _expandoObjectConverter),
             _materializedReadModels,
-            new JsonSerializerOptions());
+            new JsonSerializerOptions(),
+            NamespaceCasingContext.Create());
     }
 
     protected async Task Push(JsonObject document, ReadModelChangeContext change)

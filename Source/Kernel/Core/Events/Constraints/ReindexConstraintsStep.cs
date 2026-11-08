@@ -6,6 +6,7 @@ using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.EventTypes;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
@@ -26,6 +27,7 @@ namespace Cratis.Chronicle.Events.Constraints;
 /// <param name="complianceManager"><see cref="IJsonSchemaMetadataManager"/> for releasing (decrypting) PII before hashing.</param>
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between ExpandoObject and JsonObject.</param>
 /// <param name="logger">The logger.</param>
+/// <param name="schemaCache">The effective protection schema cache.</param>
 /// <remarks>
 /// Closing constraints rebuild only when explicitly named by the job. Their transitions are staged before
 /// writing differences. If a redacted property-sourced closing or reopening event has no recoverable scope in the
@@ -40,7 +42,8 @@ public partial class ReindexConstraintsStep(
     IGrainFactory grainFactory,
     IJsonSchemaMetadataManager complianceManager,
     IExpandoObjectConverter expandoObjectConverter,
-    ILogger<ReindexConstraintsStep> logger) : JobStep<ReindexConstraintsRequest, object, ReindexConstraintsStepState>(state, throttle, logger), IReindexConstraintsStep
+    ILogger<ReindexConstraintsStep> logger,
+    IEventTypeSchemaCache schemaCache) : JobStep<ReindexConstraintsRequest, object, ReindexConstraintsStepState>(state, throttle, logger), IReindexConstraintsStep
 {
     /// <summary>
     /// Reindexes a single event against a single constraint definition using the released (plaintext) content.
@@ -171,7 +174,7 @@ public partial class ReindexConstraintsStep(
                 await closingReindexer.Initialize(closingDefinitions);
 
                 var tracking = CreateTracking(changedDefinitions, uniqueConstraintsStorage, progress);
-                var storedContent = new StoredConstraintEventContent(jobStepKey.Scope, jobStepKey.Namespace, eventStoreStorage.EventTypes, complianceManager, expandoObjectConverter);
+                var storedContent = new StoredConstraintEventContent(jobStepKey.Scope, jobStepKey.Namespace, eventStoreStorage.EventTypes, complianceManager, expandoObjectConverter, schemaCache);
                 await ReindexStoredEvents(namespaceStorage.GetEventSequence(currentState.EventSequenceId), storedContent, closingReindexer, tracking, cancellationToken);
                 await closingReindexer.Commit(cancellationToken, () => progress.WroteAnything = true);
                 if (!await ReportCollisions(progress, cancellationToken))

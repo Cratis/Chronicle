@@ -1,6 +1,6 @@
 ---
 name: cratis-fundamentals-concept
-description: Create strongly typed Cratis domain values with ConceptAs and Chronicle event-source identities with EventSourceId. Use when a C# or TypeScript domain value has meaning beyond its primitive or when an identity is actually used as a Chronicle event-source/stream ID. Do not use for enums, DTO-only transport values, arbitrary non-stream entity IDs, or event schema migration.
+description: Use when a C# or TypeScript domain value needs a distinct type, a concept generates a value or an identity addresses a Chronicle stream. Not for enums, DTO-only values, Go concepts or event migration.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-fundamentals-concept/SKILL.md -->

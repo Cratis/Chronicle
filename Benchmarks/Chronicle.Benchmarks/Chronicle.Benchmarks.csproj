@@ -12,7 +12,9 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="Chronicle.Benchmarks.Clustering.Specs" />
     <PackageReference Include="BenchmarkDotNet" />
+    <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" />
     <PackageReference Include="MongoDB.Driver" />
     <PackageReference Include="Testcontainers" />
   </ItemGroup>
@@ -28,6 +30,7 @@
          compiling when BenchmarkDotNet drops the server reference. -->
     <ProjectReference Include="../../Source/Kernel/Storage.MongoDB/Storage.MongoDB.csproj" />
     <ProjectReference Include="../../Source/Kernel/Server/Server.csproj" Condition="'$(ArtifactsPath)' == ''" />
+    <Compile Include="../../Integration/Client/SqlServerContainerImage.cs" Link="SqlServerContainerImage.cs" />
   </ItemGroup>
 
   <!-- The image runs Linux, so on macOS the kernel is published for the Linux runtime identifier of the

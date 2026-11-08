@@ -28,6 +28,8 @@ public partial class Observer
     /// </summary>
     internal const int MaxPartitionRecoveriesPerTurn = 10;
 
+    static readonly TimeSpan _recoveryStartFailureDelay = TimeSpan.FromSeconds(5);
+
     readonly Queue<FailedPartitionId> _partitionsAwaitingRecovery = new();
     readonly HashSet<FailedPartitionId> _partitionsAwaitingRecoveryLookup = [];
     bool _recoveryOfAllFailedPartitionsRequested;
@@ -45,7 +47,7 @@ public partial class Observer
         SchedulePartitionRecoveryTurn();
     }
 
-    void SchedulePartitionRecoveryTurn()
+    void SchedulePartitionRecoveryTurn(TimeSpan delay = default)
     {
         if (_partitionRecoveryTurnScheduled)
         {
@@ -53,7 +55,7 @@ public partial class Observer
         }
 
         _partitionRecoveryTurnScheduled = true;
-        this.ScheduleInSeparateTurn(RecoverNextBatchOfFailedPartitions);
+        this.ScheduleInSeparateTurn(RecoverNextBatchOfFailedPartitions, delay);
     }
 
     async Task RecoverNextBatchOfFailedPartitions()
@@ -95,6 +97,8 @@ public partial class Observer
 
         var config = await GetRetryConfiguration();
         var started = 0;
+        var failedToStart = false;
+        var notStarted = new List<FailedPartitionId>();
         while (started < MaxPartitionRecoveriesPerTurn && _partitionsAwaitingRecovery.TryDequeue(out var failedPartitionId))
         {
             _partitionsAwaitingRecoveryLookup.Remove(failedPartitionId);
@@ -118,14 +122,32 @@ public partial class Observer
                 logger.StartingRecoveryWithExistingAttempts(partition.Partition, attemptCount, config.MaxRetryAttempts);
             }
 
-            await StartRecoverJobForFailedPartition(partition);
+            try
+            {
+                await StartRecoverJobForFailedPartition(partition);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException || !IsRetired)
+            {
+                // A job that cannot be started - its grain could not activate while the silo was busy - must not end the
+                // turn: the partitions still queued would wait for the next subscription, which may never come.
+                logger.CouldNotStartRecoveryOfFailedPartition(ex, partition.Partition);
+                notStarted.Add(failedPartitionId);
+                failedToStart = true;
+            }
+
             started++;
+        }
+
+        // Tried again in a later turn, not in this one: it would only fail the same way again straight away.
+        foreach (var failedPartitionId in notStarted.Where(_partitionsAwaitingRecoveryLookup.Add))
+        {
+            _partitionsAwaitingRecovery.Enqueue(failedPartitionId);
         }
 
         if (_partitionsAwaitingRecovery.Count > 0 || _retryJobSweepRequested)
         {
             logger.DeferringRecoveryOfFailedPartitions(_partitionsAwaitingRecovery.Count);
-            SchedulePartitionRecoveryTurn();
+            SchedulePartitionRecoveryTurn(failedToStart ? _recoveryStartFailureDelay : TimeSpan.Zero);
         }
     }
 

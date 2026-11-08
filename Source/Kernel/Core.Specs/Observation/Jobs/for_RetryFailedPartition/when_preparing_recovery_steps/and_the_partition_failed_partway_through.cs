@@ -28,4 +28,5 @@ public class and_the_partition_failed_partway_through : given.a_retry_failed_par
     [Fact] void should_start_from_the_sequence_number_the_partition_failed_on() => Arguments.StartEventSequenceNumber.ShouldEqual(_request.FromSequenceNumber);
     [Fact] void should_read_to_the_end_of_the_sequence() => Arguments.EndEventSequenceNumber.ShouldEqual(EventSequenceNumber.Max);
     [Fact] void should_not_present_the_redelivery_as_a_replay() => Arguments.EventObservationState.ShouldEqual(EventObservationState.None);
+    [Fact] void should_carry_no_replay_epoch() => Arguments.ReplayEpoch.ShouldBeNull();
 }

@@ -25,6 +25,7 @@ public class a_manager_with_a_quarantined_subscription : Specification
     async Task Establish()
     {
         _silo = new TestKitSilo();
+        _silo.AddNamespaceCasing();
         _silo.AddService(Substitute.For<ILocalSiloDetails>());
         _namespaces = Substitute.For<INamespaces>();
         _namespaces.GetAll().Returns([EventStoreNamespaceName.Default]);

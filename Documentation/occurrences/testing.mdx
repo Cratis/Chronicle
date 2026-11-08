@@ -1,15 +1,15 @@
 ---
-title: Specify occurrences and receipts in process
-description: Drive trigger deliveries, effect receipts, lease expiry, retries and lost replies with isolated in-process scenarios.
+title: Specify Chronicle occurrence retries and receipts
+description: Specify Chronicle trigger effects and recovery without a running kernel, using isolated scenarios to drive delivery, lease expiry and lost replies.
 ---
 
-Use `Cratis.Chronicle.Testing` to specify a trigger handler's effects, retries and recovery without a running kernel. Each scenario owns isolated in-memory storage. Recording and delivery are separate actions: advancing time never invokes a handler.
+Use `Cratis.Chronicle.Testing` to check that a Cratis Chronicle trigger handler recovers from retries and lost replies without appending the same effect twice. Each scenario owns isolated in-memory storage and needs no running kernel. You control recording, delivery and time separately: advancing time never invokes a handler.
 
-The examples below use `Cratis.Chronicle.Testing`, `.Events` and `.Occurrences`, together with `Cratis.Chronicle.Occurrences`. `ImportRequested` denotes your attributed trigger and `ImportHandler` its `IOccurrenceHandler<ImportRequested>` implementation. Dispose each store and scenario after its specification.
+Start with a typed trigger and handler from [application triggers](triggers-and-handlers.mdx). The examples below use `Cratis.Chronicle.Testing`, `.Events` and `.Occurrences`, together with `Cratis.Chronicle.Occurrences`. `ImportRequested` denotes your attributed trigger and `ImportHandler` its `IOccurrenceHandler<ImportRequested>` implementation. Dispose each store and scenario after its specification.
 
 ## Choose the advertised kernel capabilities
 
-An `EventStoreForTesting` advertises `Current()` by default. This includes precise event schemas, occurrences and effect receipts. Scenarios now discover precise schemas rather than the legacy fallback shape.
+An `EventStoreForTesting` advertises `Current()` by default, including precise event schemas, occurrences and effect receipts. Its scenarios discover precise schemas rather than the legacy fallback shape. Change the advertised capabilities when you need to check how your code handles an older kernel or an unknown compatibility result.
 
 For example, create `using var store = new EventStoreForTesting();`, then call `store.Capabilities.Old();` before exercising a receipt enrollment. `unit.UseEffectReceipt(key)` throws `EffectReceiptsNotSupported`. `store.Capabilities.Unknown();` models a skipped or failed compatibility check and also fails closed. `store.Capabilities.Current();` restores the current advertisement.
 
@@ -17,7 +17,7 @@ Schema discovery happens during store construction. To choose the advertisement 
 
 ## Commit an event and its receipt together
 
-Use the real unit of work with the scenario's store. For example:
+A receipt specification should check both the stored outcome and the absence of duplicate events. Use the real unit of work with the scenario's store. For example:
 
 1. Create `using var unit = new UnitOfWork(CorrelationId.New(), _ => { }, store);` from `Cratis.Chronicle.Transactions`.
 2. Enroll `unit.UseEffectReceipt(context.EffectKey("import"));`.
@@ -31,17 +31,21 @@ For a validate-only example, enroll the key, then call `unit.AddEvents(EventSequ
 
 ## Record and deliver a typed trigger
 
-Create `using var scenario = new OccurrenceScenario<ImportHandler>();`. Register constructor dependencies in `scenario.Services` before the first operation. The scenario supplies its own `IEventStore`, `IEventLog` and `IUnitOfWorkManager`.
+Use an occurrence scenario when you want to exercise delivery as well as the effect's commit. Create `using var scenario = new OccurrenceScenario<ImportHandler>();` and register constructor dependencies in `scenario.Services` before the first operation. The scenario supplies its own `IEventStore`, `IEventLog` and `IUnitOfWorkManager`.
 
 Record with `var recorded = await scenario.Record(new ImportRequested(), "import-42");`, then invoke `var outcome = await scenario.DeliverNext();`. Successful handling returns `Completed`. `await scenario.StatusOf(recorded.Id)` returns the durable snapshot, including attempts, epoch, next attempt and receipts. With nothing claimable, delivery returns `NothingDue`.
 
-The scenario activates a fresh handler in a fresh dependency scope for each attempt. It runs the real occurrence service and delivery policy over in-memory storage. It deliberately replaces the Orleans queue's reminder/timer shell with serialized calls: there are no background workers or automatic lease renewals. This is not a test of silo recovery, network transport, production persistence or lifecycle fan-out.
+Each attempt activates a fresh handler in a fresh dependency scope. The scenario runs the real occurrence service and delivery policy over in-memory storage, but replaces the Orleans queue's reminder/timer shell with explicitly driven, serialized calls. There are no background workers or automatic lease renewals. These specifications do not test silo recovery, network transport, production persistence or lifecycle fan-out.
 
 ## Build an occurrence context
 
 For a handler or command specification that needs a context without delivery, use `new OccurrenceContextBuilder().For<ImportRequested>().WithIdempotencyId("import-42").BuildDetached()`.
 
-The occurrence identity is derived when the context is built using the final selected trigger, so `WithIdempotencyId` can be called before or after `For<T>()` or `ForTrigger(id)` and give the same identity. `For<T>()` reads the identity from the `Trigger` attribute on `T` and throws `TriggerNotValid` when the attribute is missing; it does not scan assemblies. `OccurrenceScenario<THandler>` finds its trigger from the single `IOccurrenceHandler<TTrigger>` the handler implements and the `Trigger` attribute on that type; it throws `TriggerNotValid` otherwise. An identity set with `WithId(id)` always wins over one derived by `WithIdempotencyId`, whichever is called first. `WithId(id)`, `Kind(kind)`, `RecordedAt(instant)`, `DueAt(instant)`, `Attempt(number)` and `Epoch(number)` select individual metadata values. Attempts and epochs default to one.
+The builder derives the occurrence identity from the trigger selected when you build the context. Calling `WithIdempotencyId` before or after `For<T>()` or `ForTrigger(id)` therefore gives the same identity. An explicit `WithId(id)` always wins over the derived identity, whichever is called first.
+
+`For<T>()` reads the identity from the `Trigger` attribute on `T` and throws `TriggerNotValid` when the attribute is missing; it does not scan assemblies. `OccurrenceScenario<THandler>` finds its trigger from the single `IOccurrenceHandler<TTrigger>` the handler implements and the `Trigger` attribute on that type; it throws `TriggerNotValid` otherwise.
+
+Use `WithId(id)`, `Kind(kind)`, `RecordedAt(instant)`, `DueAt(instant)`, `Attempt(number)` and `Epoch(number)` to select individual metadata values. Attempts and epochs default to one.
 
 A detached context owns no durable lease: receipts still deduplicate, but completing its token returns `OccurrenceLeaseLost`. For a real lease, use `await new OccurrenceContextBuilder(store.Time).For<ImportRequested>().WithIdempotencyId("import-42").RecordAndClaimIn(store)` instead. This seeds a synthetic occurrence with an empty payload and claims it; it does not validate a payload or invoke a handler. The trigger queue must be empty. Recorded contexts default to the store's clock; detached contexts use the builder's clock.
 
@@ -49,7 +53,7 @@ A detached context owns no durable lease: receipts still deduplicate, but comple
 
 `ScenarioTime` starts at `2026-01-01T00:00:00Z`, or at the instant supplied to its constructor. `Now` and `GetUtcNow()` report UTC.
 
-For example, call `await scenario.DeliverNextFailing(new ImportFailed());` with your exception type. This substitutes a handler failure without invoking the handler, and records normal backoff. Read the snapshot, then call `scenario.Time.AdvanceTo(snapshot.NextAttempt);` and `await scenario.DeliverNext();`. Delivery before the backoff expires returns `NothingDue`. Ordinary handler exceptions follow the same failure path; exhausted attempts become quarantined.
+To check retry timing, call `await scenario.DeliverNextFailing(new ImportFailed());` with your exception type. This records a failure and normal backoff without invoking the handler; it checks delivery policy, not your handler's error path. Read the snapshot, then call `scenario.Time.AdvanceTo(snapshot.NextAttempt);` and `await scenario.DeliverNext();`. Delivery before the backoff expires returns `NothingDue`. Exceptions thrown by the handler follow the same failure path; exhausted attempts become quarantined.
 
 Use `scenario.Time.Advance(TimeSpan.FromSeconds(60));` to expire a lease. Moving backward through either advance method throws `ScenarioTimeCannotMoveBackwards` and preserves the current instant.
 
@@ -57,13 +61,15 @@ To share an explicit clock with event scenarios, construct `new Defaults(artifac
 
 ## Lose a reply after commit
 
-Queue a fault with `scenario.Replies.DropNext(DroppedReply.Append);` before delivery. The next successful **receipted or keyed** append (any append shape) commits, then throws `Grpc.Core.RpcException` with `StatusCode.Unavailable`. For a receipted handler append, the handler attempt fails, but its receipt survives. On retry with the same effect key, the original outcome wins and no duplicate events are appended.
+A lost reply tests the gap between a durable commit and the handler knowing it succeeded. Queue a fault with `scenario.Replies.DropNext(DroppedReply.Append);` before delivery. The next successful receipted or keyed append (any append shape) commits, then throws `Grpc.Core.RpcException` with `StatusCode.Unavailable`.
+
+For a receipted handler append, the handler attempt fails, but its receipt survives. Retry after backoff with the same effect key and assert that the original outcome wins without duplicate events.
 
 For keyed appends through `store.EventLog`, queue the same fault with `store.Replies.DropNext(DroppedReply.Append);`. Retry `AppendOnce` or `AppendManyOnce` with the same `IdempotencyKey` after reply loss; the retry reports `AlreadyAppended` without duplicating events. The named-tag variants behave the same way.
 
 Other fault points are `RecordEffectReceipt`, `RecordOccurrence`, `ClaimOccurrences`, `CompleteOccurrence` and `FailOccurrence`. For example, `store.Replies.DropNext(DroppedReply.RecordEffectReceipt, 2);` discards two successful receipt-only replies. `Dropped` counts replies actually discarded, not faults queued. Refused mutations and ordinary appends without a receipt or idempotency key do not consume these faults.
 
-An unknown outcome is not permission to execute an unrelated replacement. Inspect durable state or retry with the same identity. A lost claim remains leased until expiry. A repeated completion at the same epoch returns `AlreadyCompleted`.
+When a reply is lost, inspect durable state or retry with the same identity rather than creating replacement work. A lost claim remains leased until expiry. A repeated completion at the same epoch returns `AlreadyCompleted`.
 
 To model a worker lost after its effects but before completion, call `await scenario.DeliverWithoutCompleting();`. It returns `Delivered`, leaving the successful lease intact. Advance past its expiry and deliver again to check receipt-based recovery.
 

@@ -1,39 +1,23 @@
 ---
-title: Namespaces and data isolation
-description: Chronicle namespaces segregate data within a single event store, for example per tenant in a multi-tenant system, and determine database names.
+title: Cratis Chronicle namespaces for tenant data isolation
+description: Cratis Chronicle namespaces separate data within an event store. Use a namespace per tenant and account for its effect on database names and reads.
 ---
 
-Chronicle has been designed with the concept of namespaces from the ground up.
-Namespaces provide a way to provide segregation of data in the same event store.
-This can typically be used for multi-tenant scenarios were you have multiple
-tenants of your system and you want to provide data segregation between them.
+A namespace in Cratis Chronicle separates one set of data from another within the same event store. In a multi-tenant application, give each tenant its own namespace so its events, observer progress and read models stay separate from those of other tenants. A tenant is an organization or group using the shared application.
 
-When not specified, Chronicle will use the **Default** namespace. For how namespaces fit into tenancy, including choosing where each tenant's database lives, see [Tenancy](../tenancy/index.md).
-
-> Note: A tenant is typically an organization or an organizational unit that uses a system.
-> In cloud terminology it is often linked to Software as a Service offerings were companies
-> can sign up to use a system. The system being the same for all these companies, or tenants,
-> but all their data segregated from each other.
-
-For client usage and namespace removal, see [Manage namespaces](../namespaces/index.md).
+Chronicle uses the `Default` namespace when none is specified. Choose how your application resolves the namespace for each request before introducing tenant data. [Tenancy](../tenancy/index.md) explains that choice and where each tenant's database can live; [Manage namespaces](../namespaces/index.md) covers client usage and namespace removal.
 
 ## Subscription Readiness
 
-The explicit `EnsureNamespace` operation returns once healthy active projections and started events
-captures are subscribed in that namespace. Broken artifacts are logged and retried by the next
-subscription trigger; they do not prevent namespace creation, and retired observers are skipped.
-A very large projection set can exceed the call timeout; retrying joins the running subscription
-pass. A namespace created implicitly by its first append is reconciled on its event log's next
-observer watchdog tick, even if the namespace-added notification was missed. Subscription does not
-mean catch-up is complete: wait for observer completion before querying a read model that must
-include an append.
+Call `EnsureNamespace` when you need to establish a namespace before using it. The operation returns once healthy active projections and started event captures are subscribed there. Subscription is not catch-up completion: wait for observer completion before querying a read model that must include a particular append.
+
+Failed subscription setup is logged and retried at the next subscription trigger. It does not prevent namespace creation, and retired observers are skipped. With a very large projection set, the call can time out while setup continues; retrying joins the running subscription pass.
+
+A first append can also create a namespace implicitly. Its event log's observer watchdog, a periodic recovery check, reconciles subscriptions on the next tick even if the namespace-added notification was missed.
 
 ## Data Segregation
 
-With Chronicle, all namespace specific data sits in its own database in the underlying
-data storage. This helps us avoid data leakage between namespaces, or tenants. With this
-you also get a better utilization of resources with mechanisms like indexing that happens
-on a database level.
+Namespace-specific data is stored separately from other namespaces. On MongoDB, each namespace has its own event sequence and read-model databases, while event-store-wide state is shared. This separation lets the databases maintain their own indexes; it does not decide which tenant a caller is allowed to access.
 
 ```mermaid
 flowchart TB
@@ -50,8 +34,7 @@ flowchart TB
 
 ## Database Naming
 
-The databases are named from the event store name and the namespace. For an event store named
-`Ada` on MongoDB:
+On MongoDB, database names include the event store name and, where applicable, the namespace. For an event store named `Ada` with no database-name prefix:
 
 | Holds | Namespace `Default` | Namespace `tenant-a` |
 | --- | --- | --- |
@@ -59,16 +42,10 @@ The databases are named from the event store name and the namespace. For an even
 | Event sequences | `Ada+es+Default` | `Ada+es+tenant-a` |
 | Read models | `Ada` | `Ada+tenant-a` |
 
-Note the one asymmetry: **read models of the default namespace are materialized into the bare event
-store name**, without a namespace suffix, while event sequences suffix every namespace including the
-default. Anything reading read models outside Chronicle — for instance an injected
-`IMongoCollection<TReadModel>` bound to a database name composed by hand — has to reproduce that rule.
-Composing `<eventStore>+<namespace>` unconditionally resolves `Ada+Default`, a database that does not
-exist, and reads then come back **empty rather than failing**.
+Read models in the default namespace use the bare event store name, without a namespace suffix. Event sequence databases include the suffix even for `Default`. If you read models outside Chronicle, for example through an injected `IMongoCollection<TReadModel>`, use the same naming rule.
 
-Since the namespace becomes part of a database name, it has to be a legal one. MongoDB rejects the
-characters `/ \ . " $ * < > : | ?`, the space, and the null character, and limits the whole name to 63
-bytes. This bites most often when the namespace is resolved from a tenant id — a display-style tenant id
-such as `Hive Consulting` composes a name MongoDB will not accept. Chronicle checks the composed name and
-throws `InvalidDatabaseName`, naming the event store, the namespace, and the offending character, rather
-than letting the driver fail later with a bare `Invalid namespace specified`.
+Always composing `<eventStore>+<namespace>` sends a default-namespace query to `Ada+Default` instead of `Ada`. A query against that nonexistent database returns empty results rather than an error, which can look like missing projection output.
+
+The complete database name must satisfy MongoDB's naming rules. MongoDB rejects the characters `/ \ . " $ * < > : | ?`, spaces and the null character, and limits the name to 63 bytes. A tenant display name such as `Hive Consulting` therefore cannot be used unchanged as a namespace.
+
+Chronicle validates the composed name and throws `InvalidDatabaseName` with the event store, namespace and reason for rejection, before the driver can fail with `Invalid namespace specified`. Choose a legal tenant identifier and allow room for the event store name and any prefix. [Storage configuration](../hosting/configuration/storage.mdx) explains database prefixes and the System event store's naming exception.

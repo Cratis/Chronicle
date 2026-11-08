@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+import { randomUuid } from '../../../../../Utils/randomUuid';
 import { useCallback, useState } from 'react';
 import { DialogButtons, DialogResult, useConfirmationDialog } from '@cratis/arc.react/dialogs';
 import strings from 'Strings';
@@ -13,6 +14,7 @@ import { SequenceQueryScope } from 'Features/Concepts/SequenceQueries';
 import { saveSequenceQuery } from '../QueryEditor/saveSequenceQuery';
 import { SequenceQueryState, toSequenceQueryState } from '../QueryEditor/SequenceQueryState';
 import { folderNodeId, foldersInScope, queryNodeId } from './buildQueryTree';
+import { applyChanges, followRenamedFolder } from './folderChanges';
 import { renamedFolderPath, rewriteFolderPath, uniqueFolderPath } from './folderNaming';
 
 /**
@@ -74,12 +76,22 @@ export const useQueryHierarchyActions = (
     const [renamingId, setRenamingId] = useState<string | null>(null);
     const [showConfirmation] = useConfirmationDialog();
 
+    const reportRefused = useCallback((refused: number, total: number) => {
+        if (refused === 0) return;
+
+        const partiallyApplied = sequenceStrings.dialogs.partiallyApplied;
+        showConfirmation(
+            partiallyApplied.title,
+            partiallyApplied.message.replace('{count}', refused.toString()).replace('{total}', total.toString()),
+            DialogButtons.Ok);
+    }, [showConfirmation, sequenceStrings]);
+
     const newFolder = useCallback(async (scope: SequenceQueryScope, parentFolder: string) => {
         const path = uniqueFolderPath(parentFolder, sequenceStrings.newFolder, foldersInScope(queries, scope, folders));
 
         // Named straight after it appears, so the folder is stored before the rename rather than
         // only once the user settles on a name - closing the page mid-rename still leaves it there.
-        if (!await saveFolder(eventStore, { id: crypto.randomUUID(), scope, namespace, path })) return;
+        if (!await saveFolder(eventStore, { id: randomUuid(), scope, namespace, path })) return;
 
         setRenamingId(folderNodeId(scope, path));
         onChanged();
@@ -103,12 +115,17 @@ export const useQueryHierarchyActions = (
             DialogButtons.YesNo);
         if (confirmed !== DialogResult.Yes) return;
 
-        await Promise.all(doomedQueries.map(query => deleteStoredQuery(eventStore, query.id)));
-        await Promise.all(doomedFolders.map(candidate => deleteStoredFolder(eventStore, candidate.id)));
+        // Only what the event store accepted goes away - a query that belongs to somebody else
+        // stays, tab and all, rather than being closed on the user with their edits in it.
+        const queryOutcome = await applyChanges(doomedQueries, query => deleteStoredQuery(eventStore, query.id));
+        const folderOutcome = await applyChanges(doomedFolders, candidate => deleteStoredFolder(eventStore, candidate.id));
 
-        doomedQueries.forEach(query => onQueryClosed(query.id));
+        queryOutcome.accepted.forEach(query => onQueryClosed(query.id));
         onChanged();
-    }, [folders, queries, eventStore, onChanged, onQueryClosed, showConfirmation, sequenceStrings]);
+        reportRefused(
+            queryOutcome.refused.length + folderOutcome.refused.length,
+            doomedQueries.length + doomedFolders.length);
+    }, [folders, queries, eventStore, onChanged, onQueryClosed, showConfirmation, sequenceStrings, reportRefused]);
 
     const renameFolder = useCallback(async (scope: SequenceQueryScope, folder: string, name: string) => {
         const renamed = renamedFolderPath(folder, name);
@@ -123,23 +140,25 @@ export const useQueryHierarchyActions = (
 
         if (movedFolders.length === 0 && movedQueries.length === 0) return;
 
-        await Promise.all([
-            ...movedFolders.map(candidate => saveFolder(eventStore, {
-                id: candidate.id,
-                scope: candidate.scope,
-                namespace: candidate.namespace,
-                path: rewriteFolderPath(candidate.path, folder, renamed)
-            })),
-            ...movedQueries.map(query => saveSequenceQuery(
-                { ...toSequenceQueryState(query), folder: rewriteFolderPath(query.folder ?? '', folder, renamed) },
-                eventStore))
-        ]);
+        const folderOutcome = await applyChanges(movedFolders, candidate => saveFolder(eventStore, {
+            id: candidate.id,
+            scope: candidate.scope,
+            namespace: candidate.namespace,
+            path: rewriteFolderPath(candidate.path, folder, renamed)
+        }));
+        const queryOutcome = await applyChanges(movedQueries, query => saveSequenceQuery(
+            { ...toSequenceQueryState(query), folder: rewriteFolderPath(query.folder ?? '', folder, renamed) },
+            eventStore));
 
-        onPersisted(state => (state.scope === scope
-            ? { ...state, folder: rewriteFolderPath(state.folder, folder, renamed) }
-            : state));
+        // Open tabs only follow the saves the event store accepted; a refused query keeps the
+        // folder it was filed in, in the tab as well as in the store.
+        const refusedQueries = new Set(queryOutcome.refused.map(query => query.id));
+        onPersisted(state => followRenamedFolder(state, scope, folder, renamed, refusedQueries));
         onChanged();
-    }, [queries, folders, eventStore, onChanged, onPersisted]);
+        reportRefused(
+            queryOutcome.refused.length + folderOutcome.refused.length,
+            movedQueries.length + movedFolders.length);
+    }, [queries, folders, eventStore, onChanged, onPersisted, reportRefused]);
 
     const renameQuery = useCallback(async (query: SequenceQuery, name: string) => {
         if (!await saveSequenceQuery({ ...toSequenceQueryState(query), name }, eventStore)) return;

@@ -15,7 +15,7 @@ command_text=${payload//\\n/ }
 command_text=${command_text//\\t/ }
 command_text=${command_text//\\r/ }
 command_text=${command_text//\\/}
-if [[ ! "$command_text" =~ gh[[:space:]]+pr[[:space:]]+(create|edit) ]]; then
+if [[ ! "$command_text" =~ gh([[:space:]]+[^[:space:]]+)*[[:space:]]+pr[[:space:]]+(create|edit) ]]; then
     exit 0
 fi
 if ! command -v node >/dev/null 2>&1; then

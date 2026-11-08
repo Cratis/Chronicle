@@ -10,6 +10,8 @@ public class FakeHttpMessageHandler : HttpMessageHandler
 
     public int RequestsSent { get; private set; }
 
+    public Uri? LastRequestUri { get; private set; }
+
     public FakeHttpMessageHandler(HttpResponseMessage response)
     {
         _response = response;
@@ -23,6 +25,7 @@ public class FakeHttpMessageHandler : HttpMessageHandler
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         RequestsSent++;
+        LastRequestUri = request.RequestUri;
         if (_exception is not null)
         {
             throw _exception;

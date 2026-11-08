@@ -36,6 +36,7 @@ public class all_dependencies : Specification
     protected const string ReadModelName = "test-read-model";
 
     protected ILocalSiloDetails _localSiloDetails;
+    protected Cratis.Chronicle.Clients.IConnectionOwnership _ownership = AllowingConnectionOwnership.Create();
     protected IGrainFactory _grainFactory;
     protected IExpandoObjectConverter _expandoObjectConverter;
     protected ILanguageService _languageService;
@@ -151,7 +152,10 @@ public class all_dependencies : Specification
             services.BuildServiceProvider(),
             _readModelsCompliance,
             _localSiloDetails,
-            Microsoft.Extensions.Logging.Abstractions.NullLogger<Projections>.Instance);
+            _ownership,
+            Microsoft.Extensions.Options.Options.Create(new Cratis.Chronicle.Configuration.ChronicleOptions()),
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<Projections>.Instance,
+            NamespaceCasingContext.Create());
     }
 
     /// <summary>

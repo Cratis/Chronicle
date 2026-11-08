@@ -1,19 +1,27 @@
 ---
-title: Explicit artifact registration
-description: Configure marker-free .NET artifacts, their identities, and their store-local registration lifetime.
+title: Cratis Chronicle .NET explicit artifact registration
+description: Register plain .NET events and observers through ChronicleOptions.ExplicitArtifacts, control their identities, and deploy definitions separately.
 ---
 
-Use `ChronicleOptions.ExplicitArtifacts` when your contract types cannot reference Chronicle or you want to nominate artifacts at the composition root. Existing attributes and interfaces keep working. Plain reactors and classic instance reducers still require nomination. A concrete, non-generic model with the exact public static self-reduction shape is the exception: it is discovered structurally. See [self-reducing read models](/chronicle/reducers/self-reducing-read-models/).
+Use `ChronicleOptions.ExplicitArtifacts` to register types whose assemblies cannot reference Cratis Chronicle, or to choose artifacts in your application's startup configuration. You can keep event records and observers plain while supplying their identities where you configure the client. Existing attributes and interfaces keep working alongside explicit declarations.
 
-For read models, start with model-bound attributes, then fluent mappings when the definition needs
-structure, then reducer code when transitions read better; a self-reducing model is the default for new
-reducers. Use `IReducerFor<T>` for fold-time DI or separation, and nominate a plain reducer only when
-its assembly cannot reference Chronicle. [Choose how to build a read model](../../projections/choosing-a-read-model-style.mdx)
-compares the forms; this page covers their explicit registration.
+Plain reactors and classic instance reducers must be nominated: list them explicitly so the client
+knows to use them as observers. A concrete, non-generic model with the exact public static
+self-reduction shape can instead be discovered by its method signature. See
+[self-reducing read models](/chronicle/reducers/self-reducing-read-models/).
+
+If you are choosing a read-model style, start with model-bound attributes, use fluent mappings for
+structured definitions, or use reducer code when it expresses transitions more clearly. Prefer a
+self-reducing model for a new reducer. `IReducerFor<T>` suits dependency injection during a fold or
+separation from the model; a plain reducer suits an assembly that cannot reference Chronicle.
+[Choose how to build a read model](../../projections/choosing-a-read-model-style.mdx) compares those
+forms. The sections below cover how to register them explicitly.
 
 ## Declare artifacts before creating stores
 
-The generic and `Type` forms declare the same artifacts:
+Configure `ChronicleOptions.ExplicitArtifacts` before creating an event store. Use a generic method
+when the type is known in code, or its `Type` counterpart when startup configuration supplies it at
+runtime. Both declare the same artifact:
 
 | Generic form | Runtime-type form | Optional configuration |
 | --- | --- | --- |
@@ -24,22 +32,34 @@ The generic and `Type` forms declare the same artifacts:
 | `RegisterEventSource<T>(name)` | `RegisterEventSource(type, name)` | Source name |
 | `RegisterMigration<T>()` | `RegisterMigration(type)` | None |
 
-Every method returns the same `ExplicitArtifacts` object. The configuration arguments are optional. Existing projection, model-bound read-model and delegate-reactor registration remain available on that object; see [explicit read-model registration](/chronicle/projections/explicit-registration/).
+Every method returns the same `ExplicitArtifacts` object, so you can chain declarations. Configuration
+arguments are optional. For a complete setup that keeps event records plain while registering their
+observers and constraints, follow the [composition example](/chronicle/configuration/#explicit-artifacts).
 
-The [composition example](/chronicle/configuration/#explicit-artifacts) keeps event records plain while registering their observers and constraints.
+The same object also supports projection, model-bound read-model, and delegate-reactor registration.
+See [explicit read-model registration](/chronicle/projections/explicit-registration/).
 
 ### Defaults and peer declarations
 
-Omitted arguments inherit marker declarations, then the existing identity defaults:
+If you omit an argument, the client uses the type's attributes or marker interfaces, then falls back
+to its identity defaults:
 
 - Event id: the CLR type's name; generation: `1`.
 - Reactor and reducer id: the full CLR type name, with the existing namespace/name fallback.
 - Event source name: the CLR type name with an `EventSource` suffix removed.
 - Constraint names: the existing constraint-builder or attribute naming rules.
 
-Discovery and explicit registration are peers, not an override stack. Equal declarations for the same CLR type coalesce. Incompatible supplied ids, generations, owning stores, visibility or publication destinations throw `ConflictingArtifactDeclaration`, including declaration provenance. A marked id cannot be silently replaced by an explicit alias. Two CLR types with the same `(id, generation)` are rejected; distinct generations of one id are valid.
+An explicit declaration does not override an attribute found during discovery. Equal declarations
+for the same CLR type combine into one. If supplied ids, generations, owning stores, visibility, or
+publication destinations conflict, preparation throws `ConflictingArtifactDeclaration` with the
+sources of those declarations. To use an explicit alias, remove a conflicting marked id first.
+Two CLR types cannot share the same `(id, generation)`; different generations of one id are valid.
 
-A type explicitly nominated as both reactor and reducer, or against a contradictory observer marker, throws `ConflictingArtifactKind`. Invalid nominated shapes fail preparation rather than being silently omitted. Local identity, schema or migration failures prevent registration effects; an independently invalid projection retains the existing partial-projection outcome behavior.
+Nominating a type as both reactor and reducer, or contradicting its observer marker, throws
+`ConflictingArtifactKind`. An invalid nominated method shape fails preparation instead of being
+silently skipped. Local identity, schema, or migration failures prevent registration effects. An
+independently invalid projection can still leave a partial registration; inspect the
+[registration outcome](./registration-outcome.md) for its failure.
 
 ### Event facets
 
@@ -52,23 +72,44 @@ A type explicitly nominated as both reactor and reducer, or against a contradict
 | `ForEventStore(EventStoreName)` | Owning store |
 | `PublishTo(EventSequenceId)` | Destination sequence for event-target publication |
 
-Registration visibility and publication eligibility are separate. Ownership in the current store, `[Public]`, or explicit `Public()` can grant eligibility; those contributions form a union. `Private()` never removes ownership-derived eligibility. It conflicts with a supplied public visibility declaration, but not with an ownership-derived default. Declared store ownership, including a foreign store, defaults registration visibility to public. Foreign ownership alone does not grant publication eligibility.
+Visibility controls how the event type is registered; publication eligibility controls whether it
+can be published. Ownership in the current store, `[Public]`, or explicit `Public()` can each grant
+eligibility. `Private()` does not remove eligibility granted by ownership. It conflicts with a
+supplied public visibility declaration, but not an ownership-derived default.
+
+Declaring an owning store defaults registration visibility to public, even when that store is
+foreign. Foreign ownership alone does not make the event eligible for publication.
 
 Absent visibility and sequence attributes supply no competing declaration. You can therefore add `Public()` or `PublishTo(customSequence)` to an otherwise marked event without conflicting with default private/outbox values. `PublishTo` alone does not make an event eligible for publication, and the event log is not a valid publication destination. The default destination is the outbox.
 
-Numeric `Generation(n)` does not mean “historical type.” Exact-dispatch exclusion remains the behavior of `[EventTypeGenerationFor<T>]`; its referenced identity resolves through the completed peer declarations.
+Setting `Generation(n)` alone does not mark a type as historical or exclude it from exact dispatch.
+That behavior belongs to `[EventTypeGenerationFor<T>]`, whose referenced identity is resolved after
+the client combines the declarations.
 
 ## Snapshot and discovery lifetime
 
-Each store captures all explicit recipes together when it is constructed. Later options changes affect only subsequently created stores. Reconnect reuses that snapshot. Explicit `DiscoverAll()` can refresh the discovered provider while retaining the original recipes.
+Each event store captures the explicit declarations when it is constructed. Changing the options
+later affects only stores created afterwards; reconnecting reuses the captured snapshot. An explicit
+`DiscoverAll()` can refresh the discovered provider, but it retains that store's original declarations.
 
-`AutoDiscoverAndRegister = false` stays manual: call `DiscoverAll()` to apply options recipes, then `RegisterAll()` when connected. For a separate deployment step, use [Register definitions as a deployment step](#register-definitions-as-a-deployment-step). An untouched manual store does not silently acquire those recipes. This differs from a fixture's `AutoDiscoverArtifacts = false`, which disables assembly discovery but does not disable its client's registration process.
+With `AutoDiscoverAndRegister = false`, call `DiscoverAll()` to apply the options declarations, then
+`RegisterAll()` once connected. Until you do, a manual store does not acquire them. To move
+registration into a separate process, use
+[Register definitions as a deployment step](#register-definitions-as-a-deployment-step).
 
-An empty explicit snapshot leaves the supplied provider untouched. With nominations, the store merges a local catalog without mutating the provider. Attribute-derived Unique, property-Unique, RemoveConstraint and ClosesStream entries are added only for explicitly nominated events and unioned without duplicates. For discovered-only events, a custom provider's own derived lists remain authoritative, including intentional omissions.
+A test fixture's `AutoDiscoverArtifacts = false` has a different meaning: it disables assembly
+discovery without disabling the client's registration process.
+
+With no explicit declarations, the supplied artifact provider stays untouched. With nominations,
+the store builds a local catalog without mutating that provider. It adds attribute-derived Unique,
+property-Unique, RemoveConstraint, and ClosesStream entries only for explicitly nominated events,
+without duplicates. For events found only by discovery, a custom provider's derived lists remain
+authoritative, including intentional omissions.
 
 ## Register definitions as a deployment step
 
-A CI/CD job or init container can register definitions before the application starts its observers:
+If startup should use definitions registered by another process, call `RegisterDefinitions` from a
+CI/CD job or init container before starting the application's observers:
 
 ```csharp
 using Cratis.Chronicle.Registrations;
@@ -77,35 +118,82 @@ var result = await eventStore.RegisterDefinitions(new DeploymentGeneration(build
 Console.WriteLine(result.Fingerprint);
 ```
 
-`buildNumber` is a monotonic `ulong` assigned by your deployment pipeline. The call registers event types, event sources, read models, constraints and projections. It does not start reactors, reducers, read-model reactors, external subscriptions or seeding; those register when the application connects through its normal registration flow. It reuses discovery with the same rules as `DiscoverAll()`, including explicit recipes and completed preparation.
+Assign `buildNumber` as a monotonic `ulong` in your deployment pipeline. The call registers event
+types, event sources, read models, constraints, and projections using the same discovery rules as
+`DiscoverAll()`, including explicit declarations and completed preparation.
 
-The fingerprint is a deterministic, lowercase hex SHA-256 value, independent of the event store name, discovery order and projection update timestamps. Compare fingerprints between environments to check that the same definitions were prepared. Custom, non-native artifact registries still register, but their definitions do not contribute to the fingerprint.
+It does not start reactors, reducers, read-model reactors, external subscriptions, or seeding. Those
+belong to the application's normal connection-driven registration flow. Choose the application's
+[registration mode](./short-lived-processes.md#choosing-how-to-register) to match which process owns
+registration.
 
-The optional generation defaults to zero, meaning no generation is sent. An older generation than the one stored by the kernel is refused with `DeploymentGenerationIsStale`. A value above `long.MaxValue` throws `DeploymentGenerationOutOfRange` locally. Use a kernel that supports `RegisterDeployment`; an older kernel without that RPC cannot perform this step.
+Compare the returned fingerprint between environments to check whether their prepared definitions
+match. It is a deterministic, lowercase hex SHA-256 value that does not depend on event store name, discovery
+order, or projection update timestamps. Definitions from custom, non-native artifact registries can
+register but do not contribute to the fingerprint, so matching fingerprints do not compare those
+definitions.
 
-Every payload is prepared before registration effects. An unbuildable projection throws `ArtifactDefinitionsIncomplete` before anything is sent. Unsupported closing-stream constraints throw `ClosesStreamConstraintsNotSupported` under the same capability check as ordinary constraint registration, also before any RPC. The call does not retry failures or start background registration.
+Use a kernel that supports the `RegisterDeployment` RPC. Without it, this deployment step cannot run.
+The optional generation defaults to zero, which sends no generation. The kernel refuses a generation
+older than its stored value with `DeploymentGenerationIsStale`; a value above `long.MaxValue` throws
+`DeploymentGenerationOutOfRange` locally.
 
-The prepared fingerprint is reported on `Registration.Fingerprint`, including when sending definitions fails after the deployment was recorded. A concurrent `RegisterAll()` can replace that outcome and reset the fingerprint to `NotSet`, so the returned `DefinitionsRegistration` is the authoritative result of a successful call. Cancellation covers waiting for services and checks between steps, not an RPC already in flight.
+The client prepares every payload before sending registrations. An unbuildable projection throws
+`ArtifactDefinitionsIncomplete` before anything is sent. Unsupported closing-stream constraints
+throw `ClosesStreamConstraintsNotSupported` under the same capability check as ordinary constraint
+registration, also before any RPC. Handle failures in the deployment process: this call does not
+retry or start background registration.
+
+Keep the returned `DefinitionsRegistration` as the result of a successful call. The prepared
+fingerprint also appears on `Registration.Fingerprint`, even if sending definitions fails after the
+deployment was recorded, but a concurrent `RegisterAll()` can replace that outcome and reset the
+fingerprint to `NotSet`. Cancellation applies while waiting for services and between steps, not to
+an RPC already in flight.
 
 ## Plain observers and constraint definers
 
-A nominated reactor uses the existing instance-method dispatch, dependency injection, filters, tags, sequence selection and replay behavior. A nominated classic reducer infers exactly one read model from supported instance `(event, current[, EventContext])` methods. Declare current state nullable; nullable-oblivious declarations retain compatibility. Supported returns remain the read model, `Task<read model>` and classic `Task`; classic mutation-only `Task` keeps its existing null-return semantics.
+An explicitly nominated reactor uses the same instance-method dispatch, dependency injection,
+filters, tags, sequence selection, and replay behavior as a marked reactor. A classic reducer must
+identify exactly one read model through supported instance `(event, current[, EventContext])`
+methods. Declare `current` nullable because the model may not exist yet; declarations made without
+nullable annotations remain compatible. Methods can return the read model, `Task<read model>`, or
+classic `Task`. A mutation-only classic `Task` keeps its existing null-return semantics.
 
-The same `RegisterReducer<T>(id)` and `RegisterReducer(typeof(T), id)` APIs also accept a self-reducing model. Its public static `Reduce(event, model? current[, EventContext])` returns the model or `Task<model>`, including nullable results. No model is activated and no new nomination API is needed. Explicit near misses fail with `InvalidSelfReducerSignature`. Implementing `IReducer` always keeps a type classic, even if it has a self-shaped static helper. A self model with another builder in the same store catalog fails with `AmbiguousReadModelBuilder` before registration effects.
+To register a self-reducing model, use the same `RegisterReducer<T>(id)` or
+`RegisterReducer(typeof(T), id)` API. Its public static
+`Reduce(event, model? current[, EventContext])` returns the model or `Task<model>`, including nullable
+results. The client does not activate a model instance. A nominated type with a near-miss signature
+fails with `InvalidSelfReducerSignature`.
+
+Implementing `IReducer` keeps a type on the classic path, even if it has a static helper shaped like
+self-reduction. If a self-reducing model has another builder in the same store catalog, preparation
+fails with `AmbiguousReadModelBuilder` before registration effects.
 
 A plain constraint definer exposes exactly one public synchronous instance `void Define(IConstraintBuilder)` method. Existing `IConstraint` implementations keep their direct interface path. A nominated event source keeps its declared streams and metadata; an explicit name changes the registered identity, not its declaration-only description helpers.
 
-The existing constrained generic observer APIs remain. For plain classes, import `Cratis.Chronicle.Reactors` or `Cratis.Chronicle.Reducers` to use the registered-artifact extension siblings, or pass `typeof(YourObserver)` to the Type-based operations. These operations resolve aliases through the store. Plain `Register(Type)` is explicit intent and need not be prelisted in options; its event types must already be registered.
+For operations on plain observers, import `Cratis.Chronicle.Reactors` or `Cratis.Chronicle.Reducers`
+to use the registered-artifact extensions, or pass `typeof(YourObserver)` to Type-based operations.
+These resolve aliases through the store. You can call plain `Register(Type)` without listing the
+observer in options first, but its event types must already be registered. Existing constrained
+generic observer APIs remain available for types that satisfy their constraints.
 
-Custom observer registries that implement only the old generic interface surface remain compatible. Unsupported new Type operations throw `TypeBasedArtifactRegistrationNotSupported` rather than pretending registration succeeded.
+A custom observer registry that implements only the older generic interface remains compatible.
+If it does not support a new Type operation, the operation throws
+`TypeBasedArtifactRegistrationNotSupported`.
 
 ## Typed and plain migrations
 
 [Explicit migration registration](/chronicle/migrations/explicit-registration/) uses the existing migration builders and kernel-side generation engine.
 
-For unmarked or aliased endpoints, a typed migration calls the additive protected constructor `EventTypeMigration<TUpgrade,TPrevious>(IEventTypes)`. The client supplies the owning store's finalized registry, even if ordinary DI contains another registry. Both endpoints must be registered, share one id and have adjacent generations.
+If either endpoint is unmarked or aliased, have your typed migration call the protected constructor
+`EventTypeMigration<TUpgrade,TPrevious>(IEventTypes)`. The client supplies the owning store's
+finalized registry, even if ordinary dependency injection contains another registry. Register both
+endpoints with the same id and adjacent generations.
 
-The parameterless base constructor keeps declaration-only validation. An attributed previous endpoint intentionally omitted by a custom provider remains valid on that legacy path; its placeholder schema behavior is unchanged. Merely listing a legacy migration explicitly does not switch its constructor semantics.
+The parameterless base constructor still validates declarations without consulting the store
+registry. On that legacy path, an attributed previous endpoint can remain valid even when a custom
+provider intentionally omits it; placeholder schema behavior is unchanged. Explicitly listing a
+legacy migration does not change which constructor path it uses.
 
 A nominated plain, concrete, closed class declares these roles:
 
@@ -113,22 +201,54 @@ A nominated plain, concrete, closed class declares these roles:
 - `public void Downcast(IEventMigrationBuilder<TPrevious,TUpgrade> builder)`
 - Optional `public void MapValues(IEventValueMapBuilder<TUpgrade,TPrevious> builder)`
 
-Each role is one non-generic synchronous instance method with one ordinary parameter. Overloads, ambiguous endpoints, static methods, async void and malformed roles are rejected. Both endpoints must be registered. The adapter uses the typed migration engine, including bidirectional value-map inversion; there is no separate migration language. Constructor dependencies use ordinary DI, with an owning registry supplied explicitly when requested. Plain definers must not implement disposal interfaces because the migration provider has no disposal ownership contract.
+Each role must be one non-generic, synchronous instance method with one ordinary parameter. Do not
+use overloads, ambiguous endpoints, static methods, or async void; validation rejects these shapes.
+Register both endpoints before using the migration. The adapter uses the typed migration engine,
+including bidirectional value-map inversion, rather than a separate migration language.
 
-Every explicit recipe is validated during preparation, even if no discovered upgrade could otherwise select it. Migration nomination does not register missing events automatically. Custom migration providers retain compatible legacy output; opaque results that require a new registry binding but cannot identify their original recipe fail with `ExplicitMigrationBindingNotSupported`. Plain adapter activation makes no new trimming or Native AOT guarantee. The migration-id analyzer does not prove plain-role endpoints; runtime validation does.
+Constructor dependencies use ordinary dependency injection, with the owning registry supplied
+explicitly when requested. A plain definer must not implement disposal interfaces because the
+migration provider does not own a disposal scope.
+
+Preparation validates every explicit migration, even if no discovered upgrade would select it.
+Nominating a migration does not register missing event types. Custom migration providers can retain
+compatible legacy output, but a result that needs a new registry binding must identify its original
+declaration; otherwise it fails with `ExplicitMigrationBindingNotSupported`.
+
+Plain adapter activation adds no trimming or Native AOT guarantee. The migration-id analyzer cannot
+prove plain-role endpoints, so runtime validation checks them.
 
 ## Registry-aware schemas and concurrency
 
-Compensation metadata can refer to explicitly registered targets. Built-in schema generation resolves new aliases or unmarked compensation targets through the owning registry without placing store-specific ids in CLR-only caches. Those new targets must be registered.
+For compensation metadata that refers to an explicit alias or unmarked target, register the target
+with the owning store. Built-in schema generation resolves those references through the store's
+registry, without putting store-specific ids in CLR-only caches.
 
-A custom `IJsonSchemaGenerator` retains its original output for declaration-only compensation, even when the marked target is absent from the registry. For new explicit bindings it must implement the additive `Generate(Type, IEventTypes)` and `GenerateLegacyEventType(Type, IEventTypes)` overloads. Otherwise `RegistryAwareEventTypeSchemasNotSupported` fails narrowly on that requirement; no metadata is silently rewritten.
+A custom `IJsonSchemaGenerator` can keep its original output for declaration-only compensation,
+even when the marked target is absent from the registry. To support new explicit bindings,
+implement `Generate(Type, IEventTypes)` and `GenerateLegacyEventType(Type, IEventTypes)`. If the
+generator lacks that support, the required binding throws `RegistryAwareEventTypeSchemasNotSupported`
+instead of silently rewriting metadata.
 
 For [concurrency scopes](/chronicle/configuration/#registry-resolved-concurrency), pass `store.EventTypes.GetEventTypeFor(typeof(YourEvent))` to existing `WithEventType(EventType)` or `WithEventTypes` methods. Declaration-only Type/generic helpers cannot know an explicit alias. For a source alias, resolve `store.EventSources.GetFor(typeof(YourSource))` and its `FindStream(...)` definition, then use their effective `EventSourceType` and `EventStreamType` with the existing scope builders.
 
 ## Testing and analyzer boundaries
 
-Per-run `Defaults(artifacts, serviceProvider, options)` honors the same registrations in `ReadModelScenario`, `ReactorScenario` and `EventScenario`. A plain reactor scenario requires explicit nomination; it is not shape-discovered. Give each independent run its own defaults/options rather than changing `Defaults.Instance`.
+Pass `Defaults(artifacts, serviceProvider, options)` to `ReadModelScenario`, `ReactorScenario`, or
+`EventScenario` to use these registrations in a test run. Nominate a plain reactor explicitly; the
+scenario does not discover it by method shape. Give independent runs their own defaults and options
+instead of changing `Defaults.Instance`.
 
-XUnit integration options have the lifetime of the fixture type's host/client/store, not an individual test run. Configure explicit recipes before that host is created. Reuse keeps its first captured snapshot; a separately created fixture host has a separate snapshot. The sharing boundary is the existing closed `ChronicleClientFixture<TChronicleFixture>` family, so derived scenarios sharing that family also share its host. A fixture that overrides `ChronicleFixture.UsesPerContextMongoDBHost` to return `true` starts a fresh host for each test context, so each context captures its own snapshot. Disabling fixture assembly discovery does not remove explicit recipes. See [testing configuration](/chronicle/testing/#explicit-artifacts-and-lifetime).
+For XUnit integration tests, configure explicit declarations before the fixture host is created.
+Its options live as long as the fixture type's host, client, and store, not one test run. Reusing
+that host retains its first snapshot. Derived scenarios in the same closed
+`ChronicleClientFixture<TChronicleFixture>` family share the host and snapshot.
 
-[Analyzer evidence](/chronicle/code-analysis/#explicit-registration-evidence) recognizes possible registrations in the same compilation, not execution or per-client membership. Runtime validation is final authority.
+A separately created fixture host captures a separate snapshot. Overriding
+`ChronicleFixture.UsesPerContextMongoDBHost` to return `true` creates a fresh host for each test
+context, so each context captures its own declarations. Disabling fixture assembly discovery does
+not remove explicit declarations. See [testing configuration](/chronicle/testing/#explicit-artifacts-and-lifetime).
+
+[Analyzer evidence](/chronicle/code-analysis/#explicit-registration-evidence) identifies possible
+registrations in the same compilation. It cannot show that the code ran or that a particular client
+received those registrations; runtime validation is the final check.

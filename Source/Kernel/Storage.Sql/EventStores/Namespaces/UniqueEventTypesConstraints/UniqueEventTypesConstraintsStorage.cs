@@ -48,8 +48,7 @@ public class UniqueEventTypesConstraintsStorage(EventStoreName eventStore, Event
         await using var tableScope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
 
         var eventTypeIdValues = definition.EventTypeIds.Select(_ => _.Value).ToArray();
-        var eventSourceIdValue = eventSourceId.Value;
-        var forEventSource = WithinScope(tableScope.DbContext.Events.Where(e => e.EventSourceId == eventSourceIdValue), scope);
+        var forEventSource = WithinScope(tableScope.DbContext, tableScope.DbContext.Events.WhereEventSource(tableScope.DbContext, eventSourceId), scope);
         var latestRemoval = await GetLatestRemoval(forEventSource, definition);
 
         var query = forEventSource.Where(e => eventTypeIdValues.Contains(e.Type));
@@ -74,6 +73,7 @@ public class UniqueEventTypesConstraintsStorage(EventStoreName eventStore, Event
     /// <summary>
     /// Narrow a query to the scope of the event being validated.
     /// </summary>
+    /// <param name="context">The context the query runs on.</param>
     /// <param name="query">The query to narrow.</param>
     /// <param name="scope">The <see cref="ResolvedConstraintScope"/> of the event being validated, or <see langword="null"/> when unscoped.</param>
     /// <returns>The query narrowed to the scope, unchanged when unscoped.</returns>
@@ -82,7 +82,7 @@ public class UniqueEventTypesConstraintsStorage(EventStoreName eventStore, Event
     /// into SQL rather than evaluated in memory. Narrowing per dimension rather than by a flattened key is also
     /// what makes two genuinely different scopes impossible to confuse for one another.
     /// </remarks>
-    static IQueryable<EventEntry> WithinScope(IQueryable<EventEntry> query, ResolvedConstraintScope? scope)
+    static IQueryable<EventEntry> WithinScope(DbContext context, IQueryable<EventEntry> query, ResolvedConstraintScope? scope)
     {
         if (scope is null)
         {
@@ -92,19 +92,17 @@ public class UniqueEventTypesConstraintsStorage(EventStoreName eventStore, Event
         if (scope.EventSourceType is not null)
         {
             var eventSourceTypeValue = scope.EventSourceType.Value;
-            query = query.Where(e => e.EventSourceType == eventSourceTypeValue);
+            query = query.WhereSourceType(context, eventSourceTypeValue);
         }
 
         if (scope.EventStreamType is not null)
         {
-            var eventStreamTypeValue = scope.EventStreamType.Value;
-            query = query.Where(e => e.EventStreamType == eventStreamTypeValue);
+            query = query.WhereStreamType(context, scope.EventStreamType);
         }
 
         if (scope.EventStreamId is not null)
         {
-            var eventStreamIdValue = scope.EventStreamId.Value;
-            query = query.Where(e => e.EventStreamId == eventStreamIdValue);
+            query = query.WhereStreamId(context, scope.EventStreamId);
         }
 
         return query;

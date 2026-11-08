@@ -43,6 +43,9 @@ internal sealed class SingleFlightRegistration(Func<Task> action, RegistrationBa
         // Leave the caller's lock before doing any work, so the action never runs while the gate is held.
         await Task.Yield();
 
+        // A background retry outlives the delivery that may have started it and must not keep that delivery's context.
+        using var detached = Observation.ObserverDeliveryScope.EnterCleared();
+
         try
         {
             var toWait = _backoff.NextDelay(_consecutiveFailures);

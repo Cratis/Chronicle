@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage.Captures;
 using Cratis.Chronicle.Storage.Events.Constraints;
+using Cratis.Chronicle.Storage.EventSequences.Mutations;
 using Cratis.Chronicle.Storage.EventSources;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.ExternalServices;
@@ -56,6 +57,7 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// <param name="jobsStorage">The <see cref="Cratis.Choreography.Storage.IJobsStorage"/> resolving jobs storage for an event store namespace.</param>
 /// <param name="options"><see cref="ChronicleOptions"/>.</param>
 /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
+/// <param name="mutationDigestKeys">The source of mutation digest keys; without one, every mutation fails closed.</param>
 public class EventStoreStorage(
     EventStoreName eventStore,
     IEventStoreDatabase eventStoreDatabase,
@@ -64,28 +66,32 @@ public class EventStoreStorage(
     SinksFactory sinksFactory,
     Cratis.Choreography.Storage.IJobsStorage jobsStorage,
     IOptions<ChronicleOptions> options,
-    ILoggerFactory loggerFactory) : IEventStoreStorage
+    ILoggerFactory loggerFactory,
+    IEventSequenceMutationDigestKeys? mutationDigestKeys = null) : IEventStoreStorage
 {
     readonly ConcurrentDictionary<EventStoreNamespaceName, IEventStoreNamespaceStorage> _namespaces = new();
-    readonly Occurrences.OccurrencesStorage _occurrences = new(eventStoreDatabase.GetCollection<BsonDocument>("occurrences").Database);
+    readonly Occurrences.OccurrencesStorage _occurrences = new(eventStoreDatabase.GetCollection<BsonDocument>(WellKnownCollectionNames.Occurrences).Database);
 
     /// <inheritdoc/>
-    public Chronicle.Storage.Generations.IGenerationInitializationStorage GenerationInitialization { get; } = new Generations.GenerationInitializationStorage(eventStoreDatabase.GetCollection<BsonDocument>("generation-initialization"));
+    public Chronicle.Storage.Generations.IGenerationInitializationStorage GenerationInitialization { get; } = new Generations.GenerationInitializationStorage(eventStoreDatabase.GetCollection<BsonDocument>(WellKnownCollectionNames.GenerationInitialization));
 
     /// <inheritdoc/>
-    public Chronicle.Storage.Occurrences.ITriggerDefinitionsStorage TriggerDefinitions { get; } = new Occurrences.TriggerDefinitionsStorage(eventStoreDatabase.GetCollection<BsonDocument>("trigger-definitions").Database);
+    public Chronicle.Storage.Occurrences.ITriggerDefinitionsStorage TriggerDefinitions { get; } = new Occurrences.TriggerDefinitionsStorage(eventStoreDatabase.GetCollection<BsonDocument>(WellKnownCollectionNames.TriggerDefinitions).Database);
 
     /// <inheritdoc/>
     public Chronicle.Storage.Occurrences.IOccurrencesStorage Occurrences => _occurrences;
 
     /// <inheritdoc/>
-    public Chronicle.Storage.Occurrences.ILifecycleFanOutStorage LifecycleFanOut { get; } = new Occurrences.LifecycleFanOutStorage(eventStoreDatabase.GetCollection<BsonDocument>("lifecycle-fan-out-intents").Database);
+    public Chronicle.Storage.Occurrences.ILifecycleFanOutStorage LifecycleFanOut { get; } = new Occurrences.LifecycleFanOutStorage(eventStoreDatabase.GetCollection<BsonDocument>(WellKnownCollectionNames.LifecycleFanOutIntents).Database);
 
     /// <inheritdoc/>
     public Chronicle.Storage.Occurrences.IScheduleStorage Schedules => _occurrences;
 
     /// <inheritdoc/>
-    public Chronicle.Storage.Generations.IGenerationFloorStorage GenerationFloor { get; } = new Generations.GenerationFloorStorage(eventStoreDatabase.GetCollection<BsonDocument>("generation-floor"));
+    public Chronicle.Storage.Generations.IGenerationFloorStorage GenerationFloor { get; } = new Generations.GenerationFloorStorage(eventStoreDatabase.GetCollection<BsonDocument>(WellKnownCollectionNames.GenerationFloor));
+
+    /// <inheritdoc/>
+    public IUniqueConstraintEncodingStorage UniqueConstraintEncoding { get; } = new Events.Constraints.UniqueConstraintEncodingStorage(eventStoreDatabase.GetCollection<BsonDocument>(WellKnownCollectionNames.UniqueConstraintEncodingKey));
 
     /// <inheritdoc/>
     public EventStoreName EventStore { get; } = eventStore;
@@ -118,6 +124,9 @@ public class EventStoreStorage(
     public IWebhookDefinitionsStorage Webhooks { get; } = new WebhookDefinitionsStorage(eventStoreDatabase);
 
     /// <inheritdoc/>
+    public IWebhookSigningKeysStorage WebhookSigningKeys { get; } = new WebhookSigningKeysStorage(eventStoreDatabase);
+
+    /// <inheritdoc/>
     public IExternalServiceDefinitionsStorage ExternalServices { get; } = new ExternalServiceDefinitionsStorage(eventStoreDatabase);
 
     /// <inheritdoc/>
@@ -139,19 +148,19 @@ public class EventStoreStorage(
     public IEventSeedingStorage EventSeeding { get; } = new EventSeedingStorage(eventStoreDatabase);
 
     /// <inheritdoc/>
-    public async Task<bool> IsInitialized() => await eventStoreDatabase.GetCollection<BsonDocument>("initialization")
+    public async Task<bool> IsInitialized() => await eventStoreDatabase.GetCollection<BsonDocument>(WellKnownCollectionNames.Initialization)
         .CountDocumentsAsync(new BsonDocument("_id", 1)) > 0;
 
     /// <inheritdoc/>
-    public Task MarkInitialized() => DuplicateKeyConvergence.UpsertWithRetry(() => eventStoreDatabase.GetCollection<BsonDocument>("initialization")
+    public Task MarkInitialized() => DuplicateKeyConvergence.UpsertWithRetry(() => eventStoreDatabase.GetCollection<BsonDocument>(WellKnownCollectionNames.Initialization)
         .UpdateOneAsync(new BsonDocument("_id", 1), new BsonDocument("$setOnInsert", new BsonDocument("_id", 1)), new UpdateOptions { IsUpsert = true }));
 
     /// <inheritdoc/>
-    public async Task<bool> AreObserversInitialized() => await eventStoreDatabase.GetCollection<BsonDocument>("initialization")
+    public async Task<bool> AreObserversInitialized() => await eventStoreDatabase.GetCollection<BsonDocument>(WellKnownCollectionNames.Initialization)
         .CountDocumentsAsync(new BsonDocument("_id", 2)) > 0;
 
     /// <inheritdoc/>
-    public Task MarkObserversInitialized() => DuplicateKeyConvergence.UpsertWithRetry(() => eventStoreDatabase.GetCollection<BsonDocument>("initialization")
+    public Task MarkObserversInitialized() => DuplicateKeyConvergence.UpsertWithRetry(() => eventStoreDatabase.GetCollection<BsonDocument>(WellKnownCollectionNames.Initialization)
         .UpdateOneAsync(new BsonDocument("_id", 2), new BsonDocument("$setOnInsert", new BsonDocument("_id", 2)), new UpdateOptions { IsUpsert = true }));
 
     /// <inheritdoc/>
@@ -172,10 +181,14 @@ public class EventStoreStorage(
             sinksFactory(@namespace),
             jobsStorage,
             options,
-            loggerFactory);
+            loggerFactory,
+            mutationDigestKeys);
 
         return _namespaces.GetOrAdd(@namespace, created);
     }
+
+    /// <inheritdoc/>
+    public Task<bool> HasOwnNamespaceData(EventStoreNamespaceName @namespace) => eventStoreDatabase.GetNamespaceDatabase(@namespace).HasOwnDatabase();
 
     /// <inheritdoc/>
     public async Task DropNamespace(EventStoreNamespaceName @namespace)

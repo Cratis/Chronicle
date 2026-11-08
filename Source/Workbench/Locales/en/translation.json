@@ -37,7 +37,8 @@
             "events": "Events",
             "eventTypes": "Event types",
             "namespaces": "Namespaces",
-            "unavailable": "Key figures unavailable"
+            "unavailable": "Key figures unavailable",
+            "notAuthorized": "Not authorized on {databases}"
         },
         "subtitle": "Pick an event store to open its dashboard",
         "addEventStore": "Add event store"
@@ -608,6 +609,10 @@
                         "title": "Delete folder",
                         "empty": "Delete the folder \"{folder}\"?",
                         "withQueries": "Delete the folder \"{folder}\" and the {count} queries filed under it? This cannot be undone."
+                    },
+                    "partiallyApplied": {
+                        "title": "Some items were not changed",
+                        "message": "{count} of {total} items belong to another owner and were left as they were."
                     }
                 },
                 "details": {
@@ -1073,6 +1078,11 @@
         }
     },
     "components": {
+        "storageAuthorization": {
+            "title": "Chronicle's storage user is missing a permission",
+            "failure": "{operation} on {database}.{collection} was refused (Unauthorized)",
+            "hint": "Grant the storage user access to these databases, or set storage.databaseNamePrefix. Check the kernel log and the storage-authorization health check."
+        },
         "projectionEditor": {
             "tooltips": {
                 "help": "Show Projection Declaration Language help panel"

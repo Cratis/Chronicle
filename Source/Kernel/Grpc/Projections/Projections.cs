@@ -9,19 +9,23 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Contracts.Primitives;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Json;
+using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Projections.Engine.DeclarationLanguage;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Services.Events;
 using Cratis.Chronicle.Services.Projections.Definitions;
 using Cratis.Chronicle.Services.ReadModels;
 using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using ProtoBuf.Grpc;
 using ContractProjectionDefinitionParsingErrors = Cratis.Chronicle.Contracts.Projections.ProjectionDeclarationParsingErrors;
 using ContractProjectionPreview = Cratis.Chronicle.Contracts.Projections.ProjectionPreview;
@@ -38,7 +42,10 @@ namespace Cratis.Chronicle.Services.Projections;
 /// <param name="serviceProvider"><see cref="IServiceProvider"/> for accessing services.</param>
 /// <param name="readModelsCompliance"><see cref="IReadModelsCompliance"/> for decrypting PII fields in previewed read model instances.</param>
 /// <param name="localSiloDetails">The local silo details for locating client connections.</param>
+/// <param name="connectionOwnership"><see cref="IConnectionOwnership"/> telling which caller opened each connection.</param>
+/// <param name="options">The <see cref="IOptions{ChronicleOptions}"/> for configuration.</param>
 /// <param name="logger">The logger.</param>
+/// <param name="namespaceCasing">The namespace casing resolver.</param>
 internal sealed class Projections(
     IGrainFactory grainFactory,
     IExpandoObjectConverter expandoObjectConverter,
@@ -46,7 +53,10 @@ internal sealed class Projections(
     IServiceProvider serviceProvider,
     IReadModelsCompliance readModelsCompliance,
     ILocalSiloDetails localSiloDetails,
-    ILogger<Projections> logger) : IProjections
+    IConnectionOwnership connectionOwnership,
+    IOptions<ChronicleOptions> options,
+    ILogger<Projections> logger,
+    INamespaceCasing namespaceCasing) : IProjections
 {
     /// <summary>
     /// The property a materialized read model carries its key in, which is what the read side looks it up by.
@@ -62,7 +72,7 @@ internal sealed class Projections(
     /// <inheritdoc/>
     public async Task Register(RegisterRequest request, CallContext context = default)
     {
-        SystemStoreGuard.EnsureNotSystem(new(request.EventStore));
+        await SystemStoreGuard.EnsureNotSystem(context, new(request.EventStore), StoreAccess.Manage);
         foreach (var definition in request.Projections)
         {
             SystemStoreGuard.EnsureNotSystem(new(request.EventStore, definition.Identifier, definition.ReadModel, definition.EventSequenceId));
@@ -70,7 +80,11 @@ internal sealed class Projections(
         var projectionsManager = grainFactory.GetGrain<IProjectionsManager>(request.EventStore);
         var owner = (Concepts.Projections.ProjectionOwner)(int)request.Owner;
         var projections = request.Projections.Select(_ => _.ToChronicle(owner)).ToArray();
-        if (!string.IsNullOrEmpty(request.ConnectionId))
+        if (!string.IsNullOrEmpty(request.ConnectionId) && !connectionOwnership.IsOwnedBy(request.ConnectionId, ConnectionCallers.From(context, options.Value).Owner))
+        {
+            logger.DeclarationsSkippedForConnection(request.EventStore, request.ConnectionId);
+        }
+        else if (!string.IsNullOrEmpty(request.ConnectionId))
         {
             try
             {
@@ -89,7 +103,14 @@ internal sealed class Projections(
             // several applications sharing the event store would each retire the others' projections.
             var registrant = string.IsNullOrEmpty(request.Registrant) ? null : request.Registrant;
             var version = string.IsNullOrWhiteSpace(request.Version) ? null : request.Version;
-            await projectionsManager.Register(projections, request.FullSet && registrant is not null ? owner : null, registrant, version);
+            Concepts.Projections.ProjectionOwner? fullSetOwner = request.FullSet && registrant is not null ? owner : null;
+            if (!TryComputeSignature(projections, fullSetOwner, registrant, version, out var signature))
+            {
+                await projectionsManager.Register(projections, fullSetOwner, registrant, version);
+                return;
+            }
+
+            await SharedProjectionRegistration.Register(projectionsManager, signature, projections, fullSetOwner, registrant, version);
         }
         catch (Exception exception)
         {
@@ -100,7 +121,7 @@ internal sealed class Projections(
     /// <inheritdoc/>
     public async Task<IEnumerable<ProjectionDefinition>> GetAllDefinitions(GetAllDefinitionsRequest request, CallContext context = default)
     {
-        await SystemStoreGuard.Ensure(context, new(request.EventStore));
+        await SystemStoreGuard.Ensure(context, new(request.EventStore), StoreAccess.Read);
         var projectionsManager = grainFactory.GetGrain<IProjectionsManager>(request.EventStore);
         var definitions = await projectionsManager.GetProjectionDefinitions();
         return definitions.Select(p => p.ToContract()).ToArray();
@@ -109,7 +130,7 @@ internal sealed class Projections(
     /// <inheritdoc/>
     public async Task<IEnumerable<Contracts.Projections.ProjectionWithDeclaration>> GetAllDeclarations(GetAllDeclarationsRequest request, CallContext context = default)
     {
-        await SystemStoreGuard.Ensure(context, new(request.EventStore));
+        await SystemStoreGuard.Ensure(context, new(request.EventStore), StoreAccess.Read);
         var projectionsManager = grainFactory.GetGrain<IProjectionsManager>(request.EventStore);
         var definitions = await projectionsManager.GetProjectionDeclarations();
         return definitions.Select(p => new Contracts.Projections.ProjectionWithDeclaration
@@ -123,7 +144,21 @@ internal sealed class Projections(
     /// <inheritdoc/>
     public async Task<OneOf<ContractProjectionPreview, ContractProjectionDefinitionParsingErrors>> Preview(PreviewProjectionRequest request, CallContext context = default)
     {
-        await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.EventSequenceId, request.DraftReadModel?.Identifier));
+        await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.EventSequenceId, request.DraftReadModel?.Identifier), StoreAccess.Read);
+        request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
+        if (languageService.IsGraphDeclaration(request.Declaration ?? string.Empty))
+        {
+            return new OneOf<ContractProjectionPreview, ContractProjectionDefinitionParsingErrors>(new ContractProjectionDefinitionParsingErrors
+            {
+                Errors = [new ProjectionDeclarationSyntaxError
+                {
+                    Line = 1,
+                    Column = 1,
+                    Message = "Previewing a graph projection is not supported; save it and read the graph from the graph database"
+                }]
+            });
+        }
+
         var storage = serviceProvider.GetRequiredService<IStorage>();
         var eventSequenceStorage = storage
             .GetEventStore(request.EventStore)
@@ -154,7 +189,7 @@ internal sealed class Projections(
         return await compileResult.Match(
             async definition =>
             {
-                await SystemStoreGuard.Ensure(context, new(request.EventStore, definition.Identifier, definition.ReadModel, definition.EventSequenceId));
+                await SystemStoreGuard.Ensure(context, new(request.EventStore, definition.Identifier, definition.ReadModel, definition.EventSequenceId), StoreAccess.Read, namespaceAddressed: false);
                 ReadModelDefinition? readModelDefinition;
                 var isInferredReadModel = definition.ReadModel == ReadModelIdentifier.Inferred;
 
@@ -243,8 +278,14 @@ internal sealed class Projections(
     /// <inheritdoc/>
     public async Task<SaveProjectionResult> Save(SaveProjectionRequest request, CallContext context = default)
     {
-        SystemStoreGuard.EnsureNotSystem(new(request.EventStore, request.Namespace, request.EventSequenceId, request.DraftReadModel?.Identifier));
+        await SystemStoreGuard.EnsureNotSystem(context, new(request.EventStore, request.Namespace, request.EventSequenceId, request.DraftReadModel?.Identifier), StoreAccess.Manage);
+        request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
         var storage = serviceProvider.GetRequiredService<IStorage>();
+        if (languageService.IsGraphDeclaration(request.Declaration ?? string.Empty))
+        {
+            return await SaveGraph(request, storage);
+        }
+
         var allReadModels = await storage.GetEventStore(request.EventStore).ReadModels.GetAll();
 
         // If a draft read model is provided, include a temporary definition for compilation
@@ -675,5 +716,44 @@ internal sealed class Projections(
         }
 
         return released;
+    }
+
+    bool TryComputeSignature(IEnumerable<Concepts.Projections.Definitions.ProjectionDefinition> projections, Concepts.Projections.ProjectionOwner? fullSetOwner, string? registrant, string? version, out string signature)
+    {
+        // Sharing is an optimization. A registration whose signature cannot be computed is registered as before.
+        try
+        {
+            signature = ProjectionRegistrationSignature.For(projections, fullSetOwner, registrant, version);
+            return true;
+        }
+        catch (Exception exception)
+        {
+            logger.FailedComputingRegistrationSignature(exception);
+            signature = string.Empty;
+            return false;
+        }
+    }
+
+    async Task<SaveProjectionResult> SaveGraph(SaveProjectionRequest request, IStorage storage)
+    {
+        var eventTypeSchemas = await storage.GetEventStore(request.EventStore).EventTypes.GetLatestForAllEventTypes();
+        var compileResult = languageService.CompileGraph(
+            request.Declaration ?? string.Empty,
+            Concepts.Projections.ProjectionOwner.Server,
+            eventTypeSchemas,
+            (Concepts.Observation.EventGenerationDelivery)request.GenerationDelivery);
+
+        return await compileResult.Match(
+            async graph =>
+            {
+                var definition = graph.Projection with { EventSequenceId = request.EventSequenceId };
+                SystemStoreGuard.EnsureNotSystem(new(request.EventStore, definition.Identifier, definition.ReadModel, definition.EventSequenceId));
+
+                var readModelsManager = grainFactory.GetReadModelsManager(request.EventStore);
+                await readModelsManager.RegisterSingle(graph.ReadModel with { ObserverIdentifier = definition.Identifier.Value });
+                await grainFactory.GetGrain<IProjectionsManager>(request.EventStore).Register([definition]);
+                return new SaveProjectionResult();
+            },
+            errors => Task.FromResult(new SaveProjectionResult { Errors = errors.ToContract().Errors }));
     }
 }

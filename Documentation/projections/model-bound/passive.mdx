@@ -1,22 +1,28 @@
 ---
-description: Mark a model-bound Chronicle projection passive with [Passive] so it is queried on demand instead of actively observing events.
+title: Read a Cratis Chronicle model-bound projection on demand
+description: Mark a Cratis Chronicle model-bound projection with Passive to compute state from events on each read instead of maintaining a persistent read model.
 ---
-# Passive Projections
 
-Mark a projection as passive (not actively observing) using `[Passive]`:
+<a id="passive-projections"></a>
+
+A passive model-bound projection in Cratis Chronicle computes a read model from events when you request it, instead of maintaining a persistent copy as events arrive. Use it for occasional reads where computing state on demand is preferable to keeping a stored view up to date.
+
+In C#, apply `[Passive]` from `Cratis.Chronicle.ReadModels` to the read model type:
 
 <ChronicleClientTabs snippet="projections/model-bound/passive/basic" />
+
+The attribute sets `IsActive` to `false` on the projection definition. Read `MbPassiveHistoricalSnapshot` through `ReadModels.GetInstanceById`, passing the event source ID. Chronicle folds that source's relevant events in memory: it applies them in order to produce the result. Despite the example's name, this is an on-demand view of the source, not a saved historical snapshot.
 
 A read model declaring `[EventStream<TSource>(stream)]` from `Cratis.Chronicle.ReadModels` is implicitly passive, so `[Passive]` is unnecessary. It keeps its event source ID as the key but requires a stream-scoped read. See [Read models scoped to one event stream](../../read-models/per-stream.mdx).
 
 ## When to use
 
-- On-demand projections that are only rebuilt when explicitly requested
-- Historical snapshots
-- Resource-intensive projections that shouldn't run continuously
+Passive projections suit source-local state that you need only occasionally. A read starts from the beginning of the relevant history, and later reads compute the state again. There is no persistent read-model sink or cached result between reads, so read cost grows with the history being processed.
+
+A by-ID read selects one event source. It cannot generally reproduce a stored projection that joins events across sources or aggregates under a custom key. Check [Read-model consistency](../../read-models/consistency.md) before changing an existing projection to passive.
 
 ## Best practices
 
-- Use for expensive projections that are only needed occasionally
-- Consider the trade-off between resource usage and data freshness
-- Ensure you have mechanisms to trigger rebuilds when needed
+Keep the history small enough to process on each read. If a frequently used query would repeatedly fold a long history, a materialized projection, which stores state as events arrive, may be a better fit when eventual consistency is acceptable.
+
+No separate rebuild trigger is needed for an ordinary passive read: requesting the instance computes it. For an example of the read call and more detail on read-time cost, continue with [Using passive projections](../declarative/passive.mdx#using-passive-projections).

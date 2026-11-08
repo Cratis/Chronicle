@@ -94,7 +94,7 @@ public class CompositeEncryptionKeyStorage : IEncryptionKeyStorage, IEvictEncryp
             catch (Exception error)
             {
                 (failures ??= []).Add(error);
-                _logger.ReadingFromInnerStoreFailed(identifier, error);
+                LogFailure(error, () => _logger.ReadingFromInnerStoreFailed(identifier, error));
                 continue;
             }
 
@@ -116,6 +116,7 @@ public class CompositeEncryptionKeyStorage : IEncryptionKeyStorage, IEvictEncryp
 
         if (failures is not null)
         {
+            failures.ThrowIfUnderReview();
             throw new EncryptionKeyStorageUnavailable(identifier, failures);
         }
 
@@ -137,7 +138,7 @@ public class CompositeEncryptionKeyStorage : IEncryptionKeyStorage, IEvictEncryp
             catch (Exception error)
             {
                 (failures ??= []).Add(error);
-                _logger.ReadingFromInnerStoreFailed(identifier, error);
+                LogFailure(error, () => _logger.ReadingFromInnerStoreFailed(identifier, error));
                 continue;
             }
 
@@ -159,6 +160,7 @@ public class CompositeEncryptionKeyStorage : IEncryptionKeyStorage, IEvictEncryp
 
         if (failures is not null)
         {
+            failures.ThrowIfUnderReview();
             throw new EncryptionKeyStorageUnavailable(identifier, failures);
         }
 
@@ -182,7 +184,7 @@ public class CompositeEncryptionKeyStorage : IEncryptionKeyStorage, IEvictEncryp
             }
             catch (Exception error)
             {
-                _logger.MirroringToInnerStoreFailed(identifier, error);
+                LogFailure(error, () => _logger.MirroringToInnerStoreFailed(identifier, error));
             }
         }
 
@@ -223,7 +225,7 @@ public class CompositeEncryptionKeyStorage : IEncryptionKeyStorage, IEvictEncryp
                 // The key is persisted on the primary and is usable. Failing the provisioning would stop every
                 // write of a protected value while a secondary store is unavailable; the read path heals the
                 // secondary the next time the key is asked for.
-                _logger.MirroringToInnerStoreFailed(identifier, error);
+                LogFailure(error, () => _logger.MirroringToInnerStoreFailed(identifier, error));
             }
         }
 
@@ -251,12 +253,13 @@ public class CompositeEncryptionKeyStorage : IEncryptionKeyStorage, IEvictEncryp
             catch (Exception error)
             {
                 (failures ??= []).Add(error);
-                _logger.ReadingFromInnerStoreFailed(identifier, error);
+                LogFailure(error, () => _logger.ReadingFromInnerStoreFailed(identifier, error));
             }
         }
 
         if (failures is not null)
         {
+            failures.ThrowIfUnderReview();
             throw new EncryptionKeyStorageUnavailable(identifier, failures);
         }
 
@@ -269,6 +272,7 @@ public class CompositeEncryptionKeyStorage : IEncryptionKeyStorage, IEvictEncryp
         var failures = await ForEachStore(store => store.SaveFor(eventStore, eventStoreNamespace, identifier, key, revision));
         if (failures.Count > 0)
         {
+            failures.ThrowIfUnderReview();
             throw new EncryptionKeySaveIncomplete(identifier, failures);
         }
     }
@@ -279,6 +283,7 @@ public class CompositeEncryptionKeyStorage : IEncryptionKeyStorage, IEvictEncryp
         var failures = await ForEachStore(store => store.DeleteFor(eventStore, eventStoreNamespace, identifier, revision));
         if (failures.Count > 0)
         {
+            failures.ThrowIfUnderReview();
             throw new EncryptionKeyErasureIncomplete(identifier, failures);
         }
     }
@@ -301,7 +306,7 @@ public class CompositeEncryptionKeyStorage : IEncryptionKeyStorage, IEvictEncryp
             catch (Exception error)
             {
                 (failures ??= []).Add(error);
-                _logger.ReadingFromInnerStoreFailed(identifier, error);
+                LogFailure(error, () => _logger.ReadingFromInnerStoreFailed(identifier, error));
             }
         }
 
@@ -312,6 +317,7 @@ public class CompositeEncryptionKeyStorage : IEncryptionKeyStorage, IEvictEncryp
         // reported incomplete, which is the signal to repeat it.
         if (failures is not null && failures.Count == _inner.Length)
         {
+            failures.ThrowIfUnderReview();
             throw new EncryptionKeyStorageUnavailable(identifier, failures);
         }
 
@@ -324,6 +330,7 @@ public class CompositeEncryptionKeyStorage : IEncryptionKeyStorage, IEvictEncryp
         var failures = await ForEachStore(store => store.RecordErasureFor(eventStore, eventStoreNamespace, identifier));
         if (failures.Count > 0)
         {
+            failures.ThrowIfUnderReview();
             throw new EncryptionKeyErasureIncomplete(identifier, failures);
         }
     }
@@ -334,9 +341,19 @@ public class CompositeEncryptionKeyStorage : IEncryptionKeyStorage, IEvictEncryp
         var failures = await ForEachStore(store => store.AllowNewKeyFor(eventStore, eventStoreNamespace, identifier));
         if (failures.Count > 0)
         {
+            failures.ThrowIfUnderReview();
             throw new EncryptionKeyLifecycleIncomplete(identifier, failures);
         }
     }
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Internal secrets live only in the primary, which is authoritative and which every silo reads, so they converge
+    /// on one stored secret. When the primary cannot hold internal secrets the call fails rather than falling back to
+    /// another store: a secret kept anywhere else would change with the order of the stores.
+    /// </remarks>
+    public Task<EncryptionKey> GetOrAddInternalSecretFor(EventStoreName eventStore, InternalSecretPurpose purpose, EncryptionKey candidate) =>
+        _inner[0].GetOrAddInternalSecretFor(eventStore, purpose, candidate);
 
     /// <inheritdoc/>
     public void EvictFromCache(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
@@ -404,7 +421,7 @@ public class CompositeEncryptionKeyStorage : IEncryptionKeyStorage, IEvictEncryp
                 // protected value reading back empty, which is the outcome an untrue absence causes and the one
                 // this class exists to avoid. A fence only that member holds is missed until it is back, and its
                 // erasure was reported incomplete when it was recorded.
-                _logger.ReadingFromInnerStoreFailed(identifier, error);
+                LogFailure(error, () => _logger.ReadingFromInnerStoreFailed(identifier, error));
             }
         }
 
@@ -423,8 +440,20 @@ public class CompositeEncryptionKeyStorage : IEncryptionKeyStorage, IEvictEncryp
             {
                 // Healing is opportunistic - the caller already holds a usable key, and failing the read because
                 // a store could not be written to would turn an available key into an outage.
-                _logger.HealingInnerStoreFailed(identifier, error);
+                LogFailure(error, () => _logger.HealingInnerStoreFailed(identifier, error));
             }
         }
+    }
+
+    void LogFailure(Exception error, Action log)
+    {
+        if (error is EncryptionKeyIdentifierRefused)
+        {
+            // A store that refuses the identifier is never outvoted by one that has no opinion on it.
+            _logger.InnerStoreRefusedIdentifier();
+            System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(error).Throw();
+        }
+
+        log();
     }
 }

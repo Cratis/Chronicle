@@ -8,6 +8,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Grpc;
+using Cratis.Chronicle.Security;
 
 namespace Cratis.Chronicle.Sequences;
 
@@ -36,6 +37,7 @@ namespace Cratis.Chronicle.Sequences;
 /// Keyed appends travel on their own RPC so a kernel that does not know them answers Unimplemented instead of
 /// ignoring the key (decision 0012).
 /// </remarks>
+[StoreAccess(StoreAccess.Append)]
 [Command]
 [BelongsTo(WellKnownServices.EventSequences)]
 public record AppendOnce(

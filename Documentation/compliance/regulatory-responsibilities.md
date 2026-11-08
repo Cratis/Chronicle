@@ -1,6 +1,6 @@
 ---
 title: Regulatory responsibilities
-description: Which duties under HIPAA, SEC and PCAOB rules, PCI DSS and GDPR transfer rules Chronicle supports today, which you configure, and which stay with your application and deployment.
+description: Cratis Chronicle supports encryption and erasure; HIPAA, SOX, PCI DSS and GDPR compliance remains your system's responsibility.
 ---
 
 You are deciding whether Chronicle can sit in a regulated system, and you need to know who does what. This page separates what Chronicle provides today from what you configure, what stays yours, and what is only planned.
@@ -78,7 +78,7 @@ Chapter V is a transfer regime. It is not a blanket rule that data must stay in 
 |---|---|---|
 | Decide where data may be stored and processed | **Your responsibility** | An event store and a namespace are logical boundaries. They are not a jurisdiction. |
 | Choose and document the transfer basis | **Your responsibility** | Chronicle cannot know who receives your data. |
-| Erase a subject's personal data on request | **Built in** (for protected values) | See [Erasing a subject](./erasing-a-subject.mdx) and [The encryption key lifecycle](./key-lifecycle.mdx#erasure-reaches-every-event-store-in-the-namespace). |
+| Erase a subject's personal data on request | **Built in** (key erasure for protected values) | Key erasure does not remove every copy or complete your GDPR duties. See [Erasing a subject](./erasing-a-subject.mdx), [The encryption key lifecycle](./key-lifecycle.mdx#erasure-reaches-every-event-store-in-the-namespace) and [Known limits](#known-limits). |
 
 ## Where your data goes: the boundary inventory
 
@@ -109,7 +109,7 @@ For configuration, see [Compliance storage](/chronicle/hosting/configuration/com
 
 ## Read and access auditing
 
-When authentication is enabled, the kernel requires an authenticated caller. When it is disabled, every request is allowed. Chronicle has no authorization model that distinguishes roles, actions, event stores, namespaces, subjects or purposes, so authentication is not least privilege. Authorization on the kernel side is **Planned** in [#1965](https://github.com/Cratis/Chronicle/issues/1965).
+When authentication is enabled, Chronicle enforces administrator authorization for administrator management and System-store access. Some operational authorization checks run in audit mode by default: they log would-be denials and allow the operation to continue. Review [authentication and administrator authorization](../hosting/configuration/authentication.md#administrator-authorization), including `enforceAdministratorPolicyForOperations`, before relying on those checks. When authentication is disabled, administrator checks allow all callers. Authentication alone is not least privilege; you remain responsible for deciding who may access your application's data and for what purpose. Related authorization work is tracked in [#1965](https://github.com/Cratis/Chronicle/issues/1965).
 
 The `CausedBy` identity on an append is supplied by the calling client. It records what the client asserts, which is often a service rather than the end user. Reads do not produce a durable record of actor, purpose, resource and outcome. That record is **Your responsibility**, through your IAM, SIEM or application audit. Actor-attributed administration of key erasure is **Planned** in [#3793](https://github.com/Cratis/Chronicle/issues/3793).
 
@@ -133,10 +133,10 @@ For what erasure and redaction reach, see [Erasing a subject](./erasing-a-subjec
 
 ## Known limits
 
-These open issues describe gaps that affect regulated use.
+These limits affect regulated use. The linked issues track related work.
 
-- [#4978](https://github.com/Cratis/Chronicle/issues/4978): An erased encryption key can still decrypt personal data on cached and unvalidated release paths.
-- [#4979](https://github.com/Cratis/Chronicle/issues/4979): Encryption key saves and erasure fence writes are not atomic or monotonic on any key store.
+- [#4978](https://github.com/Cratis/Chronicle/issues/4978): Erasure invalidates key caches, but individual key-store reads do not all validate the erasure fence. Stale or recovered key material can still permit decryption. See [key-store erasure guarantees](./key-store-erasure-guarantees.md).
+- [#4979](https://github.com/Cratis/Chronicle/issues/4979): Persistent backends check the erasure fence and write key material in separate operations. A save or provisioning operation already in flight can persist a key after deletion. Stop forwarding and appends for the subject, then repeat erasure.
 - [#4980](https://github.com/Cratis/Chronicle/issues/4980): Materialized read models are not rebuilt after redaction or revision when their key differs from the event's source.
 - [#4599](https://github.com/Cratis/Chronicle/issues/4599): Deferred projection futures persist `[PII]` and `[Encrypted]` child values in plaintext.
 

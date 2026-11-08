@@ -22,6 +22,6 @@ public class and_storage_admission_never_recovers : given.a_startup_task
     [Fact] void should_not_keep_a_driver_inner_exception() => _failure!.InnerException.ShouldBeNull();
     [Fact] void should_preserve_the_transient_storage_failure() => SiblingSiloInstability.IsTransient(_failure!).ShouldBeTrue();
     [Fact] void should_keep_the_original_storage_diagnostics() => _failure!.Message.ShouldEqual("MongoDB.Driver.MongoWaitQueueFullException: Planted storage admission overload");
-    [Fact] void should_stop_after_five_attempts() => _reactors.Received(5).DiscoverAndRegister(Concepts.EventStoreName.System, Concepts.EventStoreNamespaceName.Default);
+    [Fact] void should_stop_after_ten_rounds_of_five_attempts() => _reactors.Received(50).DiscoverAndRegister(Concepts.EventStoreName.System, Concepts.EventStoreNamespaceName.Default);
     [Fact] void should_not_report_bootstrap_complete() => _bootstrapClientsEnsured.ShouldBeFalse();
 }

@@ -1,13 +1,14 @@
 ---
-description: Build read models with child collections in a declarative Chronicle projection by declaring how children are identified, added, updated and removed.
+title: "Cratis Chronicle projections: build child collections"
+description: "Build child collections in a Cratis Chronicle read model by mapping events to a parent key and a child key, then defining updates and removals."
 ---
-# Projection with children
+<a id="projection-with-children"></a>
 
-Projections can manage hierarchical data by defining child collections. This allows you to build read models that contain arrays or lists of related data.
+Child collections in Cratis Chronicle let you keep related items inside one read model, such as members inside a group. Configure both the parent key, which selects the group, and the child key, which selects the member to add, update, or remove.
 
 ## Defining a projection with children
 
-Use the child-collection builder to select the collection property, declare how each child is identified, and map the events that add, update, or remove items.
+Use `Children` to select the collection property, then `IdentifiedBy()` to select the property that identifies each stored child. Each event mapping supplies the child key with `UsingKey()`. The example maps group details at the root and membership changes inside `Members`.
 
 <ChronicleClientTabs snippet="projections/declarative/children/basic" />
 
@@ -19,25 +20,23 @@ The read model includes a collection property for the children:
 
 ## Event definitions
 
-Events that affect children use keys to identify which child to update:
+Membership events carry a `UserId` so the projection can find the affected member. The event source ID will identify the parent group in this example:
 
 <ChronicleClientTabs snippet="projections/declarative/children/events" />
 
 ## How children work
 
-1. **Root events** (`GroupCreated`) update properties on the main read model
-2. **Child events** (`UserAddedToGroup`, `UserRoleChanged`) are routed to child items
-3. `IdentifiedBy()` specifies how to identify child items (by `UserId` in this example)
-4. `UsingKey()` tells the projection which property contains the child identifier
-5. Child items are created, updated, or remain unchanged based on the events
+The root `From` mapping updates group details. The mappings inside `Children` update members instead. For each membership event, Chronicle first resolves the parent group, then matches the event's child key against the property selected by `IdentifiedBy()`.
+
+A member with that key is updated if it exists, or added if it does not. Removal uses a separate `RemovedWith<>()` mapping.
 
 ## Parent key resolution
 
-By default, when a child event is processed, the framework uses the **EventSourceId** to identify the parent. This works well when the event is appended with the parent's identifier as the EventSourceId.
+By default, Chronicle uses `EventSourceId`, the identifier attached when the event is appended, as the parent key. Leave that default when membership events are appended under the group's ID. Choose a parent key from event content when they are appended under another ID, such as the user's.
 
 ### Default behavior (EventSourceId as parent key)
 
-In most scenarios, you don't need to specify the parent key explicitly:
+When the event source ID is the group's ID, only the child key needs an explicit mapping:
 
 <ChronicleClientTabs snippet="projections/declarative/children/default-parent-key" />
 
@@ -45,11 +44,11 @@ When you append the event:
 
 <ChronicleClientTabs snippet="projections/declarative/children/default-parent-key-append" />
 
-The `groupId` (EventSourceId) is automatically used to find the parent `Group`.
+The `groupId` passed to `Append` selects the parent group. The event's `UserId` selects the member within it.
 
 ### Extracting parent key from event content
 
-If your event contains the parent key as a property (instead of using EventSourceId), use `UsingParentKey()`:
+Use `UsingParentKey()` when the event contains the parent's ID but is appended under a different event source ID:
 
 <ChronicleClientTabs snippet="projections/declarative/children/event-parent-key" />
 
@@ -57,46 +56,40 @@ When you append the event:
 
 <ChronicleClientTabs snippet="projections/declarative/children/event-parent-key-append" />
 
-The `groupId` property from the event content is used to find the parent `Group`.
+Here, the event is appended under `userId`. Its `GroupId` property selects the parent group, and `UserId` still selects the member.
 
 ### Using EventSourceId explicitly with UsingParentKeyFromContext
 
-In some advanced scenarios, you might want to explicitly indicate that the EventSourceId should be used as the parent key (e.g., for documentation clarity):
+Use `UsingParentKeyFromContext(ctx => ctx.EventSourceId)` if you want the default parent-key choice to be visible in the definition:
 
 <ChronicleClientTabs snippet="projections/declarative/children/context-parent-key" />
 
-This is functionally equivalent to not specifying the parent key at all, but can make the intent clearer in complex projections.
+This selects the same parent as leaving the parent key unspecified.
 
 ### When to use each approach
 
-- **No parent key specified** (default): Use when EventSourceId represents the parent identifier
-- **`UsingParentKey(e => e.Property)`**: Use when parent identifier is in the event content
-- **`UsingParentKeyFromContext(ctx => ctx.EventSourceId)`**: Use for explicit documentation of default behavior
+| Parent identifier location | Mapping |
+| --- | --- |
+| Event source ID | Leave the parent key unspecified. |
+| Event content | Use `UsingParentKey(e => e.Property)`. |
+| Event source ID, stated explicitly | Use `UsingParentKeyFromContext(ctx => ctx.EventSourceId)`. |
 
 ## Child lifecycle
 
-- **Adding children**: When a new event arrives with a previously unseen key, a new child is created
-- **Updating children**: When an event arrives with an existing key, that child is updated
-- **Removing children**: Use `RemovedWith<>()` to specify which events remove child items
+A `From` mapping adds a child when its key is new and updates the child when the key already exists. This means an event named as an update can also create a missing child. Use `RemovedWith<>()` for removal rather than mapping a deletion event through `From`.
 
 ## Removing children
 
-The `RemovedWith<>()` method specifies how to remove child items from collections:
+Configure the removal event with the same child-key strategy used by the add and update mappings:
 
 <ChronicleClientTabs snippet="projections/declarative/children/removing" />
 
-When a `UserRemovedFromGroup` event is processed:
-
-1. The projection looks up the child using the specified key (`e.UserId`)
-2. If found, the child is removed from the collection
-3. If not found, the event is ignored
-
-You can also remove children conditionally or based on other criteria by using multiple `RemovedWith<>()` calls.
+When the removal event arrives, Chronicle finds the member by `e.UserId` and removes it. If no member has that key, the collection stays unchanged. Add separate `RemovedWith<>()` mappings for other event types that remove members.
 
 ## Multiple child collections
 
-A single projection can have multiple child collections:
+Call `Children` for each collection the read model needs. Each collection has its own identity and event mappings:
 
 <ChronicleClientTabs snippet="projections/declarative/children/multiple-collections" />
 
-This pattern allows you to build rich, hierarchical read models from events.
+If a child needs several values to identify it, continue with [composite keys](./composite-keys). For an object without a collection, use a [nested projection](./nested).

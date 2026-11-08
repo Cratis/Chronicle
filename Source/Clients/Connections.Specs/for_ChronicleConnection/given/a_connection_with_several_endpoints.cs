@@ -23,6 +23,7 @@ public class a_connection_with_several_endpoints : Specification
     protected static readonly ChronicleServerAddress _c = new("node-c", 35000);
 
     protected ChronicleConnection _connection;
+    protected a_logger_that_remembers_messages<ChronicleConnection> _logger;
     protected ManualTimeProvider _time;
     protected IConnectionLifecycle _lifecycle;
     protected ILoadBalancerStrategy _loadBalancer;
@@ -39,6 +40,7 @@ public class a_connection_with_several_endpoints : Specification
     readonly object _changeGate = new();
     TaskCompletionSource _changed = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
+    protected virtual ChronicleConnectionString ConnectionString => ChronicleConnectionString.Default;
     protected virtual IReadOnlyList<ChronicleServerAddress> Servers => [_a, _b];
     protected virtual bool WatchdogTicksQuickly => false;
     protected virtual bool SkipCompatibilityCheck => true;
@@ -47,6 +49,7 @@ public class a_connection_with_several_endpoints : Specification
     void Establish()
     {
         _time = new ManualTimeProvider();
+        _logger = new a_logger_that_remembers_messages<ChronicleConnection>();
         _cancellation = new CancellationTokenSource();
         _candidatesOffered = [];
         _servedBy = [];
@@ -131,7 +134,7 @@ public class a_connection_with_several_endpoints : Specification
     void CreateConnection(IChronicleServerAddressResolver resolver)
     {
         _connection = new ChronicleConnection(
-            ChronicleConnectionString.Default,
+            ConnectionString,
             ConnectTimeoutSeconds,
             null,
             null,
@@ -140,7 +143,7 @@ public class a_connection_with_several_endpoints : Specification
             Substitute.For<ICorrelationIdAccessor>(),
             NullLoggerFactory.Instance,
             _cancellation.Token,
-            NullLogger<ChronicleConnection>.Instance,
+            _logger,
             skipTlsValidation: true,
             skipCompatibilityCheck: SkipCompatibilityCheck,
             skipKeepAlive: SkipKeepAlive,

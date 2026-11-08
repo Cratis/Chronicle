@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Storage.Events.Constraints;
+using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Constraints;
@@ -39,7 +40,7 @@ public class ConstraintsStorage(EventStoreName eventStore, IDatabase database) :
 
         // Materialize before sorting — SQLite EF cannot translate OrderByDescending on a ulong.
         var existingByName = await scope.DbContext.Constraints
-            .Where(_ => _.Name == definition.Name.Value)
+            .WhereExact(scope.DbContext, _ => _.Name, definition.Name.Value)
             .ToListAsync();
         var existing = existingByName.OrderByDescending(_ => _.Version).FirstOrDefault();
 

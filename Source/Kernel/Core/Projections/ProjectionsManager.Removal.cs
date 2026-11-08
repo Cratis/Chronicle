@@ -32,6 +32,7 @@ public partial class ProjectionsManager
         // Registration holds the same non-reentrant turn as removal. Timers and namespace reconciliation
         // deliberately interleave, so fence new work and drain captured passes before deleting anything.
         // Keep the fence on failure: a retry completes cleanup; only an explicit registration revives it.
+        _lastRegistrationSignature = null;
         _removingProjections.Add(identifier);
         await Task.WhenAll(_subscriptionPasses.ToArray());
         var namespaces = await GrainFactory.GetGrain<INamespaces>(_eventStoreName).GetAll();

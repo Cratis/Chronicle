@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
+using Cratis.Chronicle.Storage.Graphs;
 using Cratis.Types;
 
 namespace Cratis.Chronicle.Storage.Sinks;
@@ -26,6 +27,7 @@ public class Sinks(
     readonly Dictionary<SinkTypeId, ISinkFactory> _factories = sinkFactories.Where(_ => _ is not null).ToDictionary(_ => _.TypeId, _ => _);
     readonly ConcurrentDictionary<SinkKey, SinkEntry> _sinks = new();
     readonly ConcurrentDictionary<SinkKey, SemaphoreSlim> _gates = new();
+    readonly ConcurrentDictionary<SinkKey, GraphSinkEntry> _graphSinks = new();
 
     /// <inheritdoc/>
     public Task<ISink> GetFor(ReadModelDefinition readModel) => Get(readModel, initialize: true);
@@ -36,6 +38,26 @@ public class Sinks(
     /// <inheritdoc/>
     public Task<ISink> GetFor(ReadModelDefinition readModel, ReadModelContainerName container) =>
         GetFor(readModel with { ContainerName = container });
+
+    /// <inheritdoc/>
+    public Task<IGraphSink> GetGraphFor(ReadModelDefinition readModel)
+    {
+        ThrowIfUnknownSink(readModel.Sink.Type);
+        if (_factories[readModel.Sink.Type] is not IGraphSinkFactory factory)
+        {
+            throw new SinkIsNotAGraphSink(readModel.Sink.Type);
+        }
+
+        var key = new SinkKey(readModel.Sink.Type, readModel.Sink.Configuration, readModel.ContainerName, readModel.Sink.EventSequence);
+
+        // A graph sink is built from the graph the read model declares, so a read model whose declaration changed - a node or an edge added, say -
+        // needs a sink that knows the new graph. Serving the sink of the old one refuses every element the old graph did not have.
+        return _graphSinks.AddOrUpdate(
+            key,
+            static (_, state) => GraphSinkEntry.For(state.Factory, state.EventStore, state.Namespace, state.ReadModel),
+            static (_, existing, state) => SameDefinition(existing.Definition, state.ReadModel) ? existing : GraphSinkEntry.For(state.Factory, state.EventStore, state.Namespace, state.ReadModel),
+            (Factory: factory, EventStore: eventStoreName, Namespace: eventStoreNamespaceName, ReadModel: readModel)).Sink.Value;
+    }
 
     /// <inheritdoc/>
     public bool HasType(SinkTypeId typeId) => _factories.ContainsKey(typeId);
@@ -104,6 +126,19 @@ public class Sinks(
     }
 
     sealed record SinkEntry(ISink Sink, ReadModelDefinition Definition, bool Initialized);
+
+    sealed record GraphSinkEntry(Lazy<Task<IGraphSink>> Sink, ReadModelDefinition Definition)
+    {
+        internal static GraphSinkEntry For(IGraphSinkFactory factory, EventStoreName eventStore, EventStoreNamespaceName @namespace, ReadModelDefinition readModel) =>
+            new(new(() => Create(factory, eventStore, @namespace, readModel)), readModel);
+
+        static async Task<IGraphSink> Create(IGraphSinkFactory factory, EventStoreName eventStore, EventStoreNamespaceName @namespace, ReadModelDefinition readModel)
+        {
+            var sink = factory.CreateGraphFor(eventStore, @namespace, readModel);
+            await sink.EnsureSchema();
+            return sink;
+        }
+    }
 
     sealed record SinkKey(SinkTypeId TypeId, SinkConfigurationId ConfigurationId, ReadModelContainerName ContainerName, EventSequenceSinkConfiguration? EventSequence);
 }

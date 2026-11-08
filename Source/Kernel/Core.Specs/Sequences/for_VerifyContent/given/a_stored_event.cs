@@ -38,7 +38,7 @@ public class a_stored_event : Specification
         };
         _stored = _stored with { Context = _stored.Context with { AppendedGeneration = 1 } };
         _storage.GetEventStore("store").GetNamespace("tenant").GetEventSequence("log")
-            .GetRange(EventSequenceNumber.First, EventSequenceNumber.First).Returns(_cursor);
+            .GetRangeWithHistory(EventSequenceNumber.First, EventSequenceNumber.First).Returns(_cursor);
         var serializer = new Storage.InMemory.EventSequences.EventSequenceStorage("store", "tenant", "log", new Storage.InMemory.Identities.IdentityStorage());
         _storage.GetEventStore("store").GetNamespace("tenant").GetEventSequence("log")
             .SerializeContentForVerification(Arg.Any<ExpandoObject>(), Arg.Any<JsonSchema>())

@@ -275,10 +275,13 @@ module Invoicing
       specification IssuingOnMonday
         given clock "2026-10-05T07:00:00Z"
         when clock "2026-10-05T07:30:00Z"
-        then CollectionsDigestIssued
-          for "weekly"
-          issuedAt = "2026-10-05T07:30:00Z"
+        then invokes IssueCollectionsDigest
+          period = "weekly"
 ```
+
+Each slice proves its own link (Screenplay decision 0115): the automation states the
+command it invokes with `then invokes` (ESM v34), and `IssuingTheDigest` in the command's
+slice states `CollectionsDigestIssued`.
 
 At the example's verified Screenplay version, iterating the overdue items needs code (a clock trigger reads the whole view and takes
 no `by`); see `cratis-screenplay-automations-and-translations`. A reaction that `produces`

@@ -34,8 +34,8 @@ per tool call and read each result from its exit status, never from a grep of th
 | Drift or pending-change check | the same command plus `--check` (and `--scope`, `--force` as used) | no write, no recovery: exit 0 current, 6 `changes_pending`, 5 planning failure, refusal or pending recovery |
 | Bundled-binder check | `cratis screenplay validate --executable <root>` | exit 5 with "does not bind into an executable semantic model" when it does not; never renders or writes. Uses the bundled compiler, not the standalone pin |
 | Debug build | `dotnet build <dir>/<Project>.csproj -c Debug` | the build's exit status |
-| Debug tests | `dotnet test <dir>/<Project>.csproj -c Debug --no-build` | the test runner's exit status plus per-test results |
-| List the generated classes | `dotnet test <dir>/<Project>.csproj -c Debug --no-build --list-tests` | the names to map to specifications |
+| Debug tests | `dotnet test <dir>/<Project>.csproj -c Debug --no-build` after the Debug build (Stage-rendered apps use VSTest) | the test runner's exit status plus per-test results |
+| List the generated classes | `dotnet test <dir>/<Project>.csproj -c Debug --no-build --list-tests` | the names to map to specifications; listing is not execution |
 
 `<Project>` is the project name the render used: the `--project-name` value when one was given,
 otherwise the application name. Confirm it from the published `*.csproj` in the destination

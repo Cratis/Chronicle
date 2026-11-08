@@ -4,6 +4,7 @@
 using System.Reactive.Subjects;
 using System.Text.Json;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Storage.EventSequences.Mutations;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Chronicle.Storage.Sql.EventStores;
 using Cratis.Types;
@@ -27,7 +28,15 @@ namespace Cratis.Chronicle.Storage.Sql.Cluster;
 /// <param name="jsonSerializerOptions">The configured <see cref="JsonSerializerOptions"/> including all concept converters.</param>
 /// <param name="converter">The schema-aware content converter.</param>
 /// <param name="loggerFactory">Optional <see cref="ILoggerFactory"/> for the storage created for each event store.</param>
-public class ClusterStorage(IDatabase database, IInstancesOf<ISinkFactory> sinkFactories, Choreography.Storage.IJobsStorage jobsStorage, JsonSerializerOptions jsonSerializerOptions, Json.IExpandoObjectConverter converter, ILoggerFactory? loggerFactory = null) : IClusterStorage, IDisposable
+/// <param name="mutationDigestKeys">The source of mutation digest keys; without one, every mutation fails closed.</param>
+public class ClusterStorage(
+    IDatabase database,
+    IInstancesOf<ISinkFactory> sinkFactories,
+    Choreography.Storage.IJobsStorage jobsStorage,
+    JsonSerializerOptions jsonSerializerOptions,
+    Json.IExpandoObjectConverter converter,
+    ILoggerFactory? loggerFactory = null,
+    IEventSequenceMutationDigestKeys? mutationDigestKeys = null) : IClusterStorage, IDisposable
 {
     readonly Subject<IEnumerable<EventStoreName>> _eventStoresSubject = new();
 
@@ -60,7 +69,7 @@ public class ClusterStorage(IDatabase database, IInstancesOf<ISinkFactory> sinkF
     /// <inheritdoc/>
     public IEventStoreStorage CreateStorageForEventStore(EventStoreName eventStore, SinksFactory sinksFactory)
     {
-        return new EventStoreStorage(eventStore, database, sinkFactories, jobsStorage, jsonSerializerOptions, converter, loggerFactory);
+        return new EventStoreStorage(eventStore, database, sinkFactories, jobsStorage, jsonSerializerOptions, converter, loggerFactory, mutationDigestKeys);
     }
 
     /// <inheritdoc/>

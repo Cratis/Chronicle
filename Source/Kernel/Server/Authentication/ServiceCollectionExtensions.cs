@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 using OpenIddict.Validation.AspNetCore;
 using User = Cratis.Chronicle.Storage.Security.User;
 
@@ -136,6 +137,7 @@ public static class ServiceCollectionExtensions
                 options.Authority = chronicleOptions.Authentication.Authority;
                 options.Audience = chronicleOptions.Authentication.Audience;
                 options.RequireHttpsMetadata = chronicleOptions.Authentication.RequireHttpsMetadata;
+                options.TokenValidationParameters.AuthenticationType = ExternalAuthority.AuthenticationType;
             });
         }
 
@@ -172,7 +174,10 @@ public static class ServiceCollectionExtensions
     static void AddAdministratorAuthorizationHandlers(this IServiceCollection services)
     {
         services.AddChronicleAdministratorAuthorization();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IValidateOptions<Configuration.ChronicleOptions>, ExternalAdministratorClaimValidation>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IValidateOptions<Configuration.ChronicleOptions>, EventStoreAccessConfigurationValidation>());
         services.AddHostedService<AdministratorPolicyStartupWarning>();
+        services.AddHostedService<StoreEntitlementsStartupNotice>();
     }
 
     static AuthorizationBuilder AddAdministratorPolicies(this AuthorizationBuilder builder, params string[] authenticationSchemes) => builder

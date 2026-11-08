@@ -1,6 +1,6 @@
 ---
 name: cratis-chronicle-decision-reads
-description: Choose which mechanism makes a write-side rule hold (constraint, Arc read protection with read-model parameters and validators, per-stream read model, stream decision, aggregate, explicit scope, reactor repair or an advisory read), and guard a Chronicle decision directly with IDecisionReads, projection admission, ambient unit-of-work enrollment and commit conflict handling. Use when an append must remain valid for the facts read, when a rule must hold under concurrent writers, when choosing whole-source versus stream-scoped reads, or diagnosing ReadChanged, DecisionReadRefused and scope conflicts. Do not use for ordinary query reads or append-time uniqueness alone; Arc command shapes belong to cratis-arc-command.
+description: Use when a Chronicle write decision must remain valid under concurrent writers, its read scope is unclear or commit read conflicts occur. Not for ordinary query reads or append-time uniqueness alone.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-chronicle-decision-reads/SKILL.md -->
@@ -189,12 +189,16 @@ deciding writer is guarded or the rule is a constraint.
 
 ## Verify
 
-- The model is admitted and the read is protected and enrolled in the intended
-  store, namespace and stream before staging events.
-- Refusal is surfaced, never replaced by a materialized/unprotected read.
-- One owner completes or rolls back; nested code does neither behind it.
-- Competing relevant events cause rejection; unrelated events outside the guard
-  do not. Absence, empty checked append and stream isolation have specifications.
-- Scope conflicts, lifecycle violations and failed commit remain visible.
-- Real-client/kernel integration proves the concurrency boundary; a default
+- Review production enrollment in the intended store, namespace and stream;
+  surface refusal and never replace it with an unprotected read. One owner completes.
+- Application specs call `Handle()` or the validator directly with supplied state.
+  Their only decision-read spec obligation is one cheap assembly-level
+  `DecisionReadAdmissions.ShouldAdmitDecisionReadsIn(assembly)` check of the
+  application's own model/projection shapes; see the
+  [scenario rule](../../rules/specs.scenarios.csharp.md).
+- Arc/Chronicle specs alone prove platform conflict refusal, relevant/irrelevant
+  changes, absence guards, empty checked appends, isolation and commit lifecycle.
+  Their real-client/kernel integration proves the boundary; a default
   `EventScenario` scope strategy returning `None` is not concurrency evidence.
+- Application specs never simulate competing appends or repeat that matrix.
+  Never weaken production guards for spec speed.

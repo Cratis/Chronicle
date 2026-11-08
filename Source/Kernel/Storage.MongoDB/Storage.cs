@@ -6,6 +6,7 @@ using System.Reactive.Subjects;
 using System.Text.Json;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Configuration;
+using Cratis.Chronicle.Storage.EventSequences.Mutations;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Reactive;
 using Cratis.Types;
@@ -26,6 +27,7 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// <param name="options"><see cref="ChronicleOptions"/>.</param>
 /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
 /// <param name="systemEventStoreRelocation"><see cref="ISystemEventStoreRelocation"/> for moving the System event store's databases.</param>
+/// <param name="mutationDigestKeys">The source of mutation digest keys; without one, every mutation fails closed.</param>
 public class Storage(
     IDatabase database,
     Json.IExpandoObjectConverter expandoObjectConverter,
@@ -34,7 +36,8 @@ public class Storage(
     Cratis.Choreography.Storage.IJobsStorage jobsStorage,
     IOptions<ChronicleOptions> options,
     ILoggerFactory loggerFactory,
-    ISystemEventStoreRelocation systemEventStoreRelocation) : IStorage
+    ISystemEventStoreRelocation systemEventStoreRelocation,
+    IEventSequenceMutationDigestKeys? mutationDigestKeys = null) : IStorage
 {
     readonly ConcurrentDictionary<EventStoreName, IEventStoreStorage> _eventStores = new(CaseInsensitiveEventStoreNameComparer.Instance);
 
@@ -44,6 +47,9 @@ public class Storage(
     /// <inheritdoc/>
     public Task<IReadOnlyDictionary<EventStoreName, Concepts.Projections.Generations.Enablement.GenerationFloor>> ReadGenerationFloors() =>
         new ClusterStorage(database, expandoObjectConverter, jsonSerializerOptions, jobsStorage, options, loggerFactory).ReadGenerationFloors();
+
+    /// <inheritdoc/>
+    public Task<string?> FindMisplacedSystemEventStoreData() => systemEventStoreRelocation.FindMisplacedData();
 
     /// <inheritdoc/>
     public Task MoveSystemEventStoreTo(SystemEventStoreLocation location) => systemEventStoreRelocation.MoveTo(location);
@@ -101,7 +107,8 @@ public class Storage(
             @namespace => new Chronicle.Storage.Sinks.Sinks(eventStore, @namespace, sinkFactories),
             jobsStorage,
             options,
-            loggerFactory);
+            loggerFactory,
+            mutationDigestKeys);
 
         return _eventStores.GetOrAdd(eventStore, created);
     }

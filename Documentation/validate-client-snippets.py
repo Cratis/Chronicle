@@ -138,6 +138,75 @@ EVENT_SOURCES_PREFIX = "event-sources/"
 EVENT_SOURCES_NAMESPACE_ROOT = "Cratis.Chronicle.Docs.EventSourceGuides"
 
 
+# The graph projection snippets declare the same node and edge types with different shapes
+# (Group appears with and without a counter), so each one compiles in a generator-only namespace
+# of its own. The namespace supplies the using directives and the stand-in events and types the
+# snippet refers to but does not declare; a statement snippet is wrapped in a method.
+GRAPH_PREFIX = "projections/graph/"
+GRAPH_NAMESPACE_ROOT = "Cratis.Chronicle.Docs.GraphProjections"
+GRAPH_USINGS = """
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Keys;
+using Cratis.Chronicle.Projections.Graphs;
+using Cratis.Chronicle.Projections.ModelBound;
+using Cratis.Chronicle.Sinks;
+using Cratis.Chronicle.Testing.Graphs;
+using Microsoft.Extensions.DependencyInjection;
+""".strip()
+GRAPH_EVENTS = """
+[EventType] public record PersonRegistered(Guid PersonId, string Name);
+[EventType] public record PersonRemoved(Guid PersonId);
+[EventType] public record GroupCreated(Guid GroupId, string Name);
+[EventType] public record MemberAdded(Guid PersonId, Guid GroupId);
+[EventType] public record MemberRemoved(Guid PersonId, Guid GroupId);
+[EventType] public record PlaceVisited(Guid PersonId, Guid PlaceId, Guid VisitId);
+""".strip()
+GRAPH_MODEL = """
+[Graph("Organization")] [Node] [FromEvent<PersonRegistered>] public record Person([Key] Guid PersonId, string Name);
+[Graph("Organization")] [Node] [FromEvent<GroupCreated>] public record Group([Key] Guid GroupId, string Name);
+[Graph("Organization")] [Edge("MEMBER_OF")] [EdgeFrom<MemberAdded>(sourceKey: nameof(MemberAdded.PersonId), targetKey: nameof(MemberAdded.GroupId))]
+public record MemberOf([Source<Person>] Guid PersonId, [Target<Group>] Guid GroupId, DateTimeOffset Since);
+""".strip()
+GRAPH_STAND_INS = {
+    "projections/graph/model-bound": "",
+    "projections/graph/counters": "",
+    "projections/graph/fluent": GRAPH_MODEL,
+    "projections/graph/identified-edge": """
+[Graph("Organization")] [Node] [FromEvent<PersonRegistered>] public record Person([Key] Guid PersonId, string Name);
+[Graph("Organization")] [Node] public record Place([Key] Guid PlaceId);
+""".strip(),
+    "projections/graph/sink": "",
+    "projections/graph/testing": GRAPH_MODEL,
+}
+GRAPH_BODY_SNIPPETS = {
+    "projections/graph/sink": """
+        IServiceCollection services = new ServiceCollection();
+    """,
+    "projections/graph/testing": """
+        var personId = Guid.NewGuid();
+        var groupId = Guid.NewGuid();
+    """,
+}
+
+
+def graph_namespace(relative_path: str) -> str | None:
+    if not relative_path.startswith(GRAPH_PREFIX):
+        return None
+
+    snippet = relative_path[len(GRAPH_PREFIX):]
+    return f"{GRAPH_NAMESPACE_ROOT}.{''.join(part.capitalize() for part in snippet.split('-'))}"
+
+
+def graph_declaration(relative_path: str, snippet_usings: list[str], body: str) -> str:
+    namespace = graph_namespace(relative_path)
+    usings = "\n".join(sorted(set(GRAPH_USINGS.splitlines()) | set(snippet_usings)))
+    if relative_path in GRAPH_BODY_SNIPPETS:
+        body = "public static class Example\n{\n" + method(relative_path, GRAPH_BODY_SNIPPETS[relative_path], body) + "\n}"
+    parts = [usings, GRAPH_EVENTS, GRAPH_STAND_INS.get(relative_path, ""), body]
+    content = "\n\n".join(part for part in parts if part)
+    return f"namespace {namespace}\n{{\n{textwrap.indent(content, '    ')}\n}}"
+
+
 def page_namespace(relative_path: str, prefix: str, root: str) -> str | None:
     if not relative_path.startswith(prefix):
         return None
@@ -283,7 +352,10 @@ def generate_source() -> str:
         "using System.Reactive.Linq;",
         "using KernelStorageSql::Orleans.Hosting;",
         "using KernelStorageSql::Cratis.Chronicle.Setup;",
-        "using KernelStorageSql::Cratis.Chronicle.Patching;",
+        "using Cratis.Choreography.Patching;",
+        # The patches snippets' unqualified SemanticVersion is the one above; Cratis.Chronicle.Concepts.System
+        # has its own SemanticVersion concept, so the bare name is otherwise ambiguous.
+        "using SemanticVersion = Cratis.Choreography.Patching.SemanticVersion;",
         "using KernelStorageSql::Cratis.Chronicle.Storage;",
         "using KernelStorageSql::Cratis.Chronicle.Concepts.System;",
         "using Microsoft.Extensions.Logging;",
@@ -327,6 +399,10 @@ def generate_source() -> str:
     for path in files:
         relative_path = snippet_key(path)
         snippet_usings, body = split_usings(extract_snippet(path))
+        if graph_namespace(relative_path) is not None:
+            declarations.append(graph_declaration(relative_path, snippet_usings, body))
+            continue
+
         dcb_ns = dcb_namespace(relative_path) or event_sources_namespace(relative_path)
         if dcb_ns is not None:
             scoped_usings = "\n".join(sorted(set(snippet_usings)))
@@ -425,6 +501,7 @@ def generate_project() -> str:
             <Aliases>KernelStorageSql</Aliases>
         </ProjectReference>
         <PackageReference Include="MongoDB.Driver" />
+        <PackageReference Include="Cratis.Choreography" />
         <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
         <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
         <PackageReference Include="Cratis.Specifications" />

@@ -10,6 +10,7 @@
  *   Claude PreToolUse  (Write|Edit)  →  Pi `tool_call`      →  cratis-guard-writes.sh  (exit 2 = block)
  *   Claude PreToolUse  (Bash)        →  Pi `tool_call`      →  cratis-guard-store-mutations.sh  (exit 2 = block)
  *   Claude PreToolUse  (Bash)        →  Pi `tool_call`      →  cratis-guard-secrets.sh  (exit 2 = block)
+ *   Claude PreToolUse  (Bash)        →  Pi `tool_call`      →  cratis-guard-shell-writes.sh  (exit 2 = block)
  *   Claude PreToolUse  (Bash)        →  Pi `tool_call`      →  cratis-guard-pr-body.sh  (exit 2 = block)
  *   Claude PostToolUse (Write|Edit)  →  Pi `tool_result`    →  cratis-pattern-scan.sh  (advisory context)
  *   Claude PostToolUse (Bash)        →  Pi `tool_result`    →  cratis-cleanup-worktrees.sh --hook  (removes delivered worktrees/branches)
@@ -32,7 +33,7 @@
  * CRATIS_HOOKS_SKIP_GATE, …) still works because the scripts are executed unchanged, in the environment
  * Pi was started from.
  *
- * Only Pi's `bash` tool is bridged to the store-mutation and secrets guards. A command the user types directly (`!cmd`,
+ * Only Pi's `bash` tool is bridged to the store-mutation, secrets and shell-write guards. A command the user types directly (`!cmd`,
  * the `user_bash` event) is the person's own action and is deliberately not guarded.
  */
 
@@ -179,9 +180,9 @@ async function runCommandGuards(
 /**
  * Whether a hook script is installed at all.
  *
- * A repository that ships no hook scripts is a supported configuration — the corpus scripts
- * themselves degrade to a silent no-op when `jq` is missing, on the stated principle that a hook
- * must never break a session. So an absent script is not an error and is not enforced.
+ * A repository that ships no hook scripts is a supported configuration, so an absent script is
+ * not an error and is not enforced. Installed scripts report missing `jq`: guards refuse calls,
+ * the quality gate blocks changed trees, and the advisory pattern scan warns once per session.
  *
  * The dangerous case is the other one: the script is present, so this repository clearly intends
  * the guard to run, but it cannot be executed. That is a broken guard rather than an absent one,
@@ -202,6 +203,7 @@ export default function (pi: ExtensionAPI) {
 	const guardWrites = path.join(scriptsDir, "cratis-guard-writes.sh");
 	const guardStoreMutations = path.join(scriptsDir, "cratis-guard-store-mutations.sh");
 	const guardSecrets = path.join(scriptsDir, "cratis-guard-secrets.sh");
+	const guardShellWrites = path.join(scriptsDir, "cratis-guard-shell-writes.sh");
 	const guardPrBody = path.join(scriptsDir, "cratis-guard-pr-body.sh");
 	const patternScan = path.join(scriptsDir, "cratis-pattern-scan.sh");
 	const qualityGate = path.join(scriptsDir, "cratis-quality-gate.sh");
@@ -230,7 +232,7 @@ export default function (pi: ExtensionAPI) {
 			const command = (event as any).input?.command;
 			if (typeof command !== "string" || !command.trim()) return;
 			const payload = { cwd: ctx.cwd, tool_name: "Bash", tool_input: { command } };
-			const blocked = await runCommandGuards([[guardStoreMutations, "cratis-guard-store-mutations"], [guardSecrets, "cratis-guard-secrets"]], payload, ctx);
+			const blocked = await runCommandGuards([[guardStoreMutations, "cratis-guard-store-mutations"], [guardSecrets, "cratis-guard-secrets"], [guardShellWrites, "cratis-guard-shell-writes"]], payload, ctx);
 			if (blocked) return blocked;
 			if (isInstalled(guardPrBody)) {
 				const run = await runScript(guardPrBody, JSON.stringify(payload), ctx.cwd, ctx.signal);
@@ -395,7 +397,7 @@ export default function (pi: ExtensionAPI) {
 				const last = latestGateLog(gateLogDirectory(sessionId), started);
 				const tail = last ? tailLines(last.file, TAIL_LINES) : "";
 				throw new Error(`The Cratis quality gate TIMED OUT after ${duration(timeoutSeconds * 1000)}${last ? ` while running '${last.gate}'${last.cwd ? ` (cwd: ${last.cwd})` : ""}` : ""}. This is not a pass: nothing was verified.` +
-					(last ? `\nRun a narrower command instead: ${last.gate === "backend-specs" ? "dotnet test <affected.Specs.csproj-or-Tests.csproj> --configuration Debug --no-build (replace the placeholder; repeat for affected dependents)." : "run the affected project alone using this gate's configured command."}\nConfigure it in .cratis/ai/quality-gates.project.json.\n\nGate log: ${last.file}` : "") +
+					(last ? `\nRun a narrower command instead: ${last.gate === "backend-specs" ? "./<affected-project-dir>/bin/Debug/<TFM>/<AssemblyName> (or dotnet <TargetPath.dll> without apphost); dotnet test <project> --configuration Debug --no-build only for VSTest. Repeat for affected dependents." : "run the affected project alone using this gate's configured command."}\nConfigure it in .cratis/ai/quality-gates.project.json.\n\nGate log: ${last.file}` : "") +
 					(tail ? `\n\n--- last ${TAIL_LINES} lines ---\n${tail}\n--- end ---` : ""));
 			};
 			const reportInterrupted = () => {

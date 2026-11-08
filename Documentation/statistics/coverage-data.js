@@ -1,5 +1,5 @@
 window.COVERAGE_DATA = {
-  "lastUpdate": 1793800034631,
+  "lastUpdate": 1793822420525,
   "repoUrl": "https://github.com/Cratis/Chronicle",
   "entries": {
     "Cratis.Chronicle": [
@@ -2475,5 +2475,18 @@ window.COVERAGE_DATA = {
         "commit": "2d04391"
       }
     ]
+  },
+  "schemaVersion": 2,
+  "latestAttempt": {
+    "state": "missing",
+    "attemptedAt": 1794122688748,
+    "observer": {
+      "releaseContext": "unverified",
+      "runId": 42458649699,
+      "runAttempt": 1,
+      "executionSha": "f4765fe692aee7a5d17d685d7dce7c023dff7b4a",
+      "requestedVersion": "19.142.1"
+    },
+    "reason": "no scheduled main coverage producer within 30 runs/30 days"
   }
 };

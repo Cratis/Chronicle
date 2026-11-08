@@ -92,6 +92,11 @@ public class Projections(
     internal string? SoftwareVersion { get; init; }
 
     /// <summary>
+    /// Gets the discovery of graph projections, which target a property graph instead of a document read model.
+    /// </summary>
+    internal Graphs.GraphProjections? Graphs { get; init; }
+
+    /// <summary>
     /// Gets the identifier of the current connection, sent with every registration so the kernel knows which live
     /// connection declares the projections. It is optional: a registration without it still succeeds.
     /// </summary>
@@ -347,7 +352,7 @@ public class Projections(
             }
 
             _registeredAtRuntime.Clear();
-            (_explicitRegistrations, _explicitFailures) = BuildExplicitProjections(_discoveredHandlersByModelType);
+            (_explicitRegistrations, _explicitFailures) = BuildExplicitProjections(_discoveredHandlersByModelType, _discoveredContainerNames);
             Compose();
         }
     }
@@ -442,7 +447,7 @@ public class Projections(
 
         lock (_explicitLock)
         {
-            var (registrations, explicitFailures) = BuildExplicitProjections(discoveredHandlersByModelType);
+            var (registrations, explicitFailures) = BuildExplicitProjections(discoveredHandlersByModelType, containerNames);
             ValidateProjectionOwners(DiscoveredOwners(definitionsByType, modelBoundHandlers).Concat(ExplicitOwners(registrations, discoveredHandlersByModelType)));
             _definitionsByType = definitionsByType;
             _handlersByType = handlersByType;
@@ -450,10 +455,13 @@ public class Projections(
             _discoveredHandlersByModelType = discoveredHandlersByModelType;
             _discoveredContainerNames = containerNames;
 
+            Graphs?.Discover();
+
             _discoveredDefinitions =
                 ((IEnumerable<ProjectionDefinition>)[
                     .. _definitionsByType.Values.Select(_ => _).ToList(),
-                    .. modelBoundDefinitions.Values
+                    .. modelBoundDefinitions.Values,
+                    .. Graphs?.Registrations.Select(_ => _.Projection) ?? []
                 ]).ToImmutableList();
 
             _discoveredArtifactRegistrations =
@@ -461,7 +469,8 @@ public class Projections(
                     .. _definitionsByType.Keys.Select(type => new ArtifactRegistration(type, null)),
                     .. modelBoundDefinitions.Keys.Select(type => new ArtifactRegistration(type, null)),
                     .. failures.Select(kvp => new ArtifactRegistration(kvp.Key, kvp.Value)),
-                    .. modelBoundFailures.Select(kvp => new ArtifactRegistration(kvp.Key, kvp.Value))
+                    .. modelBoundFailures.Select(kvp => new ArtifactRegistration(kvp.Key, kvp.Value)),
+                    .. Graphs?.Failures.Select(kvp => new ArtifactRegistration(kvp.Key, kvp.Value)) ?? []
                 ]).ToImmutableList();
 
             _explicitRegistrations = registrations;
@@ -500,7 +509,7 @@ public class Projections(
                 }
 
                 // Built here rather than deferred so that a mistake in the definition reaches the caller who made it.
-                registration = Build(projection);
+                registration = Build(projection, _discoveredContainerNames);
                 ValidateProspectiveOwner(readModelType, registration);
                 _explicitProjections[readModelType] = projection;
                 _registeredAtRuntime.Add(readModelType);
@@ -545,7 +554,7 @@ public class Projections(
     IEnumerable<(Type Owner, ProjectionId Id, bool IsFluent)> CurrentOwners()
     {
         // Pending options recipes also own identifiers, but preflight must not publish their builds.
-        var (registrations, _) = BuildExplicitProjections(_discoveredHandlersByModelType, onlyPending: true);
+        var (registrations, _) = BuildExplicitProjections(_discoveredHandlersByModelType, _discoveredContainerNames, onlyPending: true);
         return DiscoveredOwners(_definitionsByType, _modelBoundHandlers)
             .Concat(ExplicitOwners(registrations, _discoveredHandlersByModelType));
     }
@@ -557,12 +566,13 @@ public class Projections(
     /// Build explicit projections, recording the ones that cannot be built rather than failing discovery.
     /// </summary>
     /// <param name="discoveredHandlers">The discovered projection handlers by read model type.</param>
+    /// <param name="discoveredContainerNames">The discovered container name overrides by read model type.</param>
     /// <param name="onlyPending">Whether to stage only pending recipes, retaining already built registrations and failures.</param>
     /// <remarks>
     /// Must be called while holding the explicit lock. An explicit projection maintaining a read model that discovery
     /// found is dropped when it is the very same model-bound projection, and reported as a failure otherwise.
     /// </remarks>
-    (Dictionary<Type, ExplicitProjectionRegistration> Registrations, Dictionary<Type, Exception> Failures) BuildExplicitProjections(Dictionary<Type, IProjectionHandler> discoveredHandlers, bool onlyPending = false)
+    (Dictionary<Type, ExplicitProjectionRegistration> Registrations, Dictionary<Type, Exception> Failures) BuildExplicitProjections(Dictionary<Type, IProjectionHandler> discoveredHandlers, IReadOnlyDictionary<Type, string> discoveredContainerNames, bool onlyPending = false)
     {
         var registrations = onlyPending ? new Dictionary<Type, ExplicitProjectionRegistration>(_explicitRegistrations) : new Dictionary<Type, ExplicitProjectionRegistration>();
         var failures = onlyPending ? new Dictionary<Type, Exception>(_explicitFailures) : new Dictionary<Type, Exception>();
@@ -586,7 +596,7 @@ public class Projections(
 
             try
             {
-                registrations[readModelType] = Build(projection);
+                registrations[readModelType] = Build(projection, discoveredContainerNames);
             }
 #pragma warning disable CA1031 // One unbuildable read model must not be able to take the rest of the read side with it.
             catch (Exception ex)
@@ -619,12 +629,18 @@ public class Projections(
         logger.RootRemovalViaJoinNotSupported(definition.Identifier, readModelType, string.Join(", ", removedWithJoin));
     }
 
-    ExplicitProjectionRegistration Build(IExplicitProjection projection)
+    /// <summary>
+    /// Build an explicit projection using its override or the discovered container name for its read model.
+    /// </summary>
+    /// <param name="projection">The explicit projection to build.</param>
+    /// <param name="discoveredContainerNames">The discovered container name overrides by read model type.</param>
+    /// <returns>The definition, handler and declared container name override.</returns>
+    ExplicitProjectionRegistration Build(IExplicitProjection projection, IReadOnlyDictionary<Type, string> discoveredContainerNames)
     {
         var definition = projection.Build(new(namingPolicy, eventTypes, jsonSerializerOptions, eventStore.Name?.Value, GenerationDelivery));
         ProjectionGenerationDeliveryValidation.Apply(definition, GenerationDelivery);
         WarnAboutRootRemovalViaJoin(projection.ReadModelType, definition);
-        var handler = CreateHandler(definition, projection.ReadModelType, projection.ContainerNameOverride);
+        var handler = CreateHandler(definition, projection.ReadModelType, projection.ContainerNameOverride ?? discoveredContainerNames.GetValueOrDefault(projection.ReadModelType));
         return new(definition, handler, projection.ContainerNameOverride);
     }
 

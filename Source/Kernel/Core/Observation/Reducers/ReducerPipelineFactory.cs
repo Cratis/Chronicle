@@ -21,13 +21,15 @@ namespace Cratis.Chronicle.Observation.Reducers;
 /// <param name="readModelsCompliance">The <see cref="IReadModelsCompliance"/> for encrypting and decrypting compliance and security fields.</param>
 /// <param name="options">The <see cref="ChronicleOptions"/> holding the read model write configuration.</param>
 /// <param name="expandoObjectConverter">The converter used to serialize committed state for watchers.</param>
+/// <param name="memoryGate">Optional <see cref="ReducerMemoryGate"/> that makes reduces of large states wait for room in the memory budget.</param>
 public class ReducerPipelineFactory(
     IGrainFactory grainFactory,
     IStorage storage,
     IObjectComparer objectComparer,
     IReadModelsCompliance readModelsCompliance,
     IOptions<ChronicleOptions> options,
-    IExpandoObjectConverter? expandoObjectConverter = null) : IReducerPipelineFactory
+    IExpandoObjectConverter? expandoObjectConverter = null,
+    ReducerMemoryGate? memoryGate = null) : IReducerPipelineFactory
 {
     /// <inheritdoc/>
     public async Task<IReducerPipeline> Create(
@@ -47,6 +49,7 @@ public class ReducerPipelineFactory(
             eventStore,
             @namespace,
             options.Value.ReadModels.GuardSinkWritesOnWatermark,
-            expandoObjectConverter);
+            expandoObjectConverter,
+            memoryGate);
     }
 }

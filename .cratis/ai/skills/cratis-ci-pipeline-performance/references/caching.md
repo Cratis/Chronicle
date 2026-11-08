@@ -1,16 +1,18 @@
 <!-- cratis-ai-managed: skills/cratis-ci-pipeline-performance/references/caching.md -->
 # Caching
 
-Use this when a job spends measurable time restoring packages, installing a
-frontend toolchain or rebuilding Docker layers. Check the slowest-steps table
-first: a step under a minute is not worth a cache.
-
 ## Contents
 
 - Shared Cratis cache actions
+- Ephemeral runner pods
 - NuGet and Yarn determinism
+- Locally packed CI packages
 - Docker layer cache
 - Scope, eviction and safety
+
+Use this when a job spends measurable time restoring packages, installing a
+frontend toolchain or rebuilding Docker layers. Check the slowest-steps table
+first: a step under a minute is not worth a cache.
 
 ## Shared Cratis cache actions
 
@@ -36,6 +38,17 @@ key and one path list.
   workflow on that branch never warms one. Add a scheduled warm-up workflow that
   runs the same restore and build.
 
+## Ephemeral runner pods
+
+Cratis self-hosted runners use per-job pods: workspace files, package downloads
+and Docker data disappear with the job. A warm runner or node image does not make
+`~/.nuget/packages`, the Yarn/npm download cache or BuildKit layers persistent.
+Use the shared actions above, or explicit `actions/cache` / `setup-*` dependency
+caching when the shared actions do not fit. Key downloads on the OS, toolchain and
+committed lockfiles (`packages.lock.json`, `yarn.lock` or `package-lock.json`),
+and use remote Docker layer caching below. Do not cache `node_modules` as a
+substitute for an immutable install.
+
 ## NuGet and Yarn determinism
 
 A cache is only as stable as its key. Make the key inputs deterministic.
@@ -48,6 +61,34 @@ A cache is only as stable as its key. Make the key inputs deterministic.
 - Cache the package download directories, not `bin`/`obj` output. Build output
   caches across commits are rarely correct; share build output within a run as an
   artifact instead (see `build-once-and-shard.md`).
+
+## Locally packed CI packages
+
+A repository that packs `0.0.0-ci` repeatedly and tests a consumer can restore an
+older package with the same ID/version from cached `~/.nuget/packages`. NuGet can
+reuse the extracted package without reading the newly packed bytes, so a green
+consumer test may exercise the wrong code. A lockfile cache key alone does not
+fix an unchanged local package version.
+
+Default: pack a unique prerelease version per run and attempt, and make the
+consumer reference that exact version. If the version must stay fixed, set a
+per-run packages folder for **every restore/build/test that can restore** in both
+the producer and consumer, and do not restore the global package cache into it:
+
+```yaml
+env:
+  NUGET_PACKAGES: ${{ runner.temp }}/nuget-${{ github.run_id }}-${{ github.run_attempt }}
+```
+
+Alternatively, after cache restoration and before consumer restore, remove only
+the locally packed package's ID/version directory from the global packages
+folder. Keep unrelated dependency downloads cached. A fresh runner is not enough
+if the workflow restores stale package bytes from a remote cache.
+
+Verify with `dotnet restore <consumer.csproj> --verbosity normal` followed by the
+consumer's focused test command. Pass means restore resolves the newly packed
+ID/version from the intended feed/folder and the test exercises behavior added
+in that package, not merely that a cached restore succeeds.
 
 ## Docker layer cache
 

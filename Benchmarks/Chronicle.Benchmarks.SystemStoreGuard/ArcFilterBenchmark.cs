@@ -1,87 +1,120 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Security.Claims;
 using BenchmarkDotNet.Attributes;
 using Cratis.Arc.Commands;
 using Cratis.Arc.Queries;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Security;
-using Microsoft.AspNetCore.Http;
+using Cratis.Execution;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Cratis.Chronicle.Benchmarks.SystemStoreGuard;
 
-/// <summary>
-/// Measures the Arc query and command filters for a non-System store, with the filter absent and present.
-/// </summary>
+/// <summary>Measures Arc filters including request scope creation and first service resolution.</summary>
 [MemoryDiagnoser]
-[MedianColumn]
-[MinColumn]
-[MaxColumn]
-[InProcess]
-[WarmupCount(3)]
-[IterationCount(10)]
-public class ArcFilterBenchmark
+[Config(typeof(ColdPathConfig))]
+public class ArcFilterBenchmark : IDisposable
 {
-    static readonly Task<QueryResult> _noQueryVerdict = Task.FromResult<QueryResult>(null!);
-    static readonly Task<CommandResult> _noCommandVerdict = Task.FromResult<CommandResult>(null!);
-    readonly SystemStoreAuthorizationProbe _probe = new(false);
-    readonly SystemStoreQueryFilter _queryFilter = new();
-    readonly SystemStoreCommandFilter _commandFilter = new();
-    QueryContext _query = null!;
-    CommandContext _command = null!;
+    static readonly CommandResult _noCommandResult = null!;
+    static readonly QueryResult _noQueryResult = null!;
+    readonly QueryArguments _arguments = new() { ["eventStore"] = "bench", ["namespace"] = "Default" };
+    readonly Sequences.AppendMany _append = new("bench", "Default", "event-log", "source", []);
+    readonly RetryPartition _retry = new("bench", "Default", "observer", "event-log", "partition");
+    EntitledCaller _entitled = null!;
+    EntitledCaller _unentitledAudited = null!;
+    EntitledCaller _unentitledEnforced = null!;
 
-    /// <summary>
-    /// Gets or sets a value indicating whether the guard filter is present.
-    /// </summary>
+    /// <summary>Gets or sets whether the authorization filter is present.</summary>
     [Params(false, true)]
     public bool Guarded { get; set; }
 
-    /// <summary>
-    /// Gets the number of roster calls made; it must stay zero for non-System callers.
-    /// </summary>
-    public int RosterCalls => _probe.Calls;
+    /// <summary>Gets the number of roster calls for the measured ordinary-store paths.</summary>
+    public int RosterCalls => _entitled.RosterCalls + _unentitledAudited.RosterCalls + _unentitledEnforced.RosterCalls;
 
-    /// <summary>
-    /// Creates the contexts for a read model query and a command targeting a non-System store.
-    /// </summary>
+    /// <summary>Builds the production authorization registrations and grants outside measurement.</summary>
     [GlobalSetup]
     public void Setup()
     {
-        var services = new ServiceCollection()
-            .AddSingleton<IHttpContextAccessor>(new HttpContextAccessor { HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal() } })
-            .AddSingleton<ISystemStoreAccess>(new SystemStoreAccessVerdict(_probe))
-            .BuildServiceProvider();
-
-        var arguments = new QueryArguments { ["eventStore"] = "bench", ["namespace"] = "Default" };
-        _query = new QueryContext(
-            "Cratis.Chronicle.Observation.ObserverInformation.AllObservers", Cratis.Execution.CorrelationId.New(), Paging.NotPaged, Sorting.None, arguments, ServiceProvider: services);
-        var retry = new RetryPartition("bench", "Default", "observer", "event-log", "partition");
-        _command = new CommandContext(Cratis.Execution.CorrelationId.New(), retry.GetType(), retry, [], new CommandContextValues(), ServiceProvider: services);
+        _entitled = new(true, true);
+        _unentitledAudited = new(false, false);
+        _unentitledEnforced = new(false, true);
     }
 
-    /// <summary>
-    /// A query through the filter chain.
-    /// </summary>
-    /// <returns>The filter task.</returns>
-    [Benchmark]
-    public Task<QueryResult> Query() => Guarded ? _queryFilter.OnPerform(_query) : _noQueryVerdict;
-
-    /// <summary>
-    /// A command through the filter chain.
-    /// </summary>
-    /// <returns>The filter task.</returns>
-    [Benchmark]
-    public Task<CommandResult> Command() => Guarded ? _commandFilter.OnExecution(_command) : _noCommandVerdict;
-
-    /// <summary>
-    /// Fails the run when a non-System call asked for the roster.
-    /// </summary>
-    /// <exception cref="InvalidOperationException">A roster call was made.</exception>
-    [GlobalCleanup]
-    public void Verify()
+    /// <summary>Prepares fresh requests outside the measured iteration.</summary>
+    [IterationSetup]
+    public void PrepareRequests()
     {
-        if (_probe.Calls != 0) throw new InvalidOperationException($"Non-System calls made {_probe.Calls} roster calls.");
+        _entitled.PrepareRequests();
+        _unentitledAudited.PrepareRequests();
+        _unentitledEnforced.PrepareRequests();
+    }
+
+    /// <summary>Measures a scoped ordinary query filter invocation.</summary>
+    /// <returns>The filter result.</returns>
+    [Benchmark]
+    public async Task<QueryResult> Query()
+    {
+        await using var scope = _entitled.Services.CreateAsyncScope();
+        _entitled.NextRequest(scope.ServiceProvider);
+        var context = new QueryContext("Cratis.Chronicle.Observation.ObserverInformation.AllObservers", CorrelationId.New(), Paging.NotPaged, Sorting.None, _arguments, ServiceProvider: scope.ServiceProvider);
+        return Guarded ? await scope.ServiceProvider.GetRequiredService<SystemStoreQueryFilter>().OnPerform(context) : _noQueryResult;
+    }
+
+    /// <summary>Measures a scoped ordinary command filter invocation.</summary>
+    /// <returns>The filter result.</returns>
+    [Benchmark]
+    public async Task<CommandResult> Command()
+    {
+        await using var scope = _entitled.Services.CreateAsyncScope();
+        _entitled.NextRequest(scope.ServiceProvider);
+        return Guarded ? await scope.ServiceProvider.GetRequiredService<SystemStoreCommandFilter>().OnExecution(CommandFor(scope.ServiceProvider, _retry)) : _noCommandResult;
+    }
+
+    /// <summary>Measures an entitled append including first resolution in a fresh scope.</summary>
+    /// <returns>The command result.</returns>
+    [Benchmark]
+    public Task<CommandResult> EntitledAppend() => Append(_entitled);
+
+    /// <summary>Measures an unentitled append in audit mode.</summary>
+    /// <returns>The command result.</returns>
+    [Benchmark]
+    public Task<CommandResult> AuditedUnentitledAppend() => Append(_unentitledAudited);
+
+    /// <summary>Measures an unentitled append in enforcement mode.</summary>
+    /// <returns>The command result.</returns>
+    [Benchmark]
+    public Task<CommandResult> RefusedUnentitledAppend() => Append(_unentitledEnforced);
+
+    /// <summary>Disposes the callers and verifies that ordinary store calls made no roster calls.</summary>
+    [GlobalCleanup]
+    public void Verify() => Dispose();
+
+    /// <inheritdoc/>
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    /// <summary>Releases the caller snapshots and service providers.</summary>
+    /// <param name="disposing">Whether managed resources should be released.</param>
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!disposing) return;
+        _entitled?.Dispose();
+        _unentitledAudited?.Dispose();
+        _unentitledEnforced?.Dispose();
+    }
+
+    static CommandContext CommandFor(IServiceProvider services, object command) =>
+        new(CorrelationId.New(), command.GetType(), command, [], new CommandContextValues(), ServiceProvider: services);
+
+    async Task<CommandResult> Append(EntitledCaller caller)
+    {
+        await using var scope = caller.Services.CreateAsyncScope();
+        caller.NextRequest(scope.ServiceProvider);
+        var context = CommandFor(scope.ServiceProvider, _append);
+        return Guarded ? await scope.ServiceProvider.GetRequiredService<StoreEntitlementCommandFilter>().OnExecution(context) : _noCommandResult;
     }
 }

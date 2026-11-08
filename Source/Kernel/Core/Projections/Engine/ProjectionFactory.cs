@@ -23,6 +23,7 @@ using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Projections.Engine.Expressions;
 using Cratis.Chronicle.Projections.Engine.Expressions.EventValues;
 using Cratis.Chronicle.Projections.Engine.Expressions.Keys;
+using Cratis.Chronicle.Projections.Engine.Graphs;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
@@ -49,6 +50,7 @@ namespace Cratis.Chronicle.Projections.Engine;
 /// <param name="logger">The logger.</param>
 /// <param name="eventCompliance">Optional <see cref="IEventCompliance"/> for releasing stored join events before projecting them.</param>
 /// <param name="eventGenerationRelease">The pinned-generation release boundary for stored key and join events.</param>
+/// <param name="graphProjectionFactory">Optional <see cref="IGraphProjectionFactory"/> for projections that target a graph.</param>
 [Singleton]
 public class ProjectionFactory(
     IReadModelPropertyExpressionResolvers propertyMapperExpressionResolvers,
@@ -59,23 +61,18 @@ public class ProjectionFactory(
     IStorage storage,
     ILogger<ProjectionFactory> logger,
     IEventCompliance? eventCompliance = null,
-    IEventGenerationRelease? eventGenerationRelease = null) : IProjectionFactory
+    IEventGenerationRelease? eventGenerationRelease = null,
+    IGraphProjectionFactory? graphProjectionFactory = null) : IProjectionFactory
 {
     /// <summary>
     /// The versioned algorithm for complete, registration-metadata-independent definition content.
     /// </summary>
     internal const string DefinitionDigestAlgorithm = "definition-content-sha256/v1";
 
-    static readonly string[] _aggregateExpressions =
-    [
-        WellKnownExpressions.Count,
-        WellKnownExpressions.Increment,
-        WellKnownExpressions.Decrement,
-        WellKnownExpressions.Add,
-        WellKnownExpressions.Subtract
-    ];
-
-    static readonly JsonSerializerOptions _fingerprintOptions = new()
+    /// <summary>
+    /// Gets the serializer options that write a definition in full, with dictionaries in a form that does not depend on enumeration order.
+    /// </summary>
+    internal static readonly JsonSerializerOptions FingerprintOptions = new()
     {
         Converters =
         {
@@ -90,6 +87,15 @@ public class ProjectionFactory(
         }
     };
 
+    static readonly string[] _aggregateExpressions =
+    [
+        WellKnownExpressions.Count,
+        WellKnownExpressions.Increment,
+        WellKnownExpressions.Decrement,
+        WellKnownExpressions.Add,
+        WellKnownExpressions.Subtract
+    ];
+
     /// <inheritdoc/>
     public async Task<IProjection> Create(EventStoreName eventStore, EventStoreNamespaceName @namespace, ProjectionDefinition definition, ReadModelDefinition readModelDefinition, IEnumerable<EventTypeSchema> eventTypeSchemas)
     {
@@ -99,6 +105,16 @@ public class ProjectionFactory(
         }
 
         readModelDefinition.Sink.EnsureReadModelSupported();
+        if (definition.Graph is not null)
+        {
+            if (definition.GenerationDelivery == EventGenerationDelivery.Pinned || graphProjectionFactory is null)
+            {
+                throw new EventGenerationDeliveryNotSupported();
+            }
+
+            return graphProjectionFactory.Create(definition, readModelDefinition, DefinitionFingerprintFor(definition));
+        }
+
         ProjectionGenerationDeliveryValidation.Validate(definition);
         if (definition.GenerationDelivery == EventGenerationDelivery.Pinned &&
             (eventGenerationRelease is null || definition.SubscribesToAllEvents))
@@ -152,7 +168,7 @@ public class ProjectionFactory(
             ReadModel = definition.ReadModel,
             InitialModelState = definition.InitialModelState
         };
-        var canonical = Canonicalize(JsonSerializer.SerializeToNode(normalized, _fingerprintOptions));
+        var canonical = Canonicalize(JsonSerializer.SerializeToNode(normalized, FingerprintOptions));
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(canonical!.ToJsonString())));
     }
 
@@ -165,7 +181,7 @@ public class ProjectionFactory(
     internal static ProjectionDefinitionDigest DefinitionDigestFor(ProjectionDefinition definition)
     {
         var normalized = definition with { LastUpdated = default, Version = default, HasLegacyStorageFields = false };
-        var canonical = Canonicalize(JsonSerializer.SerializeToNode(normalized, _fingerprintOptions));
+        var canonical = Canonicalize(JsonSerializer.SerializeToNode(normalized, FingerprintOptions));
         return new(Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(canonical!.ToJsonString()))));
     }
 
@@ -1044,7 +1060,7 @@ public class ProjectionFactory(
         var joinEventSchema = context.EventTypeSchemas.SchemaFor(joinEventType, level.Projection.GenerationDelivery)?.Schema;
         var mergedJoinProperties = GetMergedJoinProperties(joinDefinition, level.Schema, joinEventSchema, autoMap.AutoMap, autoMap.NoAutoMapProperties);
         var joinPropertyMappers = mergedJoinProperties.Select(kvp => ResolvePropertyMapper(level.Projection, level.AccessorPath + kvp.Key, kvp.Value)).ToArray();
-        var resolvedJoin = fromObservable.ResolveJoin(context.EventSequenceStorage, joinEventType, level.AccessorPath + joinDefinition.On, logger, eventCompliance, joinEventSchema, context.EventTypesStorage, level.Projection.GenerationDelivery == EventGenerationDelivery.Pinned ? storedEvent => level.Projection.ReleaseEvent(joinEventType, storedEvent) : null);
+        var resolvedJoin = fromObservable.ResolveJoin(context.EventSequenceStorage, joinEventType, level.AccessorPath + joinDefinition.On, logger, eventCompliance, joinEventSchema, level.Projection.GenerationDelivery == EventGenerationDelivery.Pinned ? storedEvent => level.Projection.ReleaseEvent(joinEventType, storedEvent) : null);
         ProjectJoined(level, resolvedJoin, joinPropertyMappers);
     }
 

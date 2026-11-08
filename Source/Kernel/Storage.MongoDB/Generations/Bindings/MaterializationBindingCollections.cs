@@ -16,12 +16,12 @@ internal static class MaterializationBindingCollections
     /// <summary>
     /// The authoritative binding collection.
     /// </summary>
-    internal const string Bindings = "materialization-bindings";
+    internal const string Bindings = WellKnownCollectionNames.MaterializationBindings;
 
     /// <summary>
     /// The durable publication receipt collection.
     /// </summary>
-    internal const string Receipts = "materialization-publication-receipts";
+    internal const string Receipts = WellKnownCollectionNames.MaterializationPublicationReceipts;
     static readonly ConcurrentDictionary<(IMongoClient Client, string Database), Lazy<Task>> _ensured = new();
 
     /// <summary>

@@ -17,13 +17,18 @@ namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage;
 /// <summary>
 /// Generates a projection declaration language string from a <see cref="ProjectionDefinition"/> using the new indentation-based syntax.
 /// </summary>
-public class Generator : IGenerator
+public partial class Generator : IGenerator
 {
     const string Tab = "    ";
 
     /// <inheritdoc/>
     public string Generate(ProjectionDefinition definition, ReadModelDefinition readModelDefinition)
     {
+        if (definition.Graph is not null)
+        {
+            return GenerateGraph(definition, readModelDefinition);
+        }
+
         var sb = new StringBuilder();
         var readModelName = readModelDefinition.Identifier.Value;
         var projectionName = definition.Identifier.Value;

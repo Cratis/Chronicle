@@ -58,3 +58,26 @@ configured, from bootstrap configuration (configured applications are recreated
 on startup). Changing the image or supplying new client credentials alone does
 not remove that old application. See **cratis-chronicle-hosting** for kernel
 certificates, private h2c and production setup.
+
+## Request completion ownership (19.110.1+ .NET packages)
+
+Verified at **v19.110.1**: `Source/Clients/DotNET/Transactions/`
+(`IUnitOfWorkCompletionOwnershipFeature.cs`, `IUnitOfWorkCompletionClaim.cs`,
+`UnitOfWorkCompletionResult.cs`), `Source/Clients/AspNetCore/Transactions/UnitOfWorkMiddleware.cs`
+and `Source/Clients/AspNetCore/ChronicleUnitOfWorkOptions.cs`.
+
+Nested hosts can claim a request's completion with
+`IUnitOfWorkCompletionOwnershipFeature.TryClaim`. Complete through the claim
+and inspect its result before writing the response. An uncompleted claim is
+rolled back by the outer middleware, never silently committed. This does not
+grant arbitrary nested code the decision-read owner capability described in
+**cratis-chronicle-decision-reads**. `UnitOfWorkCompletionOutcome.Unknown` means a
+technical commit failure, not proof of rollback. Decision conflicts also occur
+in `ConcurrencyViolations`; avoid reporting the same source's conflict twice.
+
+Compatibility middleware logs a failed post-handler commit without changing a
+response already sent. Opt in to problem responses **before headers start** with
+`ChronicleAspNetCoreOptions.UnitOfWork.ReportFailuresBeforeResponseStarts`:
+concurrency/decision conflict is 409, constraint violation is 400, other append
+failure is 500. A started response cannot be repaired; complete through the
+claim first when a success response must mean the write committed.

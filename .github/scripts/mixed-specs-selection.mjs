@@ -16,7 +16,7 @@ export const v3Projects = [
     ...['GrainCompatibility', 'GrpcCodeGenerator', 'LegacyContracts', 'ProtoGenerator', 'WireCompatibility'].map(x => `Source/Tools/${x}.Specs`),
     'Source/Clients/XUnit.Integration.Specs',
     'Source/Clients/XUnit.Integration.v3.Specs',
-    ...['Storage', 'Storage.InMemory', 'Storage.MongoDB', 'Storage.Sql'].map(x => `Source/Kernel/${x}.Specs`),
+    ...['Storage', 'Storage.InMemory', 'Storage.MongoDB', 'Storage.Neo4j', 'Storage.Sql'].map(x => `Source/Kernel/${x}.Specs`),
     ...['Api', 'Client', 'Clustering', 'Kernel', 'MongoDB', 'SqlClustering'].map(x => `Integration/${x}`)
 ].map(project);
 // Shipping packages are libraries, not spec runners. Each one declares the xunit generation it ships against:
@@ -113,17 +113,42 @@ export function validateSolutionProjects(xml) {
         if (!item.attrs.Path) fail('Chronicle.slnx project missing Path');
         return item.attrs.Path.replaceAll('\\', '/');
     });
+    if (new Set(projects).size !== projects.length) fail('Chronicle.slnx contains duplicate project paths');
     for (const projectPath of projects) checkProjectBoundary(projectPath);
     if (!projects.some(item => item.endsWith('.Specs.csproj'))) fail('Chronicle.slnx contains no spec projects');
     return projects;
 }
-async function discoverProjects(root, directory) {
+async function discoverProjects(root, directory, found) {
     for (const entry of await readdir(path.join(root, directory), { withFileTypes: true })) {
-        if (['bin', 'obj', 'node_modules', '.git'].includes(entry.name)) continue;
+        if (['bin', 'obj', 'node_modules', '.git', 'vendor', '.ai-work'].includes(entry.name)) continue;
         const relative = `${directory}/${entry.name}`;
-        if (entry.isDirectory()) await discoverProjects(root, relative);
-        else checkProjectBoundary(relative);
+        if (entry.isSymbolicLink()) fail(`Unsupported symlink in project discovery: ${relative}`);
+        if (entry.isDirectory()) await discoverProjects(root, relative, found);
+        else if (relative.endsWith('.csproj')) found.push(relative);
     }
+}
+function assertClassifiedSource(found, classified) {
+    const known = [...classified, ...shippingProjects];
+    if (new Set(known).size !== known.length) fail('Duplicate classified project identity');
+    const candidates = found.filter(p => p.endsWith('.Specs.csproj') || p.startsWith('Integration/'));
+    const unclassified = candidates.find(candidate => !classified.includes(candidate));
+    if (unclassified) fail(`Unclassified test project ${unclassified}`);
+    const missing = known.find(projectPath => !found.includes(projectPath));
+    if (missing) fail(`Missing classified project ${missing}`);
+}
+function sourceGroups(classified) {
+    const executable = [...classified].sort();
+    const ordinary = ordinaryProjects(executable.map(project => ({ project }))).map(x => x.project);
+    return { executable, ordinary, shipping: [...shippingProjects],
+        integration: executable.filter(p => p.startsWith('Integration/')),
+        sql: executable.filter(p => !ordinary.includes(p) && !p.startsWith('Integration/')) };
+}
+export async function validateSourceProjects(root, classified = v3Projects) {
+    const found = [];
+    for (const directory of ['Source', 'Integration', 'Benchmarks']) await discoverProjects(root, directory, found);
+    assertClassifiedSource(found, classified);
+    validateSolutionProjects(await readFile(path.join(root, 'Chronicle.slnx'), 'utf8'));
+    return sourceGroups(classified);
 }
 export async function evaluateProject(root, projectPath, execute) {
     const query = await execute('dotnet', ['msbuild', projectPath, '-nologo', '-p:Configuration=Release', '-p:DisableDockerBuild=true', '-getProperty:IsTestProject,OutputType,TargetFramework,TargetFrameworks,AssemblyName,TargetPath,ProjectAssetsFile', '-getItem:PackageReference,PackageVersion'], { cwd: root, capture: true, timeout: 120000 });
@@ -136,9 +161,7 @@ export async function evaluateProject(root, projectPath, execute) {
 }
 export async function inventory(root, execute) {
     const result = [];
-    validateSolutionProjects(await readFile(path.join(root, 'Chronicle.slnx'), 'utf8'));
-    await discoverProjects(root, 'Source');
-    await discoverProjects(root, 'Integration');
+    await validateSourceProjects(root);
     for (const projectPath of [...v3Projects, ...shippingProjects]) result.push(await evaluateProject(root, projectPath, execute));
     return result;
 }

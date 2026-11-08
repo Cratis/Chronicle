@@ -1,9 +1,13 @@
 ---
-description: Bind the Chronicle connection string in the .NET client from appsettings.json or environment variables, with a credential-free local default.
+title: Cratis Chronicle connection string configuration
+description: Configure the Cratis Chronicle .NET client from appsettings.json or environment variables, and understand connection string precedence.
 ---
-# Configuration
 
-The .NET client reads its connection string from configuration. A typical setup binds the `Cratis:Chronicle` section of `appsettings.json` and registers Chronicle on the host with `AddCratisChronicle`.
+<a id="configuration"></a>
+
+Use `AddCratisChronicle` to bind the Cratis Chronicle .NET client's connection string from your host's configuration. This keeps the endpoint out of application code so you can change servers between environments without changing registration.
+
+Start with the `Cratis:Chronicle` section in `appsettings.json`:
 
 **appsettings.json:**
 
@@ -17,18 +21,32 @@ The .NET client reads its connection string from configuration. A typical setup 
 }
 ```
 
-> [!NOTE]
-> For local development, `chronicle://localhost:35000` can be used without credentials. The .NET client automatically attempts development credentials.
+This local address omits credentials from the connection string, but the client still authenticates: it automatically attempts the built-in development credentials. Use explicit credentials for production.
 
 **Program.cs:**
 
 <ChronicleClientTabs snippet="connection-strings/configuration/register" />
 
-`AddCratisChronicle` is an extension on the host builder — `IHostApplicationBuilder` for worker and console hosts, `WebApplicationBuilder` for ASP.NET Core. It binds the `Cratis:Chronicle` section automatically, so the connection string comes from configuration rather than code. See [Add Chronicle to a worker service](../get-started/worker) and [Add Chronicle to an ASP.NET Core app](../get-started/aspnetcore) for the full host setup.
+The registration above sets the event store name in code and reads the connection string from `Cratis:Chronicle`. `AddCratisChronicle` supports `IHostApplicationBuilder` for worker and console hosts, and `WebApplicationBuilder` for ASP.NET Core. Follow [Add Chronicle to a worker service](../get-started/worker) or [Add Chronicle to an ASP.NET Core app](../get-started/aspnetcore) if you still need the host setup.
+
+## Connection string precedence
+
+For these host registrations, the first configured value in this table wins:
+
+| Priority | Source | When it applies |
+| --- | --- | --- |
+| 1 | `configureOptions` callback | The callback explicitly assigns `ConnectionString`, overriding the bound section |
+| 2 | `Cratis:Chronicle:ConnectionString` | The section supplies the connection string; `configSection` can select another section |
+| 3 | `ConnectionStrings:chronicle` | Neither the callback nor the section assigns a connection string |
+| 4 | `ChronicleConnectionString.Development` | No explicit connection string is assigned and the named fallback is absent, empty, or whitespace |
+
+The named fallback lets a host use a connection string supplied by Aspire without copying it into `Cratis:Chronicle`. If the resource has another name, use the overload with `connectionStringName` to select it. An explicit assignment wins even when you assign `ChronicleConnectionString.Development`.
+
+This precedence chooses between Chronicle settings. Within a configuration key, the host's configuration providers decide the value. With the default .NET host setup, command-line arguments override environment variables, which override `appsettings.{Environment}.json` and `appsettings.json`. If an endpoint change has no effect, check for a callback assignment before changing another configuration source.
 
 ## Environment-specific configuration
 
-Use per-environment configuration files to separate development and production settings:
+Use per-environment files to change the endpoint while keeping the same registration. With the default .NET host setup, `appsettings.{Environment}.json` overrides matching values in `appsettings.json`.
 
 **appsettings.Development.json:**
 
@@ -54,9 +72,11 @@ Use per-environment configuration files to separate development and production s
 }
 ```
 
+Keep real client secrets out of committed settings files. Supply the production value through your deployment's secret configuration, and enable server certificate validation as described below.
+
 ## Environment variables
 
-You can also supply the connection string via environment variables. .NET maps the `__` separator onto nested configuration keys, so `Cratis:Chronicle:ConnectionString` becomes:
+With the default .NET host setup, an environment variable overrides the connection string in the settings files. .NET maps `__` to `:` in configuration keys, so `Cratis:Chronicle:ConnectionString` becomes:
 
 ```bash
 export Cratis__Chronicle__ConnectionString="chronicle://clientId:clientSecret@server.example.com:35000"
@@ -64,9 +84,11 @@ export Cratis__Chronicle__ConnectionString="chronicle://clientId:clientSecret@se
 
 ## Server certificate validation
 
-The .NET client currently skips server certificate validation by default. For remote servers, trust the server's CA (including inside application containers), or configure a matching `certificatePath` pin, then add `skipTlsValidation=false` to the connection string. Setting `Cratis:Chronicle:Tls:SkipCertificateValidation=false` also enables validation.
+The .NET client still skips server certificate validation when both settings are omitted in this release. The next major release will enable validation by default. We recommend explicitly adding `skipTlsValidation=false` to the connection string or setting `Cratis:Chronicle:Tls:SkipCertificateValidation=false`. First trust the server's certificate authority (CA), including inside application containers, or configure a matching `certificatePath` pin.
 
-A connection constructed with validation disabled logs one warning for non-loopback targets and DNS SRV lookups. Localhost, 127.0.0.0/8, and ::1 are exempt. Non-localhost development hosts, including Aspire deployments, can explicitly use `skipTlsValidation=true` while setting up trust. A future major version validates by default. See [TLS configuration](../configuration/tls) for the trust and pinning requirements.
+Either setting enables validation. A `true` value in the other setting does not turn it off, so `skipTlsValidation=true` cannot override `Tls:SkipCertificateValidation=false`.
+
+A connection constructed with validation skipped logs a startup warning for remote hosts and DNS SRV targets, but not for loopback targets. With `disableTls=true`, certificate validation does not apply and that warning is suppressed. For development only, use `chronicle://localhost:35000?skipTlsValidation=true` to explicitly opt out, provided the TLS options do not require validation. Development images generate an untrusted, self-signed certificate on every start, with SANs `localhost`, `chronicle`, `127.0.0.1`, and `::1`. Follow [TLS configuration](../configuration/tls) for the trust and pinning requirements.
 
 ## Related topics
 

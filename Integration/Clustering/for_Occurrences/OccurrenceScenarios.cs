@@ -11,6 +11,18 @@ namespace Cratis.Chronicle.Integration.Clustering.for_Occurrences;
 /// </summary>
 public static class OccurrenceScenarios
 {
+    public static async Task ReconnectingWithoutAutomaticRegistration(OccurrenceFixture fixture)
+    {
+        var signals = new OccurrenceSignals();
+        await using var app = await OccurrenceApp.Start(fixture.SiloServices, signals, Guid.NewGuid().ToString("N"), lifecycle: false, automaticRegistration: false);
+        var firstId = (await app.Store.Occurrences.Record(new OccurrenceWork("before-reconnect"), Guid.NewGuid().ToString("N"))).Id.Value;
+        await app.WaitFor("p3c-work", rows => rows.Any(row => row.Id == firstId && row.State == OccurrenceState.Completed), application: false);
+        await app.Reconnect();
+        var secondId = (await app.Store.Occurrences.Record(new OccurrenceWork("after-reconnect"), Guid.NewGuid().ToString("N"))).Id.Value;
+        await app.WaitFor("p3c-work", rows => rows.Any(row => row.Id == secondId && row.State == OccurrenceState.Completed), application: false);
+        signals.Effects(secondId).ShouldEqual(1);
+    }
+
     public static async Task LogicalStartup(OccurrenceFixture fixture)
     {
         var activation = Guid.NewGuid().ToString("N");
@@ -89,6 +101,35 @@ public static class OccurrenceScenarios
             await survivor.DisposeAsync();
             await fixture.CrashAndRestart();
             await fixture.Rehydrate();
+        }
+    }
+
+    public static async Task KillingTheKernelMidLease(OccurrenceFixture fixture)
+    {
+        var signals = new OccurrenceSignals { PauseFirstWork = true };
+        var holder = await OccurrenceApp.Start(fixture.SiloServices, signals, "no-lifecycle", lifecycle: false);
+        try
+        {
+            var id = (await holder.Store.Occurrences.Record(new OccurrenceWork("kernel-kill"), Guid.NewGuid().ToString("N"))).Id.Value;
+            var entered = await signals.Entered.Task.WaitAsync(TimeSpan.FromSeconds(90));
+            signals.Effects(id).ShouldEqual(1);
+            await fixture.CrashAndRestart();
+            await fixture.Rehydrate();
+            await using var recovery = await OccurrenceApp.Start(fixture.SiloServices, signals, "no-lifecycle", lifecycle: false);
+            var completed = (await recovery.WaitFor("p3c-work", rows => rows.Any(row => row.Id == id && row.State == OccurrenceState.Completed))).Single(row => row.Id == id);
+            signals.Effects(id).ShouldEqual(1);
+            await new OccurrenceRecoveryAssertions(recovery.Store, recovery.Service, "p3c-work").Recovered(id, entered.Lease.Epoch, completed, signals.Settlements);
+        }
+        finally
+        {
+            try
+            {
+                await holder.DisposeAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(30));
+            }
+            catch (Exception exception) when (exception is not TimeoutException)
+            {
+                // The holder's in-process transport points at the abruptly terminated silo.
+            }
         }
     }
 

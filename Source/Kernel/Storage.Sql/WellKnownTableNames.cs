@@ -84,6 +84,16 @@ public static class WellKnownTableNames
     public const string EventSequenceEvents = "EventSequenceEvents";
 
     /// <summary>
+    /// The table that holds event sequence mutation heads.
+    /// </summary>
+    public const string EventSequenceMutationHeads = "EventSequenceMutationHeads";
+
+    /// <summary>
+    /// The table that holds completed event sequence mutation history.
+    /// </summary>
+    public const string EventSequenceMutationHistory = "EventSequenceMutationHistory";
+
+    /// <summary>
     /// The table that holds connected clients state.
     /// </summary>
     public const string ConnectedClients = "ConnectedClients";
@@ -244,6 +254,11 @@ public static class WellKnownTableNames
     public const string WebhookDefinitions = "WebhookDefinitions";
 
     /// <summary>
+    /// The table that holds webhook signing keys.
+    /// </summary>
+    public const string WebhookSigningKeys = "WebhookSigningKeys";
+
+    /// <summary>
     /// The table that holds external service definitions.
     /// </summary>
     public const string ExternalServiceDefinitions = "ExternalServiceDefinitions";
@@ -282,6 +297,16 @@ public static class WellKnownTableNames
     /// The table that holds recorded erasures of encryption keys for compliance handling.
     /// </summary>
     public const string EncryptionKeyErasures = "EncryptionKeyErasures";
+
+    /// <summary>
+    /// The table that holds kernel-internal secrets, apart from subject encryption keys.
+    /// </summary>
+    public const string InternalSecrets = "InternalSecrets";
+
+    /// <summary>
+    /// The table that holds the encryption key identifiers stored before they were compared exactly on SQL Server.
+    /// </summary>
+    public const string EncryptionKeyIdentifierReviews = "EncryptionKeyIdentifierReviews";
 
     /// <summary>
     /// The table that holds OAuth tokens.
@@ -342,4 +367,59 @@ public static class WellKnownTableNames
     /// The namespace table that holds atomic effect receipts.
     /// </summary>
     public const string EffectReceipts = "EffectReceipts";
+
+    /// <summary>
+    /// The table that holds generation initialization receipts.
+    /// </summary>
+    public const string GenerationInitializationReceipts = "GenerationInitializationReceipts";
+
+    /// <summary>
+    /// The table that holds generation initialization blockers.
+    /// </summary>
+    public const string GenerationInitializationBlockers = "GenerationInitializationBlockers";
+
+    /// <summary>
+    /// The table that holds the generation floor.
+    /// </summary>
+    public const string GenerationFloor = "GenerationFloor";
+
+    /// <summary>
+    /// The table that holds the unique-constraint encoding key.
+    /// </summary>
+    public const string UniqueConstraintEncodingKey = "UniqueConstraintEncodingKey";
+
+    /// <summary>
+    /// The table that holds generation floor history.
+    /// </summary>
+    public const string GenerationFloorHistory = "GenerationFloorHistory";
+
+    /// <summary>
+    /// The table that holds lifecycle fan-out intents.
+    /// </summary>
+    public const string LifecycleFanOutIntents = "LifecycleFanOutIntents";
+
+    /// <summary>
+    /// The table that holds trigger definitions.
+    /// </summary>
+    public const string TriggerDefinitions = "TriggerDefinitions";
+
+    /// <summary>
+    /// The table that holds event store initialization markers.
+    /// </summary>
+    public const string EventStoreInitialization = "EventStoreInitialization";
+
+    /// <summary>
+    /// The table that holds database name bindings.
+    /// </summary>
+    public const string DatabaseNames = "DatabaseNames";
+
+    /// <summary>
+    /// The table that holds patch versions.
+    /// </summary>
+    public const string PatchVersions = "PatchVersions";
+
+    /// <summary>
+    /// The mapped table that holds event types.
+    /// </summary>
+    public const string EventType = "EventType";
 }

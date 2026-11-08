@@ -37,7 +37,7 @@ internal sealed class EventStores(
     public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<global::Cratis.Chronicle.Contracts.EventStores.EventStoreDeploymentResponse>> GetEventStoreDeployment(global::Cratis.Chronicle.Contracts.EventStores.GetEventStoreDeploymentRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<global::Cratis.Chronicle.Contracts.EventStores.EventStoreDeploymentResponse>(
             callContext,
-            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore),
+            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: null),
             async () =>
             {
                 var result = await global::Cratis.Chronicle.EventStores.EventStoreDeployment.GetEventStoreDeployment(request.EventStore, grainFactory);
