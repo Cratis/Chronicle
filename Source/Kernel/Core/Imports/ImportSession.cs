@@ -11,6 +11,6 @@ namespace Cratis.Chronicle.Imports;
 /// <param name="ImportId">The identifier of the import.</param>
 /// <param name="State">The state of the import.</param>
 /// <param name="MaxChunkEvents">The most events one chunk may carry.</param>
-/// <param name="MaxChunkBytes">The most bytes of event content one chunk may carry.</param>
+/// <param name="MaxChunkBytes">The most bytes of event content and metadata (tags, named tags, causation, idempotency keys) one chunk may carry.</param>
 /// <param name="Error">Why the import could not be begun, when it could not.</param>
 public record ImportSession(Guid ImportId, ImportState State, int MaxChunkEvents, int MaxChunkBytes, string? Error = default);

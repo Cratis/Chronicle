@@ -72,7 +72,7 @@ public partial class EventSequence
                 {
                     request.Result = new(AppendResult.Failed(correlationId, [request.Key is { } key
                         ? IdempotencyRefusals.Unsettled(key)
-                        : new AppendError("The batch could not be committed after one retry. Nothing was written. Retry the append.")]));
+                        : AppendError.BatchNotCommittedAfterRetry]));
                 }
                 return;
             }

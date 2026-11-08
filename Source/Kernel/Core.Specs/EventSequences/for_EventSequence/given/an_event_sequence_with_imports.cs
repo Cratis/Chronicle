@@ -51,6 +51,6 @@ public class an_event_sequence_with_imports : an_event_sequence_with_idempotency
             ["eventIndex"] = index.ToString(CultureInfo.InvariantCulture)
         });
 
-    protected Task<ImportChunkAppendResult> AppendChunk(IReadOnlyList<IdempotencyKey?>? keys = null, EventSequenceNumber? committedFrom = null) =>
-        _eventSequence.AppendImportChunk(_importId, 0, committedFrom ?? EventSequenceNumber.First, [_eventType.Id], ImportEvents(keys));
+    protected Task<ImportChunkAppendResult> AppendChunk(IReadOnlyList<IdempotencyKey?>? keys = null, EventSequenceNumber? committedFrom = null, bool mayBeCommitted = false) =>
+        _eventSequence.AppendImportChunk(_importId, 0, committedFrom ?? EventSequenceNumber.First, mayBeCommitted, ImportEvents(keys));
 }

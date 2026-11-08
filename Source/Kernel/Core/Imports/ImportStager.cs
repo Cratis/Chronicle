@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text;
 using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Concepts.Imports;
 using Cratis.Chronicle.Configuration;
@@ -30,7 +29,7 @@ public class ImportStager(IGrainFactory grainFactory, IStorage storage, IOptions
 
         var namespaceStorage = storage.GetEventStore(key.EventStore).GetNamespace(key.Namespace);
         var existing = await namespaceStorage.Imports.GetChunk(key.ImportId, chunkIndex);
-        if (existing is not null) return ImportChunkStagingResult.From(existing, true);
+        if (existing is not null) return AlreadyStaged(existing, firstEventIndex, events.Count);
 
         var import = grainFactory.GetGrain<IImport>(key);
         var accepts = await import.EnsureAcceptsChunks();
@@ -41,9 +40,9 @@ public class ImportStager(IGrainFactory grainFactory, IStorage storage, IOptions
         var limits = options.Value.Imports;
         if (materialized.Count > limits.MaxChunkEvents)
             return ImportChunkStagingResult.Refused(chunkIndex, $"The chunk carries {materialized.Count} events; the most a chunk may carry is {limits.MaxChunkEvents}.");
-        var bytes = materialized.Sum(_ => (long)Encoding.UTF8.GetByteCount(_.Content));
+        var bytes = materialized.Sum(ImportEventSize.Of);
         if (bytes > limits.MaxChunkBytes)
-            return ImportChunkStagingResult.Refused(chunkIndex, $"The chunk carries {bytes} bytes of content; the most a chunk may carry is {limits.MaxChunkBytes}.");
+            return ImportChunkStagingResult.Refused(chunkIndex, $"The chunk carries {bytes} bytes of content and metadata; the most a chunk may carry is {limits.MaxChunkBytes}.");
 
         var eventStore = storage.GetEventStore(key.EventStore);
         var staged = new List<StagedImportEvent>();
@@ -62,14 +61,45 @@ public class ImportStager(IGrainFactory grainFactory, IStorage storage, IOptions
         }
 
         var chunk = new StagedImportChunk(key.ImportId, chunkIndex, firstEventIndex, materialized.Count, staged, rejections);
-        if (!await namespaceStorage.Imports.AddChunk(chunk))
+        StagedChunkAddition addition;
+        try
         {
-            // A resend raced this one and won; its staging is the one that counts.
-            var winner = await namespaceStorage.Imports.GetChunk(key.ImportId, chunkIndex);
-            return ImportChunkStagingResult.From(winner ?? chunk, true);
+            addition = await namespaceStorage.Imports.AddChunk(chunk);
+        }
+        catch (StagedChunkTooLarge ex)
+        {
+            return ImportChunkStagingResult.Refused(chunkIndex, ex.Message);
         }
 
-        await import.ChunkStaged(chunk.ToSummary());
+        if (addition != StagedChunkAddition.Added)
+        {
+            // A resend raced this one and won; its staging is the one that counts, if it covers the same events.
+            var winner = await namespaceStorage.Imports.GetChunk(key.ImportId, chunkIndex);
+            return winner is null ? ConflictingChunk(chunkIndex) : AlreadyStaged(winner, firstEventIndex, materialized.Count);
+        }
+
+        if (!await import.ChunkStaged(chunk.ToSummary()))
+        {
+            // The import was abandoned, failed or closed without this chunk between the check and the write; the chunk
+            // would otherwise stay in staging with nothing left to remove it.
+            await namespaceStorage.Imports.RemoveChunk(key.ImportId, chunkIndex);
+            var record = await import.Get();
+            return ImportChunkStagingResult.Refused(chunkIndex, $"Import '{key.ImportId}' is {record?.State} and accepts no more chunks.");
+        }
+
         return ImportChunkStagingResult.From(chunk, false);
+    }
+
+    static ImportChunkStagingResult AlreadyStaged(StagedImportChunk staged, long firstEventIndex, int events) =>
+        staged.ToSummary().Matches(firstEventIndex, events)
+            ? ImportChunkStagingResult.From(staged, true)
+            : ConflictingChunk(staged.ChunkIndex, staged);
+
+    static ImportChunkStagingResult ConflictingChunk(int chunkIndex, StagedImportChunk? staged = null)
+    {
+        var error = staged is null
+            ? $"Chunk {chunkIndex} is already staged with other events."
+            : $"Chunk {chunkIndex} is already staged with events {staged.FirstEventIndex} to {staged.FirstEventIndex + staged.EventsReceived - 1}; a chunk with the same index must carry the same events.";
+        return ImportChunkStagingResult.Refused(chunkIndex, error);
     }
 }

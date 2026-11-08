@@ -41,7 +41,9 @@ Give each event an `IdempotencyKey`, typically the source system's event identif
 
 ## Observers see imported events once
 
-Reactors, reducers and projections handle imported events like any other appended event, and each sees each event exactly once. While the import commits, observers of its event types are held back from live delivery. When it completes, each of them catches up once and receives the imported events, together with any ordinary appends that came in meanwhile, in order. Because the events arrive as catch-up and not as a replay, `[OnceOnly]` does not skip them.
+Reactors, reducers and projections handle imported events like any other appended event, and each sees each event exactly once. The commit never delivers imported events live and never pauses live delivery. After each chunk is committed, every observer of the chunk's event types is handed to its catch-up, the same way an observer that falls behind live delivery is. Catch-up reads from the observer's own position in the sequence, so it receives the imported events and any ordinary appends that came in between them, in order, and nothing twice. An observer that is already catching up is left to finish and is not given a second catch-up.
+
+Observers therefore keep up while the commit runs, behind it only by how fast they catch up. A long import can send an observer through several catch-ups in a row. Because the events arrive as catch-up and not as a replay, `[OnceOnly]` does not skip them.
 
 ## Add events from several producers
 
@@ -49,7 +51,9 @@ When your events do not come from one stream, for example several threads or a r
 
 <ChronicleClientTabs snippet="events/importing/session" />
 
-`Complete` waits for every chunk to be acknowledged, closes staging and, unless `WaitForCommit` is `false`, waits for the commit. `Progress` reports the state and counts as the kernel sees them. `Abandon` discards everything staged.
+`Complete` waits for every chunk to be acknowledged, closes staging and, unless `WaitForCommit` is `false`, waits for the commit. `Progress` reports the state and counts as the kernel sees them, and ends when the import ends. `Abandon` waits for chunks being added, then discards everything staged.
+
+A chunk sent again under the same index must carry the same events. One that covers other events is refused as a conflict, and the chunk staged first is kept.
 
 ## Resume after a crash
 
@@ -57,7 +61,18 @@ A process that stopped while staging can reattach to its import by identifier an
 
 <ChronicleClientTabs snippet="events/importing/reattach" />
 
-Feed the same events in the same order from `EventsAcknowledged` on. An import left open without activity is abandoned after `Imports.StagingRetention`, 24 hours by default, and its staging is discarded.
+Feed the same events in the same order from `EventsAcknowledged` on.
+
+## Retention and cleanup
+
+Staging holds the events as they were sent, personal data included and not yet encrypted, so the kernel keeps it no longer than needed:
+
+- When an import completes, fails or is abandoned, its staging is discarded at once.
+- An import left open without activity for `Imports.StagingRetention`, 24 hours by default, is abandoned.
+- An import whose commit made no progress for `Imports.StagingRetention` fails; the events it committed stay committed.
+- An import that ended longer ago than `Imports.StagingRetention` is removed, and its identifier can be used for a new import.
+
+A commit job that is stopped leaves its import `Committing`, and resuming the job continues the commit from where it stopped. A commit job that fails or is removed fails its import. To give up an import that is committing, stop and remove its commit job, named `Import` followed by the import identifier in the jobs list; `AbandonImport` only abandons an import that is still staging.
 
 ## Limits and configuration
 
@@ -65,10 +80,10 @@ Feed the same events in the same order from `EventsAcknowledged` on. An import l
 
 | Setting | Default | Meaning |
 | --- | --- | --- |
-| `StagingRetention` | 24 hours | How long an open import may go without activity before it is abandoned |
+| `StagingRetention` | 24 hours | How long an open import may go without activity before it is abandoned, how long a commit may go without progress before it fails, and how long an ended import is kept |
 | `RetentionSweepInterval` | 15 minutes | How often the kernel looks for imports that outlived their retention |
 | `CommitChunkSize` | 1000 | How many events the commit appends in one call |
 | `MaxChunkEvents` | 1000 | The most events one staged chunk may carry |
-| `MaxChunkBytes` | 4 MiB | The most bytes of event content one staged chunk may carry |
+| `MaxChunkBytes` | 4 MiB | The most bytes one staged chunk may carry, counting event content, tags, named tags, causation and idempotency keys |
 
 An import targets one event sequence. Events cannot be imported into the outbox.

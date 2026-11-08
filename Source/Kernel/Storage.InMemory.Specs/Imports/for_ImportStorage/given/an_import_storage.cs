@@ -27,7 +27,7 @@ public class an_import_storage : Specification
             $"source-{_}",
             "All",
             "Default",
-            """{"name":"Alice"}""",
+            """{"name":"Alice \"Al\" <al@example.com>"}""",
             ["tag"],
             [new StagedImportNamedTag("customer", "42")],
             DateTimeOffset.UnixEpoch,

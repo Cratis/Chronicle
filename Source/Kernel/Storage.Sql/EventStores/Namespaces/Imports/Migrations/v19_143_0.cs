@@ -37,6 +37,7 @@ public class v19_143_0 : Migration
                 EventsReceived = table.NumberColumn<int>(migrationBuilder, nullable: false),
                 EventsStaged = table.NumberColumn<int>(migrationBuilder, nullable: false),
                 EventsRejected = table.NumberColumn<int>(migrationBuilder, nullable: false),
+                EventTypes = table.JsonColumn<string>(migrationBuilder),
                 Payload = table.JsonColumn<string>(migrationBuilder)
             },
             constraints: table => table.PrimaryKey($"PK_{WellKnownTableNames.ImportChunks}", x => new { x.ImportId, x.ChunkIndex }));

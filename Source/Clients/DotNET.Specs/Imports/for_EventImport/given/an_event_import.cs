@@ -25,6 +25,16 @@ public class an_event_import : Specification
     protected TaskCompletionSource? _gate;
     protected ImportId _importId = ImportId.New();
     protected ImportState _finalState = ImportState.Completed;
+    protected Func<EventForEventSourceId, ImportEvent> _convert = @event => new ImportEvent
+    {
+        EventSourceId = @event.EventSourceId,
+        Content = (string)@event.Event,
+        EventType = new() { Id = "event", Generation = 1 }
+    };
+
+    protected Func<int, TimeSpan> _retryDelay = _ => TimeSpan.Zero;
+    protected int _signalAtInFlight = int.MaxValue;
+    protected TaskCompletionSource _inFlightReached = new(TaskCreationOptions.RunContinuationsAsynchronously);
     EventImport? _import;
 
     protected EventImport Import => _import ??= new(
@@ -35,15 +45,10 @@ public class an_event_import : Specification
         _options,
         _maxChunkEvents,
         _maxChunkBytes,
-        @event => Task.FromResult(new ImportEvent
-        {
-            EventSourceId = @event.EventSourceId,
-            Content = (string)@event.Event,
-            EventType = new() { Id = "event", Generation = 1 }
-        }),
+        @event => Task.FromResult(_convert(@event)),
         _acknowledgedChunks,
         _acknowledgedEvents,
-        _ => TimeSpan.Zero,
+        _retryDelay,
         TimeSpan.Zero);
 
     void Establish()
@@ -55,6 +60,7 @@ public class an_event_import : Specification
             var request = call.Arg<AddImportChunkRequest>();
             var current = Interlocked.Increment(ref _inFlight);
             InterlockedMax(ref _maxInFlight, current);
+            if (current >= _signalAtInFlight) _inFlightReached.TrySetResult();
             if (_gate is not null) await _gate.Task;
             Interlocked.Decrement(ref _inFlight);
             _chunks.Add(request);

@@ -26,5 +26,18 @@ public record StagedImportChunk(
     /// Gets the summary of the chunk.
     /// </summary>
     /// <returns>The <see cref="ImportChunkSummary"/>.</returns>
-    public ImportChunkSummary ToSummary() => new(ChunkIndex, FirstEventIndex, EventsReceived, Events.Count(), Rejections.Count());
+    public ImportChunkSummary ToSummary() => new(
+        ChunkIndex,
+        FirstEventIndex,
+        EventsReceived,
+        Events.Count(),
+        Rejections.Count(),
+        [.. Events.Select(_ => EventTypeIdOf(_.EventType)).Distinct(StringComparer.Ordinal)]);
+
+    /// <summary>
+    /// Gets the event type identifier of a staged event type, which is written as its identifier and generation.
+    /// </summary>
+    /// <param name="eventType">The staged event type.</param>
+    /// <returns>The event type identifier.</returns>
+    public static string EventTypeIdOf(string eventType) => eventType.Split('+')[0];
 }

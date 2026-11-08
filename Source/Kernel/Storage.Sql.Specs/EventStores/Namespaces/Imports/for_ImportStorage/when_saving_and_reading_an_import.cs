@@ -42,5 +42,6 @@ public class when_saving_and_reading_an_import : given.an_import_storage
     [Fact] void should_keep_when_staged_events_occurred() => _chunk!.Events.First().Occurred.ShouldEqual(DateTimeOffset.UnixEpoch);
     [Fact] void should_keep_the_causation_of_staged_events() => _chunk!.Events.First().Causation!.Single().Properties["source"].ShouldEqual("legacy");
     [Fact] void should_keep_who_caused_staged_events() => _chunk!.Events.First().CausedBy!.Name.ShouldEqual("Migrator");
+    [Fact] void should_keep_the_content_of_staged_events_exactly() => _chunk!.Events.First().Content.ShouldEqual("""{"name":"Alice \"Al\" <al@example.com>"}""");
     [Fact] async Task should_list_it() => (await FreshStorage().GetAll()).Select(_ => _.Id).ShouldContain(_importId);
 }

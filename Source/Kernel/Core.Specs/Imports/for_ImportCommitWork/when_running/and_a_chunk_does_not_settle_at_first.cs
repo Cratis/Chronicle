@@ -10,7 +10,7 @@ public class and_a_chunk_does_not_settle_at_first : given.an_import_being_commit
 {
     int _attempts;
 
-    void Establish() => _sequence.AppendImportChunk(_key.ImportId, Arg.Any<int>(), Arg.Any<EventSequenceNumber>(), Arg.Any<IEnumerable<EventTypeId>>(), Arg.Any<IReadOnlyList<ImportEventToAppend>>())
+    void Establish() => _sequence.AppendImportChunk(_key.ImportId, Arg.Any<int>(), Arg.Any<EventSequenceNumber>(), Arg.Any<bool>(), Arg.Any<IReadOnlyList<ImportEventToAppend>>())
         .Returns(call => ++_attempts == 1
             ? ImportChunkAppendResult.NotSettled("AppendOutcomeUnknown")
             : Appended(call.ArgAt<EventSequenceNumber>(2), call.ArgAt<IReadOnlyList<ImportEventToAppend>>(4)));

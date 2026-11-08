@@ -144,10 +144,19 @@ public sealed class EventImport(
     /// <inheritdoc/>
     public async Task<ImportResult> Abandon()
     {
-        await Task.WhenAll(Sends()).ContinueWith(_ => { }, TaskScheduler.Default);
-        var status = (await _service.AbandonImport(new() { EventStore = _eventStore, Namespace = _namespace, ImportId = ImportId.Value })).EnsureSuccess();
-        _completed = true;
-        return await Read() ?? new ImportResult { ImportId = ImportId, State = (ImportState)status.State, FailureReason = status.Error };
+        // Taking the lock means no Add or Complete is cutting or sending a chunk while the import is abandoned.
+        await _addLock.WaitAsync();
+        try
+        {
+            await Task.WhenAll(Sends()).ContinueWith(_ => { }, TaskScheduler.Default);
+            var status = (await _service.AbandonImport(new() { EventStore = _eventStore, Namespace = _namespace, ImportId = ImportId.Value })).EnsureSuccess();
+            _completed = true;
+            return await Read() ?? new ImportResult { ImportId = ImportId, State = (ImportState)status.State, FailureReason = status.Error };
+        }
+        finally
+        {
+            _addLock.Release();
+        }
     }
 
     /// <inheritdoc/>
@@ -165,11 +174,33 @@ public sealed class EventImport(
 
     static bool IsTerminal(ImportState state) => state is ImportState.Completed or ImportState.Failed or ImportState.Abandoned;
 
+    /// <summary>
+    /// Measures an event as the kernel counts it against its chunk byte limit: the content, tags, named tags, causation
+    /// and idempotency key.
+    /// </summary>
+    /// <param name="event">The <see cref="ImportEvent"/> in its wire form.</param>
+    /// <returns>The bytes it carries, as UTF-8.</returns>
+    static int SizeOf(ImportEvent @event)
+    {
+        var bytes = Utf8(@event.Content) + Utf8(@event.IdempotencyKey);
+        foreach (var tag in @event.Tags ?? []) bytes += Utf8(tag);
+        foreach (var tag in @event.NamedTags ?? []) bytes += Utf8(tag.Name) + Utf8(tag.Value);
+        foreach (var causation in @event.Causation ?? [])
+        {
+            bytes += Utf8(causation.Type);
+            foreach (var (name, value) in causation.Properties) bytes += Utf8(name) + Utf8(value);
+        }
+
+        return bytes;
+    }
+
+    static int Utf8(string? value) => value is null ? 0 : Encoding.UTF8.GetByteCount(value);
+
     async Task Buffer(EventForEventSourceId @event, CancellationToken cancellationToken)
     {
         ThrowIfFailed();
         var converted = await _convert(@event);
-        var bytes = Encoding.UTF8.GetByteCount(converted.Content);
+        var bytes = SizeOf(converted);
         if (_buffer.Count > 0 && (_buffer.Count >= _maxEventsPerChunk || _bufferBytes + bytes > _maxBytesPerChunk))
         {
             await Flush(cancellationToken);
@@ -191,7 +222,7 @@ public sealed class EventImport(
         _bufferBytes = 0;
 
         await _inFlight.WaitAsync(cancellationToken);
-        var send = Send(chunkIndex, firstEventIndex, events);
+        var send = Send(chunkIndex, firstEventIndex, events, cancellationToken);
         lock (_lock)
         {
             _sends.RemoveAll(_ => _.IsCompleted);
@@ -199,7 +230,7 @@ public sealed class EventImport(
         }
     }
 
-    async Task Send(int chunkIndex, long firstEventIndex, ImportEvent[] events)
+    async Task Send(int chunkIndex, long firstEventIndex, ImportEvent[] events, CancellationToken cancellationToken)
     {
         try
         {
@@ -222,7 +253,7 @@ public sealed class EventImport(
                 catch (RpcException ex) when (_transientStatusCodes.Contains(ex.StatusCode) && attempt < _options.MaxChunkAttempts)
                 {
                     // Sending the chunk again is safe: the kernel stages a chunk under its index once.
-                    await Task.Delay(_retryDelay(attempt));
+                    await Task.Delay(_retryDelay(attempt), cancellationToken);
                 }
             }
         }

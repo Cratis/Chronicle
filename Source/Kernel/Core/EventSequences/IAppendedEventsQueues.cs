@@ -78,22 +78,17 @@ public interface IAppendedEventsQueues : IGrainWithStringKey
     Task<bool> IsSubscribed(ObserverKey observerKey);
 
     /// <summary>
-    /// Holds observers back from live delivery of the given event types until the hold is released.
+    /// Hands every subscribed observer the given events are meant for to its catch-up path, dropping its live
+    /// subscription, without delivering the events live.
     /// </summary>
-    /// <param name="holdId">The identity of the hold; holding again under the same identity is harmless.</param>
-    /// <param name="eventTypes">The event types the hold covers.</param>
+    /// <param name="appendedEvents">The durable events that were committed without live delivery.</param>
     /// <returns>Awaitable task.</returns>
     /// <remarks>
-    /// Used by an import commit (decision 0023): its events are not delivered live, so every subscription that could
-    /// see them leaves live delivery, keeping its cursor where it is, instead of being carried past them by an ordinary
-    /// append that interleaves with the import. An observer that subscribes while the hold stands is held too.
+    /// Used by an import commit (decision 0023), after each chunk is durable: the chunk is not delivered live, so an
+    /// ordinary append delivered after it would carry an observer's cursor past imported events it has not seen. This is
+    /// the spill the queue applies to a lagging observer under back-pressure; an observer that is not subscribed, because
+    /// it is already catching up, is left alone and gets no second catch-up. Catch-up reads from the observer's own
+    /// cursor, so it delivers the imported events and any ordinary appends that interleave with them, in order.
     /// </remarks>
-    Task HoldBack(string holdId, IEnumerable<EventTypeId> eventTypes);
-
-    /// <summary>
-    /// Releases a hold and starts one catch-up for each observer it no longer holds back.
-    /// </summary>
-    /// <param name="holdId">The identity of the hold.</param>
-    /// <returns>Awaitable task.</returns>
-    Task ReleaseHold(string holdId);
+    Task SpillMatchingToCatchup(IEnumerable<AppendedEvent> appendedEvents);
 }

@@ -20,6 +20,11 @@ namespace Cratis.Chronicle.Storage.MongoDB.Imports;
 /// </remarks>
 public class ImportStorage(IEventStoreNamespaceDatabase database) : IImportStorage
 {
+    /// <summary>
+    /// The most bytes one MongoDB document holds.
+    /// </summary>
+    internal const int MaxDocumentBytes = 16 * 1024 * 1024;
+
     const string IdField = "_id";
     const string PayloadField = "payload";
     const string ImportIdField = "importId";
@@ -29,6 +34,7 @@ public class ImportStorage(IEventStoreNamespaceDatabase database) : IImportStora
     const string EventsStagedField = "eventsStaged";
     const string EventsRejectedField = "eventsRejected";
     const string StateField = "state";
+    const string EventTypesField = "eventTypes";
 
     readonly IMongoCollection<BsonDocument> _records = database.GetCollection<BsonDocument>(WellKnownCollectionNames.Imports);
     readonly IMongoCollection<BsonDocument> _chunks = database.GetCollection<BsonDocument>(WellKnownCollectionNames.ImportChunks);
@@ -63,28 +69,37 @@ public class ImportStorage(IEventStoreNamespaceDatabase database) : IImportStora
             new ReplaceOptions { IsUpsert = true });
 
     /// <inheritdoc/>
-    public async Task<bool> AddChunk(StagedImportChunk chunk)
+    public async Task<StagedChunkAddition> AddChunk(StagedImportChunk chunk)
     {
         await EnsureIndexes().ConfigureAwait(false);
         var summary = chunk.ToSummary();
+        var document = new BsonDocument
+        {
+            { IdField, ChunkKey(chunk.ImportId, chunk.ChunkIndex) },
+            { ImportIdField, Key(chunk.ImportId) },
+            { ChunkIndexField, chunk.ChunkIndex },
+            { FirstEventIndexField, chunk.FirstEventIndex },
+            { EventsReceivedField, summary.EventsReceived },
+            { EventsStagedField, summary.EventsStaged },
+            { EventsRejectedField, summary.EventsRejected },
+            { EventTypesField, new BsonArray(summary.EventTypes) },
+            { PayloadField, ImportStorageSerialization.Serialize(chunk) }
+        };
+
+        var size = document.ToBson().Length;
+        if (size > MaxDocumentBytes) throw new StagedChunkTooLarge(chunk.ImportId, chunk.ChunkIndex, size, MaxDocumentBytes);
+
         try
         {
-            await _chunks.InsertOneAsync(new BsonDocument
-            {
-                { IdField, ChunkKey(chunk.ImportId, chunk.ChunkIndex) },
-                { ImportIdField, Key(chunk.ImportId) },
-                { ChunkIndexField, chunk.ChunkIndex },
-                { FirstEventIndexField, chunk.FirstEventIndex },
-                { EventsReceivedField, summary.EventsReceived },
-                { EventsStagedField, summary.EventsStaged },
-                { EventsRejectedField, summary.EventsRejected },
-                { PayloadField, ImportStorageSerialization.Serialize(chunk) }
-            }).ConfigureAwait(false);
-            return true;
+            await _chunks.InsertOneAsync(document).ConfigureAwait(false);
+            return StagedChunkAddition.Added;
         }
         catch (MongoWriteException ex) when (ex.WriteError?.Category == ServerErrorCategory.DuplicateKey)
         {
-            return false;
+            var existing = await Summary(chunk.ImportId, chunk.ChunkIndex).ConfigureAwait(false);
+            return existing?.Matches(chunk.FirstEventIndex, chunk.EventsReceived) != false
+                ? StagedChunkAddition.AlreadyStaged
+                : StagedChunkAddition.Conflicting;
         }
     }
 
@@ -107,13 +122,12 @@ public class ImportStorage(IEventStoreNamespaceDatabase database) : IImportStora
         };
         using var cursor = await _chunks.FindAsync(Builders<BsonDocument>.Filter.Eq(ImportIdField, Key(importId)), options).ConfigureAwait(false);
         var documents = await cursor.ToListAsync().ConfigureAwait(false);
-        return documents.Select(_ => new ImportChunkSummary(
-            _[ChunkIndexField].ToInt32(),
-            _[FirstEventIndexField].ToInt64(),
-            _[EventsReceivedField].ToInt32(),
-            _[EventsStagedField].ToInt32(),
-            _[EventsRejectedField].ToInt32())).ToArray();
+        return documents.Select(ToSummary).ToArray();
     }
+
+    /// <inheritdoc/>
+    public Task RemoveChunk(ImportId importId, int chunkIndex) =>
+        _chunks.DeleteOneAsync(Builders<BsonDocument>.Filter.Eq(IdField, ChunkKey(importId, chunkIndex)));
 
     /// <inheritdoc/>
     public Task RemoveChunks(ImportId importId) =>
@@ -126,9 +140,25 @@ public class ImportStorage(IEventStoreNamespaceDatabase database) : IImportStora
         await _records.DeleteOneAsync(Builders<BsonDocument>.Filter.Eq(IdField, Key(importId))).ConfigureAwait(false);
     }
 
+    static ImportChunkSummary ToSummary(BsonDocument document) => new(
+        document[ChunkIndexField].ToInt32(),
+        document[FirstEventIndexField].ToInt64(),
+        document[EventsReceivedField].ToInt32(),
+        document[EventsStagedField].ToInt32(),
+        document[EventsRejectedField].ToInt32(),
+        document.TryGetValue(EventTypesField, out var eventTypes) ? eventTypes.AsBsonArray.Select(_ => _.AsString).ToArray() : []);
+
     static string Key(ImportId importId) => importId.Value.ToString("D", CultureInfo.InvariantCulture);
 
     static string ChunkKey(ImportId importId, int chunkIndex) => $"{Key(importId)}/{chunkIndex.ToString(CultureInfo.InvariantCulture)}";
+
+    async Task<ImportChunkSummary?> Summary(ImportId importId, int chunkIndex)
+    {
+        var options = new FindOptions<BsonDocument> { Projection = Builders<BsonDocument>.Projection.Exclude(PayloadField) };
+        using var cursor = await _chunks.FindAsync(Builders<BsonDocument>.Filter.Eq(IdField, ChunkKey(importId, chunkIndex)), options).ConfigureAwait(false);
+        var document = await cursor.FirstOrDefaultAsync().ConfigureAwait(false);
+        return document is null ? null : ToSummary(document);
+    }
 
     Task EnsureIndexes() => _chunks.EnsureIndexesOnceAsync(
         _ensuredIndexes,

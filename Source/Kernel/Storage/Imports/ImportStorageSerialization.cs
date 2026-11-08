@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using Cratis.Json;
 
@@ -14,8 +15,14 @@ public static class ImportStorageSerialization
     /// <summary>
     /// Gets the <see cref="JsonSerializerOptions"/> for import staging.
     /// </summary>
+    /// <remarks>
+    /// Event content is JSON held in a string, so the default encoder's escaping of every quote as six characters would
+    /// make a staged chunk several times its content. Relaxed escaping only escapes what JSON requires; the payload is
+    /// stored, never rendered as HTML.
+    /// </remarks>
     public static readonly JsonSerializerOptions Options = new()
     {
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
         Converters = { new EnumerableConceptAsJsonConverterFactory(), new ConceptAsJsonConverterFactory() }
     };
 

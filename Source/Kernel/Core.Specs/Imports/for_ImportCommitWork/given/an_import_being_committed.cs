@@ -20,6 +20,7 @@ public class an_import_being_committed : Specification
     protected List<int> _committedChunks;
     protected List<EventSequenceNumber> _committedFrom;
     protected List<bool> _validationFirsts;
+    protected List<bool> _mayBeCommitted;
     protected ImportCommitWork _work;
     protected ulong _nextSequenceNumber;
 
@@ -30,6 +31,7 @@ public class an_import_being_committed : Specification
         _committedChunks = [];
         _committedFrom = [];
         _validationFirsts = [];
+        _mayBeCommitted = [];
         _nextSequenceNumber = 10;
         _record = new ImportRecord(_key.ImportId, EventSequenceId.Log, OnInvalidEvent.Reject, DateTimeOffset.UtcNow)
         {
@@ -66,8 +68,12 @@ public class an_import_being_committed : Specification
             _validationFirsts.Add(call.ArgAt<bool>(1));
             return new ImportChunkValidationResult([]);
         });
-        _sequence.AppendImportChunk(_key.ImportId, Arg.Any<int>(), Arg.Any<EventSequenceNumber>(), Arg.Any<IEnumerable<EventTypeId>>(), Arg.Any<IReadOnlyList<ImportEventToAppend>>())
-            .Returns(call => Appended(call.ArgAt<EventSequenceNumber>(2), call.ArgAt<IReadOnlyList<ImportEventToAppend>>(4)));
+        _sequence.AppendImportChunk(_key.ImportId, Arg.Any<int>(), Arg.Any<EventSequenceNumber>(), Arg.Any<bool>(), Arg.Any<IReadOnlyList<ImportEventToAppend>>())
+            .Returns(call =>
+            {
+                _mayBeCommitted.Add(call.ArgAt<bool>(3));
+                return Appended(call.ArgAt<EventSequenceNumber>(2), call.ArgAt<IReadOnlyList<ImportEventToAppend>>(4));
+            });
 
         _work = new(_key, _import, _storage, _ => _sequence, 1000, 3, retryDelay: _ => TimeSpan.Zero);
     }

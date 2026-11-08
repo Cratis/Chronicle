@@ -10,7 +10,7 @@ public class and_the_staged_events_are_converted : given.an_import_being_committ
 {
     readonly List<ImportEventToAppend> _appended = [];
 
-    void Establish() => _sequence.AppendImportChunk(_key.ImportId, Arg.Any<int>(), Arg.Any<EventSequenceNumber>(), Arg.Any<IEnumerable<EventTypeId>>(), Arg.Any<IReadOnlyList<ImportEventToAppend>>())
+    void Establish() => _sequence.AppendImportChunk(_key.ImportId, Arg.Any<int>(), Arg.Any<EventSequenceNumber>(), Arg.Any<bool>(), Arg.Any<IReadOnlyList<ImportEventToAppend>>())
         .Returns(call =>
         {
             _appended.AddRange(call.ArgAt<IReadOnlyList<ImportEventToAppend>>(4));

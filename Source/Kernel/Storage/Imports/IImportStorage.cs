@@ -10,7 +10,8 @@ namespace Cratis.Chronicle.Storage.Imports;
 /// </summary>
 /// <remarks>
 /// Every provider must give the same answers: a chunk is keyed by its import and chunk index, a second chunk with the
-/// same key is never stored over the first, and summaries come back ordered by chunk index.
+/// same key is never stored over the first and is reported as already staged when it covers the same events and as
+/// conflicting when it does not, and summaries come back ordered by chunk index.
 /// </remarks>
 public interface IImportStorage
 {
@@ -38,8 +39,8 @@ public interface IImportStorage
     /// Stages a chunk unless a chunk with the same import and index is already staged.
     /// </summary>
     /// <param name="chunk">The <see cref="StagedImportChunk"/>.</param>
-    /// <returns>True when the chunk was stored; false when one with the same key was already staged and was kept.</returns>
-    Task<bool> AddChunk(StagedImportChunk chunk);
+    /// <returns>The <see cref="StagedChunkAddition"/>; a staged chunk is never replaced.</returns>
+    Task<StagedChunkAddition> AddChunk(StagedImportChunk chunk);
 
     /// <summary>
     /// Gets a staged chunk.
@@ -55,6 +56,14 @@ public interface IImportStorage
     /// <param name="importId">The <see cref="ImportId"/>.</param>
     /// <returns>The <see cref="ImportChunkSummary">summaries</see>.</returns>
     Task<IEnumerable<ImportChunkSummary>> GetChunkSummaries(ImportId importId);
+
+    /// <summary>
+    /// Removes one staged chunk of an import.
+    /// </summary>
+    /// <param name="importId">The <see cref="ImportId"/>.</param>
+    /// <param name="chunkIndex">The chunk index.</param>
+    /// <returns>Awaitable task.</returns>
+    Task RemoveChunk(ImportId importId, int chunkIndex);
 
     /// <summary>
     /// Removes every staged chunk of an import, keeping the import itself.

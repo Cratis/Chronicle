@@ -12,13 +12,16 @@ public class and_many_chunks_are_produced : given.an_event_import
     {
         _options = ImportOptions.Default with { MaxChunksInFlight = 2 };
         _maxChunkEvents = 1;
+        _signalAtInFlight = 2;
         _gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
     }
 
     async Task Because()
     {
         _adding = Import.Add(Events(5));
-        await Task.Delay(100);
+
+        // Both slots are taken and held by the gate, so the adding cannot get past the third chunk until it opens.
+        await _inFlightReached.Task.WaitAsync(TimeSpan.FromSeconds(5));
         _blockedWhileFull = !_adding.IsCompleted;
         _gate!.SetResult();
         await _adding;
