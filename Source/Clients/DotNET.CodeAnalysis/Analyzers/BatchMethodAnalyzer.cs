@@ -56,7 +56,7 @@ public class BatchMethodAnalyzer : DiagnosticAnalyzer
         category: "Usage",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true,
-        description: "A reactor batch method takes (EventBatch batch, BatchContext context). A reducer batch method takes (EventBatch events, TReadModel? current, BatchContext context) and returns TReadModel? or Task<TReadModel?>; on a self-reducing read model it is public and static. Further parameters are a CancellationToken or services resolved from the service provider.");
+        description: "A reactor batch method takes (EventBatch batch, BatchContext context). A reducer batch method takes (EventBatch events, TReadModel? current, BatchContext context) and returns TReadModel? or Task<TReadModel?>; on a self-reducing read model it is public, static and named Reduce, the only name the client discovers. Further parameters are a CancellationToken or services resolved from the service provider.");
 
     /// <inheritdoc/>
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
@@ -67,10 +67,19 @@ public class BatchMethodAnalyzer : DiagnosticAnalyzer
     {
         context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
         context.EnableConcurrentExecution();
-        context.RegisterSymbolAction(AnalyzeMethod, SymbolKind.Method);
+        context.RegisterCompilationStartAction(start =>
+        {
+            var symbols = BatchSymbols.For(start.Compilation, start.CancellationToken);
+            if (symbols is null)
+            {
+                return;
+            }
+
+            start.RegisterSymbolAction(symbolContext => AnalyzeMethod(symbolContext, symbols), SymbolKind.Method);
+        });
     }
 
-    static void AnalyzeMethod(SymbolAnalysisContext context)
+    static void AnalyzeMethod(SymbolAnalysisContext context, BatchSymbols symbols)
     {
         var method = (IMethodSymbol)context.Symbol;
         if (method.MethodKind != MethodKind.Ordinary)
@@ -78,68 +87,69 @@ public class BatchMethodAnalyzer : DiagnosticAnalyzer
             return;
         }
 
-        var compilation = context.Compilation;
-        var observed = BatchObservers.Observed(method, compilation).ToArray();
-        if (!BatchObservers.IsBatchMethod(method, compilation))
+        if (!BatchObservers.IsBatchMethod(method, symbols))
         {
-            foreach (var (eventType, attribute) in observed)
+            foreach (var (eventType, attribute) in BatchObservers.Observed(method, symbols))
             {
                 context.ReportDiagnostic(Diagnostic.Create(ObservesOnlyOnBatchMethodsRule, BatchObservers.LocationOf(attribute, method), method.Name, eventType.Name));
             }
 
-            AnalyzePerEventMethod(context, method);
+            AnalyzePerEventMethod(context, method, symbols);
             return;
         }
 
-        var kind = BatchObservers.KindOf(method.ContainingType, compilation, ExplicitRegistrationEvidence.For(compilation, context.CancellationToken));
+        var kind = BatchObservers.KindOf(method.ContainingType, symbols);
         if (kind == BatchObserverKind.None)
         {
             return;
         }
 
-        if (observed.Length == 0)
+        if (!BatchObservers.Observed(method, symbols).Any())
         {
             context.ReportDiagnostic(Diagnostic.Create(MustObserveRule, method.Locations.FirstOrDefault(), method.Name));
         }
 
         if (kind == BatchObserverKind.Reactor)
         {
-            AnalyzeReactorBatchMethod(context, method);
+            AnalyzeReactorBatchMethod(context, method, symbols);
             return;
         }
 
-        var problem = BatchMethodSignature.ProblemWithReducerMethod(method, kind, compilation);
+        var problem = BatchMethodSignature.ProblemWithReducerMethod(method, kind, symbols);
         if (problem is not null)
         {
             context.ReportDiagnostic(Diagnostic.Create(SignatureRule, method.Locations.FirstOrDefault(), method.Name, problem));
         }
     }
 
-    static void AnalyzeReactorBatchMethod(SymbolAnalysisContext context, IMethodSymbol method)
+    static void AnalyzeReactorBatchMethod(SymbolAnalysisContext context, IMethodSymbol method, BatchSymbols symbols)
     {
-        if (!method.ReturnsVoid && !BatchObservers.Is(method.ReturnType, "System.Threading.Tasks.Task", context.Compilation))
+        if (!method.ReturnsVoid && !BatchSymbols.Is(method.ReturnType, symbols.Task))
         {
             context.ReportDiagnostic(Diagnostic.Create(ReactorReturnTypeRule, method.Locations.FirstOrDefault(), method.Name, method.ReturnType.ToDisplayString()));
         }
 
-        var problem = BatchMethodSignature.ProblemWithDependencies(method, 1, context.Compilation);
+        var problem = BatchMethodSignature.ProblemWithDependencies(method, 1, symbols);
         if (problem is not null)
         {
             context.ReportDiagnostic(Diagnostic.Create(SignatureRule, method.Locations.FirstOrDefault(), method.Name, problem));
         }
     }
 
-    static void AnalyzePerEventMethod(SymbolAnalysisContext context, IMethodSymbol method)
+    static void AnalyzePerEventMethod(SymbolAnalysisContext context, IMethodSymbol method, BatchSymbols symbols)
     {
-        var batchContext = method.Parameters.FirstOrDefault(parameter => BatchObservers.Is(parameter.Type, WellKnownTypes.BatchContextName, context.Compilation));
+        var batchContext = method.Parameters.FirstOrDefault(parameter => BatchSymbols.Is(parameter.Type, symbols.BatchContext));
         if (batchContext is null)
         {
             return;
         }
 
-        var evidence = ExplicitRegistrationEvidence.For(context.Compilation, context.CancellationToken);
-        var kind = BatchObservers.KindOf(method.ContainingType, context.Compilation, evidence);
-        if (BatchObservers.IsPerEventMethod(method, kind, context.Compilation, evidence))
+        var observer = method.ContainingType;
+        var kind = BatchObservers.KindOf(observer, symbols);
+        var takesItInstead = kind == BatchObserverKind.Reducer
+            ? BatchObservers.IsReduceShapedWithBatchContext(method, observer, symbols)
+            : BatchObservers.IsPerEventMethod(method, observer, kind, symbols);
+        if (takesItInstead)
         {
             context.ReportDiagnostic(Diagnostic.Create(BatchContextRule, batchContext.Locations.FirstOrDefault(), method.Name));
         }

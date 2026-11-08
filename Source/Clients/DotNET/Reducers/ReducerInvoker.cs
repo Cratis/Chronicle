@@ -164,6 +164,17 @@ public class ReducerInvoker : IReducerInvoker, IBatchReducerInvoker
         return methods.Keys.Concat(batchMethod?.EventTypes ?? []).Select(eventTypes.GetEventTypeFor).ToImmutableList();
     }
 
+    static void ThrowIfAnyReducerMethodTakesBatchContext(Type targetType, Type readModelType, IEnumerable<Type> eventTypes)
+    {
+        var offending = Array.Find(
+            targetType.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic),
+            method => method.TakesBatchContextAsReducerMethod(readModelType, eventTypes));
+        if (offending is not null)
+        {
+            throw new BatchContextOnlyForBatchMethods(targetType, offending.Name);
+        }
+    }
+
     static ReduceResult FailedReduction(object? currentModelState, EventSequenceNumber lastSuccessfulObservation, Exception exception) =>
         new(currentModelState, lastSuccessfulObservation, exception.GetAllMessages(), exception.StackTrace ?? string.Empty)
         {
@@ -183,6 +194,7 @@ public class ReducerInvoker : IReducerInvoker, IBatchReducerInvoker
         // dropped from dispatch without a word, so its events were never applied and the reducer merely looked
         // registered. Reject it here instead - it can only ever be a mistake (#3947).
         ReducerMethodCurrentReadModelMustBeNullable.ThrowIfAnyMethodHasNonNullableCurrentReadModel(targetType, readModelType, eventTypes);
+        ThrowIfAnyReducerMethodTakesBatchContext(targetType, readModelType, eventTypes);
 
         var methodsByEventType = new Dictionary<Type, MethodInfo>();
 

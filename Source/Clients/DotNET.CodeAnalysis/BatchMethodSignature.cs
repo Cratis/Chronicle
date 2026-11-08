@@ -15,11 +15,11 @@ internal static class BatchMethodSignature
     /// </summary>
     /// <param name="method">The batch method.</param>
     /// <param name="kind">The <see cref="BatchObserverKind"/> of its type.</param>
-    /// <param name="compilation">The owning compilation.</param>
+    /// <param name="symbols">The <see cref="BatchSymbols"/> of the compilation.</param>
     /// <returns>The problem, or null when the method can be called.</returns>
-    internal static string? ProblemWithReducerMethod(IMethodSymbol method, BatchObserverKind kind, Compilation compilation)
+    internal static string? ProblemWithReducerMethod(IMethodSymbol method, BatchObserverKind kind, BatchSymbols symbols)
     {
-        var readModel = BatchObservers.ReadModelOf(method.ContainingType, kind, compilation);
+        var readModel = BatchObservers.ReadModelOf(method.ContainingType, kind, symbols);
         if (readModel is null)
         {
             return null;
@@ -30,17 +30,22 @@ internal static class BatchMethodSignature
             return "a self-reducing read model's batch method is public and static";
         }
 
+        if (kind == BatchObserverKind.SelfReducer && !string.Equals(method.Name, BatchObservers.ReduceMethodName, StringComparison.Ordinal))
+        {
+            return $"a self-reducing read model's batch method is named '{BatchObservers.ReduceMethodName}'; the client discovers no other name, so this method would never be called";
+        }
+
         if (method.Parameters.Length < 2 || !SymbolEqualityComparer.Default.Equals(method.Parameters[1].Type, readModel))
         {
             return $"take the current read model '{readModel.Name}?' as the second parameter";
         }
 
-        if (!ReturnsReadModel(method, readModel, compilation))
+        if (!SymbolEqualityComparer.Default.Equals(method.ReturnType, readModel) && !symbols.IsTaskOf(method.ReturnType, readModel))
         {
             return $"return '{readModel.Name}?' or 'Task<{readModel.Name}?>'; null removes the read model";
         }
 
-        return ProblemWithDependencies(method, 2, compilation);
+        return ProblemWithDependencies(method, 2, symbols);
     }
 
     /// <summary>
@@ -48,9 +53,9 @@ internal static class BatchMethodSignature
     /// </summary>
     /// <param name="method">The batch method.</param>
     /// <param name="first">The index of the first parameter that is resolved rather than passed.</param>
-    /// <param name="compilation">The owning compilation.</param>
+    /// <param name="symbols">The <see cref="BatchSymbols"/> of the compilation.</param>
     /// <returns>The problem, or null when every parameter can be resolved.</returns>
-    internal static string? ProblemWithDependencies(IMethodSymbol method, int first, Compilation compilation)
+    internal static string? ProblemWithDependencies(IMethodSymbol method, int first, BatchSymbols symbols)
     {
         if (method.IsGenericMethod)
         {
@@ -69,17 +74,17 @@ internal static class BatchMethodSignature
         {
             var parameter = method.Parameters[index];
             var type = parameter.Type;
-            if (BatchObservers.Is(type, WellKnownTypes.BatchContextName, compilation) || BatchObservers.Is(type, "System.Threading.CancellationToken", compilation))
+            if (BatchSymbols.Is(type, symbols.BatchContext) || BatchSymbols.Is(type, symbols.CancellationToken))
             {
                 continue;
             }
 
-            if (BatchObservers.Is(type, WellKnownTypes.EventContextName, compilation))
+            if (BatchSymbols.Is(type, symbols.EventContext))
             {
                 return $"parameter '{parameter.Name}' is an EventContext; each event in the batch carries its own context, and the method takes a BatchContext";
             }
 
-            if (BatchObservers.Is(type, WellKnownTypes.EventBatchName, compilation))
+            if (BatchSymbols.Is(type, symbols.EventBatch))
             {
                 return $"parameter '{parameter.Name}' is a second EventBatch; a batch method takes one, first";
             }
@@ -92,10 +97,4 @@ internal static class BatchMethodSignature
 
         return null;
     }
-
-    static bool ReturnsReadModel(IMethodSymbol method, ITypeSymbol readModel, Compilation compilation) =>
-        SymbolEqualityComparer.Default.Equals(method.ReturnType, readModel) ||
-        (method.ReturnType is INamedTypeSymbol { IsGenericType: true } task &&
-         SymbolEqualityComparer.Default.Equals(task.OriginalDefinition, compilation.GetTypeByMetadataName("System.Threading.Tasks.Task`1")) &&
-         SymbolEqualityComparer.Default.Equals(task.TypeArguments[0], readModel));
 }

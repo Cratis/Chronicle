@@ -37,11 +37,25 @@ public class BatchMethodPatternAnalyzer : DiagnosticAnalyzer
     {
         context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
         context.EnableConcurrentExecution();
-        context.RegisterOperationAction(Analyze, PatternKinds);
+        context.RegisterCompilationStartAction(start =>
+        {
+            var symbols = BatchSymbols.For(start.Compilation, start.CancellationToken);
+            if (symbols is null)
+            {
+                return;
+            }
+
+            start.RegisterOperationAction(operationContext => Analyze(operationContext, symbols), PatternKinds);
+        });
     }
 
-    static void Analyze(OperationAnalysisContext context)
+    static void Analyze(OperationAnalysisContext context, BatchSymbols symbols)
     {
+        if (ContainingMethod(context.ContainingSymbol) is not { } method || !BatchObservers.IsBatchMethod(method, symbols))
+        {
+            return;
+        }
+
         var matchedType = context.Operation switch
         {
             IDeclarationPatternOperation declaration => declaration.MatchedType,
@@ -51,21 +65,15 @@ public class BatchMethodPatternAnalyzer : DiagnosticAnalyzer
             _ => null
         };
 
-        if (matchedType is null || ContainingMethod(context.ContainingSymbol) is not { } method)
+        if (matchedType is null)
         {
             return;
         }
 
-        var compilation = context.Compilation;
-        if (!BatchObservers.IsBatchMethod(method, compilation))
-        {
-            return;
-        }
-
-        var observed = BatchObservers.Observed(method, compilation).Select(_ => _.EventType).ToArray();
+        var observed = BatchObservers.Observed(method, symbols).Select(_ => _.EventType).ToArray();
         if (observed.Length == 0 ||
-            !ExplicitRegistrationEvidence.For(compilation, context.CancellationToken).IsEventType(matchedType, compilation) ||
-            observed.Any(eventType => BatchObservers.Overlaps(eventType, matchedType, compilation)))
+            !symbols.Evidence.IsEventType(matchedType, symbols.Compilation) ||
+            observed.Any(eventType => BatchObservers.Overlaps(eventType, matchedType, symbols)))
         {
             return;
         }

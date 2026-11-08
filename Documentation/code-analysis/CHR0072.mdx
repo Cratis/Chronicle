@@ -7,6 +7,8 @@ description: "CHR0072 reports a Cratis Chronicle per-event reactor or reducer me
 
 `BatchContext` describes the page of events a batch method is called for: its partitions, its event count, its origin and its deadline. A per-event method is called once per event and receives that event's `EventContext` instead. Chronicle refuses to register an observer whose per-event method takes a `BatchContext`.
 
+For a reducer, CHR0072 reports a method shaped like a reduce method, taking an event and the current read model, whose third parameter is a `BatchContext` where a reduce method takes the `EventContext`. Without the rule such a method would not be a reduce method at all, and its events would be skipped without a word. Other methods that happen to take an event and a `BatchContext` are not reduce methods and are not reported.
+
 ## Severity
 
 Error
