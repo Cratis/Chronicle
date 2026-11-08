@@ -9,5 +9,6 @@ public class and_its_sink_is_unchanged : given_named_sinks
 
     Task Because() => _manager.Register([Orders("Reporting") with { DisplayName = "Order overview" }]);
 
-    [Fact] void should_not_replay() => _sinkChangeReplays.DidNotReceiveWithAnyArgs().ReplayFor(default!, default!);
+    [Fact] void should_not_request_a_replay() => _sinkChangeReplays.DidNotReceiveWithAnyArgs().Request(default!, default!);
+    [Fact] void should_not_start_a_replay() => _sinkChangeReplays.DidNotReceiveWithAnyArgs().Start(default!);
 }

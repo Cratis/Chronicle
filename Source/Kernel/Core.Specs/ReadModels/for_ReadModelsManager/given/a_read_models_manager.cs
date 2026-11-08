@@ -45,6 +45,8 @@ public class a_read_models_manager : Specification
         _silo.AddService(_projectionPipelines);
         _silo.AddService(SinkConfigurations);
         _sinkChangeReplays = Substitute.For<ISinkChangeReplays>();
+        _sinkChangeReplays.Request(Arg.Any<EventStoreName>(), Arg.Any<ReadModelIdentifier>())
+            .Returns(call => new SinkChangeReplay(call.ArgAt<EventStoreName>(0), call.ArgAt<ReadModelIdentifier>(1), []));
         _silo.AddService(_sinkChangeReplays);
 
         _manager = await _silo.CreateGrainAsync<ReadModelsManager>(_eventStore.Value);

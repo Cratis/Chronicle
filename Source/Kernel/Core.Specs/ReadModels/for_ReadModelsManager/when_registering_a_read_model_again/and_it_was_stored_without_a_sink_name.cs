@@ -12,5 +12,6 @@ public class and_it_was_stored_without_a_sink_name : given_named_sinks
 
     Task Because() => _manager.Register([Orders(SinkName.Default) with { DisplayName = "Order overview" }]);
 
-    [Fact] void should_not_replay() => _sinkChangeReplays.DidNotReceiveWithAnyArgs().ReplayFor(default!, default!);
+    [Fact] void should_not_request_a_replay() => _sinkChangeReplays.DidNotReceiveWithAnyArgs().Request(default!, default!);
+    [Fact] void should_not_start_a_replay() => _sinkChangeReplays.DidNotReceiveWithAnyArgs().Start(default!);
 }

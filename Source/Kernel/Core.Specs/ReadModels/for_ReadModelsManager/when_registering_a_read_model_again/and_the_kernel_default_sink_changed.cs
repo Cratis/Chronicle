@@ -17,5 +17,6 @@ public class and_the_kernel_default_sink_changed : given_named_sinks
         return _manager.Register([Orders()]);
     }
 
-    [Fact] void should_replay_into_the_new_sink() => _sinkChangeReplays.Received(1).ReplayFor(_eventStore, (ReadModelIdentifier)"orders");
+    [Fact] void should_request_the_replays() => _sinkChangeReplays.Received(1).Request(_eventStore, (ReadModelIdentifier)"orders");
+    [Fact] void should_start_the_requested_replays() => _sinkChangeReplays.ReceivedWithAnyArgs(1).Start(default!);
 }

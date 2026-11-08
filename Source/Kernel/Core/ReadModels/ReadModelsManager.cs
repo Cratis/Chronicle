@@ -29,7 +29,6 @@ public class ReadModelsManager(
     readonly ISinkConfigurations _sinkConfigurations = sinkConfigurations ?? DefaultSinkConfigurations.Instance;
     readonly Dictionary<ReadModelIdentifier, ReadModelDefinition> _completed = new();
     readonly HashSet<ReadModelIdentifier> _pendingEvictions = new();
-    readonly HashSet<ReadModelIdentifier> _pendingSinkReplays = new();
 
     /// <inheritdoc/>
     public Task Ensure() => Task.CompletedTask;
@@ -58,13 +57,14 @@ public class ReadModelsManager(
 
         var readModels = State.ReadModels.ToList();
         var modified = new List<ReadModelDefinition>();
+        var sinkChanges = new List<ReadModelIdentifier>();
         foreach (var definition in definitions)
         {
             _completed.Remove(definition.Identifier);
             var existing = readModels.Find(_ => _.Identifier == definition.Identifier);
             if (existing is not null && !SameSink(existing.Sink, definition.Sink))
             {
-                _pendingSinkReplays.Add(definition.Identifier);
+                sinkChanges.Add(definition.Identifier);
             }
 
             if (existing is not null)
@@ -78,6 +78,20 @@ public class ReadModelsManager(
 
             readModels.Add(definition);
             modified.Add(definition);
+        }
+
+        // A moved read model's new sink is empty while the observers filling it are caught up. Its replays are recorded, durably,
+        // before the new sink is stored: a crash before the store leaves the old sink stored, so the next registration finds the
+        // change again and records the same replays once more - recording is idempotent - and a crash after it leaves them recorded.
+        // The new sink is never stored without its replays. They cannot run yet: the pipelines read the sink from the read model
+        // grains, which only learn the new definition below.
+        var sinkChangeReplaysToStart = new List<SinkChangeReplay>();
+        foreach (var identifier in sinkChanges)
+        {
+            if (sinkChangeReplays is not null)
+            {
+                sinkChangeReplaysToStart.Add(await sinkChangeReplays.Request(this.GetPrimaryKeyString(), identifier));
+            }
         }
 
         if (modified.Count > 0)
@@ -97,16 +111,10 @@ public class ReadModelsManager(
             _pendingEvictions.Remove(identifier);
         }
 
-        // The new sink is empty while the observers filling it are caught up: rebuild it, after the pipelines bound to the old sink
-        // are gone and every read model grain knows the new definition.
-        foreach (var identifier in _pendingSinkReplays.ToArray())
+        // Now the read model grains know the new sink and the pipelines bound to the old one are gone, the recorded replays run.
+        foreach (var replay in sinkChangeReplaysToStart)
         {
-            if (sinkChangeReplays is not null)
-            {
-                await sinkChangeReplays.ReplayFor(this.GetPrimaryKeyString(), identifier);
-            }
-
-            _pendingSinkReplays.Remove(identifier);
+            await sinkChangeReplays!.Start(replay);
         }
 
         foreach (var definition in definitions)

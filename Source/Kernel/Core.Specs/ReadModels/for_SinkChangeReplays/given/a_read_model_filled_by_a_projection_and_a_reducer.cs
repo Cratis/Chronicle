@@ -7,9 +7,11 @@ using Cratis.Chronicle.Concepts.Observation.Reducers;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.Concepts.Recommendations;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Observation.States;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Recommendations;
 using Cratis.Chronicle.Storage;
@@ -34,6 +36,20 @@ public class a_read_model_filled_by_a_projection_and_a_reducer : Specification
         _grainFactory = Substitute.For<IGrainFactory>();
         _observer = Substitute.For<IObserver>();
         _recommendations = Substitute.For<IRecommendationsManager>();
+
+        // As the recommendations manager does, an identical request returns the recommendation already recorded for it.
+        var recorded = new Dictionary<string, RecommendationId>();
+        _recommendations.Add<IReplayCandidateRecommendation, ReplayCandidateRequest>(Arg.Any<RecommendationDescription>(), Arg.Any<ReplayCandidateRequest>())
+            .Returns(call =>
+            {
+                var key = call.Arg<ReplayCandidateRequest>().ObserverKey.ToString();
+                if (!recorded.TryGetValue(key, out var id))
+                {
+                    id = recorded[key] = RecommendationId.New();
+                }
+
+                return id;
+            });
         _grainFactory.GetGrain<IObserver>(Arg.Any<string>(), Arg.Any<string>()).Returns(_observer);
         _grainFactory.GetGrain<IRecommendationsManager>(Arg.Any<long>(), Arg.Any<string>(), Arg.Any<string>()).Returns(_recommendations);
         var namespaces = Substitute.For<INamespaces>();

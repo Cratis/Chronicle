@@ -6,6 +6,7 @@ using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Replaying;
 using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.Concepts.Recommendations;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Observation;
@@ -25,7 +26,7 @@ namespace Cratis.Chronicle.ReadModels;
 /// A read model moved to another sink finds its new store empty while its observers are already caught up, so it is rebuilt the
 /// way a changed projection or reducer definition is: a full replay when the definition evolution policy allows one, and a
 /// replay recommendation when it does not or the observer refuses it - for a global projection, say, or during generation
-/// initialization.
+/// initialization. The replays go through replay recommendations, which are durable and recorded only once per observer.
 /// </remarks>
 /// <param name="grainFactory">The <see cref="IGrainFactory"/>.</param>
 /// <param name="storage">The <see cref="IStorage"/> holding the reducer definitions.</param>
@@ -36,7 +37,7 @@ public class SinkChangeReplays(IGrainFactory grainFactory, IStorage storage, IOp
     const string Description = "Read model sink has changed.";
 
     /// <inheritdoc/>
-    public async Task ReplayFor(EventStoreName eventStore, ReadModelIdentifier readModel)
+    public async Task<SinkChangeReplay> Request(EventStoreName eventStore, ReadModelIdentifier readModel)
     {
         var projections = (await grainFactory.GetGrain<IProjectionsManager>(eventStore).GetProjectionDefinitions())
             .Where(_ => _.ReadModel == readModel)
@@ -45,43 +46,49 @@ public class SinkChangeReplays(IGrainFactory grainFactory, IStorage storage, IOp
             .Where(_ => _.ReadModel == readModel)
             .Select(_ => new Target(_.Identifier.Value, _.EventSequenceId, ObserverType.Reducer));
         var targets = projections.Concat(reducers).ToArray();
+        var recommendations = new List<(EventStoreNamespaceName Namespace, RecommendationId Recommendation)>();
         if (targets.Length == 0)
         {
-            return;
+            return new(eventStore, readModel, recommendations);
         }
 
-        var replay = options.Value.Observers.DefinitionEvolution.Allows(DefinitionEvolutionOperation.FullReplay);
         foreach (var @namespace in await grainFactory.GetGrain<INamespaces>(eventStore).GetAll())
         {
             foreach (var target in targets)
             {
                 var key = new ObserverKey(target.Observer, eventStore, @namespace, target.EventSequence);
-                if (!replay || !await TryReplay(key, readModel))
-                {
-                    await Recommend(key, target);
-                }
+                recommendations.Add((@namespace, await Recommend(key, target)));
+            }
+        }
+
+        return new(eventStore, readModel, recommendations);
+    }
+
+    /// <inheritdoc/>
+    public async Task Start(SinkChangeReplay replay)
+    {
+        if (!options.Value.Observers.DefinitionEvolution.Allows(DefinitionEvolutionOperation.FullReplay))
+        {
+            return;
+        }
+
+        foreach (var (@namespace, recommendation) in replay.Recommendations)
+        {
+            try
+            {
+                logger.ReplayingIntoChangedSink(replay.ReadModel, @namespace);
+                await grainFactory.GetGrain<IRecommendationsManager>(0, new RecommendationsManagerKey(replay.EventStore, @namespace)).Perform(recommendation);
+            }
+#pragma warning disable CA1031 // A refused replay stays recommended, as a refused definition-change replay does.
+            catch (Exception exception)
+#pragma warning restore CA1031
+            {
+                logger.ReplayIntoChangedSinkRefused(replay.ReadModel, @namespace, exception);
             }
         }
     }
 
-    async Task<bool> TryReplay(ObserverKey key, ReadModelIdentifier readModel)
-    {
-        try
-        {
-            logger.ReplayingIntoChangedSink(key.ObserverId, readModel);
-            await grainFactory.GetGrain<IObserver>(key).Replay();
-            return true;
-        }
-#pragma warning disable CA1031 // A refused replay falls back to a recommendation, as a refused definition-change replay does.
-        catch (Exception exception)
-#pragma warning restore CA1031
-        {
-            logger.ReplayIntoChangedSinkRefused(key.ObserverId, readModel, exception);
-            return false;
-        }
-    }
-
-    async Task Recommend(ObserverKey key, Target target) =>
+    async Task<RecommendationId> Recommend(ObserverKey key, Target target) =>
         await grainFactory.GetGrain<IRecommendationsManager>(0, new RecommendationsManagerKey(key.EventStore, key.Namespace))
             .Add<IReplayCandidateRecommendation, ReplayCandidateRequest>(
                 Description,
