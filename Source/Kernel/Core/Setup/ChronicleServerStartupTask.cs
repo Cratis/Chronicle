@@ -143,6 +143,7 @@ internal sealed class ChronicleServerStartupTask(
     {
         RefuseIncompatibleCluster();
         await RefuseMisplacedSystemData();
+        await WarnAboutRetainedLegacySystemData();
         await (generationFloorAdmission ?? new GenerationFloorAdmission(storage)).Admit(cancellationToken);
 
         Task Step(string step, Func<Task> action) => RunStep(step, action, cancellationToken);
@@ -296,6 +297,23 @@ internal sealed class ChronicleServerStartupTask(
 
         logger.StartupRefusedBecauseSystemDataIsMisplaced(misplaced);
         throw new SystemEventStoreDataMisplaced(misplaced);
+    }
+
+    /// <summary>
+    /// Warns, on every start, about System event store databases left behind under their previous name.
+    /// </summary>
+    /// <remarks>
+    /// The move that left them ran once, as a patch, so its own warning is not repeated. They are harmless to the
+    /// running kernel and only an operator with more rights than the kernel can remove them, so this never stops startup.
+    /// </remarks>
+    /// <returns>Awaitable task.</returns>
+    async Task WarnAboutRetainedLegacySystemData()
+    {
+        var retained = await storage.FindRetainedLegacySystemEventStoreData();
+        if (!string.IsNullOrWhiteSpace(retained))
+        {
+            logger.LegacySystemDataRetained(retained);
+        }
     }
 
     async Task RegisterKernelProjections(EventStoreName eventStore, CancellationToken cancellationToken)
