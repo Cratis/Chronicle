@@ -98,6 +98,9 @@ public static class ServiceCollectionExtensions
                 tokenProvider,
                 skipCompatibilityCheck: skipCompatibilityCheck.Value,
                 skipKeepAlive: skipKeepAlive,
+                serverAddressResolver: null,
+                loadBalancerStrategy: null,
+                timeProvider: null,
                 certificateAuthorities: certificateAuthorities);
         });
 

@@ -51,14 +51,32 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
     /// <param name="clientSecret">The OAuth client secret.</param>
     /// <param name="skipTlsValidation">Whether to skip TLS certificate validation for the token request.</param>
     /// <param name="logger">Logger for logging.</param>
-    /// <param name="certificateAuthorities">Optional certificate authorities the server certificate must chain to when validation is enabled.</param>
+    public OAuthTokenProvider(
+        ChronicleServerAddress serverAddress,
+        string clientId,
+        string clientSecret,
+        bool skipTlsValidation,
+        ILogger<OAuthTokenProvider> logger)
+        : this(() => serverAddress, clientId, clientSecret, skipTlsValidation, logger)
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OAuthTokenProvider"/> class that validates the server certificate against a set of certificate authorities.
+    /// </summary>
+    /// <param name="serverAddress">The Chronicle server address.</param>
+    /// <param name="clientId">The OAuth client ID.</param>
+    /// <param name="clientSecret">The OAuth client secret.</param>
+    /// <param name="skipTlsValidation">Whether to skip TLS certificate validation for the token request.</param>
+    /// <param name="logger">Logger for logging.</param>
+    /// <param name="certificateAuthorities">Certificate authorities the server certificate must chain to when validation is enabled; <see langword="null"/> uses the system trust store.</param>
     public OAuthTokenProvider(
         ChronicleServerAddress serverAddress,
         string clientId,
         string clientSecret,
         bool skipTlsValidation,
         ILogger<OAuthTokenProvider> logger,
-        X509Certificate2Collection? certificateAuthorities = null)
+        X509Certificate2Collection? certificateAuthorities)
         : this(() => serverAddress, clientId, clientSecret, skipTlsValidation, logger, certificateAuthorities)
     {
     }
@@ -71,14 +89,32 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
     /// <param name="clientSecret">The OAuth client secret.</param>
     /// <param name="skipTlsValidation">Whether to skip TLS certificate validation for the token request.</param>
     /// <param name="logger">Logger for logging.</param>
-    /// <param name="certificateAuthorities">Optional certificate authorities the server certificate must chain to when validation is enabled.</param>
+    public OAuthTokenProvider(
+        Func<ChronicleServerAddress> serverAddressProvider,
+        string clientId,
+        string clientSecret,
+        bool skipTlsValidation,
+        ILogger<OAuthTokenProvider> logger)
+        : this(serverAddressProvider, clientId, clientSecret, skipTlsValidation, logger, certificateAuthorities: null)
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OAuthTokenProvider"/> class that validates the server certificate against a set of certificate authorities.
+    /// </summary>
+    /// <param name="serverAddressProvider">Provides the Chronicle server address to request tokens from - evaluated per request so it follows the currently connected server.</param>
+    /// <param name="clientId">The OAuth client ID.</param>
+    /// <param name="clientSecret">The OAuth client secret.</param>
+    /// <param name="skipTlsValidation">Whether to skip TLS certificate validation for the token request.</param>
+    /// <param name="logger">Logger for logging.</param>
+    /// <param name="certificateAuthorities">Certificate authorities the server certificate must chain to when validation is enabled; <see langword="null"/> uses the system trust store.</param>
     public OAuthTokenProvider(
         Func<ChronicleServerAddress> serverAddressProvider,
         string clientId,
         string clientSecret,
         bool skipTlsValidation,
         ILogger<OAuthTokenProvider> logger,
-        X509Certificate2Collection? certificateAuthorities = null)
+        X509Certificate2Collection? certificateAuthorities)
         : this(serverAddressProvider, clientId, clientSecret, logger, CreateHttpMessageHandler(skipTlsValidation, certificateAuthorities), TimeProvider.System)
     {
     }

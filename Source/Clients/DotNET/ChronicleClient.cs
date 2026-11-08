@@ -185,7 +185,9 @@ public class ChronicleClient : IChronicleClient, IDisposable
             tokenProvider,
             skipCompatibilityCheck: skipCompatibilityCheck,
             skipKeepAlive: options.SkipKeepAlive,
+            serverAddressResolver: null,
             loadBalancerStrategy: options.LoadBalancerStrategy,
+            timeProvider: null,
             certificateAuthorities: certificateAuthorities);
         _servicesAccessor = (_connection as IChronicleServicesAccessor)!;
         _connection.Lifecycle.OnDisconnected += _globalSeedRegistration.Reset;

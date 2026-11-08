@@ -467,7 +467,8 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     /// <remarks>
     /// The file holds one or more CA certificates in PEM or PKCS#7 format. The certificate authorities are used only
     /// when certificate validation is enabled (<c language="csharp">skipTlsValidation=false</c>); the server certificate
-    /// is then accepted only when its chain builds to one of them. This option has no effect when TLS is disabled.
+    /// is then accepted only when its chain builds to one of them. The file is read when the connection is created, also when
+    /// validation is skipped or TLS is disabled; a missing or unreadable file, or one without certificates, fails the connection setup.
     /// </remarks>
     public string? CaCertificatePath
     {

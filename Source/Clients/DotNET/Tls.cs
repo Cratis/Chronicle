@@ -27,6 +27,8 @@ public class Tls
     /// The file holds one or more CA certificates in PEM or PKCS#7 format. When set, it takes precedence over the
     /// connection string's <c language="csharp">caCertificatePath</c>. The certificate authorities are used only when
     /// certificate validation is enabled; the server certificate is then accepted only when its chain builds to one of them.
+    /// The file is read when the client is created, also when validation is skipped or TLS is disabled; a missing or
+    /// unreadable file, or one without certificates, fails the client creation.
     /// </remarks>
     public string? CaCertificatePath { get; set; }
 
