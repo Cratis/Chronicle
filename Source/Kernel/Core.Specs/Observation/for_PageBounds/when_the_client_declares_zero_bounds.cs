@@ -12,6 +12,6 @@ public class when_the_client_declares_zero_bounds : Specification
 
     void Because() => _bounds = PageBounds.For(new PageDeliveryDefinition(), new Observers());
 
-    [Fact] void should_use_the_kernel_event_maximum() => _bounds.MaxEvents.ShouldEqual(100);
+    [Fact] void should_use_the_kernel_page_maximum_of_a_thousand_events() => _bounds.MaxEvents.ShouldEqual(1000);
     [Fact] void should_use_the_kernel_byte_maximum() => _bounds.MaxBytes.ShouldEqual(4 * 1024 * 1024);
 }

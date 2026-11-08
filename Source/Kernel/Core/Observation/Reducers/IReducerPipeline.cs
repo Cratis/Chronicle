@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Storage.ReadModels;
 using Cratis.Chronicle.Storage.Sinks;
@@ -47,6 +48,17 @@ public interface IReducerPipeline
     /// </summary>
     /// <returns>The partitions whose writes failed during the final flush.</returns>
     Task<IEnumerable<FailedPartition>> EndBulk();
+
+    /// <summary>
+    /// Gets the size the state of a partition had when it was last reduced, as far as the pipeline remembers it.
+    /// </summary>
+    /// <param name="partition">The <see cref="Key"/> of the partition.</param>
+    /// <returns>The estimated size in bytes, or zero when it is not known.</returns>
+    /// <remarks>
+    /// A page holds the state of every partition in it, so the state counts toward the page's byte bound. It is not known
+    /// before it has been read, so the size it had last time stands in for it.
+    /// </remarks>
+    long StateSizeOf(Key partition);
 
     /// <summary>
     /// Handles the event and coordinates everything according to the pipeline.

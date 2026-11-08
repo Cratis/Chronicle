@@ -21,6 +21,10 @@ public class when_delivering_a_partition_beyond_its_bounds : Specification
         });
 
     [Fact] void should_deliver_three_pages() => _delivered.Count.ShouldEqual(3);
-    [Fact] void should_keep_every_page_within_the_bound() => _delivered.ShouldEachConformTo(page => page.Length <= 2);
+    [Fact] void should_deliver_the_first_two_events_first() => SequenceNumbersOf(0).ShouldEqual("1,2");
+    [Fact] void should_deliver_the_next_two_events_second() => SequenceNumbersOf(1).ShouldEqual("3,4");
+    [Fact] void should_deliver_the_last_event_alone() => SequenceNumbersOf(2).ShouldEqual("5");
     [Fact] void should_report_the_last_event_as_handled() => _result.LastSuccessfulObservation.Value.ShouldEqual(5UL);
+
+    string SequenceNumbersOf(int page) => string.Join(',', _delivered[page].Select(_ => _.Context.SequenceNumber.Value));
 }

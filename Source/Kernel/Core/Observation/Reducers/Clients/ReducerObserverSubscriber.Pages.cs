@@ -14,11 +14,23 @@ namespace Cratis.Chronicle.Observation.Reducers.Clients;
 public partial class ReducerObserverSubscriber
 {
     /// <inheritdoc/>
-    public Task<ObserverPageResult> OnNextPartitions(IReadOnlyList<ObserverPartitionBatch> batches, ObserverSubscriberContext context) =>
-        BoundedPageDelivery.Deliver(PageBoundsFor(context), batches, page => DeliverPartitions(page, context));
+    public async Task<ObserverPageResult> OnNextPartitions(IReadOnlyList<ObserverPartitionBatch> batches, ObserverSubscriberContext context) =>
+        await BoundedPageDelivery.Deliver(await PageBoundsFor(context), batches, page => DeliverPartitions(page, context), StateSizeOf);
 
     static ObserverPageResult Settled(IReadOnlyList<ObserverPartitionBatch> batches, ObserverSubscriberResult result) =>
         new(batches.ToDictionary(_ => _.Partition, _ => result));
+
+    /// <summary>
+    /// Gets the result a late answer to a page is logged and counted with.
+    /// </summary>
+    /// <remarks>
+    /// Logging and metrics of a late answer take one state, but a page has one per partition. The first partition's result
+    /// stands in for the page: the choice is arbitrary and only affects what is logged, never what is settled.
+    /// </remarks>
+    /// <param name="answers">The answer of each partition in the page.</param>
+    /// <returns>The <see cref="ObserverSubscriberResult"/> to log and count the late answer with.</returns>
+    static ObserverSubscriberResult StateReportedForPage((Key Key, ReducerSubscriberResult Result)[] answers) =>
+        answers.Length > 0 ? answers[0].Result.ObserverResult : ObserverSubscriberResult.Ok(EventSequenceNumber.Unavailable);
 
     async Task<ObserverPageResult> DeliverPartitions(IReadOnlyList<ObserverPartitionBatch> batches, ObserverSubscriberContext context)
     {
@@ -83,9 +95,12 @@ public partial class ReducerObserverSubscriber
             var completions = operations.ToDictionary(_ => _.Partition, _ => new TaskCompletionSource<ReducerSubscriberResult>(TaskCreationOptions.RunContinuationsAsynchronously));
             reducerMediator.OnNextPage(_key.ObserverId, client.ConnectionId, _key.EventStore, _key.Namespace, operations, completions);
 
+            // The client answers the page as a whole, so the page waits for every partition. One partition the client never
+            // answers holds the page until the delivery's deadline, and the whole page is then abandoned: every partition
+            // fails and is delivered again, the ones the client did answer included, since nothing of the page is written.
             var answers = await deliveryWait.For(
                 Task.WhenAll(completions.Select(async _ => (_.Key, Result: await _.Value.Task))),
-                answers => answers.Length > 0 ? answers[0].Result.ObserverResult : ObserverSubscriberResult.Ok(EventSequenceNumber.Unavailable),
+                StateReportedForPage,
                 context);
             return answers.ToDictionary(_ => _.Key, _ => _.Result);
         };
@@ -95,8 +110,8 @@ public partial class ReducerObserverSubscriber
     /// </summary>
     /// <remarks>
     /// A partition the client failed or deferred wrote nothing, so it is reported as handling nothing and is delivered again from
-    /// its stored state, exactly as on its own. A partition whose write failed fails alone, and failed writes the page's bulk window
-    /// reported for partitions outside the page are recorded so they are retried.
+    /// its stored state, exactly as on its own. A partition whose write failed fails alone, and failed writes a bulk window the page
+    /// joined reported for partitions outside the page are recorded so they are retried.
     /// </remarks>
     /// <param name="batches">The partition batches of the page.</param>
     /// <param name="outcome">The <see cref="ReducerPageOutcome"/> of the page.</param>

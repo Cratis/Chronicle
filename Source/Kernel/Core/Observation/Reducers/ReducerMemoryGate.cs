@@ -81,18 +81,12 @@ public class ReducerMemoryGate(
 
         var size = ExpandoObjectSize.Estimate(state);
         _stateSize?.Record(size);
+        Remember(scope, partition, size);
 
         if (budget is null || !_settings.Enabled)
         {
             return;
         }
-
-        if (_sizes.Count >= MaximumRememberedPartitions)
-        {
-            _sizes.Clear();
-        }
-
-        _sizes[(scope, partition)] = size;
 
         var cost = CostOf(size);
         if (cost < _settings.MinimumReservationBytes)
@@ -150,17 +144,7 @@ public class ReducerMemoryGate(
 
             var size = ExpandoObjectSize.Estimate(state);
             _stateSize?.Record(size);
-            if (budget is null || !_settings.Enabled)
-            {
-                continue;
-            }
-
-            if (_sizes.Count >= MaximumRememberedPartitions)
-            {
-                _sizes.Clear();
-            }
-
-            _sizes[(scope, partition)] = size;
+            Remember(scope, partition, size);
             cost += CostOf(size);
         }
 
@@ -177,6 +161,27 @@ public class ReducerMemoryGate(
         {
             ticket.Reservation.Grow(cost - ticket.Reservation.Bytes);
         }
+    }
+
+    /// <summary>
+    /// Gets the size the state of a partition had the last time it was read.
+    /// </summary>
+    /// <param name="scope">What the partition belongs to.</param>
+    /// <param name="partition">The <see cref="Key"/> of the partition.</param>
+    /// <returns>The estimated size in bytes, or zero when it is not remembered.</returns>
+    /// <remarks>
+    /// Sizes are remembered whether or not the budget is enabled, since the bounds of a reducer page count them too.
+    /// </remarks>
+    public long RememberedSizeOf(string scope, Key partition) => _sizes.TryGetValue((scope, partition), out var size) ? size : 0;
+
+    void Remember(string scope, Key partition, long size)
+    {
+        if (_sizes.Count >= MaximumRememberedPartitions)
+        {
+            _sizes.Clear();
+        }
+
+        _sizes[(scope, partition)] = size;
     }
 
     long CostOf(long size) => size * Math.Max(1, _settings.ReducerCostMultiplier);

@@ -23,13 +23,15 @@ public static class BoundedPageDelivery
     /// <param name="bounds">The <see cref="PageBounds"/> to stay within.</param>
     /// <param name="batches">The <see cref="ObserverPartitionBatch"/> of each partition in the page.</param>
     /// <param name="deliver">The delivery of one page within the bounds.</param>
+    /// <param name="stateSize">Optional size of the state each partition is delivered with, which counts toward the byte bound.</param>
     /// <returns>The <see cref="ObserverPageResult"/> with one result per partition.</returns>
     public static async Task<ObserverPageResult> Deliver(
         PageBounds bounds,
         IReadOnlyList<ObserverPartitionBatch> batches,
-        Func<IReadOnlyList<ObserverPartitionBatch>, Task<ObserverPageResult>> deliver)
+        Func<IReadOnlyList<ObserverPartitionBatch>, Task<ObserverPageResult>> deliver,
+        Func<Key, long>? stateSize = null)
     {
-        var pages = bounds.IsBounded ? bounds.Split(batches) : [batches];
+        var pages = bounds.IsBounded ? bounds.Split(batches, stateSize) : [batches];
         if (pages.Count <= 1)
         {
             return await deliver(batches);
@@ -63,18 +65,20 @@ public static class BoundedPageDelivery
     /// <param name="bounds">The <see cref="PageBounds"/> to stay within.</param>
     /// <param name="events">The events of the partition, in sequence order.</param>
     /// <param name="deliver">The delivery of one page of the partition's events within the bounds.</param>
+    /// <param name="stateSize">The size of the state the partition is delivered with, counted toward the byte bound of every page; zero when there is none.</param>
     /// <returns>The <see cref="ObserverSubscriberResult"/> for the partition.</returns>
     public static async Task<ObserverSubscriberResult> Deliver(
         PageBounds bounds,
         IEnumerable<AppendedEvent> events,
-        Func<IEnumerable<AppendedEvent>, Task<ObserverSubscriberResult>> deliver)
+        Func<IEnumerable<AppendedEvent>, Task<ObserverSubscriberResult>> deliver,
+        long stateSize = 0)
     {
         if (!bounds.IsBounded)
         {
             return await deliver(events);
         }
 
-        var pages = bounds.Split(events as IReadOnlyList<AppendedEvent> ?? [.. events]);
+        var pages = bounds.Split(events as IReadOnlyList<AppendedEvent> ?? [.. events], stateSize);
         if (pages.Count <= 1)
         {
             return await deliver(events);

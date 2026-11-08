@@ -66,6 +66,9 @@ public partial class ReducerPipeline(
     public Task<IEnumerable<FailedPartition>> EndBulk() => Sink.EndBulk();
 
     /// <inheritdoc/>
+    public long StateSizeOf(Key partition) => memoryGate?.RememberedSizeOf(_memoryScope, partition) ?? 0;
+
+    /// <inheritdoc/>
     public async Task<ReadModelChangeNotification?> Reduce(ReducerContext context, ReducerDelegate reducer, bool createNotification = true)
     {
         using var memoryTicket = memoryGate is null ? ReducerMemoryTicket.None : await memoryGate.Enter(_memoryScope, context.Key);
