@@ -26,6 +26,8 @@ public class an_observation_stream : Specification
     protected readonly List<ReduceOperationMessage> _deliveries = [];
     protected ReducerEventsObserver _deliver;
     protected ReducerReplayObserver _replay;
+    protected ReducerPageObserver _deliverPage;
+    protected readonly TaskCompletionSource _pagesSubscribed = new(TaskCreationOptions.RunContinuationsAsynchronously);
     IDisposable _subscription;
 
     private protected virtual IActivitySource<Reducers> CreateActivitySource() => new ActivitySource<Reducers>();
@@ -46,6 +48,12 @@ public class an_observation_stream : Specification
             {
                 _deliver = call.Arg<ReducerEventsObserver>();
                 subscribed.TrySetResult();
+            });
+        mediator.When(_ => _.SubscribePages(Arg.Any<ReducerId>(), Arg.Any<ConnectionId>(), Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<ReducerPageObserver>()))
+            .Do(call =>
+            {
+                _deliverPage = call.Arg<ReducerPageObserver>();
+                _pagesSubscribed.TrySetResult();
             });
         mediator.When(_ => _.SubscribeReplayNotifications(Arg.Any<ReducerId>(), Arg.Any<ConnectionId>(), Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<ReducerReplayObserver>()))
             .Do(call => _replay = call.Arg<ReducerReplayObserver>());
