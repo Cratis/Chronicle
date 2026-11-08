@@ -28,15 +28,15 @@ public partial class EncryptionKeyStorage
                 {
                     { "version", new Decimal128(0m) }, { "state", empty }, { "seal", EncryptionKeyFenceState.Seal(empty) }
                 });
-                await collection.WithWriteConcern(Durability).UpdateOneAsync(new BsonDocument("_id", identifier.Value), insert, new UpdateOptions { IsUpsert = true });
+                await Bounded(identifier, cancellationToken => collection.WithWriteConcern(Durability).UpdateOneAsync(new BsonDocument("_id", identifier.Value), insert, new UpdateOptions { IsUpsert = true }, cancellationToken));
             }
             catch (MongoWriteException exception) when (IsDuplicate(exception))
             {
                 // A definite non-write; read the winner linearly.
             }
 
-            var row = await collection.WithReadConcern(Linearizability).WithReadPreference(ReadPreference.Primary)
-                .Find(new BsonDocument("_id", identifier.Value), new FindOptions { MaxTime = _readTimeout }).SingleOrDefaultAsync();
+            var row = await Bounded(identifier, cancellationToken => collection.WithReadConcern(Linearizability).WithReadPreference(ReadPreference.Primary)
+                .Find(new BsonDocument("_id", identifier.Value), new FindOptions { MaxTime = _readTimeout }).SingleOrDefaultAsync(cancellationToken));
             if (row?.Contains("version") != true || !row.Contains("state") || !row.Contains("seal")) throw new EncryptionKeyFenceUnavailable(identifier);
             var version = Decimal128.ToDecimal(row["version"].AsDecimal128);
             if (decimal.Truncate(version) != version) throw new EncryptionKeyFenceUnavailable(identifier);
@@ -55,12 +55,13 @@ public partial class EncryptionKeyStorage
         try
         {
             var state = next.Serialize();
-            var result = await ExternalFences(eventStore, eventStoreNamespace).WithWriteConcern(Durability).UpdateOneAsync(
+            var result = await Bounded(identifier, cancellationToken => ExternalFences(eventStore, eventStoreNamespace).WithWriteConcern(Durability).UpdateOneAsync(
                 new BsonDocument { { "_id", identifier.Value }, { "version", new Decimal128((decimal)observed.Erasure.Version) }, { "seal", EncryptionKeyFenceState.Seal(observed.Serialize()) } },
                 new BsonDocument("$set", new BsonDocument
                 {
                     { "version", new Decimal128((decimal)next.Erasure.Version) }, { "state", state }, { "seal", EncryptionKeyFenceState.Seal(state) }
-                }));
+                }),
+                cancellationToken: cancellationToken));
             return result.MatchedCount == 1;
         }
         catch (Exception exception) when (exception is MongoException or TimeoutException)

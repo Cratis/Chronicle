@@ -18,8 +18,8 @@ public partial class EncryptionKeyStorage : IEncryptionKeyFenceRecords
     /// <inheritdoc/>
     public async Task<string?> ReadRecord(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string id)
     {
-        var row = await Records(eventStore, eventStoreNamespace).WithReadConcern(Linearizability).WithReadPreference(ReadPreference.Primary)
-            .Find(new BsonDocument("_id", id), new FindOptions { MaxTime = _readTimeout }).SingleOrDefaultAsync();
+        var row = await BoundedRecord(cancellationToken => Records(eventStore, eventStoreNamespace).WithReadConcern(Linearizability).WithReadPreference(ReadPreference.Primary)
+            .Find(new BsonDocument("_id", id), new FindOptions { MaxTime = _readTimeout }).SingleOrDefaultAsync(cancellationToken));
         if (row is null) return null;
         var value = row["value"].AsString;
         if (row["seal"].AsString != EncryptionKeyFenceState.Seal(value)) throw new InvalidOperationException("Invalid encryption key metadata seal.");
@@ -31,10 +31,11 @@ public partial class EncryptionKeyStorage : IEncryptionKeyFenceRecords
     {
         try
         {
-            await Records(eventStore, eventStoreNamespace).WithWriteConcern(Durability).UpdateOneAsync(
+            await BoundedRecord(cancellationToken => Records(eventStore, eventStoreNamespace).WithWriteConcern(Durability).UpdateOneAsync(
                 new BsonDocument("_id", id),
                 new BsonDocument(replace ? "$set" : "$setOnInsert", new BsonDocument { { "value", value }, { "seal", EncryptionKeyFenceState.Seal(value) } }),
-                new UpdateOptions { IsUpsert = true });
+                new UpdateOptions { IsUpsert = true },
+                cancellationToken));
         }
         catch (MongoWriteException exception) when (IsDuplicate(exception))
         {
@@ -57,7 +58,7 @@ public partial class EncryptionKeyStorage : IEncryptionKeyFenceRecords
         {
             var observed = await RequiredFence(eventStore, eventStoreNamespace, identifier);
             var next = await EncryptionKeyRequestArchive.Prepare(this, eventStore, eventStoreNamespace, identifier, observed, retain);
-            if (await WriteFence(eventStore, eventStoreNamespace, EncryptionKeyFenceUpdates.Observed(identifier, observed), EncryptionKeyFenceUpdates.Compact(next))) return;
+            if (await WriteFence(eventStore, eventStoreNamespace, identifier, EncryptionKeyFenceUpdates.Observed(identifier, observed), EncryptionKeyFenceUpdates.Compact(next))) return;
             await Backoff(attempt);
         }
 

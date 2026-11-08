@@ -13,18 +13,20 @@ public class a_topology : Specification
     protected int _probes;
     protected Func<BsonDocument?> _reply = () => new BsonDocument("isWritablePrimary", true);
 
-    void Establish()
-    {
-        _time = new();
+    void Establish() => _time = new();
+
+    /// <summary>
+    /// Create the topology, which starts probing at once; call it only after the reply is arranged.
+    /// </summary>
+    protected void Start() =>
         _topology = new(
             _ =>
             {
-                _probes++;
-                return _reply();
+                Interlocked.Increment(ref _probes);
+                return Task.FromResult(_reply());
             },
             NullLogger.Instance,
             _time);
-    }
 
     protected class ManualTime : TimeProvider
     {

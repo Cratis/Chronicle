@@ -10,10 +10,13 @@ public class when_the_server_is_standalone : a_topology
     bool _first;
     bool _second;
 
-    void Because()
+    async Task Because()
     {
+        Start();
+        await _topology.Probing;
         _first = _topology.IsStandalone;
         _second = _topology.IsStandalone;
+        await _topology.Probing;
     }
 
     [Fact] void should_report_standalone() => _first.ShouldBeTrue();

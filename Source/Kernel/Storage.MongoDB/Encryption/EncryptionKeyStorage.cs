@@ -183,27 +183,16 @@ public partial class EncryptionKeyStorage(IDatabase database, IMongoDBTopology? 
     /// <inheritdoc/>
     public async Task<EncryptionKeyErasure?> GetFenceFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
     {
-        try
+        var document = await Bounded(identifier, cancellationToken => GetErasureCollection(eventStore, eventStoreNamespace)
+            .WithReadConcern(Linearizability).WithReadPreference(ReadPreference.Primary)
+            .Find(_ => _.Id == identifier, new FindOptions { MaxTime = _readTimeout }).FirstOrDefaultAsync(cancellationToken));
+        var fence = document?.ToFence();
+        if (fence is not null && !HasValidSeal(fence))
         {
-            var document = await GetErasureCollection(eventStore, eventStoreNamespace)
-                .WithReadConcern(Linearizability).WithReadPreference(ReadPreference.Primary)
-                .Find(_ => _.Id == identifier, new FindOptions { MaxTime = _readTimeout }).FirstOrDefaultAsync();
-            var fence = document?.ToFence();
-            if (fence is not null && !HasValidSeal(fence))
-            {
-                throw new EncryptionKeyFenceUnavailable(identifier);
-            }
+            throw new EncryptionKeyFenceUnavailable(identifier);
+        }
 
-            return fence;
-        }
-        catch (MongoException)
-        {
-            throw new EncryptionKeyFenceUnavailable(identifier);
-        }
-        catch (TimeoutException)
-        {
-            throw new EncryptionKeyFenceUnavailable(identifier);
-        }
+        return fence;
     }
 
     /// <inheritdoc/>
@@ -220,7 +209,7 @@ public partial class EncryptionKeyStorage(IDatabase database, IMongoDBTopology? 
     /// <inheritdoc/>
     public async Task RecordErasureFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyErasureRequest request)
     {
-        var collection = await GetCollection(eventStore, eventStoreNamespace);
+        var collection = await GetFencedCollection(eventStore, eventStoreNamespace, identifier);
         var initial = await EnsureFence(eventStore, eventStoreNamespace, identifier);
         var lifecycle = request.Lifecycle == 0 ? initial.Lifecycle : request.Lifecycle;
         for (var attempt = 0; attempt < MaximumAttempts; attempt++)
@@ -235,7 +224,7 @@ public partial class EncryptionKeyStorage(IDatabase database, IMongoDBTopology? 
             {
                 // A no-op CAS validates the Version observed before consulting the separate archive.
                 var stamped = observed with { Version = checked(observed.Version + 1) };
-                if (await WriteFence(eventStore, eventStoreNamespace, EncryptionKeyFenceUpdates.Observed(identifier, observed), EncryptionKeyFenceUpdates.Compact(stamped))) return;
+                if (await WriteFence(eventStore, eventStoreNamespace, identifier, EncryptionKeyFenceUpdates.Observed(identifier, observed), EncryptionKeyFenceUpdates.Compact(stamped))) return;
                 await Backoff(attempt);
                 continue;
             }
@@ -250,11 +239,11 @@ public partial class EncryptionKeyStorage(IDatabase database, IMongoDBTopology? 
                 throw new EncryptionKeyRequestLogFull(identifier);
             }
 
-            var present = await collection.Find(_ => _.Id.Identifier == identifier).ToListAsync();
+            var present = await Bounded(identifier, cancellationToken => collection.Find(_ => _.Id.Identifier == identifier).ToListAsync(cancellationToken));
             var next = EncryptionKeyErasure.Covering(observed, present.Select(_ => (_.Id.Revision, new EncryptionKey(_.PublicKey, _.PrivateKey))));
             var recorded = new EncryptionKeyErasureRequest(request.RequestId, next.ErasedThrough, observed.Lifecycle, next.ErasedKeyFingerprints);
             var filter = EncryptionKeyFenceUpdates.Observed(identifier, observed) & !EncryptionKeyFenceUpdates.HasRequest(request.RequestId);
-            if (await WriteFence(eventStore, eventStoreNamespace, filter, EncryptionKeyFenceUpdates.Raise(next, recorded)))
+            if (await WriteFence(eventStore, eventStoreNamespace, identifier, filter, EncryptionKeyFenceUpdates.Raise(next, recorded)))
             {
                 return;
             }
@@ -272,7 +261,7 @@ public partial class EncryptionKeyStorage(IDatabase database, IMongoDBTopology? 
     /// <inheritdoc/>
     public async Task DeleteThroughFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, string requestId)
     {
-        var collection = await GetCollection(eventStore, eventStoreNamespace);
+        var collection = await GetFencedCollection(eventStore, eventStoreNamespace, identifier);
         EncryptionKeyErasure? missed = null;
         for (var attempt = 0; attempt < MaximumAttempts; attempt++)
         {
@@ -281,7 +270,7 @@ public partial class EncryptionKeyStorage(IDatabase database, IMongoDBTopology? 
             var request = observed.Requests?.SingleOrDefault(_ => _.RequestId == requestId) ?? await EncryptionKeyRequestArchive.Read(this, eventStore, eventStoreNamespace, identifier, requestId) ?? throw new EncryptionKeyFenceUnavailable(identifier);
             if (request.Confirmed) return;
             var covered = Covered(identifier, request);
-            var present = await collection.Find(covered).ToListAsync();
+            var present = await Bounded(identifier, cancellationToken => collection.Find(covered).ToListAsync(cancellationToken));
             var fingerprints = (request.Fingerprints ?? []).Concat(present.Select(_ => new EncryptionKey(_.PublicKey, _.PrivateKey).Fingerprint)).Distinct(StringComparer.Ordinal).ToArray();
             if (fingerprints.Length != (request.Fingerprints?.Count ?? 0))
             {
@@ -300,7 +289,7 @@ public partial class EncryptionKeyStorage(IDatabase database, IMongoDBTopology? 
             }
 
             // The predicate, not the observed row list, also removes a writer staging after the read above.
-            await collection.WithWriteConcern(Durability).DeleteManyAsync(covered);
+            await Bounded(identifier, cancellationToken => collection.WithWriteConcern(Durability).DeleteManyAsync(covered, cancellationToken));
             return;
         }
 
@@ -310,7 +299,9 @@ public partial class EncryptionKeyStorage(IDatabase database, IMongoDBTopology? 
     /// <inheritdoc/>
     public async Task ConfirmErasureFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, string requestId)
     {
-        var collection = await GetCollection(eventStore, eventStoreNamespace);
+        // Confirmation is the claim a standalone server cannot back: the erasure stays pending there.
+        if (_topology.IsStandalone) throw new EncryptionKeyFenceUnavailable(identifier);
+        var collection = await GetFencedCollection(eventStore, eventStoreNamespace, identifier);
         EncryptionKeyErasure? missed = null;
         for (var attempt = 0; attempt < MaximumAttempts; attempt++)
         {
@@ -318,7 +309,7 @@ public partial class EncryptionKeyStorage(IDatabase database, IMongoDBTopology? 
             ThrowIfMissedUnchanged(identifier, missed, observed);
             var request = observed.Requests?.SingleOrDefault(_ => _.RequestId == requestId) ?? await EncryptionKeyRequestArchive.Read(this, eventStore, eventStoreNamespace, identifier, requestId) ?? throw new EncryptionKeyFenceUnavailable(identifier);
             if (request.Confirmed) return;
-            await VerifySwept(collection, identifier, request, Linearizability, _readTimeout);
+            await VerifySwept(collection, identifier, request);
             if (request.Confirmed)
             {
                 return;
@@ -353,7 +344,7 @@ public partial class EncryptionKeyStorage(IDatabase database, IMongoDBTopology? 
 
         var next = observed with { Version = checked(observed.Version + 1), Lifecycle = checked(observed.Lifecycle + 1), NewKeyAllowed = true };
         var filter = EncryptionKeyFenceUpdates.Observed(identifier, observed) & _fences.Eq(_ => _.NewKeyAllowed, false);
-        if (!await WriteFence(eventStore, eventStoreNamespace, filter, EncryptionKeyFenceUpdates.Authorize(next)))
+        if (!await WriteFence(eventStore, eventStoreNamespace, identifier, filter, EncryptionKeyFenceUpdates.Authorize(next)))
         {
             var current = await RequiredFence(eventStore, eventStoreNamespace, identifier);
             if (!IsAuthorizationRetry(current, observedVersion, observedLifecycle))
@@ -488,26 +479,6 @@ public partial class EncryptionKeyStorage(IDatabase database, IMongoDBTopology? 
         return document is not null && fence?.Covers(AtRevision(document)) != true ? document : null;
     }
 
-    static async Task VerifySwept(IMongoCollection<EncryptionKeyForIdentifier> collection, EncryptionKeyIdentifier identifier, EncryptionKeyErasureRequest request, ReadConcern readConcern, TimeSpan timeout)
-    {
-        try
-        {
-            if (await collection.WithReadConcern(readConcern).WithReadPreference(ReadPreference.Primary)
-                .Find(Covered(identifier, request), new FindOptions { MaxTime = timeout }).Limit(1).AnyAsync())
-            {
-                throw new EncryptionKeyFenceUnavailable(identifier);
-            }
-        }
-        catch (MongoException)
-        {
-            throw new EncryptionKeyFenceUnavailable(identifier);
-        }
-        catch (TimeoutException)
-        {
-            throw new EncryptionKeyFenceUnavailable(identifier);
-        }
-    }
-
     static async Task<EncryptionKeyRevision> GetNextRevisionFor(IMongoCollection<EncryptionKeyForIdentifier> collection, EncryptionKeyIdentifier identifier, EncryptionKeyErasure observed)
     {
         var highest = await collection.Find(_ => _.Id.Identifier == identifier).SortByDescending(_ => _.Id.Revision).FirstOrDefaultAsync();
@@ -525,7 +496,7 @@ public partial class EncryptionKeyStorage(IDatabase database, IMongoDBTopology? 
     {
         var staged = new EncryptionKeyForIdentifier(new(identifier, revision), key.Public, key.Private, false, observed.Lifecycle, Guid.NewGuid().ToString("N"));
         var durable = collection.WithWriteConcern(Durability);
-        await durable.InsertOneAsync(staged);
+        await Bounded(identifier, cancellationToken => durable.InsertOneAsync(staged, cancellationToken: cancellationToken));
         try
         {
             var current = await RequiredFence(eventStore, eventStoreNamespace, identifier);
@@ -535,7 +506,7 @@ public partial class EncryptionKeyStorage(IDatabase database, IMongoDBTopology? 
             }
 
             current.EnsureStillAllowed(identifier, AtRevision(staged));
-            var result = await durable.UpdateOneAsync(Owned(staged), Builders<EncryptionKeyForIdentifier>.Update.Set(_ => _.Published, true));
+            var result = await Bounded(identifier, cancellationToken => durable.UpdateOneAsync(Owned(staged), Builders<EncryptionKeyForIdentifier>.Update.Set(_ => _.Published, true), cancellationToken: cancellationToken));
             if (result.MatchedCount == 0)
             {
                 current = await RequiredFence(eventStore, eventStoreNamespace, identifier);
@@ -547,7 +518,7 @@ public partial class EncryptionKeyStorage(IDatabase database, IMongoDBTopology? 
         }
         catch (Exception exception) when (exception is EncryptionKeyErased or EncryptionKeyFenceUnavailable)
         {
-            await durable.DeleteOneAsync(Owned(staged));
+            await Bounded(identifier, cancellationToken => durable.DeleteOneAsync(Owned(staged), cancellationToken));
             throw;
         }
     }
@@ -557,8 +528,8 @@ public partial class EncryptionKeyStorage(IDatabase database, IMongoDBTopology? 
         // The id-only upsert cannot weaken an existing fence. An acknowledged result is still read linearly.
         try
         {
-            await GetErasureCollection(eventStore, eventStoreNamespace).WithWriteConcern(Durability)
-                .UpdateOneAsync(_ => _.Id == identifier, EncryptionKeyFenceUpdates.Ensure(identifier), new UpdateOptions { IsUpsert = true });
+            await Bounded(identifier, cancellationToken => GetErasureCollection(eventStore, eventStoreNamespace).WithWriteConcern(Durability)
+                .UpdateOneAsync(_ => _.Id == identifier, EncryptionKeyFenceUpdates.Ensure(identifier), new UpdateOptions { IsUpsert = true }, cancellationToken));
         }
         catch (MongoWriteException exception) when (IsDuplicate(exception))
         {
@@ -571,15 +542,15 @@ public partial class EncryptionKeyStorage(IDatabase database, IMongoDBTopology? 
     async Task<EncryptionKeyErasure> RequiredFence(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier) =>
         await GetFenceFor(eventStore, eventStoreNamespace, identifier) ?? throw new EncryptionKeyFenceUnavailable(identifier);
 
-    async Task<bool> WriteFence(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, FilterDefinition<EncryptionKeyErasureForIdentifier> filter, UpdateDefinition<EncryptionKeyErasureForIdentifier> update)
+    async Task<bool> WriteFence(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, FilterDefinition<EncryptionKeyErasureForIdentifier> filter, UpdateDefinition<EncryptionKeyErasureForIdentifier> update)
     {
-        var result = await GetErasureCollection(eventStore, eventStoreNamespace).WithWriteConcern(Durability)
-            .FindOneAndUpdateAsync(filter, update, new FindOneAndUpdateOptions<EncryptionKeyErasureForIdentifier> { ReturnDocument = ReturnDocument.After, MaxTime = _readTimeout });
+        var result = await Bounded(identifier, cancellationToken => GetErasureCollection(eventStore, eventStoreNamespace).WithWriteConcern(Durability)
+            .FindOneAndUpdateAsync(filter, update, new FindOneAndUpdateOptions<EncryptionKeyErasureForIdentifier> { ReturnDocument = ReturnDocument.After, MaxTime = _readTimeout }, cancellationToken));
         return result is not null;
     }
 
     Task<bool> WriteRequest(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyErasure observed, EncryptionKeyErasure next, EncryptionKeyErasureRequest request) =>
-        WriteFence(eventStore, eventStoreNamespace, EncryptionKeyFenceUpdates.Observed(identifier, observed) & EncryptionKeyFenceUpdates.HasRequest(request.RequestId), EncryptionKeyFenceUpdates.UpdateRequest(next, request));
+        WriteFence(eventStore, eventStoreNamespace, identifier, EncryptionKeyFenceUpdates.Observed(identifier, observed) & EncryptionKeyFenceUpdates.HasRequest(request.RequestId), EncryptionKeyFenceUpdates.UpdateRequest(next, request));
 
     IMongoCollection<EncryptionKeyErasureForIdentifier> GetErasureCollection(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace) =>
         database.GetEventStoreDatabase(eventStore).GetNamespaceDatabase(eventStoreNamespace).GetCollection<EncryptionKeyErasureForIdentifier>(WellKnownCollectionNames.EncryptionKeyErasures);

@@ -32,7 +32,13 @@ internal sealed partial class FencedAzureKeyVaultEncryptionKeyStorage(
     const string FingerprintTag = "chronicle-key-fingerprint";
 
     /// <inheritdoc/>
-    public EncryptionKeyFenceGuarantees FenceGuarantees => EncryptionKeyFenceGuarantees.MonotonicFence | EncryptionKeyFenceGuarantees.FencedSave;
+    /// <remarks>
+    /// Read from the authority on every call: whether its fence is durable can be learned only after this store was chosen
+    /// (for example a MongoDB server found to be standalone), and the guarantees must never outlive that answer.
+    /// </remarks>
+    public EncryptionKeyFenceGuarantees FenceGuarantees => authority.IsDurable
+        ? EncryptionKeyFenceGuarantees.MonotonicFence | EncryptionKeyFenceGuarantees.FencedSave
+        : EncryptionKeyFenceGuarantees.None;
 
     /// <inheritdoc/>
     public async Task SaveFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKey key, EncryptionKeyRevision? revision = null) =>
