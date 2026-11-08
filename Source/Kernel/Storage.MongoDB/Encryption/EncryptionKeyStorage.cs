@@ -65,7 +65,7 @@ public partial class EncryptionKeyStorage(IDatabase database, IMongoDBTopology? 
     /// <summary>
     /// Gets the write concern fence writes use: majority, bounded by the fence timeout, on a replica set; acknowledged on a standalone server.
     /// </summary>
-    internal WriteConcern Durability => _topology.IsStandalone ? WriteConcern.Acknowledged : WriteConcern.WMajority.With(wTimeout: _readTimeout);
+    internal WriteConcern Durability => _topology.IsStandalone ? WriteConcern.Acknowledged : WriteConcern.WMajority.With(wTimeout: _readTimeout, journal: true);
 
     /// <inheritdoc/>
     public async Task SaveFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKey key, EncryptionKeyRevision? revision = null)
@@ -172,11 +172,11 @@ public partial class EncryptionKeyStorage(IDatabase database, IMongoDBTopology? 
         var collection = await GetCollection(eventStore, eventStoreNamespace);
         if (IsLatest(revision))
         {
-            await collection.DeleteManyAsync(_ => _.Id.Identifier == identifier);
+            await collection.WithWriteConcern(Durability).DeleteManyAsync(_ => _.Id.Identifier == identifier);
         }
         else
         {
-            await collection.DeleteOneAsync(_ => _.Id == new EncryptionKeyId(identifier, revision!));
+            await collection.WithWriteConcern(Durability).DeleteOneAsync(_ => _.Id == new EncryptionKeyId(identifier, revision!));
         }
     }
 
@@ -382,7 +382,7 @@ public partial class EncryptionKeyStorage(IDatabase database, IMongoDBTopology? 
 
         try
         {
-            await collection.InsertOneAsync(new InternalSecretForPurpose(id, candidate.Public, candidate.Private));
+            await collection.WithWriteConcern(Durability).InsertOneAsync(new InternalSecretForPurpose(id, candidate.Public, candidate.Private));
             return candidate;
         }
         catch (MongoWriteException ex) when (ex.WriteError?.Category == ServerErrorCategory.DuplicateKey)
