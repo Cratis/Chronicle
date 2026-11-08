@@ -13,8 +13,8 @@ public class and_the_current_private_key_is_malformed : given.protected_events
     async Task Establish()
     {
         _original = _converter.ToJsonObject(_stored[1][1], _sourceSchema).ToJsonString();
-        await _keys.RecordErasureFor(Store, Namespace, "erased-owner");
         var validKey = (await _keys.TryGetFor(Store, Namespace, "erased-owner"))!;
+        await _keys.RecordErasureFor(Store, Namespace, "erased-owner");
         _keyAccess.TryGetFor(Store, Namespace, "erased-owner").Returns(new EncryptionKey(validKey.Public, [1, 2, 3]));
     }
 

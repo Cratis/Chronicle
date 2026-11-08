@@ -8,6 +8,8 @@ public class with_corrupt_ciphertext_and_a_live_key : given.content_for_erasure_
     async Task Because()
     {
         await _keys.RecordErasureFor("store", "tenant", "subject");
+        await _keys.AllowNewKeyFor("store", "tenant", "subject");
+        _stored = await _manager.Apply("store", "tenant", _schema, "subject", _plaintext);
         var bytes = Convert.FromBase64String(_stored["profile"]["name"].GetValue<string>());
         bytes[^1] ^= 1;
         _stored["profile"]["name"] = Convert.ToBase64String(bytes);
