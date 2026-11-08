@@ -18,7 +18,7 @@ public static class FederationPortPolicy
     /// <summary>
     /// The path prefix of the federation service.
     /// </summary>
-    public const string ServicePathPrefix = "/Cratis.Chronicle.Contracts.Federation.";
+    public const string ServicePathPrefix = "/Cratis.Chronicle.Contracts.Federation.FederationPull/";
 
     /// <summary>
     /// Determines whether a request must be rejected.
