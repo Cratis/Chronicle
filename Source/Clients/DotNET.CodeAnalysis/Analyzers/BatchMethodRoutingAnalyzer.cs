@@ -39,27 +39,34 @@ public class BatchMethodRoutingAnalyzer : DiagnosticAnalyzer
     {
         context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
         context.EnableConcurrentExecution();
-        context.RegisterSymbolAction(Analyze, SymbolKind.NamedType);
+        context.RegisterCompilationStartAction(start =>
+        {
+            var symbols = BatchSymbols.For(start.Compilation, start.CancellationToken);
+            if (symbols is null)
+            {
+                return;
+            }
+
+            start.RegisterSymbolAction(symbolContext => Analyze(symbolContext, symbols), SymbolKind.NamedType);
+        });
     }
 
-    static void Analyze(SymbolAnalysisContext context)
+    static void Analyze(SymbolAnalysisContext context, BatchSymbols symbols)
     {
         var type = (INamedTypeSymbol)context.Symbol;
-        var compilation = context.Compilation;
         var methods = BatchObservers.MethodsOf(type).ToArray();
-        var batchMethods = methods.Where(method => BatchObservers.IsBatchMethod(method, compilation)).ToArray();
+        var batchMethods = methods.Where(method => BatchObservers.IsBatchMethod(method, symbols)).ToArray();
         if (batchMethods.Length == 0)
         {
             return;
         }
 
-        var evidence = ExplicitRegistrationEvidence.For(compilation, context.CancellationToken);
-        var kind = BatchObservers.KindOf(type, compilation, evidence);
-        var perEventMethods = methods.Where(method => BatchObservers.IsPerEventMethod(method, kind, compilation, evidence)).ToArray();
+        var kind = BatchObservers.KindOf(type, symbols);
+        var perEventMethods = methods.Where(method => BatchObservers.IsPerEventMethod(method, type, kind, symbols)).ToArray();
         switch (kind)
         {
             case BatchObserverKind.Reactor:
-                AnalyzeReactor(context, type, batchMethods, perEventMethods);
+                AnalyzeReactor(context, type, batchMethods, perEventMethods, symbols);
                 break;
 
             case BatchObserverKind.Reducer:
@@ -69,15 +76,14 @@ public class BatchMethodRoutingAnalyzer : DiagnosticAnalyzer
         }
     }
 
-    static void AnalyzeReactor(SymbolAnalysisContext context, INamedTypeSymbol type, IMethodSymbol[] batchMethods, IMethodSymbol[] perEventMethods)
+    static void AnalyzeReactor(SymbolAnalysisContext context, INamedTypeSymbol type, IMethodSymbol[] batchMethods, IMethodSymbol[] perEventMethods, BatchSymbols symbols)
     {
-        var compilation = context.Compilation;
         var claimed = new List<(ITypeSymbol EventType, IMethodSymbol Method)>();
         foreach (var method in batchMethods)
         {
-            foreach (var (eventType, attribute) in BatchObservers.Observed(method, compilation))
+            foreach (var (eventType, attribute) in BatchObservers.Observed(method, symbols))
             {
-                var other = claimed.Find(_ => !SymbolEqualityComparer.Default.Equals(_.Method, method) && BatchObservers.Overlaps(_.EventType, eventType, compilation));
+                var other = claimed.Find(_ => !SymbolEqualityComparer.Default.Equals(_.Method, method) && BatchObservers.Overlaps(_.EventType, eventType, symbols));
                 if (other.Method is not null && Owns(type, method))
                 {
                     context.ReportDiagnostic(Diagnostic.Create(OneMethodRule, BatchObservers.LocationOf(attribute, method), eventType.Name, other.Method.Name, method.Name, type.Name));
@@ -90,7 +96,7 @@ public class BatchMethodRoutingAnalyzer : DiagnosticAnalyzer
         foreach (var method in perEventMethods)
         {
             var eventType = method.Parameters[0].Type;
-            var other = claimed.Find(_ => BatchObservers.Overlaps(_.EventType, eventType, compilation));
+            var other = claimed.Find(_ => BatchObservers.Overlaps(_.EventType, eventType, symbols));
             if (other.Method is not null && (Owns(type, method) || Owns(type, other.Method)))
             {
                 context.ReportDiagnostic(Diagnostic.Create(OneMethodRule, method.Locations.FirstOrDefault(), eventType.Name, other.Method.Name, method.Name, type.Name));
