@@ -8,6 +8,7 @@ using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Projections.Engine.Pipelines;
+using Cratis.Chronicle.Storage.Sinks;
 using Orleans.Providers;
 
 namespace Cratis.Chronicle.ReadModels;
@@ -16,9 +17,11 @@ namespace Cratis.Chronicle.ReadModels;
 /// Represents an implementation of <see cref="IReadModelsManager"/>.
 /// </summary>
 /// <param name="projectionPipelines"><see cref="IProjectionPipelineManager"/> for evicting pipelines left bound to a read model's former definition.</param>
+/// <param name="sinkConfigurations">The <see cref="ISinkConfigurations"/> a named sink must be known to; none configured when omitted.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.ReadModelsManager)]
-public class ReadModelsManager(IProjectionPipelineManager projectionPipelines) : Grain<ReadModelsManagerState>, IReadModelsManager
+public class ReadModelsManager(IProjectionPipelineManager projectionPipelines, ISinkConfigurations? sinkConfigurations = null) : Grain<ReadModelsManagerState>, IReadModelsManager
 {
+    readonly ISinkConfigurations _sinkConfigurations = sinkConfigurations ?? DefaultSinkConfigurations.Instance;
     readonly Dictionary<ReadModelIdentifier, ReadModelDefinition> _completed = new();
     readonly HashSet<ReadModelIdentifier> _pendingEvictions = new();
 
@@ -33,6 +36,7 @@ public class ReadModelsManager(IProjectionPipelineManager projectionPipelines) :
         {
             definition.Sink.EnsureReadModelSupported();
             definition.ContainerName.EnsureValid(definition.Identifier);
+            EnsureKnownSink(definition);
         }
 
         EnsureSinglePublisher(definitions);
@@ -92,6 +96,7 @@ public class ReadModelsManager(IProjectionPipelineManager projectionPipelines) :
     public async Task UpdateDefinition(ReadModelDefinition definition)
     {
         definition.Sink.EnsureReadModelSupported();
+        EnsureKnownSink(definition);
         EnsureSinglePublisher([definition]);
         if (!State.ReadModels.Any(_ => _.Identifier == definition.Identifier)) throw new ReadModelNotFound(definition.Identifier);
         await Register([definition]);
@@ -118,6 +123,15 @@ public class ReadModelsManager(IProjectionPipelineManager projectionPipelines) :
             throw;
         }
     }
+
+    /// <summary>
+    /// Refuses a definition naming a sink the kernel has no configuration for, or one that cannot store its kind of read model.
+    /// </summary>
+    /// <param name="definition">The <see cref="ReadModelDefinition"/> about to be stored.</param>
+    /// <exception cref="UnknownSinkName">Thrown when the named sink is not configured.</exception>
+    /// <exception cref="SinkConfigurationIsForAnotherKindOfReadModel">Thrown when the named sink cannot store the read model.</exception>
+    void EnsureKnownSink(ReadModelDefinition definition) =>
+        _sinkConfigurations.ResolveFor(definition, SinkConfigurationRules.IsGraph(definition.Sink.Type));
 
     /// <summary>
     /// Refuses definitions that would make two targets publish the same event type to the same event sequence.

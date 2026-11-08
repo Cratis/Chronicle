@@ -9,6 +9,7 @@ using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Projections.Engine.Pipelines;
+using Cratis.Chronicle.Storage.Sinks;
 using Orleans.TestKit;
 
 namespace Cratis.Chronicle.ReadModels.for_ReadModelsManager.given;
@@ -39,6 +40,7 @@ public class a_read_models_manager : Specification
 
         _projectionPipelines = Substitute.For<IProjectionPipelineManager>();
         _silo.AddService(_projectionPipelines);
+        _silo.AddService<ISinkConfigurations>(DefaultSinkConfigurations.Instance);
 
         _manager = await _silo.CreateGrainAsync<ReadModelsManager>(_eventStore.Value);
     }
