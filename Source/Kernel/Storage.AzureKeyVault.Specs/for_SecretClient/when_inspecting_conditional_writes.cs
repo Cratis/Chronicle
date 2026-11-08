@@ -21,7 +21,7 @@ public class when_inspecting_conditional_writes : Specification
                         _.Name.Equals(nameof(SecretClient.SetSecretAsync), StringComparison.Ordinal))
             .ToArray();
         _conditions = _writes.SelectMany(_ => _.GetParameters())
-            .Where(_ => typeof(RequestConditions).IsAssignableFrom(_.ParameterType) || HasConditionName(_.Name!))
+            .Where(_ => typeof(RequestConditions).IsAssignableFrom(_.ParameterType) || HasConditionName(_.Name))
             .ToArray();
         _entityTags = typeof(SecretProperties).GetProperties()
             .Where(_ => _.PropertyType == typeof(ETag) || HasConditionName(_.Name))

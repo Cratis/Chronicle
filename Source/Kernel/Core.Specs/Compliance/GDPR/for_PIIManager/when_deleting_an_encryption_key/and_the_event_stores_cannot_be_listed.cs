@@ -19,7 +19,7 @@ public class and_the_event_stores_cannot_be_listed : given.a_pii_manager
 
     async Task Because() => _error = await Catch.Exception(() => _manager.DeleteEncryptionKeyFor(Identifier));
 
-    [Fact] void should_still_fence_the_event_store_it_was_asked_for() => _keyStore.Received(1).RecordErasureFor(EventStore, EventStoreNamespace, Identifier, Arg.Any<Storage.Compliance.EncryptionKeyErasureRequest>());
+    [Fact] void should_still_fence_the_event_store_it_was_asked_for() => _keyStore.Received(1).RecordErasureFor(EventStore, EventStoreNamespace, Identifier, Arg.Any<EncryptionKeyErasureRequest>());
     [Fact] void should_still_erase_the_key_from_it() => _keyStore.Received(1).DeleteThroughFor(EventStore, EventStoreNamespace, Identifier, Arg.Any<string>());
     [Fact] void should_still_evict_the_key_from_every_silo() => _cacheClient.Received(1).Evict(EventStore, EventStoreNamespace, Identifier);
     [Fact] void should_not_reach_an_event_store_it_could_not_learn_about() => _keyStore.DidNotReceive().DeleteThroughFor(OtherEventStore, EventStoreNamespace, Identifier, Arg.Any<string>());

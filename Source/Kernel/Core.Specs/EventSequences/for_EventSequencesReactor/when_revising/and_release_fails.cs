@@ -44,9 +44,9 @@ public class and_release_fails : Specification
         access.GetErasureForRelease(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>())
             .Returns(call => keys.GetErasureForRelease(call.ArgAt<EventStoreName>(0), call.ArgAt<EventStoreNamespaceName>(1), call.ArgAt<EncryptionKeyIdentifier>(2)));
         var manager = new JsonSchemaMetadataManager(new KnownInstancesOf<IJsonSchemaMetadataValueHandler>(new PIICompliancePropertyValueHandler(provisioner, access, encryption)), NullLogger<JsonSchemaMetadataManager>.Instance);
-        _original = await manager.Apply("store", "namespace", schema, "owner", JsonNode.Parse(UsesObjectArray ? """{"contacts":[{"name":"original"}]}""" : """{"name":"original"}""")!.AsObject());
+        _original = await manager.Apply("store", "namespace", schema, "owner", JsonNode.Parse(UsesObjectArray ? """{"contacts":[{"name":"original"}]}""" : """{"name":"original"}""").AsObject());
         _originalText = _original.ToJsonString();
-        var revision = await manager.Apply("store", "namespace", schema, "owner", JsonNode.Parse(UsesObjectArray ? """{"contacts":[{"name":"revised"}]}""" : """{"name":"revised"}""")!.AsObject());
+        var revision = await manager.Apply("store", "namespace", schema, "owner", JsonNode.Parse(UsesObjectArray ? """{"contacts":[{"name":"revised"}]}""" : """{"name":"revised"}""").AsObject());
 
         // Missing key material without a recorded erasure is an operational failure, not erasure.
         access.TryGetLatestFor("store", "namespace", "owner").Returns(Task.FromResult<EncryptionKeyAtRevision?>(null));

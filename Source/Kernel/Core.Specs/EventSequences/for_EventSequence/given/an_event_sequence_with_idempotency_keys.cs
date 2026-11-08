@@ -59,7 +59,7 @@ public class an_event_sequence_with_idempotency_keys : appending_many_events
         {
             _writes++;
             _written = call.Arg<IEnumerable<EventToAppendToStorage>>().ToList();
-            return Task.FromResult<Result<IEnumerable<AppendedEvent>, AppendManyStorageFailure>>(Result<IEnumerable<AppendedEvent>, AppendManyStorageFailure>.Success(AppendedEventsFrom(_written)));
+            return Task.FromResult(Result<IEnumerable<AppendedEvent>, AppendManyStorageFailure>.Success(AppendedEventsFrom(_written)));
         });
         _complianceManager.LocateProtectedValues(Arg.Any<JsonSchema>(), Arg.Any<string>(), Arg.Any<JsonObject>()).Returns(_ => []);
         _complianceManager.ApplyReportingKeys(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<JsonSchema>(), Arg.Any<string>(), Arg.Any<JsonObject>())
@@ -96,10 +96,10 @@ public class an_event_sequence_with_idempotency_keys : appending_many_events
     protected async Task Protect(bool erased = false)
     {
         _request.Content["name"] = "Alice";
-        var location = new ProtectedValueLocation("name", ProtectionKind.Pii, _eventSourceId.Value, _request.Content["name"]!.DeepClone());
+        var location = new ProtectedValueLocation("name", ProtectionKind.Pii, _eventSourceId.Value, _request.Content["name"].DeepClone());
         var use = new ProtectedValueUse("name", ProtectionKind.Pii, location.Plaintext, new(ProtectionKind.Pii, _eventSourceId.Value, _protectingKey, EncryptionKeyRevision.Initial));
         _complianceManager.LocateProtectedValues(Arg.Any<JsonSchema>(), Arg.Any<string>(), Arg.Any<JsonObject>()).Returns(call =>
-            [location with { Plaintext = call.Arg<JsonObject>()["name"]!.DeepClone() }]);
+            [location with { Plaintext = call.Arg<JsonObject>()["name"].DeepClone() }]);
         var encoded = AppendFingerprint.Compute(Input(_request, [location]), [use]).AsT0.Format();
         Durable(fingerprint: encoded);
         await _backingKeys.SaveFor(EventStore, EventStoreNamespace, _eventSourceId.Value, _protectingKey, EncryptionKeyRevision.Initial);

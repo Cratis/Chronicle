@@ -119,7 +119,7 @@ public class CompositeEncryptionKeyStorage : IEncryptionKeyStorage, IEvictEncryp
             if (await store.GetErasureRequestFor(eventStore, eventStoreNamespace, identifier, requestId) is { } request) requests.Add(request);
         }
 
-        return requests.Count == 0 ? null : requests[0] with { Confirmed = requests.Count == _inner.Length && requests.TrueForAll(_ => _.Confirmed) };
+        return requests.Count == 0 ? null : requests[0] with { Confirmed = FenceGuarantees != EncryptionKeyFenceGuarantees.None && requests.Count == _inner.Length && requests.TrueForAll(_ => _.Confirmed) };
     }
 
     /// <inheritdoc/>
@@ -431,11 +431,8 @@ public class CompositeEncryptionKeyStorage : IEncryptionKeyStorage, IEvictEncryp
         {
             try
             {
-                if (store.FenceGuarantees != (EncryptionKeyFenceGuarantees.MonotonicFence | EncryptionKeyFenceGuarantees.FencedSave))
-                {
-                    throw new EncryptionKeyFenceUnavailable(identifier);
-                }
-
+                // Release N still reads legacy members. D4 reports their missing guarantees at startup;
+                // only protocol-confirmed erasure requires every member to support fencing.
                 if (await store.GetErasureForRelease(eventStore, eventStoreNamespace, identifier) is { } fence)
                 {
                     fences.Add(fence);

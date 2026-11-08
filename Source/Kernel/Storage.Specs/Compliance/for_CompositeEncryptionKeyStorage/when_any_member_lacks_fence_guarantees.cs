@@ -7,11 +7,13 @@ public class when_any_member_lacks_fence_guarantees : Specification
 {
     CompositeEncryptionKeyStorage _composite;
     Exception _error;
+    EncryptionKeyErasure? _fence;
 
     void Establish() => _composite = new(new InMemoryEncryptionKeyStorage(), Substitute.For<IEncryptionKeyStorage>());
 
-    async Task Because() => _error = await Catch.Exception(() => _composite.GetErasureForRelease("store", "namespace", "subject"));
+    async Task Because() => _error = await Catch.Exception(async () => _fence = await _composite.GetErasureForRelease("store", "namespace", "subject"));
 
     [Fact] void should_not_advertise_a_partial_guarantee() => _composite.FenceGuarantees.ShouldEqual(EncryptionKeyFenceGuarantees.None);
-    [Fact] void should_refuse_release_without_every_authority() => _error.ShouldBeOfExactType<EncryptionKeyFenceUnavailable>();
+    [Fact] void should_allow_release_n_reads() => _error.ShouldBeNull();
+    [Fact] void should_return_the_legacy_fence() => _fence.ShouldBeNull();
 }

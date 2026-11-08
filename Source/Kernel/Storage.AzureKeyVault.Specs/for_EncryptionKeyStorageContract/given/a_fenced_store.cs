@@ -31,7 +31,7 @@ public class a_fenced_store : Specification
 
     protected async Task Authorize()
     {
-        var fence = (await Fence())!;
+        var fence = await Fence();
         await Storage.AllowNewKeyFor(EventStore, Namespace, Identifier, fence.Version, fence.Lifecycle);
     }
 

@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.Encryption.for_EncryptionKeyStorage.when_getting_or_adding;
 
-public class and_the_insert_fails_without_a_winner : Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.given.a_migrated_namespace_database
+public class and_the_insert_fails_without_a_winner : Namespaces.given.a_migrated_namespace_database
 {
     EncryptionKeyStorage _storage;
     EncryptionKeyIdentifier _identifier = Guid.NewGuid().ToString();

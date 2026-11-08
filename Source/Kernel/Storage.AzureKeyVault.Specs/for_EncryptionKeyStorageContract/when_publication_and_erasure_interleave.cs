@@ -44,7 +44,7 @@ public class when_publication_and_erasure_interleave : given.a_fenced_store
         Client.FailPurge = true;
         await Assert.ThrowsAsync<EncryptionKeyNotPurged>(() => Storage.DeleteThroughFor(EventStore, Namespace, Identifier, "erase"));
         await Assert.ThrowsAsync<EncryptionKeyFenceUnavailable>(() => Storage.ConfirmErasureFor(EventStore, Namespace, Identifier, "erase"));
-        (await Fence())!.Requests!.Single().Confirmed.ShouldBeFalse();
+        (await Fence()).Requests.Single().Confirmed.ShouldBeFalse();
     }
 
     [Fact]

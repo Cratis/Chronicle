@@ -39,15 +39,19 @@ public static class ReleaseKeys
     /// <param name="eventStore">The event store.</param>
     /// <param name="ns">The namespace.</param>
     /// <param name="identifier">The identifier.</param>
+    /// <param name="cancellationToken">Cancellation of the release validation.</param>
     /// <returns>The usable key, or null when erased.</returns>
-    public static async Task<EncryptionKey?> TryGetForRelease(IEncryptionKeyStorage storage, EventStoreName eventStore, EventStoreNamespaceName ns, EncryptionKeyIdentifier identifier)
+    public static async Task<EncryptionKey?> TryGetForRelease(IEncryptionKeyStorage storage, EventStoreName eventStore, EventStoreNamespaceName ns, EncryptionKeyIdentifier identifier, CancellationToken cancellationToken = default)
     {
-        var pair = await storage.TryGetLatestFor(eventStore, ns, identifier);
         var memo = _current.Value ?? new Memo(TimeProvider.System, _grace);
+        var attempt = memo.BeginAttempt(cancellationToken);
+        attempt.Check();
+        var pair = await attempt.Wait(storage.TryGetLatestFor(eventStore, ns, identifier));
         var key = new FenceKey(storage, eventStore, ns, identifier);
         while (true)
         {
-            var snapshot = await memo.Read(key);
+            var snapshot = await memo.Read(key, attempt);
+            attempt.Check();
             if (!memo.IsFresh(snapshot)) continue;
             if (pair is null || snapshot.Fence.Covers(pair)) return null;
             memo.Uses[(key, pair)] = true;
@@ -60,12 +64,13 @@ public static class ReleaseKeys
     /// <param name="eventStore">The event store.</param>
     /// <param name="ns">The namespace.</param>
     /// <param name="identifier">The identifier.</param>
+    /// <param name="cancellationToken">Cancellation of the release validation.</param>
     /// <returns>The usable key, or null when refused.</returns>
-    public static async Task<EncryptionKey?> TryGetForReleaseOrEmpty(IEncryptionKeyStorage storage, EventStoreName eventStore, EventStoreNamespaceName ns, EncryptionKeyIdentifier identifier)
+    public static async Task<EncryptionKey?> TryGetForReleaseOrEmpty(IEncryptionKeyStorage storage, EventStoreName eventStore, EventStoreNamespaceName ns, EncryptionKeyIdentifier identifier, CancellationToken cancellationToken = default)
     {
         try
         {
-            return await TryGetForRelease(storage, eventStore, ns, identifier);
+            return await TryGetForRelease(storage, eventStore, ns, identifier, cancellationToken);
         }
         catch (EncryptionKeyFenceUnavailable)
         {
@@ -79,10 +84,12 @@ public static class ReleaseKeys
     /// <param name="eventStore">The event store.</param>
     /// <param name="ns">The namespace.</param>
     /// <param name="identifier">The identifier.</param>
+    /// <param name="cancellationToken">Cancellation of the release validation.</param>
     /// <returns>The authoritative erasure fence for this read.</returns>
-    public static async Task<EncryptionKeyErasure?> GetErasureForRelease(IEncryptionKeyStorage storage, EventStoreName eventStore, EventStoreNamespaceName ns, EncryptionKeyIdentifier identifier)
+    public static async Task<EncryptionKeyErasure?> GetErasureForRelease(IEncryptionKeyStorage storage, EventStoreName eventStore, EventStoreNamespaceName ns, EncryptionKeyIdentifier identifier, CancellationToken cancellationToken = default)
     {
-        var fence = (await (_current.Value ?? new Memo(TimeProvider.System, _grace)).Read(new(storage, eventStore, ns, identifier))).Fence;
+        var memo = _current.Value ?? new Memo(TimeProvider.System, _grace);
+        var fence = (await memo.Read(new(storage, eventStore, ns, identifier), memo.BeginAttempt(cancellationToken))).Fence;
 
         // A protocol authority initializes an empty fence for provisioning; that is not evidence of erasure.
         return fence is { NewKeyAllowed: true, Lifecycle: 1, ErasedLifecycle: 0 } &&
@@ -92,30 +99,35 @@ public static class ReleaseKeys
     /// <summary>Revalidate all material immediately before the synchronous hand-off.</summary>
     /// <typeparam name="T">The released result.</typeparam>
     /// <param name="handoff">The synchronous hand-off, with no intervening await.</param>
+    /// <param name="cancellationToken">Cancellation of the release validation.</param>
     /// <returns>The value produced by the hand-off.</returns>
     /// <exception cref="EncryptionKeyErased">Material was erased during this operation.</exception>
-    public static async Task<T> Complete<T>(Func<T> handoff)
+    public static async Task<T> Complete<T>(Func<T> handoff, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var memo = _current.Value;
         if (memo is null) return handoff();
+        var attempt = memo.BeginAttempt(cancellationToken);
         while (true)
         {
+            attempt.Check();
             List<Snapshot> checkedReads = [];
             foreach (var (use, _) in memo.Uses)
             {
-                var snapshot = await memo.Read(use.Key);
+                var snapshot = await memo.Read(use.Key, attempt);
                 if (snapshot.Fence.Covers(use.Pair)) throw new EncryptionKeyErased(use.Key.Identifier, snapshot.Fence!);
                 checkedReads.Add(snapshot);
             }
 
             foreach (var (key, observe) in memo.Observations?.AsEnumerable() ?? [])
             {
-                var snapshot = await memo.Read(key);
+                var snapshot = await memo.Read(key, attempt);
                 observe(snapshot.Fence);
                 checkedReads.Add(snapshot);
             }
 
             // Refresh can itself stall. All reads must still be inside the lease at the actual hand-off.
+            attempt.Check();
             if (checkedReads.TrueForAll(memo.IsFresh)) return handoff();
         }
     }
@@ -158,16 +170,22 @@ public static class ReleaseKeys
         public bool IsFresh(Snapshot snapshot) =>
             clock.GetElapsedTime(snapshot.Started) <= _lease && clock.GetUtcNow() - snapshot.WallStarted <= _lease;
 
-        public async Task<Snapshot> Read(FenceKey key)
+        /// <summary>Share one overall budget across every retry and key in a validation.</summary>
+        /// <param name="cancellationToken">Cancellation of the release.</param>
+        /// <returns>The bounded validation attempt.</returns>
+        public ReleaseAttempt BeginAttempt(CancellationToken cancellationToken) => new(clock, grace * 3, cancellationToken);
+
+        public async Task<Snapshot> Read(FenceKey key, ReleaseAttempt attempt)
         {
             while (true)
             {
+                attempt.Check();
                 if (_failure is { } failure) throw new EncryptionKeyFenceUnavailable(failure);
                 var pending = _reads.GetOrAdd(key, static (scope, memo) => new(() => memo.ReadFresh(scope)), this);
                 Snapshot snapshot;
                 try
                 {
-                    snapshot = await pending.Value;
+                    snapshot = await attempt.Wait(pending.Value);
                 }
                 catch (Exception error)
                 {

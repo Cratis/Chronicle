@@ -23,8 +23,8 @@ public class when_merging_an_older_snapshot : Specification
     [Fact] void should_preserve_the_erased_lifecycle() => _result.ErasedLifecycle.ShouldEqual(2u);
     [Fact] void should_increment_the_current_version() => _result.Version.ShouldEqual(11ul);
     [Fact] void should_close_provisioning() => _result.NewKeyAllowed.ShouldBeFalse();
-    [Fact] void should_keep_both_requests() => _result.Requests!.Count.ShouldEqual(2);
-    [Fact] void should_keep_the_original_request_boundary() => _result.Requests![0].Through.ShouldEqual(_current.Requests![0].Through);
-    [Fact] void should_not_unconfirm_a_request() => _result.Requests![0].Confirmed.ShouldBeTrue();
-    [Fact] void should_union_request_fingerprints() => _result.Requests![0].Fingerprints!.ShouldContainOnly("new", "old");
+    [Fact] void should_keep_both_requests() => _result.Requests.Count.ShouldEqual(2);
+    [Fact] void should_keep_the_original_request_boundary() => _result.Requests[0].Through.ShouldEqual(_current.Requests[0].Through);
+    [Fact] void should_not_unconfirm_a_request() => _result.Requests[0].Confirmed.ShouldBeTrue();
+    [Fact] void should_union_request_fingerprints() => _result.Requests[0].Fingerprints.ShouldContainOnly("new", "old");
 }

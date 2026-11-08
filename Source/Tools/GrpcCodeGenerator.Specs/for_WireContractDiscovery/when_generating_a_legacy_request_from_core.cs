@@ -20,7 +20,7 @@ public class when_generating_a_legacy_request_from_core : Specification
         SharedTypeRegistry.Configure(2, "Cratis.Chronicle.Contracts");
         _outputDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
         _file = Path.Combine(_outputDir, "Compliance", "ErasureWireRequest.cs");
-        Directory.CreateDirectory(Path.GetDirectoryName(_file)!);
+        Directory.CreateDirectory(Path.GetDirectoryName(_file));
         const string existing = """
             using ProtoBuf;
             namespace Cratis.Chronicle.Contracts.Compliance;

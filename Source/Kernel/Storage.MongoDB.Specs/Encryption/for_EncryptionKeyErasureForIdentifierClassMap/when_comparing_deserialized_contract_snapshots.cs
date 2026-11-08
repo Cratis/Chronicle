@@ -27,7 +27,7 @@ public class when_comparing_deserialized_contract_snapshots : Specification
     [Fact] void should_preserve_the_lifecycle() => _actual.Lifecycle.ShouldEqual(2u);
     [Fact] void should_preserve_the_erased_lifecycle() => _actual.ErasedLifecycle.ShouldEqual(2u);
     [Fact] void should_preserve_the_seal() => _actual.Seal.ShouldEqual("seal");
-    [Fact] void should_preserve_the_request_identifier() => _actual.Requests!.Single().RequestId.ShouldEqual("request");
-    [Fact] void should_preserve_the_request_fingerprints() => _actual.Requests!.Single().Fingerprints!.ShouldEqual("fingerprint");
-    [Fact] void should_preserve_the_confirmation() => _actual.Requests!.Single().Confirmed.ShouldBeTrue();
+    [Fact] void should_preserve_the_request_identifier() => _actual.Requests.Single().RequestId.ShouldEqual("request");
+    [Fact] void should_preserve_the_request_fingerprints() => _actual.Requests.Single().Fingerprints.ShouldEqual("fingerprint");
+    [Fact] void should_preserve_the_confirmation() => _actual.Requests.Single().Confirmed.ShouldBeTrue();
 }

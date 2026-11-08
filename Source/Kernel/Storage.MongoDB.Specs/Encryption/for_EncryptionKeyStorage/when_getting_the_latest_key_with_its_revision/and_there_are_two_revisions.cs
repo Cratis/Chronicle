@@ -28,14 +28,14 @@ public class and_there_are_two_revisions(ReplicaSetMongoDBFixture fixture) : Spe
         namespaceDatabase.GetCollection<EncryptionKeyForIdentifier>("encryption-keys").Returns(mongo.GetCollection<EncryptionKeyForIdentifier>("encryption-keys"));
         namespaceDatabase.GetCollection<EncryptionKeyErasureForIdentifier>("encryption-key-erasures").Returns(mongo.GetCollection<EncryptionKeyErasureForIdentifier>("encryption-key-erasures"));
         eventStore.GetNamespaceDatabase(EventStoreNamespaceName.NotSet).Returns(namespaceDatabase);
-        _store = new Cratis.Compliance.MongoDB.EncryptionKeyStorage(database);
+        _store = new EncryptionKeyStorage(database);
         await _store.SaveFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, _identifier, _expected, new EncryptionKeyRevision(7u));
         await _store.SaveFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, _identifier, new EncryptionKey([3], [4]), EncryptionKeyRevision.Initial);
     }
 
     async Task Because() => _result = await _store.TryGetLatestFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, _identifier);
 
-    [Fact] void should_report_the_highest_revision() => _result!.Revision.ShouldEqual(new EncryptionKeyRevision(7u));
-    [Fact] void should_report_the_public_key_at_that_revision() => _result!.Key.Public.ShouldEqual(_expected.Public);
-    [Fact] void should_report_the_private_key_at_that_revision() => _result!.Key.Private.ShouldEqual(_expected.Private);
+    [Fact] void should_report_the_highest_revision() => _result.Revision.ShouldEqual(new EncryptionKeyRevision(7u));
+    [Fact] void should_report_the_public_key_at_that_revision() => _result.Key.Public.ShouldEqual(_expected.Public);
+    [Fact] void should_report_the_private_key_at_that_revision() => _result.Key.Private.ShouldEqual(_expected.Private);
 }

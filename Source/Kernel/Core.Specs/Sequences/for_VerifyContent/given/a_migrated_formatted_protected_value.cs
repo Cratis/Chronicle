@@ -42,7 +42,7 @@ public class a_migrated_formatted_protected_value : a_stored_event
         eventTypes.GetFor("event", 2U).Returns(new EventTypeSchema(new("event", 2), EventTypeOwner.Client, EventTypeSource.Code, second));
         eventTypes.Configure().GetDefinition("event").Returns(new EventTypeDefinition("event", EventTypeOwner.Client, false, [new(1, first), new(2, second)], [new(1, 2, [], new JsonObject(), new JsonObject())]));
         _command = _command with { Content = content, EventType = new("event", (uint)attemptedGeneration, false) };
-        var plaintext = JsonNode.Parse(content)!.AsObject();
+        var plaintext = JsonNode.Parse(content).AsObject();
         var sourceSchema = attemptedGeneration == 1 ? first : second;
         var protectedSource = await _manager.Apply("store", "tenant", sourceSchema, "source", plaintext);
         var migrations = new ProtectedEventTypeMigrations(eventTypes, new EventTypeMigrations(_storage, _converter), _manager, _converter);

@@ -27,6 +27,6 @@ public class when_one_member_has_no_fencing_guarantees : given.two_key_stores
 
     [Fact] void should_not_advertise_a_stronger_composite() => _composite.FenceGuarantees.ShouldEqual(EncryptionKeyFenceGuarantees.None);
     [Fact] void should_not_claim_the_erasure_completed() => _error.ShouldBeOfExactType<EncryptionKeyErasureIncomplete>();
-    [Fact] void should_still_fence_members_after_the_legacy_member() => _fence!.Requests!.Single().RequestId.ShouldEqual("request");
+    [Fact] void should_still_fence_members_after_the_legacy_member() => _fence.Requests.Single().RequestId.ShouldEqual("request");
     [Fact] void should_expose_each_member_capability() => _composite.Capabilities.Count.ShouldEqual(3);
 }

@@ -19,12 +19,14 @@ public class when_reporting_unsupported_stores : Specification
     void Establish()
     {
         _logger = new();
-        var keys = Substitute.For<IEncryptionKeyStorage>();
-        keys.Capabilities.Returns([
-            new("HELD Vault", EncryptionKeyFenceGuarantees.None),
-            new("Azure without durable authority", EncryptionKeyFenceGuarantees.None),
-            new("SQL", EncryptionKeyFenceGuarantees.MonotonicFence | EncryptionKeyFenceGuarantees.FencedSave)
-        ]);
+        var vault = Substitute.For<IEncryptionKeyStorage>();
+        vault.Capabilities.Returns([new("HELD Vault", EncryptionKeyFenceGuarantees.None)]);
+        var azure = Substitute.For<IEncryptionKeyStorage>();
+        azure.Capabilities.Returns([new("Azure without durable authority", EncryptionKeyFenceGuarantees.None)]);
+        var sql = Substitute.For<IEncryptionKeyStorage>();
+        sql.FenceGuarantees.Returns(EncryptionKeyFenceGuarantees.MonotonicFence | EncryptionKeyFenceGuarantees.FencedSave);
+        sql.Capabilities.Returns([new("SQL", EncryptionKeyFenceGuarantees.MonotonicFence | EncryptionKeyFenceGuarantees.FencedSave)]);
+        var keys = new CompositeEncryptionKeyStorage(vault, azure, sql);
         _publisher = new(Substitute.For<IStorage>(), keys, new InMemoryEncryptionKeyStorage(), Substitute.For<ILocalSiloDetails>(), Options.Create(new ClusterOptions()), Options.Create(new ClusterMembershipOptions()), Options.Create(new ChronicleOptions()), _logger, TimeProvider.System);
     }
 

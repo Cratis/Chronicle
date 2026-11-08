@@ -29,5 +29,5 @@ public class and_authorization_wins_a_compare_and_swap_race : racing_encryption_
     [Fact] void should_reject_the_stale_erasure() => _result.ShouldBeOfExactType<EncryptionKeyFenceChanged>();
     [Fact] void should_not_retry_against_the_authorized_successor() => _writes.ShouldEqual(1);
     [Fact] void should_keep_the_successor_authorized() => _fence.NewKeyAllowed.ShouldBeTrue();
-    [Fact] void should_not_record_the_losing_request() => _fence.Requests!.Select(_ => _.RequestId).ShouldEqual(["winner"]);
+    [Fact] void should_not_record_the_losing_request() => _fence.Requests.Select(_ => _.RequestId).ShouldEqual(["winner"]);
 }

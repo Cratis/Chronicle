@@ -19,7 +19,7 @@ public class when_persisting_the_authority : given.a_fenced_store
         decoded.Erasure.ErasedThrough.Value.ShouldEqual(7u);
         decoded.Publications.Single().Version.ShouldEqual("exact-version");
         decoded.LegacyImports.Single().Version.ShouldEqual("imported-version");
-        decoded.Erasure.Requests!.Single().RequestId.ShouldEqual("erase");
+        decoded.Erasure.Requests.Single().RequestId.ShouldEqual("erase");
     }
 
     [Fact]
@@ -35,7 +35,7 @@ public class when_persisting_the_authority : given.a_fenced_store
         await Storage.SaveFor(EventStore, Namespace, Identifier, Original, 1u);
         await Storage.SaveFor(EventStore, Namespace, Identifier, Successor, 1u);
         await Storage.RecordErasureFor(EventStore, Namespace, Identifier, new("all-versions"));
-        var fence = (await Fence())!;
+        var fence = await Fence();
         fence.ErasedKeyFingerprints.ShouldContain(Original.Fingerprint);
         fence.ErasedKeyFingerprints.ShouldContain(Successor.Fingerprint);
         await Storage.DeleteThroughFor(EventStore, Namespace, Identifier, "all-versions");
