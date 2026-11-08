@@ -51,6 +51,9 @@ public class AzureKeyVaultEncryptionKeyStorage : IEncryptionKeyStorage
         _storage = new LegacyAzureKeyVaultEncryptionKeyStorage(secretClient, timeProvider, logger);
 
     /// <inheritdoc/>
+    public IReadOnlyList<EncryptionKeyStorageCapability> Capabilities => _storage.Capabilities;
+
+    /// <inheritdoc/>
     public EncryptionKeyFenceGuarantees FenceGuarantees => _storage.FenceGuarantees;
 
     /// <inheritdoc/>
@@ -88,6 +91,14 @@ public class AzureKeyVaultEncryptionKeyStorage : IEncryptionKeyStorage
     /// <inheritdoc/>
     public Task<EncryptionKeyErasure?> GetErasureFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier) =>
         _storage.GetErasureFor(eventStore, eventStoreNamespace, identifier);
+
+    /// <inheritdoc/>
+    public Task<EncryptionKeyErasureRequest?> GetErasureRequestFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, string requestId) =>
+        _storage.GetErasureRequestFor(eventStore, eventStoreNamespace, identifier, requestId);
+
+    /// <inheritdoc/>
+    public Task CompactErasureRequestsFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, int retain = 32) =>
+        _storage.CompactErasureRequestsFor(eventStore, eventStoreNamespace, identifier, retain);
 
     /// <inheritdoc/>
     public Task<EncryptionKeyErasure?> GetFenceFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier) =>

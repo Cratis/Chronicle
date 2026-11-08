@@ -68,10 +68,12 @@ public abstract class EncryptionKeyStorageContract : Specification
 
     void Establish() => _storage = CreateStorage();
 
-    [Fact] public void should_declare_both_atomic_guarantees() =>
+    [Fact]
+    public void should_declare_both_atomic_guarantees() =>
         _storage.FenceGuarantees.ShouldEqual(EncryptionKeyFenceGuarantees.MonotonicFence | EncryptionKeyFenceGuarantees.FencedSave);
 
-    [Fact] public async Task should_ensure_a_fence_before_the_first_save()
+    [Fact]
+    public async Task should_ensure_a_fence_before_the_first_save()
     {
         await Save(_original);
         var fence = await Fence();
@@ -115,7 +117,8 @@ public abstract class EncryptionKeyStorageContract : Specification
         AssertFence((await Erasure())!, await Fence());
     }
 
-    [Fact] public async Task should_refuse_a_delayed_save_of_destroyed_material_at_a_higher_revision()
+    [Fact]
+    public async Task should_refuse_a_delayed_save_of_destroyed_material_at_a_higher_revision()
     {
         await Save(_original);
         await Raise("erase");
@@ -124,7 +127,8 @@ public abstract class EncryptionKeyStorageContract : Specification
         await Assert.ThrowsAsync<EncryptionKeyErased>(() => Save(_original, 99u));
     }
 
-    [Fact] public async Task should_refuse_a_stalled_authorization_after_another_erasure()
+    [Fact]
+    public async Task should_refuse_a_stalled_authorization_after_another_erasure()
     {
         await Raise("first");
         var observed = await Fence();
@@ -133,7 +137,8 @@ public abstract class EncryptionKeyStorageContract : Specification
         (await Fence()).NewKeyAllowed.ShouldBeFalse();
     }
 
-    [Fact] public async Task should_accept_only_the_immediate_authorization_retry_without_another_write()
+    [Fact]
+    public async Task should_accept_only_the_immediate_authorization_retry_without_another_write()
     {
         await Raise("erase");
         var observed = await Fence();
@@ -145,7 +150,8 @@ public abstract class EncryptionKeyStorageContract : Specification
         authorized.Lifecycle.ShouldEqual(observed.Lifecycle + 1);
     }
 
-    [Fact] public async Task should_refuse_an_authorization_retry_after_a_later_fence_write_even_when_still_allowed()
+    [Fact]
+    public async Task should_refuse_an_authorization_retry_after_a_later_fence_write_even_when_still_allowed()
     {
         await Raise("erase");
         var observed = await Fence();
@@ -155,7 +161,8 @@ public abstract class EncryptionKeyStorageContract : Specification
         (await Fence()).NewKeyAllowed.ShouldBeTrue();
     }
 
-    [Fact] public async Task should_not_mistake_a_confirmation_for_an_authorization()
+    [Fact]
+    public async Task should_not_mistake_a_confirmation_for_an_authorization()
     {
         await Raise("erase");
         await Authorize(await Fence());
@@ -164,7 +171,8 @@ public abstract class EncryptionKeyStorageContract : Specification
         await Assert.ThrowsAsync<EncryptionKeyFenceChanged>(() => Authorize(observed));
     }
 
-    [Fact] public async Task should_require_the_observed_lifecycle_for_an_authorization_retry()
+    [Fact]
+    public async Task should_require_the_observed_lifecycle_for_an_authorization_retry()
     {
         await Raise("erase");
         var observed = await Fence();
@@ -172,14 +180,16 @@ public abstract class EncryptionKeyStorageContract : Specification
         await Assert.ThrowsAsync<EncryptionKeyFenceChanged>(() => Authorize(observed with { Lifecycle = 0 }));
     }
 
-    [Fact] public async Task should_refuse_revision_two_under_an_empty_subject_fence()
+    [Fact]
+    public async Task should_refuse_revision_two_under_an_empty_subject_fence()
     {
         await Raise("empty");
         await Assert.ThrowsAsync<EncryptionKeyErased>(() => Save(_original, 2u));
         (await Latest()).ShouldBeNull();
     }
 
-    [Fact] public async Task should_refuse_first_provisioning_racing_an_empty_erasure()
+    [Fact]
+    public async Task should_refuse_first_provisioning_racing_an_empty_erasure()
     {
         await Assert.ThrowsAsync<EncryptionKeyErased>(() => DuringPublication(
             async () => await Provision(_original),
@@ -187,7 +197,8 @@ public abstract class EncryptionKeyStorageContract : Specification
         (await Latest()).ShouldBeNull();
     }
 
-    [Fact] public async Task should_never_read_an_unpublished_revision()
+    [Fact]
+    public async Task should_never_read_an_unpublished_revision()
     {
         await DuringPublication(() => Save(_original), async () =>
         {
@@ -198,7 +209,8 @@ public abstract class EncryptionKeyStorageContract : Specification
         AssertKey((await Latest())!.Key, _original);
     }
 
-    [Fact] public async Task should_keep_get_or_add_on_the_published_revision_during_a_later_stage()
+    [Fact]
+    public async Task should_keep_get_or_add_on_the_published_revision_during_a_later_stage()
     {
         await Save(_original);
         await DuringPublication(() => Save(_successor, 2u), async () =>
@@ -209,7 +221,8 @@ public abstract class EncryptionKeyStorageContract : Specification
         AssertKey((await Latest())!.Key, _successor);
     }
 
-    [Fact] public async Task should_hide_covered_rows_before_the_sweep_including_get_or_add()
+    [Fact]
+    public async Task should_hide_covered_rows_before_the_sweep_including_get_or_add()
     {
         await Save(_original);
         await Raise("erase");
@@ -219,7 +232,8 @@ public abstract class EncryptionKeyStorageContract : Specification
         await Assert.ThrowsAsync<EncryptionKeyErased>(async () => await _storage.GetOrAddFor(_eventStore, _namespace, _identifier, _successor));
     }
 
-    [Fact] public async Task should_not_sweep_an_authorized_successor_when_an_old_request_is_retried()
+    [Fact]
+    public async Task should_not_sweep_an_authorized_successor_when_an_old_request_is_retried()
     {
         await Save(_original);
         await Raise("old");
@@ -240,7 +254,8 @@ public abstract class EncryptionKeyStorageContract : Specification
         AssertRequest((await Fence()).Requests!.Single(), request);
     }
 
-    [Fact] public async Task should_keep_an_old_request_after_the_inline_log_reaches_capacity()
+    [Fact]
+    public async Task should_keep_an_old_request_after_the_inline_log_reaches_capacity()
     {
         await Raise("old");
         await Confirm("old");
@@ -256,7 +271,8 @@ public abstract class EncryptionKeyStorageContract : Specification
         (await Fence()).Requests!.Count.ShouldEqual(1024);
     }
 
-    [Fact] public async Task should_refuse_a_request_bound_to_a_superseded_lifecycle()
+    [Fact]
+    public async Task should_refuse_a_request_bound_to_a_superseded_lifecycle()
     {
         await Raise("first");
         var observed = await Fence();
@@ -288,7 +304,8 @@ public abstract class EncryptionKeyStorageContract : Specification
         AssertKey((await Latest())!.Key, _successor);
     }
 
-    [Fact] public async Task should_verify_the_sweep_before_confirming()
+    [Fact]
+    public async Task should_verify_the_sweep_before_confirming()
     {
         await Save(_original);
         await Raise("erase");
@@ -299,7 +316,8 @@ public abstract class EncryptionKeyStorageContract : Specification
         (await Fence()).Requests!.Single().Confirmed.ShouldBeTrue();
     }
 
-    [Fact] public async Task should_keep_floors_fingerprints_and_lifecycle_boundaries_monotone()
+    [Fact]
+    public async Task should_keep_floors_fingerprints_and_lifecycle_boundaries_monotone()
     {
         EncryptionKeyErasure? previous = null;
         for (uint index = 1; index <= 32; index++)
@@ -323,7 +341,8 @@ public abstract class EncryptionKeyStorageContract : Specification
         }
     }
 
-    [Fact] public async Task should_surface_an_unknown_fence_write_outcome_and_deduplicate_the_explicit_retry()
+    [Fact]
+    public async Task should_surface_an_unknown_fence_write_outcome_and_deduplicate_the_explicit_retry()
     {
         // Model a transport losing the response after the server applied the write. A caller must see the error;
         // it may retry only with the same request id, not turn the ambiguous outcome into a fresh erasure.
@@ -331,6 +350,36 @@ public abstract class EncryptionKeyStorageContract : Specification
         var applied = await Fence();
         await Raise("lost-response");
         AssertFence(await Fence(), applied);
+    }
+
+    [Fact]
+    public async Task should_deduplicate_an_archived_id_after_a_successor_is_published()
+    {
+        await Save(_original);
+        await Raise("archived");
+        await Sweep("archived");
+        await Confirm("archived");
+        var request = (await Fence()).Requests!.Single();
+        await _storage.CompactErasureRequestsFor(_eventStore, _namespace, _identifier, retain: 0);
+        (await Fence()).Requests!.ShouldBeEmpty();
+        AssertRequest((await _storage.GetErasureRequestFor(_eventStore, _namespace, _identifier, "archived"))!, request);
+        await Authorize(await Fence());
+        await Save(_successor);
+        await Raise("archived");
+        await Sweep("archived");
+        await Confirm("archived");
+        AssertKey((await Latest())!.Key, _successor);
+        (await Fence()).NewKeyAllowed.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task should_keep_unconfirmed_requests_inline_during_compaction()
+    {
+        await Save(_original);
+        await Raise("pending");
+        var request = (await Fence()).Requests!.Single();
+        await _storage.CompactErasureRequestsFor(_eventStore, _namespace, _identifier, retain: 0);
+        AssertRequest((await Fence()).Requests!.Single(), request);
     }
 
     static void AssertKey(EncryptionKey actual, EncryptionKey expected)

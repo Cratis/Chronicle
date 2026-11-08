@@ -34,6 +34,15 @@ internal sealed partial class FencedAzureKeyVaultEncryptionKeyStorage
         for (var attempt = 0; attempt < MaximumAttempts; attempt++)
         {
             if ((observed.Erasure.Requests ?? []).Any(_ => _.RequestId.Equals(request.RequestId, StringComparison.Ordinal))) return;
+            if (await Archived(address, request.RequestId) is not null)
+            {
+                var stamped = observed with { Erasure = observed.Erasure with { Version = checked(observed.Erasure.Version + 1) } };
+                if (await authority.CompareExchangeFor(eventStore, eventStoreNamespace, address.AuthorityIdentifier, observed, stamped)) return;
+                await Backoff(attempt);
+                observed = await ReadState(address);
+                continue;
+            }
+
             if (observed.Erasure.Lifecycle != lifecycle || (request.Lifecycle != 0 && request.Lifecycle != lifecycle)) throw new EncryptionKeyFenceChanged(identifier);
             if ((observed.Erasure.Requests?.Count ?? 0) >= 1024) throw new EncryptionKeyRequestLogFull(identifier);
             var (present, highest, fingerprints) = await Capture(address, observed);
@@ -122,7 +131,9 @@ internal sealed partial class FencedAzureKeyVaultEncryptionKeyStorage
     public async Task DeleteThroughFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, string requestId)
     {
         var address = await AddressFor(eventStore, eventStoreNamespace, identifier);
-        await Sweep(address, Request(await ReadState(address), identifier, requestId));
+        var state = await ReadState(address);
+        var request = state.Erasure.Requests?.SingleOrDefault(_ => _.RequestId == requestId) ?? await Archived(address, requestId) ?? throw new EncryptionKeyFenceChanged(identifier);
+        if (!request.Confirmed) await Sweep(address, request);
     }
 
     /// <inheritdoc/>
@@ -132,7 +143,8 @@ internal sealed partial class FencedAzureKeyVaultEncryptionKeyStorage
         for (var attempt = 0; attempt < MaximumAttempts; attempt++)
         {
             var state = await ReadState(address);
-            var request = Request(state, identifier, requestId);
+            var request = state.Erasure.Requests?.SingleOrDefault(_ => _.RequestId == requestId) ?? await Archived(address, requestId) ?? throw new EncryptionKeyFenceChanged(identifier);
+            if (request.Confirmed) return;
             await VerifySweep(address, request);
             if (request.Confirmed) return;
             var next = state with
@@ -149,9 +161,6 @@ internal sealed partial class FencedAzureKeyVaultEncryptionKeyStorage
 
         throw new EncryptionKeyFenceUnavailable(identifier);
     }
-
-    static EncryptionKeyErasureRequest Request(EncryptionKeyFenceState state, EncryptionKeyIdentifier identifier, string requestId) =>
-        state.Erasure.Requests?.FirstOrDefault(_ => _.RequestId.Equals(requestId, StringComparison.Ordinal)) ?? throw new EncryptionKeyFenceChanged(identifier);
 
     static bool IsAuthorizationRetry(EncryptionKeyErasure fence, ulong version, uint lifecycle) =>
         fence.NewKeyAllowed && fence.Version > version && fence.Version - version == 1 && fence.Lifecycle > lifecycle && fence.Lifecycle - lifecycle == 1;

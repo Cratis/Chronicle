@@ -16,6 +16,42 @@ public interface IEncryptionKeyStorage
     /// </summary>
     EncryptionKeyFenceGuarantees FenceGuarantees => EncryptionKeyFenceGuarantees.None;
 
+    /// <summary>Gets the non-sensitive capability diagnostics for every member.</summary>
+    IReadOnlyList<EncryptionKeyStorageCapability> Capabilities => [new(GetType().Name, FenceGuarantees)];
+
+    /// <summary>Observe each authority freshly and open a successor only after every request is confirmed.</summary>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="eventStoreNamespace">The namespace.</param>
+    /// <param name="identifier">The key identifier.</param>
+    /// <returns>Awaitable authorization.</returns>
+    /// <exception cref="EncryptionKeyFenceChanged">An erasure is still pending.</exception>
+    async Task AuthorizeConfirmedSuccessorFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
+    {
+        if (await GetFenceFor(eventStore, eventStoreNamespace, identifier) is { NewKeyAllowed: false } observed)
+        {
+            if (observed.Requests?.Any(_ => !_.Confirmed) == true) throw new EncryptionKeyFenceChanged(identifier);
+            await AllowNewKeyFor(eventStore, eventStoreNamespace, identifier, observed.Version, observed.Lifecycle);
+        }
+    }
+
+    /// <summary>Archive confirmed requests before removing them with a Version-conditioned write.</summary>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="eventStoreNamespace">The namespace.</param>
+    /// <param name="identifier">The key identifier.</param>
+    /// <param name="retain">The maximum number of confirmed inline requests to retain.</param>
+    /// <returns>Awaitable compaction.</returns>
+    Task CompactErasureRequestsFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, int retain = 32) =>
+        Task.CompletedTask;
+
+    /// <summary>Read an inline or archived request without changing its immutable boundary.</summary>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="eventStoreNamespace">The namespace.</param>
+    /// <param name="identifier">The key identifier.</param>
+    /// <param name="requestId">The retry identity.</param>
+    /// <returns>The recorded request, or null.</returns>
+    async Task<EncryptionKeyErasureRequest?> GetErasureRequestFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, string requestId) =>
+        (await GetFenceFor(eventStore, eventStoreNamespace, identifier))?.Requests?.SingleOrDefault(_ => _.RequestId == requestId);
+
     /// <summary>
     /// Get the current fence, including an empty guard created before the first save.
     /// </summary>

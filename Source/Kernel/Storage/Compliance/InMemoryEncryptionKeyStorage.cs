@@ -132,7 +132,7 @@ public partial class InMemoryEncryptionKeyStorage : IEncryptionKeyStorage, IEncr
             var scope = new Scope(eventStore, eventStoreNamespace, identifier);
             var fence = EnsureFence(scope);
             var requests = fence.Requests ?? [];
-            if (requests.Any(_ => _.RequestId == request.RequestId))
+            if (_archivedRequests.ContainsKey((scope, request.RequestId)) || requests.Any(_ => _.RequestId == request.RequestId))
             {
                 return Task.CompletedTask;
             }
@@ -162,6 +162,7 @@ public partial class InMemoryEncryptionKeyStorage : IEncryptionKeyStorage, IEncr
         {
             var scope = new Scope(eventStore, eventStoreNamespace, identifier);
             var fence = RequiredFence(scope);
+            if (_archivedRequests.ContainsKey((scope, requestId))) return Task.CompletedTask;
             var request = RequiredRequest(scope, fence, requestId);
             var boundary = Boundary(request);
             var removed = KeysFor(scope).Where(_ => boundary.Covers(_.Value)).ToArray();
@@ -192,6 +193,7 @@ public partial class InMemoryEncryptionKeyStorage : IEncryptionKeyStorage, IEncr
         lock (_lock)
         {
             var scope = new Scope(eventStore, eventStoreNamespace, identifier);
+            if (_archivedRequests.ContainsKey((scope, requestId))) return Task.CompletedTask;
             var fence = RequiredFence(scope);
             var request = RequiredRequest(scope, fence, requestId);
             if (KeysFor(scope).Any(_ => Boundary(request).Covers(_.Value)))

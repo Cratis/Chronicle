@@ -107,6 +107,12 @@ internal static class EncryptionKeyFenceUpdates
             .Set("requests.$", request)
             .AddToSetEach(_ => _.ErasedKeyFingerprints, next.ErasedKeyFingerprints);
 
+    /// <summary>Replace the inline log only after acknowledged archival, under the observed Version predicate.</summary>
+    /// <param name="next">The replacement fence.</param>
+    /// <returns>The sealed CAS update.</returns>
+    internal static UpdateDefinition<EncryptionKeyErasureForIdentifier> Compact(EncryptionKeyErasure next) =>
+        Advance(next).Set(_ => _.Requests, (next.Requests ?? []).ToArray());
+
     static UpdateDefinition<EncryptionKeyErasureForIdentifier> Advance(EncryptionKeyErasure next) =>
         _updates.Inc(_ => _.Version, 1UL)
             .Set(_ => _.Lifecycle, next.Lifecycle)

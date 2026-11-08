@@ -53,7 +53,7 @@ public partial class EncryptionKeyStorage
     /// <inheritdoc/>
     public async Task<bool> CompareExchangeFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyFenceState observed, EncryptionKeyFenceState next)
     {
-        observed.EnsureMonotonic(identifier, next);
+        await EncryptionKeyRequestArchive.ValidateTransition(this, eventStore, eventStoreNamespace, identifier, observed, next);
         try
         {
             await using var scope = await database.Namespace(eventStore, eventStoreNamespace);

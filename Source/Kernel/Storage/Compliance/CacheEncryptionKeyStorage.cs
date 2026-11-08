@@ -67,6 +67,44 @@ public class CacheEncryptionKeyStorage(
     readonly TimeSpan _negativeCacheTimeToLive = negativeCacheTimeToLive ?? DefaultNegativeCacheTimeToLive;
 
     /// <inheritdoc/>
+    public IReadOnlyList<EncryptionKeyStorageCapability> Capabilities => actualKeyStore.Capabilities;
+
+    /// <inheritdoc/>
+    public EncryptionKeyFenceGuarantees FenceGuarantees => actualKeyStore.FenceGuarantees;
+
+    /// <inheritdoc/>
+    public Task<EncryptionKeyErasureRequest?> GetErasureRequestFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, string requestId) =>
+        actualKeyStore.GetErasureRequestFor(eventStore, eventStoreNamespace, identifier, requestId);
+
+    /// <inheritdoc/>
+    public Task<EncryptionKeyErasure?> GetFenceFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier) =>
+        actualKeyStore.GetFenceFor(eventStore, eventStoreNamespace, identifier);
+
+    /// <inheritdoc/>
+    public Task AuthorizeConfirmedSuccessorFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier) =>
+        Mutate(eventStore, eventStoreNamespace, identifier, () => actualKeyStore.AuthorizeConfirmedSuccessorFor(eventStore, eventStoreNamespace, identifier));
+
+    /// <inheritdoc/>
+    public Task CompactErasureRequestsFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, int retain = 32) =>
+        Mutate(eventStore, eventStoreNamespace, identifier, () => actualKeyStore.CompactErasureRequestsFor(eventStore, eventStoreNamespace, identifier, retain));
+
+    /// <inheritdoc/>
+    public Task RecordErasureFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyErasureRequest request) =>
+        Mutate(eventStore, eventStoreNamespace, identifier, () => actualKeyStore.RecordErasureFor(eventStore, eventStoreNamespace, identifier, request));
+
+    /// <inheritdoc/>
+    public Task DeleteThroughFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, string requestId) =>
+        Mutate(eventStore, eventStoreNamespace, identifier, () => actualKeyStore.DeleteThroughFor(eventStore, eventStoreNamespace, identifier, requestId));
+
+    /// <inheritdoc/>
+    public Task ConfirmErasureFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, string requestId) =>
+        Mutate(eventStore, eventStoreNamespace, identifier, () => actualKeyStore.ConfirmErasureFor(eventStore, eventStoreNamespace, identifier, requestId));
+
+    /// <inheritdoc/>
+    public Task AllowNewKeyFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, ulong observedVersion, uint observedLifecycle) =>
+        Mutate(eventStore, eventStoreNamespace, identifier, () => actualKeyStore.AllowNewKeyFor(eventStore, eventStoreNamespace, identifier, observedVersion, observedLifecycle));
+
+    /// <inheritdoc/>
     public async Task DeleteFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyRevision? revision = null)
     {
         var scope = new KeyScope(eventStore, eventStoreNamespace, identifier);
@@ -369,6 +407,20 @@ public class CacheEncryptionKeyStorage(
         foreach (var key in map.Keys.Where(_ => _.Scope == scope).ToList())
         {
             map.Remove(key);
+        }
+    }
+
+    async Task Mutate(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, Func<Task> mutation)
+    {
+        var scope = new KeyScope(eventStore, eventStoreNamespace, identifier);
+        Invalidate(scope, revision: null);
+        try
+        {
+            await mutation();
+        }
+        finally
+        {
+            Invalidate(scope, revision: null);
         }
     }
 

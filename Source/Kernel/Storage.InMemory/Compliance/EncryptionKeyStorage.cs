@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Storage.InMemory.Compliance;
 /// <summary>
 /// Represents an in-memory implementation of <see cref="IEncryptionKeyStorage"/>.
 /// </summary>
-public sealed class EncryptionKeyStorage : IEncryptionKeyStorage, IEncryptionKeyFence
+public sealed class EncryptionKeyStorage : IEncryptionKeyStorage, IEncryptionKeyFence, IEncryptionKeyFenceRecords
 {
     readonly InMemoryEncryptionKeyStorage _storage = new();
 
@@ -63,6 +63,25 @@ public sealed class EncryptionKeyStorage : IEncryptionKeyStorage, IEncryptionKey
     /// <inheritdoc/>
     public Task<EncryptionKeyErasure?> GetErasureFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier) =>
         _storage.GetErasureFor(eventStore, eventStoreNamespace, identifier);
+
+    /// <inheritdoc/>
+    public Task<long?> CountLegacyFences(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace) => _storage.CountLegacyFences(eventStore, eventStoreNamespace);
+
+    /// <inheritdoc/>
+    public Task<string?> ReadRecord(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string id) =>
+        _storage.ReadRecord(eventStore, eventStoreNamespace, id);
+
+    /// <inheritdoc/>
+    public Task WriteRecord(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string id, string value, bool replace = false) =>
+        _storage.WriteRecord(eventStore, eventStoreNamespace, id, value, replace);
+
+    /// <inheritdoc/>
+    public Task<EncryptionKeyErasureRequest?> GetErasureRequestFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, string requestId) =>
+        _storage.GetErasureRequestFor(eventStore, eventStoreNamespace, identifier, requestId);
+
+    /// <inheritdoc/>
+    public Task CompactErasureRequestsFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, int retain = 32) =>
+        _storage.CompactErasureRequestsFor(eventStore, eventStoreNamespace, identifier, retain);
 
     /// <inheritdoc/>
     public Task<EncryptionKeyErasure?> GetFenceFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier) =>

@@ -193,6 +193,15 @@ public partial class EncryptionKeyStorage(IDatabase database) : IEncryptionKeySt
                 return;
             }
 
+            if (await EncryptionKeyRequestArchive.Read(this, eventStore, eventStoreNamespace, identifier, request.RequestId) is not null)
+            {
+                // A no-op CAS validates the Version observed before consulting the separate archive.
+                var stamped = observed with { Version = checked(observed.Version + 1) };
+                if (await WriteFence(eventStore, eventStoreNamespace, EncryptionKeyFenceUpdates.Observed(identifier, observed), EncryptionKeyFenceUpdates.Compact(stamped))) return;
+                await Backoff(attempt);
+                continue;
+            }
+
             if (lifecycle != observed.Lifecycle)
             {
                 throw new EncryptionKeyFenceChanged(identifier);
@@ -229,7 +238,8 @@ public partial class EncryptionKeyStorage(IDatabase database) : IEncryptionKeySt
         for (var attempt = 0; attempt < MaximumAttempts; attempt++)
         {
             var observed = await RequiredFence(eventStore, eventStoreNamespace, identifier);
-            var request = Request(observed, identifier, requestId);
+            var request = observed.Requests?.SingleOrDefault(_ => _.RequestId == requestId) ?? await EncryptionKeyRequestArchive.Read(this, eventStore, eventStoreNamespace, identifier, requestId) ?? throw new EncryptionKeyFenceUnavailable(identifier);
+            if (request.Confirmed) return;
             var covered = Covered(identifier, request);
             var present = await collection.Find(covered).ToListAsync();
             var fingerprints = (request.Fingerprints ?? []).Concat(present.Select(_ => new EncryptionKey(_.PublicKey, _.PrivateKey).Fingerprint)).Distinct(StringComparer.Ordinal).ToArray();
@@ -263,7 +273,8 @@ public partial class EncryptionKeyStorage(IDatabase database) : IEncryptionKeySt
         for (var attempt = 0; attempt < MaximumAttempts; attempt++)
         {
             var observed = await RequiredFence(eventStore, eventStoreNamespace, identifier);
-            var request = Request(observed, identifier, requestId);
+            var request = observed.Requests?.SingleOrDefault(_ => _.RequestId == requestId) ?? await EncryptionKeyRequestArchive.Read(this, eventStore, eventStoreNamespace, identifier, requestId) ?? throw new EncryptionKeyFenceUnavailable(identifier);
+            if (request.Confirmed) return;
             await VerifySwept(collection, identifier, request);
             if (request.Confirmed)
             {
@@ -363,9 +374,6 @@ public partial class EncryptionKeyStorage(IDatabase database) : IEncryptionKeySt
     static bool IsDuplicate(MongoWriteException exception) => exception.WriteError?.Category == ServerErrorCategory.DuplicateKey;
     static Task Backoff(int attempt) => Task.Delay(Random.Shared.Next(1, 4) * (attempt + 1));
     static EncryptionKeyAtRevision AtRevision(EncryptionKeyForIdentifier document) => new(new(document.PublicKey, document.PrivateKey), document.Id.Revision, document.StagedLifecycle);
-    static EncryptionKeyErasureRequest Request(EncryptionKeyErasure fence, EncryptionKeyIdentifier identifier, string requestId) =>
-        fence.Requests?.SingleOrDefault(_ => _.RequestId == requestId) ?? throw new EncryptionKeyFenceChanged(identifier);
-
     static async Task<EncryptionKeyForIdentifier?> ReadPublishedFor(IMongoCollection<EncryptionKeyForIdentifier> collection, EncryptionKeyIdentifier identifier, EncryptionKeyRevision? revision, EncryptionKeyErasure? fence)
     {
         var document = await collection.Find(Visible(identifier, revision, fence)).SortByDescending(_ => _.Id.Revision).FirstOrDefaultAsync();

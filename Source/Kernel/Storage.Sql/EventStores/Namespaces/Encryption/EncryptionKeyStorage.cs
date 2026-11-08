@@ -181,6 +181,16 @@ public partial class EncryptionKeyStorage(IDatabase database, ILogger<Encryption
             var row = await ReadFence(eventStore, eventStoreNamespace, identifier) ?? throw new EncryptionKeyFenceUnavailable(identifier);
             var fence = EncryptionKeyFenceWrites.Read(identifier, row);
             if (fence.Requests!.Any(_ => _.RequestId == request.RequestId)) return;
+            if (await EncryptionKeyRequestArchive.Read(this, eventStore, eventStoreNamespace, identifier, request.RequestId) is not null)
+            {
+                var stamped = (fence with { Version = checked(fence.Version + 1) }).WithStateSeal();
+                await using var archiveScope = await database.Namespace(eventStore, eventStoreNamespace);
+                archiveScope.DbContext.Database.SetCommandTimeout(TimeSpan.FromSeconds(10));
+                if (await EncryptionKeyFenceWrites.CompareExchange(archiveScope.DbContext, identifier, row, stamped) == 1) return;
+                await Backoff(attempt);
+                continue;
+            }
+
             if (fence.Lifecycle != (request.Lifecycle == 0 ? initial.Lifecycle : request.Lifecycle)) throw new EncryptionKeyFenceChanged(identifier);
             if (fence.Requests!.Count >= MaximumRequests) throw new EncryptionKeyRequestLogFull(identifier);
             await using var scope = await database.Namespace(eventStore, eventStoreNamespace);
@@ -233,7 +243,8 @@ public partial class EncryptionKeyStorage(IDatabase database, ILogger<Encryption
         {
             var row = await ReadFence(eventStore, eventStoreNamespace, identifier) ?? throw new EncryptionKeyFenceUnavailable(identifier);
             var fence = EncryptionKeyFenceWrites.Read(identifier, row);
-            var request = Request(fence, identifier, requestId);
+            var request = fence.Requests?.SingleOrDefault(_ => _.RequestId == requestId) ?? await EncryptionKeyRequestArchive.Read(this, eventStore, eventStoreNamespace, identifier, requestId) ?? throw new EncryptionKeyFenceUnavailable(identifier);
+            if (request.Confirmed) return;
             await using var scope = await database.Namespace(eventStore, eventStoreNamespace);
             var covered = await Covered(scope.DbContext, identifier, request).AsNoTracking().ToListAsync();
             var fingerprints = (request.Fingerprints ?? []).Concat(covered.Select(_ => Key(_).Fingerprint)).Distinct(StringComparer.Ordinal).ToArray();
@@ -262,7 +273,8 @@ public partial class EncryptionKeyStorage(IDatabase database, ILogger<Encryption
         {
             var row = await ReadFence(eventStore, eventStoreNamespace, identifier) ?? throw new EncryptionKeyFenceUnavailable(identifier);
             var fence = EncryptionKeyFenceWrites.Read(identifier, row);
-            var request = Request(fence, identifier, requestId);
+            var request = fence.Requests?.SingleOrDefault(_ => _.RequestId == requestId) ?? await EncryptionKeyRequestArchive.Read(this, eventStore, eventStoreNamespace, identifier, requestId) ?? throw new EncryptionKeyFenceUnavailable(identifier);
+            if (request.Confirmed) return;
             await using var scope = await database.Namespace(eventStore, eventStoreNamespace);
             scope.DbContext.Database.SetCommandTimeout(TimeSpan.FromSeconds(10));
             try
@@ -294,9 +306,6 @@ public partial class EncryptionKeyStorage(IDatabase database, ILogger<Encryption
         var baseMilliseconds = Math.Min(1 << Math.Clamp(attempt, 0, 5), 32);
         return TimeSpan.FromMilliseconds(baseMilliseconds + random.Next(0, baseMilliseconds));
     }
-
-    static EncryptionKeyErasureRequest Request(Fence fence, EncryptionKeyIdentifier identifier, string requestId) =>
-        fence.Requests?.SingleOrDefault(_ => _.RequestId == requestId) ?? throw new EncryptionKeyFenceChanged(identifier);
 
     static Fence UpdateRequest(Fence fence, EncryptionKeyErasureRequest request) => fence with
     {

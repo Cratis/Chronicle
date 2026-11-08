@@ -25,15 +25,15 @@ public partial class InMemoryEncryptionKeyStorage
     }
 
     /// <inheritdoc/>
-    public Task<bool> CompareExchangeFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyFenceState observed, EncryptionKeyFenceState next)
+    public async Task<bool> CompareExchangeFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyFenceState observed, EncryptionKeyFenceState next)
     {
-        observed.EnsureMonotonic(identifier, next);
+        await EncryptionKeyRequestArchive.ValidateTransition(this, eventStore, eventStoreNamespace, identifier, observed, next);
         lock (_lock)
         {
             var scope = new Scope(eventStore, eventStoreNamespace, identifier);
-            if (!_externalFences.TryGetValue(scope, out var current) || current.Erasure.Version != observed.Erasure.Version) return Task.FromResult(false);
+            if (!_externalFences.TryGetValue(scope, out var current) || current.Erasure.Version != observed.Erasure.Version) return false;
             _externalFences[scope] = next;
-            return Task.FromResult(true);
+            return true;
         }
     }
 }

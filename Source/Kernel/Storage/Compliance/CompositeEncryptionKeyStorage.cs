@@ -31,7 +31,7 @@ namespace Cratis.Chronicle.Storage.Compliance;
 /// silently blank every value it protects.
 /// </para>
 /// <para>
-/// <b>Erasure must reach every store.</b> <see cref="DeleteFor"/> and <see cref="RecordErasureFor"/> attempt every
+/// <b>Erasure must reach every store.</b> <see cref="DeleteFor"/> and <see cref="RecordErasureFor(EventStoreName, EventStoreNamespaceName, EncryptionKeyIdentifier)"/> attempt every
 /// store even after one fails, and then report the failure: a key left behind in one store is healed back into the
 /// others by the next read, so a partial erasure is not an erasure.
 /// </para>
@@ -75,6 +75,121 @@ public class CompositeEncryptionKeyStorage : IEncryptionKeyStorage, IEvictEncryp
         _logger = logger;
         _inner = inner;
         _logger.Composed(inner.Length);
+    }
+
+    /// <inheritdoc/>
+    public IReadOnlyList<EncryptionKeyStorageCapability> Capabilities => _inner.SelectMany(_ => _.Capabilities).ToArray();
+
+    /// <inheritdoc/>
+    public EncryptionKeyFenceGuarantees FenceGuarantees => _inner.Aggregate(
+        EncryptionKeyFenceGuarantees.MonotonicFence | EncryptionKeyFenceGuarantees.FencedSave,
+        (guarantees, store) => guarantees & store.FenceGuarantees);
+
+    /// <inheritdoc/>
+    public async Task<EncryptionKeyErasure?> GetFenceFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
+    {
+        var fences = new List<EncryptionKeyErasure>();
+        foreach (var store in _inner)
+        {
+            if (await store.GetFenceFor(eventStore, eventStoreNamespace, identifier) is { } fence)
+            {
+                fences.Add(fence);
+            }
+        }
+
+        if (fences.Count == 0) return null;
+
+        // This is a conservative read, not a shared CAS token. Authorization observes each authority separately.
+        return Strictest(fences) with
+        {
+            Version = fences[0].Version,
+            Lifecycle = fences.Min(_ => _.Lifecycle),
+            ErasedLifecycle = fences.Max(_ => _.ErasedLifecycle),
+            Requests = fences.SelectMany(_ => _.Requests ?? []).GroupBy(_ => _.RequestId, StringComparer.Ordinal)
+                .Select(group => group.First() with { Confirmed = FenceGuarantees != EncryptionKeyFenceGuarantees.None && group.Count() == _inner.Length && group.All(_ => _.Confirmed) }).ToArray()
+        };
+    }
+
+    /// <inheritdoc/>
+    public async Task<EncryptionKeyErasureRequest?> GetErasureRequestFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, string requestId)
+    {
+        var requests = new List<EncryptionKeyErasureRequest>();
+        foreach (var store in _inner)
+        {
+            if (await store.GetErasureRequestFor(eventStore, eventStoreNamespace, identifier, requestId) is { } request) requests.Add(request);
+        }
+
+        return requests.Count == 0 ? null : requests[0] with { Confirmed = requests.Count == _inner.Length && requests.TrueForAll(_ => _.Confirmed) };
+    }
+
+    /// <inheritdoc/>
+    public async Task AuthorizeConfirmedSuccessorFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
+    {
+        if (FenceGuarantees != (EncryptionKeyFenceGuarantees.MonotonicFence | EncryptionKeyFenceGuarantees.FencedSave))
+        {
+            throw new EncryptionKeyLifecycleIncomplete(identifier, [new EncryptionKeyFenceUnavailable(identifier)]);
+        }
+
+        // Capture every member's own CAS version; independent authorities do not share a Version.
+        var observations = new List<(IEncryptionKeyStorage Store, EncryptionKeyErasure Fence)>();
+        foreach (var store in _inner)
+        {
+            var fence = await store.GetFenceFor(eventStore, eventStoreNamespace, identifier);
+            if (fence?.Requests?.Any(_ => !_.Confirmed) == true) throw new EncryptionKeyFenceChanged(identifier);
+            if (fence is { NewKeyAllowed: false }) observations.Add((store, fence));
+        }
+
+        var failures = new List<Exception>();
+        foreach (var (store, fence) in observations)
+        {
+            try
+            {
+                await store.AllowNewKeyFor(eventStore, eventStoreNamespace, identifier, fence.Version, fence.Lifecycle);
+            }
+            catch (Exception error)
+            {
+                failures.Add(error);
+            }
+        }
+
+        if (failures.Count > 0)
+        {
+            failures.ThrowIfUnderReview();
+            throw new EncryptionKeyLifecycleIncomplete(identifier, failures);
+        }
+    }
+
+    /// <inheritdoc/>
+    public Task CompactErasureRequestsFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, int retain = 32) =>
+        EraseEvery(store => store.CompactErasureRequestsFor(eventStore, eventStoreNamespace, identifier, retain), identifier);
+
+    /// <inheritdoc/>
+    public Task RecordErasureFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyErasureRequest request) =>
+        EraseEvery(store => store.RecordErasureFor(eventStore, eventStoreNamespace, identifier, request), identifier);
+
+    /// <inheritdoc/>
+    public Task DeleteThroughFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, string requestId) =>
+        EraseEvery(store => store.DeleteThroughFor(eventStore, eventStoreNamespace, identifier, requestId), identifier);
+
+    /// <inheritdoc/>
+    public Task ConfirmErasureFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, string requestId) =>
+        EraseEvery(store => store.ConfirmErasureFor(eventStore, eventStoreNamespace, identifier, requestId), identifier);
+
+    /// <inheritdoc/>
+    public async Task AllowNewKeyFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, ulong observedVersion, uint observedLifecycle)
+    {
+        foreach (var store in _inner)
+        {
+            var fence = await store.GetFenceFor(eventStore, eventStoreNamespace, identifier);
+            if (fence is null || fence.Version != observedVersion || fence.Lifecycle != observedLifecycle) throw new EncryptionKeyFenceChanged(identifier);
+        }
+
+        var failures = await ForEachStore(store => store.AllowNewKeyFor(eventStore, eventStoreNamespace, identifier, observedVersion, observedLifecycle));
+        if (failures.Count > 0)
+        {
+            failures.ThrowIfUnderReview();
+            throw new EncryptionKeyLifecycleIncomplete(identifier, failures);
+        }
     }
 
     /// <inheritdoc/>
@@ -367,6 +482,24 @@ public class CompositeEncryptionKeyStorage : IEncryptionKeyStorage, IEvictEncryp
             erasures.Max(_ => _.ErasedThrough.Value),
             [.. erasures.SelectMany(_ => _.ErasedKeyFingerprints).Distinct(StringComparer.Ordinal)],
             erasures.TrueForAll(_ => _.NewKeyAllowed));
+    }
+
+    async Task EraseEvery(Func<IEncryptionKeyStorage, Task> operation, EncryptionKeyIdentifier identifier)
+    {
+        if (FenceGuarantees != (EncryptionKeyFenceGuarantees.MonotonicFence | EncryptionKeyFenceGuarantees.FencedSave))
+        {
+            // Still reach every member, but a legacy member can never confirm a composite erasure.
+            var failures = await ForEachStore(operation);
+            failures.Add(new EncryptionKeyFenceUnavailable(identifier));
+            throw new EncryptionKeyErasureIncomplete(identifier, failures);
+        }
+
+        var errors = await ForEachStore(operation);
+        if (errors.Count > 0)
+        {
+            errors.ThrowIfUnderReview();
+            throw new EncryptionKeyErasureIncomplete(identifier, errors);
+        }
     }
 
     async Task<List<Exception>> ForEachStore(Func<IEncryptionKeyStorage, Task> operation)
