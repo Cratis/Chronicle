@@ -110,7 +110,16 @@ logger.ServerStarting(assembly.GetName().Version?.ToString() ?? "unknown");
 
 var env = Environment.GetEnvironmentVariables();
 
-ChronicleOptions.AddConfiguration(builder.Services, builder.Configuration);
+try
+{
+    ChronicleOptions.AddConfiguration(builder.Services, builder.Configuration);
+}
+catch (InvalidConnectionFile exception)
+{
+    await Console.Error.WriteLineAsync(exception.Message);
+    return 4;
+}
+
 ChronicleOptions chronicleOptions;
 SchemaAction schemaAction;
 try
