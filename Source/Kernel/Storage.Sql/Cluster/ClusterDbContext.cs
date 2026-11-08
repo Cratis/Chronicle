@@ -4,6 +4,7 @@
 using Cratis.Arc.EntityFrameworkCore;
 using Cratis.Chronicle.Storage.Sql.Cluster.Patching;
 using Cratis.Chronicle.Storage.Sql.Cluster.Security;
+using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cratis.Chronicle.Storage.Sql.Cluster;
@@ -78,6 +79,11 @@ public class ClusterDbContext(DbContextOptions<ClusterDbContext> options) : Base
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+        if (Database.IsSqlServer())
+        {
+            ExactIdentifiers.RegisterByteLength(modelBuilder);
+        }
+
         MembershipModel.Configure(modelBuilder, Database.ProviderName);
         SingleWriterLeaseModel.Configure(modelBuilder, Database.ProviderName);
         modelBuilder.Entity<DatabaseNameBinding>(entity =>

@@ -8,6 +8,7 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Storage.Changes;
+using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.Changesets;
 
@@ -24,7 +25,7 @@ public class ChangesetStorage(EventStoreName eventStore, EventStoreNamespaceName
     {
         await using var scope = await database.Namespace(eventStore, @namespace);
         var readModelName = readModel.Value;
-        var changesets = scope.DbContext.Changesets.Where(changeset => changeset.ReadModelName == readModelName);
+        var changesets = scope.DbContext.Changesets.WhereExact(scope.DbContext, changeset => changeset.ReadModelName, readModelName);
         scope.DbContext.Changesets.RemoveRange(changesets);
         await scope.DbContext.SaveChangesAsync();
     }

@@ -375,7 +375,7 @@ public partial class EventSequenceStorage(
     {
         await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
 
-        var query = scope.DbContext.Events.Where(e => e.EventSourceId == eventSourceId);
+        var query = scope.DbContext.Events.WhereEventSource(scope.DbContext, eventSourceId);
 
         if (eventTypes?.Any() == true)
         {
@@ -435,7 +435,7 @@ public partial class EventSequenceStorage(
 
         if (eventSourceId?.IsSpecified == true)
         {
-            query = query.Where(e => e.EventSourceId == eventSourceId);
+            query = query.WhereEventSource(scope.DbContext, eventSourceId);
         }
 
         var firstEvent = await query
@@ -467,22 +467,22 @@ public partial class EventSequenceStorage(
 
         if (eventSourceId?.IsSpecified == true)
         {
-            query = query.Where(e => e.EventSourceId == eventSourceId);
+            query = query.WhereEventSource(scope.DbContext, eventSourceId);
         }
 
         if (eventSourceType?.IsDefaultOrUnspecified == false)
         {
-            query = query.Where(e => e.EventSourceType == eventSourceType);
+            query = query.WhereSourceType(scope.DbContext, eventSourceType);
         }
 
         if (eventStreamId?.IsDefault == false)
         {
-            query = query.Where(e => e.EventStreamId == eventStreamId);
+            query = query.WhereStreamId(scope.DbContext, eventStreamId);
         }
 
         if (eventStreamType?.IsAll == false)
         {
-            query = query.Where(e => e.EventStreamType == eventStreamType);
+            query = query.WhereStreamType(scope.DbContext, eventStreamType);
         }
 
         var lastEvent = await query
@@ -568,7 +568,7 @@ public partial class EventSequenceStorage(
 
         if (eventSourceId?.IsSpecified == true)
         {
-            query = query.Where(e => e.EventSourceId == eventSourceId);
+            query = query.WhereEventSource(scope.DbContext, eventSourceId);
         }
 
         var nextEvent = await query
@@ -585,7 +585,7 @@ public partial class EventSequenceStorage(
     {
         await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
 
-        return await scope.DbContext.Events.AnyAsync(e => e.EventSourceId == eventSourceId);
+        return await scope.DbContext.Events.WhereEventSource(scope.DbContext, eventSourceId).AnyAsync();
     }
 
     /// <inheritdoc/>
@@ -597,9 +597,9 @@ public partial class EventSequenceStorage(
 
             var currentSequenceNumberValue = currentSequenceNumber.Value;
             var eventEntry = await scope.DbContext.Events
+                .WhereEventSource(scope.DbContext, eventSourceId)
                 .Where(e =>
                     e.Type == eventTypeId
-                    && e.EventSourceId == eventSourceId
                     && e.SequenceNumber < currentSequenceNumberValue)
                 .OrderByDescending(e => e.SequenceNumber)
                 .WithoutHistory()
@@ -684,9 +684,8 @@ public partial class EventSequenceStorage(
         var eventTypeIds = eventTypes.ToArray();
 
         var eventEntry = await scope.DbContext.Events
-            .Where(e =>
-                e.EventSourceId == eventSourceId
-                && eventTypeIds.Contains(e.Type))
+            .WhereEventSource(scope.DbContext, eventSourceId)
+            .Where(e => eventTypeIds.Contains(e.Type))
             .OrderByDescending(e => e.SequenceNumber)
             .WithoutHistory()
             .FirstOrDefaultAsync();
@@ -737,17 +736,17 @@ public partial class EventSequenceStorage(
 
         if (eventSourceId?.IsSpecified == true)
         {
-            query = query.Where(e => e.EventSourceId == eventSourceId);
+            query = query.WhereEventSource(scope.DbContext, eventSourceId);
         }
 
         if (eventStreamType?.IsAll == false)
         {
-            query = query.Where(e => e.EventStreamType == eventStreamType);
+            query = query.WhereStreamType(scope.DbContext, eventStreamType);
         }
 
         if (eventStreamId?.IsDefault == false)
         {
-            query = query.Where(e => e.EventStreamId == eventStreamId);
+            query = query.WhereStreamId(scope.DbContext, eventStreamId);
         }
 
         if (eventTypes?.Any() == true)
@@ -844,7 +843,7 @@ public partial class EventSequenceStorage(
         if (eventStreamId is { Value.Length: > 0, IsDefault: false })
         {
             var streamId = eventStreamId.Value;
-            query = query.Where(e => e.EventStreamId == streamId);
+            query = query.WhereStreamId(scope.DbContext, streamId);
         }
 
         query = descending ? query.OrderByDescending(e => e.SequenceNumber) : query.OrderBy(e => e.SequenceNumber);
@@ -890,19 +889,19 @@ public partial class EventSequenceStorage(
         if (criteria.HasEventSourceId)
         {
             var eventSourceId = criteria.EventSourceId!.Value;
-            query = query.Where(e => e.EventSourceId == eventSourceId);
+            query = query.WhereEventSource(context, eventSourceId);
         }
 
         if (criteria.HasEventSourceType)
         {
             var eventSourceType = criteria.EventSourceType!.Value;
-            query = query.Where(e => e.EventSourceType == eventSourceType);
+            query = query.WhereSourceType(context, eventSourceType);
         }
 
         if (criteria.HasEventStreamType)
         {
             var eventStreamType = criteria.EventStreamType!.Value;
-            query = query.Where(e => e.EventStreamType == eventStreamType);
+            query = query.WhereStreamType(context, eventStreamType);
         }
 
         if (criteria.HasCorrelationId)
@@ -1012,23 +1011,23 @@ public partial class EventSequenceStorage(
 
         if (eventSourceId?.IsSpecified == true)
         {
-            query = query.Where(e => e.EventSourceId == eventSourceId);
+            query = query.WhereEventSource(scope.DbContext, eventSourceId);
         }
 
         if (eventSourceType?.IsDefaultOrUnspecified == false)
         {
             var resolvedEventSourceType = eventSourceType.Value;
-            query = query.Where(e => e.EventSourceType == resolvedEventSourceType);
+            query = query.WhereSourceType(scope.DbContext, resolvedEventSourceType);
         }
 
         if (eventStreamType?.IsAll == false)
         {
-            query = query.Where(e => e.EventStreamType == eventStreamType);
+            query = query.WhereStreamType(scope.DbContext, eventStreamType);
         }
 
         if (eventStreamId?.IsDefault == false)
         {
-            query = query.Where(e => e.EventStreamId == eventStreamId);
+            query = query.WhereStreamId(scope.DbContext, eventStreamId);
         }
 
         if (eventTypes?.Any() == true)
@@ -1061,18 +1060,18 @@ public partial class EventSequenceStorage(
 
         if (eventSourceId?.IsSpecified == true)
         {
-            query = query.Where(e => e.EventSourceId == eventSourceId);
+            query = query.WhereEventSource(scope.DbContext, eventSourceId);
         }
 
         if (eventSourceType?.IsDefaultOrUnspecified == false)
         {
             var resolvedEventSourceType = eventSourceType.Value;
-            query = query.Where(e => e.EventSourceType == resolvedEventSourceType);
+            query = query.WhereSourceType(scope.DbContext, resolvedEventSourceType);
         }
 
         if (eventStreamType?.IsAll == false)
         {
-            query = query.Where(e => e.EventStreamType == eventStreamType);
+            query = query.WhereStreamType(scope.DbContext, eventStreamType);
         }
 
         if (eventTypes?.Any() == true)

@@ -69,6 +69,10 @@ public class EventSequenceDbContext(DbContextOptions<EventSequenceDbContext> opt
     {
         base.OnModelCreating(modelBuilder);
         EventStores.Occurrences.OccurrenceModel.ConfigureReceipts(modelBuilder);
+        if (Database.IsSqlServer())
+        {
+            ExactIdentifiers.RegisterByteLength(modelBuilder);
+        }
 
 #pragma warning disable RCS1201 // Separate EF entity configurations cannot be combined into a fluent chain.
         modelBuilder.Entity<NamedTagEntry>(entity =>

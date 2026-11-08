@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Patterns;
 using Cratis.Chronicle.Storage.Patterns;
+using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 using Microsoft.EntityFrameworkCore;
 using KernelBehaviorPattern = Cratis.Chronicle.Concepts.Patterns.BehaviorPattern;
 
@@ -48,7 +49,7 @@ public class BehaviorPatternStorage(EventStoreName eventStore, EventStoreNamespa
     {
         await using var scope = await database.Namespace(eventStore, @namespace);
         var entities = await scope.DbContext.BehaviorPatterns
-            .Where(pattern => pattern.GroupingKey == groupingKey.Value)
+            .WhereExact(scope.DbContext, pattern => pattern.GroupingKey, groupingKey.Value)
             .ToListAsync();
 
         return [.. entities.Select(_converter.ToKernel)];
@@ -65,7 +66,8 @@ public class BehaviorPatternStorage(EventStoreName eventStore, EventStoreNamespa
 
         await using var scope = await database.Namespace(eventStore, @namespace);
         var entities = await scope.DbContext.BehaviorPatterns
-            .Where(pattern => pattern.GroupingKey == groupingKey.Value && hashes.Contains(pattern.FacetSetHash))
+            .WhereExact(scope.DbContext, pattern => pattern.GroupingKey, groupingKey.Value)
+            .Where(pattern => hashes.Contains(pattern.FacetSetHash))
             .ToListAsync();
 
         return [.. entities.Select(_converter.ToKernel)];
@@ -90,7 +92,8 @@ public class BehaviorPatternStorage(EventStoreName eventStore, EventStoreNamespa
 
         await using var scope = await database.Namespace(eventStore, @namespace);
         var doomed = await scope.DbContext.BehaviorPatterns
-            .Where(pattern => pattern.GroupingKey == groupingKey.Value && !hashes.Contains(pattern.FacetSetHash))
+            .WhereExact(scope.DbContext, pattern => pattern.GroupingKey, groupingKey.Value)
+            .Where(pattern => !hashes.Contains(pattern.FacetSetHash))
             .ToListAsync();
 
         if (doomed.Count == 0)
