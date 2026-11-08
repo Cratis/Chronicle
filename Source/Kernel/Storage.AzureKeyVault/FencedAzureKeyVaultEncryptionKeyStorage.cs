@@ -54,14 +54,20 @@ internal sealed partial class FencedAzureKeyVaultEncryptionKeyStorage(
         await ReadLatest(await AddressFor(eventStore, eventStoreNamespace, identifier));
 
     /// <inheritdoc/>
+    public async Task<EncryptionKeyAtRevision?> TryGetAtRevisionFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyRevision revision)
+    {
+        var address = await AddressFor(eventStore, eventStoreNamespace, identifier);
+        return IsLatest(revision) ? await ReadLatest(address) : await ReadRevision(address, await ReadState(address), revision);
+    }
+
+    /// <inheritdoc/>
     public async Task<bool> HasFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyRevision? revision = null) =>
         await TryGetFor(eventStore, eventStoreNamespace, identifier, revision) is not null;
 
     /// <inheritdoc/>
     public async Task<EncryptionKey?> TryGetFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyRevision? revision = null)
     {
-        var address = await AddressFor(eventStore, eventStoreNamespace, identifier);
-        return IsLatest(revision) ? (await ReadLatest(address))?.Key : (await ReadRevision(address, await ReadState(address), revision!))?.Key;
+        return (await TryGetAtRevisionFor(eventStore, eventStoreNamespace, identifier, revision ?? EncryptionKeyRevision.Latest))?.Key;
     }
 
     /// <inheritdoc/>

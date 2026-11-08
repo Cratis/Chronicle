@@ -121,6 +121,10 @@ public class AzureKeyVaultEncryptionKeyStorage : IEncryptionKeyStorage
         _storage.TryGetLatestFor(eventStore, eventStoreNamespace, identifier);
 
     /// <inheritdoc/>
+    public Task<EncryptionKeyAtRevision?> TryGetAtRevisionFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyRevision revision) =>
+        _storage.TryGetAtRevisionFor(eventStore, eventStoreNamespace, identifier, revision);
+
+    /// <inheritdoc/>
     public Task<bool> HasFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyRevision? revision = null) =>
         _storage.HasFor(eventStore, eventStoreNamespace, identifier, revision);
 
