@@ -16,6 +16,7 @@ public static class CertificateLoader
     const string ServerAuthenticationOid = "1.3.6.1.5.5.7.3.1";
     const string CertificatePemLabel = "CERTIFICATE";
     const string Pkcs7PemLabel = "PKCS7";
+    const string TrustedCertificatePemLabel = "TRUSTED CERTIFICATE";
 
     /// <summary>
     /// Loads a certificate based on the priority: ChronicleOptions → Embedded Certificate → Dev Certificate.
@@ -43,6 +44,7 @@ public static class CertificateLoader
     /// <returns>The loaded CA certificates.</returns>
     /// <exception cref="CertificateAuthorityDoesNotExist">Thrown when the specified file does not exist.</exception>
     /// <exception cref="InvalidCertificateAuthority">Thrown when the specified file cannot be read or contains no certificates.</exception>
+    /// <exception cref="UnsupportedCertificateAuthorityFormat">Thrown when the specified file contains an OpenSSL TRUSTED CERTIFICATE block.</exception>
     public static X509Certificate2Collection LoadCertificateAuthorities(string caCertificatePath)
     {
         if (!File.Exists(caCertificatePath))
@@ -53,7 +55,7 @@ public static class CertificateLoader
         X509Certificate2Collection certificateAuthorities;
         try
         {
-            certificateAuthorities = ReadCertificateAuthorities(File.ReadAllBytes(caCertificatePath));
+            certificateAuthorities = ReadCertificateAuthorities(caCertificatePath, File.ReadAllBytes(caCertificatePath));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or CryptographicException or FormatException)
         {
@@ -161,10 +163,10 @@ public static class CertificateLoader
         return chain.Build(copy);
     }
 
-    static X509Certificate2Collection ReadCertificateAuthorities(byte[] content)
+    static X509Certificate2Collection ReadCertificateAuthorities(string path, byte[] content)
     {
         var certificateAuthorities = new X509Certificate2Collection();
-        if (!ReadPemCertificateAuthorities(certificateAuthorities, content))
+        if (!ReadPemCertificateAuthorities(certificateAuthorities, path, content))
         {
             ReadBinaryCertificateAuthorities(certificateAuthorities, content);
         }
@@ -172,22 +174,27 @@ public static class CertificateLoader
         return certificateAuthorities;
     }
 
-    static bool ReadPemCertificateAuthorities(X509Certificate2Collection certificateAuthorities, byte[] content)
+    static bool ReadPemCertificateAuthorities(X509Certificate2Collection certificateAuthorities, string path, byte[] content)
     {
         var remaining = Encoding.ASCII.GetString(content).AsSpan();
         var foundPem = false;
         while (PemEncoding.TryFind(remaining, out var fields))
         {
             foundPem = true;
-            AddPemBlock(certificateAuthorities, remaining[fields.Label].ToString(), Convert.FromBase64String(remaining[fields.Base64Data].ToString()));
+            AddPemBlock(certificateAuthorities, path, remaining[fields.Label].ToString(), Convert.FromBase64String(remaining[fields.Base64Data].ToString()));
             remaining = remaining[fields.Location.End..];
         }
 
         return foundPem;
     }
 
-    static void AddPemBlock(X509Certificate2Collection certificateAuthorities, string label, byte[] data)
+    static void AddPemBlock(X509Certificate2Collection certificateAuthorities, string path, string label, byte[] data)
     {
+        if (string.Equals(label, TrustedCertificatePemLabel, StringComparison.Ordinal))
+        {
+            throw new UnsupportedCertificateAuthorityFormat(path);
+        }
+
         if (string.Equals(label, CertificatePemLabel, StringComparison.Ordinal))
         {
             certificateAuthorities.Add(LoadDerCertificate(data));

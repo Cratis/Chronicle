@@ -40,17 +40,23 @@ public class a_private_certificate_authority : Specification
         }
     }
 
-    protected static X509Certificate2 CreateCertificateAuthority(string subject)
+    protected static X509Certificate2 CreateCertificateAuthority(string subject) =>
+        CreateCertificateAuthority(subject, DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(30));
+
+    protected static X509Certificate2 CreateCertificateAuthority(string subject, DateTimeOffset notBefore, DateTimeOffset notAfter)
     {
         using var key = RSA.Create(2048);
         var request = new CertificateRequest(subject, key, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
         request.CertificateExtensions.Add(new X509BasicConstraintsExtension(certificateAuthority: true, hasPathLengthConstraint: false, pathLengthConstraint: 0, critical: true));
         request.CertificateExtensions.Add(new X509KeyUsageExtension(X509KeyUsageFlags.KeyCertSign | X509KeyUsageFlags.CrlSign, critical: true));
         request.CertificateExtensions.Add(new X509SubjectKeyIdentifierExtension(request.PublicKey, critical: false));
-        return request.CreateSelfSigned(DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(30));
+        return request.CreateSelfSigned(notBefore, notAfter);
     }
 
-    protected static X509Certificate2 CreateServerCertificate(X509Certificate2 issuer, string serverName)
+    protected static X509Certificate2 CreateServerCertificate(X509Certificate2 issuer, string serverName) =>
+        CreateServerCertificate(issuer, serverName, DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(7));
+
+    protected static X509Certificate2 CreateServerCertificate(X509Certificate2 issuer, string serverName, DateTimeOffset notBefore, DateTimeOffset notAfter)
     {
         using var key = RSA.Create(2048);
         var request = new CertificateRequest($"CN={serverName}", key, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
@@ -61,6 +67,6 @@ public class a_private_certificate_authority : Specification
         subjectAlternativeNames.AddDnsName(serverName);
         request.CertificateExtensions.Add(subjectAlternativeNames.Build());
         request.CertificateExtensions.Add(X509AuthorityKeyIdentifierExtension.CreateFromCertificate(issuer, includeKeyIdentifier: true, includeIssuerAndSerial: false));
-        return request.Create(issuer, DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(7), [0x01, 0x23, 0x45, 0x67, 0x89]);
+        return request.Create(issuer, notBefore, notAfter, [0x01, 0x23, 0x45, 0x67, 0x89]);
     }
 }
