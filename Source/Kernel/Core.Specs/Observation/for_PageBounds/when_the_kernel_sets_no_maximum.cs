@@ -13,7 +13,7 @@ public class when_the_kernel_sets_no_maximum : Specification
 
     void Because()
     {
-        var configuration = new Observers { MaxEventsPerSubscriberCall = 0, MaxBytesPerSubscriberCall = 0 };
+        var configuration = new Observers { MaxEventsPerPage = 0, MaxBytesPerSubscriberCall = 0 };
         _declared = PageBounds.For(new PageDeliveryDefinition(MaxEventsPerPage: 5000, MaxBytesPerPage: 123), configuration);
         _undeclared = PageBounds.For(new PageDeliveryDefinition(), configuration);
     }

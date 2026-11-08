@@ -32,6 +32,7 @@ namespace Cratis.Chronicle.Observation.Reducers.Clients;
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 /// <param name="timeProvider"><see cref="TimeProvider"/> for deciding when the cached pipeline is due for a refresh.</param>
 /// <param name="options">The telemetry configuration.</param>
+/// <param name="configurationProvider">The <see cref="IConfigurationForObserverProvider"/> holding the kernel's page maximums, read for every delivery.</param>
 [ConnectedObserverPlacement]
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.Reducers)]
 public partial class ReducerObserverSubscriber(
@@ -39,7 +40,8 @@ public partial class ReducerObserverSubscriber(
     IReducerMediator reducerMediator,
     ILogger<ReducerObserverSubscriber> logger,
     TimeProvider? timeProvider = null,
-    IOptions<ChronicleOptions>? options = null) : Grain<ReducerDefinition>, IReducerObserverSubscriber, IReducerPageObserverSubscriber
+    IOptions<ChronicleOptions>? options = null,
+    IConfigurationForObserverProvider? configurationProvider = null) : Grain<ReducerDefinition>, IReducerObserverSubscriber, IReducerPageObserverSubscriber
 {
     /// <summary>
     /// How long a built pipeline - and the sink it resolved the target read model's definition to - is
@@ -78,8 +80,8 @@ public partial class ReducerObserverSubscriber(
     }
 
     /// <inheritdoc/>
-    public Task<ObserverSubscriberResult> OnNext(Key partition, IEnumerable<AppendedEvent> events, ObserverSubscriberContext context) =>
-        BoundedPageDelivery.Deliver(PageBoundsFor(context), events, page => DeliverPartition(partition, page, context));
+    public async Task<ObserverSubscriberResult> OnNext(Key partition, IEnumerable<AppendedEvent> events, ObserverSubscriberContext context) =>
+        await BoundedPageDelivery.Deliver(await PageBoundsFor(context), events, page => DeliverPartition(partition, page, context), StateSizeOf(partition));
 
     /// <summary>
     /// Reports only what the read model actually holds.
@@ -113,16 +115,31 @@ public partial class ReducerObserverSubscriber(
     /// Gets the bounds of the pages the connection receives: the bounds the client declared, capped by the kernel's maximums.
     /// </summary>
     /// <remarks>
-    /// A partition split across pages is reduced page by page, each from the state the page before it wrote.
+    /// A partition split across pages is reduced page by page, each from the state the page before it wrote. A page holds
+    /// the state of every partition in it as well as its events, so the size of each state counts toward the byte bound,
+    /// estimated from the size it had when it was last reduced (see <see cref="StateSizeOf"/>).
     /// </remarks>
     /// <param name="context">The <see cref="ObserverSubscriberContext"/> of the delivery.</param>
     /// <returns>The <see cref="PageBounds"/>; unbounded for a client that did not declare page delivery.</returns>
-    PageBounds PageBoundsFor(ObserverSubscriberContext context) =>
-        context.Metadata is ConnectedClient connectedClient
-            ? PageBounds.For(
-                reducerMediator.GetPageDelivery(_key.ObserverId, connectedClient.ConnectionId, _key.EventStore, _key.Namespace),
-                options?.Value?.Observers ?? new Observers())
-            : PageBounds.Unbounded;
+    async Task<PageBounds> PageBoundsFor(ObserverSubscriberContext context)
+    {
+        if (context.Metadata is not ConnectedClient connectedClient ||
+            reducerMediator.GetPageDelivery(_key.ObserverId, connectedClient.ConnectionId, _key.EventStore, _key.Namespace) is not { } declared)
+        {
+            return PageBounds.Unbounded;
+        }
+
+        // Read for every delivery, like the job cursor reads its bounds, so a changed setting takes effect without a restart.
+        var configuration = configurationProvider is null ? new Observers() : await configurationProvider.GetFor(_key);
+        return PageBounds.For(declared, configuration);
+    }
+
+    /// <summary>
+    /// Gets the size the state of a partition had when it was last reduced, zero when it is not known.
+    /// </summary>
+    /// <param name="partition">The <see cref="Key"/> of the partition.</param>
+    /// <returns>The estimated size in bytes.</returns>
+    long StateSizeOf(Key partition) => _pipeline?.StateSizeOf(partition) ?? 0;
 
     async Task<ObserverSubscriberResult> DeliverPartition(Key partition, IEnumerable<AppendedEvent> events, ObserverSubscriberContext context)
     {

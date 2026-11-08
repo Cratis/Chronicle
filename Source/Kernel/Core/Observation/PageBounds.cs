@@ -39,7 +39,7 @@ public record PageBounds(int MaxEvents, int MaxBytes)
     /// <returns>The effective <see cref="PageBounds"/>; <see cref="Unbounded"/> when the client declared no page delivery.</returns>
     /// <remarks>
     /// A bound the client declared above zero is used up to the kernel's maximum; zero takes the kernel's maximum.
-    /// The kernel's maximums are <see cref="Observers.MaxEventsPerSubscriberCall"/> and <see cref="Observers.MaxBytesPerSubscriberCall"/>,
+    /// The kernel's maximums are <see cref="Observers.MaxEventsPerPage"/> and <see cref="Observers.MaxBytesPerSubscriberCall"/>,
     /// where zero or less means the kernel sets no maximum.
     /// </remarks>
     public static PageBounds For(PageDeliveryDefinition? declared, Observers configuration)
@@ -50,7 +50,7 @@ public record PageBounds(int MaxEvents, int MaxBytes)
         }
 
         return new(
-            Cap(declared.MaxEventsPerPage, configuration.MaxEventsPerSubscriberCall),
+            Cap(declared.MaxEventsPerPage, configuration.MaxEventsPerPage),
             Cap(declared.MaxBytesPerPage, configuration.MaxBytesPerSubscriberCall));
     }
 

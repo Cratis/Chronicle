@@ -12,7 +12,7 @@ public class when_the_client_bound_is_below_the_kernel_maximum : Specification
 
     void Because() => _bounds = PageBounds.For(
         new PageDeliveryDefinition(MaxEventsPerPage: 10, MaxBytesPerPage: 1000),
-        new Observers { MaxEventsPerSubscriberCall = 100, MaxBytesPerSubscriberCall = 4096 });
+        new Observers { MaxEventsPerPage = 100, MaxBytesPerSubscriberCall = 4096 });
 
     [Fact] void should_use_the_declared_event_bound() => _bounds.MaxEvents.ShouldEqual(10);
     [Fact] void should_use_the_declared_byte_bound() => _bounds.MaxBytes.ShouldEqual(1000);
