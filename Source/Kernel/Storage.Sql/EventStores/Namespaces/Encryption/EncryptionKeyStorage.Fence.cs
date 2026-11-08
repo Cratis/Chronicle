@@ -67,7 +67,7 @@ public partial class EncryptionKeyStorage
                 (decimal)next.Erasure.Version, state, EncryptionKeyFenceState.Seal(state), EncryptionKeyIdentifierColumn.Value(context, identifier),
                 (decimal)observed.Erasure.Version, EncryptionKeyFenceState.Seal(observed.Serialize())
             };
-            return await EncryptionKeyFenceWrites.Execute(context, sql, parameters) == 1;
+            return await EncryptionKeyFenceWrites.Write(identifier, () => EncryptionKeyFenceWrites.Execute(context, sql, parameters)) == 1;
         }
         catch (Exception exception) when (exception is DbException or TimeoutException or OperationCanceledException)
         {

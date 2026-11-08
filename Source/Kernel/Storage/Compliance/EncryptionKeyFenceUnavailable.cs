@@ -8,6 +8,9 @@ namespace Cratis.Chronicle.Storage.Compliance;
 /// <summary>
 /// A linearizable fence read or verified sweep could not be obtained.
 /// </summary>
+/// <remarks>
+/// This type itself means nothing was applied. A write that may have been applied throws <see cref="EncryptionKeyFenceWriteOutcomeUnknown"/>.
+/// </remarks>
 public class EncryptionKeyFenceUnavailable : Exception
 {
     /// <summary>Initializes an unavailable fence for an identifier.</summary>
@@ -21,6 +24,14 @@ public class EncryptionKeyFenceUnavailable : Exception
     /// <param name="cause">The failed fence read.</param>
     public EncryptionKeyFenceUnavailable(Exception cause)
         : base("The encryption key erasure fence could not be read; protected material cannot be used.", cause)
+    {
+    }
+
+    /// <summary>Initializes an unavailable fence with a specific message.</summary>
+    /// <param name="message">The message.</param>
+    /// <param name="cause">The underlying failure.</param>
+    protected EncryptionKeyFenceUnavailable(string message, Exception cause)
+        : base(message, cause)
     {
     }
 }

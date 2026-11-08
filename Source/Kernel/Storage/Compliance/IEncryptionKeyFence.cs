@@ -11,7 +11,8 @@ namespace Cratis.Chronicle.Storage.Compliance;
 /// </summary>
 /// <remarks>
 /// State is isolated from the database's own key store. Reads include insert-only initialization and must be
-/// linearizable; writes are acknowledged CAS operations. Unknown outcomes throw <see cref="EncryptionKeyFenceUnavailable"/>.
+/// linearizable; writes are acknowledged CAS operations. A write that timed out, was cancelled or lost its response throws
+/// <see cref="EncryptionKeyFenceWriteOutcomeUnknown"/>; any other failure throws <see cref="EncryptionKeyFenceUnavailable"/>.
 /// No material is stored here. Callers retain the originally observed lifecycle across retries.
 /// </remarks>
 public interface IEncryptionKeyFence

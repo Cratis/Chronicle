@@ -289,7 +289,7 @@ public partial class EncryptionKeyStorage(IDatabase database, IMongoDBTopology? 
             }
 
             // The predicate, not the observed row list, also removes a writer staging after the read above.
-            await Bounded(identifier, cancellationToken => collection.WithWriteConcern(Durability).DeleteManyAsync(covered, cancellationToken));
+            await BoundedWrite(identifier, cancellationToken => collection.WithWriteConcern(Durability).DeleteManyAsync(covered, cancellationToken));
             return;
         }
 
@@ -496,7 +496,7 @@ public partial class EncryptionKeyStorage(IDatabase database, IMongoDBTopology? 
     {
         var staged = new EncryptionKeyForIdentifier(new(identifier, revision), key.Public, key.Private, false, observed.Lifecycle, Guid.NewGuid().ToString("N"));
         var durable = collection.WithWriteConcern(Durability);
-        await Bounded(identifier, cancellationToken => durable.InsertOneAsync(staged, cancellationToken: cancellationToken));
+        await BoundedWrite(identifier, cancellationToken => durable.InsertOneAsync(staged, cancellationToken: cancellationToken));
         try
         {
             var current = await RequiredFence(eventStore, eventStoreNamespace, identifier);
@@ -506,7 +506,7 @@ public partial class EncryptionKeyStorage(IDatabase database, IMongoDBTopology? 
             }
 
             current.EnsureStillAllowed(identifier, AtRevision(staged));
-            var result = await Bounded(identifier, cancellationToken => durable.UpdateOneAsync(Owned(staged), Builders<EncryptionKeyForIdentifier>.Update.Set(_ => _.Published, true), cancellationToken: cancellationToken));
+            var result = await BoundedWrite(identifier, cancellationToken => durable.UpdateOneAsync(Owned(staged), Builders<EncryptionKeyForIdentifier>.Update.Set(_ => _.Published, true), cancellationToken: cancellationToken));
             if (result.MatchedCount == 0)
             {
                 current = await RequiredFence(eventStore, eventStoreNamespace, identifier);
@@ -518,7 +518,7 @@ public partial class EncryptionKeyStorage(IDatabase database, IMongoDBTopology? 
         }
         catch (Exception exception) when (exception is EncryptionKeyErased or EncryptionKeyFenceUnavailable)
         {
-            await Bounded(identifier, cancellationToken => durable.DeleteOneAsync(Owned(staged), cancellationToken));
+            await BoundedWrite(identifier, cancellationToken => durable.DeleteOneAsync(Owned(staged), cancellationToken));
             throw;
         }
     }
@@ -526,6 +526,7 @@ public partial class EncryptionKeyStorage(IDatabase database, IMongoDBTopology? 
     async Task<EncryptionKeyErasure> EnsureFence(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
     {
         // The id-only upsert cannot weaken an existing fence. An acknowledged result is still read linearly.
+        // Its outcome never matters to the caller, so any failure is a plain unavailable fence, not an unknown write.
         try
         {
             await Bounded(identifier, cancellationToken => GetErasureCollection(eventStore, eventStoreNamespace).WithWriteConcern(Durability)
@@ -544,7 +545,7 @@ public partial class EncryptionKeyStorage(IDatabase database, IMongoDBTopology? 
 
     async Task<bool> WriteFence(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, FilterDefinition<EncryptionKeyErasureForIdentifier> filter, UpdateDefinition<EncryptionKeyErasureForIdentifier> update)
     {
-        var result = await Bounded(identifier, cancellationToken => GetErasureCollection(eventStore, eventStoreNamespace).WithWriteConcern(Durability)
+        var result = await BoundedWrite(identifier, cancellationToken => GetErasureCollection(eventStore, eventStoreNamespace).WithWriteConcern(Durability)
             .FindOneAndUpdateAsync(filter, update, new FindOneAndUpdateOptions<EncryptionKeyErasureForIdentifier> { ReturnDocument = ReturnDocument.After, MaxTime = _readTimeout }, cancellationToken));
         return result is not null;
     }

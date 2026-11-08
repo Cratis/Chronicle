@@ -59,6 +59,56 @@ public partial class EncryptionKeyStorage
     internal Task BoundedRecord(Func<CancellationToken, Task> operation) =>
         Bounded(Unit(operation), cause => new EncryptionKeyFenceUnavailable(cause));
 
+    /// <summary>
+    /// Run a fence write within the fence timeout, reporting a write that may have been applied as an unknown outcome.
+    /// </summary>
+    /// <typeparam name="T">The result type.</typeparam>
+    /// <param name="identifier">The identifier the fence belongs to.</param>
+    /// <param name="operation">The write, given the token that ends with the timeout.</param>
+    /// <returns>The write's result.</returns>
+    /// <exception cref="EncryptionKeyFenceWriteOutcomeUnknown">The write timed out, was cancelled or lost its response.</exception>
+    /// <exception cref="EncryptionKeyFenceUnavailable">The write failed before it was sent, or the server rejected it.</exception>
+    internal Task<T> BoundedWrite<T>(EncryptionKeyIdentifier identifier, Func<CancellationToken, Task<T>> operation) =>
+        Bounded(operation, cause => IsUnknownOutcome(cause) ? new EncryptionKeyFenceWriteOutcomeUnknown(identifier, cause) : new EncryptionKeyFenceUnavailable(identifier));
+
+    /// <summary>
+    /// Run a fence write without a result within the fence timeout, reporting a write that may have been applied as an unknown outcome.
+    /// </summary>
+    /// <param name="identifier">The identifier the fence belongs to.</param>
+    /// <param name="operation">The write, given the token that ends with the timeout.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <exception cref="EncryptionKeyFenceWriteOutcomeUnknown">The write timed out, was cancelled or lost its response.</exception>
+    /// <exception cref="EncryptionKeyFenceUnavailable">The write failed before it was sent, or the server rejected it.</exception>
+    internal Task BoundedWrite(EncryptionKeyIdentifier identifier, Func<CancellationToken, Task> operation) =>
+        BoundedWrite(identifier, Unit(operation));
+
+    /// <summary>
+    /// Run a fence metadata write, which is not addressed by an identifier, within the fence timeout.
+    /// </summary>
+    /// <param name="operation">The write, given the token that ends with the timeout.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <exception cref="EncryptionKeyFenceWriteOutcomeUnknown">The write timed out, was cancelled or lost its response.</exception>
+    /// <exception cref="EncryptionKeyFenceUnavailable">The write failed before it was sent, or the server rejected it.</exception>
+    internal Task BoundedRecordWrite(Func<CancellationToken, Task> operation) =>
+        Bounded(Unit(operation), cause => IsUnknownOutcome(cause) ? new EncryptionKeyFenceWriteOutcomeUnknown(cause) : new EncryptionKeyFenceUnavailable(cause));
+
+    /// <summary>
+    /// Decide whether a failed write may still have been applied.
+    /// </summary>
+    /// <param name="exception">The failure.</param>
+    /// <returns><see langword="true"/> unless the failure proves the write was not applied.</returns>
+    /// <remarks>
+    /// A rejected write or a server-selection timeout applied nothing. The driver does not say whether a cancelled call reached the
+    /// server, so cancellation, like a dropped connection, a server-side time limit or a missed write concern, is unknown.
+    /// </remarks>
+    static bool IsUnknownOutcome(Exception exception) => exception switch
+    {
+        TimeoutException timeout => !timeout.Message.Contains("selecting a server", StringComparison.Ordinal),
+        MongoWriteException write => write.WriteError is null && write.WriteConcernError is not null,
+        OperationCanceledException or MongoConnectionException or MongoExecutionTimeoutException or MongoWriteConcernException => true,
+        _ => false
+    };
+
     static Func<CancellationToken, Task<bool>> Unit(Func<CancellationToken, Task> operation) =>
         async cancellationToken =>
         {
