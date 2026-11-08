@@ -8,6 +8,8 @@ namespace Cratis.Chronicle;
 /// </summary>
 public class Tls
 {
+    bool _skipCertificateValidation = true;
+
     /// <summary>
     /// Gets or sets the path to the certificate file for TLS.
     /// </summary>
@@ -22,11 +24,23 @@ public class Tls
     /// Gets or sets whether to skip TLS certificate validation when connecting.
     /// </summary>
     /// <remarks>
-    /// The client always connects over TLS. This defaults to <see langword="true"/>: the server's
-    /// certificate is not validated, and any certificate, including self-signed ones, is accepted.
-    /// Set this to <see langword="false"/> to require full certificate chain validation instead —
-    /// only do so against a server whose certificate is verifiable (not a self-signed development
-    /// certificate).
+    /// Defaults to true in this release; the next major release will require validation by default.
+    /// Set this to false explicitly to require certificate validation. An explicit false in either
+    /// this option or the connection string requires validation. Use true only as a development
+    /// opt-out. This option has no effect when TLS is disabled.
     /// </remarks>
-    public bool SkipCertificateValidation { get; set; } = true;
+    public bool SkipCertificateValidation
+    {
+        get => _skipCertificateValidation;
+        set
+        {
+            _skipCertificateValidation = value;
+            HasExplicitSkipCertificateValidation = true;
+        }
+    }
+
+    /// <summary>
+    /// Gets whether certificate validation was explicitly configured.
+    /// </summary>
+    internal bool HasExplicitSkipCertificateValidation { get; private set; }
 }

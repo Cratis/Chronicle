@@ -17,12 +17,17 @@ static class TlsCertificateValidationPolicy
     /// <param name="connectionString"><see cref="ChronicleConnectionString"/> options.</param>
     /// <returns><see langword="true"/> when neither input asks for validation; otherwise <see langword="false"/>.</returns>
     /// <remarks>
-    /// Both inputs default to skipping, so the Chronicle server's generated self-signed development
-    /// certificate is accepted without any setup. They therefore combine with AND: validation is
-    /// skipped only while neither input asks for it, and setting either one to <see langword="false"/>
-    /// is enough to turn it on. Combining with OR would let the untouched input swallow an explicit
-    /// <c language="csharp">skipTlsValidation=false</c> and go on accepting any certificate.
+    /// An explicit false in either input requires validation, even if the other explicitly skips it.
+    /// Otherwise an explicit true skips validation. When both settings are omitted, this release
+    /// continues to skip validation; the next major release will require it by default.
+    /// When TLS is disabled, certificate validation does not apply.
     /// </remarks>
-    public static bool ShouldSkip(Tls tls, ChronicleConnectionString connectionString) =>
-        tls.SkipCertificateValidation && connectionString.SkipTlsValidation;
+    public static bool ShouldSkip(Tls tls, ChronicleConnectionString connectionString)
+    {
+        if (connectionString.DisableTls) return false;
+        if (tls.HasExplicitSkipCertificateValidation && !tls.SkipCertificateValidation) return false;
+        if (connectionString.HasExplicitSkipTlsValidation && !connectionString.SkipTlsValidation) return false;
+
+        return true;
+    }
 }

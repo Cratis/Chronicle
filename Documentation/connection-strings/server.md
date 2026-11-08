@@ -115,7 +115,7 @@ that enforces authentication, calls to protected services fail as unauthenticate
 |-----------|------|-------------|---------|
 | `auth` | string | Set to `none` to connect without presenting credentials | `?auth=none` |
 | `apiKey` | string | API key for API key authentication | `?apiKey=your-api-key` |
-| `skipTlsValidation` | boolean | Connects over TLS without validating the server certificate | `?skipTlsValidation=true` |
+| `skipTlsValidation` | boolean | Set `false` to require server certificate validation; `true` is a development-only opt-out | `?skipTlsValidation=false` |
 | `disableTls` | boolean | Connects without TLS, over cleartext HTTP/2 (h2c), to a server running with `tls.enabled=false`. See [Connecting without TLS](#connecting-without-tls) | `?disableTls=true` |
 | `skipCompatibilityCheck` | boolean | Skips the connect-time wire-compatibility check against the server | `?skipCompatibilityCheck=true` |
 | `serverless` | boolean | Turns on serverless mode in the .NET client (equal to Cratis:Chronicle:Serverless:Mode=Serverless). Implies skipping keep-alive. Other clients ignore it | `?serverless=true` |
@@ -125,7 +125,11 @@ that enforces authentication, calls to protected services fail as unauthenticate
 
 ## TLS
 
-The client connects over TLS unless `disableTls=true` is set, but by default it does **not** validate the server certificate — any certificate, including a self-signed one, is accepted. With TLS enabled, the development images (`latest-development` and `latest-development-slim`) generate a self-signed certificate on every start when none is configured, so this default is what lets a development client connect with no certificate setup. The production image (`latest` and the version tags) generates none and, with TLS enabled, stops at startup without a configured certificate — see [Production deployment](../hosting/production.md). Set `skipTlsValidation=false` to require full certificate chain validation against a server whose certificate is verifiable — do this for anything beyond a trusted network, as the default removes protection against man-in-the-middle attacks. In the .NET client this option and `Tls.SkipCertificateValidation` combine so that whichever one asks for validation wins, so either setting alone is enough and an omitted second setting can never silently turn validation back off.
+The .NET client connects over TLS unless `disableTls=true` is set. When both validation settings are omitted, it still skips server certificate validation in this release. We recommend explicitly setting `skipTlsValidation=false` after configuring certificate trust or a matching pin. Either an explicit `skipTlsValidation=false` or `Tls.SkipCertificateValidation=false` requires validation, even if the other option is `true` and even on localhost. Otherwise an explicit `true` skips validation. With TLS disabled, certificate validation does not apply.
+
+For development only, use `chronicle://localhost:35000?skipTlsValidation=true` to explicitly opt out. The development images (`latest-development` and `latest-development-slim`) generate an untrusted, self-signed certificate on every start when none is configured, with SANs `localhost`, `chronicle`, `127.0.0.1`, and `::1`. The production image (`latest` and version tags) does not generate a certificate and requires one when TLS is enabled; see [Production deployment](../hosting/production.md).
+
+The next major release will enable validation by default. Connection-string builders preserve omitted settings and explicit `true` or `false` through serialization and credential helpers. A startup warning is logged when validation is skipped, including on loopback targets; it is suppressed when TLS is disabled.
 
 See [TLS configuration (client)](../configuration/tls.mdx) for certificate setup.
 

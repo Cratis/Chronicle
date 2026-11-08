@@ -11,5 +11,5 @@ public class and_validation_is_skipped_for_ipv6_loopback : Specification
 
     void Because() => _result = ServerCertificateValidationWarning.AppliesTo(true, new ChronicleConnectionString("chronicle://[::1]:35000"));
 
-    [Fact] void should_not_warn() => _result.ShouldBeFalse();
+    [Fact] void should_warn() => _result.ShouldBeTrue();
 }

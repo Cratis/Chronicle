@@ -20,6 +20,8 @@ When you run an Aspire AppHost, `AddCratisChronicle()` selects the Chronicle dev
 
 Use this path for local development or automated checks that need a running Chronicle server. Add storage or certificate settings to the callback only when you need to replace the defaults.
 
+The generated certificate is untrusted and regenerated on every start, with SANs `localhost`, `chronicle`, `127.0.0.1`, and `::1`. The .NET client still skips validation when both settings are omitted in this release, but the next major release will enable it by default. We recommend explicitly setting `skipTlsValidation=false` after configuring trust or a matching pin. For development only, explicitly opt out with a connection string such as `chronicle://localhost:35000?skipTlsValidation=true`, using your AppHost's assigned address. An explicit `Tls.SkipCertificateValidation=false` still requires validation. See [Client TLS configuration](../configuration/tls).
+
 ## Production Mode
 
 When you publish an Aspire AppHost, `AddCratisChronicle()` selects the production image (`cratis/chronicle:latest`) whether or not you pass a configure callback. It has no embedded MongoDB and does not generate certificates. Configure the following dependencies for the default TLS and internal OAuth setup:

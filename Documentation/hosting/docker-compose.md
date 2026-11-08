@@ -4,6 +4,8 @@ description: Run Cratis Chronicle locally with bundled MongoDB and an Aspire Ope
 ---
 Run Cratis Chronicle with Docker Compose when you want a local event store and a dashboard for its telemetry without creating an Aspire AppHost. This setup uses the development image, which bundles a single-node MongoDB replica set and generates a self-signed TLS certificate. You do not need a separate database service or certificate file.
 
+The generated certificate is untrusted and regenerated on every start, with SANs `localhost`, `chronicle`, `127.0.0.1`, and `::1`. The .NET client still skips validation when both settings are omitted in this release; the next major release will enable it by default. We recommend explicitly setting `skipTlsValidation=false` after configuring certificate trust or a matching pin. For this development setup only, explicitly opt out with `chronicle://localhost:35000?skipTlsValidation=true`. An explicit `Tls.SkipCertificateValidation=false` still requires validation. See [Client TLS configuration](../configuration/tls.mdx).
+
 Save the following as `docker-compose.yml`. The `aspire-dashboard` service runs the [Microsoft Aspire](https://learn.microsoft.com/en-us/dotnet/aspire/get-started/aspire-overview) dashboard; it does not run your application or an AppHost.
 
 ```yaml
