@@ -18,10 +18,11 @@ public class and_a_new_lifecycle_is_allowed_above_a_secondary_erasure : given.tw
     async Task Establish()
     {
         _candidate = KeyNamed("candidate");
+        await Save(_primary, KeyNamed("erased"), new EncryptionKeyRevision(7u));
         await Save(_secondary, KeyNamed("erased"), new EncryptionKeyRevision(7u));
-        await _secondary.RecordErasureFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, _identifier);
-        await _secondary.DeleteFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, _identifier);
-        await _secondary.AllowNewKeyFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, _identifier);
+        await _composite.RecordErasureFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, _identifier);
+        await _composite.DeleteFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, _identifier);
+        await _composite.AllowNewKeyFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, _identifier);
     }
 
     async Task Because()
@@ -34,7 +35,7 @@ public class and_a_new_lifecycle_is_allowed_above_a_secondary_erasure : given.tw
 
     [Fact] void should_not_refuse_after_saving_on_the_primary() => _error.ShouldBeNull();
     [Fact] void should_report_the_primary_pair() => _result.ShouldEqual(_primaryPair);
-    [Fact] void should_return_the_primary_revision() => _result!.Revision.ShouldEqual(EncryptionKeyRevision.Initial);
+    [Fact] void should_return_the_primary_revision() => _result!.Revision.ShouldEqual(new EncryptionKeyRevision(8u));
     [Fact] void should_mirror_the_key_above_the_secondary_erasure_floor() => _secondaryPair!.Revision.ShouldEqual(new EncryptionKeyRevision(8u));
     [Fact] void should_mirror_the_primary_key() => _secondaryPair!.Key.Public.ShouldEqual(_candidate.Public);
     [Fact] void should_match_key_only_provisioning() => _result!.Key.ShouldEqual(_legacyKey);

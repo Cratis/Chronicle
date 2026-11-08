@@ -166,7 +166,7 @@ public class ReadModelsCompliance(
             result.Add(await Release(eventStore, eventStoreNamespace, schema, instance));
         }
 
-        return result;
+        return await ReleaseKeys.Complete<IEnumerable<ExpandoObject>>(() => result);
     }
 
     static async Task<JsonObject> HandleBySubject(
@@ -208,6 +208,6 @@ public class ReadModelsCompliance(
             }
         }
 
-        return result;
+        return await ReleaseKeys.Complete(() => result);
     }
 }

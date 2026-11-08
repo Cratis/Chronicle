@@ -105,7 +105,7 @@ internal static class AppendFingerprintComparison
             return false;
         }
 
-        if (key is not null && erasure.Refuses(new(key, part.Revision)))
+        if (key is not null && erasure.Covers(new(key, part.Revision)))
         {
             return true;
         }

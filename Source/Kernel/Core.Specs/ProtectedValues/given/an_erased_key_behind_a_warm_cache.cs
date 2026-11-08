@@ -32,8 +32,9 @@ public class an_erased_key_behind_a_warm_cache : Specification
     {
         _protected = await _handler.Apply("store", "ns", "subject", JsonValue.Create("confidential"));
         (await _handler.Release("store", "ns", "subject", _protected)).ToString().ShouldEqual("confidential");
-        await _inner.RecordErasureFor(store, ns, identifier);
-        await _inner.DeleteFor(store, ns, identifier);
+        await _inner.RecordErasureFor(store, ns, identifier, new EncryptionKeyErasureRequest("erase"));
+        await _inner.DeleteThroughFor(store, ns, identifier, "erase");
+        await _inner.ConfirmErasureFor(store, ns, identifier, "erase");
     }
 
     protected async Task ReleaseValues()

@@ -416,7 +416,12 @@ public partial class EncryptionKeyStorage(IDatabase database) : IEncryptionKeySt
     internal static FilterDefinition<EncryptionKeyForIdentifier> Owned(EncryptionKeyForIdentifier document) =>
         _keys.Eq(_ => _.Id, document.Id) & _keys.Eq(_ => _.WriterNonce, document.WriterNonce) & _keys.Eq(_ => _.StagedLifecycle, document.StagedLifecycle);
 
-    static bool HasValidSeal(EncryptionKeyErasure fence) => fence.Seal is { } seal ? StringComparer.Ordinal.Equals(seal, EncryptionKeyFenceUpdates.Seal(fence)) : fence.Version == 0;
+    /// <summary>Validate N seals, or require a seal after the N+1 rollout backfill.</summary>
+    /// <param name="fence">The persisted fence.</param>
+    /// <param name="requireSeal">Whether the N+1 protocol floor has been established.</param>
+    /// <returns>Whether the fence has a valid rollout seal.</returns>
+    internal static bool HasValidSeal(EncryptionKeyErasure fence, bool requireSeal = false) =>
+        fence.Seal is { } seal ? StringComparer.Ordinal.Equals(seal, EncryptionKeyFenceUpdates.Seal(fence)) : !requireSeal && fence.Version == 0;
     static bool IsAuthorizationRetry(EncryptionKeyErasure fence, ulong version, uint lifecycle) =>
         fence.NewKeyAllowed && fence.Version > version && fence.Version - version == 1 && fence.Lifecycle > lifecycle && fence.Lifecycle - lifecycle == 1;
     static bool IsLatest(EncryptionKeyRevision? revision) => revision is null || revision == EncryptionKeyRevision.Latest;

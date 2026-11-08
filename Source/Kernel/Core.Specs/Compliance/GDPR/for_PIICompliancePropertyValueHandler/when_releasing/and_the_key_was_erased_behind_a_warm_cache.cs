@@ -23,8 +23,9 @@ public class and_the_key_was_erased_behind_a_warm_cache : Specification
         _handler = new(new ManagedEncryptionKeyProvisioner(cache, encryption), cache, encryption);
         _encrypted = await _handler.Apply(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, Identifier, JsonValue.Create("protected value"));
         (await _handler.Release(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, Identifier, _encrypted)).ToString().ShouldEqual("protected value");
-        await inner.RecordErasureFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, Identifier);
-        await inner.DeleteFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, Identifier);
+        await inner.RecordErasureFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, Identifier, new EncryptionKeyErasureRequest("erase"));
+        await inner.DeleteThroughFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, Identifier, "erase");
+        await inner.ConfirmErasureFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, Identifier, "erase");
     }
 
     async Task Because() => _result = await _handler.Release(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, Identifier, _encrypted);

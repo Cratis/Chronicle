@@ -2,10 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.ProtectedValues;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.EventTypes;
 using Cratis.Chronicle.Json;
+using Cratis.Chronicle.ProtectedValues;
 using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Events;
@@ -76,7 +76,7 @@ public class EventCompliance(
             releasedEvents.Add(await ReleaseReportingErasureResolved(@event, effective));
         }
 
-        return releasedEvents.ToArray();
+        return await ReleaseKeys.Complete(releasedEvents.ToArray);
     }
 
     /// <inheritdoc/>
@@ -106,7 +106,7 @@ public class EventCompliance(
             releasedEvents.Add(released);
         }
 
-        return releasedEvents.ToArray();
+        return await ReleaseKeys.Complete(releasedEvents.ToArray);
     }
 
     async Task<AppendedEvent> ReleaseReportingErasureAfterLookup(AppendedEvent @event, ValueTask<JsonSchema> lookup) =>
@@ -123,11 +123,11 @@ public class EventCompliance(
             @event.Context.Subject.Value,
             contentAsJson);
 
-        return @event with
+        return await ReleaseKeys.Complete(() => @event with
         {
             Content = expandoObjectConverter.ToExpandoObject(released.Value, schema),
             ErasedProperties = released.ErasedPaths
-        };
+        });
     }
 
     async Task<AppendedEvent> ReleaseAfterLookup(AppendedEvent @event, ValueTask<JsonSchema> lookup) =>
@@ -151,6 +151,6 @@ public class EventCompliance(
             contentAsJson);
 
         var releasedContent = expandoObjectConverter.ToExpandoObject(released, schema);
-        return @event with { Content = releasedContent };
+        return await ReleaseKeys.Complete(() => @event with { Content = releasedContent });
     }
 }

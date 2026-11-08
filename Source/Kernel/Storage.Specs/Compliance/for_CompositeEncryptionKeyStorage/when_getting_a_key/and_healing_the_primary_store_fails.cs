@@ -20,6 +20,7 @@ public class and_healing_the_primary_store_fails : given.two_key_stores
         await Save(_secondary, _key);
 
         _readableButUnwritablePrimary = Substitute.For<IEncryptionKeyStorage>();
+        _readableButUnwritablePrimary.FenceGuarantees.Returns(EncryptionKeyFenceGuarantees.MonotonicFence | EncryptionKeyFenceGuarantees.FencedSave);
         _readableButUnwritablePrimary
             .TryGetFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>(), Arg.Any<EncryptionKeyRevision?>())
             .Returns((EncryptionKey?)null);

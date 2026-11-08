@@ -18,7 +18,8 @@ public class and_the_fence_cannot_be_read : given.protected_events
 
     async Task Because() => await Perform();
 
-    [Fact] void should_report_the_fence_failure()
+    [Fact]
+    void should_report_the_fence_failure()
     {
         _result.TryGetException(out var error).ShouldBeTrue();
         error.InnerException.ShouldBeOfExactType<EncryptionKeyFenceUnavailable>();

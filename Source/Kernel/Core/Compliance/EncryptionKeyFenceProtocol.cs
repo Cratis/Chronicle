@@ -92,6 +92,7 @@ public sealed class EncryptionKeyFenceProtocol(
 
     async Task Start(CancellationToken cancellationToken)
     {
+        Cratis.Chronicle.ProtectedValues.ReleaseKeys.Configure(options.Value.Compliance.Encryption.RevocationGrace);
         logger.RolloutWarning();
         logger.RevocationGrace(options.Value.Compliance.Encryption.RevocationGrace);
         ReportCapabilities();

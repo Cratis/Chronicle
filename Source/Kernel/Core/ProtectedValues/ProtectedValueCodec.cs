@@ -69,13 +69,14 @@ public static class ProtectedValueCodec
     /// <returns>The original value, or null if the key or ciphertext is unavailable.</returns>
     public static async Task<JsonNode?> TryRelease(IEncryptionKeyStorage keyStorage, IEncryption encryption, EventStoreName eventStore, EventStoreNamespaceName @namespace, string identifier, JsonNode value)
     {
+        using var scope = ReleaseKeys.BeginScope();
         if (!TryDecodeCipherText(encryption, value.ToString(), out var encrypted))
         {
             return null;
         }
 
         var key = await ReleaseKeys.TryGetForRelease(keyStorage, eventStore, @namespace, identifier);
-        return key is null ? null : Decrypt(encryption, key, encrypted);
+        return await ReleaseKeys.Complete(() => key is null ? null : Decrypt(encryption, key, encrypted));
     }
 
     /// <summary>

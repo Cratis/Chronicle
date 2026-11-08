@@ -13,11 +13,8 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
-<<<<<<< HEAD
 using Cratis.Chronicle.Namespaces;
-=======
 using Cratis.Chronicle.ProtectedValues;
->>>>>>> parent of c4ce4ad846 (Revert "Fence protected-value release against fresh erasure (part of #4978)")
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Compliance;
 using Microsoft.Extensions.Logging;

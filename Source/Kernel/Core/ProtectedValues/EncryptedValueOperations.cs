@@ -84,9 +84,10 @@ static class EncryptedValueOperations
             return new(value, ProtectedValueReleaseStatus.Plain);
         }
 
-        var key = await encryptionKeyStore.TryGetFor(eventStore, eventStoreNamespace, keyIdentifier)
+        using var scope = ReleaseKeys.BeginScope();
+        var key = await ReleaseKeys.TryGetForRelease(encryptionKeyStore, eventStore, eventStoreNamespace, keyIdentifier)
             ?? throw new MissingEncryptionKey(keyIdentifier);
-        return new(ProtectedValueCodec.Decrypt(encryption, key, encrypted), ProtectedValueReleaseStatus.Decrypted);
+        return await ReleaseKeys.Complete(() => new ReleasedProtectedValue(ProtectedValueCodec.Decrypt(encryption, key, encrypted), ProtectedValueReleaseStatus.Decrypted));
     }
 
     /// <summary>
