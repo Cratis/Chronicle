@@ -32,6 +32,7 @@ public record FederatedEventBatch(
     /// <param name="limit">The maximum number of events to return.</param>
     /// <param name="eventTypes">The event types the consumer wants, intersected with the grant. Empty means everything granted.</param>
     /// <returns>The batch.</returns>
+    /// <exception cref="NotImplementedException">Thrown until the pull service lands; a stub of the contract skeleton.</exception>
     public static Task<FederatedEventBatch> Pull(string eventStore, string @namespace, ulong fromSequenceNumber, int limit, IEnumerable<string> eventTypes) =>
         throw new NotImplementedException();
 }

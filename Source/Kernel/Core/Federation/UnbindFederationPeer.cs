@@ -10,6 +10,7 @@ namespace Cratis.Chronicle.Federation;
 /// <summary>
 /// Removes a consumer binding.
 /// </summary>
+/// <param name="Id">The binding id.</param>
 [Command]
 [Cratis.Arc.Authorization.Authorize(Policy = WellKnownAuthorizationPolicies.AdministratorOperations)]
 [BelongsTo(WellKnownServices.Federation)]
@@ -18,6 +19,7 @@ public record UnbindFederationPeer(string Id)
     /// <summary>
     /// Handles the command.
     /// </summary>
+    /// <param name="registry">The <see cref="IFederationRegistry"/> to unbind with.</param>
     /// <returns>Awaitable task.</returns>
-    public Task Handle() => throw new NotImplementedException();
+    public Task Handle(IFederationRegistry registry) => registry.Unbind(Id);
 }
