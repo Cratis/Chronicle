@@ -51,7 +51,7 @@ When your events do not come from one stream, for example several threads or a r
 
 <ChronicleClientTabs snippet="events/importing/session" />
 
-`Complete` waits for every chunk to be acknowledged, closes staging and, unless `WaitForCommit` is `false`, waits for the commit. `Progress` reports the state and counts as the kernel sees them, and ends when the import ends. `Abandon` waits for chunks being added, then discards everything staged.
+`Complete` waits for every chunk to be acknowledged, closes staging and, unless `WaitForCommit` is `false`, waits for the commit. `Progress` reports the state and counts as the kernel sees them, and ends when the import ends. `Abandon` stops any `Add` in progress, without waiting for its stream to yield, waits for the chunks already sent, and then discards everything staged. Adding to or completing an abandoned import throws `ImportWasAbandoned`. Give `Abandon` a cancellation token to bound the wait for chunks in flight; when it is cancelled first, the import stays open until its staging retention runs out.
 
 A chunk sent again under the same index must carry the same events. One that covers other events is refused as a conflict, and the chunk staged first is kept.
 
@@ -69,10 +69,10 @@ Staging holds the events as they were sent, personal data included and not yet e
 
 - When an import completes, fails or is abandoned, its staging is discarded at once.
 - An import left open without activity for `Imports.StagingRetention`, 24 hours by default, is abandoned.
-- An import whose commit made no progress for `Imports.StagingRetention` fails; the events it committed stay committed.
+- An import whose validation or commit made no progress for `Imports.StagingRetention` fails when its commit job is gone or has ended; the events it committed stay committed. While the commit job is still there, running or stopped, the import is left to it: a kernel that was down for longer than the retention resumes the commit from its checkpoint.
 - An import that ended longer ago than `Imports.StagingRetention` is removed, and its identifier can be used for a new import.
 
-A commit job that is stopped leaves its import `Committing`, and resuming the job continues the commit from where it stopped. A commit job that fails or is removed fails its import. To give up an import that is committing, stop and remove its commit job, named `Import` followed by the import identifier in the jobs list; `AbandonImport` only abandons an import that is still staging.
+A commit job that is stopped leaves its import `Committing`, and resuming the job continues the commit from where it stopped. A commit job that fails or is removed fails its import. A chunk the commit was already appending when the import failed is still counted in `EventsCommitted` and its sequence numbers, since its events are in the log. To give up an import that is committing, stop and remove its commit job, named `Import` followed by the import identifier in the jobs list; `AbandonImport` only abandons an import that is still staging.
 
 ## Limits and configuration
 
@@ -85,5 +85,7 @@ A commit job that is stopped leaves its import `Committing`, and resuming the jo
 | `CommitChunkSize` | 1000 | How many events the commit appends in one call |
 | `MaxChunkEvents` | 1000 | The most events one staged chunk may carry |
 | `MaxChunkBytes` | 4 MiB | The most bytes one staged chunk may carry, counting event content, tags, named tags, causation and idempotency keys |
+
+An event sequence validates up to four imports at a time. The constraint claims of an import being validated are held in memory, so a fifth import waits, and starts validating once one of the others finishes; it never pushes an import out in the middle of its validation. Claims left behind by a validation that stopped are released after five minutes without use. A validation call that fails, for example when the kernel is busy, starts the validation over, up to ten times before the import fails.
 
 An import targets one event sequence. Events cannot be imported into the outbox.
