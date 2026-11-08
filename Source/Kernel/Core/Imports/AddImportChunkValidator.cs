@@ -18,6 +18,7 @@ internal class AddImportChunkValidator : CommandValidator<AddImportChunk>
     public AddImportChunkValidator()
     {
         RuleFor(_ => _.EventStore).RequiredEventStore();
+        RuleFor(_ => _.EventStore).NotSystemEventStore();
         RuleFor(_ => _.EventStore).NoKeySeparator();
         RuleFor(_ => _.Namespace).RequiredNamespace();
         RuleFor(_ => _.Namespace).NoKeySeparator();
