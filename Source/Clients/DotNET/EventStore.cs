@@ -375,8 +375,7 @@ public partial class EventStore : IEventStore
         }
         else
         {
-            Connection.Lifecycle.OnConnected += RegisterReactorsAgainAfterReconnect;
-            Connection.Lifecycle.OnConnected += RegisterReducersAgainAfterReconnect;
+            Connection.Lifecycle.OnConnected += RegisterRecreatedArtifactsAfterReconnect;
         }
     }
 
@@ -879,10 +878,6 @@ public partial class EventStore : IEventStore
             _logger.ClientObserversNotRegistered(skipped);
         }
     }
-
-    Task RegisterReactorsAgainAfterReconnect() => (Reactors as Reactors.Reactors)?.RegisterAgainAfterReconnect() ?? Task.CompletedTask;
-
-    Task RegisterReducersAgainAfterReconnect() => (Reducers as Reducers.Reducers)?.RegisterAgainAfterReconnect() ?? Task.CompletedTask;
 
     Task RegisterClientHostedObservers(bool hostsClientObservers)
     {
