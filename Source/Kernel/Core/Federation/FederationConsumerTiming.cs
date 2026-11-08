@@ -25,7 +25,7 @@ public record FederationConsumerTiming(
         TimeSpan.FromSeconds(2),
         TimeSpan.FromSeconds(1),
         TimeSpan.FromSeconds(60),
-        TimeSpan.FromMinutes(10),
+        TimeSpan.FromSeconds(90),
         TimeSpan.FromSeconds(30));
 
     /// <summary>

@@ -42,9 +42,14 @@ Subscriptions forward events from one event store's outbox into another's inbox 
 
 A handshake or approval workflow, many-to-many relay routing (the model must not prevent it), and any change to how consumer code selects event types.
 
-## Delivery
+## Implementation
 
-Delivered in increments. The first adds the listener, the pin and grant primitives and the loop and duplicate guard, each specified. Peer bindings and grants as runtime state, the streaming service, the Workbench and CLI surface and the compliance behavior follow.
+- **State and audit trail.** Bindings and grants are events in the system event log (`FederationPeerBound`, `FederationPeerUnbound`, `FederationGrantSet`, `FederationLinkRevoked`), folded by `FederationRegistry`. The event log is the audit trail, with the identity of the caller recorded by the append path. Configuration bootstraps by appending events for ids with no history and never overwrites or resurrects runtime state.
+- **Pull is a batch query, not a duplex stream.** `FederationPull.Pull` is a generated Core query. The consumer asks for a page from a sequence number; this gives backpressure (the consumer paces itself), per-link rate limiting (the producer answers `Throttled`) and independent links for free. The caller is identified only by the client certificate pin, never by the request.
+- **Resume without cursor storage.** Each inbox event carries a causation entry with the origin event store and source sequence number. A consumer resumes from the tail event of the inbox sequence, which makes redelivery after a crash or reconnect idempotent. A guard rejects events originating in the receiving store.
+- **Consumer code selects the types.** The consumer requests the union of event types of the local subscriptions whose source is the binding's logical source; the producer intersects them with the grant.
+- **Personal data.** The producer refuses to forward event types whose schema carries protected properties, so personal data and key material never cross a link. Erasure therefore does not need to propagate. Sharing keys across organizations is out of scope.
+- **Not in this repository.** The `cratis` CLI lives in its own repository and consumes the generated Core contracts; it gains the commands from the `Federation` service without changes here.
 
 ## Consequences
 
