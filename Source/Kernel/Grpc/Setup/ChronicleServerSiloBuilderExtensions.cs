@@ -101,6 +101,7 @@ public static class ChronicleServerSiloBuilderExtensions
             return Options.Create(new OrleansJobsOptions
             {
                 MaxParallelSteps = Math.Min(chronicleOptions.Jobs.GetEffectiveMaxParallelSteps(), chronicleOptions.Observers.MaxConcurrentPartitions),
+                MaxActiveStepsPerJob = chronicleOptions.Jobs.GetEffectiveMaxActiveStepsPerJob(),
                 DeadJobThreshold = chronicleOptions.Jobs.DeadJobThreshold,
                 CleanupCadence = chronicleOptions.Jobs.CleanupCadence,
                 StepCheckpointBatchInterval = chronicleOptions.Jobs.StepCheckpointBatchInterval,

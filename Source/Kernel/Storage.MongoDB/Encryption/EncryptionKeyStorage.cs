@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
+using System.Globalization;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage.Compliance;
@@ -20,6 +21,12 @@ public partial class EncryptionKeyStorage(IDatabase database) : IEncryptionKeySt
     /// The encryption key collection name.
     /// </summary>
     internal const string CollectionName = WellKnownCollectionNames.EncryptionKeys;
+
+    /// <summary>
+    /// The internal secret collection name. It sits in the event store database and no subject key operation uses it.
+    /// </summary>
+    internal const string InternalSecretsCollectionName = WellKnownCollectionNames.InternalSecrets;
+
     const int MaximumAttempts = 8;
     const int MaximumRequests = 1024;
     static readonly TimeSpan _readTimeout = TimeSpan.FromSeconds(10);
@@ -328,6 +335,44 @@ public partial class EncryptionKeyStorage(IDatabase database) : IEncryptionKeySt
             await AllowNewKeyFor(eventStore, eventStoreNamespace, identifier, observed.Version, observed.Lifecycle);
         }
     }
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// The secret is a document in <see cref="InternalSecretsCollectionName"/>, keyed by the exact event store and purpose. Inserting it is the
+    /// ordering point: a concurrent creator that loses the race reads back the winner's document.
+    /// </remarks>
+    public async Task<EncryptionKey> GetOrAddInternalSecretFor(EventStoreName eventStore, InternalSecretPurpose purpose, EncryptionKey candidate)
+    {
+        var collection = database
+            .GetEventStoreDatabase(eventStore)
+            .GetCollection<InternalSecretForPurpose>(InternalSecretsCollectionName);
+        var id = BuildInternalSecretId(eventStore, purpose);
+        if (await collection.Find(_ => _.Id == id).FirstOrDefaultAsync() is { } existing)
+        {
+            return new(existing.PublicKey, existing.PrivateKey);
+        }
+
+        try
+        {
+            await collection.InsertOneAsync(new InternalSecretForPurpose(id, candidate.Public, candidate.Private));
+            return candidate;
+        }
+        catch (MongoWriteException ex) when (ex.WriteError?.Category == ServerErrorCategory.DuplicateKey)
+        {
+            var winner = await collection.Find(_ => _.Id == id).FirstOrDefaultAsync()
+                ?? throw new InternalSecretProvisioningConflict(purpose);
+            return new(winner.PublicKey, winner.PrivateKey);
+        }
+    }
+
+    /// <summary>
+    /// Builds an unambiguous identity even when event stores share a physical database.
+    /// </summary>
+    /// <param name="eventStore">The exact event store name.</param>
+    /// <param name="purpose">The secret purpose.</param>
+    /// <returns>The length-prefixed event store name followed by the purpose.</returns>
+    internal static string BuildInternalSecretId(EventStoreName eventStore, InternalSecretPurpose purpose) =>
+        $"{eventStore.Value.Length.ToString(CultureInfo.InvariantCulture)}:{eventStore.Value}{purpose.Value}";
 
     /// <summary>
     /// Include published and legacy rows, but never staged rows.

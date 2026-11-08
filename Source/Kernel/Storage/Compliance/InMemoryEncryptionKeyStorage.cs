@@ -15,6 +15,7 @@ public partial class InMemoryEncryptionKeyStorage : IEncryptionKeyStorage, IEncr
 {
     readonly Dictionary<Key, EncryptionKeyAtRevision> _keys = [];
     readonly Dictionary<Scope, EncryptionKeyErasure> _erasures = [];
+    readonly Dictionary<(EventStoreName EventStore, InternalSecretPurpose Purpose), EncryptionKey> _internalSecrets = [];
     readonly Lock _lock = new();
 
     /// <inheritdoc/>
@@ -255,6 +256,16 @@ public partial class InMemoryEncryptionKeyStorage : IEncryptionKeyStorage, IEncr
         }
 
         return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    /// <remarks>Internal secrets live in their own dictionary, which no subject key member reads or writes.</remarks>
+    public Task<EncryptionKey> GetOrAddInternalSecretFor(EventStoreName eventStore, InternalSecretPurpose purpose, EncryptionKey candidate)
+    {
+        lock (_lock)
+        {
+            return Task.FromResult(_internalSecrets.TryAdd((eventStore, purpose), candidate) ? candidate : _internalSecrets[(eventStore, purpose)]);
+        }
     }
 
     static bool IsAuthorizationRetry(EncryptionKeyErasure fence, ulong observedVersion, uint observedLifecycle)

@@ -276,6 +276,22 @@ internal class LegacyAzureKeyVaultEncryptionKeyStorage : IEncryptionKeyStorage
         await WriteErasure(locations, erasure with { NewKeyAllowed = true });
     }
 
+    /// <inheritdoc/>
+    /// <remarks>The internal name is outside all subject key and erasure prefixes; candidate elections still converge.</remarks>
+    public async Task<EncryptionKey> GetOrAddInternalSecretFor(EventStoreName eventStore, InternalSecretPurpose purpose, EncryptionKey candidate)
+    {
+        var name = AzureKeyVaultEncryptionKeyStorage.BuildInternalSecretName(eventStore, purpose);
+        if (await ReadKey(name) is { } existing)
+        {
+            return existing;
+        }
+
+        var secret = new KeyVaultSecret(name, Serialize(candidate));
+        ProvisioningCandidateElection.MarkAsCandidate(secret);
+        await _secretClient.SetSecretAsync(secret);
+        return await Elect(name) ?? throw new InternalSecretProvisioningConflict(purpose);
+    }
+
     static bool IsDisabled(RequestFailedException exception) =>
         exception.Status == 403 &&
         (string.Equals(exception.ErrorCode, "SecretDisabled", StringComparison.OrdinalIgnoreCase) ||

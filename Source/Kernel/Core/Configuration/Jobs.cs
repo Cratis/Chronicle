@@ -17,6 +17,18 @@ public class Jobs
     public int? MaxParallelSteps { get; init; }
 
     /// <summary>
+    /// Gets the maximum number of steps a single job keeps active at once.
+    /// </summary>
+    /// <remarks>
+    /// A job with thousands of steps, such as the catch-up of an observer with thousands of partitions, would
+    /// otherwise activate a grain for every one of them at once, holding memory for all of them although only
+    /// <see cref="MaxParallelSteps"/> can run. With a limit the job starts that many steps and starts the next one
+    /// each time one reaches an outcome. The steps not yet started stay in storage. If not configured, defaults to
+    /// four times the effective maximum parallel steps, but never less than 32.
+    /// </remarks>
+    public int? MaxActiveStepsPerJob { get; init; }
+
+    /// <summary>
     /// Gets the time threshold for considering a job as dead in the water.
     /// Jobs in preparation state with no steps that were created before this threshold are candidates for cleanup.
     /// Defaults to 1 hour.
@@ -67,4 +79,10 @@ public class Jobs
     /// </summary>
     /// <returns>The maximum parallel steps value.</returns>
     public int GetEffectiveMaxParallelSteps() => MaxParallelSteps ?? Math.Max(1, Environment.ProcessorCount - 1);
+
+    /// <summary>
+    /// Gets the effective maximum number of steps a job keeps active at once.
+    /// </summary>
+    /// <returns>The maximum active steps per job.</returns>
+    public int GetEffectiveMaxActiveStepsPerJob() => Math.Max(1, MaxActiveStepsPerJob ?? Math.Max(32, GetEffectiveMaxParallelSteps() * 4));
 }

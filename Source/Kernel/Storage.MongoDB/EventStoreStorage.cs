@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage.Captures;
 using Cratis.Chronicle.Storage.Events.Constraints;
+using Cratis.Chronicle.Storage.EventSequences.Mutations;
 using Cratis.Chronicle.Storage.EventSources;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.ExternalServices;
@@ -56,6 +57,7 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// <param name="jobsStorage">The <see cref="Cratis.Choreography.Storage.IJobsStorage"/> resolving jobs storage for an event store namespace.</param>
 /// <param name="options"><see cref="ChronicleOptions"/>.</param>
 /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
+/// <param name="mutationDigestKeys">The source of mutation digest keys; without one, every mutation fails closed.</param>
 public class EventStoreStorage(
     EventStoreName eventStore,
     IEventStoreDatabase eventStoreDatabase,
@@ -64,7 +66,8 @@ public class EventStoreStorage(
     SinksFactory sinksFactory,
     Cratis.Choreography.Storage.IJobsStorage jobsStorage,
     IOptions<ChronicleOptions> options,
-    ILoggerFactory loggerFactory) : IEventStoreStorage
+    ILoggerFactory loggerFactory,
+    IEventSequenceMutationDigestKeys? mutationDigestKeys = null) : IEventStoreStorage
 {
     readonly ConcurrentDictionary<EventStoreNamespaceName, IEventStoreNamespaceStorage> _namespaces = new();
     readonly Occurrences.OccurrencesStorage _occurrences = new(eventStoreDatabase.GetCollection<BsonDocument>(WellKnownCollectionNames.Occurrences).Database);
@@ -178,7 +181,8 @@ public class EventStoreStorage(
             sinksFactory(@namespace),
             jobsStorage,
             options,
-            loggerFactory);
+            loggerFactory,
+            mutationDigestKeys);
 
         return _namespaces.GetOrAdd(@namespace, created);
     }

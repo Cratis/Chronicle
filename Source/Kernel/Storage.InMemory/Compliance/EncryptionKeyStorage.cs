@@ -80,6 +80,11 @@ public sealed class EncryptionKeyStorage : IEncryptionKeyStorage, IEncryptionKey
         _storage.GetErasureRequestFor(eventStore, eventStoreNamespace, identifier, requestId);
 
     /// <inheritdoc/>
+    /// <remarks>Internal secrets live in their own dictionary, which no subject key member reads or writes.</remarks>
+    public Task<EncryptionKey> GetOrAddInternalSecretFor(EventStoreName eventStore, InternalSecretPurpose purpose, EncryptionKey candidate) =>
+        _storage.GetOrAddInternalSecretFor(eventStore, purpose, candidate);
+
+    /// <inheritdoc/>
     public Task CompactErasureRequestsFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, int retain = 32) =>
         _storage.CompactErasureRequestsFor(eventStore, eventStoreNamespace, identifier, retain);
 

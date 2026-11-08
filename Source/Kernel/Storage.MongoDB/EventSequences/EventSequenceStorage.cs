@@ -933,6 +933,14 @@ public partial class EventSequenceStorage(
         GetRange(start, end, eventSourceId, eventTypes, tags, null, null, cancellationToken);
 
     /// <inheritdoc/>
+    public Task<IEventCursor> GetRangeWithHistory(EventSequenceNumber start, EventSequenceNumber end, EventSourceId? eventSourceId = default, IEnumerable<EventType>? eventTypes = default, IEnumerable<Concepts.Events.Tag>? tags = default, CancellationToken cancellationToken = default) =>
+        GetRange(start, end, eventSourceId, eventTypes, tags, cancellationToken);
+
+    /// <inheritdoc/>
+    public Task<IEventCursor> GetFromSequenceNumberWithHistory(EventSequenceNumber sequenceNumber, EventSourceId? eventSourceId = default, EventSourceType? eventSourceType = default, EventStreamType? eventStreamType = default, EventStreamId? eventStreamId = default, IEnumerable<EventType>? eventTypes = default, IEnumerable<Concepts.Events.Tag>? tags = default, CancellationToken cancellationToken = default) =>
+        GetFromSequenceNumber(sequenceNumber, eventSourceId, eventSourceType, eventStreamType, eventStreamId, eventTypes, tags, cancellationToken);
+
+    /// <inheritdoc/>
     public async Task<IEventCursor> GetRange(
         EventSequenceNumber start,
         EventSequenceNumber end,

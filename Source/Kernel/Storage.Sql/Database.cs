@@ -71,6 +71,7 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
         WellKnownTableNames.SystemInformation,
         WellKnownTableNames.EncryptionKeys,
         WellKnownTableNames.EncryptionKeyErasures,
+        WellKnownTableNames.InternalSecrets,
         WellKnownTableNames.Tokens,
         WellKnownTableNames.Authorizations,
         WellKnownTableNames.Scopes,

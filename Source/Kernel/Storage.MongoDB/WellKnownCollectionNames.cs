@@ -86,6 +86,16 @@ public static class WellKnownCollectionNames
     public const string EventSequences = "event-sequences";
 
     /// <summary>
+    /// The collection that holds event sequence mutation heads.
+    /// </summary>
+    public const string EventSequenceMutationHeads = "event-sequence-mutation-heads";
+
+    /// <summary>
+    /// The collection that holds event sequence mutation history.
+    /// </summary>
+    public const string EventSequenceMutationHistory = "event-sequence-mutation-history";
+
+    /// <summary>
     /// The collection that holds connected clients state.
     /// </summary>
     public const string ConnectedClients = "connected-clients";
@@ -304,6 +314,11 @@ public static class WellKnownCollectionNames
     /// The collection that holds encryption keys.
     /// </summary>
     public const string EncryptionKeys = "encryption-keys";
+
+    /// <summary>
+    /// The collection that holds internal secrets separately from subject encryption keys.
+    /// </summary>
+    public const string InternalSecrets = "internal-secrets";
 
     /// <summary>
     /// The collection that holds encryption key erasures.
