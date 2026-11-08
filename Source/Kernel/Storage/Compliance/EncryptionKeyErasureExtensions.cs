@@ -16,6 +16,15 @@ namespace Cratis.Chronicle.Storage.Compliance;
 /// </remarks>
 public static class EncryptionKeyErasureExtensions
 {
+    /// <summary>Whether the fence refuses this exact revision and key material.</summary>
+    /// <param name="erasure">The authoritative fence.</param>
+    /// <param name="pair">The candidate revision and key.</param>
+    /// <returns>Whether this candidate was erased.</returns>
+    public static bool Refuses(this EncryptionKeyErasure? erasure, EncryptionKeyAtRevision pair) =>
+        erasure is not null &&
+        (pair.Revision.Value <= erasure.ErasedThrough.Value ||
+         erasure.ErasedKeyFingerprints.Contains(pair.Key.Fingerprint, StringComparer.Ordinal));
+
     /// <summary>
     /// Determine whether a fence covers a stored or staged key.
     /// </summary>

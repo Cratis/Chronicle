@@ -35,6 +35,8 @@ public class ManagedEncryptionKeyProvisioner(IEncryptionKeyStorage encryptionKey
     {
         if (await encryptionKeyStore.TryGetLatestFor(eventStore, eventStoreNamespace, identifier) is { } existing)
         {
+            var fence = await ReleaseKeys.GetErasureForRelease(encryptionKeyStore, eventStore, eventStoreNamespace, identifier);
+            fence.EnsureCanSave(identifier, existing.Revision, existing.Key);
             return existing;
         }
 
@@ -49,7 +51,17 @@ public class ManagedEncryptionKeyProvisioner(IEncryptionKeyStorage encryptionKey
         await gate.WaitAsync();
         try
         {
-            return await encryptionKeyStore.GetOrAddWithRevisionFor(eventStore, eventStoreNamespace, identifier, encryption.GenerateKey());
+            var fence = await ReleaseKeys.GetErasureForRelease(encryptionKeyStore, eventStore, eventStoreNamespace, identifier);
+            if (fence is { NewKeyAllowed: false })
+            {
+                throw new EncryptionKeyErased(identifier, fence);
+            }
+
+            var key = encryption.GenerateKey();
+            fence.EnsureCanProvision(identifier, key);
+            var provisioned = await encryptionKeyStore.GetOrAddWithRevisionFor(eventStore, eventStoreNamespace, identifier, key);
+            (await ReleaseKeys.GetErasureForRelease(encryptionKeyStore, eventStore, eventStoreNamespace, identifier)).EnsureCanSave(identifier, provisioned.Revision, provisioned.Key);
+            return provisioned;
         }
         finally
         {

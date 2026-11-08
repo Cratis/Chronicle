@@ -161,6 +161,10 @@ public partial class EncryptionKeyStorage(IDatabase database, ILogger<Encryption
     }
 
     /// <inheritdoc/>
+    public Task<Fence?> GetErasureForRelease(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier) =>
+        GetFenceFor(eventStore, eventStoreNamespace, identifier);
+
+    /// <inheritdoc/>
     public async Task<Fence?> GetErasureFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
     {
         var row = await ReadFence(eventStore, eventStoreNamespace, identifier);

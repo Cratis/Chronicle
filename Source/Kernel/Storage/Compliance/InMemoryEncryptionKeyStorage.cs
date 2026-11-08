@@ -22,6 +22,10 @@ public partial class InMemoryEncryptionKeyStorage : IEncryptionKeyStorage, IEncr
     public EncryptionKeyFenceGuarantees FenceGuarantees => EncryptionKeyFenceGuarantees.MonotonicFence | EncryptionKeyFenceGuarantees.FencedSave;
 
     /// <inheritdoc/>
+    public Task<EncryptionKeyErasure?> GetErasureForRelease(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier) =>
+        GetFenceFor(eventStore, eventStoreNamespace, identifier);
+
+    /// <inheritdoc/>
     public Task SaveFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKey key, EncryptionKeyRevision? revision = null)
     {
         lock (_lock)

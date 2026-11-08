@@ -137,6 +137,10 @@ public class AzureKeyVaultEncryptionKeyStorage : IEncryptionKeyStorage
         _storage.DeleteFor(eventStore, eventStoreNamespace, identifier, revision);
 
     /// <inheritdoc/>
+    public Task<EncryptionKeyErasure?> GetErasureForRelease(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier) =>
+        _storage.GetErasureForRelease(eventStore, eventStoreNamespace, identifier);
+
+    /// <inheritdoc/>
     public Task<EncryptionKeyErasure?> GetErasureFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier) =>
         _storage.GetErasureFor(eventStore, eventStoreNamespace, identifier);
 

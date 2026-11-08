@@ -74,7 +74,7 @@ public static class ProtectedValueCodec
             return null;
         }
 
-        var key = await keyStorage.TryGetFor(eventStore, @namespace, identifier);
+        var key = await ReleaseKeys.TryGetForRelease(keyStorage, eventStore, @namespace, identifier);
         return key is null ? null : Decrypt(encryption, key, encrypted);
     }
 

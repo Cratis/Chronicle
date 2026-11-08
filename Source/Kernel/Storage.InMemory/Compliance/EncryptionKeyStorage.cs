@@ -21,6 +21,10 @@ public sealed class EncryptionKeyStorage : IEncryptionKeyStorage, IEncryptionKey
     public EncryptionKeyFenceGuarantees FenceGuarantees => _storage.FenceGuarantees;
 
     /// <inheritdoc/>
+    public Task<EncryptionKeyErasure?> GetErasureForRelease(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier) =>
+        _storage.GetErasureForRelease(eventStore, eventStoreNamespace, identifier);
+
+    /// <inheritdoc/>
     public Task<EncryptionKeyFenceState> ReadFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier) =>
         _storage.ReadFor(eventStore, eventStoreNamespace, identifier);
 

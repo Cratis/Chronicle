@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.ProtectedValues;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.EventTypes;
 using Cratis.Chronicle.Json;
@@ -49,6 +50,7 @@ public class EventCompliance(
         IEnumerable<AppendedEvent> events,
         IDictionary<EventType, EventTypeSchema> eventTypeSchemas)
     {
+        using var releaseScope = ReleaseKeys.BeginScope();
         var releasedEvents = new List<AppendedEvent>();
         foreach (var @event in events)
         {
@@ -82,6 +84,7 @@ public class EventCompliance(
         IEnumerable<AppendedEvent> events,
         IDictionary<EventType, EventTypeSchema> eventTypeSchemas)
     {
+        using var releaseScope = ReleaseKeys.BeginScope();
         var releasedEvents = new List<AppendedEvent>();
         foreach (var @event in events)
         {
@@ -111,6 +114,7 @@ public class EventCompliance(
 
     async Task<AppendedEvent> ReleaseReportingErasureResolved(AppendedEvent @event, JsonSchema schema)
     {
+        using var releaseScope = ReleaseKeys.BeginScope();
         var contentAsJson = expandoObjectConverter.ToJsonObject(@event.Content, schema);
         var released = await complianceManager.ReleaseReportingErasedProperties(
             @event.Context.EventStore,
@@ -137,6 +141,7 @@ public class EventCompliance(
 
     async Task<AppendedEvent> ReleaseResolved(AppendedEvent @event, JsonSchema schema)
     {
+        using var releaseScope = ReleaseKeys.BeginScope();
         var contentAsJson = expandoObjectConverter.ToJsonObject(@event.Content, schema);
         var released = await complianceManager.Release(
             @event.Context.EventStore,

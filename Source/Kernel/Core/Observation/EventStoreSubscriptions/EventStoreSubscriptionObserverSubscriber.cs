@@ -13,7 +13,11 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
+<<<<<<< HEAD
 using Cratis.Chronicle.Namespaces;
+=======
+using Cratis.Chronicle.ProtectedValues;
+>>>>>>> parent of c4ce4ad846 (Revert "Fence protected-value release against fresh erasure (part of #4978)")
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Compliance;
 using Microsoft.Extensions.Logging;
@@ -225,13 +229,13 @@ public class EventStoreSubscriptionObserverSubscriber(
         // back before the fence existed - the copy happens because the target holds no key, which is the state an
         // erasure creates. The store refuses the write regardless; asking first is what turns a thrown exception
         // into a logged refusal for the common case, so forwarding of the subject's non-PII events keeps flowing.
-        if (await encryptionKeyStorage.GetErasureFor(targetEventStore, targetNamespace, identifier) is { NewKeyAllowed: false })
+        if (await ReleaseKeys.GetErasureForRelease(encryptionKeyStorage, targetEventStore, targetNamespace, identifier) is { NewKeyAllowed: false })
         {
             logger.SkippedCopyingEncryptionKeyToErasedEventStore(_key.EventStore, targetEventStore, targetNamespace);
             return;
         }
 
-        var sourceKey = await encryptionKeyStorage.TryGetFor(_key.EventStore, _key.Namespace, identifier);
+        var sourceKey = await ReleaseKeys.TryGetForRelease(encryptionKeyStorage, _key.EventStore, _key.Namespace, identifier);
         if (sourceKey is null)
         {
             return;

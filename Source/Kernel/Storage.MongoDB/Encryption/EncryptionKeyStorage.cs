@@ -180,6 +180,10 @@ public partial class EncryptionKeyStorage(IDatabase database) : IEncryptionKeySt
     }
 
     /// <inheritdoc/>
+    public Task<EncryptionKeyErasure?> GetErasureForRelease(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier) =>
+        GetFenceFor(eventStore, eventStoreNamespace, identifier);
+
+    /// <inheritdoc/>
     public async Task<EncryptionKeyErasure?> GetErasureFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
     {
         var fence = await GetFenceFor(eventStore, eventStoreNamespace, identifier);
