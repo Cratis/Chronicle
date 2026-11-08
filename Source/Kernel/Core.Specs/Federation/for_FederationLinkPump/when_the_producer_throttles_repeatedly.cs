@@ -26,7 +26,7 @@ public class when_the_producer_throttles_repeatedly : given.a_link_pump
 
     [Fact] void should_start_at_the_initial_backoff() => _delays[0].ShouldEqual(_timing.InitialBackoff);
     [Fact] void should_double_the_backoff() => _delays[1].ShouldEqual(_timing.InitialBackoff * 2);
-    [Fact] void should_never_exceed_the_cap() => _delays.All(_ => _ <= _timing.MaxBackoff).ShouldBeTrue();
+    [Fact] void should_never_exceed_the_cap() => _delays.TrueForAll(_ => _ <= _timing.MaxBackoff).ShouldBeTrue();
     [Fact] void should_reach_the_cap() => _delays[^1].ShouldEqual(_timing.MaxBackoff);
     [Fact] void should_be_in_backoff() => _status.GetBinding(BindingId).State.ShouldEqual(FederationBindingStates.Backoff);
 }

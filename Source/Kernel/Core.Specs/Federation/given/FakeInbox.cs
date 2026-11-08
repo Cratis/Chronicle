@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Federation.given;
 /// </summary>
 public class FakeInbox : IFederationInbox
 {
-    public FederationResumePoint? ResumePoint { get; set; }
+    public FederationResumePoint? Resume { get; set; }
 
     public List<(string Origin, ulong SequenceNumber)> Appended { get; } = [];
 
@@ -19,7 +19,7 @@ public class FakeInbox : IFederationInbox
     public Task<FederationResumePoint?> GetResumePoint(FederationBindingState binding)
     {
         ResumeLookups++;
-        return Task.FromResult(ResumePoint);
+        return Task.FromResult(Resume);
     }
 
     public Task<string?> Append(FederationBindingState binding, string originEventStore, FederatedEvent @event)

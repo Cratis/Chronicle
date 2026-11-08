@@ -34,7 +34,9 @@ public class when_creating_the_handler : given.certificates
     static FederationBindingState Binding(string endpoint, string certificate) =>
         new("b", "source", endpoint, "sha256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=", certificate, "remote", "Default", "local", "Default", FederationOrigin.Runtime);
 
+#pragma warning disable CA5398 // The specification asserts that TLS 1.3 is the only protocol, by design (decision 0027).
     [Fact] void should_allow_tls_1_3_only() => _handler.SslOptions.EnabledSslProtocols.ShouldEqual(SslProtocols.Tls13);
+#pragma warning restore CA5398
     [Fact] void should_present_the_client_certificate() => _handler.SslOptions.ClientCertificates!.Count.ShouldEqual(1);
     [Fact] void should_validate_the_server_by_pin_and_not_by_chain() => _handler.SslOptions.RemoteCertificateValidationCallback.ShouldNotBeNull();
     [Fact] void should_accept_the_pinned_server() => _handler.SslOptions.RemoteCertificateValidationCallback!(this, _certificate, null, SslPolicyErrors.RemoteCertificateChainErrors).ShouldBeTrue();
