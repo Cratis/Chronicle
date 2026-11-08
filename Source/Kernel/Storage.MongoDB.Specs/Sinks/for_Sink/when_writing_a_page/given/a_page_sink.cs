@@ -24,6 +24,11 @@ public class a_page_sink(MongoDBFixture fixture) : Specification
     protected int _bulkWrites;
     protected int _reads;
     protected int _directWrites;
+
+    /// <summary>
+    /// When set, every bulk write throws this instead of reaching the database.
+    /// </summary>
+    protected Exception? _bulkWriteFailure;
     readonly string _databaseName = MongoDBSpecDatabaseNames.New();
     IMongoClient _client;
 
@@ -52,6 +57,16 @@ public class a_page_sink(MongoDBFixture fixture) : Specification
     protected static SinkPageWrite Write(string key, int count) =>
         new(KeyFor(key), Changes(count), (ulong)count, SinkWriteMode.Always);
 
+    protected static SinkPageWrite Guarded(string key, int count) =>
+        new(KeyFor(key), Changes(count), (ulong)count, SinkWriteMode.OnlyWhenAdvancingWatermark);
+
+    protected static SinkPageWrite Removal(string key, ulong eventSequenceNumber)
+    {
+        var changeset = new Changeset<AppendedEvent, ExpandoObject>(new ObjectComparer(), null!, new ExpandoObject());
+        changeset.Remove();
+        return new(KeyFor(key), changeset, eventSequenceNumber, SinkWriteMode.Always);
+    }
+
     protected static Changeset<AppendedEvent, ExpandoObject> Changes(int count)
     {
         var changeset = new Changeset<AppendedEvent, ExpandoObject>(new ObjectComparer(), null!, new ExpandoObject());
@@ -69,6 +84,11 @@ public class a_page_sink(MongoDBFixture fixture) : Specification
             .Returns(info =>
             {
                 _bulkWrites++;
+                if (_bulkWriteFailure is not null)
+                {
+                    throw _bulkWriteFailure;
+                }
+
                 return collection.BulkWriteAsync(info.ArgAt<IEnumerable<WriteModel<BsonDocument>>>(0), info.ArgAt<BulkWriteOptions>(1));
             });
         intercepted.UpdateOneAsync(Arg.Any<FilterDefinition<BsonDocument>>(), Arg.Any<UpdateDefinition<BsonDocument>>(), Arg.Any<UpdateOptions>(), Arg.Any<CancellationToken>())

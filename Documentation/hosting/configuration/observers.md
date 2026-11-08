@@ -179,7 +179,10 @@ A maximum of `0` or less means the kernel sets none, so the declared bound appli
 
 - An event's size is the UTF-8 length of its JSON content. A reducer page also holds the state of each partition in
   it, so that state counts toward the byte bound once per page, estimated from the size it had when it was last
-  reduced. A state the kernel has not seen since it started counts from the next page on.
+  reduced. Only the states of recently reduced partitions count: each silo remembers the sizes of about 10 000
+  partitions across all its reducers and namespaces, and forgets those not reduced for the longest. A state the kernel
+  has not seen since it started, or has forgotten, does not count toward the page that reads it, only toward the pages
+  after it.
 - The byte bound covers content, not the whole message. The envelope around it, event metadata, partition keys and a
   reducer's states as sent, comes on top. The default of 4 MiB equals the default receive limit of gRPC clients such as
   grpc-js and grpc-java, so a client that keeps that limit should declare a smaller bound or raise its receive limit.

@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections.Concurrent;
 using System.Diagnostics.Metrics;
 using System.Dynamic;
 using Cratis.Chronicle.Concepts;
@@ -23,7 +22,8 @@ namespace Cratis.Chronicle.Observation.Reducers;
 /// A reduce holds several copies of the state at once, so the cost of one grows with the state, and nothing else
 /// limits how many run at the same time. The size of a state is not known before it has been read, so the gate
 /// remembers how large the state of a partition was the last time it was reduced and reserves for that; the first
-/// reduce of a partition after a restart is only accounted for once its state has been read.
+/// reduce of a partition after a restart, or after it has not been reduced for long enough to be forgotten, is only
+/// accounted for once its state has been read.
 /// </remarks>
 /// <param name="options">The <see cref="ChronicleOptions"/>.</param>
 /// <param name="budget">The <see cref="IMemoryBudget"/> to reserve from. When not available nothing is gated.</param>
@@ -34,14 +34,17 @@ public class ReducerMemoryGate(
     IMemoryBudget? budget = null,
     [FromKeyedServices(WellKnown.MeterName)] IMeter<ReducerMemoryGate>? meter = null)
 {
-    const int MaximumRememberedPartitions = 10_000;
+    /// <summary>
+    /// The number of partitions, across all reducers and namespaces of the silo, whose state sizes are remembered.
+    /// </summary>
+    internal const int MaximumRememberedPartitions = 10_000;
 
     readonly MemoryManagement _settings = options.Value.Memory;
     readonly Histogram<long>? _stateSize = meter?.ActualMeter.CreateHistogram<long>(
         "cratis.chronicle.reducer.state_size",
         "By",
         "Estimated size of the state of a reducer read model when a reduce starts");
-    readonly ConcurrentDictionary<(string Scope, Key Partition), long> _sizes = new();
+    readonly RememberedStateSizes _sizes = new(MaximumRememberedPartitions);
 
     /// <summary>
     /// Wait for room to reduce a partition.
@@ -51,7 +54,7 @@ public class ReducerMemoryGate(
     /// <returns>The <see cref="ReducerMemoryTicket"/>, to dispose when the reduce is done.</returns>
     public async ValueTask<ReducerMemoryTicket> Enter(string scope, Key partition)
     {
-        if (budget is null || !_settings.Enabled || !_sizes.TryGetValue((scope, partition), out var size))
+        if (budget is null || !_settings.Enabled || !_sizes.TryGet(scope, partition, out var size))
         {
             return ReducerMemoryTicket.None;
         }
@@ -81,7 +84,7 @@ public class ReducerMemoryGate(
 
         var size = ExpandoObjectSize.Estimate(state);
         _stateSize?.Record(size);
-        Remember(scope, partition, size);
+        _sizes.Remember(scope, partition, size);
 
         if (budget is null || !_settings.Enabled)
         {
@@ -121,7 +124,7 @@ public class ReducerMemoryGate(
             return ReducerMemoryTicket.None;
         }
 
-        var cost = partitions.Sum(partition => _sizes.TryGetValue((scope, partition), out var size) ? CostOf(size) : 0);
+        var cost = partitions.Sum(partition => _sizes.TryGet(scope, partition, out var size) ? CostOf(size) : 0);
         return cost < _settings.MinimumReservationBytes ? ReducerMemoryTicket.None : new ReducerMemoryTicket(await budget.Reserve(cost));
     }
 
@@ -144,7 +147,7 @@ public class ReducerMemoryGate(
 
             var size = ExpandoObjectSize.Estimate(state);
             _stateSize?.Record(size);
-            Remember(scope, partition, size);
+            _sizes.Remember(scope, partition, size);
             cost += CostOf(size);
         }
 
@@ -171,18 +174,10 @@ public class ReducerMemoryGate(
     /// <returns>The estimated size in bytes, or zero when it is not remembered.</returns>
     /// <remarks>
     /// Sizes are remembered whether or not the budget is enabled, since the bounds of a reducer page count them too.
+    /// Only the sizes of recently reduced partitions are kept, about <see cref="MaximumRememberedPartitions"/> of them
+    /// across all reducers and namespaces of the silo; see <see cref="RememberedStateSizes"/>.
     /// </remarks>
-    public long RememberedSizeOf(string scope, Key partition) => _sizes.TryGetValue((scope, partition), out var size) ? size : 0;
-
-    void Remember(string scope, Key partition, long size)
-    {
-        if (_sizes.Count >= MaximumRememberedPartitions)
-        {
-            _sizes.Clear();
-        }
-
-        _sizes[(scope, partition)] = size;
-    }
+    public long RememberedSizeOf(string scope, Key partition) => _sizes.TryGet(scope, partition, out var size) ? size : 0;
 
     long CostOf(long size) => size * Math.Max(1, _settings.ReducerCostMultiplier);
 }
