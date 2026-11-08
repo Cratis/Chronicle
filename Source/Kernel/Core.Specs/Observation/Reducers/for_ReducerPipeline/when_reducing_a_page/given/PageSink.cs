@@ -18,6 +18,9 @@ namespace Cratis.Chronicle.Observation.Reducers.for_ReducerPipeline.when_reducin
 /// <summary>
 /// A sink that records how a page is read and written: prefetches, single reads, writes and bulk windows.
 /// </summary>
+/// <remarks>
+/// Like a sink that buffers, a write made while a bulk window is open is only durable once the window ends.
+/// </remarks>
 public class PageSink : ISink, ISinkPagePrefetch
 {
     /// <summary>
@@ -34,6 +37,21 @@ public class PageSink : ISink, ISinkPagePrefetch
     /// Gets the partitions written, in call order.
     /// </summary>
     public List<string> Writes { get; } = [];
+
+    /// <summary>
+    /// Gets the partitions whose writes are durable, in the order they became durable.
+    /// </summary>
+    public List<string> Durable { get; } = [];
+
+    /// <summary>
+    /// Gets the partitions whose writes are buffered in the open bulk window.
+    /// </summary>
+    public List<string> Buffered { get; } = [];
+
+    /// <summary>
+    /// Gets the failures a write of a partition reports for other partitions, as a flush of a shared window would.
+    /// </summary>
+    public Dictionary<string, FailedPartition[]> FailuresReportedByWrite { get; } = [];
 
     /// <summary>
     /// Gets the calls in the order they were made.
@@ -93,13 +111,21 @@ public class PageSink : ISink, ISinkPagePrefetch
         var partition = key.Value.ToString()!;
         Calls.Add($"{nameof(ApplyChanges)}:{partition}");
         Writes.Add(partition);
-        return Task.FromResult<IEnumerable<FailedPartition>>(FailingWrites.Contains(partition) ? [new FailedPartition(key, eventSequenceNumber) { Reason = "write failed" }] : []);
+        IEnumerable<FailedPartition> failures = FailuresReportedByWrite.TryGetValue(partition, out var reported) ? reported : [];
+        if (FailingWrites.Contains(partition))
+        {
+            return Task.FromResult<IEnumerable<FailedPartition>>([.. failures, new FailedPartition(key, eventSequenceNumber) { Reason = "write failed" }]);
+        }
+
+        (IsInBulkMode ? Buffered : Durable).Add(partition);
+        return Task.FromResult(failures);
     }
 
     /// <inheritdoc/>
     public Task BeginBulk()
     {
         Calls.Add(nameof(BeginBulk));
+        IsInBulkMode = true;
         return Task.CompletedTask;
     }
 
@@ -107,6 +133,9 @@ public class PageSink : ISink, ISinkPagePrefetch
     public Task<IEnumerable<FailedPartition>> EndBulk()
     {
         Calls.Add(nameof(EndBulk));
+        IsInBulkMode = false;
+        Durable.AddRange(Buffered);
+        Buffered.Clear();
         return Task.FromResult(FailuresAtEndOfBulk);
     }
 

@@ -16,9 +16,9 @@ public class and_every_partition_succeeds : given.a_page_pipeline
     [Fact] void should_prefetch_the_states_of_every_partition_in_one_read() => _sink.Prefetches.Single().Select(_ => _.Value).ShouldContainOnly(Partitions);
     [Fact] void should_prefetch_before_reading_any_state() => _sink.Calls.IndexOf("PrefetchPage").ShouldBeLessThan(_sink.Calls.FindIndex(_ => _.StartsWith("FindOrDefault")));
     [Fact] void should_write_every_partition() => _sink.Writes.ShouldContainOnly(Partitions);
-    [Fact] void should_open_one_bulk_window() => _sink.Calls.Count(_ => _ == "BeginBulk").ShouldEqual(1);
-    [Fact] void should_close_the_bulk_window_after_every_write() => _sink.Calls[^1].ShouldEqual("EndBulk");
-    [Fact] void should_write_within_the_bulk_window() => _sink.Calls.IndexOf("BeginBulk").ShouldBeLessThan(_sink.Calls.FindIndex(_ => _.StartsWith("ApplyChanges")));
+    [Fact] void should_not_begin_a_bulk_window() => _sink.Calls.ShouldNotContain("BeginBulk");
+    [Fact] void should_not_end_a_bulk_window() => _sink.Calls.ShouldNotContain("EndBulk");
+    [Fact] void should_have_made_every_write_durable_before_returning() => _sink.Durable.ShouldContainOnly(Partitions);
     [Fact] void should_report_a_change_for_every_partition() => _outcome.Notifications.Count.ShouldEqual(3);
     [Fact] void should_report_no_failed_partitions() => _outcome.FailedPartitions.ShouldBeEmpty();
 }

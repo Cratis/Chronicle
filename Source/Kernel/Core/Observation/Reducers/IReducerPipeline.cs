@@ -65,9 +65,11 @@ public interface IReducerPipeline
     /// <param name="createNotification">Whether to build the notification of each change; false when nothing is watching.</param>
     /// <returns>The <see cref="ReducerPageOutcome"/> with the result, the change and any failed write of each partition.</returns>
     /// <remarks>
-    /// The states of every partition are read in one sink read where the sink can, and the successful states are written
-    /// in one bulk window. A partition the client failed or deferred writes nothing, and a failed write fails only its own
-    /// partition. Each partition is reduced exactly as <see cref="Reduce"/> reduces it on its own.
+    /// The states of every partition are read in one sink read where the sink can, and the successful states are written in
+    /// one write where the sink can. A page never opens, flushes or closes the sink's shared bulk window, so every write is
+    /// durable or reported as failed when the page returns; a window someone else holds open, such as a replay's, is joined.
+    /// A partition the client failed or deferred writes nothing, and a failed write fails only its own partition. Each
+    /// partition is reduced exactly as <see cref="Reduce"/> reduces it on its own.
     /// </remarks>
     Task<ReducerPageOutcome> ReducePage(IReadOnlyList<ReducerContext> contexts, ReducerPageDelegate reducer, bool createNotification = true);
 }

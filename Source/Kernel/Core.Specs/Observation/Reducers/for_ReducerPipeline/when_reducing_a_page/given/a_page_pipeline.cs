@@ -28,7 +28,7 @@ public class a_page_pipeline : Specification
 
     void Establish()
     {
-        _sink = new PageSink();
+        _sink = CreateSink();
         _reducerCalls = [];
         _clientResults = Partitions.ToDictionary(_ => _, _ => ObserverSubscriberResult.Ok(EventSequenceNumber.First));
 
@@ -62,8 +62,13 @@ public class a_page_pipeline : Specification
             objectComparer,
             readModelsCompliance,
             EventStore,
-            EventStoreNamespace);
+            EventStoreNamespace,
+            memoryGate: CreateMemoryGate());
     }
+
+    protected virtual PageSink CreateSink() => new();
+
+    protected virtual ReducerMemoryGate? CreateMemoryGate() => null;
 
     protected static ExpandoObject StateWith(int value)
     {
@@ -86,7 +91,7 @@ public class a_page_pipeline : Specification
 
     protected async Task ReduceThePage() => _outcome = await _pipeline.ReducePage(Page(), Reduce);
 
-    static AppendedEvent CreateEvent(string eventSourceId, ulong sequenceNumber)
+    protected static AppendedEvent CreateEvent(string eventSourceId, ulong sequenceNumber)
     {
         var context = EventContext.From(
             EventStore,
