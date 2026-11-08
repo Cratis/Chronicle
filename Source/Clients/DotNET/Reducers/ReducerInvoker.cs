@@ -166,6 +166,14 @@ public class ReducerInvoker : IReducerInvoker, IBatchReducerInvoker
 
     static void ThrowIfAnyReducerMethodTakesBatchContext(Type targetType, Type readModelType, IEnumerable<Type> eventTypes)
     {
+        // In a reducer with a batch method, a method shaped like a reducer method but taking the BatchContext is a
+        // helper the batch method calls with the context it was given. Only a per-event reducer can have meant it as a
+        // reducer method, and skipped it.
+        if (BatchMethods.DeclaresAny(targetType))
+        {
+            return;
+        }
+
         var offending = Array.Find(
             targetType.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic),
             method => method.TakesBatchContextAsReducerMethod(readModelType, eventTypes));

@@ -147,7 +147,7 @@ public class BatchMethodAnalyzer : DiagnosticAnalyzer
         var observer = method.ContainingType;
         var kind = BatchObservers.KindOf(observer, symbols);
         var takesItInstead = kind == BatchObserverKind.Reducer
-            ? BatchObservers.IsReduceShapedWithBatchContext(method, observer, symbols)
+            ? BatchObservers.IsReduceShapedWithBatchContext(method, observer, symbols) && !BatchObservers.HasBatchMethod(observer, symbols)
             : BatchObservers.IsPerEventMethod(method, observer, kind, symbols);
         if (takesItInstead)
         {

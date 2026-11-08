@@ -223,7 +223,8 @@ public static class ReducerTypeExtensions
     /// <returns>True if it has that shape, false if not.</returns>
     /// <remarks>
     /// A reducer method is called once per event, and a <see cref="BatchContext"/> describes a page of events, so only a batch
-    /// method receives it. Without this the method is not a reducer method, and would be skipped without a word.
+    /// method receives it. Without this the method is not a reducer method, and would be skipped without a word. In a reducer
+    /// that has a batch method the same shape is a helper the batch method calls, so callers only refuse it in a per-event reducer.
     /// </remarks>
     internal static bool TakesBatchContextAsReducerMethod(this MethodInfo methodInfo, Type readModelType, IEnumerable<Type> eventTypes) =>
         methodInfo.GetParameters().Length == 3 && HasReducerMethodShape(methodInfo, readModelType, eventTypes, typeof(BatchContext));

@@ -141,6 +141,7 @@ internal static class BatchObservers
 
     /// <summary>
     /// Gets whether a method of a reducer has the reduce shape, but takes a BatchContext where a reduce method takes the EventContext.
+    /// Callers refuse it only in a reducer without a batch method; see <see cref="HasBatchMethod"/>.
     /// </summary>
     /// <param name="method">The method.</param>
     /// <param name="observer">The reducer type.</param>
@@ -148,6 +149,19 @@ internal static class BatchObservers
     /// <returns>True when it does.</returns>
     internal static bool IsReduceShapedWithBatchContext(IMethodSymbol method, INamedTypeSymbol observer, BatchSymbols symbols) =>
         symbols.BatchContext is not null && method.Parameters.Length == 3 && IsReduceShaped(method, observer, symbols, symbols.BatchContext);
+
+    /// <summary>
+    /// Gets whether a type or one of its base types declares a batch method.
+    /// </summary>
+    /// <param name="type">The type.</param>
+    /// <param name="symbols">The <see cref="BatchSymbols"/> of the compilation.</param>
+    /// <returns>True when it does.</returns>
+    /// <remarks>
+    /// In a reducer with a batch method, a reduce-shaped method taking the BatchContext is a helper the batch method calls,
+    /// not a reducer method that was meant to receive single events.
+    /// </remarks>
+    internal static bool HasBatchMethod(INamedTypeSymbol type, BatchSymbols symbols) =>
+        MethodsOf(type).Any(method => IsBatchMethod(method, symbols));
 
     /// <summary>
     /// Gets the methods of a type and its base types.
