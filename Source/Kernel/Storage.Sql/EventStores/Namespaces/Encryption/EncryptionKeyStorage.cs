@@ -20,7 +20,7 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.Encryption;
 /// <param name="logger">Optional <see cref="ILogger{EncryptionKeyStorage}"/> for logging.</param>
 /// <param name="random">Optional <see cref="Random"/> used for retry jitter; defaults to <see cref="Random.Shared"/>.</param>
 /// <param name="delay">Optional delay function used between retries; defaults to <see cref="Task.Delay(TimeSpan)"/>.</param>
-public class EncryptionKeyStorage(IDatabase database, ILogger<EncryptionKeyStorage>? logger = null, Random? random = null, Func<TimeSpan, Task>? delay = null) : IEncryptionKeyStorage
+public partial class EncryptionKeyStorage(IDatabase database, ILogger<EncryptionKeyStorage>? logger = null, Random? random = null, Func<TimeSpan, Task>? delay = null) : IEncryptionKeyStorage, IEncryptionKeyFence
 {
     const int MaximumAttempts = 8;
     const int MaximumRequests = 1024;

@@ -45,11 +45,12 @@ public static class AzureKeyVaultChronicleBuilderExtensions
         builder.Services.AddSingleton<IEncryptionKeyStoreUpgradeCheck>(_ =>
             new Storage.AzureKeyVault.AzureKeyVaultKeyStoreUpgradeCheck(CreateSecretClient(complianceStorage.ConnectionDetails)));
 
-        return builder.WithComplianceEncryptionKeyStorage(options, serviceProvider =>
+        return builder.WithComplianceEncryptionKeyStorage(options, (serviceProvider, authority) =>
             new CacheEncryptionKeyStorage(
                 new Storage.AzureKeyVault.AzureKeyVaultEncryptionKeyStorage(
                     CreateSecretClient(complianceStorage.ConnectionDetails),
-                    serviceProvider.GetRequiredService<ILoggerFactory>().CreateLogger<Storage.AzureKeyVault.AzureKeyVaultEncryptionKeyStorage>())));
+                    serviceProvider.GetRequiredService<ILoggerFactory>().CreateLogger<Storage.AzureKeyVault.AzureKeyVaultEncryptionKeyStorage>(),
+                    authority)));
     }
 
     static SecretClient CreateSecretClient(string connectionDetails) =>

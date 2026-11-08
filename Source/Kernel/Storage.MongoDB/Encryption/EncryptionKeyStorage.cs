@@ -14,7 +14,7 @@ namespace Cratis.Compliance.MongoDB;
 /// MongoDB implementation of <see cref="IEncryptionKeyStorage"/> using a single-document fence and staged key publication.
 /// </summary>
 /// <param name="database">The scoped database.</param>
-public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
+public partial class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage, IEncryptionKeyFence
 {
     /// <summary>
     /// The encryption key collection name.

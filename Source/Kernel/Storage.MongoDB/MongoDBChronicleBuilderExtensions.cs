@@ -119,6 +119,7 @@ public static class MongoDBChronicleBuilderExtensions
             services.TryAddSingleton<IReadModelChangeStreams, ReadModelChangeStreams>();
             services.AddSingleton<IMongoDBClientManager, MongoDBClientManager>();
             services.AddSingleton<EncryptionKeyStorage>();
+            services.AddSingleton<IEncryptionKeyFence>(sp => sp.GetRequiredService<EncryptionKeyStorage>());
             services.AddSingleton<IEncryptionKeyStorage>(sp => new CacheEncryptionKeyStorage(sp.GetRequiredService<EncryptionKeyStorage>()));
             services.AddSingleton<IClusterStorage, ClusterStorage>();
             services.AddSingleton<ISingleWriterLeaseStorage, MongoDBSingleWriterLeaseStorage>();

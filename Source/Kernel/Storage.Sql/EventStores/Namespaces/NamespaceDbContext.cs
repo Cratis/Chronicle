@@ -83,6 +83,9 @@ public class NamespaceDbContext(DbContextOptions<NamespaceDbContext> options) : 
     /// </summary>
     public DbSet<Encryption.EncryptionKeyErasure> EncryptionKeyErasures { get; set; } = null!;
 
+    /// <summary>Gets or sets the authorities for external key-material stores.</summary>
+    public DbSet<Encryption.EncryptionKeyExternalFence> EncryptionKeyExternalFences { get; set; } = null!;
+
     /// <summary>
     /// Gets or sets the closed streams DbSet.
     /// </summary>
@@ -171,6 +174,7 @@ public class NamespaceDbContext(DbContextOptions<NamespaceDbContext> options) : 
         {
             modelBuilder.Entity<Encryption.EncryptionKey>().Property(e => e.Identifier).UseCollation(Encryption.EncryptionKeyIdentifierColumn.Collation);
             modelBuilder.Entity<Encryption.EncryptionKeyErasure>().Property(e => e.Identifier).UseCollation(Encryption.EncryptionKeyIdentifierColumn.Collation);
+            modelBuilder.Entity<Encryption.EncryptionKeyExternalFence>().Property(e => e.Identifier).UseCollation(Encryption.EncryptionKeyIdentifierColumn.Collation);
         }
 
         modelBuilder.Entity<Alerts.AlertIncidentEntity>(entity =>

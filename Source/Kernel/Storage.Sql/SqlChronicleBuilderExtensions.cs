@@ -40,6 +40,7 @@ public static class SqlChronicleBuilderExtensions
         builder.Services.AddSingleton<IClusterStorage, ClusterStorage>();
         builder.Services.AddSingleton<ISingleWriterLeaseStorage, SqlSingleWriterLeaseStorage>();
         builder.Services.AddSingleton<EncryptionKeyStorage>();
+        builder.Services.AddSingleton<IEncryptionKeyFence>(sp => sp.GetRequiredService<EncryptionKeyStorage>());
         builder.Services.AddSingleton<IEncryptionKeyStorage>(sp => new CacheEncryptionKeyStorage(sp.GetRequiredService<EncryptionKeyStorage>()));
 
         builder.Services.AddSingleton<IReminderTable, ReminderTable>();

@@ -10,12 +10,23 @@ namespace Cratis.Chronicle.Storage.InMemory.Compliance;
 /// <summary>
 /// Represents an in-memory implementation of <see cref="IEncryptionKeyStorage"/>.
 /// </summary>
-public sealed class EncryptionKeyStorage : IEncryptionKeyStorage
+public sealed class EncryptionKeyStorage : IEncryptionKeyStorage, IEncryptionKeyFence
 {
     readonly InMemoryEncryptionKeyStorage _storage = new();
 
     /// <inheritdoc/>
+    public bool IsDurable => false;
+
+    /// <inheritdoc/>
     public EncryptionKeyFenceGuarantees FenceGuarantees => _storage.FenceGuarantees;
+
+    /// <inheritdoc/>
+    public Task<EncryptionKeyFenceState> ReadFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier) =>
+        _storage.ReadFor(eventStore, eventStoreNamespace, identifier);
+
+    /// <inheritdoc/>
+    public Task<bool> CompareExchangeFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyFenceState observed, EncryptionKeyFenceState next) =>
+        _storage.CompareExchangeFor(eventStore, eventStoreNamespace, identifier, observed, next);
 
     /// <inheritdoc/>
     public Task SaveFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKey key, EncryptionKeyRevision? revision = null) =>

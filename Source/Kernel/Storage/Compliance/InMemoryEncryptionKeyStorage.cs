@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Storage.Compliance;
 /// Represents an implementation of <see cref="IEncryptionKeyStorage"/> for in-memory.
 /// </summary>
 [Singleton]
-public class InMemoryEncryptionKeyStorage : IEncryptionKeyStorage
+public partial class InMemoryEncryptionKeyStorage : IEncryptionKeyStorage, IEncryptionKeyFence
 {
     readonly Dictionary<Key, EncryptionKeyAtRevision> _keys = [];
     readonly Dictionary<Scope, EncryptionKeyErasure> _erasures = [];
