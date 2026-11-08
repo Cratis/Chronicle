@@ -79,6 +79,10 @@ public interface IImport : IGrainWithStringKey
     /// <summary>
     /// Records the settlement of one committed chunk; this is the commit's checkpoint.
     /// </summary>
+    /// <remarks>
+    /// A chunk that settles after the import was failed mid-commit is recorded too, since its events are in the log; the
+    /// import stays failed.
+    /// </remarks>
     /// <param name="chunkIndex">The staged chunk that settled.</param>
     /// <param name="outcomes">How each of its events settled.</param>
     /// <returns>Awaitable task.</returns>
@@ -99,8 +103,12 @@ public interface IImport : IGrainWithStringKey
 
     /// <summary>
     /// Fails the import when it has been validating or committing for longer than the staging retention without
-    /// progress, which means nothing is left to finish it.
+    /// progress and no commit job is left to finish it.
     /// </summary>
+    /// <remarks>
+    /// A commit job that is still there, running or stopped, resumes from the checkpoint, as after a kernel outage longer
+    /// than the retention, so the import is left to it. When the jobs cannot be read, the import is left until the next check.
+    /// </remarks>
     /// <returns>True when it was failed.</returns>
     Task<bool> FailIfStalled();
 

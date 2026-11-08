@@ -45,23 +45,32 @@ public partial class EventSequence
     /// The most imports whose whole-import validation claims one event sequence keeps at once.
     /// </summary>
     /// <remarks>
-    /// The claims live in the grain's memory between validation calls. When more imports validate at once, the one
-    /// touched least recently loses its claims and restarts its validation, so the memory stays bounded.
+    /// The claims live in the grain's memory between validation calls. An import that starts validating while as many
+    /// imports hold claims is told to wait and start again later; an import in the middle of its validation never loses
+    /// its claims to a newcomer, so imports queue up instead of evicting each other. Claims that no call has touched for
+    /// <see cref="ImportValidationIdleTimeout"/> belong to a validation that stopped without releasing them, and give way.
     /// </remarks>
     internal const int MaxImportsValidating = 4;
 
-    readonly Dictionary<ImportId, (ConstraintBatchClaims Claims, long Touched)> _importClaims = [];
-    long _importClaimsTouched;
+    /// <summary>
+    /// How long the claims of an import may go untouched before they are taken to belong to a validation that stopped.
+    /// </summary>
+    /// <remarks>
+    /// A running validation touches its claims with every chunk, so this is far longer than one chunk takes.
+    /// </remarks>
+    internal static readonly TimeSpan ImportValidationIdleTimeout = TimeSpan.FromMinutes(5);
+
+    readonly Dictionary<ImportId, (ConstraintBatchClaims Claims, DateTimeOffset Touched)> _importClaims = [];
     bool _committingImport;
 
     /// <inheritdoc/>
     public async Task<ImportChunkValidationResult> ValidateImportChunk(ImportId importId, bool first, IReadOnlyList<ImportEventToAppend> events)
     {
         if (!_mayWriteSequence) throw new ReservedEventSequenceName(_eventSequenceId);
-        if (first) StartImportClaims(importId);
+        if (first && !TryStartImportClaims(importId)) return ImportChunkValidationResult.Wait;
         if (!_importClaims.TryGetValue(importId, out var entry)) return ImportChunkValidationResult.Restart;
         var claims = entry.Claims;
-        _importClaims[importId] = (claims, ++_importClaimsTouched);
+        _importClaims[importId] = (claims, _timeProvider.GetUtcNow());
 
         await RefreshConstraintsIfChanged();
         if (await RefusedByPendingConstraintIndex(events.Select(_ => _.Event.EventType.Id).Distinct().ToArray()))
@@ -114,7 +123,7 @@ public partial class EventSequence
         var outcomes = new Dictionary<long, ImportEventOutcome>();
         if (mayBeCommitted)
         {
-            var found = await FindCommittedImportEvents(importId, committedFrom);
+            var found = await FindCommittedImportEvents(importId, committedFrom, events.Select(_ => _.Index).ToHashSet());
             var recovered = new List<AppendedEvent>();
             foreach (var @event in events.Where(_ => found.ContainsKey(_.Index)))
             {
@@ -186,17 +195,18 @@ public partial class EventSequence
             : new(@event.Index, @event.Event.EventType, ImportEventOutcomeKind.Rejected, EventSequenceNumber.Unavailable, DescribeFailure(result.Result));
     }
 
-    void StartImportClaims(ImportId importId)
+    bool TryStartImportClaims(ImportId importId)
     {
         _importClaims.Remove(importId);
-        while (_importClaims.Count >= MaxImportsValidating)
+        var now = _timeProvider.GetUtcNow();
+        foreach (var idle in _importClaims.Where(_ => now - _.Value.Touched > ImportValidationIdleTimeout).Select(_ => _.Key).ToArray())
         {
-            // The import that has waited longest loses its claims; its next call restarts its validation.
-            var oldest = _importClaims.MinBy(_ => _.Value.Touched).Key;
-            _importClaims.Remove(oldest);
+            _importClaims.Remove(idle);
         }
 
-        _importClaims[importId] = (new(), ++_importClaimsTouched);
+        if (_importClaims.Count >= MaxImportsValidating) return false;
+        _importClaims[importId] = (new(), now);
+        return true;
     }
 
     /// <summary>
@@ -249,17 +259,29 @@ public partial class EventSequence
         }
     }
 
-    async Task<Dictionary<long, AppendedEvent>> FindCommittedImportEvents(ImportId importId, EventSequenceNumber committedFrom)
+    /// <summary>
+    /// Finds the events of a slice of an import that an interrupted call already stored.
+    /// </summary>
+    /// <param name="importId">The <see cref="ImportId"/>.</param>
+    /// <param name="searchFrom">The sequence number below which none of the slice's events can be.</param>
+    /// <param name="indexes">The indexes in the import of the slice's events.</param>
+    /// <returns>The stored events, by their index in the import.</returns>
+    /// <remarks>
+    /// This runs within the grain's turn, holding every other appender to the sequence, so it reads no more than it must:
+    /// from where the commit says the slice can start, through a cursor that pages the log, and only until every event
+    /// of the slice is found. Only the slice's events are kept.
+    /// </remarks>
+    async Task<Dictionary<long, AppendedEvent>> FindCommittedImportEvents(ImportId importId, EventSequenceNumber searchFrom, HashSet<long> indexes)
     {
         var found = new Dictionary<long, AppendedEvent>();
-        if (!committedFrom.IsActualValue || committedFrom >= State.SequenceNumber) return found;
+        if (indexes.Count == 0 || !searchFrom.IsActualValue || searchFrom >= State.SequenceNumber) return found;
 
         var tail = await EventSequenceStorage.GetTailSequenceNumber();
-        if (tail == EventSequenceNumber.Unavailable || tail < committedFrom) return found;
+        if (tail == EventSequenceNumber.Unavailable || tail < searchFrom) return found;
 
         var import = importId.Value.ToString("D", CultureInfo.InvariantCulture);
-        using var cursor = await EventSequenceStorage.GetRange(committedFrom, tail);
-        while (await cursor.MoveNext())
+        using var cursor = await EventSequenceStorage.GetRange(searchFrom, tail);
+        while (found.Count < indexes.Count && await cursor.MoveNext())
         {
             foreach (var @event in cursor.Current)
             {
@@ -268,7 +290,8 @@ public partial class EventSequence
                     _.Properties.TryGetValue(ImportIdProperty, out var id) &&
                     string.Equals(id, import, StringComparison.OrdinalIgnoreCase));
                 if (causation?.Properties.TryGetValue(ImportEventIndexProperty, out var index) == true &&
-                    long.TryParse(index, NumberStyles.Integer, CultureInfo.InvariantCulture, out var eventIndex))
+                    long.TryParse(index, NumberStyles.Integer, CultureInfo.InvariantCulture, out var eventIndex) &&
+                    indexes.Contains(eventIndex))
                 {
                     found[eventIndex] = @event;
                 }

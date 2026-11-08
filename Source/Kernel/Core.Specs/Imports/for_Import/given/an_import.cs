@@ -1,7 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
 using Cratis.Choreography.Jobs;
+using Cratis.Choreography.Storage.Jobs;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Imports;
 using Cratis.Chronicle.Configuration;
@@ -11,6 +13,7 @@ using Cratis.Monads;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using ImportsStorage = Cratis.Chronicle.Storage.InMemory.Imports.ImportStorage;
+using JobError = Cratis.Choreography.Storage.Jobs.JobError;
 
 namespace Cratis.Chronicle.Imports.for_Import.given;
 
@@ -26,6 +29,8 @@ public class an_import : Specification
     protected SettableTime _time;
     protected List<ImportEventsRequest> _startedJobs;
     protected ImportOperationResult _result;
+    protected List<JobState> _commitJobs;
+    protected Catch<IImmutableList<JobState>, JobError>? _commitJobsLookup;
 
     void Establish()
     {
@@ -36,6 +41,9 @@ public class an_import : Specification
         _imports = new();
         var storage = Substitute.For<IStorage>();
         storage.GetEventStore(_key.EventStore).GetNamespace(_key.Namespace).Imports.Returns(_imports);
+        _commitJobs = [];
+        storage.GetEventStore(_key.EventStore).GetNamespace(_key.Namespace).Jobs.GetJobs<IImportEvents, JobState>()
+            .Returns(_ => Task.FromResult(_commitJobsLookup ?? (Catch<IImmutableList<JobState>, JobError>)_commitJobs.ToImmutableList()));
         _startedJobs = [];
         _jobsManager = Substitute.For<IJobsManager>();
         _jobsManager.Start<IImportEvents, ImportEventsRequest>(Arg.Do<ImportEventsRequest>(_startedJobs.Add))
@@ -49,6 +57,9 @@ public class an_import : Specification
     }
 
     protected ImportRecord Record => _grainState.Record!;
+
+    protected JobState CommitJob(JobStatus status, ImportId? importId = null) =>
+        new() { Id = new(Guid.NewGuid()), Status = status, Request = new ImportEventsRequest(importId ?? _key.ImportId) };
 
     protected Task Begin(OnInvalidEvent onInvalid = OnInvalidEvent.Reject) => _grain.Begin(EventSequenceId.Log, onInvalid);
 

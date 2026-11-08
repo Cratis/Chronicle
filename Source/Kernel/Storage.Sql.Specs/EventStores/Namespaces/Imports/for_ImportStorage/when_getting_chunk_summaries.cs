@@ -20,5 +20,4 @@ public class when_getting_chunk_summaries : given.an_import_storage
 
     [Fact] void should_return_only_the_chunks_of_the_import_ordered_by_index() => _summaries.Select(_ => _.ChunkIndex).ShouldEqual([0, 1, 2]);
     [Fact] void should_count_received_staged_and_rejected_events() => (_summaries[0].ChunkIndex, _summaries[0].FirstEventIndex, _summaries[0].EventsReceived, _summaries[0].EventsStaged, _summaries[0].EventsRejected).ShouldEqual((0, 0L, 3, 2, 1));
-    [Fact] void should_carry_the_event_types_staged() => _summaries[0].EventTypes.ShouldContainOnly("first");
 }

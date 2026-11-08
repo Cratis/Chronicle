@@ -21,8 +21,7 @@ public class when_saving_and_reading_an_import : given.an_import_storage
             ExpectedEvents = 10,
             LastCommittedChunk = 1,
             CommitStartedAt = 40,
-            CommittedRanges = [new ImportCommittedRange(0, 40, 44), new ImportCommittedRange(1, 46, 50)],
-            EventTypes = ["first", "second"]
+            CommittedRanges = [new ImportCommittedRange(0, 40, 44), new ImportCommittedRange(1, 46, 50)]
         };
         _record = _record.WithRejections([new ImportRejection(7, "first+1", ["unique: taken"])]);
         await _storage.Save(_record);
@@ -38,7 +37,6 @@ public class when_saving_and_reading_an_import : given.an_import_storage
     [Fact] void should_keep_the_event_sequence() => _read!.EventSequenceId.Value.ShouldEqual("my-sequence");
     [Fact] void should_keep_the_checkpoint() => (_read!.LastCommittedChunk, _read.CommittedFrom).ShouldEqual((1, 51UL));
     [Fact] void should_keep_the_rejections() => _read!.Rejections.Single().Reasons.Single().ShouldEqual("unique: taken");
-    [Fact] void should_keep_the_event_types() => _read!.EventTypes.ShouldEqual(["first", "second"]);
     [Fact] void should_keep_when_staged_events_occurred() => _chunk!.Events.First().Occurred.ShouldEqual(DateTimeOffset.UnixEpoch);
     [Fact] void should_keep_the_causation_of_staged_events() => _chunk!.Events.First().Causation!.Single().Properties["source"].ShouldEqual("legacy");
     [Fact] void should_keep_who_caused_staged_events() => _chunk!.Events.First().CausedBy!.Name.ShouldEqual("Migrator");

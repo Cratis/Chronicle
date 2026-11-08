@@ -56,10 +56,12 @@ public sealed class EventImport(
     readonly List<Task> _sends = [];
     readonly List<ImportEvent> _buffer = [];
     readonly Lock _lock = new();
+    readonly CancellationTokenSource _abandoning = new();
     int _bufferBytes;
     int _nextChunkIndex = acknowledgedChunks;
     long _nextEventIndex = acknowledgedEvents;
     Exception? _failure;
+    bool _abandoned;
     bool _completed;
 
     /// <inheritdoc/>
@@ -75,88 +77,76 @@ public sealed class EventImport(
         .Select(_ => _.Data.ToProgress());
 
     /// <inheritdoc/>
-    public async Task Add(IEnumerable<EventForEventSourceId> events, CancellationToken cancellationToken = default)
-    {
-        await _addLock.WaitAsync(cancellationToken);
-        try
-        {
-            foreach (var @event in events)
+    public Task Add(IEnumerable<EventForEventSourceId> events, CancellationToken cancellationToken = default) =>
+        WhileNotAbandoned(
+            async waitToken =>
             {
-                await Buffer(@event, cancellationToken);
-            }
-        }
-        finally
-        {
-            _addLock.Release();
-        }
-    }
+                foreach (var @event in events)
+                {
+                    await Buffer(@event, waitToken, cancellationToken);
+                }
+            },
+            cancellationToken);
 
     /// <inheritdoc/>
-    public async Task Add(IAsyncEnumerable<EventForEventSourceId> events, CancellationToken cancellationToken = default)
-    {
-        await _addLock.WaitAsync(cancellationToken);
-        try
-        {
-            await foreach (var @event in events.WithCancellation(cancellationToken))
+    public Task Add(IAsyncEnumerable<EventForEventSourceId> events, CancellationToken cancellationToken = default) =>
+        WhileNotAbandoned(
+            async waitToken =>
             {
-                await Buffer(@event, cancellationToken);
-            }
-        }
-        finally
-        {
-            _addLock.Release();
-        }
-    }
+                await foreach (var @event in events.WithCancellation(waitToken))
+                {
+                    await Buffer(@event, waitToken, cancellationToken);
+                }
+            },
+            cancellationToken);
 
     /// <inheritdoc/>
     public async Task<ImportResult> Complete(CancellationToken cancellationToken = default)
     {
-        await _addLock.WaitAsync(cancellationToken);
-        try
-        {
-            await Flush(cancellationToken);
-            await Task.WhenAll(Sends());
-            ThrowIfFailed();
-
-            var status = (await _service.CompleteImport(new()
+        ImportResult? result = null;
+        await WhileNotAbandoned(
+            async waitToken =>
             {
-                EventStore = _eventStore,
-                Namespace = _namespace,
-                ImportId = ImportId.Value,
-                ExpectedChunks = _nextChunkIndex,
-                ExpectedEvents = _nextEventIndex
-            })).EnsureSuccess();
-            _completed = true;
+                await Flush(waitToken, cancellationToken);
+                await Task.WhenAll(Sends());
+                ThrowIfFailed();
+                ThrowIfAbandoned();
 
-            if (status.Error is null && _options.WaitForCommit)
-            {
-                return await WaitForCommit(cancellationToken);
-            }
+                var status = (await _service.CompleteImport(new()
+                {
+                    EventStore = _eventStore,
+                    Namespace = _namespace,
+                    ImportId = ImportId.Value,
+                    ExpectedChunks = _nextChunkIndex,
+                    ExpectedEvents = _nextEventIndex
+                })).EnsureSuccess();
+                _completed = true;
 
-            return await Read() ?? new ImportResult { ImportId = ImportId, State = (ImportState)status.State, FailureReason = status.Error };
-        }
-        finally
-        {
-            _addLock.Release();
-        }
+                result = status.Error is null && _options.WaitForCommit
+                    ? await WaitForCommit(cancellationToken)
+                    : await Read() ?? new ImportResult { ImportId = ImportId, State = (ImportState)status.State, FailureReason = status.Error };
+            },
+            cancellationToken);
+        return result!;
     }
 
     /// <inheritdoc/>
-    public async Task<ImportResult> Abandon()
+    public async Task<ImportResult> Abandon(CancellationToken cancellationToken = default)
     {
-        // Taking the lock means no Add or Complete is cutting or sending a chunk while the import is abandoned.
-        await _addLock.WaitAsync();
-        try
+        // No chunk is sent once this is set, and an Add in progress is stopped rather than waited for: it may be reading
+        // a stream that never yields again.
+        lock (_lock)
         {
-            await Task.WhenAll(Sends()).ContinueWith(_ => { }, TaskScheduler.Default);
-            var status = (await _service.AbandonImport(new() { EventStore = _eventStore, Namespace = _namespace, ImportId = ImportId.Value })).EnsureSuccess();
-            _completed = true;
-            return await Read() ?? new ImportResult { ImportId = ImportId, State = (ImportState)status.State, FailureReason = status.Error };
+            _abandoned = true;
         }
-        finally
-        {
-            _addLock.Release();
-        }
+
+        await _abandoning.CancelAsync();
+
+        // Chunks already handed to the kernel settle first, so none is staged after the import is abandoned.
+        await Task.WhenAll(Sends()).ContinueWith(_ => { }, TaskScheduler.Default).WaitAsync(cancellationToken);
+        var status = (await _service.AbandonImport(new() { EventStore = _eventStore, Namespace = _namespace, ImportId = ImportId.Value })).EnsureSuccess();
+        _completed = true;
+        return await Read() ?? new ImportResult { ImportId = ImportId, State = (ImportState)status.State, FailureReason = status.Error };
     }
 
     /// <inheritdoc/>
@@ -170,6 +160,7 @@ public sealed class EventImport(
 
         _addLock.Dispose();
         _inFlight.Dispose();
+        _abandoning.Dispose();
     }
 
     static bool IsTerminal(ImportState state) => state is ImportState.Completed or ImportState.Failed or ImportState.Abandoned;
@@ -196,42 +187,73 @@ public sealed class EventImport(
 
     static int Utf8(string? value) => value is null ? 0 : Encoding.UTF8.GetByteCount(value);
 
-    async Task Buffer(EventForEventSourceId @event, CancellationToken cancellationToken)
+    async Task WhileNotAbandoned(Func<CancellationToken, Task> work, CancellationToken cancellationToken)
+    {
+        using var waiting = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _abandoning.Token);
+        try
+        {
+            ThrowIfAbandoned();
+            await _addLock.WaitAsync(waiting.Token);
+            try
+            {
+                await work(waiting.Token);
+            }
+            finally
+            {
+                _addLock.Release();
+            }
+        }
+        catch (OperationCanceledException) when (_abandoning.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
+        {
+            throw new ImportWasAbandoned(ImportId);
+        }
+    }
+
+    async Task Buffer(EventForEventSourceId @event, CancellationToken waitToken, CancellationToken cancellationToken)
     {
         ThrowIfFailed();
+        ThrowIfAbandoned();
         var converted = await _convert(@event);
         var bytes = SizeOf(converted);
         if (_buffer.Count > 0 && (_buffer.Count >= _maxEventsPerChunk || _bufferBytes + bytes > _maxBytesPerChunk))
         {
-            await Flush(cancellationToken);
+            await Flush(waitToken, cancellationToken);
         }
 
         _buffer.Add(converted);
         _bufferBytes += bytes;
     }
 
-    async Task Flush(CancellationToken cancellationToken)
+    async Task Flush(CancellationToken waitToken, CancellationToken cancellationToken)
     {
         if (_buffer.Count == 0) return;
 
         var events = _buffer.ToArray();
-        var chunkIndex = _nextChunkIndex++;
+        var chunkIndex = _nextChunkIndex;
         var firstEventIndex = _nextEventIndex;
-        _nextEventIndex += events.Length;
-        _buffer.Clear();
-        _bufferBytes = 0;
 
-        await _inFlight.WaitAsync(cancellationToken);
-        var send = Send(chunkIndex, firstEventIndex, events, cancellationToken);
+        await _inFlight.WaitAsync(waitToken);
         lock (_lock)
         {
+            // Checked and registered together, so Abandon sees every chunk sent before it and none is sent after it.
+            if (_abandoned)
+            {
+                _inFlight.Release();
+                throw new ImportWasAbandoned(ImportId);
+            }
+
+            _nextChunkIndex++;
+            _nextEventIndex += events.Length;
+            _buffer.Clear();
+            _bufferBytes = 0;
             _sends.RemoveAll(_ => _.IsCompleted);
-            _sends.Add(send);
+            _sends.Add(Task.Run(() => Send(chunkIndex, firstEventIndex, events, cancellationToken), CancellationToken.None));
         }
     }
 
     async Task Send(int chunkIndex, long firstEventIndex, ImportEvent[] events, CancellationToken cancellationToken)
     {
+        using var retrying = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _abandoning.Token);
         try
         {
             for (var attempt = 1; ; attempt++)
@@ -253,7 +275,7 @@ public sealed class EventImport(
                 catch (RpcException ex) when (_transientStatusCodes.Contains(ex.StatusCode) && attempt < _options.MaxChunkAttempts)
                 {
                     // Sending the chunk again is safe: the kernel stages a chunk under its index once.
-                    await Task.Delay(_retryDelay(attempt), cancellationToken);
+                    await Task.Delay(_retryDelay(attempt), retrying.Token);
                 }
             }
         }
@@ -275,6 +297,14 @@ public sealed class EventImport(
         lock (_lock)
         {
             return [.. _sends];
+        }
+    }
+
+    void ThrowIfAbandoned()
+    {
+        lock (_lock)
+        {
+            if (_abandoned) throw new ImportWasAbandoned(ImportId);
         }
     }
 

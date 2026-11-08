@@ -37,8 +37,7 @@ public class an_import_being_committed : Specification
         {
             State = ImportState.Validating,
             ExpectedChunks = 2,
-            ExpectedEvents = 4,
-            EventTypes = ["event-type"]
+            ExpectedEvents = 4
         };
         await _storage.AddChunk(Chunk(0));
         await _storage.AddChunk(Chunk(1));

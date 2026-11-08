@@ -11,7 +11,8 @@ namespace Cratis.Chronicle.Storage.Imports;
 /// <remarks>
 /// Every provider must give the same answers: a chunk is keyed by its import and chunk index, a second chunk with the
 /// same key is never stored over the first and is reported as already staged when it covers the same events and as
-/// conflicting when it does not, and summaries come back ordered by chunk index.
+/// conflicting when it does not or when the first was removed before it could be compared (see
+/// <see cref="StagedImportChunk.ComparedWith"/>), and summaries come back ordered by chunk index.
 /// </remarks>
 public interface IImportStorage
 {

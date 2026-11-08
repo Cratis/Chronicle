@@ -17,7 +17,7 @@ namespace Cratis.Chronicle.Imports;
 /// <param name="imports">The <see cref="IImportStorage"/> holding the staged chunks.</param>
 /// <param name="getEventSequence">Gets the <see cref="IEventSequence"/> the import targets.</param>
 /// <param name="commitChunkSize">How many events go to the event sequence in one call.</param>
-/// <param name="maxAttempts">How many times a call that could not settle is tried before the import fails.</param>
+/// <param name="maxAttempts">How many times a call that could not settle, or a validation pass that had to start over, is tried before the import fails.</param>
 /// <param name="timeProvider">The optional <see cref="TimeProvider"/>.</param>
 /// <param name="retryDelay">The optional delay between attempts; grows with each attempt when not given.</param>
 public class ImportCommitWork(
@@ -30,9 +30,21 @@ public class ImportCommitWork(
     TimeProvider? timeProvider = null,
     Func<int, TimeSpan>? retryDelay = null)
 {
+    /// <summary>
+    /// The highest attempt number the delay between waits for room to validate grows to.
+    /// </summary>
+    const int MaxWaitStep = 20;
+
     readonly TimeProvider _time = timeProvider ?? TimeProvider.System;
     readonly Func<int, TimeSpan> _retryDelay = retryDelay ?? (attempt => TimeSpan.FromMilliseconds(Math.Min(10_000, 500 * attempt)));
     readonly int _commitChunkSize = Math.Max(1, commitChunkSize);
+
+    enum ValidationPass
+    {
+        Completed = 0,
+        Restart = 1,
+        WaitForRoom = 2
+    }
 
     /// <summary>
     /// Runs the work from wherever the import stands.
@@ -93,43 +105,77 @@ public class ImportCommitWork(
         await import.CommitCompleted();
     }
 
+    static EventSequenceNumber After(EventSequenceNumber searchFrom, IEnumerable<ImportEventOutcome> settled)
+    {
+        var appended = settled.Where(_ => _.Kind == ImportEventOutcomeKind.Appended).Select(_ => _.SequenceNumber.Value).ToArray();
+        if (appended.Length == 0) return searchFrom;
+        var next = appended.Max() + 1;
+        return next > searchFrom.Value ? new EventSequenceNumber(next) : searchFrom;
+    }
+
     async Task<List<ImportRejection>> Validate(ImportRecord record, IEventSequence sequence, CancellationToken cancellationToken)
     {
         try
         {
-            for (var attempt = 1; attempt <= maxAttempts; attempt++)
+            var failedPasses = 0;
+            var waits = 0;
+            Exception? lastError = null;
+            while (true)
             {
                 var rejections = new List<ImportRejection>();
-                var first = true;
-                var restart = false;
-                for (var chunkIndex = 0; chunkIndex < record.ExpectedChunks && !restart; chunkIndex++)
-                {
-                    foreach (var slice in await Slices(chunkIndex))
-                    {
-                        cancellationToken.ThrowIfCancellationRequested();
-                        var result = await sequence.ValidateImportChunk(key.ImportId, first, slice);
-                        first = false;
-                        if (result.MustRestart)
-                        {
-                            restart = true;
-                            break;
-                        }
+                var (pass, error) = await ValidatePass(record, sequence, rejections, cancellationToken);
+                if (pass == ValidationPass.Completed) return rejections;
 
-                        rejections.AddRange(result.Rejections);
-                    }
+                if (pass == ValidationPass.WaitForRoom)
+                {
+                    // Waiting for other imports to finish validating is not a failure, so it is not counted as an attempt.
+                    await Task.Delay(_retryDelay(Math.Min(++waits, MaxWaitStep)), _time, cancellationToken);
+                    continue;
                 }
 
-                if (!restart) return rejections;
-                await Task.Delay(_retryDelay(attempt), _time, cancellationToken);
+                lastError = error ?? lastError;
+                if (++failedPasses >= maxAttempts) throw new ImportValidationUnavailable(key.ImportId, lastError);
+                await Task.Delay(_retryDelay(failedPasses), _time, cancellationToken);
             }
-
-            throw new ImportValidationUnavailable(key.ImportId);
         }
         finally
         {
             // The claims live in the event sequence's memory; they are released however validation ends.
             await ForgetClaims(sequence);
         }
+    }
+
+    async Task<(ValidationPass Pass, Exception? Error)> ValidatePass(
+        ImportRecord record,
+        IEventSequence sequence,
+        List<ImportRejection> rejections,
+        CancellationToken cancellationToken)
+    {
+        var first = true;
+        for (var chunkIndex = 0; chunkIndex < record.ExpectedChunks; chunkIndex++)
+        {
+            foreach (var slice in await Slices(chunkIndex))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                ImportChunkValidationResult result;
+                try
+                {
+                    result = await sequence.ValidateImportChunk(key.ImportId, first, slice);
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    // A failed call, such as a timed-out grain call, leaves the claims in an unknown state; start over.
+                    return (ValidationPass.Restart, ex);
+                }
+
+                if (result.MustWait) return (ValidationPass.WaitForRoom, null);
+                if (result.MustRestart) return (ValidationPass.Restart, null);
+                first = false;
+                rejections.AddRange(result.Rejections);
+            }
+        }
+
+        return (ValidationPass.Completed, null);
     }
 
     async Task ForgetClaims(IEventSequence sequence)
@@ -152,11 +198,16 @@ public class ImportCommitWork(
         var resuming = true;
         for (var chunkIndex = record.LastCommittedChunk + 1; chunkIndex < record.ExpectedChunks; chunkIndex++)
         {
-            var committedFrom = record.CommittedFrom is { } from ? new EventSequenceNumber(from) : EventSequenceNumber.First;
+            // Chunk N is only attempted once chunk N-1 is recorded, so none of its events is below the last recorded
+            // range, and none of a slice's events is below what the slices before it were given. A search for events
+            // an interrupted call stored therefore starts there, never at the start of the commit.
+            var searchFrom = record.CommittedFrom is { } from ? new EventSequenceNumber(from) : EventSequenceNumber.First;
             var outcomes = new List<ImportEventOutcome>();
             foreach (var slice in await Slices(chunkIndex))
             {
-                outcomes.AddRange(await CommitSlice(sequence, chunkIndex, committedFrom, resuming, slice, cancellationToken));
+                var settled = (await CommitSlice(sequence, chunkIndex, searchFrom, resuming, slice, cancellationToken)).ToArray();
+                outcomes.AddRange(settled);
+                searchFrom = After(searchFrom, settled);
             }
 
             resuming = false;

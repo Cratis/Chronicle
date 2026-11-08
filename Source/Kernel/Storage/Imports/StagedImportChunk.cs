@@ -31,13 +31,18 @@ public record StagedImportChunk(
         FirstEventIndex,
         EventsReceived,
         Events.Count(),
-        Rejections.Count(),
-        [.. Events.Select(_ => EventTypeIdOf(_.EventType)).Distinct(StringComparer.Ordinal)]);
+        Rejections.Count());
 
     /// <summary>
-    /// Gets the event type identifier of a staged event type, which is written as its identifier and generation.
+    /// Tells what became of this chunk when another chunk already held its import and index, so it was not stored.
     /// </summary>
-    /// <param name="eventType">The staged event type.</param>
-    /// <returns>The event type identifier.</returns>
-    public static string EventTypeIdOf(string eventType) => eventType.Split('+')[0];
+    /// <param name="staged">The summary of the chunk that holds the key, or null when it was removed before it could be read.</param>
+    /// <returns><see cref="StagedChunkAddition.AlreadyStaged"/> when the staged chunk covers the same events; otherwise <see cref="StagedChunkAddition.Conflicting"/>.</returns>
+    /// <remarks>
+    /// Every provider answers a key collision through this, so they agree. A chunk that held the key and is gone by the
+    /// time it is read was removed with its import's staging; nothing is staged under the index, so the chunk is not
+    /// reported as staged.
+    /// </remarks>
+    public StagedChunkAddition ComparedWith(ImportChunkSummary? staged) =>
+        staged?.Matches(FirstEventIndex, EventsReceived) == true ? StagedChunkAddition.AlreadyStaged : StagedChunkAddition.Conflicting;
 }

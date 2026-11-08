@@ -40,7 +40,7 @@ public sealed class ImportStorage : IImportStorage
         var summary = chunk.ToSummary();
         var stored = _chunks.GetOrAdd((chunk.ImportId, chunk.ChunkIndex), static (_, argument) => (argument.Summary, ImportStorageSerialization.Serialize(argument.Chunk)), (Summary: summary, Chunk: chunk));
         if (ReferenceEquals(stored.Summary, summary)) return Task.FromResult(StagedChunkAddition.Added);
-        return Task.FromResult(stored.Summary.Matches(chunk.FirstEventIndex, chunk.EventsReceived) ? StagedChunkAddition.AlreadyStaged : StagedChunkAddition.Conflicting);
+        return Task.FromResult(chunk.ComparedWith(stored.Summary));
     }
 
     /// <inheritdoc/>

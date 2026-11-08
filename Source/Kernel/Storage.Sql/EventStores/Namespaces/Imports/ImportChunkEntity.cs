@@ -39,11 +39,6 @@ public class ImportChunkEntity
     public int EventsRejected { get; set; }
 
     /// <summary>
-    /// Gets or sets the distinct event type identifiers staged in the chunk, as a JSON array.
-    /// </summary>
-    public string EventTypes { get; set; } = string.Empty;
-
-    /// <summary>
     /// Gets or sets the serialized chunk.
     /// </summary>
     public string Payload { get; set; } = string.Empty;

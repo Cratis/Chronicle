@@ -57,6 +57,14 @@ public interface IEventImport : IAsyncDisposable
     /// <summary>
     /// Abandons the import, discarding everything staged. Nothing is committed.
     /// </summary>
+    /// <param name="cancellationToken">The <see cref="CancellationToken"/> for waiting on chunks already being sent; when it is cancelled first, the import is not abandoned on the kernel, which abandons it once its staging retention runs out.</param>
     /// <returns>The <see cref="ImportResult"/>.</returns>
-    Task<ImportResult> Abandon();
+    /// <remarks>
+    /// No chunk is sent once abandoning begins. An <see cref="Add(IAsyncEnumerable{EventForEventSourceId}, CancellationToken)"/>
+    /// in progress is stopped rather than waited for, so a stream that never yields again cannot hold up the abandon: it
+    /// ends with <see cref="ImportWasAbandoned"/> once the stream observes cancellation or yields its next event. Chunks
+    /// already handed to the kernel are waited for, so none is staged after the import is abandoned. Adding to or
+    /// completing the import afterwards throws <see cref="ImportWasAbandoned"/>.
+    /// </remarks>
+    Task<ImportResult> Abandon(CancellationToken cancellationToken = default);
 }
