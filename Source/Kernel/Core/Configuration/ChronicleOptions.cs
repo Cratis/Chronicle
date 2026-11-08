@@ -247,6 +247,7 @@ public class ChronicleOptions : IValidatableObject
     /// </summary>
     /// <param name="services">Service collection to add to.</param>
     /// <param name="configuration">Application configuration.</param>
+    /// <exception cref="InvalidConnectionFile">Thrown when a connection setting that names a file cannot be resolved.</exception>
     public static void AddConfiguration(IServiceCollection services, IConfiguration configuration)
     {
         // Load chronicle.json at the root level and bind it to the Cratis:Chronicle section
@@ -260,6 +261,8 @@ public class ChronicleOptions : IValidatableObject
         {
             configuration[$"{SectionPath}:{kvp.Key}"] = kvp.Value;
         }
+
+        ConnectionFiles.Resolve(configuration);
 
         services
             .AddOptions<ChronicleOptions>()
