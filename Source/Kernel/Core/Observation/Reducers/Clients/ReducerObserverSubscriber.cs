@@ -34,12 +34,12 @@ namespace Cratis.Chronicle.Observation.Reducers.Clients;
 /// <param name="options">The telemetry configuration.</param>
 [ConnectedObserverPlacement]
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.Reducers)]
-public class ReducerObserverSubscriber(
+public partial class ReducerObserverSubscriber(
     IReducerPipelineFactory reducerPipelineFactory,
     IReducerMediator reducerMediator,
     ILogger<ReducerObserverSubscriber> logger,
     TimeProvider? timeProvider = null,
-    IOptions<ChronicleOptions>? options = null) : Grain<ReducerDefinition>, IReducerObserverSubscriber
+    IOptions<ChronicleOptions>? options = null) : Grain<ReducerDefinition>, IReducerObserverSubscriber, IReducerPageObserverSubscriber
 {
     /// <summary>
     /// How long a built pipeline - and the sink it resolved the target read model's definition to - is
@@ -231,23 +231,35 @@ public class ReducerObserverSubscriber(
     async Task<ObserverSubscriberResult> RecordSinkWriteFailures(Key partition, ReducerSinkWriteFailed failed, Task<ObserverSubscriberResult> result)
     {
         var others = failed.FailedPartitions.Where(failure => !Equals(failure.EventSourceId.Value, partition.Value)).ToArray();
-        if (others.Length > 0)
-        {
-            var observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(_key.ObserverId, _key.EventStore, _key.Namespace, _key.EventSequenceId));
-            foreach (var failure in others)
-            {
-                await observer.PartitionFailed(
-                    failure.EventSourceId,
-                    failure.EventSequenceNumber,
-                    [ReducerSinkWriteFailed.MessageFor(failure)],
-                    string.Empty,
-                    FailureKind.Handling);
-            }
-        }
+        await RecordFailedPartitions(others);
 
         return others.Length == failed.FailedPartitions.Count && result.IsCompleted
             ? await result
             : ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, failed.Message);
+    }
+
+    /// <summary>
+    /// Records partitions outside the delivery whose writes a shared bulk flush reported as failed, so they are retried.
+    /// </summary>
+    /// <param name="failures">The <see cref="Storage.Sinks.FailedPartition"/> instances to record.</param>
+    /// <returns>Awaitable task.</returns>
+    async Task RecordFailedPartitions(Storage.Sinks.FailedPartition[] failures)
+    {
+        if (failures.Length == 0)
+        {
+            return;
+        }
+
+        var observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(_key.ObserverId, _key.EventStore, _key.Namespace, _key.EventSequenceId));
+        foreach (var failure in failures)
+        {
+            await observer.PartitionFailed(
+                failure.EventSourceId,
+                failure.EventSequenceNumber,
+                [ReducerSinkWriteFailed.MessageFor(failure)],
+                string.Empty,
+                FailureKind.Handling);
+        }
     }
 
     async Task HandlePipeline()

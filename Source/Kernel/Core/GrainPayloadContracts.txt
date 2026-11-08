@@ -527,6 +527,7 @@ json Cratis.Chronicle.Concepts.Observation.Reducers.ReducerDefinition
   hash: string
   identifier: Cratis.Chronicle.Concepts.Observation.Reducers.ReducerId
   isActive: bool
+  pageDelivery: Cratis.Chronicle.Concepts.Observation.PageDeliveryDefinition
   readModel: Cratis.Chronicle.Concepts.ReadModels.ReadModelIdentifier
   tags: System.Collections.Generic.IEnumerable<string>
 concept Cratis.Chronicle.Concepts.Observation.Reducers.ReducerId : string
