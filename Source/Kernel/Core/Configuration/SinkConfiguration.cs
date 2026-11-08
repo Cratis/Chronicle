@@ -19,6 +19,15 @@ public class SinkConfiguration
     public string ConnectionDetails { get; init; } = string.Empty;
 
     /// <summary>
+    /// Gets the path of a file holding the <see cref="ConnectionDetails"/>, for instance a mounted Kubernetes Secret.
+    /// </summary>
+    /// <remarks>
+    /// The file is read once at startup and trimmed of a trailing newline. Setting both this and <see cref="ConnectionDetails"/>
+    /// stops startup. See <see cref="ConnectionFiles"/>.
+    /// </remarks>
+    public string ConnectionDetailsFile { get; init; } = string.Empty;
+
+    /// <summary>
     /// Gets the server URI of a <c language="text">Neo4j</c> sink, for instance <c language="text">bolt://neo4j:7687</c>.
     /// </summary>
     public string Server { get; init; } = string.Empty;
@@ -32,6 +41,15 @@ public class SinkConfiguration
     /// Gets the name of the configuration key holding the password of a <c language="text">Neo4j</c> sink. The password itself is never written in the options.
     /// </summary>
     public string? PasswordSecret { get; init; }
+
+    /// <summary>
+    /// Gets the path of a file holding the password of a <c language="text">Neo4j</c> sink, for instance a mounted Kubernetes Secret.
+    /// </summary>
+    /// <remarks>
+    /// The file is read once at startup and trimmed of a trailing newline, and <see cref="PasswordSecret"/> is pointed at the value.
+    /// Setting both this and <see cref="PasswordSecret"/> stops startup. See <see cref="ConnectionFiles"/>.
+    /// </remarks>
+    public string? PasswordFile { get; init; }
 
     /// <summary>
     /// Gets the optional prefix of the database names of a <c language="text">Neo4j</c> sink.
