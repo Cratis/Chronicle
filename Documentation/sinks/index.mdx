@@ -207,6 +207,39 @@ A [graph projection](../projections/graph-projections.mdx) writes nodes and edge
 | `InMemoryGraph` | Keeps the graph in memory. It is the executable reference for the graph sink semantics: operations, watermarks and replay. Use it for development and tests. |
 | `Neo4j` | The default graph sink type, `DefaultGraphSinkTypeId`. It stores the graph in Neo4j, with a database per event store and namespace. See [Neo4j graph sink](neo4j.mdx). A graph sink type that is not available fails with `UnknownSink`. |
 
+A Kernel can serve several Neo4j servers through [named sinks](#named-sinks), one graph in each.
+
+## Named sinks
+
+By default every read model is stored through the Kernel's own storage connection, and every graph in the Kernel's `neo4j` server. A named sink is a sink type with a connection of its own, configured in the Kernel's [`sinks` section](../hosting/configuration/sinks.md). With named sinks a Kernel can store one read model in MongoDB and another in PostgreSQL, keep read models on a different server than the events, or project graphs into more than one Neo4j server.
+
+Two implicit defaults always exist, so nothing changes for a Kernel without a `sinks` section:
+
+- the default sink for read models: the client's `DefaultSinkTypeId` on the Kernel's `storage` connection;
+- the default sink for graphs: `Neo4j` on the Kernel's `neo4j` section.
+
+`sinks.readModels` and `sinks.graphs` replace those defaults with a named sink. The configuration's type decides how a read model is stored: a read model naming a `SQL` sink is stored in SQL even when the client's `DefaultSinkTypeId` is MongoDB. The Kernel's named sinks do not depend on its event storage: a Kernel on MongoDB can store read models in PostgreSQL, and a Kernel on SQL can store read models in MongoDB.
+
+### Choosing a named sink in the client
+
+Put `[Sink]` on a read model type to store it in a named sink. It works for model-bound read models and for read models filled by a projection or a reducer:
+
+<ChronicleClientTabs snippet="sinks/index/named-sink-attribute" />
+
+Put it on a graph projection, or on the nodes and edges of a model-bound graph, to choose the sink of a graph:
+
+<ChronicleClientTabs snippet="sinks/index/named-graph-sink" />
+
+All nodes and edges of a model-bound graph must name the same sink; a graph whose elements name different sinks fails to register with `GraphHasConflictingSinks`.
+
+To name a sink for everything without `[Sink]`, set `DefaultSinkName` and `DefaultGraphSinkName` in the client options. Both are empty by default, which leaves the choice to the Kernel:
+
+<ChronicleClientTabs snippet="sinks/index/default-sink-name" />
+
+A passive read model has no sink, so `[Passive]` cannot be combined with `[Sink]`; the analyzer reports it as [CHR0069](../code-analysis/CHR0069.mdx). Event targets ignore sink names, because they publish to an event sequence.
+
+The Kernel refuses a read model that names a sink it has no configuration for, with `UnknownSinkName` naming the read model and the sink. A read model naming a graph sink, or a graph naming a read-model sink, is refused with `SinkConfigurationIsForAnotherKindOfReadModel`.
+
 ## Choosing a Sink
 
 First decide whether consumers need current state or new events. For current state, choose a storage sink to match the database your application will query. For events, choose an event target and account for its publication and replay rules.
@@ -217,6 +250,6 @@ First decide whether consumers need current state or new events. For current sta
 | Read-model rows queried with SQL tooling | SQL | PostgreSQL, SQL Server or SQLite storage and the column mappings above |
 | New events derived from accumulated state | EventSequence | A registered event target, an allowed destination and consumers that account for replay publications |
 
-`DefaultSinkTypeId` applies to all materialized read models registered by the client; client configuration does not select a different storage sink per read model. Event targets use their explicit `EventSequence` sink instead of that default.
+`DefaultSinkTypeId` applies to all materialized read models registered by the client. To store some read models elsewhere, configure [named sinks](#named-sinks) in the Kernel and choose them with `[Sink]`. Event targets use their explicit `EventSequence` sink instead of these defaults.
 
 Once you have chosen read-model storage, follow the [querying guide](../read-models/querying.md) to retrieve state. For event output, use [Public events](../events/public-events.md) to understand visibility before selecting an outbox target.
