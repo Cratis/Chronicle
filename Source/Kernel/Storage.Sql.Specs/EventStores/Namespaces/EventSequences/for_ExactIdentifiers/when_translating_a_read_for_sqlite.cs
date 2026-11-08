@@ -21,7 +21,7 @@ public class when_translating_a_read_for_sqlite() : given.a_storage_that_capture
         await ReadByStream("Stream", "Id");
         _byStream = Only();
         _captured.Clear();
-        await RemoveFromInFlight(new("Alice", Chronicle.Properties.ArrayIndexers.NoIndexers));
+        await RemoveFromInFlight(new("Alice", Properties.ArrayIndexers.NoIndexers));
         _inFlight = Only();
     }
 

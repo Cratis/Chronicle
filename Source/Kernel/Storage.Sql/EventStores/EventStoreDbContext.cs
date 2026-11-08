@@ -101,7 +101,7 @@ public class EventStoreDbContext(DbContextOptions<EventStoreDbContext> options) 
     /// <summary>
     /// Gets or sets the webhook signing keys DbSet.
     /// </summary>
-    public DbSet<Webhooks.WebhookSigningKey> WebhookSigningKeys { get; set; }
+    public DbSet<WebhookSigningKey> WebhookSigningKeys { get; set; }
 
     /// <summary>
     /// Gets or sets the event source definitions DbSet.
@@ -172,7 +172,7 @@ public class EventStoreDbContext(DbContextOptions<EventStoreDbContext> options) 
         // whose read model type is named "ReadModel" (pluralized to "ReadModels" by DefaultNamingPolicy).
         modelBuilder.Entity<ReadModelDefinition>().ToTable(WellKnownTableNames.ReadModelDefinitions);
 
-        modelBuilder.Entity<Webhooks.WebhookSigningKey>()
+        modelBuilder.Entity<WebhookSigningKey>()
             .ToTable(WellKnownTableNames.WebhookSigningKeys)
             .HasKey(row => row.KeyId);
 

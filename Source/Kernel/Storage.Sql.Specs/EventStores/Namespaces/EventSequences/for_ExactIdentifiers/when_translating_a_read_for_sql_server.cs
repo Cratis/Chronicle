@@ -19,13 +19,13 @@ public class when_translating_a_read_for_sql_server() : given.a_storage_that_cap
         await ReadBySourceType("Account");
         _bySourceType = Only();
         _captured.Clear();
-        await ReadBySourceType(Chronicle.Concepts.Events.EventSourceType.Default);
+        await ReadBySourceType(Concepts.Events.EventSourceType.Default);
         _byDefaultSourceType = Only();
         _captured.Clear();
         await ReadByStream("Stream", "Id");
         _byStream = Only();
         _captured.Clear();
-        await RemoveFromInFlight(new("Alice", Chronicle.Properties.ArrayIndexers.NoIndexers));
+        await RemoveFromInFlight(new("Alice", Properties.ArrayIndexers.NoIndexers));
         _inFlight = Only();
     }
 

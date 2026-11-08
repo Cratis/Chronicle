@@ -123,7 +123,7 @@ public class NamespaceDbContext(DbContextOptions<NamespaceDbContext> options) : 
         EventStores.Occurrences.OccurrenceModel.Configure(modelBuilder);
         if (Database.IsSqlServer())
         {
-            Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences.ExactIdentifiers.RegisterByteLength(modelBuilder);
+            Namespaces.EventSequences.ExactIdentifiers.RegisterByteLength(modelBuilder);
         }
 
         EventStores.Occurrences.OccurrenceModel.ConfigureReceipts(modelBuilder);

@@ -131,7 +131,7 @@ static class ExactIdentifiers
     /// <param name="value">The value to match.</param>
     /// <returns>The narrowed query.</returns>
     internal static IQueryable<TEntity> WhereExact<TEntity>(this IQueryable<TEntity> query, DbContext context, Expression<Func<TEntity, string?>> column, string value) =>
-        query.WhereExact<TEntity, string?>(context, column, value, value);
+        query.WhereExact(context, column, value, value);
 
     /// <summary>
     /// Narrow a query to the rows whose identifier column of a concept type holds exactly one spelling of a value.
