@@ -48,7 +48,29 @@ public class ReactorObserverSubscriber(
     }
 
     /// <inheritdoc/>
-    public async Task<ObserverSubscriberResult> OnNext(Key partition, IEnumerable<AppendedEvent> events, ObserverSubscriberContext context)
+    public Task<ObserverSubscriberResult> OnNext(Key partition, IEnumerable<AppendedEvent> events, ObserverSubscriberContext context) =>
+        BoundedPageDelivery.Deliver(PageBoundsFor(context), events, page => DeliverPartition(partition, page, context));
+
+    /// <inheritdoc/>
+    public Task<ObserverPageResult> OnNextPartitions(IReadOnlyList<ObserverPartitionBatch> batches, ObserverSubscriberContext context) =>
+        BoundedPageDelivery.Deliver(PageBoundsFor(context), batches, page => DeliverPartitions(page, context));
+
+    static ObserverPageResult Settled(IReadOnlyList<ObserverPartitionBatch> batches, ObserverSubscriberResult result) =>
+        new(batches.ToDictionary(_ => _.Partition, _ => result));
+
+    /// <summary>
+    /// Gets the bounds of the pages the connection receives: the bounds the client declared, capped by the kernel's maximums.
+    /// </summary>
+    /// <param name="context">The <see cref="ObserverSubscriberContext"/> of the delivery.</param>
+    /// <returns>The <see cref="PageBounds"/>; unbounded for a client that did not declare page delivery.</returns>
+    PageBounds PageBoundsFor(ObserverSubscriberContext context) =>
+        context.Metadata is ConnectedClient connectedClient
+            ? PageBounds.For(
+                reactorMediator.GetPageDelivery(_key.ObserverId, connectedClient.ConnectionId, _key.EventStore, _key.Namespace),
+                options?.Value?.Observers ?? new Observers())
+            : PageBounds.Unbounded;
+
+    async Task<ObserverSubscriberResult> DeliverPartition(Key partition, IEnumerable<AppendedEvent> events, ObserverSubscriberContext context)
     {
         var deliveryWait = new ClientDeliveryWait(_clock, logger, _key, partition, _metrics);
         if (deliveryWait.Expired(context))
@@ -89,8 +111,7 @@ public class ReactorObserverSubscriber(
         }
     }
 
-    /// <inheritdoc/>
-    public async Task<ObserverPageResult> OnNextPartitions(IReadOnlyList<ObserverPartitionBatch> batches, ObserverSubscriberContext context)
+    async Task<ObserverPageResult> DeliverPartitions(IReadOnlyList<ObserverPartitionBatch> batches, ObserverSubscriberContext context)
     {
         var deliveryWait = new ClientDeliveryWait(_clock, logger, _key, ObserverSubscriberKey.AllPartitions, _metrics);
         if (deliveryWait.Expired(context))
@@ -131,7 +152,4 @@ public class ReactorObserverSubscriber(
             return Settled(batches, ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, "Task was cancelled"));
         }
     }
-
-    static ObserverPageResult Settled(IReadOnlyList<ObserverPartitionBatch> batches, ObserverSubscriberResult result) =>
-        new(batches.ToDictionary(_ => _.Partition, _ => result));
 }

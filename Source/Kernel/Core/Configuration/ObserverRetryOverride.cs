@@ -51,6 +51,7 @@ public class ObserverRetryOverride
         LiveDeliveryBudget = observers.LiveDeliveryBudget,
         AbandonedDeliveryHold = observers.AbandonedDeliveryHold,
         MaxEventsPerSubscriberCall = observers.MaxEventsPerSubscriberCall,
+        MaxBytesPerSubscriberCall = observers.MaxBytesPerSubscriberCall,
         SubscriptionReadyTimeout = observers.SubscriptionReadyTimeout,
         MaxRetryAttempts = MaxRetryAttempts ?? observers.MaxRetryAttempts,
         BackoffDelay = BackoffDelay ?? observers.BackoffDelay,

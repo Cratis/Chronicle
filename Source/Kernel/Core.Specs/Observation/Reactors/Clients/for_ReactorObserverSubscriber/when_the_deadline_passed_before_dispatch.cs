@@ -13,6 +13,6 @@ public class when_the_deadline_passed_before_dispatch : given.a_subscriber
         _result = await _subscriber.OnNext("partition", [], _context);
     }
 
-    [Fact] void should_not_call_the_mediator() => _mediator.ReceivedCalls().ShouldBeEmpty();
+    [Fact] void should_not_dispatch_through_the_mediator() => _mediator.ReceivedCalls().Where(_ => _.GetMethodInfo().Name != nameof(IReactorMediator.GetPageDelivery)).ShouldBeEmpty();
     [Fact] void should_fail_the_ghost_delivery() => _result.State.ShouldEqual(ObserverSubscriberState.Failed);
 }
