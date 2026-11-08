@@ -24,6 +24,7 @@ public partial class EncryptionKeyStorage
             var empty = EncryptionKeyFenceState.Empty.Serialize();
             try
             {
+                // Initializing an absent fence is part of the read; whether it applied is settled by the linearizable read below.
                 var insert = new BsonDocument("$setOnInsert", new BsonDocument
                 {
                     { "version", new Decimal128(0m) }, { "state", empty }, { "seal", EncryptionKeyFenceState.Seal(empty) }
@@ -55,7 +56,7 @@ public partial class EncryptionKeyStorage
         try
         {
             var state = next.Serialize();
-            var result = await Bounded(identifier, cancellationToken => ExternalFences(eventStore, eventStoreNamespace).WithWriteConcern(Durability).UpdateOneAsync(
+            var result = await BoundedWrite(identifier, cancellationToken => ExternalFences(eventStore, eventStoreNamespace).WithWriteConcern(Durability).UpdateOneAsync(
                 new BsonDocument { { "_id", identifier.Value }, { "version", new Decimal128((decimal)observed.Erasure.Version) }, { "seal", EncryptionKeyFenceState.Seal(observed.Serialize()) } },
                 new BsonDocument("$set", new BsonDocument
                 {

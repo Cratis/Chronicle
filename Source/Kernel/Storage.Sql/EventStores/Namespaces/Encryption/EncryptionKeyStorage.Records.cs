@@ -65,13 +65,13 @@ public partial class EncryptionKeyStorage : IEncryptionKeyFenceRecords
         var seal = EncryptionKeyFenceState.Seal(value);
         try
         {
-            await EncryptionKeyFenceWrites.Execute(context, $"INSERT INTO {N("EncryptionKeyFenceRecords")} ({N("Id")}, {N("Value")}, {N("Seal")}) VALUES ({{0}}, {{1}}, {{2}})", id, value, seal);
+            await EncryptionKeyFenceWrites.Write(null, () => EncryptionKeyFenceWrites.Execute(context, $"INSERT INTO {N("EncryptionKeyFenceRecords")} ({N("Id")}, {N("Value")}, {N("Seal")}) VALUES ({{0}}, {{1}}, {{2}})", id, value, seal));
         }
         catch (DbException exception) when (EncryptionKeyFenceWrites.IsDuplicate(exception))
         {
             if (replace)
             {
-                await EncryptionKeyFenceWrites.Execute(context, $"UPDATE {N("EncryptionKeyFenceRecords")} SET {N("Value")} = {{1}}, {N("Seal")} = {{2}} WHERE {N("Id")} = {{0}}", id, value, seal);
+                await EncryptionKeyFenceWrites.Write(null, () => EncryptionKeyFenceWrites.Execute(context, $"UPDATE {N("EncryptionKeyFenceRecords")} SET {N("Value")} = {{1}}, {N("Seal")} = {{2}} WHERE {N("Id")} = {{0}}", id, value, seal));
             }
         }
     }

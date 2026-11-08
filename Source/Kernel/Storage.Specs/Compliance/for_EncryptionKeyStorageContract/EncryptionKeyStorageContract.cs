@@ -55,15 +55,17 @@ public abstract class EncryptionKeyStorageContract : Specification
 
     /// <summary>
     /// Lose the response after a successful write. Transport-backed harnesses override this to inject
-    /// the fault at their write-response boundary, after the provider has applied the operation.
+    /// the fault at their write-response boundary, after the provider has applied the operation, so the
+    /// adapter must classify it. An in-process store has no response to lose, so the default models the
+    /// outcome such a store surfaces.
     /// </summary>
     /// <param name="write">The write whose response is lost.</param>
-    /// <returns>Async task that fails with a timeout after the write succeeds.</returns>
-    /// <exception cref="TimeoutException">The successful write's response was lost.</exception>
+    /// <returns>Async task that fails with an unknown outcome after the write succeeds.</returns>
+    /// <exception cref="EncryptionKeyFenceWriteOutcomeUnknown">The successful write's response was lost.</exception>
     protected virtual async Task LoseWriteResponse(Func<Task> write)
     {
         await write();
-        throw new TimeoutException();
+        throw new EncryptionKeyFenceWriteOutcomeUnknown(_identifier, new TimeoutException());
     }
 
     void Establish() => _storage = CreateStorage();
@@ -346,7 +348,8 @@ public abstract class EncryptionKeyStorageContract : Specification
     {
         // Model a transport losing the response after the server applied the write. A caller must see the error;
         // it may retry only with the same request id, not turn the ambiguous outcome into a fresh erasure.
-        await Assert.ThrowsAsync<TimeoutException>(() => LoseWriteResponse(() => Raise("lost-response")));
+        var failure = await Record.ExceptionAsync(() => LoseWriteResponse(() => Raise("lost-response")));
+        failure.ShouldBeOfExactType<EncryptionKeyFenceWriteOutcomeUnknown>();
         var applied = await Fence();
         await Raise("lost-response");
         AssertFence(await Fence(), applied);

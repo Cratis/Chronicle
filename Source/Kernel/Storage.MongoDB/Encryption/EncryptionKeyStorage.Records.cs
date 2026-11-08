@@ -31,7 +31,7 @@ public partial class EncryptionKeyStorage : IEncryptionKeyFenceRecords
     {
         try
         {
-            await BoundedRecord(cancellationToken => Records(eventStore, eventStoreNamespace).WithWriteConcern(Durability).UpdateOneAsync(
+            await BoundedRecordWrite(cancellationToken => Records(eventStore, eventStoreNamespace).WithWriteConcern(Durability).UpdateOneAsync(
                 new BsonDocument("_id", id),
                 new BsonDocument(replace ? "$set" : "$setOnInsert", new BsonDocument { { "value", value }, { "seal", EncryptionKeyFenceState.Seal(value) } }),
                 new UpdateOptions { IsUpsert = true },

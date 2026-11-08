@@ -119,6 +119,7 @@ erasure of the successor; decision 5 scopes the guarantee to callers that pass t
 C5. **Unknown outcome is an error.** A timeout or lost connection on a fence write surfaces as an error. Nothing
 reports success or retries blindly. The only automatic retries are compare-and-set conflicts, where a failed
 condition proves the write did not apply, and they re-evaluate from a fresh read, bounded and jittered.
+The error is `EncryptionKeyFenceWriteOutcomeUnknown`, a subtype of `EncryptionKeyFenceUnavailable` so fail-closed callers are unchanged, but distinct from it: plain unavailable (reads, server selection, failures before a write is sent) means nothing happened, unknown means the write may have applied and may only be retried with the same request id, which deduplicates.
 
 C6. **Stores declare what they guarantee.** `IEncryptionKeyStorage` gains `FenceGuarantees` (flags: `MonotonicFence`,
 `FencedSave`), default `None` so existing custom stores compile unchanged. A startup check reports the guarantees of every

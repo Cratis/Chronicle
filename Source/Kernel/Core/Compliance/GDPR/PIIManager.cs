@@ -151,6 +151,8 @@ public class PIIManager(
     /// <remarks>
     /// Contention clears within milliseconds. An unavailable store has already spent a bounded wait, so it gets one more
     /// try rather than seven: retries multiplied by that wait are what held a grain past its call timeout.
+    /// A write whose outcome is unknown (<see cref="EncryptionKeyFenceWriteOutcomeUnknown"/>) is retried the same way: every
+    /// retried step carries the same request id, which the store deduplicates, and a final failure still fails closed.
     /// </remarks>
     /// <param name="error">The failure.</param>
     /// <param name="attempt">The zero-based attempt that failed.</param>

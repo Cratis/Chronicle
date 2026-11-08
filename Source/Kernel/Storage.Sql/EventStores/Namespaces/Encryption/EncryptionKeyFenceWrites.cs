@@ -97,10 +97,10 @@ internal static class EncryptionKeyFenceWrites
         string N(string name) => Name(context, name);
         try
         {
-            return await Execute(
+            return await Write(identifier, () => Execute(
                 context,
                 $"INSERT INTO {N("EncryptionKeyErasures")} ({N("Identifier")}, {N("ErasedThrough")}, {N("ErasedKeyFingerprints")}, {N("NewKeyAllowed")}, {N("Version")}, {N("Lifecycle")}, {N("StateSeal")}, {N("Requests")}, {N("ErasedLifecycle")}) VALUES ({{0}}, {{1}}, {{2}}, {{3}}, {{4}}, {{5}}, {{6}}, {{7}}, {{8}})",
-                [EncryptionKeyIdentifierColumn.Value(context, identifier), fence.ErasedThrough.Value, string.Join(',', fence.ErasedKeyFingerprints), fence.NewKeyAllowed, (decimal)fence.Version, fence.Lifecycle, fence.Seal!, JsonSerializer.Serialize(fence.Requests), fence.ErasedLifecycle]) == 1;
+                [EncryptionKeyIdentifierColumn.Value(context, identifier), fence.ErasedThrough.Value, string.Join(',', fence.ErasedKeyFingerprints), fence.NewKeyAllowed, (decimal)fence.Version, fence.Lifecycle, fence.Seal!, JsonSerializer.Serialize(fence.Requests), fence.ErasedLifecycle])) == 1;
         }
         catch (DbException exception) when (IsDuplicate(exception))
         {
@@ -120,10 +120,10 @@ internal static class EncryptionKeyFenceWrites
     {
         string N(string name) => Name(context, name);
         var version = observed.Version is null ? $"{N("Version")} IS NULL" : $"{N("Version")} = {{8}}";
-        return Execute(
+        return Write(identifier, () => Execute(
             context,
             $"UPDATE {N("EncryptionKeyErasures")} SET {N("ErasedThrough")} = {{0}}, {N("ErasedKeyFingerprints")} = {{1}}, {N("NewKeyAllowed")} = {{2}}, {N("Version")} = {{3}}, {N("Lifecycle")} = {{4}}, {N("StateSeal")} = {{5}}, {N("Requests")} = {{6}}, {N("ErasedLifecycle")} = {{12}} WHERE {N("Identifier")} = {{7}} AND {version} AND {N("ErasedThrough")} = {{9}} AND {N("ErasedKeyFingerprints")} = {{10}} AND {N("NewKeyAllowed")} = {{11}}",
-            [next.ErasedThrough.Value, string.Join(',', next.ErasedKeyFingerprints), next.NewKeyAllowed, (decimal)next.Version, next.Lifecycle, next.Seal!, JsonSerializer.Serialize(next.Requests), EncryptionKeyIdentifierColumn.Value(context, identifier), observed.Version ?? 0, observed.ErasedThrough, observed.ErasedKeyFingerprints, observed.NewKeyAllowed, next.ErasedLifecycle]);
+            [next.ErasedThrough.Value, string.Join(',', next.ErasedKeyFingerprints), next.NewKeyAllowed, (decimal)next.Version, next.Lifecycle, next.Seal!, JsonSerializer.Serialize(next.Requests), EncryptionKeyIdentifierColumn.Value(context, identifier), observed.Version ?? 0, observed.ErasedThrough, observed.ErasedKeyFingerprints, observed.NewKeyAllowed, next.ErasedLifecycle]));
     }
 
     /// <summary>
@@ -142,17 +142,17 @@ internal static class EncryptionKeyFenceWrites
         string N(string name) => Name(context, name);
         if (replacePublished)
         {
-            var replaced = await Execute(
+            var replaced = await Write(identifier, () => Execute(
                 context,
                 $"UPDATE {N("EncryptionKeys")} SET {N("PublicKey")} = {{0}}, {N("PrivateKey")} = {{1}}, {N("StagedLifecycle")} = {{2}}, {N("WriteNonce")} = {{3}}, {N("Published")} = {{4}} WHERE {N("Identifier")} = {{5}} AND {N("Revision")} = {{6}} AND ({N("Published")} IS NULL OR {N("Published")} = {{7}})",
-                [key.Public, key.Private, lifecycle, nonce, false, EncryptionKeyIdentifierColumn.Value(context, identifier), revision, true]);
+                [key.Public, key.Private, lifecycle, nonce, false, EncryptionKeyIdentifierColumn.Value(context, identifier), revision, true]));
             if (replaced == 1) return replaced;
         }
 
-        return await Execute(
+        return await Write(identifier, () => Execute(
             context,
             $"INSERT INTO {N("EncryptionKeys")} ({N("Identifier")}, {N("Revision")}, {N("PublicKey")}, {N("PrivateKey")}, {N("StagedLifecycle")}, {N("WriteNonce")}, {N("Published")}) VALUES ({{0}}, {{1}}, {{2}}, {{3}}, {{4}}, {{5}}, {{6}})",
-            [EncryptionKeyIdentifierColumn.Value(context, identifier), revision, key.Public, key.Private, lifecycle, nonce, false]);
+            [EncryptionKeyIdentifierColumn.Value(context, identifier), revision, key.Public, key.Private, lifecycle, nonce, false]));
     }
 
     /// <summary>
@@ -167,11 +167,50 @@ internal static class EncryptionKeyFenceWrites
     internal static Task<int> Publish(NamespaceDbContext context, EncryptionKeyIdentifier identifier, uint revision, string nonce, Fence fence)
     {
         string N(string name) => Name(context, name);
-        return Execute(
+        return Write(identifier, () => Execute(
             context,
             $"UPDATE {N("EncryptionKeys")} SET {N("Published")} = {{0}} WHERE {N("Identifier")} = {{1}} AND {N("Revision")} = {{2}} AND {N("WriteNonce")} = {{3}} AND {N("StagedLifecycle")} = {{4}} AND EXISTS (SELECT 1 FROM {N("EncryptionKeyErasures")} WHERE {N("Identifier")} = {{1}} AND {N("Version")} = {{5}} AND {N("StateSeal")} = {{6}} AND {N("NewKeyAllowed")} = {{0}})",
-            [true, EncryptionKeyIdentifierColumn.Value(context, identifier), revision, nonce, fence.Lifecycle, (decimal)fence.Version, fence.Seal!]);
+            [true, EncryptionKeyIdentifierColumn.Value(context, identifier), revision, nonce, fence.Lifecycle, (decimal)fence.Version, fence.Seal!]));
     }
+
+    /// <summary>
+    /// Run a fence write, reporting a write that may have been applied as an unknown outcome.
+    /// </summary>
+    /// <typeparam name="T">The result type.</typeparam>
+    /// <param name="identifier">The subject, or <see langword="null"/> for fence metadata.</param>
+    /// <param name="write">The write.</param>
+    /// <returns>The write's result.</returns>
+    /// <exception cref="EncryptionKeyFenceWriteOutcomeUnknown">The write timed out, was cancelled or lost its connection.</exception>
+    /// <remarks>Failures that prove nothing was applied, such as a duplicate key, pass through unchanged.</remarks>
+    internal static async Task<T> Write<T>(EncryptionKeyIdentifier? identifier, Func<Task<T>> write)
+    {
+        try
+        {
+            return await write();
+        }
+        catch (Exception exception) when (IsUnknownOutcome(exception))
+        {
+            throw identifier is null ? new EncryptionKeyFenceWriteOutcomeUnknown(exception) : new EncryptionKeyFenceWriteOutcomeUnknown(identifier, exception);
+        }
+    }
+
+    /// <summary>
+    /// Decide whether a failed write may still have been applied.
+    /// </summary>
+    /// <param name="exception">The failure.</param>
+    /// <returns><see langword="true"/> unless the server reported an error, which rolls the single statement back.</returns>
+    /// <remarks>
+    /// Client-side failures cannot tell whether the statement reached the server: a timeout, a cancellation, a client-side
+    /// Npgsql failure or a SQL Server timeout or connection-terminating error. SQLite runs in-process and reports every outcome.
+    /// </remarks>
+    internal static bool IsUnknownOutcome(Exception exception) => exception switch
+    {
+        TimeoutException or OperationCanceledException => true,
+        Npgsql.PostgresException => false,
+        Npgsql.NpgsqlException => true,
+        Microsoft.Data.SqlClient.SqlException sql => sql.Number == -2 || sql.Class >= 20,
+        _ => false
+    };
 
     /// <summary>
     /// Recognize only definite duplicate-key failures, never transient or unknown outcomes.

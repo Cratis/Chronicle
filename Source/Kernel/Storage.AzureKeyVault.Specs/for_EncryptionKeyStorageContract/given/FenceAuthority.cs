@@ -38,7 +38,7 @@ public class FenceAuthority : IEncryptionKeyFence, IEncryptionKeyFenceRecords
         if (result && LoseResponse)
         {
             LoseResponse = false;
-            throw new TimeoutException("Applied authority write lost its response");
+            throw new EncryptionKeyFenceWriteOutcomeUnknown(identifier, new TimeoutException("Applied authority write lost its response"));
         }
 
         return result;

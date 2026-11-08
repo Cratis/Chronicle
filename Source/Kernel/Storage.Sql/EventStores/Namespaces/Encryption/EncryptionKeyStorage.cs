@@ -408,10 +408,10 @@ public partial class EncryptionKeyStorage(IDatabase database, ILogger<Encryption
         {
             var context = scope.DbContext;
             string N(string name) => EncryptionKeyFenceWrites.Name(context, name);
-            await EncryptionKeyFenceWrites.Execute(
+            await EncryptionKeyFenceWrites.Write(identifier, () => EncryptionKeyFenceWrites.Execute(
                 context,
                 $"DELETE FROM {N("EncryptionKeys")} WHERE {N("Identifier")} = {{0}} AND {N("Revision")} = {{1}} AND {N("WriteNonce")} = {{2}} AND {N("StagedLifecycle")} = {{3}}",
-                [EncryptionKeyIdentifierColumn.Value(context, identifier), revision.Value, nonce, initial.Lifecycle]);
+                [EncryptionKeyIdentifierColumn.Value(context, identifier), revision.Value, nonce, initial.Lifecycle]));
             throw;
         }
     }
@@ -529,10 +529,10 @@ public partial class EncryptionKeyStorage(IDatabase database, ILogger<Encryption
         await using var scope = await database.Namespace(eventStore, eventStoreNamespace);
         var context = scope.DbContext;
         string N(string name) => EncryptionKeyFenceWrites.Name(context, name);
-        await EncryptionKeyFenceWrites.Execute(
+        await EncryptionKeyFenceWrites.Write(identifier, () => EncryptionKeyFenceWrites.Execute(
             context,
             $"DELETE FROM {N("EncryptionKeys")} WHERE {N("Identifier")} = {{0}} AND ({N("Revision")} <= {{1}} OR ({N("StagedLifecycle")} IS NOT NULL AND {N("StagedLifecycle")} <= {{2}}))",
-            [EncryptionKeyIdentifierColumn.Value(context, identifier), (request.Through ?? EncryptionKeyRevision.Initial).Value, request.Lifecycle]);
+            [EncryptionKeyIdentifierColumn.Value(context, identifier), (request.Through ?? EncryptionKeyRevision.Initial).Value, request.Lifecycle]));
     }
 
     async Task EnsureNotUnderReview(NamespaceDbContext dbContext, EncryptionKeyIdentifier identifier, string stored)
