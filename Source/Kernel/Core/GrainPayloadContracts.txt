@@ -1078,6 +1078,7 @@ json Cratis.Chronicle.Imports.ImportChunkStagingResult
   rejections: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Storage.Imports.ImportRejection>
 json Cratis.Chronicle.Imports.ImportChunkValidationResult
   mustRestart: bool
+  mustWait: bool
   rejections: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Storage.Imports.ImportRejection>
 json Cratis.Chronicle.Imports.ImportEvent
   causation: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Sequences.Causation>
@@ -1437,7 +1438,6 @@ enum Cratis.Chronicle.Sequences.ReopenStreamScopeError : int
   NotCompleted = 1
 json Cratis.Chronicle.Storage.Imports.ImportChunkSummary
   chunkIndex: int
-  eventTypes: System.Collections.Generic.IEnumerable<string>
   eventsReceived: int
   eventsRejected: int
   eventsStaged: int
@@ -1452,7 +1452,6 @@ json Cratis.Chronicle.Storage.Imports.ImportRecord
   committedRanges: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Storage.Imports.ImportCommittedRange>
   created: System.DateTimeOffset
   eventSequenceId: Cratis.Chronicle.Concepts.EventSequences.EventSequenceId
-  eventTypes: System.Collections.Generic.IEnumerable<string>
   eventsCommitted: long
   eventsStaged: long
   expectedChunks: int

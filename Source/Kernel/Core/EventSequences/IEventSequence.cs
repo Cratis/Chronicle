@@ -452,7 +452,7 @@ public interface IEventSequence : IGrainWithStringKey
     /// <param name="importId">The <see cref="Concepts.Imports.ImportId"/> whose claims accumulate.</param>
     /// <param name="first">True for the first chunk, which starts the import's claims over.</param>
     /// <param name="events">The staged events of the chunk.</param>
-    /// <returns>The <see cref="Imports.ImportChunkValidationResult"/>; nothing is written and no key is created.</returns>
+    /// <returns>The <see cref="Imports.ImportChunkValidationResult"/>; nothing is written and no key is created. A first chunk is told to wait, and nothing is validated, while the sequence already keeps claims for as many imports as it bounds them to.</returns>
     Task<Imports.ImportChunkValidationResult> ValidateImportChunk(Concepts.Imports.ImportId importId, bool first, IReadOnlyList<Imports.ImportEventToAppend> events);
 
     /// <summary>
@@ -469,7 +469,7 @@ public interface IEventSequence : IGrainWithStringKey
     /// </summary>
     /// <param name="importId">The <see cref="Concepts.Imports.ImportId"/>.</param>
     /// <param name="chunkIndex">The index of the chunk being committed.</param>
-    /// <param name="committedFrom">The sequence number from which the log may already hold events of this chunk from an interrupted commit.</param>
+    /// <param name="committedFrom">The sequence number from which the log may already hold these events from an interrupted commit: past the events the commit already recorded, so a search never reads what earlier chunks or slices were given.</param>
     /// <param name="mayBeCommitted">True when an earlier attempt may have stored events of this chunk: the first chunk after the commit resumes, and every retry. Only then is the log searched for them.</param>
     /// <param name="events">The staged events of the chunk, in staging order.</param>
     /// <returns>The <see cref="Imports.ImportChunkAppendResult"/>.</returns>
