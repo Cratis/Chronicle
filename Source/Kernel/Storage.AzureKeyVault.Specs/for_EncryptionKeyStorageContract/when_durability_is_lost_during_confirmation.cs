@@ -30,5 +30,5 @@ public class when_durability_is_lost_during_confirmation : given.a_fenced_store
         _exception = await confirmation;
     }
 
-    [Fact] void should_fail_closed_even_when_the_write_applied() => _exception.ShouldBeOfExactType<EncryptionKeyFenceUnavailable>();
+    [Fact] void should_fail_closed_even_when_the_write_applied() => _exception.ShouldBeOfExactType<EncryptionKeyFenceWriteOutcomeUnknown>();
 }

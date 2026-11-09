@@ -107,7 +107,7 @@ internal sealed partial class FencedAzureKeyVaultEncryptionKeyStorage
         }
 
         await WriteLegacyBestEffort(address, next.Erasure);
-        EnsureDurable(identifier);
+        EnsureWrittenDurably(identifier);
     }
 
     /// <inheritdoc/>
@@ -187,11 +187,17 @@ internal sealed partial class FencedAzureKeyVaultEncryptionKeyStorage
         if (!authority.IsDurable) throw new EncryptionKeyFenceUnavailable(identifier);
     }
 
+    void EnsureWrittenDurably(EncryptionKeyIdentifier identifier)
+    {
+        if (!authority.IsDurable) throw new EncryptionKeyFenceWriteOutcomeUnknown(identifier, new EncryptionKeyFenceUnavailable(identifier));
+    }
+
     async Task<bool> CompareExchangeDurably(Address address, EncryptionKeyFenceState observed, EncryptionKeyFenceState next)
     {
         EnsureDurable(address.Identifier);
         var result = await authority.CompareExchangeFor(address.EventStore, address.Namespace, address.AuthorityIdentifier, observed, next);
-        EnsureDurable(address.Identifier);
+        if (result) EnsureWrittenDurably(address.Identifier);
+        else EnsureDurable(address.Identifier);
         return result;
     }
 
