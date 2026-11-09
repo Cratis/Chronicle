@@ -14,13 +14,16 @@ public class when_canceled_during_a_probe : Specification
     {
         _cancellation = new();
         _probe = new(
-            token =>
+            async token =>
             {
-                _cancellation.Cancel();
+                await _cancellation.CancelAsync();
                 token.ThrowIfCancellationRequested();
-                return Task.CompletedTask;
             },
-            _ => { _collationProbed = true; return Task.CompletedTask; });
+            _ =>
+            {
+                _collationProbed = true;
+                return Task.CompletedTask;
+            });
     }
 
     async Task Because() => _error = await Catch.Exception(() => _probe.Probe(_cancellation.Token));

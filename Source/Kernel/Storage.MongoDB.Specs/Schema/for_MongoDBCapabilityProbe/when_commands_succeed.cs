@@ -11,8 +11,16 @@ public class when_commands_succeed : Specification
     int _collation;
 
     void Establish() => _probe = new(
-        _ => { _changeStreams++; return Task.CompletedTask; },
-        _ => { _collation++; return Task.CompletedTask; });
+        _ =>
+        {
+            _changeStreams++;
+            return Task.CompletedTask;
+        },
+        _ =>
+        {
+            _collation++;
+            return Task.CompletedTask;
+        });
 
     async Task Because() => _report = await _probe.Probe(CancellationToken.None);
 

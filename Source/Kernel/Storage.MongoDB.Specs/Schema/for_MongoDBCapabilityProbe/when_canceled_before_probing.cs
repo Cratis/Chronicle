@@ -9,7 +9,17 @@ public class when_canceled_before_probing : Specification
     Exception? _error;
     int _operations;
 
-    void Establish() => _probe = new(_ => { _operations++; return Task.CompletedTask; }, _ => { _operations++; return Task.CompletedTask; });
+    void Establish() => _probe = new(
+        _ =>
+        {
+            _operations++;
+            return Task.CompletedTask;
+        },
+        _ =>
+        {
+            _operations++;
+            return Task.CompletedTask;
+        });
     async Task Because() => _error = await Catch.Exception(() => _probe.Probe(new CancellationToken(true)));
 
     [Fact] void should_propagate_cancellation() => (_error is OperationCanceledException).ShouldBeTrue();

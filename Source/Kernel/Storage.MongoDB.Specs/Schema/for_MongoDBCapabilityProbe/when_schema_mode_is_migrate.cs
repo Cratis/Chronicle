@@ -17,7 +17,7 @@ public class when_schema_mode_is_migrate : given.a_driver
         Arg.Any<CreateOneIndexOptions>(),
         Arg.Any<CancellationToken>());
     [Fact] void should_drop_the_temporary_collection_and_its_index() => _ = _mongo.Received(1).DropCollectionAsync(MongoDBCapabilityProbe.ProbeCollectionName, Arg.Any<CancellationToken>());
-    [Fact] void should_not_use_the_read_only_probe() => _ = _collection.DidNotReceiveWithAnyArgs().FindAsync(default(FilterDefinition<BsonDocument>)!, default(FindOptions<BsonDocument, BsonDocument>)!, default);
+    [Fact] void should_not_use_the_read_only_probe() => _ = _collection.DidNotReceiveWithAnyArgs().FindAsync(default, default(FindOptions<BsonDocument, BsonDocument>), default);
     [Fact] void should_dispose_the_change_stream_cursor() => _changes.Received(1).Dispose();
     [Fact] void should_dispose_the_collection_listing_cursor() => _collections.Received().Dispose();
 }
