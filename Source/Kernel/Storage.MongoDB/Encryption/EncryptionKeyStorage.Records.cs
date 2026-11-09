@@ -16,15 +16,8 @@ public partial class EncryptionKeyStorage : IEncryptionKeyFenceRecords
         await GetErasureCollection(eventStore, eventStoreNamespace).WithReadPreference(ReadPreference.Primary).CountDocumentsAsync(_fences.Eq(_ => _.Seal, null), new CountOptions { MaxTime = _readTimeout });
 
     /// <inheritdoc/>
-    public async Task<string?> ReadRecord(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string id)
-    {
-        var row = await BoundedRecord(cancellationToken => Records(eventStore, eventStoreNamespace).WithReadConcern(ReadConcern.Linearizable).WithReadPreference(ReadPreference.Primary)
-            .Find(new BsonDocument("_id", id), new FindOptions { MaxTime = _readTimeout }).SingleOrDefaultAsync(cancellationToken));
-        if (row is null) return null;
-        var value = row["value"].AsString;
-        if (row["seal"].AsString != EncryptionKeyFenceState.Seal(value)) throw new InvalidOperationException("Invalid encryption key metadata seal.");
-        return value;
-    }
+    public Task<string?> ReadRecord(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string id) =>
+        ReadRecord(eventStore, eventStoreNamespace, id, strong: true);
 
     /// <inheritdoc/>
     public async Task WriteRecord(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string id, string value, bool replace = false)
@@ -65,6 +58,29 @@ public partial class EncryptionKeyStorage : IEncryptionKeyFenceRecords
         throw new EncryptionKeyFenceUnavailable(identifier);
     }
 
+    async Task<string?> ReadRecord(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string id, bool strong)
+    {
+        var readConcern = strong ? ReadConcern.Linearizable : Linearizability;
+        var row = await BoundedRecord(cancellationToken => Records(eventStore, eventStoreNamespace).WithReadConcern(readConcern).WithReadPreference(ReadPreference.Primary)
+            .Find(new BsonDocument("_id", id), new FindOptions { MaxTime = _readTimeout }).SingleOrDefaultAsync(cancellationToken));
+        if (row is null) return null;
+
+        // Only an empty, non-confirming archive lookup may degrade. A found confirmation needs authoritative verification.
+        if (readConcern != ReadConcern.Linearizable) return await ReadRecord(eventStore, eventStoreNamespace, id, strong: true);
+        var value = row["value"].AsString;
+        if (row["seal"].AsString != EncryptionKeyFenceState.Seal(value)) throw new InvalidOperationException("Invalid encryption key metadata seal.");
+        return value;
+    }
+
     IMongoCollection<BsonDocument> Records(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace) =>
         database.GetEventStoreDatabase(eventStore).GetNamespaceDatabase(eventStoreNamespace).GetCollection<BsonDocument>("EncryptionKeyFenceRecords");
+
+    sealed class PendingArchiveLookup(EncryptionKeyStorage storage) : IEncryptionKeyFenceRecords
+    {
+        public Task<string?> ReadRecord(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string id) =>
+            storage.ReadRecord(eventStore, eventStoreNamespace, id, strong: false);
+
+        public Task WriteRecord(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string id, string value, bool replace = false) =>
+            storage.WriteRecord(eventStore, eventStoreNamespace, id, value, replace);
+    }
 }

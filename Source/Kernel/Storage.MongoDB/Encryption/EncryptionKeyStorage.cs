@@ -211,11 +211,11 @@ public partial class EncryptionKeyStorage(IDatabase database, IMongoDBTopology? 
                 return;
             }
 
-            if (await EncryptionKeyRequestArchive.Read(this, eventStore, eventStoreNamespace, identifier, request.RequestId) is not null)
+            if (await EncryptionKeyRequestArchive.Read(new PendingArchiveLookup(this), eventStore, eventStoreNamespace, identifier, request.RequestId) is not null)
             {
                 // A no-op CAS validates the Version observed before consulting the separate archive.
                 var stamped = observed with { Version = checked(observed.Version + 1) };
-                if (await WriteFence(eventStore, eventStoreNamespace, identifier, EncryptionKeyFenceUpdates.Observed(identifier, observed), EncryptionKeyFenceUpdates.Compact(stamped))) return;
+                if (await WriteFence(eventStore, eventStoreNamespace, identifier, EncryptionKeyFenceUpdates.Observed(identifier, observed), EncryptionKeyFenceUpdates.Compact(stamped), strong: true)) return;
                 await Backoff(attempt);
                 continue;
             }
