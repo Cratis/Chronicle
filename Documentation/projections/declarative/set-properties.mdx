@@ -47,6 +47,14 @@ Choose the source that represents the fact you want to store. Event context is t
 > [!NOTE]
 > `.To(...)` maps a single **event property** — it reads the value straight off the event, it does not run code. It cannot produce a *computed* value: `.To(e => $"{e.FirstName} {e.LastName}")`, `.To(_ => DateTimeOffset.UtcNow)` and similar expressions are not supported, because the builder extracts a property path from the expression rather than executing it. To derive a value, either record it on the event as a fact (compute it in the command's `Handle()` before appending) or use a [reducer](/chronicle/reducers/), which can run arbitrary logic over the current state and the event.
 
+## Setting a value only once
+
+A set-once mapping assigns its value only while the target property has no value - it is missing or null. Once the property holds a value, later events leave it unchanged and produce no change for the read model. Use it for facts that belong to the first event that supplies them, such as who created something or when it was first seen.
+
+The source can be anything a normal mapping can read: an event property, a constant, the event source ID, event context such as `Occurred`, or the identity that caused the event. Set once works on root properties, children, nested objects and dictionary entries, including [dictionaries keyed by event content](./dictionaries).
+
+The decision depends only on the read model state built from earlier events, so a replay assigns the same value. A property that is cleared back to null can be set once more by a later event.
+
 ## Multiple events
 
 Each `From<TEvent>()` block defines the changes for that event type. In the first example, opening the account sets its number, customer name, balance, active flag, and opening time. A deposit replaces `Balance` with the event's `Amount` and updates `LastTransaction`; properties not mapped by that event retain their previous values.

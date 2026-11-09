@@ -1,0 +1,48 @@
+---
+title: "Cratis Chronicle projections: dictionary keys"
+description: "Key a Cratis Chronicle read model dictionary by event content, event context or the causing identity, and remove dictionary keys when an event says so."
+---
+
+A dictionary property in a Cratis Chronicle read model can hold one entry per key, where the key is resolved for each event. Use it when a read model needs a value per slot, per category or per user, and the set of keys is only known from the events themselves.
+
+## Where the key comes from
+
+The key of each entry is read from the event that is being projected:
+
+| Key source | Example key |
+| --- | --- |
+| Event content | A property on the event, such as the slot a series was assigned to. Nested event properties work too. |
+| Event context | Metadata accompanying the event, such as the event type identifier. |
+| Caused by | The subject, name or user name of the identity that caused the event. |
+
+Keys are strings. A key value that is a strongly typed concept is stored by its underlying value.
+
+When the key's source is an event property that is missing or null on a particular event, the mapping is skipped for that event. Nothing is written, and no entry with an empty key is created.
+
+The dictionary property must be a dictionary on the read model, or an object without properties of its own. Using a dynamic key on a property with a fixed shape fails when the projection is registered.
+
+## Operations on a dictionary entry
+
+Every property operation works on the entry the key selects:
+
+| Operation | Effect on the entry |
+| --- | --- |
+| Set | Assigns a value, overwriting what the key held before. |
+| Set once | Assigns a value only when the key is missing or holds null. See [setting a value only once](./set-properties#setting-a-value-only-once). |
+| Add and subtract | Adds an event value to, or subtracts it from, the entry. |
+| Increment, decrement and count | Changes the entry by one. |
+| Remove | Removes the key from the dictionary. |
+
+Values follow the dictionary's declared value type. When the dictionary declares no value type, set and set once store the event value as it is, and the counting and arithmetic operations use 64-bit integers.
+
+## Removing a key
+
+A remove mapping takes the key out of the dictionary entirely - the entry is gone, it is not left holding null. Removing a key that is not present does nothing. Every sink removes the key the same way, so a read model looks the same whether it is stored in MongoDB, a SQL database or in memory.
+
+A remove mapping must address a dictionary entry through a dynamic key. Removing a property without one fails when the projection is registered; to clear a regular property, set it to null instead.
+
+## Related topics
+
+- [Set properties](./set-properties) for mapping regular properties.
+- [FromAll](./from-all) for counting every event type into a dictionary.
+- [Event context](./event-context) for the metadata that can serve as a key.
