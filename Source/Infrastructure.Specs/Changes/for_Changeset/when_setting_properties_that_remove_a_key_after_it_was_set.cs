@@ -24,21 +24,21 @@ public class when_setting_properties_that_remove_a_key_after_it_was_set : Specif
 
     void Because()
     {
-        _changeset.SetProperties(
-            [(_, target, indexers) =>
-            {
-                _key.SetValue(target, "series-1", indexers);
-                return new PropertyDifference(_key, null, "series-1", indexers);
-            }],
-            ArrayIndexers.NoIndexers);
-        _changeset.SetProperties(
-            [(_, target, indexers) =>
-            {
-                _key.RemoveValue(target, indexers);
-                return PropertyDifference.Removal(_key, "series-1", indexers);
-            }],
-            ArrayIndexers.NoIndexers);
+        _changeset.SetProperties([Set], ArrayIndexers.NoIndexers);
+        _changeset.SetProperties([Remove], ArrayIndexers.NoIndexers);
         _differences = [.. _changeset.Changes.OfType<PropertiesChanged<ExpandoObject>>().SelectMany(_ => _.Differences)];
+    }
+
+    static PropertyDifference Set(object source, ExpandoObject target, ArrayIndexers indexers)
+    {
+        _key.SetValue(target, "series-1", indexers);
+        return new PropertyDifference(_key, null, "series-1", indexers);
+    }
+
+    static PropertyDifference Remove(object source, ExpandoObject target, ArrayIndexers indexers)
+    {
+        _key.RemoveValue(target, indexers);
+        return PropertyDifference.Removal(_key, "series-1", indexers);
     }
 
     IDictionary<string, object?> Slots => (IDictionary<string, object?>)((IDictionary<string, object?>)_changeset.CurrentState)["slots"]!;
