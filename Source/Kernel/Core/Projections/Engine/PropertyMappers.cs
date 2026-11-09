@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using System.Globalization;
 using System.Numerics;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts;
@@ -18,6 +19,8 @@ namespace Cratis.Chronicle.Projections.Engine;
 /// </summary>
 public static class PropertyMappers
 {
+    const string RoundTripDateTimeKeyFormat = "yyyy'-'MM'-'dd'T'HH':'mm':'ss','fffffffK";
+
     /// <summary>
     /// Create a <see cref="PropertyMapper{Event, ExpandoObject}"/> that can copies content provided by a <see cref="ValueProvider{Event}"/> to a target property.
     /// </summary>
@@ -261,7 +264,7 @@ public static class PropertyMappers
         if (expression == WellKnownExpressions.EventContent)
         {
             var key = ReadExistingEventContentValue(@event.Content, new PropertyPath(property));
-            return key is null ? null : new PropertyPath($"{staticPrefix}.{FormatDynamicKeyValue(key)}");
+            return key is null ? null : new PropertyPath($"{staticPrefix}.{DictionaryKeyFor(propertyPath, key)}");
         }
 
         var contextPath = expression switch
@@ -272,7 +275,25 @@ public static class PropertyMappers
         };
         var resolvedValue = EventValueProviders.EventContext(new PropertyPath(contextPath))(@event);
 
-        return new PropertyPath($"{staticPrefix}.{FormatDynamicKeyValue(resolvedValue)}");
+        return new PropertyPath($"{staticPrefix}.{DictionaryKeyFor(propertyPath, resolvedValue)}");
+    }
+
+    /// <summary>
+    /// Format a resolved dynamic-key value as a dictionary key, refusing a key that cannot be stored as one.
+    /// </summary>
+    /// <param name="propertyPath">The property path holding the dynamic segment, for reporting.</param>
+    /// <param name="value">The resolved value.</param>
+    /// <returns>The dictionary key.</returns>
+    /// <exception cref="InvalidDictionaryKey">Thrown when the key holds a '.', '[' or ']' or starts with '$'.</exception>
+    static string DictionaryKeyFor(PropertyPath propertyPath, object? value)
+    {
+        var key = FormatDynamicKeyValue(value);
+        if (key.Contains('.') || key.Contains('[') || key.Contains(']') || key.StartsWith('$'))
+        {
+            throw new InvalidDictionaryKey(propertyPath, key);
+        }
+
+        return key;
     }
 
     /// <summary>
@@ -291,12 +312,22 @@ public static class PropertyMappers
     /// Format a resolved dynamic-key value as the <see cref="string"/> to use for a dictionary key, unwrapping
     /// any <see cref="ConceptAs{T}"/> value generically rather than special-casing individual concept types.
     /// </summary>
+    /// <remarks>
+    /// The key is formatted independently of the culture the kernel runs with, so the same event gives the same key on
+    /// every host and on replay. Dates and times use the ISO 8601 round-trip format with a comma as the decimal sign,
+    /// which ISO 8601 allows, since a '.' cannot be part of a dictionary key.
+    /// </remarks>
     /// <param name="value">The value to format.</param>
     /// <returns>The formatted key.</returns>
     static string FormatDynamicKeyValue(object? value) => value switch
     {
         null => string.Empty,
         _ when value.IsConcept() => FormatDynamicKeyValue(value.GetConceptValue()),
+        DateTimeOffset dateTimeOffset => dateTimeOffset.ToString(RoundTripDateTimeKeyFormat, CultureInfo.InvariantCulture),
+        DateTime dateTime => dateTime.ToString(RoundTripDateTimeKeyFormat, CultureInfo.InvariantCulture),
+        DateOnly dateOnly => dateOnly.ToString("O", CultureInfo.InvariantCulture),
+        TimeOnly timeOnly => timeOnly.ToString("HH':'mm':'ss','fffffff", CultureInfo.InvariantCulture),
+        IFormattable formattable => formattable.ToString(null, CultureInfo.InvariantCulture),
         _ => value.ToString() ?? string.Empty
     };
 }
