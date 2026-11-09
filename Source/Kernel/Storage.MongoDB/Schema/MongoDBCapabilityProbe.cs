@@ -17,7 +17,7 @@ public class MongoDBCapabilityProbe : IMongoDBCapabilityProbe
     /// <summary>
     /// The reserved collection name used for capability probes.
     /// </summary>
-    internal const string ProbeCollectionName = "chronicle_capability_probe";
+    internal const string ProbeCollectionName = WellKnownCollectionNames.CapabilityProbe;
     static readonly TimeSpan _probeTimeout = TimeSpan.FromSeconds(10);
     static readonly string[] _unsupportedMessages = ["not supported yet", "not implemented", "Unrecognized pipeline stage"];
 

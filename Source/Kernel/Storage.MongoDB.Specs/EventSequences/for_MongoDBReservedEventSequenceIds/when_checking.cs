@@ -17,6 +17,8 @@ public class when_checking : Specification
     [InlineData("occurrences")]
     [InlineData("effect-receipts")]
     [InlineData("observer-definition-change-progress")]
+    [InlineData("chronicle_capability_probe")]
+    [InlineData("CHRONICLE_CAPABILITY_PROBE")]
     [InlineData("Observers")]
     [InlineData("orders+closed_streams")]
     [InlineData("event-log+constraint")]
