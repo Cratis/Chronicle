@@ -29,6 +29,7 @@ public static class OpenTelemetryConfigurationExtensions
     {
         builder
             .AddMeter(WellKnown.MeterName)
+            .AddMeter(Federation.FederationMetrics.MeterName)
             .AddMeter("Microsoft.Orleans")
             .AddMeter("Grpc.AspNetCore.Server");
 

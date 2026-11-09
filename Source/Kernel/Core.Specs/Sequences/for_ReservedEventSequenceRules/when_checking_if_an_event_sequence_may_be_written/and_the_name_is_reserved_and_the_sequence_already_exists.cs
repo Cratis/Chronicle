@@ -17,5 +17,5 @@ public class and_the_name_is_reserved_and_the_sequence_already_exists : given.a_
 
     async Task Because() => _result = await Check("observers");
 
-    [Fact] void should_be_allowed() => _result.ShouldBeTrue();
+    [Fact] void should_be_refused() => _result.ShouldBeFalse();
 }

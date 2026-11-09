@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Net.Security;
+using System.Security.Cryptography.X509Certificates;
 
 namespace Cratis.Chronicle.Connections;
 
@@ -48,6 +49,22 @@ public class LeastConnectionsLoadBalancerStrategy : ILoadBalancerStrategy, IDisp
     /// <param name="maxSelectionJitter">Optional upper bound for the random delay before every probe. Defaults to 250ms; pass <see cref="TimeSpan.Zero"/> to disable it.</param>
     /// <param name="disableTls">Whether the servers are reached without TLS, speaking HTTP/2 only (h2c).</param>
     public LeastConnectionsLoadBalancerStrategy(bool skipTlsValidation, HttpClient? httpClient = null, TimeSpan? maxSelectionJitter = null, bool disableTls = false)
+        : this(skipTlsValidation, httpClient, maxSelectionJitter, disableTls, certificateAuthorities: null)
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="LeastConnectionsLoadBalancerStrategy"/> class that validates the server certificates against a set of certificate authorities.
+    /// </summary>
+    /// <param name="skipTlsValidation">Whether to skip TLS certificate validation when probing candidate servers.</param>
+    /// <param name="certificateAuthorities">Certificate authorities the server certificates must chain to when validation is enabled; <see langword="null"/> uses the system trust store.</param>
+    /// <param name="disableTls">Whether the servers are reached without TLS, speaking HTTP/2 only (h2c).</param>
+    public LeastConnectionsLoadBalancerStrategy(bool skipTlsValidation, X509Certificate2Collection? certificateAuthorities, bool disableTls)
+        : this(skipTlsValidation, httpClient: null, maxSelectionJitter: null, disableTls, certificateAuthorities)
+    {
+    }
+
+    LeastConnectionsLoadBalancerStrategy(bool skipTlsValidation, HttpClient? httpClient, TimeSpan? maxSelectionJitter, bool disableTls, X509Certificate2Collection? certificateAuthorities)
     {
         _scheme = disableTls ? Uri.UriSchemeHttp : Uri.UriSchemeHttps;
         _maxSelectionJitterMilliseconds = (int)(maxSelectionJitter ?? _defaultMaxSelectionJitter).TotalMilliseconds;
@@ -64,7 +81,7 @@ public class LeastConnectionsLoadBalancerStrategy : ILoadBalancerStrategy, IDisp
                 SslOptions = new SslClientAuthenticationOptions
                 {
                     RemoteCertificateValidationCallback =
-                        CertificateLoader.CreateServerCertificateValidationCallback(skipTlsValidation, pinnedCertificateHash: null)
+                        CertificateLoader.CreateServerCertificateValidationCallback(skipTlsValidation, pinnedCertificateHash: null, certificateAuthorities)
                 }
             };
             _httpClient = new HttpClient(_httpMessageHandler);

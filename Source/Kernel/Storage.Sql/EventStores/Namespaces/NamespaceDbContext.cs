@@ -96,6 +96,12 @@ public class NamespaceDbContext(DbContextOptions<NamespaceDbContext> options) : 
     /// </summary>
     public DbSet<Encryption.EncryptionKeyErasure> EncryptionKeyErasures { get; set; } = null!;
 
+    /// <summary>Gets or sets isolated request archives and silo protocol records.</summary>
+    public DbSet<Encryption.EncryptionKeyFenceRecord> EncryptionKeyFenceRecords { get; set; } = null!;
+
+    /// <summary>Gets or sets the authorities for external key-material stores.</summary>
+    public DbSet<Encryption.EncryptionKeyExternalFence> EncryptionKeyExternalFences { get; set; } = null!;
+
     /// <summary>
     /// Gets or sets the kernel-internal secrets DbSet.
     /// </summary>
@@ -267,6 +273,8 @@ public class NamespaceDbContext(DbContextOptions<NamespaceDbContext> options) : 
         {
             modelBuilder.Entity<Encryption.EncryptionKey>().Property(e => e.Identifier).UseCollation(Encryption.EncryptionKeyIdentifierColumn.Collation);
             modelBuilder.Entity<Encryption.EncryptionKeyErasure>().Property(e => e.Identifier).UseCollation(Encryption.EncryptionKeyIdentifierColumn.Collation);
+            modelBuilder.Entity<Encryption.EncryptionKeyExternalFence>().Property(e => e.Identifier).UseCollation(Encryption.EncryptionKeyIdentifierColumn.Collation);
+            UseExactClosedStreamColumns(modelBuilder);
         }
 
         modelBuilder.Entity<Alerts.AlertIncidentEntity>(entity =>
@@ -309,6 +317,15 @@ public class NamespaceDbContext(DbContextOptions<NamespaceDbContext> options) : 
         foreach (var (entityType, propertyName) in NamespaceJsonStringColumns.All)
         {
             modelBuilder.Entity(entityType).Property(propertyName).HasColumnType("jsonb");
+        }
+    }
+
+    static void UseExactClosedStreamColumns(ModelBuilder modelBuilder)
+    {
+        var entity = modelBuilder.Entity<ClosedStreamEntry>();
+        foreach (var column in new[] { nameof(ClosedStreamEntry.StreamType), nameof(ClosedStreamEntry.StreamId), nameof(ClosedStreamEntry.EventSourceId), nameof(ClosedStreamEntry.EventSourceType) })
+        {
+            entity.Property(column).HasMaxLength(ClosedStreamColumn.MaxLength).UseCollation(ClosedStreamColumn.Collation);
         }
     }
 }

@@ -16,6 +16,12 @@ public static class administrator_surface_policy
         ["Cratis.Chronicle.Security.Administrator"] = WellKnownAuthorizationPolicies.Administrator,
         ["Cratis.Chronicle.Security.User"] = WellKnownAuthorizationPolicies.Administrator,
         ["Cratis.Chronicle.Security.Application"] = WellKnownAuthorizationPolicies.Administrator,
+        ["Cratis.Chronicle.Federation.FederationBinding"] = WellKnownAuthorizationPolicies.Administrator,
+        ["Cratis.Chronicle.Federation.FederationGrantInformation"] = WellKnownAuthorizationPolicies.Administrator,
+        ["Cratis.Chronicle.Federation.BindFederationPeer"] = WellKnownAuthorizationPolicies.AdministratorOperations,
+        ["Cratis.Chronicle.Federation.UnbindFederationPeer"] = WellKnownAuthorizationPolicies.AdministratorOperations,
+        ["Cratis.Chronicle.Federation.SetFederationGrant"] = WellKnownAuthorizationPolicies.AdministratorOperations,
+        ["Cratis.Chronicle.Federation.RevokeFederationLink"] = WellKnownAuthorizationPolicies.AdministratorOperations,
         ["Cratis.Chronicle.Security.AddUser"] = WellKnownAuthorizationPolicies.AdministratorOperations,
         ["Cratis.Chronicle.Security.RemoveUser"] = WellKnownAuthorizationPolicies.AdministratorOperations,
         ["Cratis.Chronicle.Security.RequirePasswordChange"] = WellKnownAuthorizationPolicies.AdministratorOperations,
@@ -59,6 +65,7 @@ public static class administrator_surface_policy
 
     public static IReadOnlyDictionary<string, string> ExemptReadModels { get; } = new Dictionary<string, string>(StringComparer.Ordinal)
     {
+        ["Federation.FederatedEventBatch"] = "peer-facing pull; authenticated by a pinned client certificate on the dedicated federation listener, never by an OAuth policy",
         ["Alerts.AlertIncidentSummary"] = "read-only incident diagnostics",
         ["Alerts.AlertIncidentPage"] = "read-only incident diagnostics",
         ["Alerts.AlertIncidentLookup"] = "read-only incident diagnostics",

@@ -15,11 +15,11 @@ public class and_the_key_is_missing : given.a_property_handler
     {
         _value = JsonValue.Create(Convert.ToBase64String(new byte[256]));
         _encryption.IsEncrypted(Arg.Any<byte[]>()).Returns(true);
-        _keyStore.TryGetFor(EncryptedValueKeyIdentifiers.GlobalEventStore, EncryptedValueKeyIdentifiers.GlobalNamespace, KeyIdentifier).Returns(Task.FromResult<EncryptionKey?>(null));
+        _keyStore.TryGetLatestFor(EncryptedValueKeyIdentifiers.GlobalEventStore, EncryptedValueKeyIdentifiers.GlobalNamespace, KeyIdentifier).Returns(Task.FromResult<EncryptionKeyAtRevision?>(null));
         _keyStore.GetErasureFor(EncryptedValueKeyIdentifiers.GlobalEventStore, EncryptedValueKeyIdentifiers.GlobalNamespace, KeyIdentifier).Returns(new EncryptionKeyErasure(1, [], false));
     }
 
-    async Task Because() => _error = (await Catch.Exception(() => _handler.ReleaseWithStatus("actual-store", "actual-namespace", "original-subject", _value)))!;
+    async Task Because() => _error = await Catch.Exception(() => _handler.ReleaseWithStatus("actual-store", "actual-namespace", "original-subject", _value));
 
     [Fact] void should_fail_instead_of_reporting_erasure() => _error.ShouldBeOfExactType<MissingEncryptionKey>();
     [Fact] async Task should_not_consult_erasure_records() => await _keyStore.DidNotReceive().GetErasureFor(EncryptedValueKeyIdentifiers.GlobalEventStore, EncryptedValueKeyIdentifiers.GlobalNamespace, KeyIdentifier);

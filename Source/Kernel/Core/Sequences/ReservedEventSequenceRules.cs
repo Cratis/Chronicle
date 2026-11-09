@@ -3,30 +3,30 @@
 
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.EventSequences;
-using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
 
 namespace Cratis.Chronicle.Sequences;
 
 /// <summary>
-/// Holds the shared rule keeping new event sequences off the names the storage provider keeps for itself.
+/// Holds the shared rule keeping event sequences off the names the storage provider keeps for itself.
 /// </summary>
 /// <remarks>
 /// An event sequence is stored under its identifier, so a new sequence named like an internal collection or table
-/// would write its events into internal data. Built-in sequences and sequences that already exist are unaffected.
+/// would write its events into internal data. Built-in sequences are unaffected; a sequence that already carries a
+/// reserved name is refused as well, since it would alias the same internal data.
 /// </remarks>
 internal static class ReservedEventSequenceRules
 {
     /// <summary>
-    /// Gets the message reported when a new event sequence uses a reserved name.
+    /// Gets the message reported when an event sequence uses a reserved name.
     /// </summary>
     /// <param name="eventSequenceId">The refused event sequence identifier.</param>
     /// <returns>The message.</returns>
     public static string Message(string eventSequenceId) =>
-        $"The event sequence name '{eventSequenceId}' is reserved for Chronicle's own storage and cannot be used for a new event sequence. Choose a different name.";
+        $"The event sequence name '{eventSequenceId}' is reserved for Chronicle's own storage and cannot be used for an event sequence. Choose a different name.";
 
     /// <summary>
-    /// Check whether a write may create an event sequence with a reserved name, without touching storage.
+    /// Check whether a write may reach an event sequence with a reserved name, without touching storage.
     /// </summary>
     /// <param name="reservedEventSequenceIds">The <see cref="IReservedEventSequenceIds"/> of the active storage provider.</param>
     /// <param name="eventStore">The event store name.</param>
@@ -60,53 +60,19 @@ internal static class ReservedEventSequenceRules
     }
 
     /// <summary>
-    /// Check whether an event sequence already exists. An unknown event store is never created by the lookup.
-    /// </summary>
-    /// <param name="storage">The <see cref="IStorage"/> to read existing event sequences from.</param>
-    /// <param name="eventStore">The event store name.</param>
-    /// <param name="namespace">The namespace name.</param>
-    /// <param name="eventSequenceId">The event sequence identifier.</param>
-    /// <returns>True when the event sequence exists.</returns>
-    public static async Task<bool> Exists(
-        IStorage storage,
-        EventStoreName eventStore,
-        EventStoreNamespaceName @namespace,
-        EventSequenceId eventSequenceId)
-    {
-        var stores = (await storage.GetEventStores()).ToArray();
-        var storeName = stores.FirstOrDefault(_ => string.Equals(_.Value, eventStore.Value, StringComparison.Ordinal));
-        if (storeName is null)
-        {
-            var matches = stores.Where(_ => string.Equals(_.Value, eventStore.Value, StringComparison.OrdinalIgnoreCase)).ToArray();
-            if (matches.Length != 1)
-            {
-                return false;
-            }
-
-            storeName = matches[0];
-        }
-
-        var existing = await storage.GetEventStore(storeName).GetNamespace(@namespace).GetEventSequences();
-        return existing.Contains(eventSequenceId);
-    }
-
-    /// <summary>
     /// Check whether an event sequence may be written to.
     /// </summary>
-    /// <param name="storage">The <see cref="IStorage"/> to read existing event sequences from.</param>
     /// <param name="reservedEventSequenceIds">The <see cref="IReservedEventSequenceIds"/> of the active storage provider.</param>
     /// <param name="eventStore">The event store name.</param>
     /// <param name="namespace">The namespace name.</param>
     /// <param name="eventSequenceId">The event sequence identifier.</param>
-    /// <returns>True when the write may proceed, false when it would create a new event sequence with a reserved name.</returns>
-    public static async Task<bool> MayBeWritten(
-        IStorage storage,
+    /// <returns>True when the write may proceed, false when the name is reserved, whether or not the event sequence already exists.</returns>
+    public static bool MayBeWritten(
         IReservedEventSequenceIds reservedEventSequenceIds,
         EventStoreName eventStore,
         EventStoreNamespaceName @namespace,
         EventSequenceId eventSequenceId) =>
-        !MayBeReserved(reservedEventSequenceIds, eventStore, @namespace, eventSequenceId) ||
-        await Exists(storage, eventStore, @namespace, eventSequenceId);
+        !MayBeReserved(reservedEventSequenceIds, eventStore, @namespace, eventSequenceId);
 
     static bool IsBuiltIn(string eventSequenceId) =>
         string.Equals(eventSequenceId, EventSequenceId.Log.Value, StringComparison.Ordinal) ||

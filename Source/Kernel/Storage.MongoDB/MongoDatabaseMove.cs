@@ -73,33 +73,47 @@ internal static class MongoDatabaseMove
             return DatabaseMoveOutcome.Kept;
         }
 
-        await Drop(source);
-        return DatabaseMoveOutcome.Moved;
+        return await Drop(source) ? DatabaseMoveOutcome.Moved : DatabaseMoveOutcome.MovedSourceRetained;
     }
 
     /// <summary>
     /// Drop a database whose content has been copied elsewhere.
     /// </summary>
     /// <param name="database">The <see cref="IMongoDatabase"/> to drop.</param>
-    /// <returns>Awaitable <see cref="Task"/>.</returns>
+    /// <returns>True if the database was dropped, false if the server refused to let it be dropped.</returns>
     /// <remarks>
     /// The readWriteAnyDatabase role, which is what Atlas hands an application user, does not grant the
     /// dropDatabase action, but it does grant dropCollection. When the server refuses to drop the database,
-    /// its collections are dropped one by one instead, which leaves the same result: MongoDB removes a database once its last collection is gone.
+    /// its collections are dropped one by one instead, which leaves the same result: MongoDB removes a database once its
+    /// last collection is gone. A user granted neither can still copy, so the content has already moved; the source is
+    /// then left in place for someone with the rights to drop, rather than failing a move that has done its work.
+    /// Only a refusal on authorization grounds is tolerated, any other failure surfaces.
     /// </remarks>
-    internal static async Task Drop(IMongoDatabase database)
+    internal static async Task<bool> Drop(IMongoDatabase database)
     {
         try
         {
             await database.Client.DropDatabaseAsync(database.DatabaseNamespace.DatabaseName);
+            return true;
         }
         catch (Exception exception) when (MongoDBAuthorizationErrors.IsUnauthorized(exception, out _))
+        {
+            // Not allowed to drop the database; fall back to dropping its collections below.
+        }
+
+        try
         {
             var names = await (await database.ListCollectionNamesAsync()).ToListAsync();
             foreach (var name in names.Where(_ => !_.StartsWith("system.", StringComparison.Ordinal)))
             {
                 await database.DropCollectionAsync(name);
             }
+
+            return true;
+        }
+        catch (Exception exception) when (MongoDBAuthorizationErrors.IsUnauthorized(exception, out _))
+        {
+            return false;
         }
     }
 

@@ -39,8 +39,11 @@ public class when_the_server_refuses_to_drop_the_database : Specification
         _database.ListCollectionNamesAsync(Arg.Any<ListCollectionNamesOptions>(), Arg.Any<CancellationToken>()).Returns(Task.FromResult(cursor));
     }
 
-    Task Because() => MongoDatabaseMove.Drop(_database);
+    bool _dropped;
 
+    async Task Because() => _dropped = await MongoDatabaseMove.Drop(_database);
+
+    [Fact] void should_report_the_database_as_dropped() => _dropped.ShouldBeTrue();
     [Fact] void should_drop_the_events_collection() => _database.Received(1).DropCollectionAsync("events", Arg.Any<CancellationToken>());
     [Fact] void should_drop_the_jobs_collection() => _database.Received(1).DropCollectionAsync("jobs", Arg.Any<CancellationToken>());
     [Fact] void should_leave_the_system_collections_alone() => _database.DidNotReceive().DropCollectionAsync("system.views", Arg.Any<CancellationToken>());

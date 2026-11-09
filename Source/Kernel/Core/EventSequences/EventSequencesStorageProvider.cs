@@ -36,8 +36,7 @@ public class EventSequencesStorageProvider(IStorage storage, IReservedEventSeque
     {
         var actualGrainState = (grainState as IGrainState<EventSequenceState>)!;
         var key = EventSequenceKey.Parse(grainId.Key.ToString()!);
-        if (ReservedEventSequenceRules.MayBeReserved(reservedEventSequenceIds, key.EventStore, key.Namespace, key.EventSequenceId) &&
-            !await ReservedEventSequenceRules.Exists(storage, key.EventStore, key.Namespace, key.EventSequenceId))
+        if (ReservedEventSequenceRules.MayBeReserved(reservedEventSequenceIds, key.EventStore, key.Namespace, key.EventSequenceId))
         {
             actualGrainState.State = new EventSequenceState();
             return;

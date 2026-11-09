@@ -4,6 +4,7 @@
 using System.Buffers;
 using System.Text;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.EventStores;
 using Cratis.Chronicle.ProtectedValues;
 
 namespace Cratis.Chronicle.Storage.MongoDB;
@@ -56,7 +57,7 @@ public static class DatabaseNames
     /// <param name="systemDatabaseName">The name the System event store's databases are named by.</param>
     /// <returns>The database name.</returns>
     public static string ForEventStore(EventStoreName eventStore, string prefix = "", string systemDatabaseName = Configuration.Storage.DefaultSystemDatabaseName) =>
-        Validated($"{prefix}{NameFor(eventStore, systemDatabaseName)}+es", eventStore, null);
+        Validated($"{prefix}{NameFor(eventStore, systemDatabaseName, prefix)}+es", eventStore, null);
 
     /// <summary>
     /// Get the name of the database holding the event sequences of a namespace within an event store.
@@ -67,7 +68,7 @@ public static class DatabaseNames
     /// <param name="systemDatabaseName">The name the System event store's databases are named by.</param>
     /// <returns>The database name.</returns>
     public static string ForEventStoreNamespace(EventStoreName eventStore, EventStoreNamespaceName @namespace, string prefix = "", string systemDatabaseName = Configuration.Storage.DefaultSystemDatabaseName) =>
-        Validated($"{prefix}{NameFor(eventStore, systemDatabaseName)}+es+{@namespace}", eventStore, @namespace);
+        Validated($"{prefix}{NameFor(eventStore, systemDatabaseName, prefix)}+es+{@namespace}", eventStore, @namespace);
 
     /// <summary>
     /// Get the name of the database read models of a namespace within an event store are materialized into.
@@ -77,6 +78,7 @@ public static class DatabaseNames
     /// <param name="prefix">The prefix, or empty to preserve the database name.</param>
     /// <param name="systemDatabaseName">The name the System event store's databases are named by.</param>
     /// <returns>The database name.</returns>
+    /// <exception cref="InvalidDatabaseName">The name resolves to a database that is reserved.</exception>
     /// <remarks>
     /// Unlike the event sequence databases, the default namespace is not suffixed — its read models live in the
     /// bare event store name. A reader that suffixes unconditionally therefore resolves a database that simply
@@ -84,11 +86,20 @@ public static class DatabaseNames
     /// </remarks>
     public static string ForReadModels(EventStoreName eventStore, EventStoreNamespaceName @namespace, string prefix = "", string systemDatabaseName = Configuration.Storage.DefaultSystemDatabaseName)
     {
-        var name = NameFor(eventStore, systemDatabaseName);
-        return Validated(
-            @namespace == EventStoreNamespaceName.Default ? $"{prefix}{name}" : $"{prefix}{name}+{@namespace}",
-            eventStore,
-            @namespace);
+        var name = NameFor(eventStore, systemDatabaseName, prefix);
+        if (@namespace != EventStoreNamespaceName.Default && string.Equals(@namespace.Value, "es", StringComparison.OrdinalIgnoreCase))
+        {
+            // The read models of a namespace named like this would be stored in the event store database itself.
+            throw new InvalidDatabaseName($"{prefix}{name}+{@namespace}", "the namespace name is reserved", eventStore, @namespace.Value);
+        }
+
+        var databaseName = @namespace == EventStoreNamespaceName.Default ? $"{prefix}{name}" : $"{prefix}{name}+{@namespace}";
+        if (IsClusterDatabaseName(databaseName, prefix))
+        {
+            throw new InvalidDatabaseName(databaseName, "the name is reserved", eventStore, @namespace.Value);
+        }
+
+        return Validated(databaseName, eventStore, @namespace);
     }
 
     /// <summary>
@@ -100,7 +111,12 @@ public static class DatabaseNames
     public static EventStoreName EventStoreFor(string name, string systemDatabaseName = Configuration.Storage.DefaultSystemDatabaseName) =>
         string.Equals(name, systemDatabaseName, StringComparison.OrdinalIgnoreCase) ? EventStoreName.System : new EventStoreName(name);
 
-    static string NameFor(EventStoreName eventStore, string systemDatabaseName)
+    static bool IsClusterDatabaseName(string databaseName, string prefix) =>
+        databaseName.Length == prefix.Length + WellKnownDatabaseNames.Chronicle.Length &&
+        databaseName.StartsWith(prefix, StringComparison.Ordinal) &&
+        databaseName.EndsWith(WellKnownDatabaseNames.Chronicle, StringComparison.OrdinalIgnoreCase);
+
+    static string NameFor(EventStoreName eventStore, string systemDatabaseName, string prefix)
     {
         if (string.Equals(eventStore.Value, EventStoreName.System.Value, StringComparison.OrdinalIgnoreCase))
         {
@@ -110,6 +126,11 @@ public static class DatabaseNames
         if (string.Equals(eventStore.Value, systemDatabaseName, StringComparison.OrdinalIgnoreCase))
         {
             throw new InvalidDatabaseName(eventStore.Value, "the name is reserved for the System event store's databases", eventStore, null);
+        }
+
+        if (ReservedEventStoreNames.IsReserved(eventStore.Value, systemDatabaseName, prefix))
+        {
+            throw new InvalidDatabaseName(eventStore.Value, "the name is reserved", eventStore, null);
         }
 
         return eventStore.Value;
@@ -124,6 +145,11 @@ public static class DatabaseNames
         else if (databaseName.Contains(ReservedPhysicalMarker, StringComparison.OrdinalIgnoreCase))
         {
             throw new InvalidDatabaseName(databaseName, "it uses the physical name space reserved for confidentiality keys", eventStore, @namespace?.Value);
+        }
+
+        if (ReservedEventStoreNames.IsInternalDatabaseName(databaseName))
+        {
+            throw new InvalidDatabaseName(databaseName, "the name is reserved", eventStore, @namespace?.Value);
         }
 
         var reason = GetInvalidReason(databaseName);

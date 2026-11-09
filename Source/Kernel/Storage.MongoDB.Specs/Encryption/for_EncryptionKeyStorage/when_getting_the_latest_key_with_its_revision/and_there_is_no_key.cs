@@ -5,13 +5,13 @@ using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage.Compliance;
 using Cratis.Chronicle.Storage.MongoDB;
-using Cratis.Chronicle.Storage.MongoDB.Sinks;
+using Cratis.Chronicle.Storage.MongoDB.EventSequences;
 using MongoDB.Driver;
 
 namespace Cratis.Compliance.MongoDB.for_EncryptionKeyStorage.when_getting_the_latest_key_with_its_revision;
 
-[Collection(MongoDBCollection.Name)]
-public class and_there_is_no_key(MongoDBFixture fixture) : Specification
+[Collection(ReplicaSetMongoDBCollection.Name)]
+public class and_there_is_no_key(ReplicaSetMongoDBFixture fixture) : Specification
 {
     IEncryptionKeyStorage _store;
     EncryptionKeyIdentifier _identifier = Guid.NewGuid().ToString();
@@ -27,7 +27,7 @@ public class and_there_is_no_key(MongoDBFixture fixture) : Specification
         namespaceDatabase.GetCollection<EncryptionKeyForIdentifier>("encryption-keys").Returns(mongo.GetCollection<EncryptionKeyForIdentifier>("encryption-keys"));
         namespaceDatabase.GetCollection<EncryptionKeyErasureForIdentifier>("encryption-key-erasures").Returns(mongo.GetCollection<EncryptionKeyErasureForIdentifier>("encryption-key-erasures"));
         eventStore.GetNamespaceDatabase(EventStoreNamespaceName.NotSet).Returns(namespaceDatabase);
-        _store = new Cratis.Compliance.MongoDB.EncryptionKeyStorage(database);
+        _store = new EncryptionKeyStorage(database);
     }
 
     async Task Because() => _result = await _store.TryGetLatestFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, _identifier);

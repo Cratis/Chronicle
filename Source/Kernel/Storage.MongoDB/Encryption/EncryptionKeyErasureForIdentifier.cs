@@ -21,8 +21,25 @@ namespace Cratis.Compliance.MongoDB;
 /// <param name="ErasedThrough">The highest <see cref="EncryptionKeyRevision"/> the erasure covered.</param>
 /// <param name="ErasedKeyFingerprints">Fingerprints of the key material that was destroyed.</param>
 /// <param name="NewKeyAllowed">Whether an authorized new lifecycle may mint a fresh key above the fence.</param>
+/// <param name="Version">The version incremented by every guarded fence write.</param>
+/// <param name="Lifecycle">The current authorized lifecycle.</param>
+/// <param name="ErasedLifecycle">The highest erased lifecycle.</param>
+/// <param name="Requests">The immutable, never-evicted request boundaries.</param>
+/// <param name="Seal">The integrity seal over the fence fields.</param>
 public record EncryptionKeyErasureForIdentifier(
     EncryptionKeyIdentifier Id,
     EncryptionKeyRevision ErasedThrough,
     string[] ErasedKeyFingerprints,
-    bool NewKeyAllowed);
+    bool NewKeyAllowed,
+    ulong Version = 0,
+    uint Lifecycle = 1,
+    uint ErasedLifecycle = 0,
+    EncryptionKeyErasureRequest[]? Requests = null,
+    string? Seal = null)
+{
+    /// <summary>
+    /// Convert the persisted fence to the provider-independent model.
+    /// </summary>
+    /// <returns>The fence.</returns>
+    public EncryptionKeyErasure ToFence() => new(ErasedThrough, ErasedKeyFingerprints, NewKeyAllowed, Version, Lifecycle, ErasedLifecycle, Requests, Seal);
+}

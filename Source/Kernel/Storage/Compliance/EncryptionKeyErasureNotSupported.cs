@@ -13,8 +13,8 @@ namespace Cratis.Chronicle.Storage.Compliance;
 /// not, and deleting a key in it leaves exactly the absence a later provisioning reads as "never protected" - so
 /// the erasure would be reversible, which is the defect the fence exists to close. Refusing loudly is the safe
 /// outcome: an erasure that cannot be fenced is not an erasure, and reporting one would be worse than failing.
-/// Implement <see cref="IEncryptionKeyStorage.RecordErasureFor"/>, <see cref="IEncryptionKeyStorage.GetErasureFor"/>
-/// and <see cref="IEncryptionKeyStorage.AllowNewKeyFor"/> in the store to resolve it.
+/// Implement <see cref="IEncryptionKeyStorage.RecordErasureFor(Concepts.EventStoreName, Concepts.EventStoreNamespaceName, EncryptionKeyIdentifier)"/>, <see cref="IEncryptionKeyStorage.GetErasureFor"/>
+/// and <see cref="IEncryptionKeyStorage.AllowNewKeyFor(Concepts.EventStoreName, Concepts.EventStoreNamespaceName, EncryptionKeyIdentifier)"/> in the store to resolve it.
 /// </remarks>
 /// <param name="identifier">The <see cref="EncryptionKeyIdentifier"/> the erasure was being recorded for.</param>
 public class EncryptionKeyErasureNotSupported(EncryptionKeyIdentifier identifier)
