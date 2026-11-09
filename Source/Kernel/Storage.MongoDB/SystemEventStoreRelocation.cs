@@ -158,7 +158,7 @@ public class SystemEventStoreRelocation(
     static async Task<bool> AnyDatabaseExists(IMongoClient server, string eventStoreDatabaseName)
     {
         var names = await (await server.ListDatabaseNamesAsync()).ToListAsync();
-        return names.Any(_ =>
+        return names.Exists(_ =>
             string.Equals(_, eventStoreDatabaseName, StringComparison.OrdinalIgnoreCase) ||
             _.StartsWith($"{eventStoreDatabaseName}+", StringComparison.OrdinalIgnoreCase));
     }

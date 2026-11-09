@@ -14,7 +14,7 @@ public class when_the_move_fails : given.a_repeat_move_patch
 
     void Establish() => _storage.MoveSystemEventStoreTo(Arg.Any<SystemEventStoreLocation>()).Returns(Task.FromException(new InvalidOperationException("not authorized")));
 
-    async Task Because() => _exception = await Catch.Exception(() => _patch.Up());
+    async Task Because() => _exception = await Catch.Exception(_patch.Up);
 
     [Fact] void should_not_fail_the_patch() => _exception.ShouldBeNull();
 }
