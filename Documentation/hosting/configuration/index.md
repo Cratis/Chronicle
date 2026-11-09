@@ -52,6 +52,7 @@ If your deployment provisions storage before starting replicas, use [SQL schema 
 - [Clustering](clustering.md) - Orleans clustering provider, cluster identity, and silo/gateway ports.
 - [Observers](observers.md) - Retry and timeout settings for observer subscriptions.
 - [Read Models](read-models.md) - Configure replay retention for replay-generated read model versions.
+- [Sinks](sinks.md) - Name the sinks read models and graphs are stored in, independent of the event storage.
 - [Events](events.md) - Configure event queues.
 - [Memory](memory.md) - Memory budget and memory metrics.
 - [Authentication](authentication.md) - External authority and default admin settings.

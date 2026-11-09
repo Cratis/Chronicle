@@ -5,9 +5,11 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Projections.Engine.Pipelines;
+using Cratis.Chronicle.Storage.Sinks;
 using Orleans.Providers;
 
 namespace Cratis.Chronicle.ReadModels;
@@ -16,9 +18,15 @@ namespace Cratis.Chronicle.ReadModels;
 /// Represents an implementation of <see cref="IReadModelsManager"/>.
 /// </summary>
 /// <param name="projectionPipelines"><see cref="IProjectionPipelineManager"/> for evicting pipelines left bound to a read model's former definition.</param>
+/// <param name="sinkConfigurations">The <see cref="ISinkConfigurations"/> a named sink must be known to; none configured when omitted.</param>
+/// <param name="sinkChangeReplays">The <see cref="ISinkChangeReplays"/> rebuilding a read model moved to another sink; no rebuild when omitted.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.ReadModelsManager)]
-public class ReadModelsManager(IProjectionPipelineManager projectionPipelines) : Grain<ReadModelsManagerState>, IReadModelsManager
+public class ReadModelsManager(
+    IProjectionPipelineManager projectionPipelines,
+    ISinkConfigurations? sinkConfigurations = null,
+    ISinkChangeReplays? sinkChangeReplays = null) : Grain<ReadModelsManagerState>, IReadModelsManager
 {
+    readonly ISinkConfigurations _sinkConfigurations = sinkConfigurations ?? DefaultSinkConfigurations.Instance;
     readonly Dictionary<ReadModelIdentifier, ReadModelDefinition> _completed = new();
     readonly HashSet<ReadModelIdentifier> _pendingEvictions = new();
 
@@ -35,6 +43,10 @@ public class ReadModelsManager(IProjectionPipelineManager projectionPipelines) :
             definition.ContainerName.EnsureValid(definition.Identifier);
         }
 
+        // Store each definition with the sink it resolves to, so a change of that sink - the read model's own, the client's
+        // default or the kernel's - is a change of the stored definition. The implicit default resolves to the definition as sent.
+        definitions = definitions.Select(WithResolvedSink).ToArray();
+
         EnsureSinglePublisher(definitions);
 
         // Only successfully reconciled definitions qualify for the fast path. Persisted manager state alone
@@ -45,10 +57,16 @@ public class ReadModelsManager(IProjectionPipelineManager projectionPipelines) :
 
         var readModels = State.ReadModels.ToList();
         var modified = new List<ReadModelDefinition>();
+        var sinkChanges = new List<ReadModelIdentifier>();
         foreach (var definition in definitions)
         {
             _completed.Remove(definition.Identifier);
             var existing = readModels.Find(_ => _.Identifier == definition.Identifier);
+            if (existing is not null && !SameSink(existing.Sink, definition.Sink))
+            {
+                sinkChanges.Add(definition.Identifier);
+            }
+
             if (existing is not null)
             {
                 // A fresh activation must also reconcile an equal persisted definition: the previous
@@ -60,6 +78,20 @@ public class ReadModelsManager(IProjectionPipelineManager projectionPipelines) :
 
             readModels.Add(definition);
             modified.Add(definition);
+        }
+
+        // A moved read model's new sink is empty while the observers filling it are caught up. Its replays are recorded, durably,
+        // before the new sink is stored: a crash before the store leaves the old sink stored, so the next registration finds the
+        // change again and records the same replays once more - recording is idempotent - and a crash after it leaves them recorded.
+        // The new sink is never stored without its replays. They cannot run yet: the pipelines read the sink from the read model
+        // grains, which only learn the new definition below.
+        var sinkChangeReplaysToStart = new List<SinkChangeReplay>();
+        foreach (var identifier in sinkChanges)
+        {
+            if (sinkChangeReplays is not null)
+            {
+                sinkChangeReplaysToStart.Add(await sinkChangeReplays.Request(this.GetPrimaryKeyString(), identifier));
+            }
         }
 
         if (modified.Count > 0)
@@ -79,6 +111,12 @@ public class ReadModelsManager(IProjectionPipelineManager projectionPipelines) :
             _pendingEvictions.Remove(identifier);
         }
 
+        // Now the read model grains know the new sink and the pipelines bound to the old one are gone, the recorded replays run.
+        foreach (var replay in sinkChangeReplaysToStart)
+        {
+            await sinkChangeReplays!.Start(replay);
+        }
+
         foreach (var definition in definitions)
         {
             _completed[definition.Identifier] = definition;
@@ -92,6 +130,7 @@ public class ReadModelsManager(IProjectionPipelineManager projectionPipelines) :
     public async Task UpdateDefinition(ReadModelDefinition definition)
     {
         definition.Sink.EnsureReadModelSupported();
+        definition = WithResolvedSink(definition);
         EnsureSinglePublisher([definition]);
         if (!State.ReadModels.Any(_ => _.Identifier == definition.Identifier)) throw new ReadModelNotFound(definition.Identifier);
         await Register([definition]);
@@ -99,6 +138,16 @@ public class ReadModelsManager(IProjectionPipelineManager projectionPipelines) :
 
     /// <inheritdoc/>
     public Task<IEnumerable<ReadModelDefinition>> GetDefinitions() => Task.FromResult(State.ReadModels);
+
+    /// <summary>
+    /// Compares the sinks two definitions store to. A definition stored before sinks had names stores to the default sink.
+    /// </summary>
+    /// <param name="first">The stored <see cref="SinkDefinition"/>.</param>
+    /// <param name="second">The incoming <see cref="SinkDefinition"/>.</param>
+    /// <returns>True when both store to the same sink.</returns>
+    static bool SameSink(SinkDefinition first, SinkDefinition second) =>
+        string.Equals(first.Type.Value, second.Type.Value, StringComparison.OrdinalIgnoreCase) &&
+        string.Equals(first.Name.Value.Trim(), second.Name.Value.Trim(), StringComparison.OrdinalIgnoreCase);
 
     async Task Persist(List<ReadModelDefinition> readModels, IEnumerable<ReadModelDefinition> modified)
     {
@@ -117,6 +166,22 @@ public class ReadModelsManager(IProjectionPipelineManager projectionPipelines) :
             State.Modified = [];
             throw;
         }
+    }
+
+    /// <summary>
+    /// Gives a definition the sink it resolves to, refusing one naming a sink the kernel has no configuration for, or one that cannot
+    /// store its kind of read model.
+    /// </summary>
+    /// <param name="definition">The <see cref="ReadModelDefinition"/> about to be stored.</param>
+    /// <returns>The definition with its resolved sink.</returns>
+    /// <exception cref="UnknownSinkName">Thrown when the named sink is not configured.</exception>
+    /// <exception cref="SinkConfigurationIsForAnotherKindOfReadModel">Thrown when the named sink cannot store the read model.</exception>
+    ReadModelDefinition WithResolvedSink(ReadModelDefinition definition)
+    {
+        var resolved = _sinkConfigurations.ResolveFor(definition, SinkConfigurationRules.IsGraph(definition.Sink.Type));
+        return resolved.IsImplicitDefault
+            ? definition
+            : definition with { Sink = definition.Sink with { Type = resolved.Type, Name = resolved.Name } };
     }
 
     /// <summary>

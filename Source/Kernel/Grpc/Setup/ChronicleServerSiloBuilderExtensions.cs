@@ -127,6 +127,8 @@ public static class ChronicleServerSiloBuilderExtensions
         builder.Services.TryAddSingleton<IReadModelsCompliance, ReadModelsCompliance>();
         builder.Services.TryAddSingleton<IReadModelReadBindings, ReadModelReadBindings>();
         builder.Services.TryAddSingleton<IMaterializedReadModelStore, MaterializedReadModelStore>();
+        builder.Services.TryAddSingleton<Cratis.Chronicle.Storage.Sinks.ISinkConfigurations, Cratis.Chronicle.Sinks.SinkConfigurations>();
+        builder.Services.TryAddSingleton<Cratis.Chronicle.ReadModels.ISinkChangeReplays, Cratis.Chronicle.ReadModels.SinkChangeReplays>();
         builder.Services.TryAddSingleton<IEventTypeMigrations, EventTypeMigrations>();
         builder.Services.TryAddSingleton<IObserverSubscriberSelector, ObserverSubscriberSelector>();
         builder
@@ -160,6 +162,7 @@ public static class ChronicleServerSiloBuilderExtensions
             FenceTimeout = sp.GetRequiredService<IOptions<ChronicleOptions>>().Value.Compliance.Encryption.FenceTimeout
         });
         builder.Services.AddSingleton<ILifecycleParticipant<ISiloLifecycle>, AlertIncidentsMetricsOwnerKeeper>();
+        builder.Services.AddSingleton<ILifecycleParticipant<ISiloLifecycle>, Cratis.Chronicle.Federation.FederationConsumerKeeper>();
 
         builder.Services.AddChronicleAdministratorAuthorization();
         builder.Services.AddChronicleDataProtection();

@@ -1,5 +1,5 @@
 ---
-id: 0027-key-store-atomic-fence
+id: 0028-key-store-atomic-fence
 title: Make encryption key saves and erasure fence writes atomic and monotonic on every key store
 status: proposed
 stage: none

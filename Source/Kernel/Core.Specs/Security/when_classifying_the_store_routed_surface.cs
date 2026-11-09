@@ -21,6 +21,8 @@ public class when_classifying_the_store_routed_surface : Specification
 
     static readonly IReadOnlyDictionary<string, string> _withoutStoreParameter = new Dictionary<string, string>(StringComparer.Ordinal)
     {
+        ["Federation.FederationBinding"] = "lists federation bindings of this kernel; has no store",
+        ["Federation.FederationGrantInformation"] = "lists federation grants of this kernel; has no store",
         ["Servers.ServerInstanceDetails"] = "lists server instances; has no store",
         ["Diagnostics.StorageAuthorizationDiagnostic"] = "lists cluster-wide storage authorization failures; has no store",
         ["Occurrences.LifecycleOccurrenceResult"] = "a result record; it has no query of its own",

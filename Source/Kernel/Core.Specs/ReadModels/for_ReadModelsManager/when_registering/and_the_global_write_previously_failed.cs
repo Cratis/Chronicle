@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Projections.Engine.Pipelines;
+using Cratis.Chronicle.Storage.Sinks;
 using Orleans.Core;
 using Orleans.TestKit;
 
@@ -25,6 +26,7 @@ public class and_the_global_write_previously_failed : Specification
         _readModel = Substitute.For<IReadModel>();
         _silo.AddProbe(_ => _readModel);
         _silo.AddService(Substitute.For<IProjectionPipelineManager>());
+        _silo.AddService<ISinkConfigurations>(DefaultSinkConfigurations.Instance);
         _manager = await _silo.CreateGrainAsync<ReadModelsManager>("store");
         _definition = given.a_read_models_manager.DefinitionFor("model", "Model");
         _storage.WriteStateAsync().Returns(Task.FromException(new Exception("Unavailable")));

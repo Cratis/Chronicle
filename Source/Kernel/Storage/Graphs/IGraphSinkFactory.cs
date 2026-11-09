@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Storage.Sinks;
 
 namespace Cratis.Chronicle.Storage.Graphs;
@@ -12,7 +13,7 @@ namespace Cratis.Chronicle.Storage.Graphs;
 /// </summary>
 /// <remarks>
 /// A graph sink factory is also a <see cref="ISinkFactory"/>, so it is discovered and registered like every sink, but it
-/// does not create document sinks: <see cref="ISinkFactory.CreateFor"/> refuses, and <see cref="ISinks.GetGraphFor"/> is
+/// does not create document sinks: <see cref="ISinkFactory.CreateFor(EventStoreName, EventStoreNamespaceName, ReadModelDefinition)"/> refuses, and <see cref="ISinks.GetGraphFor"/> is
 /// the way to get a graph sink.
 /// </remarks>
 public interface IGraphSinkFactory : ISinkFactory
@@ -25,6 +26,18 @@ public interface IGraphSinkFactory : ISinkFactory
     /// <param name="readModel">The <see cref="ReadModelDefinition"/> whose schema describes the graph.</param>
     /// <returns>A new <see cref="IGraphSink"/>.</returns>
     IGraphSink CreateGraphFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, ReadModelDefinition readModel);
+
+    /// <summary>
+    /// Create a <see cref="IGraphSink"/> for a graph read model, stored to a named sink configuration.
+    /// </summary>
+    /// <param name="eventStore"><see cref="EventStoreName"/> the sink is for.</param>
+    /// <param name="namespace"><see cref="EventStoreNamespaceName"/> the sink is for.</param>
+    /// <param name="readModel">The <see cref="ReadModelDefinition"/> whose schema describes the graph.</param>
+    /// <param name="sink">The <see cref="SinkName"/> of the configuration to connect to; <see cref="SinkName.Default"/> is the kernel's own connection.</param>
+    /// <returns>A new <see cref="IGraphSink"/>.</returns>
+    /// <exception cref="SinkTypeDoesNotSupportNamedConfigurations">Thrown when the factory cannot connect to a named configuration.</exception>
+    IGraphSink CreateGraphFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, ReadModelDefinition readModel, SinkName sink) =>
+        sink.IsDefault ? CreateGraphFor(eventStore, @namespace, readModel) : throw new SinkTypeDoesNotSupportNamedConfigurations(TypeId, sink);
 
     /// <inheritdoc/>
     ISink ISinkFactory.CreateFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, ReadModelDefinition readModel) =>
