@@ -25,4 +25,15 @@ public interface IFromEveryBuilder<TReadModel>
     /// </summary>
     /// <returns>Builder continuation.</returns>
     IFromEveryBuilder<TReadModel> ExcludeChildProjections();
+
+    /// <summary>
+    /// Start building a set operation that only assigns the property when it has no value yet.
+    /// </summary>
+    /// <typeparam name="TProperty">Type of the property.</typeparam>
+    /// <param name="readModelPropertyAccessor">Read model property accessor for defining the target property.</param>
+    /// <returns>The <see cref="IAllSetBuilder{TReadModel, TBuilder}"/> to build up the property expressions.</returns>
+    /// <remarks>The first event that produces a value wins - for example the time a read model was first touched.</remarks>
+    /// <exception cref="ProjectionBuilderOperationNotSupported">Thrown when the builder implementation does not support the operation.</exception>
+    IAllSetBuilder<TReadModel, IFromEveryBuilder<TReadModel>> SetOnce<TProperty>(Expression<Func<TReadModel, TProperty>> readModelPropertyAccessor) =>
+        throw new ProjectionBuilderOperationNotSupported(GetType(), nameof(SetOnce));
 }

@@ -38,6 +38,8 @@ public class FluentJoinOverridesLocalWriteAnalyzer : DiagnosticAnalyzer
     static readonly HashSet<string> LocalWriteMethodNames = new(StringComparer.Ordinal)
     {
         SetMethodName,
+        "SetOnce",
+        "RemoveKey",
         "Add",
         "Subtract",
         "Count",
