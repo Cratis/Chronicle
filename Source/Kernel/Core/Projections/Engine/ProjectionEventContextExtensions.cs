@@ -159,9 +159,7 @@ public static class ProjectionEventContextExtensions
                         },
                         error =>
                         {
-#pragma warning disable CA1848
-                            logger.LogError("Error when trying to resolve join: {Error}", error);
-#pragma warning restore CA1848
+                            logger.ResolveJoinFailed(error);
                             observer.OnError(error);
                         });
                 },
