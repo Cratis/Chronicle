@@ -28,8 +28,10 @@ Add a `neo4j` section to `chronicle.json`. Everything but the server is optional
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
 | server | string | empty | The bolt URI of the server, such as `bolt://localhost:7687` or `neo4j+s://graph.example`. Leave it empty when the connection resolution gives a URI for every graph |
+| serverFile | string | none | Path of a file holding the bolt URI, such as a mounted Kubernetes Secret. Set either this or `server`, not both |
 | userName | string | none | The user to authenticate with. Without a user name and password the driver connects without authentication |
 | passwordSecret | string | none | The name of the configuration key that holds the password, such as an environment variable name. The password itself is never written in the options |
+| passwordFile | string | none | Path of a file holding the password, such as a mounted Kubernetes Secret. Set either this or `passwordSecret`, not both |
 | databasePrefix | string | none | Prefix of the database names, for sharing one Neo4j server between applications |
 | databaseMode | string | PerNamespace | `PerNamespace` for a database per event store and namespace, or `Single` for one database |
 | singleDatabase | string | neo4j | The database used in `Single` mode |
@@ -45,6 +47,18 @@ NEO4J_PASSWORD=from-your-secret-store
 ```
 
 Chronicle keeps one pooled driver for every server and identity, so all graphs on the same server share one connection pool.
+
+### Read the connection from files
+
+In Kubernetes the safe way to hand a Secret to a pod is a mounted file rather than an environment variable. Name the file with `serverFile` instead of `server`, and with `passwordFile` instead of `passwordSecret`:
+
+```bash
+Cratis__Chronicle__Neo4j__ServerFile=/var/run/secrets/neo4j/server
+Cratis__Chronicle__Neo4j__UserName=chronicle
+Cratis__Chronicle__Neo4j__PasswordFile=/var/run/secrets/neo4j/password
+```
+
+Each file is read once, at startup, and trimmed of a trailing newline. A password read from a file is kept in the Kernel's configuration and `passwordSecret` points at it, so it is never written in the options. The Kernel refuses to start when a setting and its file are both set, naming both, or when a file does not exist, is a directory, cannot be read or is empty, naming the setting and the path but never what the file holds. A [named Neo4j sink](../hosting/configuration/sinks.md#connections-from-files) takes `serverFile` and `passwordFile` the same way.
 
 ## One database per namespace
 

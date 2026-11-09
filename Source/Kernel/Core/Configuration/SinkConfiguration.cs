@@ -33,6 +33,15 @@ public class SinkConfiguration
     public string Server { get; init; } = string.Empty;
 
     /// <summary>
+    /// Gets the path of a file holding the <see cref="Server"/> of a <c language="text">Neo4j</c> sink, for instance a mounted Kubernetes Secret.
+    /// </summary>
+    /// <remarks>
+    /// The file is read once at startup and trimmed of a trailing newline. Setting both this and <see cref="Server"/>
+    /// stops startup. See <see cref="ConnectionFiles"/>.
+    /// </remarks>
+    public string ServerFile { get; init; } = string.Empty;
+
+    /// <summary>
     /// Gets the optional user name a <c language="text">Neo4j</c> sink authenticates with.
     /// </summary>
     public string? UserName { get; init; }
