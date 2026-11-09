@@ -78,6 +78,7 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
         }
 
         Add(new PropertiesChanged<TTarget>(workingState, differences));
+        SortChildrenAddedInThisChangeset(workingState);
         CurrentState = workingState;
     }
 
@@ -162,6 +163,10 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
                 return;
             }
 
+            // The child was added within this changeset, so a sink sorting on insert sees its final values - order it
+            // again by them so the engine's state keeps the order the sinks store.
+            existingCollection.SortChildren(existingChildAdded.Ordering, existingChildAdded.IdentifiedByProperty);
+
             // Replace the existing ChildAdded with a new one containing the updated child
             var index = _changes.IndexOf(existingChildAdded);
             _changes[index] = new ChildAdded(
@@ -238,7 +243,7 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
                     propertyPath.SetValue(item, difference.Changed!, arrayIndexers);
                 }
             }
-            items.PlaceAppendedChild(ordering);
+            items.PlaceAppendedChild(ordering, identifiedByProperty);
             Add(new ChildAdded(item, childrenProperty, identifiedByProperty, key!, arrayIndexers, ordering));
         }
 
@@ -384,6 +389,10 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
         }
 
         resolvesToRemove.ForEach(_ => changes.Remove(_));
+        if (resolvesToRemove.Count > 0)
+        {
+            parent.SortChildrenAddedInThisChangeset(parent.CurrentState);
+        }
     }
 
     static void ApplyDifferencesToChild(object child, IEnumerable<PropertyDifference> differences) =>
@@ -398,6 +407,30 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
 
             propertyPath.SetValue(child, difference.Changed!, difference.ArrayIndexers);
         });
+
+    static object? ValuesOfChild(object? item, IEnumerable<ChildAdded> childrenAdded)
+    {
+        if (item is null)
+        {
+            return null;
+        }
+
+        foreach (var childAdded in childrenAdded)
+        {
+            if (ReferenceEquals(item, childAdded.Child))
+            {
+                return item;
+            }
+
+            if (childAdded.IdentifiedByProperty.IsSet &&
+                Equals(childAdded.IdentifiedByProperty.GetValue(item, ArrayIndexers.NoIndexers)?.ToString(), childAdded.Key?.ToString()))
+            {
+                return childAdded.Child;
+            }
+        }
+
+        return item;
+    }
 
     static PropertyDifference CreateUpdatedDifferenceFor(PropertyDifference ancestor, PropertyDifference descendant, object state)
     {
@@ -517,6 +550,28 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
         }
 
         _consolidatedIntoChildren.ForEach(childAdded => ApplyDifferencesToChild(childAdded.Child, propertiesChanged.Differences));
+        parent?.SortChildrenAddedInThisChangeset(parent.CurrentState);
+    }
+
+    /// <summary>
+    /// A child added within this changeset reaches a sink sorting on insert with its final values. When a later change in
+    /// the same changeset sets a value it is sorted by, its collection is ordered again so the state keeps the stored order.
+    /// </summary>
+    /// <param name="state">The state holding the collections to order.</param>
+    void SortChildrenAddedInThisChangeset(TTarget state)
+    {
+        if (!_hasChildCollectionOperations || state is null)
+        {
+            return;
+        }
+
+        var sorted = _changes.OfType<ChildAdded>().Where(_ => _.Ordering?.Placement == ChildrenPlacement.Sorted && !_.Ordering.IsAppend()).ToArray();
+        foreach (var childAdded in sorted)
+        {
+            // A sink stores the child the change carries, so its values decide where a child added here is placed.
+            state.EnsureCollection<TTarget, object>(childAdded.ChildrenProperty, childAdded.ArrayIndexers)
+                .SortChildren(childAdded.Ordering, childAdded.IdentifiedByProperty, item => ValuesOfChild(item, sorted.Where(_ => _.ChildrenProperty == childAdded.ChildrenProperty)));
+        }
     }
 
     void Consolidate()

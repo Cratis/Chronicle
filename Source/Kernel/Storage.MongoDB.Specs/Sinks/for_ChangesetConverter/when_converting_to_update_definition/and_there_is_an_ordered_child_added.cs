@@ -46,6 +46,8 @@ public class and_there_is_an_ordered_child_added : given.a_changeset_converter
     [Fact] void should_sort_ascending() => _sortedAscending["$push"]["children"]["$sort"]["sortOrder"].AsInt32.ShouldEqual(1);
     [Fact] void should_not_set_a_position_when_sorted() => _sortedAscending["$push"]["children"].AsBsonDocument.Contains("$position").ShouldBeFalse();
     [Fact] void should_sort_descending() => _sortedDescending["$push"]["children"]["$sort"]["sortOrder"].AsInt32.ShouldEqual(-1);
+    [Fact] void should_break_ties_by_the_identifier_ascending_when_sorted_ascending() => _sortedAscending["$push"]["children"]["$sort"].AsBsonDocument.ShouldEqual(new BsonDocument { { "sortOrder", 1 }, { "_id", 1 } });
+    [Fact] void should_break_ties_by_the_identifier_ascending_when_sorted_descending() => _sortedDescending["$push"]["children"]["$sort"].AsBsonDocument.ShouldEqual(new BsonDocument { { "sortOrder", -1 }, { "_id", 1 } });
 
     async Task<BsonDocument> Push(ChildrenOrdering? ordering)
     {

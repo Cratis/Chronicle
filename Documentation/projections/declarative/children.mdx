@@ -100,7 +100,9 @@ The order is stored, not computed when the read model is queried. Chronicle appl
 
 Ordering only places **new** children. Updating an existing child never moves it, even when the update changes the property the collection is sorted by. Removing a child leaves the others where they are.
 
-A sorted collection uses a stable sort: children with equal values keep their relative order. Children with a missing or null sort value come first when sorting ascending and last when sorting descending. Because the whole collection is ordered on each insert, a child whose sort value changed since it was added takes its sorted place the next time a child is inserted.
+Children with equal sort values are ordered by the property that identifies them, ascending, in both directions, so the order is the same in every sink. Children with a missing or null sort value come first when sorting ascending and last when sorting descending.
+
+Values compare the same way regardless of the server's culture: numbers numerically across numeric types, strings by their character codes (so `B` comes before `a`), dates as UTC instants to the millisecond, `false` before `true`, and GUIDs by their stored bytes. When a collection mixes kinds of values, null comes first, then numbers, strings, GUIDs, booleans and dates. Because the whole collection is ordered on each insert, a child whose sort value changed since it was added takes its sorted place the next time a child is inserted.
 
 In the next example the newest comment comes first, and tasks stay sorted with the highest priority first:
 

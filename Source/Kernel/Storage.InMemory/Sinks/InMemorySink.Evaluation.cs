@@ -130,7 +130,7 @@ public partial class InMemorySink
 
                 case ChildAdded childAdded:
                     var collection = state.EnsureCollection<ExpandoObject, object>(childAdded.ChildrenProperty, childAdded.ArrayIndexers);
-                    collection.InsertChild(Detached(childAdded.State)!, childAdded.Ordering);
+                    collection.InsertChild(Detached(childAdded.State)!, childAdded.Ordering, childAdded.IdentifiedByProperty);
                     break;
 
                 case ChildRemoved childRemoved:

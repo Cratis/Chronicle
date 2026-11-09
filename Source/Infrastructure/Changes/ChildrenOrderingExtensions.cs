@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections;
-using System.Globalization;
 using Cratis.Chronicle.Properties;
 
 namespace Cratis.Chronicle.Changes;
@@ -12,8 +11,8 @@ namespace Cratis.Chronicle.Changes;
 /// </summary>
 /// <remarks>
 /// <see cref="ChildrenPlacement.Prepend"/> inserts a new child first. <see cref="ChildrenPlacement.Sorted"/> orders the whole
-/// collection after the insert with a stable sort - children comparing equal keep their relative order - where missing and
-/// null values sort first ascending and last descending.
+/// collection after the insert by the sort value, then by the child's identifier ascending, using the culture-free total order
+/// of <see cref="ChildrenSortValues"/> - the same order MongoDB uses - so every sink stores the same order.
 /// </remarks>
 public static class ChildrenOrderingExtensions
 {
@@ -24,10 +23,11 @@ public static class ChildrenOrderingExtensions
     /// <param name="collection">The collection to insert into.</param>
     /// <param name="child">The child to insert.</param>
     /// <param name="ordering">The optional <see cref="ChildrenOrdering"/>. When null, the child is appended.</param>
-    public static void InsertChild<T>(this ICollection<T> collection, T child, ChildrenOrdering? ordering)
+    /// <param name="identifiedBy">The optional property identifying a child, breaking ties between equal sort values.</param>
+    public static void InsertChild<T>(this ICollection<T> collection, T child, ChildrenOrdering? ordering, PropertyPath? identifiedBy = default)
     {
         collection.Add(child);
-        collection.PlaceAppendedChild(ordering);
+        collection.PlaceAppendedChild(ordering, identifiedBy);
     }
 
     /// <summary>
@@ -36,102 +36,122 @@ public static class ChildrenOrderingExtensions
     /// <typeparam name="T">Type of item in the collection.</typeparam>
     /// <param name="collection">The collection holding the child as its last item.</param>
     /// <param name="ordering">The optional <see cref="ChildrenOrdering"/>. When null, the child stays where it is.</param>
+    /// <param name="identifiedBy">The optional property identifying a child, breaking ties between equal sort values.</param>
     /// <remarks>
     /// Appending first and placing afterwards lets a child be populated while it is addressed by its appended position,
     /// and lets <see cref="ChildrenPlacement.Sorted"/> sort on the values the child was populated with.
     /// </remarks>
-    public static void PlaceAppendedChild<T>(this ICollection<T> collection, ChildrenOrdering? ordering)
+    public static void PlaceAppendedChild<T>(this ICollection<T> collection, ChildrenOrdering? ordering, PropertyPath? identifiedBy = default)
     {
         if (ordering?.IsAppend() != false || collection.Count < 2)
         {
             return;
         }
 
-        if (collection is IList list)
+        if (ordering.Placement == ChildrenPlacement.Prepend)
         {
-            Place(list, ordering);
+            MoveLastFirst(collection);
             return;
         }
 
-        if (collection is IList<T> typedList)
-        {
-            if (ordering.Placement == ChildrenPlacement.Prepend)
-            {
-                var child = typedList[typedList.Count - 1];
-                typedList.RemoveAt(typedList.Count - 1);
-                typedList.Insert(0, child);
-                return;
-            }
+        collection.SortChildren(ordering, identifiedBy);
+    }
 
-            var sorted = Sort(typedList.Cast<object>(), ordering).Cast<T>().ToArray();
-            typedList.Clear();
-            foreach (var item in sorted)
-            {
-                typedList.Add(item);
-            }
+    /// <summary>
+    /// Order a collection again by a <see cref="ChildrenPlacement.Sorted"/> ordering.
+    /// </summary>
+    /// <typeparam name="T">Type of item in the collection.</typeparam>
+    /// <param name="collection">The collection to order.</param>
+    /// <param name="ordering">The optional <see cref="ChildrenOrdering"/>. Anything but a sorted ordering leaves the collection as is.</param>
+    /// <param name="identifiedBy">The optional property identifying a child, breaking ties between equal sort values.</param>
+    /// <remarks>
+    /// Used when a child added within the same changeset gets the value it is sorted by after it was placed, so the stored
+    /// order is the one the final values give - the same order a sink sorting on insert ends up with.
+    /// </remarks>
+    public static void SortChildren<T>(this ICollection<T> collection, ChildrenOrdering? ordering, PropertyPath? identifiedBy = default) =>
+        collection.SortChildren(ordering, identifiedBy, _ => _);
+
+    /// <summary>
+    /// Order a collection again by a <see cref="ChildrenPlacement.Sorted"/> ordering, reading the values to sort by from
+    /// another representation of a child than the one in the collection.
+    /// </summary>
+    /// <typeparam name="T">Type of item in the collection.</typeparam>
+    /// <param name="collection">The collection to order.</param>
+    /// <param name="ordering">The optional <see cref="ChildrenOrdering"/>. Anything but a sorted ordering leaves the collection as is.</param>
+    /// <param name="identifiedBy">The optional property identifying a child, breaking ties between equal sort values.</param>
+    /// <param name="valuesOf">Gives the object holding the values a child is sorted by.</param>
+    public static void SortChildren<T>(this ICollection<T> collection, ChildrenOrdering? ordering, PropertyPath? identifiedBy, Func<object?, object?> valuesOf)
+    {
+        if (ordering?.IsAppend() != false || ordering.Placement != ChildrenPlacement.Sorted || collection.Count < 2)
+        {
+            return;
+        }
+
+        var sorted = Sort(collection.Cast<object?>(), ordering, identifiedBy, valuesOf).ToArray();
+        switch (collection)
+        {
+            case IList list:
+                list.Clear();
+                foreach (var item in sorted)
+                {
+                    list.Add(item);
+                }
+
+                break;
+
+            default:
+                collection.Clear();
+                foreach (var item in sorted)
+                {
+                    collection.Add((T)item!);
+                }
+
+                break;
         }
     }
 
     /// <summary>
-    /// Compare two values the way children are ordered - missing and null values first, then by natural order.
+    /// Compare two values the way children are ordered.
     /// </summary>
     /// <param name="left">Left value.</param>
     /// <param name="right">Right value.</param>
     /// <returns>Less than zero when left comes before right, zero when equal and greater than zero when after.</returns>
-    public static int CompareSortValues(object? left, object? right)
+    public static int CompareSortValues(object? left, object? right) => ChildrenSortValues.Compare(left, right);
+
+    static void MoveLastFirst<T>(ICollection<T> collection)
     {
-        if (left is null && right is null) return 0;
-        if (left is null) return -1;
-        if (right is null) return 1;
-
-        if (IsNumeric(left) && IsNumeric(right))
+        switch (collection)
         {
-            if (left is float or double || right is float or double)
-            {
-                return Convert.ToDouble(left, CultureInfo.InvariantCulture).CompareTo(Convert.ToDouble(right, CultureInfo.InvariantCulture));
-            }
+            case IList list:
+                var child = list[list.Count - 1];
+                list.RemoveAt(list.Count - 1);
+                list.Insert(0, child);
+                break;
 
-            return Convert.ToDecimal(left, CultureInfo.InvariantCulture).CompareTo(Convert.ToDecimal(right, CultureInfo.InvariantCulture));
-        }
-
-        if (left.GetType() == right.GetType() && left is IComparable comparable)
-        {
-            return comparable.CompareTo(right);
-        }
-
-        return string.CompareOrdinal(AsSortableString(left), AsSortableString(right));
-    }
-
-    static void Place(IList collection, ChildrenOrdering ordering)
-    {
-        if (ordering.Placement == ChildrenPlacement.Prepend)
-        {
-            var child = collection[collection.Count - 1];
-            collection.RemoveAt(collection.Count - 1);
-            collection.Insert(0, child);
-            return;
-        }
-
-        var sorted = Sort(collection.Cast<object>(), ordering).ToArray();
-        collection.Clear();
-        foreach (var item in sorted)
-        {
-            collection.Add(item);
+            case IList<T> typedList:
+                var typedChild = typedList[typedList.Count - 1];
+                typedList.RemoveAt(typedList.Count - 1);
+                typedList.Insert(0, typedChild);
+                break;
         }
     }
 
-    static IEnumerable<object> Sort(IEnumerable<object> items, ChildrenOrdering ordering)
+    static IEnumerable<object?> Sort(IEnumerable<object?> items, ChildrenOrdering ordering, PropertyPath? identifiedBy, Func<object?, object?> valuesOf)
     {
-        var comparer = Comparer<object?>.Create(CompareSortValues);
-        return ordering.Direction == SortDirection.Descending
-            ? items.OrderByDescending(_ => GetSortValue(_, ordering.SortBy), comparer)
-            : items.OrderBy(_ => GetSortValue(_, ordering.SortBy), comparer);
+        var comparer = Comparer<object?>.Create(ChildrenSortValues.Compare);
+        var ordered = ordering.Direction == SortDirection.Descending
+            ? items.OrderByDescending(_ => GetValue(valuesOf(_), ordering.SortBy), comparer)
+            : items.OrderBy(_ => GetValue(valuesOf(_), ordering.SortBy), comparer);
+
+        return identifiedBy?.IsSet == true
+            ? ordered.ThenBy(_ => GetValue(_, identifiedBy), comparer)
+            : ordered;
     }
 
-    static object? GetSortValue(object? child, PropertyPath sortBy)
+    static object? GetValue(object? child, PropertyPath path)
     {
         var current = child;
-        foreach (var segment in sortBy.Segments)
+        foreach (var segment in path.Segments)
         {
             if (current is not IDictionary<string, object?> dictionary || !dictionary.TryGetValue(segment.Value, out current))
             {
@@ -141,16 +161,4 @@ public static class ChildrenOrderingExtensions
 
         return current;
     }
-
-    static string? AsSortableString(object value) => value switch
-    {
-        DateTimeOffset dateTimeOffset => dateTimeOffset.ToString("O", CultureInfo.InvariantCulture),
-        DateTime dateTime => dateTime.ToString("O", CultureInfo.InvariantCulture),
-        DateOnly dateOnly => dateOnly.ToString("O", CultureInfo.InvariantCulture),
-        TimeOnly timeOnly => timeOnly.ToString("O", CultureInfo.InvariantCulture),
-        IFormattable formattable => formattable.ToString(null, CultureInfo.InvariantCulture),
-        _ => value.ToString()
-    };
-
-    static bool IsNumeric(object value) => value is byte or sbyte or short or ushort or int or uint or long or ulong or float or double or decimal;
 }

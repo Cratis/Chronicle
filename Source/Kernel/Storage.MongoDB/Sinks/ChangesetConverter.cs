@@ -235,7 +235,7 @@ public class ChangesetConverter(
         return new BsonDocument(arrayPath, new BsonDocument("$elemMatch", elementMatch));
     }
 
-    static UpdateDefinition<BsonDocument> BuildChildPush(UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder, UpdateDefinition<BsonDocument>? updateBuilder, string property, BsonValue bsonValue, ChildrenOrdering? ordering)
+    static UpdateDefinition<BsonDocument> BuildChildPush(UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder, UpdateDefinition<BsonDocument>? updateBuilder, string property, BsonValue bsonValue, ChildrenOrdering? ordering, PropertyPath identifiedBy)
     {
         // The default append keeps the plain $push it has always been.
         if (ordering?.IsAppend() != false)
@@ -246,15 +246,32 @@ public class ChangesetConverter(
         }
 
         // Prepend: $push with $each and $position 0. Sorted: $push with $each and $sort, ordering the whole array the
-        // same way the engine does - MongoDB orders missing and null values first ascending and last descending.
+        // same way the engine does - MongoDB orders missing and null values first ascending and last descending, and
+        // equal sort values are ordered by the child's identifier ascending so the order is total and stable.
         int? position = ordering.Placement == ChildrenPlacement.Prepend ? 0 : null;
         var sort = ordering.Placement == ChildrenPlacement.Sorted
-            ? new BsonDocumentSortDefinition<BsonValue>(new BsonDocument(ordering.SortBy.ToMongoDB(), ordering.Direction == ChildrenSortDirection.Descending ? -1 : 1))
+            ? new BsonDocumentSortDefinition<BsonValue>(SortDocumentFor(ordering, identifiedBy))
             : null;
 
         return updateBuilder is not null
             ? updateBuilder.PushEach<BsonDocument, BsonValue>(property, [bsonValue], position: position, sort: sort)
             : updateDefinitionBuilder.PushEach<BsonValue>(property, [bsonValue], position: position, sort: sort);
+    }
+
+    static BsonDocument SortDocumentFor(ChildrenOrdering ordering, PropertyPath identifiedBy)
+    {
+        var sortBy = ordering.SortBy.ToMongoDB();
+        var sort = new BsonDocument(sortBy, ordering.Direction == ChildrenSortDirection.Descending ? -1 : 1);
+        if (identifiedBy.IsSet && !identifiedBy.IsRoot)
+        {
+            var identifier = identifiedBy.ToMongoDB();
+            if (identifier != sortBy)
+            {
+                sort.Add(identifier, 1);
+            }
+        }
+
+        return sort;
     }
 
     async Task<UpdateDefinitionAndArrayFilters> ToUpdateDefinition(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber, SinkMultiDocumentWrites directWrites)
@@ -460,7 +477,7 @@ public class ChangesetConverter(
         var (property, arrayFilters) = converter.ToMongoDBProperty(childrenProperty, arrayIndexers);
         arrayFiltersForDocument.AddRange(property, arrayFilters);
 
-        updateBuilder = BuildChildPush(updateDefinitionBuilder, updateBuilder, property, bsonValue, childAdded.Ordering);
+        updateBuilder = BuildChildPush(updateDefinitionBuilder, updateBuilder, property, bsonValue, childAdded.Ordering, childAdded.IdentifiedByProperty);
     }
 
     void BuildNestedCleared(UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder, ref UpdateDefinition<BsonDocument>? updateBuilder, ArrayFilters arrayFiltersForDocument, NestedCleared nestedCleared)

@@ -754,7 +754,7 @@ internal static partial class ProjectionReadModelProcessor
                 case ChildAdded childAdded:
                     InjectChildIdentifierFromKey(childAdded);
                     var items = EnsureChildCollection(state, childAdded);
-                    items.InsertChild(childAdded.Child, childAdded.Ordering);
+                    items.InsertChild(childAdded.Child, childAdded.Ordering, childAdded.IdentifiedByProperty);
                     break;
 
                 case ChildRemoved childRemoved:

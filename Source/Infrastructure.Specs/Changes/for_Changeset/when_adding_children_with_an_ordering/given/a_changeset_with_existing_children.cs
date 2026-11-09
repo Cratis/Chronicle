@@ -32,14 +32,14 @@ public class a_changeset_with_existing_children : Specification
     protected void AddChild(string id, int? rank, ChildrenOrdering? ordering)
     {
         var arrayIndexers = new ArrayIndexers([new ArrayIndexer(_itemsProperty, _idProperty, id)]);
-        PropertyMapper<object, ExpandoObject>[] mappers = rank is null
-            ? []
-            : [(_, target, indexers) =>
-            {
-                _rankProperty.SetValue(target, rank.Value, indexers);
-                return new PropertyDifference(_rankProperty, null, rank.Value, indexers);
-            }];
+        PropertyMapper<object, ExpandoObject>[] mappers = rank is null ? [] : [SetRank];
         _changeset.AddChild<ExpandoObject>(_itemsProperty, _idProperty, id, mappers, arrayIndexers, ordering: ordering);
+
+        PropertyDifference SetRank(object source, ExpandoObject target, ArrayIndexers indexers)
+        {
+            _rankProperty.SetValue(target, rank.Value, indexers);
+            return new PropertyDifference(_rankProperty, null, rank.Value, indexers);
+        }
     }
 
     static ExpandoObject Child(string id, int rank)

@@ -294,7 +294,7 @@ internal static class JsonColumnDocuments
         {
             // Only a new child is placed by the ordering; an existing one is updated where it is and never moves.
             list.Add(AsExpando(newChild));
-            list.PlaceAppendedChild(ordering);
+            list.PlaceAppendedChild(ordering, identifierName);
             return;
         }
 

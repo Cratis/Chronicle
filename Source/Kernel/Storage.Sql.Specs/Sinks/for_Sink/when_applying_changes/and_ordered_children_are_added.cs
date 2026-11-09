@@ -52,6 +52,7 @@ public class and_ordered_children_are_added : Specification
     IReadOnlyList<ProjectedColumn> _columns;
     string _afterPrepend;
     string _afterSort;
+    string _afterTie;
 
     async Task Establish()
     {
@@ -86,12 +87,15 @@ public class and_ordered_children_are_added : Specification
         _afterPrepend = await StoredIds();
         await AddChild("c", 3, new(ChildrenPlacement.Sorted, new("rank"), SortDirection.Descending), 2UL);
         _afterSort = await StoredIds();
+        await AddChild("0", 2, new(ChildrenPlacement.Sorted, new("rank"), SortDirection.Descending), 3UL);
+        _afterTie = await StoredIds();
     }
 
     void Destroy() => _connection.Dispose();
 
     [Fact] void should_insert_a_prepended_child_first() => _afterPrepend.ShouldEqual("a,b");
     [Fact] void should_order_the_collection_by_the_sort_property_after_a_sorted_insert() => _afterSort.ShouldEqual("c,b,a");
+    [Fact] void should_order_equal_sort_values_by_the_identifier_ascending() => _afterTie.ShouldEqual("c,0,b,a");
 
     async Task AddChild(string id, int rank, ChildrenOrdering? ordering, EventSequenceNumber sequenceNumber)
     {
