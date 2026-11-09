@@ -15,6 +15,15 @@ internal sealed partial class FencedAzureKeyVaultEncryptionKeyStorage
         (await ReadState(await AddressFor(eventStore, eventStoreNamespace, identifier))).Erasure;
 
     /// <inheritdoc/>
+    public async Task<EncryptionKeyErasure?> GetErasureForRelease(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
+    {
+        EnsureDurable(identifier);
+        var result = await GetFenceFor(eventStore, eventStoreNamespace, identifier);
+        EnsureDurable(identifier);
+        return result;
+    }
+
+    /// <inheritdoc/>
     public async Task<EncryptionKeyErasure?> GetErasureFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
     {
         var fence = await GetFenceFor(eventStore, eventStoreNamespace, identifier);
@@ -70,15 +79,18 @@ internal sealed partial class FencedAzureKeyVaultEncryptionKeyStorage
     /// <inheritdoc/>
     public async Task AllowNewKeyFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
     {
-        var fence = await GetFenceFor(eventStore, eventStoreNamespace, identifier);
+        EnsureDurable(identifier);
+        var fence = await GetErasureForRelease(eventStore, eventStoreNamespace, identifier);
         if (fence is { NewKeyAllowed: false }) await AllowNewKeyFor(eventStore, eventStoreNamespace, identifier, fence.Version, fence.Lifecycle);
     }
 
     /// <inheritdoc/>
     public async Task AllowNewKeyFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, ulong observedVersion, uint observedLifecycle)
     {
+        EnsureDurable(identifier);
         var address = await AddressFor(eventStore, eventStoreNamespace, identifier);
         var state = await ReadState(address);
+        EnsureDurable(identifier);
         if (IsAuthorizationRetry(state.Erasure, observedVersion, observedLifecycle)) return;
         if (state.Erasure.NewKeyAllowed || state.Erasure.Version != observedVersion || state.Erasure.Lifecycle != observedLifecycle) throw new EncryptionKeyFenceChanged(identifier);
         var next = state with
@@ -86,14 +98,16 @@ internal sealed partial class FencedAzureKeyVaultEncryptionKeyStorage
             Erasure = state.Erasure with { Version = checked(observedVersion + 1), Lifecycle = checked(observedLifecycle + 1), NewKeyAllowed = true },
             LegacyImports = state.LegacyImports.Select(_ => _ with { ClosedAtLifecycle = null }).ToArray()
         };
-        if (!await authority.CompareExchangeFor(eventStore, eventStoreNamespace, address.AuthorityIdentifier, state, next))
+        if (!await CompareExchangeDurably(address, state, next))
         {
             var current = await ReadState(address);
+            EnsureDurable(identifier);
             if (!IsAuthorizationRetry(current.Erasure, observedVersion, observedLifecycle)) throw new EncryptionKeyFenceChanged(identifier);
             return;
         }
 
         await WriteLegacyBestEffort(address, next.Erasure);
+        EnsureDurable(identifier);
     }
 
     /// <inheritdoc/>
@@ -139,13 +153,16 @@ internal sealed partial class FencedAzureKeyVaultEncryptionKeyStorage
     /// <inheritdoc/>
     public async Task ConfirmErasureFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, string requestId)
     {
+        EnsureDurable(identifier);
         var address = await AddressFor(eventStore, eventStoreNamespace, identifier);
         for (var attempt = 0; attempt < MaximumAttempts; attempt++)
         {
             var state = await ReadState(address);
             var request = state.Erasure.Requests?.SingleOrDefault(_ => _.RequestId == requestId) ?? await Archived(address, requestId) ?? throw new EncryptionKeyFenceChanged(identifier);
+            EnsureDurable(identifier);
             if (request.Confirmed) return;
             await VerifySweep(address, request);
+            EnsureDurable(identifier);
             if (request.Confirmed) return;
             var next = state with
             {
@@ -155,7 +172,7 @@ internal sealed partial class FencedAzureKeyVaultEncryptionKeyStorage
                     Requests = state.Erasure.Requests!.Select(_ => _.RequestId.Equals(requestId, StringComparison.Ordinal) ? _ with { Confirmed = true } : _).ToArray()
                 }
             };
-            if (await authority.CompareExchangeFor(eventStore, eventStoreNamespace, address.AuthorityIdentifier, state, next)) return;
+            if (await CompareExchangeDurably(address, state, next)) return;
             await Backoff(attempt);
         }
 
@@ -164,6 +181,19 @@ internal sealed partial class FencedAzureKeyVaultEncryptionKeyStorage
 
     static bool IsAuthorizationRetry(EncryptionKeyErasure fence, ulong version, uint lifecycle) =>
         fence.NewKeyAllowed && fence.Version > version && fence.Version - version == 1 && fence.Lifecycle > lifecycle && fence.Lifecycle - lifecycle == 1;
+
+    void EnsureDurable(EncryptionKeyIdentifier identifier)
+    {
+        if (!authority.IsDurable) throw new EncryptionKeyFenceUnavailable(identifier);
+    }
+
+    async Task<bool> CompareExchangeDurably(Address address, EncryptionKeyFenceState observed, EncryptionKeyFenceState next)
+    {
+        EnsureDurable(address.Identifier);
+        var result = await authority.CompareExchangeFor(address.EventStore, address.Namespace, address.AuthorityIdentifier, observed, next);
+        EnsureDurable(address.Identifier);
+        return result;
+    }
 
     async Task<(List<(EncryptionKeyRevision Revision, EncryptionKey Key)> Present, uint Highest, HashSet<string> Fingerprints)> Capture(Address address, EncryptionKeyFenceState state)
     {
