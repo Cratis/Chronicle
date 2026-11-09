@@ -38,7 +38,17 @@ public class twice(context context) : Neo4jGiven<context>(context)
         Dictionary<string, object> Parameters(string @namespace) => new() { ["namespace"] = @namespace };
 
         IRecord Constraint(string name) => Constraints.Single(_ => _["name"].As<string>() == name);
-        public IReadOnlyList<string> ConstraintNames => [.. Constraints.Select(_ => _["name"].As<string>())];
+        static readonly string[] _ownLabelsAndTypes = ["Person", "Group", "VISITED", "MEMBER_OF"];
+
+        /// <summary>
+        /// Gets the names of the constraints belonging to this schema. The server is shared by the specs in the collection,
+        /// so other definitions may have left their own constraints; only the owner constraint and those on this graph's
+        /// labels and types belong to this schema.
+        /// </summary>
+        public IReadOnlyList<string> ConstraintNames => [.. Constraints
+            .Where(_ => _["name"].As<string>() == "chronicle_owner" ||
+                        _["labelsOrTypes"].As<List<object>>().Cast<string>().Any(_ownLabelsAndTypes.Contains))
+            .Select(_ => _["name"].As<string>())];
         public string[] PropertiesOf(string name) => [.. Constraint(name)["properties"].As<List<object>>().Cast<string>()];
         public string TypeOf(string name) => Constraint(name)["type"].As<string>();
     }
