@@ -9,7 +9,7 @@ public class and_registration_faults_after_the_deadline : given.a_registration_l
 {
     readonly InvalidOperationException _failure = new("Registration failed after its deadline");
     TaskCompletionSource? _lateRegistration;
-    WeakReference _releasedTask;
+    TaskStatus _lateRegistrationStatus;
     int _unobserved;
     bool _terminatedBeforeFault;
 
@@ -27,9 +27,11 @@ public class and_registration_faults_after_the_deadline : given.a_registration_l
         await Arrives(_entered.Task);
         await ExpireRegistration();
         _terminatedBeforeFault = _terminal.Task.IsCompleted;
-        _releasedTask = FaultAndReleaseRegistration();
+        _lateRegistrationStatus = FaultAndReleaseRegistration();
         _clock.ReleaseTimer();
 
+        // Best effort only: should the released task be finalized here, an unobserved fault would be reported.
+        // No fact depends on whether the collector actually reclaims it.
         GC.Collect();
         GC.WaitForPendingFinalizers();
         GC.Collect();
@@ -42,13 +44,15 @@ public class and_registration_faults_after_the_deadline : given.a_registration_l
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    WeakReference FaultAndReleaseRegistration()
+    TaskStatus FaultAndReleaseRegistration()
     {
         var registration = _lateRegistration!;
         registration.SetException(_failure);
         _lateRegistration = null;
         _register = () => Task.CompletedTask;
-        return new WeakReference(registration.Task);
+
+        // Status only: reading the exception here would observe the fault on behalf of the production code.
+        return registration.Task.Status;
     }
 
     void OnUnobserved(object? sender, UnobservedTaskExceptionEventArgs args)
@@ -60,7 +64,7 @@ public class and_registration_faults_after_the_deadline : given.a_registration_l
     }
 
     [Fact] void should_have_terminated_before_the_late_fault() => _terminatedBeforeFault.ShouldBeTrue();
-    [Fact] void should_release_the_faulted_task_for_finalization() => _releasedTask.IsAlive.ShouldBeFalse();
+    [Fact] void should_fault_the_abandoned_registration() => _lateRegistrationStatus.ShouldEqual(TaskStatus.Faulted);
     [Fact] void should_observe_the_late_fault() => Volatile.Read(ref _unobserved).ShouldEqual(0);
     [Fact] void should_not_send_another_terminal_notification() => _errors.Count.ShouldEqual(1);
     [Fact] void should_not_activate_the_connection() => _heartbeats.ShouldEqual(0);
