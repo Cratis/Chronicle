@@ -26,6 +26,7 @@ public class and_automatic_registration_is_off(context context) : Given<context>
         public IReducerHandler Original;
         public IReducerHandler Handler;
         public ConnectionId OriginalConnectionId;
+        public bool OriginalCancelledOnDisconnect;
         public ReducerState ReducerState;
         public SomeReadModel Model;
         public EventSequenceNumber SecondAppendSequenceNumber;
@@ -65,8 +66,11 @@ public class and_automatic_registration_is_off(context context) : Given<context>
             await Reducer.WaitTillHandledEventReaches(1);
 
             OriginalConnectionId = EventStore.Connection.Lifecycle.ConnectionId;
+            var originalCancellation = Original.CancellationToken;
             await EventStore.Connection.Lifecycle.Disconnected();
-            await Original.WaitForState(ObserverRunningState.Disconnected, TimeSpan.FromSeconds(30));
+
+            // The disconnect is local only: the kernel is not told, and querying the observer's state would reconnect.
+            OriginalCancelledOnDisconnect = originalCancellation.IsCancellationRequested;
             await EventStore.Connection.Connect();
 
             Handler = _store.Reducers.GetHandlerFor<ReducerWithoutDelay>();
@@ -103,6 +107,7 @@ public class and_automatic_registration_is_off(context context) : Given<context>
     }
 
     [Fact] void should_get_a_new_connection() => Context.EventStore.Connection.Lifecycle.ConnectionId.ShouldNotEqual(Context.OriginalConnectionId);
+    [Fact] void should_cancel_the_original_handler_on_disconnect() => Context.OriginalCancelledOnDisconnect.ShouldBeTrue();
     [Fact] void should_hand_out_a_recreated_handler() => ReferenceEquals(Context.Original, Context.Handler).ShouldBeFalse();
     [Fact] void should_have_the_reducer_active() => Context.ReducerState.RunningState.ShouldEqual(ObserverRunningState.Active);
     [Fact] void should_handle_the_event_appended_after_reconnect() => Context.Reducer.HandledEvents.ShouldEqual(2);
