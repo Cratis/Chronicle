@@ -19,6 +19,7 @@ public class and_the_reducer_reduces_one_event_source_at_a_time : given.a_reduce
             {
                 var running = Interlocked.Increment(ref _running);
                 InterlockedMax(ref _mostRunning, running);
+
                 // Slow on purpose, not a wait: each reduce stays in flight long enough for an overlapping one to be counted.
                 await Task.Delay(20);
                 Interlocked.Decrement(ref _running);
