@@ -153,20 +153,6 @@ public class MongoDBCapabilityProbe : IMongoDBCapabilityProbe
         ObjectId.TryParse(name[WellKnownCollectionNames.CapabilityProbePrefix.Length..], out var id) &&
         id.CreationTime < cutoff;
 
-    async Task Cleanup(string collectionName)
-    {
-        using var cleanup = new CancellationTokenSource(_timeout);
-        try
-        {
-            await _cleanup(collectionName, cleanup.Token).WaitAsync(cleanup.Token);
-        }
-        catch (Exception)
-        {
-            // Cleanup must not hide the original unsupported-feature result or expose connection details.
-            _logger?.CapabilityProbeCleanupFailed();
-        }
-    }
-
     static MongoDBCapability Classify(Exception exception)
     {
         if (exception is MongoCommandException command)
@@ -191,6 +177,20 @@ public class MongoDBCapabilityProbe : IMongoDBCapabilityProbe
         return MongoDBCapability.Inconclusive(exception is OperationCanceledException or TimeoutException
             ? "The probe timed out."
             : $"The probe failed ({exception.GetType().Name}).");
+    }
+
+    async Task Cleanup(string collectionName)
+    {
+        using var cleanup = new CancellationTokenSource(_timeout);
+        try
+        {
+            await _cleanup(collectionName, cleanup.Token).WaitAsync(cleanup.Token);
+        }
+        catch (Exception)
+        {
+            // Cleanup must not hide the original unsupported-feature result or expose connection details.
+            _logger?.CapabilityProbeCleanupFailed();
+        }
     }
 
     async Task<MongoDBCapability> Inspect(Func<CancellationToken, Task> operation, CancellationToken cancellationToken)
