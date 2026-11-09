@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Buffers;
 using System.Dynamic;
 using System.Globalization;
 using System.Numerics;
@@ -18,6 +19,8 @@ namespace Cratis.Chronicle.Sequences;
 /// </summary>
 internal static class ContentComparison
 {
+    static readonly SearchValues<char> _exponentMarkers = SearchValues.Create(['e', 'E']);
+
     /// <summary>
     /// Produces the backend's actual append representation only when conversion preserves its values.
     /// </summary>
@@ -91,48 +94,64 @@ internal static class ContentComparison
 
         return (left, right) switch
         {
-            (JsonObject a, JsonObject b) => a.Count == b.Count && a.All(property => b.TryGetPropertyValue(property.Key, out var value) && Equals(property.Value, value)),
-            (JsonArray a, JsonArray b) => a.Count == b.Count && a.Zip(b).All(pair => Equals(pair.First, pair.Second)),
-            _ when left.GetValueKind() == JsonValueKind.Number => Number(left.ToJsonString()) == Number(right.ToJsonString()),
-
-            // Serialize first: JsonValue<DateTimeOffset>.Equals compares instants, losing offsets.
-            _ => JsonElement.DeepEquals(JsonSerializer.SerializeToElement(left), JsonSerializer.SerializeToElement(right))
+            (JsonObject a, JsonObject b) => ObjectsEqual(a, b),
+            (JsonArray a, JsonArray b) => ArraysEqual(a, b),
+            _ => ScalarsEqual(left, right)
         };
     }
 
-    static bool PreservesValues(JsonNode? source, JsonNode? converted, JsonSchema schema)
+    static bool ObjectsEqual(JsonObject left, JsonObject right) =>
+        left.Count == right.Count && left.All(property => right.TryGetPropertyValue(property.Key, out var value) && Equals(property.Value, value));
+
+    static bool ArraysEqual(JsonArray left, JsonArray right) =>
+        left.Count == right.Count && left.Zip(right).All(pair => Equals(pair.First, pair.Second));
+
+    static bool ScalarsEqual(JsonNode left, JsonNode right)
     {
-        if (source is JsonObject document && converted is JsonObject result)
+        if (left.GetValueKind() == JsonValueKind.Number)
         {
-            // Append intentionally ignores undeclared properties and substitutes schema defaults
-            // for nulls. A NON-null declared value disappearing is loss, not a default to compare.
-            var properties = schema.GetFlattenedProperties().ToArray();
-            return document.All(property =>
+            return Number(left.ToJsonString()) == Number(right.ToJsonString());
+        }
+
+        // Serialize first: JsonValue<DateTimeOffset>.Equals compares instants, losing offsets.
+        return JsonElement.DeepEquals(JsonSerializer.SerializeToElement(left), JsonSerializer.SerializeToElement(right));
+    }
+
+    static bool PreservesValues(JsonNode? source, JsonNode? converted, JsonSchema schema) => (source, converted) switch
+    {
+        (JsonObject document, JsonObject result) => PreservesObject(document, result, schema),
+        (JsonArray array, JsonArray convertedArray) => PreservesArray(array, convertedArray, schema),
+        _ => Equals(source, converted)
+    };
+
+    static bool PreservesObject(JsonObject document, JsonObject result, JsonSchema schema)
+    {
+        // Append intentionally ignores undeclared properties and substitutes schema defaults
+        // for nulls. A NON-null declared value disappearing is loss, not a default to compare.
+        var properties = schema.GetFlattenedProperties().ToArray();
+        return document.All(property =>
+        {
+            var definition = properties.FirstOrDefault(_ => _.Name == property.Key) ??
+                properties.FirstOrDefault(_ => _.Name.Equals(property.Key, StringComparison.OrdinalIgnoreCase));
+            if (property.Value is null || (properties.Length > 0 && definition is null))
             {
-                var definition = properties.FirstOrDefault(_ => _.Name == property.Key) ??
-                    properties.FirstOrDefault(_ => _.Name.Equals(property.Key, StringComparison.OrdinalIgnoreCase));
-                if (property.Value is null || (properties.Length > 0 && definition is null))
-                {
-                    return true;
-                }
+                return true;
+            }
 
-                return result.TryGetPropertyValue(definition?.Name ?? property.Key, out var value) &&
-                    PreservesValues(property.Value, value, definition ?? new JsonSchema());
-            });
-        }
+            return result.TryGetPropertyValue(definition?.Name ?? property.Key, out var value) &&
+                PreservesValues(property.Value, value, definition ?? new JsonSchema());
+        });
+    }
 
-        if (source is JsonArray array && converted is JsonArray convertedArray)
-        {
-            var item = schema.Item ?? new JsonSchema();
-            return array.Count == convertedArray.Count && array.Zip(convertedArray).All(pair => PreservesValues(pair.First, pair.Second, item));
-        }
-
-        return Equals(source, converted);
+    static bool PreservesArray(JsonArray array, JsonArray converted, JsonSchema schema)
+    {
+        var item = schema.Item ?? new JsonSchema();
+        return array.Count == converted.Count && array.Zip(converted).All(pair => PreservesValues(pair.First, pair.Second, item));
     }
 
     static (BigInteger Significand, BigInteger Exponent) Number(string token)
     {
-        var exponentIndex = token.IndexOfAny(['e', 'E']);
+        var exponentIndex = token.AsSpan().IndexOfAny(_exponentMarkers);
         var mantissa = exponentIndex < 0 ? token : token[..exponentIndex];
         var exponent = exponentIndex < 0 ? BigInteger.Zero : BigInteger.Parse(token[(exponentIndex + 1)..], CultureInfo.InvariantCulture);
         var point = mantissa.IndexOf('.');
