@@ -27,8 +27,8 @@ public class and_legacy_databases_remain_after_the_move(MongoDBFixture fixture) 
 
     async Task Because() => _result = await _relocation.FindRetainedLegacyData();
 
-    [Fact] void should_name_the_legacy_read_model_database() => _result!.ShouldContain($": '{_prefix}System', ");
-    [Fact] void should_name_the_legacy_event_store_database() => _result!.ShouldContain($"'{_prefix}System+es'");
-    [Fact] void should_name_the_legacy_namespace_database() => _result!.ShouldContain($"'{_prefix}System+es+Default'");
-    [Fact] void should_not_name_another_event_store() => _result!.ShouldNotContain("SystemReports");
+    [Fact] void should_name_the_legacy_read_model_database() => _result.ShouldContain($": '{_prefix}System', ");
+    [Fact] void should_name_the_legacy_event_store_database() => _result.ShouldContain($"'{_prefix}System+es'");
+    [Fact] void should_name_the_legacy_namespace_database() => _result.ShouldContain($"'{_prefix}System+es+Default'");
+    [Fact] void should_not_name_another_event_store() => _result.ShouldNotContain("SystemReports");
 }
