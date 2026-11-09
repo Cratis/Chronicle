@@ -1,6 +1,6 @@
 ---
 title: Configure federation in Cratis Chronicle Server
-description: Exchange public events between separate Chronicle instances across networks with a producer grant and a consumer binding, over a dedicated mutual-TLS listener with pinned certificates.
+description: "Exchange public events between Chronicle instances across networks with a producer grant, a consumer binding and a mutual-TLS listener with pinned certificates."
 ---
 Federation lets separate Chronicle instances exchange public events across networks. The consuming kernel dials the producing kernel and pulls from its outbox into a local inbox, so the consumer needs no inbound port. Consumer code does not change: the implicit and explicit subscriptions you already write decide which event types arrive.
 

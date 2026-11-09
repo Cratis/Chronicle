@@ -1,6 +1,6 @@
 ---
 title: Read models
-description: Build specialized, queryable views from events and choose how to retrieve and observe them.
+description: "Build queryable read models from events, then choose how to retrieve them with queries and how to observe changes, with an overview of the available approaches."
 ---
 
 A read model in Cratis Chronicle is the view your application queries, built from events by a

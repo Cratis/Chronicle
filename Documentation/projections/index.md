@@ -1,6 +1,6 @@
 ---
 title: Projections
-description: Build specialized, queryable read models from events and choose the right projection style and consistency model.
+description: "Build queryable read models from events and choose the right projection style and consistency model, with an overview of how projections work."
 ---
 
 A Cratis Chronicle projection declares how events build a **read model**, the view your application
