@@ -19,6 +19,6 @@ public class and_establish_fails : given.a_projection_replay_handler_with_projec
         result.TryGetError(out _error);
     }
 
-    [Fact] void should_report_the_establish_failure() => _error.ShouldEqual(ICanHandleReplayForObserver.Error.Unknown);
+    [Fact] void should_report_the_establish_failure() => _error.ShouldEqual(ICanHandleReplayForObserver.Error.Failed);
     [Fact] void should_not_begin_replay() => _projectionPipeline.DidNotReceiveWithAnyArgs().BeginReplay(null!);
 }

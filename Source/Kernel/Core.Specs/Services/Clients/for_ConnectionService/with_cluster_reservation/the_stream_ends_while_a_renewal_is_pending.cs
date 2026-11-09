@@ -47,6 +47,8 @@ public class the_stream_ends_while_a_renewal_is_pending : given.a_two_silo_clust
             return spec._delayedClaim;
         }
 
+        public Task<bool> IsHeldBy(ConnectionOwner owner) => inner.IsHeldBy(owner);
+
         public Task Release(ConnectionOwner owner, Guid token) => inner.Release(owner, token);
 
         async Task<bool> Late(ConnectionOwner owner, SiloAddress silo, Guid token, TimeSpan lease)

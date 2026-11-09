@@ -372,7 +372,7 @@ public partial class EncryptChangeset(
         PropertiesChanged<ExpandoObject> propertiesChanged)
     {
         var protectedDifferences = propertiesChanged.Differences
-            .Where(_ => IsProtectedProperty(schema, _.PropertyPath))
+            .Where(_ => !_.IsRemoval && IsProtectedProperty(schema, _.PropertyPath))
             .ToArray();
         if (protectedDifferences.Length == 0)
         {
@@ -394,7 +394,7 @@ public partial class EncryptChangeset(
         return propertiesChanged with
         {
             Differences = propertiesChanged.Differences
-                .Select(difference => IsProtectedProperty(schema, difference.PropertyPath)
+                .Select(difference => !difference.IsRemoval && IsProtectedProperty(schema, difference.PropertyPath)
                     ? new PropertyDifference(
                         difference.PropertyPath,
                         difference.Original,

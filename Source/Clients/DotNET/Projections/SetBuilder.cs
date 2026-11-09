@@ -49,7 +49,7 @@ public class SetBuilder<TReadModel, TEvent, TParentBuilder>(TParentBuilder paren
     }
 
     /// <inheritdoc/>
-    public string Build()
+    public virtual string Build()
     {
         ThrowIfMissingToExpression();
 

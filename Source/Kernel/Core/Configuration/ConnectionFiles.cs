@@ -11,8 +11,9 @@ namespace Cratis.Chronicle.Configuration;
 /// <remarks>
 /// <para>
 /// Every connection-bearing setting accepts a sibling ending in <c language="text">File</c>:
-/// <c language="text">storage.connectionDetailsFile</c>, <c language="text">sinks.configurations.&lt;name&gt;.connectionDetailsFile</c>
-/// and <c language="text">sinks.configurations.&lt;name&gt;.passwordFile</c> for a Neo4j sink.
+/// <c language="text">storage.connectionDetailsFile</c>, <c language="text">sinks.configurations.&lt;name&gt;.connectionDetailsFile</c>,
+/// <c language="text">sinks.configurations.&lt;name&gt;.serverFile</c> and <c language="text">sinks.configurations.&lt;name&gt;.passwordFile</c>
+/// for a Neo4j sink, and <c language="text">neo4j.serverFile</c> and <c language="text">neo4j.passwordFile</c> for the default graph connection.
 /// </para>
 /// <para>
 /// Each file is read once, at startup, and trimmed of a trailing newline. Its value is written into the configuration in place
@@ -23,7 +24,8 @@ namespace Cratis.Chronicle.Configuration;
 public static class ConnectionFiles
 {
     /// <summary>
-    /// The configuration key, under a sink configuration, that holds a password read from <see cref="SinkConfiguration.PasswordFile"/>.
+    /// The configuration key, under a sink configuration or the <c language="text">neo4j</c> section, that holds a password read from
+    /// <see cref="SinkConfiguration.PasswordFile"/> or <see cref="Neo4jOptions.PasswordFile"/>.
     /// </summary>
     public const string PasswordFromFileKey = "PasswordFromFile";
 
@@ -40,11 +42,16 @@ public static class ConnectionFiles
 
         ResolveValue(chronicle.GetSection(nameof(ChronicleOptions.Storage)), "storage", nameof(Storage.ConnectionDetails));
 
+        var neo4j = chronicle.GetSection(nameof(ChronicleOptions.Neo4j));
+        ResolveValue(neo4j, "neo4j", nameof(Neo4jOptions.Server));
+        ResolvePassword(neo4j, "neo4j");
+
         var sinks = chronicle.GetSection($"{nameof(ChronicleOptions.Sinks)}:{nameof(SinksOptions.Configurations)}");
         foreach (var sink in sinks.GetChildren())
         {
             var prefix = $"sinks.configurations.{sink.Key}";
             ResolveValue(sink, prefix, nameof(SinkConfiguration.ConnectionDetails));
+            ResolveValue(sink, prefix, nameof(SinkConfiguration.Server));
             ResolvePassword(sink, prefix);
         }
     }
@@ -67,22 +74,22 @@ public static class ConnectionFiles
         section[setting] = Read(qualifiedFileSetting, path);
     }
 
-    static void ResolvePassword(IConfigurationSection sink, string prefix)
+    static void ResolvePassword(IConfigurationSection section, string prefix)
     {
-        var path = sink[nameof(SinkConfiguration.PasswordFile)];
+        var path = section[nameof(SinkConfiguration.PasswordFile)];
         if (string.IsNullOrWhiteSpace(path))
         {
             return;
         }
 
         var qualifiedFileSetting = Qualify(prefix, nameof(SinkConfiguration.PasswordFile));
-        if (!string.IsNullOrEmpty(sink[nameof(SinkConfiguration.PasswordSecret)]))
+        if (!string.IsNullOrEmpty(section[nameof(SinkConfiguration.PasswordSecret)]))
         {
             throw BothAreSet(qualifiedFileSetting, Qualify(prefix, nameof(SinkConfiguration.PasswordSecret)));
         }
 
-        sink[PasswordFromFileKey] = Read(qualifiedFileSetting, path);
-        sink[nameof(SinkConfiguration.PasswordSecret)] = ConfigurationPath.Combine(sink.Path, PasswordFromFileKey);
+        section[PasswordFromFileKey] = Read(qualifiedFileSetting, path);
+        section[nameof(SinkConfiguration.PasswordSecret)] = ConfigurationPath.Combine(section.Path, PasswordFromFileKey);
     }
 
     static string Read(string setting, string path)

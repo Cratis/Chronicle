@@ -102,7 +102,16 @@ internal sealed class ConnectionService(
     public async Task ConnectionKeepAlive(ConnectionKeepAlive keepAlive, CallContext context = default)
     {
         var caller = ConnectionCallers.From(context, options.Value);
-        if (!ownership.IsOwnedBy(keepAlive.ConnectionId, caller.Owner))
+        var verification = ownership.Verify(grainFactory, keepAlive.ConnectionId, caller.Owner, options.Value.Clustering.ResponseTimeout, timeProvider: RegistrationTimeProvider, cancellationToken: context.CancellationToken);
+#pragma warning disable MA0042 // Result is read only after successful synchronous completion; the hot path must not block or allocate.
+        var access = verification.IsCompletedSuccessfully ? verification.Result : await verification;
+#pragma warning restore MA0042
+        if (access == ConnectionAccessOutcome.Unverifiable)
+        {
+            logger.KeepAliveOwnershipUnverifiable(keepAlive.ConnectionId);
+            throw new RpcException(new Status(StatusCode.Unavailable, "The connection could not be verified."));
+        }
+        if (access == ConnectionAccessOutcome.Denied)
         {
             logger.KeepAliveRefused(keepAlive.ConnectionId);
             throw new RpcException(_notAvailableToCaller);

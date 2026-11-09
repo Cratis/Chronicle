@@ -754,7 +754,7 @@ internal static partial class ProjectionReadModelProcessor
                 case ChildAdded childAdded:
                     InjectChildIdentifierFromKey(childAdded);
                     var items = EnsureChildCollection(state, childAdded);
-                    items.Add(childAdded.Child);
+                    items.InsertChild(childAdded.Child, childAdded.Ordering, childAdded.IdentifiedByProperty);
                     break;
 
                 case ChildRemoved childRemoved:
@@ -824,6 +824,12 @@ internal static partial class ProjectionReadModelProcessor
     {
         foreach (var difference in differences)
         {
+            if (difference.IsRemoval)
+            {
+                difference.PropertyPath.RemoveValue(state, NormalizeArrayIndexers(difference.ArrayIndexers));
+                continue;
+            }
+
             difference.PropertyPath.SetValue(state, NormalizeStateValue(difference.Changed)!, NormalizeArrayIndexers(difference.ArrayIndexers));
         }
     }

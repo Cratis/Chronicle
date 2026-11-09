@@ -109,6 +109,14 @@ The following .NET mapping attributes can be declared on child types, including 
 
 Keep each level's identity and parent routing explicit enough to follow. An update must reach the right parent collection as well as select the right child.
 
+## Ordering New Children
+
+New children are appended by default. Set `Prepend = true` on `ChildrenFrom` to insert new children first, or name a child property with `OrderBy` or `OrderByDescending` to keep the collection sorted by it. In the next example the newest comment comes first, and tasks stay sorted with the highest priority first:
+
+<ChronicleClientTabs snippet="projections/model-bound/children/ordering" />
+
+Ordering belongs to the collection, so it covers children added by every event. When a collection has several `ChildrenFrom` attributes, declare the ordering on one of them or the same ordering on each; different orderings, or a sort property the child does not have, fail when the projection is built. Ordering only places new children - updating a child never moves it. See [ordering new children](../declarative/children#ordering-new-children) for the full behavior.
+
 ## Collections with no children
 
 Before any child is stored, the collection field is absent rather than `[]`. Root writes leave child collection paths untouched so they cannot erase children already added.
