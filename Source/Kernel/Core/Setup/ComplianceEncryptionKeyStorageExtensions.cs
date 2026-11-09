@@ -54,6 +54,31 @@ public static class ComplianceEncryptionKeyStorageExtensions
         return builder;
     }
 
+    /// <summary>Register a dedicated store against the selected default backend's captured fence authority.</summary>
+    /// <param name="builder">The Chronicle builder.</param>
+    /// <param name="options">The Chronicle options.</param>
+    /// <param name="dedicatedStorage">Creates the store with its authority, independent of migration settings.</param>
+    /// <returns>The builder.</returns>
+    /// <exception cref="InvalidOperationException">The default backend did not register an authority.</exception>
+    public static IChronicleBuilder WithComplianceEncryptionKeyStorage(
+        this IChronicleBuilder builder,
+        ChronicleOptions options,
+        Func<IServiceProvider, IEncryptionKeyFence, IEncryptionKeyStorage> dedicatedStorage)
+    {
+        var descriptor = builder.Services.LastOrDefault(_ => _.ServiceType == typeof(IEncryptionKeyFence) && !_.IsKeyedService) ??
+            throw new InvalidOperationException("A default encryption key fence authority must be registered before dedicated compliance key storage.");
+        return builder.WithComplianceEncryptionKeyStorage(options, serviceProvider => dedicatedStorage(serviceProvider, MaterializeFence(descriptor, serviceProvider)));
+    }
+
+    static IEncryptionKeyFence MaterializeFence(ServiceDescriptor descriptor, IServiceProvider serviceProvider) =>
+        descriptor switch
+        {
+            { ImplementationInstance: IEncryptionKeyFence instance } => instance,
+            { ImplementationFactory: { } factory } => (IEncryptionKeyFence)factory(serviceProvider),
+            { ImplementationType: { } type } => (IEncryptionKeyFence)ActivatorUtilities.GetServiceOrCreateInstance(serviceProvider, type),
+            _ => throw new UnresolvableDefaultEncryptionKeyStorage()
+        };
+
     static IEncryptionKeyStorage Materialize(ServiceDescriptor descriptor, IServiceProvider serviceProvider) =>
         descriptor switch
         {

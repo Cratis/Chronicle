@@ -45,8 +45,8 @@ public class when_using_legacy_key_rpcs : given.a_compliance_boundary
     {
         _storage.GetEventStores().Returns([OtherEventStore]);
         await OperateLegacy(allowNew);
-        if (allowNew) await _keyStore.Received(1).AllowNewKeyFor(EventStore, EventStoreNamespace, Identifier);
-        else await _keyStore.Received(1).DeleteFor(EventStore, EventStoreNamespace, Identifier);
+        if (allowNew) await _keyStore.Received(1).AuthorizeConfirmedSuccessorFor(EventStore, EventStoreNamespace, Identifier);
+        else await _keyStore.Received(1).DeleteThroughFor(EventStore, EventStoreNamespace, Identifier, Arg.Any<string>());
     }
 
     [Theory]
@@ -57,8 +57,8 @@ public class when_using_legacy_key_rpcs : given.a_compliance_boundary
         await OperateLegacy(allowNew);
         foreach (var store in new[] { EventStore, OtherEventStore, ThirdEventStore })
         {
-            if (allowNew) await _keyStore.Received(1).AllowNewKeyFor(store, EventStoreNamespace, Identifier);
-            else await _keyStore.Received(1).DeleteFor(store, EventStoreNamespace, Identifier);
+            if (allowNew) await _keyStore.Received(1).AuthorizeConfirmedSuccessorFor(store, EventStoreNamespace, Identifier);
+            else await _keyStore.Received(1).DeleteThroughFor(store, EventStoreNamespace, Identifier, Arg.Any<string>());
         }
         ShouldNotHaveTouched(Concepts.EventStoreName.System);
     }

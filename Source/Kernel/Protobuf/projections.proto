@@ -20,6 +20,17 @@ message ChildrenDefinition {
    AutoMap AutoMap = 9;
    map<string,ChildrenDefinition> Nested = 10;
    repeated string NoAutoMapProperties = 11;
+   ChildrenOrderingDefinition Ordering = 12;
+}
+message ChildrenOrderingDefinition {
+   ChildrenPlacement Placement = 1;
+   string SortBy = 2;
+   SortDirection Direction = 3;
+}
+enum ChildrenPlacement {
+   Append = 0;
+   Prepend = 1;
+   Sorted = 2;
 }
 message DraftReadModelDefinition {
    string ContainerName = 1;
@@ -264,6 +275,10 @@ message SinkDefinition {
    string TypeId = 2;
    EventSequenceSinkConfiguration EventSequence = 3;
    string Name = 4;
+}
+enum SortDirection {
+   Ascending = 0;
+   Descending = 1;
 }
 service Projections {
    rpc GetAllDeclarations (GetAllDeclarationsRequest) returns (IEnumerable_ProjectionWithDeclaration);

@@ -48,11 +48,13 @@ public static class InMemoryChronicleBuilderExtensions
             services.AddSingleton<EventStoreStorages>();
             services.AddSingleton<ISystemStorage, SystemStorage>();
             services.AddSingleton<IClusterStorage, ClusterStorage>();
-            services.AddSingleton<IEncryptionKeyStorage, EncryptionKeyStorage>();
-            services.AddSingleton<IStorage, Cratis.Chronicle.Storage.InMemory.Storage>();
+            services.AddSingleton<EncryptionKeyStorage>();
+            services.AddSingleton<IEncryptionKeyStorage>(sp => sp.GetRequiredService<EncryptionKeyStorage>());
+            services.AddSingleton<IEncryptionKeyFence>(sp => sp.GetRequiredService<EncryptionKeyStorage>());
+            services.AddSingleton<IStorage, Storage.InMemory.Storage>();
             services.AddSingleton<IStorageErrorClassifier, InMemoryStorageErrorClassifier>();
             services.AddSingleton<IReservedEventSequenceIds, InMemoryReservedEventSequenceIds>();
-            services.AddSingleton<Cratis.Chronicle.Storage.Generations.Bindings.IMaterializationBindingStorage, Cratis.Chronicle.Storage.InMemory.Generations.Bindings.InMemoryMaterializationBindingStorage>();
+            services.AddSingleton<Storage.Generations.Bindings.IMaterializationBindingStorage, Storage.InMemory.Generations.Bindings.InMemoryMaterializationBindingStorage>();
             services.AddGenerationCatalog();
             services.AddCratisChoreographyInMemoryJobsStorage();
         });

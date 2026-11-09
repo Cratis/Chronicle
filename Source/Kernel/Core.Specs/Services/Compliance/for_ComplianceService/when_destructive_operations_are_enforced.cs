@@ -44,8 +44,8 @@ public class when_destructive_operations_are_enforced : given.a_compliance_bound
         (await Operate(allowNew)).ShouldBeEmpty();
         foreach (var store in new[] { EventStore, OtherEventStore, ThirdEventStore })
         {
-            if (allowNew) await _keyStore.Received(1).AllowNewKeyFor(store, EventStoreNamespace, Identifier);
-            else await _keyStore.Received(1).DeleteFor(store, EventStoreNamespace, Identifier);
+            if (allowNew) await _keyStore.Received(1).AuthorizeConfirmedSuccessorFor(store, EventStoreNamespace, Identifier);
+            else await _keyStore.Received(1).DeleteThroughFor(store, EventStoreNamespace, Identifier, Arg.Any<string>());
         }
     }
 
@@ -72,6 +72,6 @@ public class when_destructive_operations_are_enforced : given.a_compliance_bound
     }
 
     Task ShouldHaveTouchedOwnStore(bool allowNew) => allowNew
-        ? _keyStore.Received(1).AllowNewKeyFor(EventStore, EventStoreNamespace, Identifier)
-        : _keyStore.Received(1).DeleteFor(EventStore, EventStoreNamespace, Identifier);
+        ? _keyStore.Received(1).AuthorizeConfirmedSuccessorFor(EventStore, EventStoreNamespace, Identifier)
+        : _keyStore.Received(1).DeleteThroughFor(EventStore, EventStoreNamespace, Identifier, Arg.Any<string>());
 }

@@ -28,6 +28,7 @@ public class a_migrated_event_with_protected_properties : a_stored_event
         _encryption = new Encryption();
         _key = _encryption.GenerateKey();
         keys.TryGetFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>()).Returns(_key);
+        keys.TryGetLatestFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>()).Returns(new EncryptionKeyAtRevision(_key, EncryptionKeyRevision.Initial));
         var handler = new PIICompliancePropertyValueHandler(Substitute.For<IManagedEncryptionKeyProvisioner>(), keys, _encryption);
         _manager = new(new KnownInstancesOf<IJsonSchemaMetadataValueHandler>(handler), NullLogger<JsonSchemaMetadataManager>.Instance);
 
@@ -47,7 +48,7 @@ public class a_migrated_event_with_protected_properties : a_stored_event
             EventTypeOwner.Client,
             false,
             [new(1, _first), new(2, _second)],
-            [new(1, 2, [], JsonNode.Parse(upcast)!.AsObject(), new JsonObject())]));
+            [new(1, 2, [], JsonNode.Parse(upcast).AsObject(), new JsonObject())]));
 
     protected void Store(JsonObject first, JsonObject second) =>
         _stored = _stored with { GenerationalContent = new Dictionary<int, string> { [1] = first.ToJsonString(), [2] = second.ToJsonString() } };

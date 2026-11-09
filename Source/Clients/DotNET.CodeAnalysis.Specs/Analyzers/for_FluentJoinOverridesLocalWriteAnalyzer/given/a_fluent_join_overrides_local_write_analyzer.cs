@@ -30,6 +30,7 @@ public class a_fluent_join_overrides_local_write_analyzer : Specification
             "    public interface IReadModelPropertiesBuilder<TReadModel, TEvent, TBuilder>",
             "    {",
             "        ISetBuilder<TReadModel, TEvent, TProperty, TBuilder> Set<TProperty>(Expression<Func<TReadModel, TProperty>> accessor);",
+            "        ISetBuilder<TReadModel, TEvent, TProperty, TBuilder> SetOnce<TProperty>(Expression<Func<TReadModel, TProperty>> accessor);",
             "        TBuilder Increment<TProperty>(Expression<Func<TReadModel, TProperty>> accessor);",
             "    }",
             "",

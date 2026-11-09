@@ -80,20 +80,28 @@ internal sealed class Projections(
         var projectionsManager = grainFactory.GetGrain<IProjectionsManager>(request.EventStore);
         var owner = (Concepts.Projections.ProjectionOwner)(int)request.Owner;
         var projections = request.Projections.Select(_ => _.ToChronicle(owner)).ToArray();
-        if (!string.IsNullOrEmpty(request.ConnectionId) && !connectionOwnership.IsOwnedBy(request.ConnectionId, ConnectionCallers.From(context, options.Value).Owner))
+        if (!string.IsNullOrEmpty(request.ConnectionId))
         {
-            logger.DeclarationsSkippedForConnection(request.EventStore, request.ConnectionId);
-        }
-        else if (!string.IsNullOrEmpty(request.ConnectionId))
-        {
-            try
+            var access = await connectionOwnership.Verify(grainFactory, request.ConnectionId, ConnectionCallers.From(context, options.Value).Owner, options.Value.Clustering.ResponseTimeout, cancellationToken: context.CancellationToken);
+            if (access == ConnectionAccessOutcome.Unverifiable)
             {
-                // Connection lookup must not occupy the non-reentrant manager's registration turn.
-                await ProjectionDeclarations.Record(grainFactory, localSiloDetails.SiloAddress, new(request.ConnectionId), request.EventStore, projections.Select(projection => projection.Identifier), request.Version);
+                logger.ConnectionOwnershipUnverifiable(request.EventStore, request.ConnectionId);
             }
-            catch (Exception exception)
+            else if (access == ConnectionAccessOutcome.Denied)
             {
-                logger.FailedRecordingDeclarations(exception, request.EventStore, request.ConnectionId);
+                logger.DeclarationsSkippedForConnection(request.EventStore, request.ConnectionId);
+            }
+            else
+            {
+                try
+                {
+                    // Connection lookup must not occupy the non-reentrant manager's registration turn.
+                    await ProjectionDeclarations.Record(grainFactory, localSiloDetails.SiloAddress, new(request.ConnectionId), request.EventStore, projections.Select(projection => projection.Identifier), request.Version);
+                }
+                catch (Exception exception)
+                {
+                    logger.FailedRecordingDeclarations(exception, request.EventStore, request.ConnectionId);
+                }
             }
         }
 

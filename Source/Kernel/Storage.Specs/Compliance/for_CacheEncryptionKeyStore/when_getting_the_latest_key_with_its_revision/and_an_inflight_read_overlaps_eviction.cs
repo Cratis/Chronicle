@@ -26,9 +26,9 @@ public class and_an_inflight_read_overlaps_eviction : Specification
     {
         var pending = _cache.TryGetLatestFor("store", "tenant", "subject");
         _cache.EvictFromCache("store", "tenant", "subject");
+        _inner.TryGetLatestFor("store", "tenant", "subject").Returns(Task.FromResult<EncryptionKeyAtRevision?>(null));
         _read.SetResult(_stale);
         await pending;
-        _inner.TryGetLatestFor("store", "tenant", "subject").Returns(Task.FromResult<EncryptionKeyAtRevision?>(null));
         _result = await _cache.TryGetLatestFor("store", "tenant", "subject");
     }
 

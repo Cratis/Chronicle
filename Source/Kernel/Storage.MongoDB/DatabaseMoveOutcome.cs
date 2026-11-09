@@ -21,5 +21,11 @@ internal enum DatabaseMoveOutcome
     /// <summary>
     /// The copy could not be confirmed, so the source was kept.
     /// </summary>
-    Kept = 2
+    Kept = 2,
+
+    /// <summary>
+    /// Everything was copied and the copy was confirmed, but the server refused to let the source be dropped, so it
+    /// remains as a stale copy.
+    /// </summary>
+    MovedSourceRetained = 3
 }

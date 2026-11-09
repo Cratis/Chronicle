@@ -299,6 +299,16 @@ public static class WellKnownTableNames
     public const string EncryptionKeyErasures = "EncryptionKeyErasures";
 
     /// <summary>
+    /// The table that holds external encryption key fences.
+    /// </summary>
+    public const string EncryptionKeyExternalFences = "EncryptionKeyExternalFences";
+
+    /// <summary>
+    /// The table that holds encryption key fence records.
+    /// </summary>
+    public const string EncryptionKeyFenceRecords = "EncryptionKeyFenceRecords";
+
+    /// <summary>
     /// The table that holds kernel-internal secrets, apart from subject encryption keys.
     /// </summary>
     public const string InternalSecrets = "InternalSecrets";

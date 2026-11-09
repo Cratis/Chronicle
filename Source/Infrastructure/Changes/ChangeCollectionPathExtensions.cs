@@ -135,7 +135,7 @@ public static class ChangeCollectionPathExtensions
 
         foreach (var difference in propertiesChanged.Differences.WithoutCollectionConflicts(collectionPathsWithChildOperations, wholeCollectionReplacementPaths))
         {
-            difference.PropertyPath.SetValue(result, difference.Changed!, difference.ArrayIndexers);
+            difference.ApplyTo(result);
         }
 
         return result;
@@ -151,7 +151,7 @@ public static class ChangeCollectionPathExtensions
     {
         var state = new ExpandoObject();
 
-        foreach (var difference in propertiesChanged.Differences.Where(_ => !_.ConflictsWithChildOperation(collectionPathsWithChildOperations)))
+        foreach (var difference in propertiesChanged.Differences.Where(_ => !_.ConflictsWithChildOperation(collectionPathsWithChildOperations) && !_.IsRemoval))
         {
             difference.PropertyPath.SetValue(state, difference.Changed!, difference.ArrayIndexers);
         }

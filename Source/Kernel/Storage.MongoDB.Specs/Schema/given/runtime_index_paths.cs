@@ -4,6 +4,7 @@
 using System.Text.Json;
 using Cratis.Choreography.Jobs;
 using Cratis.Choreography.Storage.MongoDB.Jobs;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Concepts.EventSequences;
@@ -14,6 +15,7 @@ using Cratis.Chronicle.Storage.Identities;
 using Cratis.Chronicle.Storage.MongoDB.Alerts;
 using Cratis.Chronicle.Storage.MongoDB.Events.Constraints;
 using Cratis.Chronicle.Storage.MongoDB.EventSequences;
+using Cratis.Chronicle.Storage.MongoDB.for_ColdStartStorage.given;
 using Cratis.Chronicle.Storage.MongoDB.Observation;
 using Cratis.Chronicle.Storage.MongoDB.Occurrences;
 using Cratis.Chronicle.Storage.Observation;
@@ -60,8 +62,9 @@ internal static class runtime_index_paths
         await new FailedPartitionStorage(ns).GetFor((ObserverId?)null);
         await new InFlightEventsStorage(ns).GetFor("observer");
         await new AlertIncidentsStorage(ns).GetOpenCountsByObserver();
-        await new EncryptionKeyStorage(database).HasFor("orders", "Default", "absent");
-        await new EncryptionKeyStorage(database).HasFor(EncryptedValueKeyIdentifiers.GlobalEventStore, EncryptedValueKeyIdentifiers.GlobalNamespace, "absent");
+        await KeysWithFence(database, "orders", "Default").HasFor("orders", "Default", "absent");
+        await KeysWithFence(database, EncryptedValueKeyIdentifiers.GlobalEventStore, EncryptedValueKeyIdentifiers.GlobalNamespace)
+            .HasFor(EncryptedValueKeyIdentifiers.GlobalEventStore, EncryptedValueKeyIdentifiers.GlobalNamespace, "absent");
         await new OccurrencesStorage(ns.GetCollection<BsonDocument>(WellKnownCollectionNames.EventSequences).Database).Record(Occurrence());
         await new OccurrencesStorage(store.GetCollection<BsonDocument>(WellKnownCollectionNames.Namespaces).Database).Record(Occurrence());
         await ExerciseRows(ns);
@@ -69,6 +72,27 @@ internal static class runtime_index_paths
         if (jobsResult.TryGetException(out var jobsError)) throw StorageFailure("GetJobs", jobsError);
         var stepsResult = await new JobStepStorage(jobs).GetForJob(JobId.New());
         if (stepsResult.TryGetException(out var stepsError)) throw StorageFailure("GetForJob", stepsError);
+    }
+
+    static EncryptionKeyStorage KeysWithFence(IDatabase database, EventStoreName eventStore, EventStoreNamespaceName ns)
+    {
+        // These schema fixtures use standalone MongoDB, which cannot serve linearizable fence reads.
+        // Keep the actual key collection and its runtime index checks; fake only the fence authority.
+        var realNamespace = database.GetEventStoreDatabase(eventStore).GetNamespaceDatabase(ns);
+        var keys = realNamespace.GetCollection<EncryptionKeyForIdentifier>(WellKnownCollectionNames.EncryptionKeys);
+        var fences = Substitute.For<IMongoCollection<EncryptionKeyErasureForIdentifier>>();
+        fences.WithReadConcern(Arg.Any<ReadConcern>()).Returns(fences);
+        fences.WithReadPreference(Arg.Any<ReadPreference>()).Returns(fences);
+        fences.FindAsync(Arg.Any<FilterDefinition<EncryptionKeyErasureForIdentifier>>(), Arg.Any<FindOptions<EncryptionKeyErasureForIdentifier, EncryptionKeyErasureForIdentifier>>(), Arg.Any<CancellationToken>())
+            .Returns(_ => Task.FromResult(duplicate_keys.CursorOf(new EncryptionKeyErasureForIdentifier("absent", 0u, [], true))));
+        var routedNamespace = Substitute.For<IEventStoreNamespaceDatabase>();
+        routedNamespace.GetCollection<EncryptionKeyForIdentifier>(WellKnownCollectionNames.EncryptionKeys).Returns(keys);
+        routedNamespace.GetCollection<EncryptionKeyErasureForIdentifier>(WellKnownCollectionNames.EncryptionKeyErasures).Returns(fences);
+        var routedStore = Substitute.For<IEventStoreDatabase>();
+        routedStore.GetNamespaceDatabase(ns).Returns(routedNamespace);
+        var routedDatabase = Substitute.For<IDatabase>();
+        routedDatabase.GetEventStoreDatabase(eventStore).Returns(routedStore);
+        return new(routedDatabase);
     }
 
     static InvalidOperationException StorageFailure(string operation, Exception error) => new(

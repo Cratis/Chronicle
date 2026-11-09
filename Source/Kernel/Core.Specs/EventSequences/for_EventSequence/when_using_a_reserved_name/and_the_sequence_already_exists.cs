@@ -7,11 +7,11 @@ namespace Cratis.Chronicle.EventSequences.for_EventSequence.when_using_a_reserve
 
 public class and_the_sequence_already_exists : given.an_event_sequence_with_a_reserved_name
 {
-    AppendResult _result;
+    Exception _error;
     protected override bool SequenceExists => true;
 
-    async Task Because() => _result = await AppendAnEvent();
+    async Task Because() => _error = await Catch.Exception(() => AppendAnEvent());
 
-    [Fact] void should_append() => _result.IsSuccess.ShouldBeTrue();
-    [Fact] void should_reach_storage() => _appendedSequenceNumber.ShouldEqual(EventSequenceNumber.First);
+    [Fact] void should_refuse_the_name() => _error.ShouldBeOfExactType<ReservedEventSequenceName>();
+    [Fact] void should_not_append() => _appendedSequenceNumber.ShouldEqual(EventSequenceNumber.Unavailable);
 }

@@ -53,6 +53,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     readonly string? _certificatePassword;
     readonly ITokenProvider _tokenProvider;
     readonly bool _skipTlsValidation;
+    readonly X509Certificate2Collection? _certificateAuthorities;
     readonly bool _skipCompatibilityCheck;
     readonly bool _skipKeepAlive;
     readonly IChronicleServerAddressResolver _serverAddressResolver;
@@ -92,7 +93,11 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     /// <param name="serverAddressResolver">Optional <see cref="IChronicleServerAddressResolver"/> for resolving server addresses. Defaults to <see cref="ChronicleServerAddressResolver"/>.</param>
     /// <param name="loadBalancerStrategy">Optional <see cref="ILoadBalancerStrategy"/> for selecting among multiple servers. Defaults to the strategy named by the connection string, or least-connections.</param>
     /// <param name="timeProvider">Optional <see cref="TimeProvider"/> used to time the back-off after a failed connect. Defaults to the system clock.</param>
-#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+    /// <remarks>
+    /// Certificate authorities set by the connection string's <see cref="ChronicleConnectionString.CaCertificatePath"/> are loaded here, once for the connection.
+    /// </remarks>
+    /// <exception cref="CertificateAuthorityDoesNotExist">Thrown when the connection string's CA certificate file does not exist.</exception>
+    /// <exception cref="InvalidCertificateAuthority">Thrown when the connection string's CA certificate file cannot be read or contains no certificates.</exception>
 #pragma warning disable CA1068 // CancellationToken parameters must come last
     public ChronicleConnection(
         ChronicleConnectionString connectionString,
@@ -114,6 +119,75 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         IChronicleServerAddressResolver? serverAddressResolver = null,
         ILoadBalancerStrategy? loadBalancerStrategy = null,
         TimeProvider? timeProvider = null)
+        : this(
+            connectionString,
+            connectTimeout,
+            maxReceiveMessageSize,
+            maxSendMessageSize,
+            connectionLifecycle,
+            tasks,
+            correlationIdAccessor,
+            loggerFactory,
+            cancellationToken,
+            logger,
+            skipTlsValidation,
+            certificatePath,
+            certificatePassword,
+            tokenProvider,
+            skipCompatibilityCheck,
+            skipKeepAlive,
+            serverAddressResolver,
+            loadBalancerStrategy,
+            timeProvider,
+            string.IsNullOrEmpty(connectionString.CaCertificatePath) ? null : CertificateLoader.LoadCertificateAuthorities(connectionString.CaCertificatePath))
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ChronicleConnection"/> class with already loaded certificate authorities.
+    /// </summary>
+    /// <param name="connectionString"><see cref="ChronicleConnectionString"/> to connect with.</param>
+    /// <param name="connectTimeout">Timeout when connecting in seconds.</param>
+    /// <param name="maxReceiveMessageSize">Maximum receive message size in bytes.</param>
+    /// <param name="maxSendMessageSize">Maximum send message size in bytes.</param>
+    /// <param name="connectionLifecycle"><see cref="IConnectionLifecycle"/> for when connection state changes.</param>
+    /// <param name="tasks"><see cref="ITaskFactory"/> to create tasks with.</param>
+    /// <param name="correlationIdAccessor"><see cref="ICorrelationIdAccessor"/> to access the correlation ID.</param>
+    /// <param name="loggerFactory">Logger factory for creating loggers.</param>
+    /// <param name="cancellationToken">The clients <see cref="CancellationToken"/>.</param>
+    /// <param name="logger"><see cref="ILogger{TCategoryName}"/> for diagnostics.</param>
+    /// <param name="skipTlsValidation">Whether to skip TLS certificate validation for the connection.</param>
+    /// <param name="certificatePath">Optional path to the certificate file.</param>
+    /// <param name="certificatePassword">Optional password for the certificate file.</param>
+    /// <param name="tokenProvider"><see cref="ITokenProvider"/> for authentication.</param>
+    /// <param name="skipCompatibilityCheck">Whether to skip the server compatibility check on connect.</param>
+    /// <param name="skipKeepAlive">Whether to skip the keep-alive handshake on connect.</param>
+    /// <param name="serverAddressResolver">Optional <see cref="IChronicleServerAddressResolver"/> for resolving server addresses.</param>
+    /// <param name="loadBalancerStrategy">Optional <see cref="ILoadBalancerStrategy"/> for selecting among multiple servers.</param>
+    /// <param name="timeProvider">Optional <see cref="TimeProvider"/> used to time the back-off after a failed connect.</param>
+    /// <param name="certificateAuthorities">Certificate authorities the server certificate must chain to when validation is enabled; <see langword="null"/> uses the system trust store.</param>
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+    internal ChronicleConnection(
+        ChronicleConnectionString connectionString,
+        int connectTimeout,
+        int? maxReceiveMessageSize,
+        int? maxSendMessageSize,
+        IConnectionLifecycle connectionLifecycle,
+        ITaskFactory tasks,
+        ICorrelationIdAccessor correlationIdAccessor,
+        ILoggerFactory loggerFactory,
+        CancellationToken cancellationToken,
+        ILogger<ChronicleConnection> logger,
+        bool skipTlsValidation,
+        string? certificatePath,
+        string? certificatePassword,
+        ITokenProvider? tokenProvider,
+        bool skipCompatibilityCheck,
+        bool skipKeepAlive,
+        IChronicleServerAddressResolver? serverAddressResolver,
+        ILoadBalancerStrategy? loadBalancerStrategy,
+        TimeProvider? timeProvider,
+        X509Certificate2Collection? certificateAuthorities)
     {
         if (connectionString.DisableTls && connectionString.AuthenticationMode == AuthenticationMode.ClientCredentials)
         {
@@ -122,6 +196,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
 
         _timeProvider = timeProvider ?? TimeProvider.System;
         _skipTlsValidation = skipTlsValidation;
+        _certificateAuthorities = certificateAuthorities;
         _skipCompatibilityCheck = skipCompatibilityCheck;
 #pragma warning disable CHRX0001 // The serverless switch is experimental; the connection honours it internally.
         _skipKeepAlive = skipKeepAlive || connectionString.SkipKeepAlive || connectionString.Serverless;
@@ -144,7 +219,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         _certificatePassword = certificatePassword;
         _tokenProvider = tokenProvider ?? new NoOpTokenProvider();
         _serverAddressResolver = serverAddressResolver ?? new ChronicleServerAddressResolver();
-        _loadBalancerStrategy = loadBalancerStrategy ?? LoadBalancerStrategies.Create(connectionString.LoadBalancer, skipTlsValidation, connectionString.DisableTls);
+        _loadBalancerStrategy = loadBalancerStrategy ?? LoadBalancerStrategies.Create(connectionString.LoadBalancer, skipTlsValidation, connectionString.DisableTls, _certificateAuthorities);
         _watchDog = new ConnectionWatchdog(
             tasks,
             OnSessionDropped,
@@ -745,7 +820,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
 #pragma warning restore CA2000
 
             httpHandler.SslOptions.RemoteCertificateValidationCallback =
-                CertificateLoader.CreateServerCertificateValidationCallback(_skipTlsValidation, certificate?.GetCertHashString());
+                CertificateLoader.CreateServerCertificateValidationCallback(_skipTlsValidation, certificate?.GetCertHashString(), _certificateAuthorities);
 
             // With TLS disabled the server speaks HTTP/2 without TLS (h2c); an http:// address makes the gRPC channel
             // use HTTP/2 with prior knowledge.

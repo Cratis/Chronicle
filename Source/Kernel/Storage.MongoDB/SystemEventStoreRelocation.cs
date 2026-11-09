@@ -50,26 +50,71 @@ public class SystemEventStoreRelocation(
             return;
         }
 
-        logger.Moving(prefix, from, to);
         var system = EventStoreName.System;
-        var eventStore = connections.GetDatabase(StorageConnectionKind.EventStore, DatabaseNames.ForEventStore(system, prefix, from), system.Value);
         var server = clientManager.GetClientFor(Setup.MongoDBChronicleBuilderExtensions.GetMongoClientSettings(mongoDBOptions.Value.Server));
 
-        var complete = true;
-        foreach (var @namespace in await Namespaces(eventStore, prefix, from))
+        // Hosted MongoDB offerings, such as Atlas Flex, own a database named System that the user cannot read, and a fresh
+        // installation never had one of its own. With no database of the System event store under the old name, there is
+        // nothing to move, and nothing to be authorized for.
+        if (!await AnyDatabaseExists(server, DatabaseNames.ForEventStore(system, prefix, from)))
         {
-            complete &= await Move(StorageConnectionKind.Namespace, DatabaseNames.ForEventStoreNamespace(system, @namespace, prefix, from), DatabaseNames.ForEventStoreNamespace(system, @namespace, prefix, to), @namespace);
-            complete &= await Move(StorageConnectionKind.ReadModels, DatabaseNames.ForReadModels(system, @namespace, prefix, from), DatabaseNames.ForReadModels(system, @namespace, prefix, to), @namespace);
-            complete &= await Move(
-                server.GetDatabase(DatabaseNames.ForEventStoreNamespace(system, @namespace, prefix, from)),
-                server.GetDatabase(DatabaseNames.ForEventStoreNamespace(system, @namespace, prefix, to)));
+            logger.NothingToMoveFrom(prefix, from);
+            return;
         }
 
-        complete &= await Move(StorageConnectionKind.EventStore, DatabaseNames.ForEventStore(system, prefix, from), DatabaseNames.ForEventStore(system, prefix, to), EventStoreNamespaceName.Default, includeNamespace: false);
-        if (complete)
+        logger.Moving(prefix, from, to);
+        var eventStore = connections.GetDatabase(StorageConnectionKind.EventStore, DatabaseNames.ForEventStore(system, prefix, from), system.Value);
+
+        var outcomes = new List<DatabaseMoveOutcome>();
+        foreach (var @namespace in await Namespaces(eventStore, prefix, from))
         {
-            logger.Moved(from, to);
+            outcomes.Add(await Move(StorageConnectionKind.Namespace, DatabaseNames.ForEventStoreNamespace(system, @namespace, prefix, from), DatabaseNames.ForEventStoreNamespace(system, @namespace, prefix, to), @namespace));
+            outcomes.Add(await Move(StorageConnectionKind.ReadModels, DatabaseNames.ForReadModels(system, @namespace, prefix, from), DatabaseNames.ForReadModels(system, @namespace, prefix, to), @namespace));
+            outcomes.Add(await Move(
+                server.GetDatabase(DatabaseNames.ForEventStoreNamespace(system, @namespace, prefix, from)),
+                server.GetDatabase(DatabaseNames.ForEventStoreNamespace(system, @namespace, prefix, to))));
         }
+
+        outcomes.Add(await Move(StorageConnectionKind.EventStore, DatabaseNames.ForEventStore(system, prefix, from), DatabaseNames.ForEventStore(system, prefix, to), EventStoreNamespaceName.Default, includeNamespace: false));
+        if (outcomes.Contains(DatabaseMoveOutcome.Kept))
+        {
+            return;
+        }
+
+        if (outcomes.Contains(DatabaseMoveOutcome.MovedSourceRetained))
+        {
+            logger.MovedWithSourcesRetained(from, to);
+            return;
+        }
+
+        logger.Moved(from, to);
+    }
+
+    /// <inheritdoc/>
+    public async Task<string?> FindRetainedLegacyData()
+    {
+        var prefix = storageOptions.Value.DatabaseNamePrefix;
+        var configured = storageOptions.Value.SystemDatabaseName;
+        if (string.Equals(configured, DatabaseNames.LegacySystemDatabaseName, StringComparison.OrdinalIgnoreCase) ||
+            !await HoldsEvents(prefix, configured))
+        {
+            return null;
+        }
+
+        var server = clientManager.GetClientFor(Setup.MongoDBChronicleBuilderExtensions.GetMongoClientSettings(mongoDBOptions.Value.Server));
+        var legacy = DatabaseNames.ForReadModels(EventStoreName.System, EventStoreNamespaceName.Default, prefix, DatabaseNames.LegacySystemDatabaseName);
+        var retained = (await (await server.ListDatabaseNamesAsync()).ToListAsync())
+            .Where(_ => _ == legacy || _.StartsWith($"{legacy}+", StringComparison.Ordinal))
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+        if (retained.Length == 0)
+        {
+            return null;
+        }
+
+        return $"The System event store is kept in the databases named '{prefix}{configured}', but databases from before Chronicle 19.117 remain under '{legacy}': {string.Join(", ", retained.Select(_ => $"'{_}'"))}. " +
+            "Their content was moved and they are stale copies the kernel does not read, left behind because the MongoDB user lacks the dropDatabase and dropCollection actions on them. " +
+            $"Drop them with a user that has those actions, and do not set storage.systemDatabaseName back to '{DatabaseNames.LegacySystemDatabaseName}', which would start the kernel against the stale copy.";
     }
 
     /// <inheritdoc/>
@@ -110,6 +155,14 @@ public class SystemEventStoreRelocation(
             .ToArray();
     }
 
+    static async Task<bool> AnyDatabaseExists(IMongoClient server, string eventStoreDatabaseName)
+    {
+        var names = await (await server.ListDatabaseNamesAsync()).ToListAsync();
+        return names.Exists(_ =>
+            string.Equals(_, eventStoreDatabaseName, StringComparison.OrdinalIgnoreCase) ||
+            _.StartsWith($"{eventStoreDatabaseName}+", StringComparison.OrdinalIgnoreCase));
+    }
+
     async Task<bool> HoldsEvents(string prefix, string systemDatabaseName)
     {
         var server = clientManager.GetClientFor(Setup.MongoDBChronicleBuilderExtensions.GetMongoClientSettings(mongoDBOptions.Value.Server));
@@ -124,12 +177,12 @@ public class SystemEventStoreRelocation(
         return await events.Find(FilterDefinition<BsonDocument>.Empty).Limit(1).AnyAsync();
     }
 
-    Task<bool> Move(StorageConnectionKind kind, string fromName, string toName, EventStoreNamespaceName @namespace, bool includeNamespace = true) =>
+    Task<DatabaseMoveOutcome> Move(StorageConnectionKind kind, string fromName, string toName, EventStoreNamespaceName @namespace, bool includeNamespace = true) =>
         Move(
             connections.GetDatabase(kind, fromName, EventStoreName.System.Value, includeNamespace ? @namespace.Value : string.Empty),
             connections.GetDatabase(kind, toName, EventStoreName.System.Value, includeNamespace ? @namespace.Value : string.Empty));
 
-    async Task<bool> Move(IMongoDatabase source, IMongoDatabase target)
+    async Task<DatabaseMoveOutcome> Move(IMongoDatabase source, IMongoDatabase target)
     {
         var sourceName = source.DatabaseNamespace.DatabaseName;
         var targetName = target.DatabaseNamespace.DatabaseName;
@@ -139,20 +192,25 @@ public class SystemEventStoreRelocation(
         if (string.Equals(sourceName, targetName, StringComparison.OrdinalIgnoreCase))
         {
             logger.DatabaseNameUnchanged(sourceName);
-            return true;
+            return DatabaseMoveOutcome.NothingToMove;
         }
 
-        switch (await MongoDatabaseMove.Move(source, target, logger))
+        var outcome = await MongoDatabaseMove.Move(source, target, logger);
+        switch (outcome)
         {
             case DatabaseMoveOutcome.Moved:
                 logger.DatabaseMoved(sourceName, targetName);
                 break;
 
+            case DatabaseMoveOutcome.MovedSourceRetained:
+                logger.DatabaseMovedSourceRetained(sourceName, targetName);
+                break;
+
             case DatabaseMoveOutcome.Kept:
                 logger.DatabaseKept(sourceName, targetName);
-                return false;
+                break;
         }
 
-        return true;
+        return outcome;
     }
 }

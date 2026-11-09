@@ -34,4 +34,19 @@ public class EncryptionKey
     /// Gets or sets the private key bytes.
     /// </summary>
     public byte[] PrivateKey { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the lifecycle that owns this row; null denotes a legacy row.
+    /// </summary>
+    public uint? StagedLifecycle { get; set; }
+
+    /// <summary>
+    /// Gets or sets the unique owner of an in-flight publication.
+    /// </summary>
+    public string? WriteNonce { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether publication completed; null denotes a legacy row.
+    /// </summary>
+    public bool? Published { get; set; }
 }

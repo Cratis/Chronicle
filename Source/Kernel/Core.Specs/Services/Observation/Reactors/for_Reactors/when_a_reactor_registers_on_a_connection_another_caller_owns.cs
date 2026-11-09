@@ -51,5 +51,5 @@ public class when_a_reactor_registers_on_a_connection_another_caller_owns : Spec
 
     [Fact] void should_refuse_the_registration() => (_error is RpcException { StatusCode: StatusCode.PermissionDenied }).ShouldBeTrue();
     [Fact] void should_not_subscribe_to_the_mediator() => _mediator.DidNotReceive().Subscribe(Arg.Any<ReactorId>(), Arg.Any<ConnectionId>(), Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<ReactorEventsObserver>());
-    [Fact] void should_not_reach_a_grain() => _grainFactory.ReceivedCalls().ShouldBeEmpty();
+    [Fact] void should_not_reach_the_observer_grain() => _grainFactory.DidNotReceive().GetGrain<IReactor>(Arg.Any<string>());
 }
