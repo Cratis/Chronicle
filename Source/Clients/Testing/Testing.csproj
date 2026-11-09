@@ -1,7 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <TargetFramework>net11.0</TargetFramework>
-        <TargetFrameworks></TargetFrameworks>
         <AssemblyName>Cratis.Chronicle.Testing</AssemblyName>
         <RootNamespace>Cratis.Chronicle.Testing</RootNamespace>
         <Description>Testing helpers for Cratis Chronicle - the open-source (MIT) event-sourcing database and runtime. In-process kernel and in-memory storage for testing event-sourced applications.</Description>

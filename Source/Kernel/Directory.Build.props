@@ -2,9 +2,14 @@
     <Import Project="$(MSBuildThisFileDirectory)../Directory.Build.props" />
 
     <PropertyGroup>
-        <!-- Override global multi-targeting for Kernel projects (except Contracts which needs to multi-target) -->
-        <TargetFramework Condition="'$(MSBuildProjectName)' != 'Contracts'">net11.0</TargetFramework>
-        <TargetFrameworks Condition="'$(MSBuildProjectName)' != 'Contracts'"></TargetFrameworks>
+        <!--
+            Kernel projects the published Testing and XUnit.Integration packages embed. They keep the global targeting
+            (ChronicleTfm normally, net10.0;net11.0 under IsPackaging) so those packages can multi-target; .NET 10 is LTS.
+            Every other Kernel project (Server, storage providers, specs) is net11.0 only.
+        -->
+        <ChronicleEmbeddedKernelProject Condition="'$(MSBuildProjectName)' == 'Contracts' Or '$(MSBuildProjectName)' == 'Concepts' Or '$(MSBuildProjectName)' == 'Compatibility' Or '$(MSBuildProjectName)' == 'Core' Or '$(MSBuildProjectName)' == 'Grpc' Or '$(MSBuildProjectName)' == 'Storage' Or '$(MSBuildProjectName)' == 'Storage.InMemory' Or '$(MSBuildProjectName)' == 'Storage.MongoDB'">true</ChronicleEmbeddedKernelProject>
+        <TargetFramework Condition="'$(ChronicleEmbeddedKernelProject)' != 'true'">net11.0</TargetFramework>
+        <TargetFrameworks Condition="'$(ChronicleEmbeddedKernelProject)' != 'true'"></TargetFrameworks>
         <!-- Only Contracts is published as a NuGet package from Kernel -->
         <IsPackable Condition="'$(MSBuildProjectName)' != 'Contracts'">false</IsPackable>
         <IsPackable Condition="'$(MSBuildProjectName)' == 'Contracts'">true</IsPackable>

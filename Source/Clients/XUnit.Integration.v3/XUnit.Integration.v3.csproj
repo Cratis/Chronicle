@@ -1,7 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <TargetFramework>net11.0</TargetFramework>
-        <TargetFrameworks></TargetFrameworks>
         <AssemblyName>Cratis.Chronicle.XUnit.Integration.v3</AssemblyName>
         <RootNamespace>Cratis.Chronicle.XUnit.Integration</RootNamespace>
         <Description>xUnit v3 integration-testing support for Cratis Chronicle - the open-source (MIT) event-sourcing database and runtime. Fixtures and helpers for integration tests against an in-process kernel. Must not be referenced together with Cratis.Chronicle.XUnit.Integration.</Description>
