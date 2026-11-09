@@ -420,48 +420,16 @@ public partial class Observer
             return;
         }
 
-        if (_subscription.Filters is { } filters)
+        if (ExcludedByFilters([.. events]))
         {
-            if (filters.EventSourceType is { } eventSourceType &&
-                eventSourceType != EventSourceType.Unspecified &&
-                !events.Any(_ => _.Context.EventSourceType == eventSourceType))
+            State = State with
             {
-                State = State with
-                {
-                    NextEventSequenceNumber = CursorAfter(observedTailEventSequenceNumber.Next()),
-                    TailEventSequenceNumber = TailAfter(observedTailEventSequenceNumber)
-                };
-                RecordedHandlingState();
-                await WriteProgressStateDebounced();
-                return;
-            }
-
-            if (filters.EventStreamType is { } eventStreamType &&
-                !eventStreamType.IsAll &&
-                !events.Any(_ => _.Context.EventStreamType == eventStreamType))
-            {
-                State = State with
-                {
-                    NextEventSequenceNumber = CursorAfter(observedTailEventSequenceNumber.Next()),
-                    TailEventSequenceNumber = TailAfter(observedTailEventSequenceNumber)
-                };
-                RecordedHandlingState();
-                await WriteProgressStateDebounced();
-                return;
-            }
-
-            if (filters.Tags.Any() &&
-                !events.Any(_ => _.Context.Tags.Any(t => filters.Tags.Contains(t.Value))))
-            {
-                State = State with
-                {
-                    NextEventSequenceNumber = CursorAfter(observedTailEventSequenceNumber.Next()),
-                    TailEventSequenceNumber = TailAfter(observedTailEventSequenceNumber)
-                };
-                RecordedHandlingState();
-                await WriteProgressStateDebounced();
-                return;
-            }
+                NextEventSequenceNumber = CursorAfter(observedTailEventSequenceNumber.Next()),
+                TailEventSequenceNumber = TailAfter(observedTailEventSequenceNumber)
+            };
+            RecordedHandlingState();
+            await WriteProgressStateDebounced();
+            return;
         }
 
         var failed = false;

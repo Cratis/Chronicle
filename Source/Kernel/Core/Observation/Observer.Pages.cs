@@ -76,12 +76,12 @@ public partial class Observer
     static List<List<ObserverPartitionBatch>> WithinLiveBudget(Observers configuration, IReadOnlyList<ObserverPartitionBatch> candidates)
     {
         // Partitions are taken in the order they arrived and cut into pages that each stay within the live delivery budget. A
-        // partition left on its own, including one larger than the budget, is not part of any page: Handle delivers it, and hands
-        // it to catch-up when it is over the budget, as it does any single partition.
+        // partition larger than the budget is never part of a page, so it does not keep the partitions around it apart: Handle
+        // hands it to catch-up, as it does any single partition over the budget. A partition left on its own is delivered by Handle.
         var pages = new List<List<ObserverPartitionBatch>>();
         var current = new List<ObserverPartitionBatch>();
         var events = 0;
-        foreach (var candidate in candidates)
+        foreach (var candidate in candidates.Where(_ => !ExceedsLiveBudget(configuration, _.Events.Count)))
         {
             if (current.Count > 0 && ExceedsLiveBudget(configuration, events + candidate.Events.Count))
             {
