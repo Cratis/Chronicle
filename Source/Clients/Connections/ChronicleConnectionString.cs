@@ -182,6 +182,12 @@ public class ChronicleConnectionString
     public string? CertificatePassword => _builder.CertificatePassword;
 
     /// <summary>
+    /// Gets the path to a file with the certificate authorities the server certificate must chain to.
+    /// </summary>
+    /// <remarks>See <see cref="ChronicleConnectionStringBuilder.CaCertificatePath"/>.</remarks>
+    public string? CaCertificatePath => _builder.CaCertificatePath;
+
+    /// <summary>
     /// Gets a representation of the connection string that is safe to log, with every credential masked.
     /// </summary>
     /// <remarks>
