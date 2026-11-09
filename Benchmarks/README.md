@@ -413,7 +413,7 @@ Run the clustering executable directly (not BenchmarkDotNet):
 
 ```sh
 dotnet build Benchmarks/Chronicle.Benchmarks.Clustering -c Release
-REBUILD_SIZE=small REBUILD_MODE=live dotnet Benchmarks/Chronicle.Benchmarks.Clustering/bin/Release/net10.0/Chronicle.Benchmarks.Clustering.dll --rebuild S3
+REBUILD_SIZE=small REBUILD_MODE=live dotnet Benchmarks/Chronicle.Benchmarks.Clustering/bin/Release/net11.0/Chronicle.Benchmarks.Clustering.dll --rebuild S3
 ```
 
 The existing `--rebuild-live` and `--replay-shape` diagnostics remain separate and unchanged.

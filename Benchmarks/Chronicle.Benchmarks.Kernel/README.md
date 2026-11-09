@@ -10,14 +10,14 @@ Build in Release, then run the produced assembly with a filter:
 
 ```sh
 dotnet build Benchmarks/Chronicle.Benchmarks.Kernel/Chronicle.Benchmarks.Kernel.csproj -c Release
-dotnet Benchmarks/Chronicle.Benchmarks.Kernel/bin/Release/net10.0/Chronicle.Benchmarks.Kernel.dll --filter "*AppendGenerationProtectionBenchmark*"
+dotnet Benchmarks/Chronicle.Benchmarks.Kernel/bin/Release/net11.0/Chronicle.Benchmarks.Kernel.dll --filter "*AppendGenerationProtectionBenchmark*"
 ```
 
 The benchmarks use a short in-process job (`Job.ShortRun` with `InProcessEmitToolchain`) and `[MemoryDiagnoser]`. Every report includes an `Allocated` column. Allocations are deterministic, so they are the most reliable signal. Timings vary with machine load.
 
 ## Comparing a change with a baseline
 
-1. Build the project on the baseline (for example `origin/main`) and copy `bin/Release/net10.0/` somewhere outside the repository.
+1. Build the project on the baseline (for example `origin/main`) and copy `bin/Release/net11.0/` somewhere outside the repository.
 2. Build it again with your change and copy that output as well.
 3. Run the two copies interleaved (baseline, change, baseline, change) with the same filter, so they see the same machine conditions.
 4. Compare `Allocated` first. If the time spreads overlap, treat the timing difference as noise.
