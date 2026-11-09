@@ -430,12 +430,23 @@ public class ProjectionFactory(
         }
 
         var childProperties = childSchema?.GetFlattenedProperties().Select(_ => _.Name).ToArray() ?? [];
-        if (childProperties.Length > 0 && childSchema!.GetSchemaPropertyForPropertyPath(ordering.SortBy) is null)
+        if (childProperties.Length == 0)
+        {
+            return;
+        }
+
+        var sortProperty = childSchema!.GetSchemaPropertyForPropertyPath(ordering.SortBy) ?? throw new InvalidChildrenOrdering(
+            projectionId,
+            childrenProperty,
+            $"the children are sorted by '{ordering.SortBy}', which the child read model does not have (available properties: {string.Join(", ", childProperties)}).");
+
+        var sortType = sortProperty.ActualTypeSchema.Type;
+        if (sortType.HasFlag(JsonObjectType.Object) || sortType.HasFlag(JsonObjectType.Array))
         {
             throw new InvalidChildrenOrdering(
                 projectionId,
                 childrenProperty,
-                $"the children are sorted by '{ordering.SortBy}', which the child read model does not have (available properties: {string.Join(", ", childProperties)}).");
+                $"the children are sorted by '{ordering.SortBy}', which is {(sortType.HasFlag(JsonObjectType.Array) ? "a collection" : "an object")} - children can only be sorted by a single value such as a number, string, date, Guid or boolean.");
         }
     }
 

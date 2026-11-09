@@ -30,7 +30,9 @@ public class a_projection_factory_for_definitions : a_projection_factory_and_an_
                 "type": "object",
                 "properties": {
                   "entryId": { "type": "string" },
-                  "rank": { "type": "integer" }
+                  "rank": { "type": "integer" },
+                  "details": { "type": "object", "properties": { "note": { "type": "string" } } },
+                  "tags": { "type": "array", "items": { "type": "string" } }
                 }
               }
             }
