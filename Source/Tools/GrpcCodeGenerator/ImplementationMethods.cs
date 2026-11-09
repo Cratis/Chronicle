@@ -431,7 +431,7 @@ public static class ImplementationMethods
 
     static bool IsNamespace(ParameterInfo parameter) =>
         parameter.ParameterType.FullName == "Cratis.Chronicle.Concepts.EventStoreNamespaceName" ||
-        (parameter.ParameterType == typeof(string) && parameter.Name is "namespace");
+        (parameter.ParameterType == typeof(string) && string.Equals(parameter.Name, "namespace", StringComparison.Ordinal));
 
     static bool IsStore(ParameterInfo parameter) =>
         parameter.ParameterType.FullName == "Cratis.Chronicle.Concepts.EventStoreName" ||
