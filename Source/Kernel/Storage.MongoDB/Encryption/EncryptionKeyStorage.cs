@@ -65,7 +65,9 @@ public partial class EncryptionKeyStorage(IDatabase database, IMongoDBTopology? 
     /// <summary>
     /// Gets the write concern fence writes use: majority, bounded by the fence timeout, on a replica set; acknowledged on a standalone server.
     /// </summary>
-    internal WriteConcern Durability => _topology.IsStandalone ? WriteConcern.Acknowledged : WriteConcern.WMajority.With(wTimeout: _readTimeout, journal: true);
+    internal WriteConcern Durability => _topology.IsStandalone ? WriteConcern.Acknowledged : StrongDurability;
+
+    WriteConcern StrongDurability => WriteConcern.WMajority.With(wTimeout: _readTimeout, journal: true);
 
     /// <inheritdoc/>
     public async Task SaveFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKey key, EncryptionKeyRevision? revision = null)
@@ -181,23 +183,12 @@ public partial class EncryptionKeyStorage(IDatabase database, IMongoDBTopology? 
     }
 
     /// <inheritdoc/>
-    public async Task<EncryptionKeyErasure?> GetFenceFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
-    {
-        var document = await Bounded(identifier, cancellationToken => GetErasureCollection(eventStore, eventStoreNamespace)
-            .WithReadConcern(Linearizability).WithReadPreference(ReadPreference.Primary)
-            .Find(_ => _.Id == identifier, new FindOptions { MaxTime = _readTimeout }).FirstOrDefaultAsync(cancellationToken));
-        var fence = document?.ToFence();
-        if (fence is not null && !HasValidSeal(fence))
-        {
-            throw new EncryptionKeyFenceUnavailable(identifier);
-        }
-
-        return fence;
-    }
+    public Task<EncryptionKeyErasure?> GetFenceFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier) =>
+        ReadFence(eventStore, eventStoreNamespace, identifier);
 
     /// <inheritdoc/>
     public Task<EncryptionKeyErasure?> GetErasureForRelease(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier) =>
-        GetFenceFor(eventStore, eventStoreNamespace, identifier);
+        ReadFence(eventStore, eventStoreNamespace, identifier, strong: true);
 
     /// <inheritdoc/>
     public async Task<EncryptionKeyErasure?> GetErasureFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
@@ -220,11 +211,11 @@ public partial class EncryptionKeyStorage(IDatabase database, IMongoDBTopology? 
                 return;
             }
 
-            if (await EncryptionKeyRequestArchive.Read(this, eventStore, eventStoreNamespace, identifier, request.RequestId) is not null)
+            if (await EncryptionKeyRequestArchive.Read(new PendingArchiveLookup(this), eventStore, eventStoreNamespace, identifier, request.RequestId) is not null)
             {
                 // A no-op CAS validates the Version observed before consulting the separate archive.
                 var stamped = observed with { Version = checked(observed.Version + 1) };
-                if (await WriteFence(eventStore, eventStoreNamespace, identifier, EncryptionKeyFenceUpdates.Observed(identifier, observed), EncryptionKeyFenceUpdates.Compact(stamped))) return;
+                if (await WriteFence(eventStore, eventStoreNamespace, identifier, EncryptionKeyFenceUpdates.Observed(identifier, observed), EncryptionKeyFenceUpdates.Compact(stamped), strong: true)) return;
                 await Backoff(attempt);
                 continue;
             }
@@ -300,14 +291,16 @@ public partial class EncryptionKeyStorage(IDatabase database, IMongoDBTopology? 
     public async Task ConfirmErasureFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, string requestId)
     {
         // Confirmation is the claim a standalone server cannot back: the erasure stays pending there.
-        if (_topology.IsStandalone) throw new EncryptionKeyFenceUnavailable(identifier);
+        EnsureConfirmationAvailable(identifier);
         var collection = await GetFencedCollection(eventStore, eventStoreNamespace, identifier);
+        EnsureConfirmationAvailable(identifier);
         EncryptionKeyErasure? missed = null;
         for (var attempt = 0; attempt < MaximumAttempts; attempt++)
         {
-            var observed = await RequiredFence(eventStore, eventStoreNamespace, identifier);
+            var observed = await RequiredFence(eventStore, eventStoreNamespace, identifier, strong: true);
             ThrowIfMissedUnchanged(identifier, missed, observed);
             var request = observed.Requests?.SingleOrDefault(_ => _.RequestId == requestId) ?? await EncryptionKeyRequestArchive.Read(this, eventStore, eventStoreNamespace, identifier, requestId) ?? throw new EncryptionKeyFenceUnavailable(identifier);
+            EnsureConfirmationAvailable(identifier);
             if (request.Confirmed) return;
             await VerifySwept(collection, identifier, request);
             if (request.Confirmed)
@@ -316,7 +309,8 @@ public partial class EncryptionKeyStorage(IDatabase database, IMongoDBTopology? 
             }
 
             var next = observed with { Version = checked(observed.Version + 1) };
-            if (await WriteRequest(eventStore, eventStoreNamespace, identifier, observed, next, request with { Confirmed = true }))
+            EnsureConfirmationAvailable(identifier);
+            if (await WriteRequest(eventStore, eventStoreNamespace, identifier, observed, next, request with { Confirmed = true }, strong: true))
             {
                 return;
             }
@@ -331,7 +325,7 @@ public partial class EncryptionKeyStorage(IDatabase database, IMongoDBTopology? 
     /// <inheritdoc/>
     public async Task AllowNewKeyFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, ulong observedVersion, uint observedLifecycle)
     {
-        var observed = await RequiredFence(eventStore, eventStoreNamespace, identifier);
+        var observed = await RequiredFence(eventStore, eventStoreNamespace, identifier, strong: true);
         if (IsAuthorizationRetry(observed, observedVersion, observedLifecycle))
         {
             return;
@@ -344,9 +338,9 @@ public partial class EncryptionKeyStorage(IDatabase database, IMongoDBTopology? 
 
         var next = observed with { Version = checked(observed.Version + 1), Lifecycle = checked(observed.Lifecycle + 1), NewKeyAllowed = true };
         var filter = EncryptionKeyFenceUpdates.Observed(identifier, observed) & _fences.Eq(_ => _.NewKeyAllowed, false);
-        if (!await WriteFence(eventStore, eventStoreNamespace, identifier, filter, EncryptionKeyFenceUpdates.Authorize(next)))
+        if (!await WriteFence(eventStore, eventStoreNamespace, identifier, filter, EncryptionKeyFenceUpdates.Authorize(next), strong: true))
         {
-            var current = await RequiredFence(eventStore, eventStoreNamespace, identifier);
+            var current = await RequiredFence(eventStore, eventStoreNamespace, identifier, strong: true);
             if (!IsAuthorizationRetry(current, observedVersion, observedLifecycle))
             {
                 throw new EncryptionKeyFenceChanged(identifier);
@@ -357,7 +351,7 @@ public partial class EncryptionKeyStorage(IDatabase database, IMongoDBTopology? 
     /// <inheritdoc/>
     public async Task AllowNewKeyFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
     {
-        var observed = await GetFenceFor(eventStore, eventStoreNamespace, identifier);
+        var observed = await ReadFence(eventStore, eventStoreNamespace, identifier, strong: true);
         if (observed?.NewKeyAllowed == false)
         {
             await AllowNewKeyFor(eventStore, eventStoreNamespace, identifier, observed.Version, observed.Lifecycle);
@@ -471,6 +465,9 @@ public partial class EncryptionKeyStorage(IDatabase database, IMongoDBTopology? 
         }
     }
 
+    static bool HasConfirmation(EncryptionKeyErasure? fence) =>
+        fence?.Requests?.Any(_ => _.Confirmed) == true;
+
     static Task Backoff(int attempt) => Task.Delay(Random.Shared.Next(1, 4) * (attempt + 1));
     static EncryptionKeyAtRevision AtRevision(EncryptionKeyForIdentifier document) => new(new(document.PublicKey, document.PrivateKey), document.Id.Revision, document.StagedLifecycle);
     static async Task<EncryptionKeyForIdentifier?> ReadPublishedFor(IMongoCollection<EncryptionKeyForIdentifier> collection, EncryptionKeyIdentifier identifier, EncryptionKeyRevision? revision, EncryptionKeyErasure? fence)
@@ -540,18 +537,41 @@ public partial class EncryptionKeyStorage(IDatabase database, IMongoDBTopology? 
         return await RequiredFence(eventStore, eventStoreNamespace, identifier);
     }
 
-    async Task<EncryptionKeyErasure> RequiredFence(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier) =>
-        await GetFenceFor(eventStore, eventStoreNamespace, identifier) ?? throw new EncryptionKeyFenceUnavailable(identifier);
-
-    async Task<bool> WriteFence(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, FilterDefinition<EncryptionKeyErasureForIdentifier> filter, UpdateDefinition<EncryptionKeyErasureForIdentifier> update)
+    void EnsureConfirmationAvailable(EncryptionKeyIdentifier identifier)
     {
-        var result = await BoundedWrite(identifier, cancellationToken => GetErasureCollection(eventStore, eventStoreNamespace).WithWriteConcern(Durability)
+        if (_topology.IsStandalone) throw new EncryptionKeyFenceUnavailable(identifier);
+    }
+
+    async Task<EncryptionKeyErasure?> ReadFence(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, bool strong = false)
+    {
+        var readConcern = strong ? ReadConcern.Linearizable : Linearizability;
+        var document = await Bounded(identifier, cancellationToken => GetErasureCollection(eventStore, eventStoreNamespace)
+            .WithReadConcern(readConcern).WithReadPreference(ReadPreference.Primary)
+            .Find(_ => _.Id == identifier, new FindOptions { MaxTime = _readTimeout }).FirstOrDefaultAsync(cancellationToken));
+        var fence = document?.ToFence();
+        if (fence is not null && !HasValidSeal(fence))
+        {
+            throw new EncryptionKeyFenceUnavailable(identifier);
+        }
+
+        // Even ordinary reads must not expose a confirmation obtained with degraded concerns.
+        return readConcern != ReadConcern.Linearizable && HasConfirmation(fence)
+            ? await ReadFence(eventStore, eventStoreNamespace, identifier, strong: true)
+            : fence;
+    }
+
+    async Task<EncryptionKeyErasure> RequiredFence(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, bool strong = false) =>
+        await ReadFence(eventStore, eventStoreNamespace, identifier, strong) ?? throw new EncryptionKeyFenceUnavailable(identifier);
+
+    async Task<bool> WriteFence(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, FilterDefinition<EncryptionKeyErasureForIdentifier> filter, UpdateDefinition<EncryptionKeyErasureForIdentifier> update, bool strong = false)
+    {
+        var result = await BoundedWrite(identifier, cancellationToken => GetErasureCollection(eventStore, eventStoreNamespace).WithWriteConcern(strong ? StrongDurability : Durability)
             .FindOneAndUpdateAsync(filter, update, new FindOneAndUpdateOptions<EncryptionKeyErasureForIdentifier> { ReturnDocument = ReturnDocument.After, MaxTime = _readTimeout }, cancellationToken));
         return result is not null;
     }
 
-    Task<bool> WriteRequest(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyErasure observed, EncryptionKeyErasure next, EncryptionKeyErasureRequest request) =>
-        WriteFence(eventStore, eventStoreNamespace, identifier, EncryptionKeyFenceUpdates.Observed(identifier, observed) & EncryptionKeyFenceUpdates.HasRequest(request.RequestId), EncryptionKeyFenceUpdates.UpdateRequest(next, request));
+    Task<bool> WriteRequest(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyErasure observed, EncryptionKeyErasure next, EncryptionKeyErasureRequest request, bool strong = false) =>
+        WriteFence(eventStore, eventStoreNamespace, identifier, EncryptionKeyFenceUpdates.Observed(identifier, observed) & EncryptionKeyFenceUpdates.HasRequest(request.RequestId), EncryptionKeyFenceUpdates.UpdateRequest(next, request), strong || request.Confirmed);
 
     IMongoCollection<EncryptionKeyErasureForIdentifier> GetErasureCollection(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace) =>
         database.GetEventStoreDatabase(eventStore).GetNamespaceDatabase(eventStoreNamespace).GetCollection<EncryptionKeyErasureForIdentifier>(WellKnownCollectionNames.EncryptionKeyErasures);

@@ -15,6 +15,8 @@ public class FenceAuthority : IEncryptionKeyFence, IEncryptionKeyFenceRecords
     public bool Unavailable { get; set; }
     public bool LoseResponse { get; set; }
     public Func<Task>? BeforeErasure { get; set; }
+    public Func<Task>? BeforeRead { get; set; }
+    public Func<Task> AfterExchange { get; set; } = () => Task.CompletedTask;
 
     public Task<string?> ReadRecord(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string id) =>
         _storage.ReadRecord(eventStore, eventStoreNamespace, id);
@@ -22,8 +24,12 @@ public class FenceAuthority : IEncryptionKeyFence, IEncryptionKeyFenceRecords
     public Task WriteRecord(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string id, string value, bool replace = false) =>
         _storage.WriteRecord(eventStore, eventStoreNamespace, id, value, replace);
 
-    public Task<EncryptionKeyFenceState> ReadFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier) =>
-        Unavailable ? throw new EncryptionKeyFenceUnavailable(identifier) : _storage.ReadFor(eventStore, eventStoreNamespace, identifier);
+    public async Task<EncryptionKeyFenceState> ReadFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
+    {
+        if (Unavailable) throw new EncryptionKeyFenceUnavailable(identifier);
+        if (BeforeRead is { } before) await before();
+        return await _storage.ReadFor(eventStore, eventStoreNamespace, identifier);
+    }
 
     public async Task<bool> CompareExchangeFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyFenceState observed, EncryptionKeyFenceState next)
     {
@@ -35,6 +41,7 @@ public class FenceAuthority : IEncryptionKeyFence, IEncryptionKeyFenceRecords
         }
 
         var result = await _storage.CompareExchangeFor(eventStore, eventStoreNamespace, identifier, observed, next);
+        await AfterExchange();
         if (result && LoseResponse)
         {
             LoseResponse = false;

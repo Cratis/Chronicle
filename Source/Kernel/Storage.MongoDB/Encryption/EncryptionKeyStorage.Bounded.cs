@@ -145,7 +145,7 @@ public partial class EncryptionKeyStorage
 
     async Task VerifySwept(IMongoCollection<EncryptionKeyForIdentifier> collection, EncryptionKeyIdentifier identifier, EncryptionKeyErasureRequest request)
     {
-        if (await Bounded(identifier, cancellationToken => collection.WithReadConcern(Linearizability).WithReadPreference(ReadPreference.Primary)
+        if (await Bounded(identifier, cancellationToken => collection.WithReadConcern(ReadConcern.Linearizable).WithReadPreference(ReadPreference.Primary)
             .Find(Covered(identifier, request), new FindOptions { MaxTime = _readTimeout }).Limit(1).AnyAsync(cancellationToken)))
         {
             throw new EncryptionKeyFenceUnavailable(identifier);
