@@ -106,6 +106,8 @@ public class a_fluent_key_redirection_pii_analyzer : Specification
             "        TBuilder AddChild<TChildModel>(Expression<Func<TReadModel, IEnumerable<TChildModel>>> target, Action<IAddChildBuilder<TChildModel, TEvent>> callback);",
             "        ISetBuilder<TReadModel, TEvent, TBuilder> Set(PropertyPath path);",
             "        ISetBuilder<TReadModel, TEvent, TProperty, TBuilder> Set<TProperty>(Expression<Func<TReadModel, TProperty>> accessor);",
+            "        ISetBuilder<TReadModel, TEvent, TProperty, TBuilder> SetOnce<TProperty>(Expression<Func<TReadModel, TProperty>> accessor);",
+            "        ISetBuilder<TReadModel, TEvent, TValue, TBuilder> Set<TKey, TValue>(Expression<Func<TReadModel, IDictionary<string, TValue>>> accessor, Expression<Func<TEvent, TKey>> key);",
             "        ISetBuilder<TReadModel, TEvent, TBuilder> SetThisValue();",
             "    }",
             "",

@@ -146,6 +146,9 @@ The separate column covers both `IReducerFor<T>` and a nominated plain instance 
 | [Joins across event sources](declarative/joins.mdx) | Yes | Yes | Yes | No native joins | No native joins |
 | [Children](declarative/children.mdx) / [nested objects](declarative/nested.mdx) | Mappings | Mappings | Blocks | Your code | Your code |
 | [Counters and sums](declarative/functions.mdx) | Operations; no dynamic dictionary-counter form | Operations, including dynamic dictionary counters | Operations | Your code, per source | Your code, per source |
+| [Dictionary entries keyed per event](declarative/dictionaries.mdx) | No dynamic dictionary form | Set, set once, sums, counters and key removal keyed by event content or context | No clause yet | Your code | Your code |
+| [Set a value only once](declarative/set-properties.mdx#setting-a-value-only-once) | `SetOnce = true` on `SetFrom` / `SetFromContext` | `SetOnce(...)` | No clause yet | Your code, guarded on current state | Your code, guarded on current state |
+| [Ordering new children](declarative/children.mdx#ordering-new-children) | `Prepend` / `OrderBy` / `OrderByDescending` on `ChildrenFrom` | `Prepend()` / `OrderBy()` / `OrderByDescending()` | No clause yet | Your code | Your code |
 | [Remove an instance](model-bound/removal.mdx) | Removal attributes | Removal builders | Removal blocks | Return null | Return null |
 | [Variant groups](model-bound/variants.mdx) | `VariantOf` / `EntersOn` / `GlobalFor` | `VariantOf` / `EntersOn`; no `GlobalFor` equivalent | No native group block | No native group wiring | No native group wiring |
 | [Passive reads](../read-models/consistency.md) | `[Passive]` on model | `.Passive()` | No native passive clause | `[Passive]` on model | `[Passive]` on model |
@@ -168,7 +171,9 @@ accepts Chronicle's supported projection expressions, not every expression accep
 
 Keep a projection when a reducer would make you rebuild mapping features yourself. Counts and sums
 already have operations. Cross-source joins, custom aggregation keys, and mutually exclusive variant
-groups belong to projections; reducers are event-source keyed.
+groups belong to projections; reducers are event-source keyed. Keeping the first value an event
+supplies, adding and removing dictionary entries keyed by an event value, and keeping children newest
+first or sorted are projection operations too, so none of them alone is a reason to write a reducer.
 
 A reducer's dependencies also affect where you can read it. A classic reducer with filters or
 constructor dependencies other than `ILogger<T>` cannot serve a protected decision read. A

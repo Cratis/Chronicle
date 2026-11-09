@@ -33,6 +33,20 @@ public class FromEveryBuilder<TReadModel>(INamingPolicy namingPolicy) : IFromEve
     }
 
     /// <inheritdoc/>
+    public IAllSetBuilder<TReadModel, IFromEveryBuilder<TReadModel>> SetOnce<TProperty>(Expression<Func<TReadModel, TProperty>> readModelPropertyAccessor)
+    {
+        var propertyPath = ProjectionPropertyPaths.FromExpression(readModelPropertyAccessor, namingPolicy, ProjectionPathRole.Target, $"the property to set once on read model '{typeof(TReadModel).FullName}'");
+        if (_propertyExpressions.Exists(b => b.TargetProperty == propertyPath))
+        {
+            throw new DuplicatePropertyInProjection(propertyPath);
+        }
+
+        var setBuilder = new AllSetOnceBuilder<TReadModel, IFromEveryBuilder<TReadModel>>(this, propertyPath, namingPolicy);
+        _propertyExpressions.Add(setBuilder);
+        return setBuilder;
+    }
+
+    /// <inheritdoc/>
     public IFromEveryBuilder<TReadModel> ExcludeChildProjections()
     {
         _includeChildren = false;
