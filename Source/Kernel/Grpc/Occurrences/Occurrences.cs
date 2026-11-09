@@ -17,6 +17,7 @@ namespace Cratis.Chronicle.Services.Occurrences;
 internal sealed class Occurrences(
     global::Cratis.Arc.Commands.ICommandPipeline commandPipeline,
     global::Cratis.Chronicle.Storage.IStorage storage,
+    global::Cratis.Chronicle.Namespaces.INamespaceCasing namespaceCasing,
     global::Microsoft.Extensions.Logging.ILogger<global::Cratis.Chronicle.Services.Occurrences.Occurrences> logger) : global::Cratis.Chronicle.Contracts.Occurrences.IOccurrences
 {
     /// <inheritdoc/>
@@ -89,6 +90,10 @@ internal sealed class Occurrences(
             new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: request.Namespace),
             async () =>
             {
+                if (!string.IsNullOrEmpty(request.Namespace))
+                {
+                    request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
+                }
                 var result = await global::Cratis.Chronicle.Occurrences.EffectReceiptRecord.GetEffectReceipt((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, request.OccurrenceId, request.EffectKey, storage);
                 return result is null ? null : ToEffectReceiptRecordResponse(result);
             },
@@ -101,6 +106,10 @@ internal sealed class Occurrences(
             new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: request.Namespace, ApplicationScope: request.ApplicationScope),
             async () =>
             {
+                if (!string.IsNullOrEmpty(request.Namespace) && !request.ApplicationScope)
+                {
+                    request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
+                }
                 var result = await global::Cratis.Chronicle.Occurrences.OccurrenceSnapshot.GetOccurrence((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, request.Namespace, request.OccurrenceId, storage, request.ApplicationScope);
                 return result is null ? null : ToOccurrenceSnapshotResponse(result);
             },
@@ -111,9 +120,16 @@ internal sealed class Occurrences(
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Occurrences.OccurrenceSnapshotResponse>>(
             callContext,
             new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: request.Namespace, ApplicationScope: request.ApplicationScope),
-            () => global::Cratis.Chronicle.Occurrences.OccurrenceSnapshot.ObserveOccurrences((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, request.Namespace, request.Trigger, storage, request.ApplicationScope)
+            () => QueryExecutor.Canonicalize(async () =>
+            {
+                if (!string.IsNullOrEmpty(request.Namespace) && !request.ApplicationScope)
+                {
+                    request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
+                }
+                return global::Cratis.Chronicle.Occurrences.OccurrenceSnapshot.ObserveOccurrences((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, request.Namespace, request.Trigger, storage, request.ApplicationScope)
                 .CompletedBy(callContext.CancellationToken)
-                .Select(_ => (IEnumerable<global::Cratis.Chronicle.Contracts.Occurrences.OccurrenceSnapshotResponse>)_.Select(ToOccurrenceSnapshotResponse).ToList()),
+                .Select(_ => (IEnumerable<global::Cratis.Chronicle.Contracts.Occurrences.OccurrenceSnapshotResponse>)_.Select(ToOccurrenceSnapshotResponse).ToList());
+            }, callContext.CancellationToken),
             exception => logger.QueryFailed(exception, "Occurrences", "ObserveOccurrences"));
 
     static global::Cratis.Chronicle.Contracts.Occurrences.ClaimOccurrencesResponse ToClaimOccurrencesResponse(global::Cratis.Chronicle.Occurrences.OccurrenceClaims source) =>

@@ -15,6 +15,7 @@ namespace Cratis.Chronicle.Services.Alerts;
 internal sealed class Alerts(
     global::Cratis.Chronicle.Storage.IStorage storage,
     global::Cratis.Chronicle.Alerts.IAlertIncidentsReadiness alertIncidentsReadiness,
+    global::Cratis.Chronicle.Namespaces.INamespaceCasing namespaceCasing,
     global::Microsoft.Extensions.Logging.ILogger<global::Cratis.Chronicle.Services.Alerts.Alerts> logger) : global::Cratis.Chronicle.Contracts.Alerts.IAlerts
 {
     /// <inheritdoc/>
@@ -24,6 +25,10 @@ internal sealed class Alerts(
             new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: request.Namespace, Capability: "chronicle.alerts.read"),
             async () =>
             {
+                if (!string.IsNullOrEmpty(request.Namespace))
+                {
+                    request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
+                }
                 var result = await global::Cratis.Chronicle.Alerts.AlertIncidentLookup.GetOpenIncident((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.Alerts.IncidentId)request.IncidentId, storage, alertIncidentsReadiness, (request.Namespace is null ? null : (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace));
                 return ToAlertIncidentLookupResponse(result);
             },
@@ -36,6 +41,10 @@ internal sealed class Alerts(
             new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: request.Namespace, First: request.ObserverId, Capability: "chronicle.alerts.read"),
             async () =>
             {
+                if (!string.IsNullOrEmpty(request.Namespace))
+                {
+                    request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
+                }
                 var result = await global::Cratis.Chronicle.Alerts.AlertIncidentPage.GetOpenIncidents((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, storage, alertIncidentsReadiness, (request.Namespace is null ? null : (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace), (request.ObserverId is null ? null : (global::Cratis.Chronicle.Concepts.Observation.ObserverId)request.ObserverId), (request.Condition is null ? null : (global::Cratis.Chronicle.Concepts.Alerts.AlertConditionKind)request.Condition), (global::Cratis.Chronicle.Concepts.Alerts.AlertSeverity?)request.MinimumSeverity, request.Limit, request.AfterRaisedSequenceNumber, (request.AfterIncidentId is null ? null : (global::Cratis.Chronicle.Concepts.Alerts.IncidentId)request.AfterIncidentId));
                 return ToAlertIncidentPageResponse(result);
             },
@@ -48,6 +57,10 @@ internal sealed class Alerts(
             new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: request.Namespace, Capability: "chronicle.alerts.read"),
             async () =>
             {
+                if (!string.IsNullOrEmpty(request.Namespace))
+                {
+                    request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
+                }
                 var result = await global::Cratis.Chronicle.Alerts.AlertIncidentSummary.GetOpenIncidentCounts((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, storage, alertIncidentsReadiness, (request.Namespace is null ? null : (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace));
                 return ToAlertIncidentSummaryResponse(result);
             },

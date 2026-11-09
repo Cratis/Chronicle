@@ -118,7 +118,9 @@ public class and_reading_observer_state : for_Observers.given.a_case_sensitive_o
     {
         var pending = new TaskCompletionSource<EventStoreNamespaceName>(TaskCreationOptions.RunContinuationsAsynchronously);
         var casing = NamespaceCasingContext.Create();
+#pragma warning disable CA2012 // NSubstitute configures the returned ValueTask; it is not consumed here.
         casing.Canonicalize("store", "cratis").Returns(_ => new ValueTask<EventStoreNamespaceName>(pending.Task));
+#pragma warning restore CA2012
         using var cancellation = new CancellationTokenSource();
         var completed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         using var subscription = CreateService(casing).ObserveObservers(

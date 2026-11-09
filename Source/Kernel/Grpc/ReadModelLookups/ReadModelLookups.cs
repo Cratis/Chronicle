@@ -18,6 +18,7 @@ internal sealed class ReadModelLookups(
     global::Cratis.Chronicle.Schemas.ITypeFormats typeFormats,
     global::Cratis.Chronicle.Json.IExpandoObjectConverter expandoObjectConverter,
     global::System.Text.Json.JsonSerializerOptions jsonSerializerOptions,
+    global::Cratis.Chronicle.Namespaces.INamespaceCasing namespaceCasing,
     global::Microsoft.Extensions.Logging.ILogger<global::Cratis.Chronicle.Services.ReadModelLookups.ReadModelLookups> logger) : global::Cratis.Chronicle.Contracts.ReadModelLookups.IReadModelLookups
 {
     /// <inheritdoc/>
@@ -27,6 +28,10 @@ internal sealed class ReadModelLookups(
             new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: request.Namespace, First: request.ReadModel),
             async () =>
             {
+                if (!string.IsNullOrEmpty(request.Namespace))
+                {
+                    request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
+                }
                 var result = await global::Cratis.Chronicle.ReadModelLookups.ReadModelLookup.FindByCompositeKey((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, request.ReadModel, request.Parts, grainFactory, materializedReadModelStore, typeFormats, expandoObjectConverter, jsonSerializerOptions);
                 return ToReadModelLookupResponse(result);
             },

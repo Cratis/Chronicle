@@ -18,6 +18,7 @@ internal sealed class Captures(
     global::Cratis.Arc.Commands.ICommandPipeline commandPipeline,
     global::Cratis.Chronicle.Storage.IStorage storage,
     global::System.Text.Json.JsonSerializerOptions jsonSerializerOptions,
+    global::Cratis.Chronicle.Namespaces.INamespaceCasing namespaceCasing,
     global::Microsoft.Extensions.Logging.ILogger<global::Cratis.Chronicle.Services.Captures.Captures> logger) : global::Cratis.Chronicle.Contracts.Captures.ICaptures
 {
     /// <inheritdoc/>
@@ -82,6 +83,10 @@ internal sealed class Captures(
             new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: request.Namespace),
             async () =>
             {
+                if (!string.IsNullOrEmpty(request.Namespace))
+                {
+                    request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
+                }
                 var result = await global::Cratis.Chronicle.Captures.CapturedEvent.CapturedEvents((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, request.CaptureName, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, request.MaxEvents, storage, jsonSerializerOptions);
                 return result.Select(ToCapturedEventResponse).ToList();
             },

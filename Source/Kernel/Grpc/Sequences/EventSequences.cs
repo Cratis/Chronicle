@@ -19,6 +19,7 @@ internal sealed class EventSequences(
     global::System.Text.Json.JsonSerializerOptions jsonSerializerOptions,
     global::Cratis.Arc.Queries.IQueryContextManager queryContextManager,
     global::Orleans.IGrainFactory grainFactory,
+    global::Cratis.Chronicle.Namespaces.INamespaceCasing namespaceCasing,
     global::Microsoft.Extensions.Logging.ILogger<global::Cratis.Chronicle.Services.Sequences.EventSequences> logger) : global::Cratis.Chronicle.Contracts.Sequences.IEventSequences
 {
     /// <inheritdoc/>
@@ -158,6 +159,10 @@ internal sealed class EventSequences(
             new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: request.Namespace, First: request.EventSequenceId),
             async () =>
             {
+                if (!string.IsNullOrEmpty(request.Namespace))
+                {
+                    request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
+                }
                 var result = await global::Cratis.Chronicle.Sequences.AppendedEvent.AppendedEvents(storage, eventCompliance, jsonSerializerOptions, queryContextManager, (global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, (global::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId)request.EventSequenceId, (request.EventSourceId is null ? null : (global::Cratis.Chronicle.Concepts.Events.EventSourceId)request.EventSourceId));
                 return result.Select(ToAppendedEventResponse).ToList();
             },
@@ -170,6 +175,10 @@ internal sealed class EventSequences(
             new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: request.Namespace, First: request.EventSequenceId),
             async () =>
             {
+                if (!string.IsNullOrEmpty(request.Namespace))
+                {
+                    request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
+                }
                 var result = await global::Cratis.Chronicle.Sequences.AppendedEvent.ForEventSourceIdAndEventTypes(storage, eventCompliance, jsonSerializerOptions, (global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, (global::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId)request.EventSequenceId, request.EventSourceId, request.EventTypeIds, request.EventStreamType, request.EventStreamId, request.EventSourceType);
                 return result.Select(ToAppendedEventResponse).ToList();
             },
@@ -182,6 +191,10 @@ internal sealed class EventSequences(
             new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: request.Namespace, First: request.EventSequenceId),
             async () =>
             {
+                if (!string.IsNullOrEmpty(request.Namespace))
+                {
+                    request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
+                }
                 var result = await global::Cratis.Chronicle.Sequences.AppendedEvent.FromSequenceNumber(storage, eventCompliance, jsonSerializerOptions, (global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, (global::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId)request.EventSequenceId, request.FromEventSequenceNumber, (request.EventSourceId is null ? null : (global::Cratis.Chronicle.Concepts.Events.EventSourceId)request.EventSourceId), request.EventTypeIds);
                 return result.Select(ToAppendedEventResponse).ToList();
             },
@@ -194,6 +207,10 @@ internal sealed class EventSequences(
             new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: request.Namespace, First: request.EventSequenceId),
             async () =>
             {
+                if (!string.IsNullOrEmpty(request.Namespace))
+                {
+                    request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
+                }
                 var result = await global::Cratis.Chronicle.Sequences.AppendedEvent.FromSequenceNumberWithErasedProperties(storage, eventCompliance, jsonSerializerOptions, (global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, (global::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId)request.EventSequenceId, request.FromEventSequenceNumber, (request.EventSourceId is null ? null : (global::Cratis.Chronicle.Concepts.Events.EventSourceId)request.EventSourceId), request.EventTypeIds);
                 return result.Select(ToAppendedEventResponse).ToList();
             },
@@ -206,6 +223,10 @@ internal sealed class EventSequences(
             new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: request.Namespace, First: request.EventSequenceId),
             async () =>
             {
+                if (!string.IsNullOrEmpty(request.Namespace))
+                {
+                    request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
+                }
                 var result = await global::Cratis.Chronicle.Sequences.AppendedEvent.QueryEvents(storage, eventCompliance, jsonSerializerOptions, queryContextManager, (global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, (global::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId)request.EventSequenceId, (request.EventSourceId is null ? null : (global::Cratis.Chronicle.Concepts.Events.EventSourceId)request.EventSourceId), request.EventSourceType, request.EventStreamType, request.CorrelationId, request.EventTypeIds, request.Tags, request.OccurredFrom, request.OccurredTo);
                 return result.Select(ToAppendedEventResponse).ToList();
             },
@@ -218,6 +239,10 @@ internal sealed class EventSequences(
             new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: request.Namespace, First: request.EventSequenceId),
             async () =>
             {
+                if (!string.IsNullOrEmpty(request.Namespace))
+                {
+                    request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
+                }
                 var result = await global::Cratis.Chronicle.Sequences.AppendedEvent.QueryEventsWithNamedTags(storage, eventCompliance, jsonSerializerOptions, queryContextManager, (global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, (global::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId)request.EventSequenceId, request.NamedTags?.Select(x => x.ToApi()), (request.EventSourceId is null ? null : (global::Cratis.Chronicle.Concepts.Events.EventSourceId)request.EventSourceId), request.EventSourceType, request.EventStreamType, request.CorrelationId, request.EventTypeIds, request.Tags, request.OccurredFrom, request.OccurredTo);
                 return result.Select(ToAppendedEventResponse).ToList();
             },
@@ -230,6 +255,10 @@ internal sealed class EventSequences(
             new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: request.Namespace, First: request.EventSequenceId),
             async () =>
             {
+                if (!string.IsNullOrEmpty(request.Namespace))
+                {
+                    request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
+                }
                 var result = await global::Cratis.Chronicle.Sequences.ClosedStream.ClosedStreams(storage, queryContextManager, (global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, (global::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId)request.EventSequenceId, request.EventSourceId, request.EventSourceType, request.EventStreamType, request.EventStreamId);
                 return result.Select(ToClosedStreamResponse).ToList();
             },
@@ -242,6 +271,10 @@ internal sealed class EventSequences(
             new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: request.Namespace, First: request.EventSequenceId),
             async () =>
             {
+                if (!string.IsNullOrEmpty(request.Namespace))
+                {
+                    request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
+                }
                 var result = await global::Cratis.Chronicle.Sequences.EventMetadata.MetadataAt(storage, (global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, (global::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId)request.EventSequenceId, request.SequenceNumbers);
                 return result.Select(ToEventMetadataResponse).ToList();
             },
@@ -254,6 +287,10 @@ internal sealed class EventSequences(
             new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: request.Namespace),
             async () =>
             {
+                if (!string.IsNullOrEmpty(request.Namespace))
+                {
+                    request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
+                }
                 var result = await global::Cratis.Chronicle.Sequences.EventSequenceNames.AllEventSequences(grainFactory, (global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (request.Namespace is null ? null : (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace));
                 return result.Select(ToEventSequenceNamesResponse).ToList();
             },
@@ -266,6 +303,10 @@ internal sealed class EventSequences(
             new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: request.Namespace, First: request.EventSequenceId),
             async () =>
             {
+                if (!string.IsNullOrEmpty(request.Namespace))
+                {
+                    request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
+                }
                 var result = await global::Cratis.Chronicle.Sequences.EventSequencePage.Page(storage, eventCompliance, jsonSerializerOptions, (global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, (global::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId)request.EventSequenceId, request.From, request.Count, request.Backward, request.Until, request.EventSourceId, request.EventSourceType, request.EventStreamType, request.EventStreamId, request.EventTypeIds, request.Tags);
                 return ToEventSequencePageResponse(result);
             },
@@ -278,6 +319,10 @@ internal sealed class EventSequences(
             new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: request.Namespace, First: request.EventSequenceId),
             async () =>
             {
+                if (!string.IsNullOrEmpty(request.Namespace))
+                {
+                    request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
+                }
                 var result = await global::Cratis.Chronicle.Sequences.EventSequenceTail.TailSequenceNumber(storage, (global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, (global::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId)request.EventSequenceId, request.EventTypeIds, request.EventSourceId, request.EventSourceType, request.EventStreamId, request.EventStreamType, request.IncludeMutationEpoch);
                 return ToEventSequenceTailResponse(result);
             },
@@ -290,6 +335,10 @@ internal sealed class EventSequences(
             new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: request.Namespace, First: request.EventSequenceId),
             async () =>
             {
+                if (!string.IsNullOrEmpty(request.Namespace))
+                {
+                    request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
+                }
                 var result = await global::Cratis.Chronicle.Sequences.EventSourceEvents.HasEventsForEventSourceId(storage, (global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, (global::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId)request.EventSequenceId, (global::Cratis.Chronicle.Concepts.Events.EventSourceId)request.EventSourceId);
                 return ToEventSourceEventsResponse(result);
             },
@@ -302,6 +351,10 @@ internal sealed class EventSequences(
             new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: request.Namespace, First: request.EventSequenceId),
             async () =>
             {
+                if (!string.IsNullOrEmpty(request.Namespace))
+                {
+                    request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
+                }
                 var result = await global::Cratis.Chronicle.Sequences.ExportedEvent.ExportEvents(storage, eventCompliance, jsonSerializerOptions, queryContextManager, request.EventStore, request.Namespace, request.EventSequenceId, request.EventSourceId, request.EventSourceType, request.EventStreamType, request.CorrelationId, request.EventTypeIds, request.Tags, request.OccurredFrom, request.OccurredTo);
                 return result.Select(ToExportedEventResponse).ToList();
             },
@@ -334,6 +387,10 @@ internal sealed class EventSequences(
             new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: request.Namespace, First: request.EventSequenceId),
             async () =>
             {
+                if (!string.IsNullOrEmpty(request.Namespace))
+                {
+                    request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
+                }
                 var result = await global::Cratis.Chronicle.Sequences.SequenceHistogramBucket.SequenceHistogram(storage, (global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, (global::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId)request.EventSequenceId, request.Resolution, request.EventSourceId, request.EventSourceType, request.EventStreamType, request.CorrelationId, request.EventTypeIds, request.Tags, request.OccurredFrom, request.OccurredTo);
                 return result.Select(ToSequenceHistogramBucketResponse).ToList();
             },
@@ -346,6 +403,10 @@ internal sealed class EventSequences(
             new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: request.Namespace, First: request.EventSequenceId),
             async () =>
             {
+                if (!string.IsNullOrEmpty(request.Namespace))
+                {
+                    request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
+                }
                 var result = await global::Cratis.Chronicle.Sequences.SequenceHistogramBucket.SequenceHistogramWithNamedTags(storage, (global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, (global::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId)request.EventSequenceId, request.NamedTags?.Select(x => x.ToApi()), request.Resolution, request.EventSourceId, request.EventSourceType, request.EventStreamType, request.CorrelationId, request.EventTypeIds, request.Tags, request.OccurredFrom, request.OccurredTo);
                 return result.Select(ToSequenceHistogramBucketResponse).ToList();
             },
@@ -358,6 +419,10 @@ internal sealed class EventSequences(
             new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: request.Namespace, First: request.EventSequenceId),
             async () =>
             {
+                if (!string.IsNullOrEmpty(request.Namespace))
+                {
+                    request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
+                }
                 var result = await global::Cratis.Chronicle.Sequences.StreamScopeCompletion.IsStreamScopeCompleted(storage, (global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, (global::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId)request.EventSequenceId, request.EventSourceId, request.EventSourceType, request.EventStreamType, request.EventStreamId);
                 return ToStreamScopeCompletionResponse(result);
             },
