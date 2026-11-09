@@ -20,4 +20,11 @@ public interface ISystemEventStoreRelocation
     /// </summary>
     /// <returns>A description of where the data is and where the kernel looks, or null when nothing is misplaced.</returns>
     Task<string?> FindMisplacedData();
+
+    /// <summary>
+    /// Finds System event store databases under the legacy name that remain after their content was moved, because
+    /// the server would not let them be dropped.
+    /// </summary>
+    /// <returns>A description of what remains and what to do about it, or null when nothing remains.</returns>
+    Task<string?> FindRetainedLegacyData();
 }
