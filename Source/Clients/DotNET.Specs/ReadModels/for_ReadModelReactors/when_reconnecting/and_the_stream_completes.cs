@@ -10,7 +10,7 @@ public class and_the_stream_completes : given.materialized_reactors_on_a_lifecyc
     void Because()
     {
         _streams[0].OnCompleted();
-        _lifecycle.OnConnected += Raise.Event<Connected>();
+        _reactors.Start();
     }
 
     [Fact] void should_observe_instances_again() => _streams.Count.ShouldEqual(2);

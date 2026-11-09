@@ -6,6 +6,12 @@ namespace Cratis.Chronicle.ReadModels;
 /// <summary>
 /// Maintains a materialized reactor's stream and snapshot across connection changes.
 /// </summary>
+/// <remarks>
+/// The stream is dropped when the connection drops, and is only re-established through <see cref="Resume"/>, which the
+/// event store reaches after it has registered its artifacts again. Re-subscribing straight from the connected signal
+/// would race that registration - observing a read model the kernel does not know yet - and a failure thrown there
+/// would fail the whole connection.
+/// </remarks>
 /// <typeparam name="TReadModel">The type of read model to observe.</typeparam>
 /// <param name="eventStore">The event store to observe.</param>
 /// <param name="differ">The differ retained across subscriptions.</param>
@@ -15,7 +21,7 @@ internal sealed class MaterializedReadModelSubscription<TReadModel>(
     IEventStore eventStore,
     MaterializedReadModelDiffer differ,
     Action<MaterializedReadModelChange> dispatch,
-    Action<Exception> failed) : IDisposable
+    Action<Exception> failed) : IResumableReadModelSubscription
 {
     readonly object _sync = new();
     readonly object _diffSync = new();
@@ -26,7 +32,7 @@ internal sealed class MaterializedReadModelSubscription<TReadModel>(
     bool _disposed;
 
     /// <summary>
-    /// Starts observing materialized windows and connection lifecycle changes.
+    /// Starts observing materialized windows and connection drops.
     /// </summary>
     public void Start()
     {
@@ -34,7 +40,6 @@ internal sealed class MaterializedReadModelSubscription<TReadModel>(
         {
             if (_disposed || _started) return;
             _started = true;
-            eventStore.Connection.Lifecycle.OnConnected += Connected;
             eventStore.Connection.Lifecycle.OnDisconnected += Disconnected;
         }
 
@@ -50,12 +55,24 @@ internal sealed class MaterializedReadModelSubscription<TReadModel>(
     }
 
     /// <inheritdoc/>
+    public void Resume()
+    {
+        try
+        {
+            Subscribe();
+        }
+        catch (Exception error)
+        {
+            failed(error);
+        }
+    }
+
+    /// <inheritdoc/>
     public void Dispose()
     {
         lock (_sync)
         {
             _disposed = true;
-            eventStore.Connection.Lifecycle.OnConnected -= Connected;
             eventStore.Connection.Lifecycle.OnDisconnected -= Disconnected;
         }
         ResetIf();
@@ -106,12 +123,6 @@ internal sealed class MaterializedReadModelSubscription<TReadModel>(
             }
         }
         subscription.Dispose();
-    }
-
-    Task Connected()
-    {
-        Subscribe();
-        return Task.CompletedTask;
     }
 
     Task Disconnected()

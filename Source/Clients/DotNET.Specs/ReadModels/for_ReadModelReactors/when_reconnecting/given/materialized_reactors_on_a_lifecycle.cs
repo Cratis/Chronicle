@@ -17,6 +17,7 @@ public class materialized_reactors_on_a_lifecycle : Specification
     protected readonly List<(Item Model, ReadModelChangeType ChangeType)> _changes = [];
     protected readonly Item[] _items = [new("first", "original"), new("second", "original")];
     protected IConnectionLifecycle _lifecycle;
+    protected Exception? _observeFailure;
     protected ReadModelReactors _reactors;
     ServiceProvider _services;
 
@@ -29,6 +30,7 @@ public class materialized_reactors_on_a_lifecycle : Specification
         eventStore.ReadModels.Materialized.Returns(materialized);
         materialized.ObserveInstances<Item>(Arg.Any<InstanceCountToSkip>(), Arg.Any<InstanceCount>()).Returns(_ =>
         {
+            if (_observeFailure is not null) throw _observeFailure;
             var stream = new Subject<IEnumerable<Item>>();
             _streams.Add(stream);
             return new CapturedStream(stream, _observers);
@@ -56,6 +58,7 @@ public class materialized_reactors_on_a_lifecycle : Specification
     {
         _lifecycle.OnDisconnected += Raise.Event<Disconnected>();
         _lifecycle.OnConnected += Raise.Event<Connected>();
+        _reactors.Start();
     }
 
     void Destroy()

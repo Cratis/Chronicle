@@ -35,16 +35,33 @@ public class ReadModelReactors(
     bool _released;
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// The event store calls this every time it has registered its artifacts, including after a reconnect. Once started,
+    /// a call re-establishes the materialized streams the dropped connection took down, now that the kernel knows the
+    /// read models again; watched read models are re-established by their watchers.
+    /// </remarks>
     public void Start()
     {
+        IResumableReadModelSubscription[]? resumable = null;
         lock (_sync)
         {
-            if (_released || _started)
+            if (_released)
             {
                 return;
             }
 
+            if (_started)
+            {
+                resumable = [.. _subscriptions.OfType<IResumableReadModelSubscription>()];
+            }
+
             _started = true;
+        }
+
+        if (resumable is not null)
+        {
+            Resume(resumable);
+            return;
         }
 
         // Subscribing reaches into the services, so it never runs under the lock.
@@ -80,6 +97,14 @@ public class ReadModelReactors(
     /// subscriptions and makes a <see cref="Start"/> that is still in flight a no-op.
     /// </summary>
     internal void Release() => DisposeAll(TakeSubscriptions(release: true));
+
+    static void Resume(IResumableReadModelSubscription[] subscriptions)
+    {
+        foreach (var subscription in subscriptions)
+        {
+            subscription.Resume();
+        }
+    }
 
     static void DisposeAll(List<IDisposable> subscriptions)
     {

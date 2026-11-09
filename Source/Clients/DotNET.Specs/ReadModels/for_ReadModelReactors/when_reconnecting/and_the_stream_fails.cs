@@ -10,7 +10,7 @@ public class and_the_stream_fails : given.materialized_reactors_on_a_lifecycle
     void Because()
     {
         _streams[0].OnError(new Exception("stream lost"));
-        _lifecycle.OnConnected += Raise.Event<Connected>();
+        _reactors.Start();
     }
 
     [Fact] void should_observe_instances_again() => _streams.Count.ShouldEqual(2);
