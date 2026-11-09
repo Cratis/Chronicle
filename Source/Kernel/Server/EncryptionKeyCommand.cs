@@ -58,7 +58,8 @@ internal record EncryptionKeyCommand(bool Verify, string[] RemainingArgs, bool M
             throw new ArgumentException($"{VerifyFlag} and {MigrateFlag} cannot be used together.");
         }
 
-        if ((dryRun || remove) && !migrate)
+        var migrationOptions = dryRun || remove;
+        if (migrationOptions && !migrate)
         {
             throw new ArgumentException($"{DryRunFlag} and {RemoveMigratedLegacyFlag} can only be used with {MigrateFlag}.");
         }
