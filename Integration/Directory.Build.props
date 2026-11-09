@@ -13,7 +13,7 @@
         <NoWarn>$(NoWarn);SA1600;CA1034;CS8981;SA1201;ORLEANS0010</NoWarn>
         <NuGetAuditMode>all</NuGetAuditMode>
 
-        <TargetFramework>net10.0</TargetFramework>
+        <TargetFramework>net11.0</TargetFramework>
     </PropertyGroup>
 
     <ItemGroup>
