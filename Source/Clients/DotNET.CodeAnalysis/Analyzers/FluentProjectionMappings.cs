@@ -26,6 +26,7 @@ static class FluentProjectionMappings
     const string NoAutoMapMethodName = "NoAutoMap";
     const string PassiveMethodName = "Passive";
     const string SetMethodName = "Set";
+    const string SetOnceMethodName = "SetOnce";
     const string SetThisValueMethodName = "SetThisValue";
     const string SubtractMethodName = "Subtract";
     const string ToMethodName = "To";
@@ -352,8 +353,8 @@ static class FluentProjectionMappings
         {
             target = readModelType.Name;
         }
-        else if (setMethod.Name != SetMethodName ||
-                 setInvocation.ArgumentList.Arguments.Count != 1 ||
+        else if (setMethod.Name is not SetMethodName and not SetOnceMethodName ||
+                 setInvocation.ArgumentList.Arguments.Count is not (1 or 2) ||
                  !TryGetPropertyPath(semanticModel, setInvocation.ArgumentList.Arguments[0].Expression, out target))
         {
             return false;
@@ -379,7 +380,7 @@ static class FluentProjectionMappings
             !FluentProjectionSymbols.IsMethodOn(operationMethod, symbols.ReadModelPropertiesBuilder) ||
             operationMethod.Name is not AddMethodName and not SubtractMethodName ||
             !BuilderMatches(operationMethod.ContainingType, readModelType, eventType) ||
-            operationInvocation.ArgumentList.Arguments.Count != 1 ||
+            operationInvocation.ArgumentList.Arguments.Count is not (1 or 2) ||
             !TryGetPropertyPath(semanticModel, operationInvocation.ArgumentList.Arguments[0].Expression, out var target) ||
             !TryGetPropertyPath(semanticModel, withInvocation.ArgumentList.Arguments[0].Expression, out var source))
         {
