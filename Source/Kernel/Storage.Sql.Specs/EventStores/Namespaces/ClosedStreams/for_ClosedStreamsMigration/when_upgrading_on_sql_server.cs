@@ -40,8 +40,8 @@ public class when_upgrading_on_sql_server(SqlServerFixture fixture) : for_Closed
     void should_keep_every_row_and_terminate_trailing_spaces() =>
         _rows.ShouldEqual([
             $"{Hex("Alice")}/{Hex("Alice")}/1/2024-01-02T03:04:05",
-            $"{Hex("bob \u0001")}/{Hex("bob \u0001")}/2/",
-            $"{Hex("carol\u0001\u0001")}/{Hex("carol\u0001\u0001")}/3/"]);
+            $"{Hex("bob \u007F")}/{Hex("bob \u007F")}/2/",
+            $"{Hex("carol\u007F\u007F")}/{Hex("carol\u007F\u007F")}/3/"]);
 
     [Fact] void should_create_the_primary_key_again() => _primaryKey.ShouldEqual(["EventSequenceId", "StreamType", "StreamId", "EventSourceId", "EventSourceType", "Owner", "Dimensions"]);
     [Fact] void should_change_nothing_when_run_again() => _rowsAfterSecondRun.ShouldEqual(_rows);

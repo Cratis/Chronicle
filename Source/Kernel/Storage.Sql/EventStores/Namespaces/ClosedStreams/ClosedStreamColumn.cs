@@ -27,9 +27,9 @@ internal static class ClosedStreamColumn
     internal const int MaxLength = 256;
 
     /// <summary>
-    /// The character appended to a value that ends with a space or with the character itself.
+    /// The character appended to a value that ends with a space or with the character itself. It is DEL, which sorts after the space: SQL Server compares a shorter string as if padded with spaces, so a lower terminator would sort wrong against values that end with a space.
     /// </summary>
-    internal const char Terminator = '\u0001';
+    internal const char Terminator = '\u007F';
 
     /// <summary>
     /// Gets the value to store and compare for an identifier.

@@ -23,7 +23,7 @@ public class on_sql_server(SqlServerFixture fixture) : conformance(new("sql_serv
     static string Hex(string value) => Convert.ToHexString(System.Text.Encoding.Unicode.GetBytes(value));
 
     [Fact] void should_compare_every_key_column_exactly() => _collations.ShouldEqual(Enumerable.Repeat("Latin1_General_100_BIN2", 4).ToList());
-    [Fact] void should_store_a_trailing_space_with_a_terminator() => _stored.ShouldContain(Hex("Order-1 \u0001"));
-    [Fact] void should_store_the_terminator_with_another_terminator() => _stored.ShouldContain(Hex("Order-1\u0001\u0001"));
+    [Fact] void should_store_a_trailing_space_with_a_terminator() => _stored.ShouldContain(Hex("Order-1 \u007F"));
+    [Fact] void should_store_the_terminator_with_another_terminator() => _stored.ShouldContain(Hex("Order-1\u007F\u007F"));
     [Fact] void should_list_closures_in_code_point_order() => _ordered.Select(_ => _.Scope.EventSourceId!.Value).ShouldEqual(_ordered.Select(_ => _.Scope.EventSourceId!.Value).Order(StringComparer.Ordinal));
 }

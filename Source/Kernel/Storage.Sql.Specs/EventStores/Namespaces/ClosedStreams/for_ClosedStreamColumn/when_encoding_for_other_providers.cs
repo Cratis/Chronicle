@@ -7,7 +7,7 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ClosedStreams.for_
 
 public class when_encoding_for_other_providers : Specification
 {
-    static readonly string[] _values = ["", "Order-1", "Order-1 ", " ", "Order-1\u0001"];
+    static readonly string[] _values = ["", "Order-1", "Order-1 ", " ", "Order-1\u007F"];
     string[] _sqlite;
     string[] _postgresql;
     string[] _decoded;

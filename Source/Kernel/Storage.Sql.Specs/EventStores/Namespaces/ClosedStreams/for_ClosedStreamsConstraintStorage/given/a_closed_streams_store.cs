@@ -12,7 +12,7 @@ public abstract class a_closed_streams_store(ClosedStreamsHarness harness) : Spe
         "Order-1 ",
         "ＯＲＤＥＲ-1",
         "Ørder-1",
-        "Order-1\u0001"
+        "Order-1\u007F"
     ];
 
     protected readonly ClosedStreamsHarness _harness = harness;

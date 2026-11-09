@@ -51,7 +51,7 @@ public class v20_0_2 : Migration
             $"ALTER TABLE {Table} DROP CONSTRAINT {PrimaryKey};",
             .. _columns.Select(column => EncodingFlag(column, "<>")),
             .. _columns.Select(column => $"ALTER TABLE {Table} ALTER COLUMN [{column}] nvarchar({ClosedStreamColumn.MaxLength}) COLLATE {ClosedStreamColumn.Collation} NOT NULL;"),
-            $"UPDATE {Table} SET {Assignments(column => $"CASE WHEN {NeedsEncoding(column)} THEN [{column}] + NCHAR(1) ELSE [{column}] END")} WHERE {Any(NeedsEncoding)};",
+            $"UPDATE {Table} SET {Assignments(column => $"CASE WHEN {NeedsEncoding(column)} THEN [{column}] + NCHAR(127) ELSE [{column}] END")} WHERE {Any(NeedsEncoding)};",
             $"ALTER TABLE {Table} ADD CONSTRAINT {PrimaryKey} PRIMARY KEY ({PrimaryKeyColumns});",
             "END"
         ];
@@ -87,9 +87,9 @@ public class v20_0_2 : Migration
 
     static string Any(Func<string, string> predicate) => string.Join(" OR ", _columns.Select(predicate));
 
-    static string EndsWithSpaceOrTerminator(string column) => $"UNICODE(RIGHT([{column}], 1)) IN (32, 1)";
+    static string EndsWithSpaceOrTerminator(string column) => $"UNICODE(RIGHT([{column}], 1)) IN (32, 127)";
 
-    static string EndsWithTerminator(string column) => $"UNICODE(RIGHT([{column}], 1)) = 1";
+    static string EndsWithTerminator(string column) => $"UNICODE(RIGHT([{column}], 1)) = 127";
 
     static string Assignments(Func<string, string> value) => string.Join(", ", _columns.Select(column => $"[{column}] = {value(column)}"));
 }
