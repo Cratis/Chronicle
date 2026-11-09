@@ -55,7 +55,7 @@ public static class ExecutorStubs
                 throw new NotSupportedException();
         }
 
-        internal readonly record struct QueryRouting(string? Store, string? Namespace = null, string? First = null, string? Second = null, string? Third = null, string? Fourth = null, string? Fifth = null);
+        internal readonly record struct QueryRouting(string? Store, string? Namespace = null, string? First = null, string? Second = null, string? Third = null, string? Fourth = null, string? Fifth = null, string? Capability = null, bool ApplicationScope = false);
 
         internal static class ServiceLogMessages
         {

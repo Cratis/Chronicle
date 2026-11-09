@@ -17,6 +17,8 @@ public class when_generating_namespace_routed_queries : given.a_generated_servic
         }
         """;
 
+    static readonly int _skipSegments = typeof(CasingReadModel).Namespace!.Split('.').Length - 1;
+
     string _source;
     IReadOnlyList<Microsoft.CodeAnalysis.Diagnostic> _errors;
 
@@ -35,8 +37,8 @@ public class when_generating_namespace_routed_queries : given.a_generated_servic
 
     void Because()
     {
-        _contractCode = new ServiceInterfaceGenerator(0, ContractsNamespace).Generate(_serviceDefinition, _outputDirectory);
-        _source = File.ReadAllText(new ServiceImplementationGenerator(0, ContractsNamespace, ImplementationsNamespace).Generate(_serviceDefinition, _outputDirectory).Path);
+        _contractCode = new ServiceInterfaceGenerator(_skipSegments, ContractsNamespace).Generate(_serviceDefinition, _outputDirectory);
+        _source = File.ReadAllText(new ServiceImplementationGenerator(_skipSegments, ContractsNamespace, ImplementationsNamespace).Generate(_serviceDefinition, _outputDirectory).Path);
         _ = typeof(KeyHelper).Assembly;
         (_errors, _) = GeneratedSourceCompiler.Compile(_contractCode, _source, CasingStub);
     }
