@@ -262,4 +262,64 @@ To see the full picture without starting the server, run it with `--verify-encry
 | 2 | Keys stored under earlier names need the upgrade |
 | 4 | The key layout conflicts with earlier material, or could not be verified |
 
-The option cannot be combined with the schema options. Commands that move keys to their new names are not part of this version.
+The option cannot be combined with the schema options. Keys that the migration below has already copied, and that are kept under their earlier names, are counted separately and do not need the upgrade.
+
+### Refusing to start while keys need the upgrade
+
+By default the server logs the counts and starts. Set `legacyKeyHandling` to `Refuse` to make it inspect the whole key store at startup and refuse to start, with exit code 2, while any key stored under an earlier name still needs the upgrade:
+
+```json
+{
+  "compliance": {
+    "encryption": {
+      "legacyKeyHandling": "Refuse"
+    }
+  }
+}
+```
+
+The environment variable is `Cratis__Chronicle__Compliance__Encryption__LegacyKeyHandling`. The values are `Warn`, the default, and `Refuse`. With `Refuse`, startup reads every entry stored under earlier names, so it takes longer on a large key store. An entry that cannot be tied to one address keeps the server from starting until an operator has dealt with it.
+
+### Migrating Vault keys to their new names
+
+For HashiCorp Vault, run the server with `--migrate-encryption-keys` to copy keys stored under earlier names to their paths under `k1`. It prints counts and exits; it never prints or logs a path, an identifier or key material.
+
+**Stop every node, of every version, before upgrading and before running the migration. Start them again only after `--verify-encryption-keys` exits 0.** The migration defends itself against writes it can detect, but it does not make the copy atomic with a running node.
+
+The migration:
+
+- copies each key as it is, keeping its revision, and only where nothing exists yet. It never overwrites anything under `k1`. If something different is already there, it is kept and counted as a conflict for review.
+- copies the erasure record of an address before its keys, and never copies a key that an erasure under either name covers.
+- reads every copy back and compares it with the key under the earlier name.
+- keeps the keys under their earlier names, so an earlier version still works after it. Add `--remove-migrated-legacy-keys` to remove them once their copies are verified. Nothing is removed when any copy failed or conflicts.
+- never touches an entry that cannot be tied to one address. Such entries are counted; find them with Vault tooling and decide on them yourself.
+- is safe to run again. A run that stops part way resumes where it left off, and keys already copied are counted as already migrated.
+
+Add `--dry-run` to only count what would be copied; nothing is written or removed, not even the layout marker. `--dry-run` and `--remove-migrated-legacy-keys` can only be used with `--migrate-encryption-keys`, not together, and the migration cannot be combined with `--verify-encryption-keys` or the schema options.
+
+| Exit code | Meaning |
+| --- | --- |
+| 0 | Nothing is left to migrate: every key is copied and verified |
+| 2 | Entries are left for review, or a dry run would copy something |
+| 4 | The key layout conflicts with earlier material, or could not be verified; nothing was done |
+| 5 | A copy failed or did not verify, or the run stopped before it finished; run it again |
+
+Besides the policy above, the token needs read and list on the earlier paths, and create on `secret/data/k1/*`. It needs delete on `secret/metadata/` for the earlier paths only when `--remove-migrated-legacy-keys` is used.
+
+Chronicle connects to Vault at the `connectionDetails` address as given. Use an `https://` address to protect keys in transit; there is no further TLS configuration for Vault in this version.
+
+Keys stored in Azure Key Vault under earlier names are not migrated by this command.
+
+### Proving the migration on a staging copy
+
+Before migrating production, prove the migration on a copy. None of these steps prints key material.
+
+1. Restore a snapshot of the production Vault into a separate staging Vault, for example with `vault operator raft snapshot save` and `restore`, with a token that has the same policy.
+2. Run the new version against staging with `--verify-encryption-keys`. Expect exit code 2 and the counts.
+3. Run `--migrate-encryption-keys --dry-run`. Expect the counts and no writes: the current version of a sample of secrets is unchanged, and the Vault audit log shows no `create` or `update`.
+4. Run `--migrate-encryption-keys`. Expect exit code 0, then `--verify-encryption-keys` exits 0.
+5. Start a staging node over a staging copy of the event store and read a sample of events encrypted before the upgrade. Expect the same plaintext as before.
+6. Run `--migrate-encryption-keys` again. Expect every key counted as already migrated.
+7. The keys under earlier names are untouched, so the earlier version still works on staging. That holds until `--remove-migrated-legacy-keys` is used.
+
+If any step does not give the expected result, do not migrate production.

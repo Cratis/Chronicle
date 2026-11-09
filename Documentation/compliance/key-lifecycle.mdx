@@ -183,7 +183,7 @@ Re-run erasure for subjects erased before fence support was deployed. Their miss
 
 **Upgrade every silo together.** The fence is enforced by the key store, so a silo that predates it provisions straight over one. Do not run mixed versions while an erasure is in force.
 
-**Keys stored under earlier names.** HashiCorp Vault and Azure Key Vault now keep new keys under names of their own. Keys that an earlier version stored are still read when their earlier name belongs to one address only. For any other address Chronicle refuses to read or provision, instead of creating a second key, until the keys have been upgraded. Run the server with `--verify-encryption-keys` to count what is stored under earlier names; see [Compliance Storage](../hosting/configuration/compliance-storage.md#upgrading-keys-stored-under-earlier-names).
+**Keys stored under earlier names.** HashiCorp Vault and Azure Key Vault now keep new keys under names of their own. Keys that an earlier version stored are still read when their earlier name belongs to one address only. For any other address Chronicle refuses to read or provision, instead of creating a second key, until the keys have been upgraded. Run the server with `--verify-encryption-keys` to count what is stored under earlier names, and, for HashiCorp Vault, with `--migrate-encryption-keys` to copy those keys to their new names; see [Compliance Storage](../hosting/configuration/compliance-storage.md#upgrading-keys-stored-under-earlier-names).
 
 Backend by backend, the fence needs:
 
