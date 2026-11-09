@@ -35,5 +35,5 @@ public class a_reserved_name_check : Specification
         _reservedEventSequenceIds.IsReserved(new EventSequenceId(eventSequenceId)).Returns(true);
 
     protected Task<bool> Check(string eventSequenceId) =>
-        ReservedEventSequenceRules.MayBeWritten(_storage, _reservedEventSequenceIds, EventStore, Namespace, eventSequenceId);
+        Task.FromResult(ReservedEventSequenceRules.MayBeWritten(_reservedEventSequenceIds, EventStore, Namespace, eventSequenceId));
 }

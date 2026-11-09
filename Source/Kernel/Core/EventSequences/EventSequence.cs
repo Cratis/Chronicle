@@ -92,6 +92,11 @@ public partial class EventSequence(
     IEncryptionKeyStorage? encryptionKeyStorage = null,
     TimeProvider? timeProvider = null) : Grain<EventSequenceState>, IEventSequence, IOnBroadcastChannelSubscribed
 {
+    /// <summary>
+    /// Caps the reports of refused names, so a caller cycling through distinct names cannot grow memory or the log.
+    /// </summary>
+    static readonly BoundedReporter _reservedNameReports = new(8);
+
     readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
     readonly IdentifierTelemetry _spanIdentifiers = new(options.Value.Telemetry);
     readonly HashSet<EventTypeId> _unspecifiedVisibilityWarned = [];
@@ -130,7 +135,11 @@ public partial class EventSequence(
         _eventSequenceId = _eventSequenceKey.EventSequenceId;
         if (ReservedEventSequenceRules.MayBeReserved(reservedEventSequenceIds, _eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId))
         {
-            _mayWriteSequence = await ReservedEventSequenceRules.Exists(storage, _eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId);
+            _mayWriteSequence = false;
+            if (_reservedNameReports.TryReport())
+            {
+                logger.RefusedReservedEventSequenceName(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId);
+            }
         }
         _metrics = meter.BeginEventSequenceScope(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, options.Value.Telemetry.MetricNames);
         if (!_mayWriteSequence)
