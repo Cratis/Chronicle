@@ -20,7 +20,7 @@ internal class EnsureEventStoreValidator : CommandValidator<EnsureEventStore>
     /// <param name="options">The optional <see cref="IOptions{T}"/> for <see cref="ChronicleOptions"/>, giving the database name prefix and System database name the name is checked against.</param>
     public EnsureEventStoreValidator(IOptions<ChronicleOptions>? options = null)
     {
-        var storage = options?.Value.Storage;
+        var storage = options?.Value?.Storage;
         var systemDatabaseName = storage?.SystemDatabaseName ?? Configuration.Storage.DefaultSystemDatabaseName;
         var prefix = storage?.DatabaseNamePrefix ?? string.Empty;
 
