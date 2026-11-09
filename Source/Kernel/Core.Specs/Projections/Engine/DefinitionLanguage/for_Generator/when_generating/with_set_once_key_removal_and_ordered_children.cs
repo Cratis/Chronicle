@@ -58,4 +58,7 @@ public class with_set_once_key_removal_and_ordered_children : given.a_generator
 
     [Fact] void should_not_fail() => _error.ShouldBeNull();
     [Fact] void should_generate_a_declaration() => _result.ShouldNotBeNull();
+    [Fact] void should_keep_the_event_the_new_constructs_are_declared_on() => _result.ShouldContain("from SlotAssigned");
+    [Fact] void should_keep_the_ordered_children() => _result.ShouldContain("children entries identified by entryId");
+    [Fact] void should_keep_the_mappings_of_the_ordered_children() => _result.ShouldContain("from EntryAdded");
 }
