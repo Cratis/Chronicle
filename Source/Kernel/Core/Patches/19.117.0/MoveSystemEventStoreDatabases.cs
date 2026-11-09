@@ -27,6 +27,15 @@ public class MoveSystemEventStoreDatabases(IStorage storage, ILogger<MoveSystemE
     public async Task Up()
     {
         logger.MovingToConfiguredLocation();
-        await storage.MoveSystemEventStoreTo(SystemEventStoreLocation.Configured);
+        try
+        {
+            await storage.MoveSystemEventStoreTo(SystemEventStoreLocation.Configured);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            // The move copies before it drops, so a failure leaves the data where it was. Failing the patch would stop the
+            // kernel from starting on every attempt, for instance when the MongoDB user may not read the old databases.
+            logger.FailedMovingToConfiguredLocation(exception);
+        }
     }
 }

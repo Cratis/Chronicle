@@ -50,10 +50,20 @@ public class SystemEventStoreRelocation(
             return;
         }
 
-        logger.Moving(prefix, from, to);
         var system = EventStoreName.System;
-        var eventStore = connections.GetDatabase(StorageConnectionKind.EventStore, DatabaseNames.ForEventStore(system, prefix, from), system.Value);
         var server = clientManager.GetClientFor(Setup.MongoDBChronicleBuilderExtensions.GetMongoClientSettings(mongoDBOptions.Value.Server));
+
+        // Hosted MongoDB offerings, such as Atlas Flex, own a database named System that the user cannot read, and a fresh
+        // installation never had one of its own. With no database of the System event store under the old name, there is
+        // nothing to move, and nothing to be authorized for.
+        if (!await AnyDatabaseExists(server, DatabaseNames.ForEventStore(system, prefix, from)))
+        {
+            logger.NothingToMoveFrom(prefix, from);
+            return;
+        }
+
+        logger.Moving(prefix, from, to);
+        var eventStore = connections.GetDatabase(StorageConnectionKind.EventStore, DatabaseNames.ForEventStore(system, prefix, from), system.Value);
 
         var outcomes = new List<DatabaseMoveOutcome>();
         foreach (var @namespace in await Namespaces(eventStore, prefix, from))
@@ -143,6 +153,14 @@ public class SystemEventStoreRelocation(
             .Distinct(StringComparer.Ordinal)
             .Select(_ => new EventStoreNamespaceName(_))
             .ToArray();
+    }
+
+    static async Task<bool> AnyDatabaseExists(IMongoClient server, string eventStoreDatabaseName)
+    {
+        var names = await (await server.ListDatabaseNamesAsync()).ToListAsync();
+        return names.Any(_ =>
+            string.Equals(_, eventStoreDatabaseName, StringComparison.OrdinalIgnoreCase) ||
+            _.StartsWith($"{eventStoreDatabaseName}+", StringComparison.OrdinalIgnoreCase));
     }
 
     async Task<bool> HoldsEvents(string prefix, string systemDatabaseName)

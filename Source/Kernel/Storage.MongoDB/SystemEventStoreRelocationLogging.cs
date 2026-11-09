@@ -10,6 +10,9 @@ internal static partial class SystemEventStoreRelocationLogging
     [LoggerMessage(LogLevel.Information, "The System event store's databases are already named '{Name}', nothing to move")]
     internal static partial void NothingToMove(this ILogger<SystemEventStoreRelocation> logger, string name);
 
+    [LoggerMessage(LogLevel.Information, "The server has no System event store databases named '{Prefix}{From}', nothing to move")]
+    internal static partial void NothingToMoveFrom(this ILogger<SystemEventStoreRelocation> logger, string prefix, string from);
+
     [LoggerMessage(LogLevel.Information, "Moving the System event store's databases from '{Prefix}{From}' to '{Prefix}{To}'")]
     internal static partial void Moving(this ILogger<SystemEventStoreRelocation> logger, string prefix, string from, string to);
 
