@@ -82,6 +82,22 @@ public class ReadModelReactors(
         }
     }
 
+    /// <inheritdoc/>
+    public void Stop() => Dispose();
+
+    /// <inheritdoc/>
+    public void Dispose()
+    {
+        DisposeAll(TakeSubscriptions(release: false));
+        GC.SuppressFinalize(this);
+    }
+
+    /// <summary>
+    /// Releases the reactors of an event store whose creation failed and that no caller holds. Closes the
+    /// subscriptions and makes a <see cref="Start"/> that is still in flight a no-op.
+    /// </summary>
+    internal void Release() => DisposeAll(TakeSubscriptions(release: true));
+
     /// <summary>
     /// Re-establishes the materialized streams a dropped connection took down, without starting read model reactors
     /// that were never started. Used after artifacts registered explicitly have been registered again on a reconnect.
@@ -101,22 +117,6 @@ public class ReadModelReactors(
 
         Resume(resumable);
     }
-
-    /// <inheritdoc/>
-    public void Stop() => Dispose();
-
-    /// <inheritdoc/>
-    public void Dispose()
-    {
-        DisposeAll(TakeSubscriptions(release: false));
-        GC.SuppressFinalize(this);
-    }
-
-    /// <summary>
-    /// Releases the reactors of an event store whose creation failed and that no caller holds. Closes the
-    /// subscriptions and makes a <see cref="Start"/> that is still in flight a no-op.
-    /// </summary>
-    internal void Release() => DisposeAll(TakeSubscriptions(release: true));
 
     static void Resume(IResumableReadModelSubscription[] subscriptions)
     {
