@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Security.Cryptography.X509Certificates;
 using Cratis.Chronicle.Connections;
 using Microsoft.Extensions.Logging;
 
@@ -18,6 +19,7 @@ static class TokenProviderFactory
     /// <param name="serverAddress">Provides the address of the Chronicle server currently in use.</param>
     /// <param name="skipTlsValidation">Whether to skip TLS validation towards the Chronicle server. Never applies to external authorities.</param>
     /// <param name="loggerFactory">The <see cref="ILoggerFactory"/>.</param>
+    /// <param name="certificateAuthorities">Optional certificate authorities the Chronicle server certificate must chain to. Never applies to external authorities.</param>
     /// <returns>The <see cref="ITokenProvider"/>.</returns>
     /// <exception cref="ClientCredentialsRequiredForExternalTokenAuthority">Thrown when an external authority is configured without client credentials.</exception>
     /// <exception cref="InsecureTokenEndpoint">Thrown when a configured endpoint is not an absolute https URL without user info.</exception>
@@ -25,7 +27,8 @@ static class TokenProviderFactory
         ChronicleOptions options,
         Func<ChronicleServerAddress> serverAddress,
         bool skipTlsValidation,
-        ILoggerFactory loggerFactory)
+        ILoggerFactory loggerFactory,
+        X509Certificate2Collection? certificateAuthorities = null)
     {
         if (options.ConnectionString.AuthenticationMode != AuthenticationMode.ClientCredentials)
         {
@@ -53,7 +56,8 @@ static class TokenProviderFactory
                 username!,
                 password!,
                 skipTlsValidation,
-                loggerFactory.CreateLogger<OAuthTokenProvider>());
+                loggerFactory.CreateLogger<OAuthTokenProvider>(),
+                certificateAuthorities);
         }
 
         if (LacksExplicitCredentials(options.ConnectionString))

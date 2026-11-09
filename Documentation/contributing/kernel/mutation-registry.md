@@ -1,6 +1,6 @@
 ---
 title: Event sequence mutation registry
-description: Kernel storage contracts, provider behavior, and retry semantics for mutation registry foundations.
+description: "Learn the kernel storage contracts, provider behavior and retry semantics behind the event sequence mutation registry, for contributors extending storage."
 ---
 
 <!-- Copyright (c) Cratis. All rights reserved. -->

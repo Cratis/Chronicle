@@ -84,7 +84,7 @@ export Cratis__Chronicle__ConnectionString="chronicle://clientId:clientSecret@se
 
 ## Server certificate validation
 
-The .NET client still skips server certificate validation when both settings are omitted in this release. The next major release will enable validation by default. We recommend explicitly adding `skipTlsValidation=false` to the connection string or setting `Cratis:Chronicle:Tls:SkipCertificateValidation=false`. First trust the server's certificate authority (CA), including inside application containers, or configure a matching `certificatePath` pin.
+The .NET client still skips server certificate validation when both settings are omitted in this release. The next major release will enable validation by default. We recommend explicitly adding `skipTlsValidation=false` to the connection string or setting `Cratis:Chronicle:Tls:SkipCertificateValidation=false`. First trust the server's certificate authority (CA), including inside application containers, point `caCertificatePath` at a file with that CA, or configure a matching `certificatePath` pin.
 
 Either setting enables validation. A `true` value in the other setting does not turn it off, so `skipTlsValidation=true` cannot override `Tls:SkipCertificateValidation=false`.
 

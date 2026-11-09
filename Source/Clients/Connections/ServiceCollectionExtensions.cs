@@ -53,6 +53,9 @@ public static class ServiceCollectionExtensions
             var lifetime = sp.GetRequiredService<IHostApplicationLifetime>();
             var connectionLifecycle = new ConnectionLifecycle(sp.GetRequiredService<ILogger<ConnectionLifecycle>>());
             var correlationIdAccessor = sp.GetRequiredService<ICorrelationIdAccessor>();
+            var certificateAuthorities = string.IsNullOrEmpty(connectionString.CaCertificatePath)
+                ? null
+                : CertificateLoader.LoadCertificateAuthorities(connectionString.CaCertificatePath);
 
             // Authenticate with the server using the connection string's client credentials - the
             // keep-alive and service calls are rejected without a bearer token.
@@ -74,7 +77,8 @@ public static class ServiceCollectionExtensions
                     username!,
                     password!,
                     skipTlsValidation.Value,
-                    sp.GetRequiredService<ILogger<OAuthTokenProvider>>());
+                    sp.GetRequiredService<ILogger<OAuthTokenProvider>>(),
+                    certificateAuthorities);
             }
 
             return new ChronicleConnection(
@@ -93,7 +97,11 @@ public static class ServiceCollectionExtensions
                 certificatePassword,
                 tokenProvider,
                 skipCompatibilityCheck: skipCompatibilityCheck.Value,
-                skipKeepAlive: skipKeepAlive);
+                skipKeepAlive: skipKeepAlive,
+                serverAddressResolver: null,
+                loadBalancerStrategy: null,
+                timeProvider: null,
+                certificateAuthorities: certificateAuthorities);
         });
 
         // Deliberately transient: the connection recreates its service proxies on every

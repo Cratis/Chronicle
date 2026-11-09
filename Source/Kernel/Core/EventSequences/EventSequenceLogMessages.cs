@@ -22,6 +22,9 @@ internal static partial class EventSequenceLogMessages
     [LoggerMessage(LogLevel.Debug, "Settling append key {Key} again at sequence number {SequenceNumber}")]
     internal static partial void KeyedAppendSettlingAgain(this ILogger<EventSequence> logger, IdempotencyKey key, EventSequenceNumber sequenceNumber);
 
+    [LoggerMessage(LogLevel.Warning, "Event sequence '{EventSequenceId}' for event store {EventStore} on namespace {Namespace} uses a reserved name; writes to it are refused. Rename or export it")]
+    internal static partial void RefusedReservedEventSequenceName(this ILogger<EventSequence> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId);
+
     [LoggerMessage(LogLevel.Warning, "Failed reconciling namespace subscriptions for event store {EventStore} in namespace {Namespace}. The next event-log timer tick will retry")]
     internal static partial void FailedReconcilingNamespaceSubscriptions(this ILogger<EventSequence> logger, Exception exception, EventStoreName eventStore, EventStoreNamespaceName @namespace);
 

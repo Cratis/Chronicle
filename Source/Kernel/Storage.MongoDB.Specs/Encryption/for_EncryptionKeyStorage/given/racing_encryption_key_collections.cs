@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage.MongoDB;
 using Cratis.Chronicle.Storage.MongoDB.for_ColdStartStorage.given;
+using MongoDB.Bson;
 using MongoDB.Driver;
 
 namespace Cratis.Compliance.MongoDB.for_EncryptionKeyStorage.given;
@@ -12,6 +13,7 @@ public class racing_encryption_key_collections : Specification
 {
     protected IMongoCollection<EncryptionKeyForIdentifier> _keys;
     protected IMongoCollection<EncryptionKeyErasureForIdentifier> _erasures;
+    protected IMongoCollection<BsonDocument> _records;
     protected EncryptionKeyStorage _storage;
     protected IMongoDBTopology _topology;
     protected EncryptionKeyErasureForIdentifier _fence = new("identifier", 0u, [], true);
@@ -21,6 +23,11 @@ public class racing_encryption_key_collections : Specification
     {
         _keys = Substitute.For<IMongoCollection<EncryptionKeyForIdentifier>>();
         _erasures = Substitute.For<IMongoCollection<EncryptionKeyErasureForIdentifier>>();
+        _records = Substitute.For<IMongoCollection<BsonDocument>>();
+        _records.WithReadConcern(Arg.Any<ReadConcern>()).Returns(_records);
+        _records.WithReadPreference(Arg.Any<ReadPreference>()).Returns(_records);
+        _records.FindAsync(Arg.Any<FilterDefinition<BsonDocument>>(), Arg.Any<FindOptions<BsonDocument, BsonDocument>>(), Arg.Any<CancellationToken>())
+            .Returns(_ => Task.FromResult(duplicate_keys.CursorOf<BsonDocument>()));
         _keys.CollectionNamespace.Returns(new CollectionNamespace("specs", "encryption-keys"));
         _keys.WithWriteConcern(Arg.Any<WriteConcern>()).Returns(_keys);
         _keys.WithReadConcern(Arg.Any<ReadConcern>()).Returns(_keys);
@@ -42,6 +49,7 @@ public class racing_encryption_key_collections : Specification
         eventStore.GetNamespaceDatabase(EventStoreNamespaceName.NotSet).Returns(namespaceDatabase);
         namespaceDatabase.GetCollection<EncryptionKeyForIdentifier>("encryption-keys").Returns(_keys);
         namespaceDatabase.GetCollection<EncryptionKeyErasureForIdentifier>("encryption-key-erasures").Returns(_erasures);
+        namespaceDatabase.GetCollection<BsonDocument>("EncryptionKeyFenceRecords").Returns(_records);
         _topology = Substitute.For<IMongoDBTopology>();
         _storage = new(database, _topology);
     }
