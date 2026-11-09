@@ -155,6 +155,18 @@ The external service must support the MongoDB features used by the Storage specs
 
 Unset `CHRONICLE_MONGODB_CONNECTION_DETAILS` to return to the default container-backed Storage spec fixtures. `CHRONICLE_SPECS_MONGODB_IMAGE` applies only when these fixtures start MongoDB themselves.
 
+#### Checking a MongoDB-compatible service
+
+Use a non-production endpoint you control and set `CHRONICLE_MONGODB_CONNECTION_DETAILS` to the service's connection string, as above. Run only the MongoDB storage project:
+
+```bash
+dotnet test Source/Kernel/Storage.MongoDB.Specs/Storage.MongoDB.Specs.csproj --configuration Release
+```
+
+Only `Storage.MongoDB.Specs` supports external mode. The service identity needs the database, index, and read/write permissions described above. Record passes and failures per feature rather than treating successful appends as proof of compatibility. Failures caused by missing change-stream or collation support mean the service is unsupported; see [storage compatibility](../hosting/storage-compatibility.md) for the measured DocumentDB results and startup checks.
+
+The managed Azure DocumentDB service remains unverified. Someone with access must run this check manually against their own endpoint; CI does not test that service. Keep connection strings and credentials out of committed files, logs, and shared results. Unset `CHRONICLE_MONGODB_CONNECTION_DETAILS` when finished.
+
 ### Running a single test
 
 Use `--filter` with the fully qualified type name or a substring of it:

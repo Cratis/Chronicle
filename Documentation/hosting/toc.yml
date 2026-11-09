@@ -2,6 +2,8 @@
   href: index.md
 - name: Production
   href: production.md
+- name: Storage Compatibility
+  href: storage-compatibility.md
 - name: Azure and Entra ID
   href: azure.md
 - name: Container Apps, App Service and Cloud Run
