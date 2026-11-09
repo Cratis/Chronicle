@@ -19,6 +19,8 @@ public class when_checking : Specification
     [InlineData("observer-definition-change-progress")]
     [InlineData("chronicle_capability_probe")]
     [InlineData("CHRONICLE_CAPABILITY_PROBE")]
+    [InlineData("chronicle_capability_probe_0123456789abcdef01234567")]
+    [InlineData("CHRONICLE_CAPABILITY_PROBE_0123456789ABCDEF01234567")]
     [InlineData("Observers")]
     [InlineData("orders+closed_streams")]
     [InlineData("event-log+constraint")]
@@ -31,5 +33,6 @@ public class when_checking : Specification
     [InlineData("orders+archive")]
     [InlineData("orders-changes")]
     [InlineData("price-changes")]
+    [InlineData("chronicle_capability_probes")]
     void should_not_reserve(string id) => IsReserved(id).ShouldBeFalse();
 }

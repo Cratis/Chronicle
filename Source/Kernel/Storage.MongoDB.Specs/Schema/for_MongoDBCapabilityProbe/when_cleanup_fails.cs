@@ -13,7 +13,7 @@ public class when_cleanup_fails : given.a_driver
     {
         _indexes.CreateOneAsync(Arg.Any<CreateIndexModel<BsonDocument>>(), Arg.Any<CreateOneIndexOptions>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromException<string>(given.command_errors.Create(2, "createIndex.collation is not implemented yet")));
-        _mongo.DropCollectionAsync(MongoDBCapabilityProbe.ProbeCollectionName, Arg.Any<CancellationToken>())
+        _mongo.DropCollectionAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromException(new IOException("mongodb://user:secret@private-host")));
     }
 

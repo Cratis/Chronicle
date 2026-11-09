@@ -10,14 +10,15 @@ public class when_the_probe_collection_already_exists : given.a_driver
 {
     void Establish()
     {
-        _collections.MoveNextAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult(true));
+        _collections.MoveNextAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult(true), Task.FromResult(false));
         _collections.Current.Returns([MongoDBCapabilityProbe.ProbeCollectionName]);
+        _indexes.CreateOneAsync(Arg.Any<CreateIndexModel<BsonDocument>>(), Arg.Any<CreateOneIndexOptions>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromException<string>(given.command_errors.Create(2, "createIndex.collation is not implemented yet")));
     }
 
     async Task Because() => _report = await _probe.Probe(CancellationToken.None);
 
-    [Fact] void should_be_inconclusive() => _report.Collation.State.ShouldEqual(MongoDBCapabilityState.Inconclusive);
-    [Fact] void should_not_create_the_collection_again() => _ = _mongo.DidNotReceiveWithAnyArgs().CreateCollectionAsync(default, default, default);
-    [Fact] void should_not_modify_indexes() => _ = _indexes.DidNotReceiveWithAnyArgs().CreateOneAsync(default(CreateIndexModel<BsonDocument>), default, default);
-    [Fact] void should_not_remove_a_pre_existing_collection() => _ = _mongo.DidNotReceiveWithAnyArgs().DropCollectionAsync(default, default);
+    [Fact] void should_still_detect_unsupported_collation() => _report.Collation.State.ShouldEqual(MongoDBCapabilityState.Unsupported);
+    [Fact] void should_create_an_independent_collection() => _createdCollections.Single().ShouldNotEqual(MongoDBCapabilityProbe.ProbeCollectionName);
+    [Fact] void should_clean_up_only_its_own_collection() => _droppedCollections.Single().ShouldEqual(_createdCollections.Single());
 }

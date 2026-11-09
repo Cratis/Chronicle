@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Concurrent;
 using Cratis.Chronicle.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -22,6 +23,8 @@ public class a_driver : Specification
     protected ILogger<MongoDBCapabilityProbe> _logger;
     protected MongoDBCapabilityProbe _probe;
     protected MongoDBCapabilityReport _report;
+    protected ConcurrentBag<string> _createdCollections;
+    protected ConcurrentBag<string> _droppedCollections;
 
     void Establish()
     {
@@ -35,7 +38,9 @@ public class a_driver : Specification
         _logger = Substitute.For<ILogger<MongoDBCapabilityProbe>>();
         _logger.IsEnabled(Arg.Any<LogLevel>()).Returns(true);
         _options = new() { Storage = new() { SchemaMode = SchemaMode.Migrate } };
-        _database.GetCollection<BsonDocument>(MongoDBCapabilityProbe.ProbeCollectionName).Returns(_collection);
+        _createdCollections = [];
+        _droppedCollections = [];
+        _database.GetCollection<BsonDocument>(Arg.Any<string>()).Returns(_collection);
         _collection.Database.Returns(_mongo);
         _collection.Indexes.Returns(_indexes);
         _mongo.WatchAsync(
@@ -50,8 +55,10 @@ public class a_driver : Specification
         _documents.MoveNextAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult(false));
         _mongo.ListCollectionNamesAsync(Arg.Any<ListCollectionNamesOptions>(), Arg.Any<CancellationToken>()).Returns(Task.FromResult(_collections));
         _collections.MoveNextAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult(false));
-        _mongo.CreateCollectionAsync(MongoDBCapabilityProbe.ProbeCollectionName, Arg.Any<CreateCollectionOptions>(), Arg.Any<CancellationToken>()).Returns(Task.CompletedTask);
-        _mongo.DropCollectionAsync(MongoDBCapabilityProbe.ProbeCollectionName, Arg.Any<CancellationToken>()).Returns(Task.CompletedTask);
+        _mongo.CreateCollectionAsync(Arg.Any<string>(), Arg.Any<CreateCollectionOptions>(), Arg.Any<CancellationToken>()).Returns(Task.CompletedTask)
+            .AndDoes(call => _createdCollections.Add(call.ArgAt<string>(0)));
+        _mongo.DropCollectionAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(Task.CompletedTask)
+            .AndDoes(call => _droppedCollections.Add(call.ArgAt<string>(0)));
         _indexes.CreateOneAsync(Arg.Any<CreateIndexModel<BsonDocument>>(), Arg.Any<CreateOneIndexOptions>(), Arg.Any<CancellationToken>()).Returns(Task.FromResult("capability_collation"));
         _probe = new(_database, Options.Create(_options), _logger);
     }

@@ -16,6 +16,11 @@ public static class WellKnownCollectionNames
     public const string CapabilityProbe = "chronicle_capability_probe";
 
     /// <summary>
+    /// The reserved prefix for independently owned startup capability probe collections.
+    /// </summary>
+    public const string CapabilityProbePrefix = CapabilityProbe + "_";
+
+    /// <summary>
     /// The collection holding inert projection definition history.
     /// </summary>
     public const string ProjectionDefinitionHistory = "projection-definition-history";

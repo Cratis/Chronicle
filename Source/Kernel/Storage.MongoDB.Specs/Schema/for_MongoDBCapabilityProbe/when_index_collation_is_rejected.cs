@@ -14,5 +14,5 @@ public class when_index_collation_is_rejected : given.a_driver
     async Task Because() => _report = await _probe.Probe(CancellationToken.None);
 
     [Fact] void should_report_collation_as_unsupported() => _report.Collation.State.ShouldEqual(MongoDBCapabilityState.Unsupported);
-    [Fact] void should_still_clean_up_the_collection() => _ = _mongo.Received(1).DropCollectionAsync(MongoDBCapabilityProbe.ProbeCollectionName, Arg.Any<CancellationToken>());
+    [Fact] void should_still_clean_up_the_collection() => _droppedCollections.Single().ShouldEqual(_createdCollections.Single());
 }

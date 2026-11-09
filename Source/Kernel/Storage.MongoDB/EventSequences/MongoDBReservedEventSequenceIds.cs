@@ -30,6 +30,7 @@ public class MongoDBReservedEventSequenceIds : IReservedEventSequenceIds
     {
         var value = eventSequenceId.Value;
         return _names.Contains(value) ||
+            value.StartsWith(WellKnownCollectionNames.CapabilityProbePrefix, StringComparison.OrdinalIgnoreCase) ||
             value.EndsWith(ConstraintSuffix, StringComparison.OrdinalIgnoreCase) ||
             value.EndsWith(ClosedStreamsSuffix, StringComparison.OrdinalIgnoreCase);
     }
