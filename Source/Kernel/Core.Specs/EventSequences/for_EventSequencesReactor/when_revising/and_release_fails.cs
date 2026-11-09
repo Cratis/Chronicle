@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Compliance.GDPR;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Events.EventSequences;
 using Cratis.Chronicle.ProtectedValues;
@@ -39,13 +40,16 @@ public class and_release_fails : Specification
         var keys = new InMemoryEncryptionKeyStorage();
         var encryption = new Encryption();
         var provisioner = new ManagedEncryptionKeyProvisioner(keys, encryption);
-        var manager = new JsonSchemaMetadataManager(new KnownInstancesOf<IJsonSchemaMetadataValueHandler>(new PIICompliancePropertyValueHandler(provisioner, keys, encryption)), NullLogger<JsonSchemaMetadataManager>.Instance);
-        _original = await manager.Apply("store", "namespace", schema, "owner", JsonNode.Parse(UsesObjectArray ? """{"contacts":[{"name":"original"}]}""" : """{"name":"original"}""")!.AsObject());
+        var access = Substitute.For<IEncryptionKeyStorage>();
+        access.GetErasureForRelease(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>())
+            .Returns(call => keys.GetErasureForRelease(call.ArgAt<EventStoreName>(0), call.ArgAt<EventStoreNamespaceName>(1), call.ArgAt<EncryptionKeyIdentifier>(2)));
+        var manager = new JsonSchemaMetadataManager(new KnownInstancesOf<IJsonSchemaMetadataValueHandler>(new PIICompliancePropertyValueHandler(provisioner, access, encryption)), NullLogger<JsonSchemaMetadataManager>.Instance);
+        _original = await manager.Apply("store", "namespace", schema, "owner", JsonNode.Parse(UsesObjectArray ? """{"contacts":[{"name":"original"}]}""" : """{"name":"original"}""").AsObject());
         _originalText = _original.ToJsonString();
-        var revision = await manager.Apply("store", "namespace", schema, "owner", JsonNode.Parse(UsesObjectArray ? """{"contacts":[{"name":"revised"}]}""" : """{"name":"revised"}""")!.AsObject());
+        var revision = await manager.Apply("store", "namespace", schema, "owner", JsonNode.Parse(UsesObjectArray ? """{"contacts":[{"name":"revised"}]}""" : """{"name":"revised"}""").AsObject());
 
         // Missing key material without a recorded erasure is an operational failure, not erasure.
-        await keys.DeleteFor("store", "namespace", "owner");
+        access.TryGetLatestFor("store", "namespace", "owner").Returns(Task.FromResult<EncryptionKeyAtRevision?>(null));
         var type = new EventType("personal-event", 1);
         _context = EventContext.From("store", "namespace", type, EventSourceType.Default, "source", EventStreamType.All, EventStreamId.Default, 1UL, CorrelationId.NotSet, subject: "owner");
         _request = new EventRevised(Concepts.EventSequences.WellKnownEventSequences.EventLog, 1UL, type, revision.ToJsonString());

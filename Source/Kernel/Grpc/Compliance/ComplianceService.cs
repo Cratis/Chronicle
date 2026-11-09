@@ -70,7 +70,7 @@ internal sealed class ComplianceService(IGrainFactory grainFactory, IJsonSchemaM
         EnsureComplete(coverage.NotCovered.Select(store => store.Value).ToArray());
         if (coverage.Allowed.Count > 0)
         {
-            await GetPIIManager(request.EventStore, request.Namespace).DeleteEncryptionKeyIn(request.Identifier, coverage.Allowed.ToArray());
+            await DeleteWithRequest(request, coverage.Allowed.ToArray());
         }
     }
 
@@ -96,7 +96,7 @@ internal sealed class ComplianceService(IGrainFactory grainFactory, IJsonSchemaM
         EnsureRequestedStoreAllowed(coverage);
         if (coverage.Allowed.Count > 0)
         {
-            await GetPIIManager(request.EventStore, request.Namespace).DeleteEncryptionKeyIn(request.Identifier, coverage.Allowed.ToArray());
+            await DeleteWithRequest(request, coverage.Allowed.ToArray());
         }
 
         EnsureListed(coverage);
@@ -140,6 +140,22 @@ internal sealed class ComplianceService(IGrainFactory grainFactory, IJsonSchemaM
         {
             throw new RpcException(new Status(StatusCode.Unavailable, "Compliance event store coverage could not be established."));
         }
+    }
+
+    Task DeleteWithRequest(DeleteEncryptionKeyRequest request, EventStoreName[] eventStores)
+    {
+        var manager = GetPIIManager(request.EventStore, request.Namespace);
+        if (request.RequestId is null) return manager.DeleteEncryptionKeyIn(request.Identifier, eventStores);
+        try
+        {
+            Storage.Compliance.EncryptionKeyErasureRequestIdentity.Validate(request.RequestId);
+        }
+        catch (ArgumentException)
+        {
+            throw new RpcException(new Status(StatusCode.InvalidArgument, "An erasure request id must contain between 1 and 128 characters and cannot be blank."));
+        }
+
+        return manager.DeleteEncryptionKeyInWithRequest(request.Identifier, eventStores, request.RequestId);
     }
 
     Task<JsonObject> ReleaseContent(ReleaseRequest request, JsonSchema schema, JsonObject json) =>

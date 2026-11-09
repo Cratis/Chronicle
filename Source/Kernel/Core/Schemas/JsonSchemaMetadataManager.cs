@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.ProtectedValues;
 using Cratis.Chronicle.Storage.Compliance;
 using Cratis.DependencyInjection;
 using Cratis.Types;
@@ -41,9 +42,10 @@ public class JsonSchemaMetadataManager(
             return json;
         }
 
+        using var scope = ReleaseKeys.BeginScope();
         var result = (json.DeepClone() as JsonObject)!;
         await HandleActionFor(schema, identifier, result, SchemaMetadataActionFailed.ApplyAction, async (h, id, token) => await h.Apply(eventStore, eventStoreNamespace, id, token));
-        return result;
+        return await ReleaseKeys.Complete(() => result);
     }
 
     /// <inheritdoc/>
@@ -56,6 +58,7 @@ public class JsonSchemaMetadataManager(
             return (result, uses);
         }
 
+        using var scope = ReleaseKeys.BeginScope();
         await HandleActionFor(schema, identifier, result, SchemaMetadataActionFailed.ApplyAction, (_, _, value) => Task.FromResult(value), boundaryTransform: async (path, _, handlers, subject, value) =>
         {
             ProtectionLocation(path, handlers, subject);
@@ -65,7 +68,7 @@ public class JsonSchemaMetadataManager(
             uses.Add(new(path, key.Kind, plaintext, key));
             return applied.Value;
         });
-        return (result, uses.OrderBy(_ => _.Path, StringComparer.Ordinal).ToArray());
+        return await ReleaseKeys.Complete<(JsonObject, IReadOnlyList<ProtectedValueUse>)>(() => (result, uses.OrderBy(_ => _.Path, StringComparer.Ordinal).ToArray()));
     }
 
     /// <inheritdoc/>
@@ -119,9 +122,10 @@ public class JsonSchemaMetadataManager(
             return json;
         }
 
+        using var scope = ReleaseKeys.BeginScope();
         var result = (json.DeepClone() as JsonObject)!;
         await HandleActionFor(schema, identifier, result!, SchemaMetadataActionFailed.ReleaseAction, async (h, id, token) => await h.Release(eventStore, eventStoreNamespace, id, token));
-        return result;
+        return await ReleaseKeys.Complete(() => result);
     }
 
     /// <inheritdoc/>
@@ -134,6 +138,7 @@ public class JsonSchemaMetadataManager(
             return new StatusedRelease(result, statuses);
         }
 
+        using var scope = ReleaseKeys.BeginScope();
         await HandleActionFor(
             schema,
             identifier,
@@ -153,12 +158,13 @@ public class JsonSchemaMetadataManager(
                     ? StrictJsonSchemaRelease.TryRestore(boundarySchema, released.Value) ?? throw new StrictSchemaMetadataReleaseNotSupported()
                     : released.Value;
             });
-        return new StatusedRelease(result, statuses);
+        return await ReleaseKeys.Complete(() => new StatusedRelease(result, statuses));
     }
 
     /// <inheritdoc/>
     public async Task<(JsonObject Value, IReadOnlyList<string> ErasedPaths)> ReleaseReportingErasedProperties(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, JsonSchema schema, string identifier, JsonObject json)
     {
+        using var scope = ReleaseKeys.BeginScope();
         var result = (JsonObject)json.DeepClone();
         var erasure = new ErasedPathCollector(eventStore, eventStoreNamespace);
         if (schema.HasSchemaMetadata())
@@ -166,12 +172,13 @@ public class JsonSchemaMetadataManager(
             await WalkObject(new MetadataWalk { Identifier = identifier, ActionName = SchemaMetadataActionFailed.ReleaseAction, Action = static (_, _, value) => Task.FromResult(value), Erasure = erasure }, schema, result, string.Empty);
         }
 
-        return (result, erasure.Paths.Order(StringComparer.Ordinal).ToArray());
+        return await ReleaseKeys.Complete<(JsonObject, IReadOnlyList<string>)>(() => (result, erasure.Paths.Order(StringComparer.Ordinal).ToArray()));
     }
 
     /// <inheritdoc/>
     public async Task<JsonObject?> TryRelease(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, JsonSchema schema, string identifier, JsonObject json)
     {
+        using var scope = ReleaseKeys.BeginScope();
         if (!schema.HasSchemaMetadata())
         {
             return (JsonObject)json.DeepClone();
@@ -179,8 +186,9 @@ public class JsonSchemaMetadataManager(
 
         try
         {
-            return await TryTransformForComparison(schema, json, (current, handler, node) =>
+            var released = await TryTransformForComparison(schema, json, (current, handler, node) =>
                 StrictJsonSchemaRelease.ReleaseValue(current, handler, eventStore, eventStoreNamespace, identifier, node));
+            return await ReleaseKeys.Complete(() => released);
         }
         catch (Exception exception)
         {
@@ -267,6 +275,7 @@ public class JsonSchemaMetadataManager(
     /// <inheritdoc/>
     public async Task<JsonObject> ReleaseStrict(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, JsonSchema schema, string identifier, JsonObject json)
     {
+        using var scope = ReleaseKeys.BeginScope();
         if (!schema.HasSchemaMetadata())
         {
             return json;
@@ -274,7 +283,7 @@ public class JsonSchemaMetadataManager(
 
         var result = (json.DeepClone() as JsonObject)!;
         await HandleActionFor(schema, identifier, result, SchemaMetadataActionFailed.ReleaseAction, async (handler, subject, value) => await handler.ReleaseStrict(eventStore, eventStoreNamespace, subject, value), strictRelease: true);
-        return result;
+        return await ReleaseKeys.Complete(() => result);
     }
 
     /// <summary>

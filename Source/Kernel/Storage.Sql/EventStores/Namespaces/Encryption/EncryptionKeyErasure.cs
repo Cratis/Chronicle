@@ -39,4 +39,30 @@ public class EncryptionKeyErasure
     /// Gets or sets a value indicating whether an authorized new lifecycle may mint a fresh key above the fence.
     /// </summary>
     public bool NewKeyAllowed { get; set; }
+
+    /// <summary>
+    /// Gets or sets the CAS token; null denotes an unsealed pre-fence row.
+    /// </summary>
+    [Precision(20, 0)]
+    public decimal? Version { get; set; }
+
+    /// <summary>
+    /// Gets or sets the lifecycle advanced only by authorization.
+    /// </summary>
+    public uint? Lifecycle { get; set; }
+
+    /// <summary>
+    /// Gets or sets the greatest lifecycle covered by an erasure.
+    /// </summary>
+    public uint? ErasedLifecycle { get; set; }
+
+    /// <summary>
+    /// Gets or sets the canonical-semantics seal.
+    /// </summary>
+    public string? StateSeal { get; set; }
+
+    /// <summary>
+    /// Gets or sets the durable erasure requests as JSON.
+    /// </summary>
+    public string? Requests { get; set; }
 }

@@ -12,7 +12,7 @@ public class and_the_key_storage_is_unavailable : given.an_event_sequence_with_i
     async Task Establish()
     {
         await Protect();
-        _keys.TryGetFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>(), Arg.Any<EncryptionKeyRevision?>()).Throws(new Exception("key store unavailable"));
+        _keys.TryGetAtRevisionFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>(), Arg.Any<EncryptionKeyRevision>()).Throws(new Exception("key store unavailable"));
     }
     async Task Because() => _result = await AppendKeyed();
     [Fact] void should_report_an_append_error() => _result.Result.Errors.Single().Value.ShouldEqual("key store unavailable");

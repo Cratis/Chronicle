@@ -14,6 +14,7 @@
 
     <ItemGroup>
         <ProjectReference Include="../Core/Core.csproj" />
+        <ProjectReference Include="../Storage.AzureKeyVault.Specs/Storage.AzureKeyVault.Specs.csproj" />
         <ProjectReference Include="../Storage.InMemory/Storage.InMemory.csproj" />
         <ProjectReference Include="../Storage.MongoDB/Storage.MongoDB.csproj" />
         <ProjectReference Include="../Storage.Sql/Storage.Sql.csproj" />

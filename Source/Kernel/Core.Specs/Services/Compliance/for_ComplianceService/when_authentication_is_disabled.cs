@@ -29,7 +29,7 @@ public class when_authentication_is_disabled : given.a_compliance_boundary
     }
 
     [Fact] void should_cover_all_eligible_stores() => _notCovered.ShouldBeEmpty();
-    [Fact] void should_erase_the_requested_store() => _keyStore.Received(1).DeleteFor(EventStore, EventStoreNamespace, Identifier);
-    [Fact] void should_erase_the_other_store() => _keyStore.Received(1).DeleteFor(OtherEventStore, EventStoreNamespace, Identifier);
+    [Fact] void should_erase_the_requested_store() => _keyStore.Received(1).DeleteThroughFor(EventStore, EventStoreNamespace, Identifier, Arg.Any<string>());
+    [Fact] void should_erase_the_other_store() => _keyStore.Received(1).DeleteThroughFor(OtherEventStore, EventStoreNamespace, Identifier, Arg.Any<string>());
     [Fact] void should_log_the_authentication_disabled_decision() => string.Join(' ', _audit.Values).ShouldContain("AuthenticationDisabled");
 }

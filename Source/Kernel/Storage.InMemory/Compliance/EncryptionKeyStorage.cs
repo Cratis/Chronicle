@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections.Concurrent;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage.Compliance;
@@ -11,226 +10,117 @@ namespace Cratis.Chronicle.Storage.InMemory.Compliance;
 /// <summary>
 /// Represents an in-memory implementation of <see cref="IEncryptionKeyStorage"/>.
 /// </summary>
-public sealed class EncryptionKeyStorage : IEncryptionKeyStorage
+public sealed class EncryptionKeyStorage : IEncryptionKeyStorage, IEncryptionKeyFence, IEncryptionKeyFenceRecords
 {
-    readonly ConcurrentDictionary<Key, EncryptionKey> _keys = new();
-    readonly ConcurrentDictionary<Scope, EncryptionKeyErasure> _erasures = new();
-    readonly ConcurrentDictionary<(EventStoreName EventStore, InternalSecretPurpose Purpose), EncryptionKey> _internalSecrets = new();
+    readonly InMemoryEncryptionKeyStorage _storage = new();
 
     /// <inheritdoc/>
-    public Task SaveFor(
-        EventStoreName eventStore,
-        EventStoreNamespaceName eventStoreNamespace,
-        EncryptionKeyIdentifier identifier,
-        EncryptionKey key,
-        EncryptionKeyRevision? revision = null)
-    {
-        var actualRevision = IsLatest(revision)
-            ? GetNextRevision(eventStore, eventStoreNamespace, identifier)
-            : revision!;
-
-        ErasureFor(eventStore, eventStoreNamespace, identifier).EnsureCanSave(identifier, actualRevision, key);
-
-        _keys[new Key(eventStore, eventStoreNamespace, identifier, actualRevision)] = key;
-        return Task.CompletedTask;
-    }
+    public bool IsDurable => false;
 
     /// <inheritdoc/>
-    public Task<EncryptionKey> GetOrAddFor(
-        EventStoreName eventStore,
-        EventStoreNamespaceName eventStoreNamespace,
-        EncryptionKeyIdentifier identifier,
-        EncryptionKey key)
-    {
-        if (TryGetLatest(eventStore, eventStoreNamespace, identifier) is { } existing)
-        {
-            return Task.FromResult(existing);
-        }
+    public EncryptionKeyFenceGuarantees FenceGuarantees => _storage.FenceGuarantees;
 
-        var revision = ErasureFor(eventStore, eventStoreNamespace, identifier).RevisionForNewKey(identifier, key);
-        var added = _keys.GetOrAdd(new Key(eventStore, eventStoreNamespace, identifier, revision), key);
-        return Task.FromResult(added);
-    }
+    /// <inheritdoc/>
+    public Task<EncryptionKeyErasure?> GetErasureForRelease(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier) =>
+        _storage.GetErasureForRelease(eventStore, eventStoreNamespace, identifier);
+
+    /// <inheritdoc/>
+    public Task<EncryptionKeyFenceState> ReadFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier) =>
+        _storage.ReadFor(eventStore, eventStoreNamespace, identifier);
+
+    /// <inheritdoc/>
+    public Task<bool> CompareExchangeFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyFenceState observed, EncryptionKeyFenceState next) =>
+        _storage.CompareExchangeFor(eventStore, eventStoreNamespace, identifier, observed, next);
+
+    /// <inheritdoc/>
+    public Task SaveFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKey key, EncryptionKeyRevision? revision = null) =>
+        _storage.SaveFor(eventStore, eventStoreNamespace, identifier, key, revision);
+
+    /// <inheritdoc/>
+    public Task<EncryptionKey> GetOrAddFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKey key) =>
+        _storage.GetOrAddFor(eventStore, eventStoreNamespace, identifier, key);
 
     /// <inheritdoc/>
     public Task<EncryptionKeyAtRevision?> TryGetLatestFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier) =>
-        Task.FromResult(KeysFor(eventStore, eventStoreNamespace, identifier)
-            .OrderByDescending(_ => _.Key.Revision.Value)
-            .Select(_ => new EncryptionKeyAtRevision(_.Value, _.Key.Revision))
-            .FirstOrDefault());
+        _storage.TryGetLatestFor(eventStore, eventStoreNamespace, identifier);
 
     /// <inheritdoc/>
-    public async Task<EncryptionKeyAtRevision> GetOrAddWithRevisionFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKey key)
-    {
-        if (await TryGetLatestFor(eventStore, eventStoreNamespace, identifier) is { } existing)
-        {
-            return existing;
-        }
-
-        var revision = ErasureFor(eventStore, eventStoreNamespace, identifier).RevisionForNewKey(identifier, key);
-        var added = _keys.GetOrAdd(new Key(eventStore, eventStoreNamespace, identifier, revision), key);
-        return new(added, revision);
-    }
+    public Task<EncryptionKeyAtRevision?> TryGetAtRevisionFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyRevision revision) =>
+        _storage.TryGetAtRevisionFor(eventStore, eventStoreNamespace, identifier, revision);
 
     /// <inheritdoc/>
-    public Task<bool> HasFor(
-        EventStoreName eventStore,
-        EventStoreNamespaceName eventStoreNamespace,
-        EncryptionKeyIdentifier identifier,
-        EncryptionKeyRevision? revision = null)
-    {
-        if (IsLatest(revision))
-        {
-            return Task.FromResult(KeysFor(eventStore, eventStoreNamespace, identifier).Any());
-        }
-
-        return Task.FromResult(_keys.ContainsKey(new Key(eventStore, eventStoreNamespace, identifier, revision!)));
-    }
+    public Task<EncryptionKeyAtRevision> GetOrAddWithRevisionFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKey key) =>
+        _storage.GetOrAddWithRevisionFor(eventStore, eventStoreNamespace, identifier, key);
 
     /// <inheritdoc/>
-    public Task<EncryptionKey?> TryGetFor(
-        EventStoreName eventStore,
-        EventStoreNamespaceName eventStoreNamespace,
-        EncryptionKeyIdentifier identifier,
-        EncryptionKeyRevision? revision = null)
-    {
-        if (IsLatest(revision))
-        {
-            return Task.FromResult(TryGetLatest(eventStore, eventStoreNamespace, identifier));
-        }
-
-        return Task.FromResult(_keys.TryGetValue(new Key(eventStore, eventStoreNamespace, identifier, revision!), out var found) ? found : null);
-    }
+    public Task<bool> HasFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyRevision? revision = null) =>
+        _storage.HasFor(eventStore, eventStoreNamespace, identifier, revision);
 
     /// <inheritdoc/>
-    public async Task<EncryptionKey> GetFor(
-        EventStoreName eventStore,
-        EventStoreNamespaceName eventStoreNamespace,
-        EncryptionKeyIdentifier identifier,
-        EncryptionKeyRevision? revision = null) =>
-        await TryGetFor(eventStore, eventStoreNamespace, identifier, revision) ?? throw new MissingEncryptionKey(identifier);
+    public Task<EncryptionKey?> TryGetFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyRevision? revision = null) =>
+        _storage.TryGetFor(eventStore, eventStoreNamespace, identifier, revision);
 
     /// <inheritdoc/>
-    public Task DeleteFor(
-        EventStoreName eventStore,
-        EventStoreNamespaceName eventStoreNamespace,
-        EncryptionKeyIdentifier identifier,
-        EncryptionKeyRevision? revision = null)
-    {
-        if (IsLatest(revision))
-        {
-            foreach (var entry in KeysFor(eventStore, eventStoreNamespace, identifier).ToArray())
-            {
-                _keys.TryRemove(entry.Key, out _);
-            }
-        }
-        else
-        {
-            _keys.TryRemove(new Key(eventStore, eventStoreNamespace, identifier, revision!), out _);
-        }
-
-        return Task.CompletedTask;
-    }
+    public Task<EncryptionKey> GetFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyRevision? revision = null) =>
+        _storage.GetFor(eventStore, eventStoreNamespace, identifier, revision);
 
     /// <inheritdoc/>
-    public Task<EncryptionKeyErasure?> GetErasureFor(
-        EventStoreName eventStore,
-        EventStoreNamespaceName eventStoreNamespace,
-        EncryptionKeyIdentifier identifier) =>
-        Task.FromResult(ErasureFor(eventStore, eventStoreNamespace, identifier));
+    public Task DeleteFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyRevision? revision = null) =>
+        _storage.DeleteFor(eventStore, eventStoreNamespace, identifier, revision);
 
     /// <inheritdoc/>
-    public Task RecordErasureFor(
-        EventStoreName eventStore,
-        EventStoreNamespaceName eventStoreNamespace,
-        EncryptionKeyIdentifier identifier)
-    {
-        var scope = new Scope(eventStore, eventStoreNamespace, identifier);
-        var present = KeysFor(eventStore, eventStoreNamespace, identifier).Select(_ => (_.Key.Revision, _.Value));
-        _erasures[scope] = EncryptionKeyErasure.Covering(_erasures.GetValueOrDefault(scope), present);
-        return Task.CompletedTask;
-    }
+    public Task<EncryptionKeyErasure?> GetErasureFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier) =>
+        _storage.GetErasureFor(eventStore, eventStoreNamespace, identifier);
 
     /// <inheritdoc/>
-    public Task AllowNewKeyFor(
-        EventStoreName eventStore,
-        EventStoreNamespaceName eventStoreNamespace,
-        EncryptionKeyIdentifier identifier)
-    {
-        var scope = new Scope(eventStore, eventStoreNamespace, identifier);
-        if (_erasures.TryGetValue(scope, out var erasure))
-        {
-            _erasures[scope] = erasure with { NewKeyAllowed = true };
-        }
+    public Task<long?> CountLegacyFences(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace) => _storage.CountLegacyFences(eventStore, eventStoreNamespace);
 
-        return Task.CompletedTask;
-    }
+    /// <inheritdoc/>
+    public Task<string?> ReadRecord(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string id) =>
+        _storage.ReadRecord(eventStore, eventStoreNamespace, id);
+
+    /// <inheritdoc/>
+    public Task WriteRecord(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string id, string value, bool replace = false) =>
+        _storage.WriteRecord(eventStore, eventStoreNamespace, id, value, replace);
+
+    /// <inheritdoc/>
+    public Task<EncryptionKeyErasureRequest?> GetErasureRequestFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, string requestId) =>
+        _storage.GetErasureRequestFor(eventStore, eventStoreNamespace, identifier, requestId);
 
     /// <inheritdoc/>
     /// <remarks>Internal secrets live in their own dictionary, which no subject key member reads or writes.</remarks>
     public Task<EncryptionKey> GetOrAddInternalSecretFor(EventStoreName eventStore, InternalSecretPurpose purpose, EncryptionKey candidate) =>
-        Task.FromResult(_internalSecrets.GetOrAdd((eventStore, purpose), candidate));
+        _storage.GetOrAddInternalSecretFor(eventStore, purpose, candidate);
 
-    static bool IsLatest(EncryptionKeyRevision? revision) => revision is null || revision == EncryptionKeyRevision.Latest;
+    /// <inheritdoc/>
+    public Task CompactErasureRequestsFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, int retain = 32) =>
+        _storage.CompactErasureRequestsFor(eventStore, eventStoreNamespace, identifier, retain);
 
-    EncryptionKeyErasure? ErasureFor(
-        EventStoreName eventStore,
-        EventStoreNamespaceName eventStoreNamespace,
-        EncryptionKeyIdentifier identifier) =>
-        _erasures.GetValueOrDefault(new Scope(eventStore, eventStoreNamespace, identifier));
+    /// <inheritdoc/>
+    public Task<EncryptionKeyErasure?> GetFenceFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier) =>
+        _storage.GetFenceFor(eventStore, eventStoreNamespace, identifier);
 
-    IEnumerable<KeyValuePair<Key, EncryptionKey>> KeysFor(
-        EventStoreName eventStore,
-        EventStoreNamespaceName eventStoreNamespace,
-        EncryptionKeyIdentifier identifier) =>
-        _keys.Where(_ =>
-            _.Key.EventStore == eventStore &&
-            _.Key.EventStoreNamespace == eventStoreNamespace &&
-            _.Key.Identifier == identifier);
+    /// <inheritdoc/>
+    public Task RecordErasureFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier) =>
+        _storage.RecordErasureFor(eventStore, eventStoreNamespace, identifier);
 
-    EncryptionKey? TryGetLatest(
-        EventStoreName eventStore,
-        EventStoreNamespaceName eventStoreNamespace,
-        EncryptionKeyIdentifier identifier) =>
-        KeysFor(eventStore, eventStoreNamespace, identifier)
-            .OrderByDescending(_ => _.Key.Revision.Value)
-            .Select(_ => (EncryptionKey?)_.Value)
-            .FirstOrDefault();
+    /// <inheritdoc/>
+    public Task RecordErasureFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyErasureRequest request) =>
+        _storage.RecordErasureFor(eventStore, eventStoreNamespace, identifier, request);
 
-    EncryptionKeyRevision GetNextRevision(
-        EventStoreName eventStore,
-        EventStoreNamespaceName eventStoreNamespace,
-        EncryptionKeyIdentifier identifier)
-    {
-        var latest = KeysFor(eventStore, eventStoreNamespace, identifier)
-            .Select(_ => _.Key.Revision.Value)
-            .DefaultIfEmpty(0u)
-            .Max();
+    /// <inheritdoc/>
+    public Task DeleteThroughFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, string requestId) =>
+        _storage.DeleteThroughFor(eventStore, eventStoreNamespace, identifier, requestId);
 
-        return latest + 1u;
-    }
+    /// <inheritdoc/>
+    public Task ConfirmErasureFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, string requestId) =>
+        _storage.ConfirmErasureFor(eventStore, eventStoreNamespace, identifier, requestId);
 
-    /// <summary>
-    /// Represents the identity an erasure is recorded against.
-    /// </summary>
-    /// <param name="EventStore">The <see cref="EventStoreName"/> the key belongs to.</param>
-    /// <param name="EventStoreNamespace">The <see cref="EventStoreNamespaceName"/> the key belongs to.</param>
-    /// <param name="Identifier">The <see cref="EncryptionKeyIdentifier"/>.</param>
-    sealed record Scope(
-        EventStoreName EventStore,
-        EventStoreNamespaceName EventStoreNamespace,
-        EncryptionKeyIdentifier Identifier);
+    /// <inheritdoc/>
+    public Task AllowNewKeyFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier) =>
+        _storage.AllowNewKeyFor(eventStore, eventStoreNamespace, identifier);
 
-    /// <summary>
-    /// Represents the composite key for a stored encryption key.
-    /// </summary>
-    /// <param name="EventStore">The <see cref="EventStoreName"/> the key belongs to.</param>
-    /// <param name="EventStoreNamespace">The <see cref="EventStoreNamespaceName"/> the key belongs to.</param>
-    /// <param name="Identifier">The <see cref="EncryptionKeyIdentifier"/>.</param>
-    /// <param name="Revision">The <see cref="EncryptionKeyRevision"/>.</param>
-    sealed record Key(
-        EventStoreName EventStore,
-        EventStoreNamespaceName EventStoreNamespace,
-        EncryptionKeyIdentifier Identifier,
-        EncryptionKeyRevision Revision);
+    /// <inheritdoc/>
+    public Task AllowNewKeyFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, ulong observedVersion, uint observedLifecycle) =>
+        _storage.AllowNewKeyFor(eventStore, eventStoreNamespace, identifier, observedVersion, observedLifecycle);
 }

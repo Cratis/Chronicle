@@ -17,8 +17,8 @@ public class and_the_store_refuses_the_identifier : given.a_pii_manager
 
     void Establish()
     {
-        _keyStore.RecordErasureFor(EventStore, EventStoreNamespace, _hostile).Returns(Task.FromException(new EncryptionKeyIdentifierUnderReview()));
-        _keyStore.DeleteFor(OtherEventStore, EventStoreNamespace, _hostile).Returns(Task.FromException(new StoreUnreachable()));
+        _keyStore.RecordErasureFor(EventStore, EventStoreNamespace, _hostile, Arg.Any<EncryptionKeyErasureRequest>()).Returns(Task.FromException(new EncryptionKeyIdentifierUnderReview()));
+        _keyStore.DeleteThroughFor(OtherEventStore, EventStoreNamespace, _hostile, Arg.Any<string>()).Returns(Task.FromException(new StoreUnreachable()));
     }
 
     async Task Because() => _error = await Catch.Exception(() => _manager.DeleteEncryptionKeyFor(_hostile));

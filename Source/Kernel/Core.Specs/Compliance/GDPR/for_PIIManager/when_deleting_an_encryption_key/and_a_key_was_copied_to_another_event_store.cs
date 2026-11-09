@@ -17,16 +17,17 @@ public class and_a_key_was_copied_to_another_event_store : given.a_pii_manager
 {
     Task Because() => _manager.DeleteEncryptionKeyFor(Identifier);
 
-    [Fact] void should_fence_the_event_store_it_was_asked_for() => _keyStore.Received(1).RecordErasureFor(EventStore, EventStoreNamespace, Identifier);
-    [Fact] void should_fence_the_event_store_the_key_was_copied_into() => _keyStore.Received(1).RecordErasureFor(OtherEventStore, EventStoreNamespace, Identifier);
-    [Fact] void should_erase_the_key_from_the_event_store_it_was_asked_for() => _keyStore.Received(1).DeleteFor(EventStore, EventStoreNamespace, Identifier);
-    [Fact] void should_erase_the_copy_from_the_other_event_store() => _keyStore.Received(1).DeleteFor(OtherEventStore, EventStoreNamespace, Identifier);
+    [Fact] void should_fence_the_event_store_it_was_asked_for() => _keyStore.Received(1).RecordErasureFor(EventStore, EventStoreNamespace, Identifier, Arg.Any<Storage.Compliance.EncryptionKeyErasureRequest>());
+    [Fact] void should_fence_the_event_store_the_key_was_copied_into() => _keyStore.Received(1).RecordErasureFor(OtherEventStore, EventStoreNamespace, Identifier, Arg.Any<Storage.Compliance.EncryptionKeyErasureRequest>());
+    [Fact] void should_erase_the_key_from_the_event_store_it_was_asked_for() => _keyStore.Received(1).DeleteThroughFor(EventStore, EventStoreNamespace, Identifier, Arg.Any<string>());
+    [Fact] void should_erase_the_copy_from_the_other_event_store() => _keyStore.Received(1).DeleteThroughFor(OtherEventStore, EventStoreNamespace, Identifier, Arg.Any<string>());
     [Fact] void should_evict_the_copy_from_every_silo() => _cacheClient.Received(1).Evict(OtherEventStore, EventStoreNamespace, Identifier);
-    [Fact] void should_fence_every_event_store_before_destroying_any_key() => Received.InOrder(() =>
+    [Fact]
+    void should_fence_every_event_store_before_destroying_any_key() => Received.InOrder(() =>
     {
-        _keyStore.RecordErasureFor(EventStore, EventStoreNamespace, Identifier);
-        _keyStore.RecordErasureFor(OtherEventStore, EventStoreNamespace, Identifier);
-        _keyStore.DeleteFor(EventStore, EventStoreNamespace, Identifier);
-        _keyStore.DeleteFor(OtherEventStore, EventStoreNamespace, Identifier);
+        _keyStore.RecordErasureFor(EventStore, EventStoreNamespace, Identifier, Arg.Any<Storage.Compliance.EncryptionKeyErasureRequest>());
+        _keyStore.RecordErasureFor(OtherEventStore, EventStoreNamespace, Identifier, Arg.Any<Storage.Compliance.EncryptionKeyErasureRequest>());
+        _keyStore.DeleteThroughFor(EventStore, EventStoreNamespace, Identifier, Arg.Any<string>());
+        _keyStore.DeleteThroughFor(OtherEventStore, EventStoreNamespace, Identifier, Arg.Any<string>());
     });
 }

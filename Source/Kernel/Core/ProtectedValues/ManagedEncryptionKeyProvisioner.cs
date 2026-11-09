@@ -35,6 +35,10 @@ public class ManagedEncryptionKeyProvisioner(IEncryptionKeyStorage encryptionKey
     {
         if (await encryptionKeyStore.TryGetLatestFor(eventStore, eventStoreNamespace, identifier) is { } existing)
         {
+            var fence = await ReleaseKeys.GetErasureForRelease(encryptionKeyStore, eventStore, eventStoreNamespace, identifier);
+            fence.EnsureCanSave(identifier, existing.Revision, existing.Key);
+            if (fence.Covers(existing)) throw new EncryptionKeyErased(identifier, fence!);
+            ReleaseKeys.Track(encryptionKeyStore, (eventStore, eventStoreNamespace, identifier), existing);
             return existing;
         }
 
@@ -49,7 +53,20 @@ public class ManagedEncryptionKeyProvisioner(IEncryptionKeyStorage encryptionKey
         await gate.WaitAsync();
         try
         {
-            return await encryptionKeyStore.GetOrAddWithRevisionFor(eventStore, eventStoreNamespace, identifier, encryption.GenerateKey());
+            var fence = await ReleaseKeys.GetErasureForRelease(encryptionKeyStore, eventStore, eventStoreNamespace, identifier);
+            if (fence is { NewKeyAllowed: false })
+            {
+                throw new EncryptionKeyErased(identifier, fence);
+            }
+
+            var key = encryption.GenerateKey();
+            fence.EnsureCanProvision(identifier, key);
+            var provisioned = await encryptionKeyStore.GetOrAddWithRevisionFor(eventStore, eventStoreNamespace, identifier, key);
+            fence = await ReleaseKeys.GetErasureForRelease(encryptionKeyStore, eventStore, eventStoreNamespace, identifier);
+            fence.EnsureCanSave(identifier, provisioned.Revision, provisioned.Key);
+            if (fence.Covers(provisioned)) throw new EncryptionKeyErased(identifier, fence!);
+            ReleaseKeys.Track(encryptionKeyStore, (eventStore, eventStoreNamespace, identifier), provisioned);
+            return provisioned;
         }
         finally
         {

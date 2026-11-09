@@ -5,6 +5,7 @@ using Cratis.Arc.EntityFrameworkCore.Concepts;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.Encryption.Migrations;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 
@@ -18,6 +19,8 @@ public sealed class KeyStoreHarness(string provider, Func<Task<string>> createDa
     public EncryptionKeyStorage Storage { get; private set; }
 
     public int Commands => _commands.Count;
+
+    public DbCommandInterceptor Interceptor { get; set; }
 
     public async Task Initialize()
     {
@@ -51,6 +54,7 @@ public sealed class KeyStoreHarness(string provider, Func<Task<string>> createDa
         }
 
         if (_counting) builder.AddInterceptors(_commands);
+        if (Interceptor is not null) builder.AddInterceptors(Interceptor);
 
         return new(builder.Options);
     }

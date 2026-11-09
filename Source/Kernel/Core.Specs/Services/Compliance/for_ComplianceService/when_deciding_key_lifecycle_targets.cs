@@ -24,11 +24,11 @@ public class when_deciding_key_lifecycle_targets : given.a_compliance_boundary
         ShouldNotHaveTouched(EventStoreName.System);
         if (allowNew)
         {
-            await _keyStore.Received(1).AllowNewKeyFor(EventStore, EventStoreNamespace, Identifier);
+            await _keyStore.Received(1).AuthorizeConfirmedSuccessorFor(EventStore, EventStoreNamespace, Identifier);
         }
         else
         {
-            await _keyStore.Received(1).DeleteFor(EventStore, EventStoreNamespace, Identifier);
+            await _keyStore.Received(1).DeleteThroughFor(EventStore, EventStoreNamespace, Identifier, Arg.Any<string>());
             _keys.ShouldContain(OtherEventStore);
             _keys.ShouldContain(ThirdEventStore);
             _keys.ShouldNotContain(EventStore);
@@ -62,8 +62,8 @@ public class when_deciding_key_lifecycle_targets : given.a_compliance_boundary
         (await Operate(allowNew)).ShouldBeEmpty();
         foreach (var store in new[] { EventStore, OtherEventStore, ThirdEventStore })
         {
-            if (allowNew) await _keyStore.Received(1).AllowNewKeyFor(store, EventStoreNamespace, Identifier);
-            else await _keyStore.Received(1).DeleteFor(store, EventStoreNamespace, Identifier);
+            if (allowNew) await _keyStore.Received(1).AuthorizeConfirmedSuccessorFor(store, EventStoreNamespace, Identifier);
+            else await _keyStore.Received(1).DeleteThroughFor(store, EventStoreNamespace, Identifier, Arg.Any<string>());
         }
         ShouldNotHaveTouched(EventStoreName.System);
         ShouldNotHaveTouched("system");
