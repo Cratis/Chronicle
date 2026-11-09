@@ -14,9 +14,12 @@ namespace Cratis.Chronicle.Storage.MongoDB.Schema;
 /// </summary>
 public class MongoDBCapabilityProbe : IMongoDBCapabilityProbe
 {
+    /// <summary>
+    /// The reserved collection name used for capability probes.
+    /// </summary>
     internal const string ProbeCollectionName = "chronicle_capability_probe";
-    static readonly TimeSpan ProbeTimeout = TimeSpan.FromSeconds(10);
-    static readonly string[] UnsupportedMessages = ["not supported yet", "not implemented", "Unrecognized pipeline stage"];
+    static readonly TimeSpan _probeTimeout = TimeSpan.FromSeconds(10);
+    static readonly string[] _unsupportedMessages = ["not supported yet", "not implemented", "Unrecognized pipeline stage"];
 
     readonly Func<CancellationToken, Task> _changeStreams;
     readonly Func<CancellationToken, Task> _collation;
@@ -43,7 +46,7 @@ public class MongoDBCapabilityProbe : IMongoDBCapabilityProbe
     {
         _changeStreams = changeStreams;
         _collation = collation;
-        _timeout = timeout ?? ProbeTimeout;
+        _timeout = timeout ?? _probeTimeout;
     }
 
     /// <inheritdoc/>
@@ -67,21 +70,26 @@ public class MongoDBCapabilityProbe : IMongoDBCapabilityProbe
         if (mode != SchemaMode.Migrate)
         {
             // Best effort without DDL rights: some compatible services accept find collation but reject index collation.
-            using var cursor = await collection.FindAsync(FilterDefinition<BsonDocument>.Empty, new FindOptions<BsonDocument>
-            {
-                Collation = Collation.Simple,
-                Limit = 1,
-                MaxTime = ProbeTimeout
-            }, cancellationToken);
+            using var cursor = await collection.FindAsync(
+                FilterDefinition<BsonDocument>.Empty,
+                new FindOptions<BsonDocument>
+                {
+                    Collation = Collation.Simple,
+                    Limit = 1,
+                    MaxTime = _probeTimeout
+                },
+                cancellationToken);
             await cursor.MoveNextAsync(cancellationToken);
             return;
         }
 
         // Do not touch a pre-existing collection at the reserved name, even if createCollection is idempotent.
-        using var names = await collection.Database.ListCollectionNamesAsync(new ListCollectionNamesOptions
-        {
-            Filter = new BsonDocument("name", ProbeCollectionName)
-        }, cancellationToken);
+        using var names = await collection.Database.ListCollectionNamesAsync(
+            new ListCollectionNamesOptions
+            {
+                Filter = new BsonDocument("name", ProbeCollectionName)
+            },
+            cancellationToken);
         if (await names.AnyAsync(cancellationToken))
         {
             throw new InvalidOperationException("The reserved capability probe collection already exists.");
@@ -90,9 +98,11 @@ public class MongoDBCapabilityProbe : IMongoDBCapabilityProbe
         await collection.Database.CreateCollectionAsync(ProbeCollectionName, cancellationToken: cancellationToken);
         try
         {
-            await collection.Indexes.CreateOneAsync(new CreateIndexModel<BsonDocument>(
-                Builders<BsonDocument>.IndexKeys.Ascending("value"),
-                new CreateIndexOptions { Name = "capability_collation", Collation = Collation.Simple }), cancellationToken: cancellationToken);
+            await collection.Indexes.CreateOneAsync(
+                new CreateIndexModel<BsonDocument>(
+                    Builders<BsonDocument>.IndexKeys.Ascending("value"),
+                    new CreateIndexOptions { Name = "capability_collation", Collation = Collation.Simple }),
+                cancellationToken: cancellationToken);
         }
         finally
         {
@@ -103,7 +113,7 @@ public class MongoDBCapabilityProbe : IMongoDBCapabilityProbe
 
     static async Task Cleanup(IMongoDatabase database, ILogger logger)
     {
-        using var cleanup = new CancellationTokenSource(ProbeTimeout);
+        using var cleanup = new CancellationTokenSource(_probeTimeout);
         try
         {
             await database.DropCollectionAsync(ProbeCollectionName, cleanup.Token);
@@ -129,7 +139,7 @@ public class MongoDBCapabilityProbe : IMongoDBCapabilityProbe
                 return MongoDBCapability.Inconclusive("Change streams require a replica set.");
             }
 
-            if (command.Code is 115 or 238 || UnsupportedMessages.Any(message => command.Message.Contains(message, StringComparison.OrdinalIgnoreCase)))
+            if (command.Code is 115 or 238 || _unsupportedMessages.Any(message => command.Message.Contains(message, StringComparison.OrdinalIgnoreCase)))
             {
                 return MongoDBCapability.Unsupported("The server explicitly rejected the feature.");
             }

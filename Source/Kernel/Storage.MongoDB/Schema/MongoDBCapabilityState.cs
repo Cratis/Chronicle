@@ -11,15 +11,15 @@ public enum MongoDBCapabilityState
     /// <summary>
     /// The operation succeeded.
     /// </summary>
-    Supported,
+    Supported = 0,
 
     /// <summary>
     /// The server explicitly rejected the feature.
     /// </summary>
-    Unsupported,
+    Unsupported = 1,
 
     /// <summary>
     /// The probe could not determine support.
     /// </summary>
-    Inconclusive
+    Inconclusive = 2
 }

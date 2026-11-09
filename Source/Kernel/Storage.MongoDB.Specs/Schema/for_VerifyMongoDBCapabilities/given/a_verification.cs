@@ -18,10 +18,12 @@ public class a_verification : Specification
         _report = new(MongoDBCapability.Supported, MongoDBCapability.Supported);
         _logger = Substitute.For<ILogger<VerifyMongoDBCapabilities>>();
         _logger.IsEnabled(Arg.Any<LogLevel>()).Returns(true);
-        _task = new(_ =>
-        {
-            _inspections++;
-            return Task.FromResult(_report);
-        }, _logger);
+        _task = new(
+            _ =>
+            {
+                _inspections++;
+                return Task.FromResult(_report);
+            },
+            _logger);
     }
 }

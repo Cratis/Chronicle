@@ -5,6 +5,9 @@ using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Schema;
 
+/// <summary>
+/// Structured operational logging for MongoDB capability probes.
+/// </summary>
 internal static partial class MongoDBCapabilityProbeLogging
 {
     /// <summary>
