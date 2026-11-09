@@ -178,9 +178,14 @@ public partial class Reducers : IReducers
     }
 
     /// <inheritdoc/>
-    public async Task Register()
+    public Task Register()
     {
-        lock (ReadModelBuilderOwnership.SyncFor(_eventStore, ReadModelOwnershipSync))
+        if (_registered || _released)
+        {
+            return Task.CompletedTask;
+        }
+
+        WithCurrentServices(services =>
         {
             if (_registered || _released)
             {
@@ -189,13 +194,14 @@ public partial class Reducers : IReducers
 
             _logger.RegisterReducers();
 
-            foreach (var handler in _handlersByModelType.Values.Where(_ => _.IsActive))
+            foreach (var handler in _handlersByModelType.Values.Where(_ => _.IsActive && !_registeredTypes.Contains(_.ReducerType)).ToList())
             {
-                RegisterWhenDispatchable(handler);
+                RegisterWhenDispatchable(handler, services);
+                MarkRegistered(handler.ReducerType);
             }
             _registered = true;
-        }
-        await Task.CompletedTask;
+        });
+        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
@@ -205,17 +211,20 @@ public partial class Reducers : IReducers
     {
         var reducerType = typeof(TReducer);
         var modelType = typeof(TReadModel);
-        lock (ReadModelBuilderOwnership.SyncFor(_eventStore, ReadModelOwnershipSync))
+        IReducerHandler? registered = null;
+        WithCurrentServices(services =>
         {
             ReadModelBuilderOwnership.Validate(_eventStore, _clientArtifacts, Catalog, modelType, reducerType, false);
             var handler = CreateHandlerFor(reducerType, modelType);
-            RegisterWhenDispatchable(handler);
+            RegisterWhenDispatchable(handler, services);
+            MarkRegistered(reducerType);
             var handlersByType = new Dictionary<Type, IReducerHandler>(_handlersByType) { { reducerType, handler } };
             var handlersByModelType = new Dictionary<Type, IReducerHandler>(_handlersByModelType) { { modelType, handler } };
             _handlersByType = handlersByType.ToFrozenDictionary();
             _handlersByModelType = handlersByModelType.ToFrozenDictionary();
-            return Task.FromResult<IReducerHandler>(handler);
-        }
+            registered = handler;
+        });
+        return Task.FromResult(registered ?? throw ReleasedRegistration());
     }
 
     /// <inheritdoc/>
@@ -386,6 +395,10 @@ public partial class Reducers : IReducers
     /// Releases the reducers of an event store whose creation failed and that no caller holds: stops reacting to the
     /// connection lifecycle, closes the observe streams and makes a registration that is still in flight a no-op.
     /// </summary>
+    /// <remarks>
+    /// After release, parameterless <see cref="Register()"/> and reconnect registration are no-ops. Registration
+    /// overloads that return a handler throw <see cref="ObjectDisposedException"/>, including registrations still in flight.
+    /// </remarks>
     internal void Release()
     {
         lock (ReadModelBuilderOwnership.SyncFor(_eventStore, ReadModelOwnershipSync))
@@ -427,6 +440,7 @@ public partial class Reducers : IReducers
     Task DiscoverCore()
     {
         DisconnectHandlers();
+        _registeredTypes = [];
         _handlersByType = _clientArtifacts.Reducers
                             .Where(IsDiscoverable)
                             .ToFrozenDictionary(
@@ -488,6 +502,7 @@ public partial class Reducers : IReducers
             }
 
             _registered = false;
+            MarkRegisteredOnPreviousConnection();
             RecreateHandlersForReconnect();
         }
 
@@ -530,11 +545,11 @@ public partial class Reducers : IReducers
         return true;
     }
 
-    void RegisterWhenDispatchable(IReducerHandler handler)
+    void RegisterWhenDispatchable(IReducerHandler handler, IServices services)
     {
         if (handler.EventTypes.Any())
         {
-            RegisterReducerWhenHostable(handler);
+            RegisterReducerWhenHostable(handler, services);
             return;
         }
 
@@ -556,14 +571,14 @@ public partial class Reducers : IReducers
         }
     }
 
-    void RegisterReducerWhenHostable(IReducerHandler handler)
+    void RegisterReducerWhenHostable(IReducerHandler handler, IServices services)
     {
         ThrowIfDeliveredOverHttp(handler);
         ClientObserverHosting.ThrowIfUnavailable(_eventStore.Connection, "Reducer", () => handler.Id.Value);
-        RegisterReducer(handler);
+        RegisterReducer(handler, services);
     }
 
-    void RegisterReducer(IReducerHandler handler)
+    void RegisterReducer(IReducerHandler handler, IServices services)
     {
         if (GenerationDelivery == Observation.EventGenerationDelivery.Pinned)
         {
@@ -608,7 +623,7 @@ public partial class Reducers : IReducers
 #pragma warning disable CA2000 // Dispose objects before losing scope
         var scheduler = new PartitionedDeliveryScheduler(MaxConcurrentPartitions);
 #pragma warning restore CA2000 // Dispose objects before losing scope
-        var operationsToObserve = _servicesAccessor.Services.Reducers.Observe(messages.Messages, handler.CancellationToken);
+        var operationsToObserve = services.Reducers.Observe(messages.Messages, handler.CancellationToken);
 
         // Re-establish the observation after the stream ends or fails. The kernel can end a reducer's stream without
         // an error; without re-subscribing then, the reducer silently stops observing until the whole client
@@ -628,7 +643,7 @@ public partial class Reducers : IReducers
                     await scheduler.DrainAndDispose();
                     await Task.Delay(ReconnectDelay, handler.CancellationToken);
                     _logger.ReconnectingReducer(handler.Id);
-                    RegisterReducerWhenHostable(handler);
+                    RegisterReducerWhenHostable(handler, _servicesAccessor.Services);
                 }
                 catch (OperationCanceledException) { }
                 catch (Exception ex)

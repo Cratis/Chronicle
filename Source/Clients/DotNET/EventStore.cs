@@ -373,6 +373,10 @@ public partial class EventStore : IEventStore
             Connection.Lifecycle.OnConnected += RegisterAfterConnect;
             Connection.Lifecycle.OnDisconnected += MarkRegistrationAfterDisconnect;
         }
+        else
+        {
+            Connection.Lifecycle.OnConnected += RegisterRecreatedArtifactsAfterReconnect;
+        }
     }
 
     /// <inheritdoc/>

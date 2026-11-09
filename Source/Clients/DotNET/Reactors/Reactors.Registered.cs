@@ -16,12 +16,7 @@ public partial class Reactors
         {
             throw new ConflictingArtifactKind(reactorType, nameof(ExplicitArtifactKind.Reactor), nameof(ExplicitArtifactKind.Reducer));
         }
-        lock (_registerLock)
-        {
-            var registration = CreateRegistrationFor(reactorType);
-            AddRegistration(registration);
-            return Task.FromResult<IReactorHandler>(registration.Handler);
-        }
+        return AddRegistration(() => CreateRegistrationFor(reactorType));
     }
 
     /// <inheritdoc/>

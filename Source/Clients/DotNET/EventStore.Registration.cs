@@ -57,6 +57,37 @@ public partial class EventStore
         await RegisterAll();
     }
 
+    /// <summary>
+    /// Registers the reactors and reducers that were registered explicitly again on a new connection. Both are
+    /// attempted even when the first fails, and every failure is rethrown afterwards.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    /// <exception cref="AggregateException">Thrown when both registrations fail.</exception>
+    async Task RegisterRecreatedArtifactsAfterReconnect()
+    {
+        var failures = new List<Exception>();
+        try
+        {
+            await ((Reactors as Reactors.Reactors)?.RegisterAgainAfterReconnect() ?? Task.CompletedTask);
+        }
+        catch (Exception ex)
+        {
+            failures.Add(ex);
+        }
+
+        try
+        {
+            await ((Reducers as Reducers.Reducers)?.RegisterAgainAfterReconnect() ?? Task.CompletedTask);
+        }
+        catch (Exception ex)
+        {
+            failures.Add(ex);
+        }
+
+        if (failures.Count == 1) ExceptionDispatchInfo.Capture(failures[0]).Throw();
+        if (failures.Count > 1) throw new AggregateException(failures);
+    }
+
     async Task<bool> WasNamespaceRemoved()
     {
         try
