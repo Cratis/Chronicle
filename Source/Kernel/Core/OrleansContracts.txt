@@ -59,8 +59,9 @@ interface [GrainInterfaceType("Cratis.Chronicle.Clients.IConnectedClients")] Cra
   1F595548: RecordObserver(Cratis.Chronicle.Concepts.Clients.ConnectionId, Cratis.Chronicle.Concepts.Observation.ObserverKey) -> Task
   710D6431: ReserveConnection() -> Task
 
-interface [GrainInterfaceType("Cratis.Chronicle.Clients.IConnectionReservation")] Cratis.Chronicle.Clients.IConnectionReservation [Version(1)]
+interface [GrainInterfaceType("Cratis.Chronicle.Clients.IConnectionReservation")] Cratis.Chronicle.Clients.IConnectionReservation [Version(2)]
   8FE2642A: Claim(Cratis.Chronicle.Clients.ConnectionOwner, Orleans.Runtime.SiloAddress, System.Guid, System.TimeSpan) -> Task<bool>
+  70566633: IsHeldBy(Cratis.Chronicle.Clients.ConnectionOwner) -> Task<bool>
   38462836: Release(Cratis.Chronicle.Clients.ConnectionOwner, System.Guid) -> Task
 
 class [GrainType("encryptionkeycachegrainservice")] Cratis.Chronicle.Compliance.EncryptionKeyCacheGrainService

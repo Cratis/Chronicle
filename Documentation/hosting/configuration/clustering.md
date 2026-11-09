@@ -18,6 +18,8 @@ Clustering configuration controls how multiple Chronicle Server nodes form one O
 > Unsupported combinations fail at startup: `Sql` requires `MsSql` or `PostgreSql` storage, and `MongoDB`
 > requires MongoDB storage. SQLite and in-memory storage do not support multi-node clustering.
 
+Clients behind a load balancer do not need sticky routing between silos; see [connection lifecycle](../../building-a-client/clustering-and-connection-lifecycle#several-silos-behind-a-load-balancer) for ownership checks and retry behavior.
+
 ## Use cases
 
 - **Horizontal scaling**: Run multiple nodes as one cluster; separate event ingestion (event sequences) from event processing (observers) to scale independently based on load
