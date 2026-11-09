@@ -62,7 +62,8 @@ jobs:
 
       - uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: "10.0.x"
+          dotnet-version: 11.0.x
+          dotnet-quality: preview
 
       # Kept as its own step: when the build and the run share one step, a build failure is reported as a
       # successful step and only surfaces later as "no benchmark result was found".

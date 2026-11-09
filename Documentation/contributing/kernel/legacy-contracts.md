@@ -54,7 +54,7 @@ Do not lower selector counts or remove planted proofs merely to get a green chec
 
 ## Run the evaluator locally
 
-Use .NET 10 and saved inputs from the same build. `issues.json` is an array of objects with `number`, uppercase `state`, nullable uppercase `stateReason`, and `isPullRequest`. `jobs.json` maps upstream job IDs to `result` and nullable `outputs`; it has the shape of GitHub's `toJSON(needs)`. Results are lowercase, such as `success` or `skipped`. The TRX directory can contain nested project and artifact directories.
+Use .NET 11 and saved inputs from the same build. `issues.json` is an array of objects with `number`, uppercase `state`, nullable uppercase `stateReason`, and `isPullRequest`. `jobs.json` maps upstream job IDs to `result` and nullable `outputs`; it has the shape of GitHub's `toJSON(needs)`. Results are lowercase, such as `success` or `skipped`. The TRX directory can contain nested project and artifact directories.
 
 From the repository root:
 

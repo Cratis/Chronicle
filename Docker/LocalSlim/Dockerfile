@@ -9,7 +9,9 @@
 # the layout parallels Docker/DevelopmentSlim so the local build mirrors the
 # published `cratis/chronicle:*-development-slim` image.
 ####################################
-FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble
+# .NET 11 is in release candidate: the floating preview tag below is unverified (no registry access when edited).
+# GA: switch to 11.0-noble (and 11.0-noble-chiseled-extra) before any image ships from this file.
+FROM mcr.microsoft.com/dotnet/aspnet:11.0-preview-noble
 
 # Tini propagates signals to the kernel process cleanly so docker stop works
 # without orphaning the .NET host. ca-certificates is needed for HTTPS pulls

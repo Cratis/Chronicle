@@ -40,7 +40,7 @@ function graph(projectPath = v3Projects[0]) {
     const packages = [...runnerPackages, ...(!shipping ? ['xunit.v3.mtp-off'] : [])];
     const libraries = Object.fromEntries(packages.map(id => [`${id}/1.2.3`, { type: 'package' }]));
     return {
-        evaluated: { Properties: { IsTestProject: String(!shipping), OutputType: shipping ? 'Library' : 'Exe', TargetFramework: 'net10.0', TargetFrameworks: '', AssemblyName: 'Actual.Output', TargetPath: '/built/Actual.Output.dll' }, Items: { PackageReference: packages.map(Identity => ({ Identity })), PackageVersion: packages.map(Identity => ({ Identity, Version: '1.2.3' })) } },
+        evaluated: { Properties: { IsTestProject: String(!shipping), OutputType: shipping ? 'Library' : 'Exe', TargetFramework: 'net11.0', TargetFrameworks: '', AssemblyName: 'Actual.Output', TargetPath: '/built/Actual.Output.dll' }, Items: { PackageReference: packages.map(Identity => ({ Identity })), PackageVersion: packages.map(Identity => ({ Identity, Version: '1.2.3' })) } },
         assets: { libraries }, deps: { libraries: structuredClone(libraries) }
     };
 }
@@ -58,7 +58,7 @@ test('exact 32 executable v3 + 3 shipping boundary, not a Storage prefix heurist
         assert.equal(selected.runner, 'v3');
         assert.equal(selected.assemblyName, 'Actual.Output');
         assert.equal(selected.dll, '/built/Actual.Output.dll');
-        assert.equal(selected.tfm, 'net10.0');
+        assert.equal(selected.tfm, 'net11.0');
         assert.deepEqual(selected.coverageRoots, p === benchmarkProject ? ['Source', 'Benchmarks/Chronicle.Benchmarks.Clustering'] : ['Source']);
     }
 });
@@ -127,7 +127,7 @@ test('selection rejects mixed cores, missing assets, stale versions and local fl
         g => { g.evaluated.Items.PackageReference = []; },
         g => { g.evaluated.Items.PackageVersion[0].Version = '9.0.0'; },
         g => { g.evaluated.Properties.IsTestProject = 'false'; },
-        g => { g.evaluated.Properties.TargetFrameworks = 'net8.0;net10.0'; },
+        g => { g.evaluated.Properties.TargetFrameworks = 'net10.0;net11.0'; },
         g => { g.evaluated.Properties.TargetPath = ''; },
         g => { g.evaluated.Properties.OutputType = 'Library'; },
         g => { delete g.evaluated.Properties.OutputType; }
@@ -171,12 +171,12 @@ test('TRX preserves escaped theory/display identities and definition linkage', (
 test('coverage fails closed for empty/malformed/missing/fixture-only/zero-hit reports', async () => {
     const { root } = await fixture();
     for (const segment of ['obj', 'bin']) {
-        await mkdir(path.join(root, 'Source/Library', segment, 'Release/net10.0'), { recursive: true });
-        await writeFile(path.join(root, 'Source/Library', segment, 'Release/net10.0/Generated.cs'), '// generated mock source');
+        await mkdir(path.join(root, 'Source/Library', segment, 'Release/net11.0'), { recursive: true });
+        await writeFile(path.join(root, 'Source/Library', segment, 'Release/net11.0/Generated.cs'), '// generated mock source');
     }
     assert.equal(await validateCoverage(coverage(), root), 'Source/Library/Decision.cs');
     assert.equal(await validateCoverage(coverage('/agent/repo/Source/Library/Decision.cs'), root), 'Source/Library/Decision.cs');
-    for (const bad of ['', '<coverage><packages /></coverage>', '<coverage>', coverage('Source/Library.Specs/Test.cs'), coverage('Integration/Api/Test.cs'), coverage('Source/Library/given/Test.cs'), coverage('Source/Library/Decision.cs', '0'), coverage('Source/../outside.cs'), coverage('Source/Library/Missing.cs'), coverage('Source/Library/obj/Release/net10.0/Generated.cs'), coverage('/agent/repo/Source/Library/bin/Release/net10.0/Generated.cs'), coverage('Source\\Library\\obj\\Release\\net10.0\\Generated.cs')]) await assert.rejects(validateCoverage(bad, root));
+    for (const bad of ['', '<coverage><packages /></coverage>', '<coverage>', coverage('Source/Library.Specs/Test.cs'), coverage('Integration/Api/Test.cs'), coverage('Source/Library/given/Test.cs'), coverage('Source/Library/Decision.cs', '0'), coverage('Source/../outside.cs'), coverage('Source/Library/Missing.cs'), coverage('Source/Library/obj/Release/net11.0/Generated.cs'), coverage('/agent/repo/Source/Library/bin/Release/net11.0/Generated.cs'), coverage('Source\\Library\\obj\\Release\\net11.0\\Generated.cs')]) await assert.rejects(validateCoverage(bad, root));
 });
 
 test('benchmark production hits are allowed only for the benchmark selection, never generated/spec hits', async () => {

@@ -20,7 +20,9 @@ on:
         default: '0.0.0'
 
 env:
-  DOTNET_VERSION: "10.0.x"
+  # GA follow-up: drop DOTNET_QUALITY, set global.json to 11.0.100 and remove allowPrerelease.
+  DOTNET_VERSION: "11.0.x"
+  DOTNET_QUALITY: preview
   PROTOC_VERSION: "28.3"
 
 jobs:
@@ -49,6 +51,7 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
+          dotnet-quality: ${{ env.DOTNET_QUALITY }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -92,7 +95,7 @@ jobs:
       - name: Generate proto files
         if: inputs.protos-artifact == ''
         run: |
-          CONTRACTS_DLL="Source/Kernel/Contracts/bin/Release/net10.0/Cratis.Chronicle.Contracts.dll"
+          CONTRACTS_DLL="Source/Kernel/Contracts/bin/Release/net11.0/Cratis.Chronicle.Contracts.dll"
           dotnet run \
             --project Source/Tools/ProtoGenerator/ProtoGenerator.csproj -- \
             "$CONTRACTS_DLL" \

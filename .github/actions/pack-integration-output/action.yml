@@ -19,7 +19,7 @@ runs:
       run: |
         set -euo pipefail
         for project in Client Kernel Clustering; do
-          test -d "Integration/$project/bin/Release/net10.0" || { echo "Missing build output for Integration/$project" >&2; exit 1; }
+          test -d "Integration/$project/bin/Release/net11.0" || { echo "Missing build output for Integration/$project" >&2; exit 1; }
           tar -I 'zstd -T0' -cf "${PREFIX}-${project,,}.tar.zst" "Integration/$project/bin"
         done
 

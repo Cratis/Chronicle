@@ -31,7 +31,9 @@ on:
         value: ${{ jobs.check-compatibility.outputs.breaking-changes }}
 
 env:
-  DOTNET_VERSION: "10.0.x"
+  # GA follow-up: drop DOTNET_QUALITY, set global.json to 11.0.100 and remove allowPrerelease.
+  DOTNET_VERSION: "11.0.x"
+  DOTNET_QUALITY: preview
 
 jobs:
   check-compatibility:
@@ -63,6 +65,7 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
+          dotnet-quality: ${{ env.DOTNET_QUALITY }}
 
       - name: Generate current schema
         working-directory: current

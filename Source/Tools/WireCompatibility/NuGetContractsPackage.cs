@@ -21,7 +21,7 @@ public sealed class NuGetContractsPackage(HttpClient client) : IDisposable
     const string PackageId = "cratis.chronicle.contracts";
     const string FlatContainer = "https://api.nuget.org/v3-flatcontainer";
 
-    static readonly string[] _preferredTargetFrameworks = ["net10.0", "net9.0", "net8.0"];
+    static readonly string[] _preferredTargetFrameworks = ["net11.0", "net10.0", "net9.0", "net8.0"];
 
     readonly List<string> _temporaryDirectories = [];
 

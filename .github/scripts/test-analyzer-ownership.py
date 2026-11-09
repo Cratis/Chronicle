@@ -86,7 +86,7 @@ class AnalyzerOwnership(unittest.TestCase):
     def test_packaging_build_skips_analyzers_only_for_the_owned_framework(self):
         run = without_comments(step_run(self.build, "dotnet-build", "Build client packages for every shipped framework"))
         self.assertEqual(2, run.count("dotnet build"))
-        self.assertEqual(2, run.count("-p:SkipAnalyzersForTargetFramework=net10.0"))
+        self.assertEqual(2, run.count("-p:SkipAnalyzersForTargetFramework=net11.0"))
 
     def test_framework_skip_is_scoped_to_that_framework(self):
         targets = (ROOT / "Directory.Build.targets").read_text(encoding="utf-8")

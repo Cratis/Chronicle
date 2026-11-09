@@ -5,9 +5,9 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  DOTNET8_VERSION: "8.0.410"
-  DOTNET9_VERSION: "9.0.x"
-  DOTNET_VERSION: "10.0.x"
+  # GA follow-up: drop DOTNET_QUALITY, set global.json to 11.0.100 and remove allowPrerelease.
+  DOTNET_VERSION: "11.0.x"
+  DOTNET_QUALITY: preview
 
 on:
   workflow_dispatch:
@@ -48,10 +48,8 @@ jobs:
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: |
-            ${{ env.DOTNET8_VERSION }}
-            ${{ env.DOTNET9_VERSION }}
-            ${{ env.DOTNET_VERSION }}
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+          dotnet-quality: ${{ env.DOTNET_QUALITY }}
 
       # Shared org cache: pull requests restore only; the nightly build and default-branch runs save (Cratis/Workflows#164).
       - name: Cache NuGet packages

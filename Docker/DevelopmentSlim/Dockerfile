@@ -4,7 +4,9 @@
 ####################################
 # Cratis Chronicle Server - Preparation stage
 ####################################
-FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble AS prep
+# .NET 11 is in release candidate: the floating preview tag below is unverified (no registry access when edited).
+# GA: switch to 11.0-noble (and 11.0-noble-chiseled-extra) before any image ships from this file.
+FROM mcr.microsoft.com/dotnet/aspnet:11.0-preview-noble AS prep
 
 WORKDIR /app
 
@@ -19,7 +21,7 @@ RUN ./copy-server-files.sh && rm -f appsettings.Development.json
 ####################################
 # Cratis Chronicle Server - Runtime stage
 ####################################
-FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble
+FROM mcr.microsoft.com/dotnet/aspnet:11.0-preview-noble
 
 # Install tools and tini
 RUN apt-get update \

@@ -88,7 +88,7 @@ Run the suite with `dotnet test` from the repository root. `--configuration Rele
 dotnet test Integration/Client/Client.csproj \
     --logger "console;verbosity=normal" \
     --configuration Release \
-    --framework net10.0 \
+    --framework net11.0 \
     -- inprocess mongodb
 ```
 
@@ -180,7 +180,7 @@ You can run the same configurations from VS Code by creating a dedicated test la
     "test",
     "${workspaceFolder}/Integration/Client/Client.csproj",
     "--framework",
-    "net10.0",
+    "net11.0",
     "--configuration",
     "Debug",
     "--",
@@ -226,10 +226,10 @@ CHRONICLE_BACKUP_ENABLED=true dotnet test Integration/Client/Client.csproj \
 
 ### Where backups are stored
 
-Backups are written to a `backups/` directory that sits alongside the compiled test binary. For a Debug build targeting `net10.0`, that path is:
+Backups are written to a `backups/` directory that sits alongside the compiled test binary. For a Debug build targeting `net11.0`, that path is:
 
 ```bash
-Integration/Client/bin/Debug/net10.0/backups/
+Integration/Client/bin/Debug/net11.0/backups/
 ```
 
 The directory is created automatically during fixture initialization — you do not need to create it yourself.

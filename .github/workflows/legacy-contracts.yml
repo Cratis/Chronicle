@@ -37,7 +37,8 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: "10.0.x"
+          dotnet-version: 11.0.x
+          dotnet-quality: preview
 
       # Deliberately build only this small tool. The proofs already ran upstream.
       - name: Build the matrix evaluator
@@ -49,7 +50,7 @@ jobs:
       - name: Prove the matrix evaluator rejects planted failures
         run: |
           set -euo pipefail
-          dotnet Source/Tools/LegacyContracts/bin/Release/net10.0/LegacyContracts.dll --self-test
+          dotnet Source/Tools/LegacyContracts/bin/Release/net11.0/LegacyContracts.dll --self-test
 
       - name: Fetch owner issue states
         env:
@@ -87,7 +88,7 @@ jobs:
         run: |
           set -euo pipefail
           printf '%s\n' "$JOB_RESULTS" > legacy-contract-inputs/jobs.json
-          dotnet Source/Tools/LegacyContracts/bin/Release/net10.0/LegacyContracts.dll \
+          dotnet Source/Tools/LegacyContracts/bin/Release/net11.0/LegacyContracts.dll \
             --manifest .github/legacy-contracts.json \
             --issues legacy-contract-inputs/issues.json \
             --jobs legacy-contract-inputs/jobs.json \

@@ -254,6 +254,6 @@ test('the proxy job exact steps run Node fixtures, then isolated Debug generatio
 
 test('the proxy check is a required prerequisite of the specs aggregate and the Release build never generates proxies', () => {
     const text = readFileSync(path.join(root, '.github/workflows/dotnet-build.yml'), 'utf8');
-    assert.ok(text.includes('needs: [already-ran, wire-compatibility, grain-compatibility, workbench-proxies, specs-other, specs-sql]'));
+    assert.ok(text.includes('needs: [already-ran, wire-compatibility, grain-compatibility, workbench-proxies, specs-other, specs-sql, specs-net10]'));
     assert.ok(text.includes('run: dotnet build --configuration Release -p:DisableProxyGenerator=true -p:DisableDockerBuild=true -p:ForceCodeGeneration=true'));
 });

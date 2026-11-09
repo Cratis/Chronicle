@@ -8,9 +8,12 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  DOTNET8_VERSION: "8.0.410"
-  DOTNET9_VERSION: "9.0.x"
-  DOTNET_VERSION: "10.0.x"
+  # .NET 11 builds everything. .NET 10 is installed as well for the net10 client-library lane and the net10 packaging asset.
+  # GA follow-up: drop DOTNET_QUALITY, set global.json to 11.0.100 and remove allowPrerelease.
+  DOTNET_VERSION: |
+    10.0.x
+    11.0.x
+  DOTNET_QUALITY: preview
   CRATIS_CHRONICLE_LOCAL_IMAGE: "ghcr.io/cratis/chronicle:${{ github.sha }}"
 
 on:
@@ -114,6 +117,7 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
+          dotnet-quality: ${{ env.DOTNET_QUALITY }}
       # Shared org cache: pull requests restore only; the nightly build and default-branch runs save (Cratis/Workflows#164).
       - name: Cache NuGet packages
         uses: Cratis/Workflows/.github/actions/dotnet-cache@main
@@ -221,10 +225,8 @@ jobs:
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: |
-            ${{ env.DOTNET8_VERSION }}
-            ${{ env.DOTNET9_VERSION }}
-            ${{ env.DOTNET_VERSION }}
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+          dotnet-quality: ${{ env.DOTNET_QUALITY }}
 
       - name: Spec the gRPC generator targeting
         run: node --test .github/scripts/test-grpc-generator-targeting.mjs
@@ -281,23 +283,23 @@ jobs:
       - name: Assert the build carries the stamped version
         run: |
           set -euo pipefail
-          for dll in Source/Kernel/Contracts/bin/Release/net10.0/Cratis.Chronicle.Contracts.dll Source/Kernel/Server/bin/Release/net10.0/Cratis.Chronicle.Server.dll; do
+          for dll in Source/Kernel/Contracts/bin/Release/net11.0/Cratis.Chronicle.Contracts.dll Source/Kernel/Server/bin/Release/net11.0/Cratis.Chronicle.Server.dll; do
             grep -a -F -q -- "$CRATIS_CHRONICLE_BUILD_VERSION" "$dll" || { echo "::error::$dll does not carry $CRATIS_CHRONICLE_BUILD_VERSION"; exit 1; }
           done
 
-      # The build above is net10.0 only. The client packages ship net8.0 and net9.0 as well, and that multi-target
-      # happens only under IsPackaging - which until now nothing ran before publish. So an API newer than net8.0
+      # The build above is net11.0 only. The client packages ship net10.0 as well, and that multi-target
+      # happens only under IsPackaging - which until now nothing ran before publish. So an API newer than net10.0
       # passed every check on a pull request and failed while the release was being cut, with the merge already
       # done. This builds what publish packs, on the frameworks it packs them for. The SDKs are already installed
-      # above for exactly this reason. The Build step above already analyzes net10.0 with warnings as errors, so
-      # analyzers are skipped for that framework here (generators still run) and own net8.0 and net9.0 only.
+      # above for exactly this reason. The Build step above already analyzes net11.0 with warnings as errors, so
+      # analyzers are skipped for that framework here (generators still run) and own net10.0 only.
       - name: Build client packages for every shipped framework
         run: |
           set -e
           find ./Source/Clients -name "*.csproj" ! -name "*.Specs.csproj" -print0 | while IFS= read -r -d '' project; do
-            dotnet build "$project" --configuration Release -p:IsPackaging=true -p:SkipAnalyzersForTargetFramework=net10.0 -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
+            dotnet build "$project" --configuration Release -p:IsPackaging=true -p:SkipAnalyzersForTargetFramework=net11.0 -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
           done
-          dotnet build ./Source/Kernel/Contracts/Contracts.csproj --configuration Release -p:IsPackaging=true -p:SkipAnalyzersForTargetFramework=net10.0 -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
+          dotnet build ./Source/Kernel/Contracts/Contracts.csproj --configuration Release -p:IsPackaging=true -p:SkipAnalyzersForTargetFramework=net11.0 -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
 
       # Fail closed before any pack/image/artifact collection. The verifier is stdlib-only, outside
       # the solution and package filters, and all of its own outputs stay outside the checkout.
@@ -307,7 +309,7 @@ jobs:
           node .github/scripts/verify-rolling-delivery-build.mjs
           dotnet build .github/scripts/rolling-delivery-il/RollingDeliveryIl.csproj -c Release -warnaserror \
             --artifacts-path "$RUNNER_TEMP/rolling-il-verifier" -o "$RUNNER_TEMP/rolling-il-tool"
-          for framework in net8.0 net9.0 net10.0; do
+          for framework in net10.0 net11.0; do
             dotnet "$RUNNER_TEMP/rolling-il-tool/RollingDeliveryIl.dll" \
               "Source/Clients/DotNET/bin/Release/$framework/Cratis.Chronicle.dll"
           done
@@ -332,7 +334,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p Source/Kernel/Server/out
-          cp -r Source/Kernel/Server/bin/Release/net10.0/. Source/Kernel/Server/out/
+          cp -r Source/Kernel/Server/bin/Release/net11.0/. Source/Kernel/Server/out/
           docker build -t "chronicle-dockerfile-check:${{ github.sha }}" -f Docker/Local/Dockerfile .
 
       # Integration runs need an image to share with their shards. The existing push guard
@@ -358,7 +360,7 @@ jobs:
         run: |
           set -euo pipefail
           for project in Source/Kernel/Core.Specs Source/Kernel/Server Integration/MongoDB Integration/Api; do
-            test -d "$project/bin/Release/net10.0" || { echo "Missing build output for $project" >&2; exit 1; }
+            test -d "$project/bin/Release/net11.0" || { echo "Missing build output for $project" >&2; exit 1; }
           done
           find . -type d -name bin -not -path '*/node_modules/*' -prune -print0 | tar --null -I 'zstd -T0' -cf build-output-release.tar.zst -T -
 
@@ -400,10 +402,8 @@ jobs:
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: |
-            ${{ env.DOTNET8_VERSION }}
-            ${{ env.DOTNET9_VERSION }}
-            ${{ env.DOTNET_VERSION }}
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+          dotnet-quality: ${{ env.DOTNET_QUALITY }}
 
       # Shared org cache: pull requests restore only; the nightly build and default-branch runs save (Cratis/Workflows#164).
       - name: Cache NuGet packages
@@ -440,7 +440,7 @@ jobs:
         run: |
           set -euo pipefail
           for project in Integration/Client Integration/Kernel Integration/Clustering Integration/SqlClustering; do
-            test -d "$project/bin/Release/net10.0" || { echo "Missing build output for $project" >&2; exit 1; }
+            test -d "$project/bin/Release/net11.0" || { echo "Missing build output for $project" >&2; exit 1; }
           done
           find . -type d -name bin -not -path '*/node_modules/*' -prune -print0 | tar --null -I 'zstd -T0' -cf build-output-development.tar.zst -T -
 
@@ -471,10 +471,8 @@ jobs:
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: |
-            ${{ env.DOTNET8_VERSION }}
-            ${{ env.DOTNET9_VERSION }}
-            ${{ env.DOTNET_VERSION }}
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+          dotnet-quality: ${{ env.DOTNET_QUALITY }}
 
       # Shared org cache: pull requests restore only; the nightly build and default-branch runs save (Cratis/Workflows#164).
       - name: Cache NuGet packages
@@ -511,7 +509,7 @@ jobs:
         run: |
           set -euo pipefail
           for project in Integration/Client Integration/Kernel Integration/Clustering Integration/SqlClustering; do
-            test -d "$project/bin/Release/net10.0" || { echo "Missing build output for $project" >&2; exit 1; }
+            test -d "$project/bin/Release/net11.0" || { echo "Missing build output for $project" >&2; exit 1; }
           done
           find . -type d -name bin -not -path '*/node_modules/*' -prune -print0 | tar --null -I 'zstd -T0' -cf build-output-development.tar.zst -T -
 
@@ -541,10 +539,8 @@ jobs:
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: |
-            ${{ env.DOTNET8_VERSION }}
-            ${{ env.DOTNET9_VERSION }}
-            ${{ env.DOTNET_VERSION }}
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+          dotnet-quality: ${{ env.DOTNET_QUALITY }}
 
       - name: Download Release build output
         uses: actions/download-artifact@v4
@@ -641,6 +637,7 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
+          dotnet-quality: ${{ env.DOTNET_QUALITY }}
 
       - name: Download Release build output
         uses: actions/download-artifact@v4
@@ -679,6 +676,54 @@ jobs:
           path: ./coverage-results/
           retention-days: 1
 
+  # The client libraries still ship a net10.0 asset (TargetFrameworks net10.0;net11.0 under IsPackaging).
+  # The whole-solution build and the other spec jobs run on net11.0, so this lane builds and runs the client
+  # library specs on net10.0 (ChronicleTfm is read by the root Directory.Build.props) to prove that asset works.
+  specs-net10:
+    if: needs.already-ran.outputs.skip != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    needs: [already-ran]
+    env:
+      ChronicleTfm: net10.0
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .Net
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+          dotnet-quality: ${{ env.DOTNET_QUALITY }}
+
+      - name: Add GitHub Package Registry to NuGet
+        run: |
+          dotnet nuget update source github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text || \
+          dotnet nuget add source --name github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text https://nuget.pkg.github.com/cratis/index.json
+
+      - name: Restore pinned coverage tool
+        run: dotnet tool restore
+
+      - name: Build client library specs on net10.0
+        run: |
+          set -euo pipefail
+          for project in DotNET AspNetCore Aspire Connections DotNET.CodeAnalysis; do
+            dotnet build "Source/Clients/$project.Specs/$project.Specs.csproj" --configuration Release -p:DisableProxyGenerator=true -p:DisableDockerBuild=true -p:DisableProtoGeneration=true
+          done
+
+      - name: Run client library specs on net10.0
+        run: |
+          set -euo pipefail
+          for project in DotNET AspNetCore Aspire Connections DotNET.CodeAnalysis; do
+            node .github/scripts/run-spec-project.mjs --project "Source/Clients/$project.Specs/$project.Specs.csproj" --settings specs.runsettings --filter 'FullyQualifiedName!~Cratis.Chronicle.Integration&FullyQualifiedName!~Cratis.Chronicle.Kernel.Integration&FullyQualifiedName!~Cratis.Chronicle.Storage.Sql.' --results-directory "./net10-results/$project"
+          done
+
+      - name: Assert specs ran
+        uses: ./.github/actions/assert-tests-ran
+        with:
+          path: ./net10-results
+          name: The net10.0 client library specs
+
   legacy-contracts:
     # Report red upstream jobs instead of skipping the gate, but not for a cancelled run.
     if: ${{ needs.already-ran.outputs.skip != 'true' && (!cancelled()) }}
@@ -695,7 +740,7 @@ jobs:
   # A failed, skipped or cancelled shard must never turn this aggregate green.
   specs:
     if: ${{ needs.already-ran.outputs.skip != 'true' && (always()) }}
-    needs: [already-ran, wire-compatibility, grain-compatibility, workbench-proxies, specs-other, specs-sql]
+    needs: [already-ran, wire-compatibility, grain-compatibility, workbench-proxies, specs-other, specs-sql, specs-net10]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -709,7 +754,8 @@ jobs:
           PROXIES_RESULT: ${{ needs.workbench-proxies.result }}
           OTHER_RESULT: ${{ needs.specs-other.result }}
           SQL_RESULT: ${{ needs.specs-sql.result }}
-        run: test "$WIRE_RESULT" = success && test "$GRAIN_RESULT" = success && test "$PROXIES_RESULT" = success && test "$OTHER_RESULT" = success && test "$SQL_RESULT" = success
+          NET10_RESULT: ${{ needs.specs-net10.result }}
+        run: test "$WIRE_RESULT" = success && test "$GRAIN_RESULT" = success && test "$PROXIES_RESULT" = success && test "$OTHER_RESULT" = success && test "$SQL_RESULT" = success && test "$NET10_RESULT" = success
 
       - name: Checkout shard contract
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -769,10 +815,8 @@ jobs:
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: |
-            ${{ env.DOTNET8_VERSION }}
-            ${{ env.DOTNET9_VERSION }}
-            ${{ env.DOTNET_VERSION }}
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+          dotnet-quality: ${{ env.DOTNET_QUALITY }}
 
       - name: Download Release build output
         uses: actions/download-artifact@v4
@@ -793,7 +837,7 @@ jobs:
         run: |
           rm -rf Source/Kernel/Server/out
           mkdir -p Source/Kernel/Server/out
-          cp -r Source/Kernel/Server/bin/Release/net10.0/. Source/Kernel/Server/out/
+          cp -r Source/Kernel/Server/bin/Release/net11.0/. Source/Kernel/Server/out/
           docker build -t "${{ env.CRATIS_CHRONICLE_LOCAL_IMAGE }}" -f Docker/Local/Dockerfile .
 
       - name: Restore API runner evaluation inputs
@@ -832,10 +876,8 @@ jobs:
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: |
-            ${{ env.DOTNET8_VERSION }}
-            ${{ env.DOTNET9_VERSION }}
-            ${{ env.DOTNET_VERSION }}
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+          dotnet-quality: ${{ env.DOTNET_QUALITY }}
 
       - name: Download Release build output
         uses: actions/download-artifact@v4
@@ -992,6 +1034,7 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
+          dotnet-quality: ${{ env.DOTNET_QUALITY }}
 
       - name: Download all coverage artifacts
         uses: actions/download-artifact@v4
@@ -1101,6 +1144,7 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
+          dotnet-quality: ${{ env.DOTNET_QUALITY }}
 
       - name: Download Release build output
         uses: actions/download-artifact@v4

@@ -25,7 +25,9 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  DOTNET_VERSION: "10.0.x"
+  # GA follow-up: drop DOTNET_QUALITY, set global.json to 11.0.100 and remove allowPrerelease.
+  DOTNET_VERSION: "11.0.x"
+  DOTNET_QUALITY: preview
 
 permissions: {}
 
@@ -83,6 +85,7 @@ jobs:
         uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
+          dotnet-quality: ${{ env.DOTNET_QUALITY }}
 
       # Force the real proto generator even with cached outputs. The result must equal what the tag committed, so a
       # hand-patched or stale generated file cannot reach the wheel.

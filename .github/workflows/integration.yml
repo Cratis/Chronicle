@@ -125,14 +125,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # The integration test projects target net10.0 only (Directory.Build.props),
-      # and these jobs only run already-built net10.0 assemblies, so installing the
-      # 8.0/9.0 SDKs on every matrix shard is pure setup overhead. Multi-targeting
+      # The integration test projects target net11.0 only (Directory.Build.props),
+      # and these jobs only run already-built net11.0 assemblies, so installing the
+      # 10.0 SDK on every matrix shard is pure setup overhead. Multi-targeting
       # only happens during `dotnet pack` in the publish workflows.
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 10.0.x
+          dotnet-version: 11.0.x
+          dotnet-quality: preview
 
       - name: Download build output
         uses: actions/download-artifact@v4
@@ -248,14 +249,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # The integration test projects target net10.0 only (Directory.Build.props),
-      # and these jobs only run already-built net10.0 assemblies, so installing the
-      # 8.0/9.0 SDKs on every matrix shard is pure setup overhead. Multi-targeting
+      # The integration test projects target net11.0 only (Directory.Build.props),
+      # and these jobs only run already-built net11.0 assemblies, so installing the
+      # 10.0 SDK on every matrix shard is pure setup overhead. Multi-targeting
       # only happens during `dotnet pack` in the publish workflows.
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 10.0.x
+          dotnet-version: 11.0.x
+          dotnet-quality: preview
 
       - name: Download build output
         uses: actions/download-artifact@v4
@@ -330,7 +332,8 @@ jobs:
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 10.0.x
+          dotnet-version: 11.0.x
+          dotnet-quality: preview
 
       - name: Download build output
         uses: actions/download-artifact@v4
@@ -427,7 +430,8 @@ jobs:
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 10.0.x
+          dotnet-version: 11.0.x
+          dotnet-quality: preview
 
       - name: Download build output
         uses: actions/download-artifact@v4
@@ -445,7 +449,7 @@ jobs:
           set -euo pipefail
           line=$(python3 .github/scripts/derive-build-version.py)
           echo "$line" >> "$GITHUB_ENV"
-          if ! grep -a -F -q -- "${line#*=}" Source/Clients/DotNET/bin/Release/net10.0/Cratis.Chronicle.dll; then
+          if ! grep -a -F -q -- "${line#*=}" Source/Clients/DotNET/bin/Release/net11.0/Cratis.Chronicle.dll; then
             echo "::error::Downloaded client does not contain the stamped build version ${line#*=}."
             exit 1
           fi
@@ -475,7 +479,7 @@ jobs:
             -p:Version="$CRATIS_CHRONICLE_BUILD_VERSION" -p:EnableRollingDeliveryDiagnostics=true \
             --artifacts-path "$RUNNER_TEMP/rolling-delivery-diagnostics"
           dotnet "$RUNNER_TEMP/rolling-il-tool/RollingDeliveryIl.dll" \
-            Source/Clients/DotNET/bin/Release/net10.0/Cratis.Chronicle.dll \
+            Source/Clients/DotNET/bin/Release/net11.0/Cratis.Chronicle.dll \
             --enabled "$RUNNER_TEMP/rolling-delivery-diagnostics/bin/DotNET/release/Cratis.Chronicle.dll"
           grep -a -F -q -- "$CRATIS_CHRONICLE_BUILD_VERSION" "$RUNNER_TEMP/rolling-delivery-diagnostics/bin/DotNET/release/Cratis.Chronicle.dll"
 
@@ -487,7 +491,7 @@ jobs:
         continue-on-error: true
         run: |
           node .github/scripts/measure-rolling-delivery-overhead.mjs \
-            --normal Integration/SqlClustering/bin/Release/net10.0/Cratis.Chronicle.Integration.SqlClustering.dll \
+            --normal Integration/SqlClustering/bin/Release/net11.0/Cratis.Chronicle.Integration.SqlClustering.dll \
             --enabled "$RUNNER_TEMP/rolling-delivery-diagnostics/bin/SqlClustering/release/Cratis.Chronicle.Integration.SqlClustering.dll" \
             --output "$RUNNER_TEMP/rolling-delivery-overhead"
 

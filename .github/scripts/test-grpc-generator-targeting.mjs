@@ -21,7 +21,7 @@ function evaluate(isPackaging) {
 }
 
 function assertSingleTarget(evaluation) {
-    assert.equal(evaluation.Properties.TargetFramework, 'net10.0');
+    assert.equal(evaluation.Properties.TargetFramework, 'net11.0');
     assert.equal(evaluation.Properties.TargetFrameworks, '', 'The host tool must not inherit packaging frameworks');
 }
 
@@ -34,14 +34,14 @@ function roslynPins(evaluation) {
     });
 }
 
-test('the generator is a net10 host tool in a normal Release evaluation', () => {
+test('the generator is a net11 host tool in a normal Release evaluation', () => {
     assertSingleTarget(evaluate(false));
 });
 
-test('packaging preserves the single net10 target and normal Roslyn pins', () => {
+test('packaging preserves the single net11 target and normal Roslyn pins', () => {
     const packaging = evaluate(true);
     assertSingleTarget(packaging);
     const pins = roslynPins(packaging);
     assert.deepEqual(pins, roslynPins(evaluate(false)));
-    assert.equal(pins[0], pins[1], 'CSharp and Workspaces.Common must use compatible net10 pins');
+    assert.equal(pins[0], pins[1], 'CSharp and Workspaces.Common must use compatible net11 pins');
 });

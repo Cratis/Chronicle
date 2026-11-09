@@ -249,7 +249,7 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         steps = self.build["jobs"]["dotnet-build"]["steps"]
         smoke = next(step for step in steps if step.get("name") == "Verify local Docker image without push")
         self.assertEqual("github.event_name == 'pull_request' && !inputs.integration_requested", smoke["if"])
-        self.assertIn("Source/Kernel/Server/bin/Release/net10.0/.", smoke["run"])
+        self.assertIn("Source/Kernel/Server/bin/Release/net11.0/.", smoke["run"])
         self.assertIn("docker build", smoke["run"])
         self.assertIn("Docker/Local/Dockerfile", smoke["run"])
         self.assertNotIn("docker push", smoke["run"])
@@ -446,7 +446,7 @@ class SparseIntegrationWorkflows(unittest.TestCase):
     def test_stable_specs_check_requires_every_shard_to_succeed(self):
         aggregate = self.build["jobs"]["specs"]
         self.assertEqual("${{ needs.already-ran.outputs.skip != 'true' && (always()) }}", aggregate["if"])
-        self.assertEqual(["wire-compatibility", "grain-compatibility", "workbench-proxies", "specs-other", "specs-sql"],
+        self.assertEqual(["wire-compatibility", "grain-compatibility", "workbench-proxies", "specs-other", "specs-sql", "specs-net10"],
                          prerequisites_of(aggregate))
         self.assertEqual({"contents": "read", "actions": "read"}, aggregate["permissions"])
         self.assertEqual("Checkout shard contract", aggregate["steps"][1]["name"])
@@ -470,13 +470,16 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         self.assertEqual("${{ needs.wire-compatibility.result }}", step["env"]["WIRE_RESULT"])
         self.assertEqual("${{ needs.grain-compatibility.result }}", step["env"]["GRAIN_RESULT"])
         self.assertEqual("${{ needs.workbench-proxies.result }}", step["env"]["PROXIES_RESULT"])
+        self.assertEqual("${{ needs.specs-net10.result }}", step["env"]["NET10_RESULT"])
         results = ("success", "failure", "cancelled", "skipped")
-        for wire, grain, proxies, ordinary, sql in product(results, repeat=5):
-            with self.subTest(wire=wire, grain=grain, proxies=proxies, ordinary=ordinary, sql=sql):
+        for wire, grain, proxies, ordinary, sql, net10 in product(results, repeat=6):
+            with self.subTest(wire=wire, grain=grain, proxies=proxies, ordinary=ordinary, sql=sql, net10=net10):
                 result = subprocess.run(["bash", "-c", step["run"]],
                                         env={"WIRE_RESULT": wire, "GRAIN_RESULT": grain, "PROXIES_RESULT": proxies,
-                                             "OTHER_RESULT": ordinary, "SQL_RESULT": sql}, check=False)
-                self.assertEqual(wire == grain == proxies == ordinary == sql == "success", result.returncode == 0)
+                                             "OTHER_RESULT": ordinary, "SQL_RESULT": sql,
+                                             "NET10_RESULT": net10}, check=False)
+                self.assertEqual(wire == grain == proxies == ordinary == sql == net10 == "success",
+                                 result.returncode == 0)
 
     def test_development_paths_preserve_steps_permissions_and_artifact(self):
         jobs = self.build["jobs"]
@@ -492,7 +495,7 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         self.assertEqual([], prerequisites_of(parallel))
         # The requested PR build runs in parallel with the specs; the integration job keeps the specs gate.
         self.assertEqual([], prerequisites_of(requested))
-        self.assertEqual(["wire-compatibility", "grain-compatibility", "workbench-proxies", "specs-other", "specs-sql"],
+        self.assertEqual(["wire-compatibility", "grain-compatibility", "workbench-proxies", "specs-other", "specs-sql", "specs-net10"],
                          prerequisites_of(jobs["specs"]))
         for job_id in ("specs-other", "specs-sql"):
             self.assertEqual(["dotnet-build"], prerequisites_of(jobs[job_id]))
@@ -658,7 +661,7 @@ class IntegrationSingleBuildContracts(unittest.TestCase):
                             '-p:EnableRollingDeliveryDiagnostics=true \\\n'
                             '  --artifacts-path "$RUNNER_TEMP/rolling-delivery-diagnostics"\n'
                             'dotnet "$RUNNER_TEMP/rolling-il-tool/RollingDeliveryIl.dll" \\\n'
-                            '  Source/Clients/DotNET/bin/Release/net10.0/Cratis.Chronicle.dll \\\n'
+                            '  Source/Clients/DotNET/bin/Release/net11.0/Cratis.Chronicle.dll \\\n'
                             '  --enabled "$RUNNER_TEMP/rolling-delivery-diagnostics/bin/DotNET/'
                             'release/Cratis.Chronicle.dll"\n'
                             'grep -a -F -q -- "$CRATIS_CHRONICLE_BUILD_VERSION" '
@@ -673,7 +676,7 @@ class IntegrationSingleBuildContracts(unittest.TestCase):
             pack = next(step["run"] for step in steps if step["name"] == "Pack DEVELOPMENT build output")
             self.assertIn("set -euo pipefail", pack)
             self.assertIn("Integration/Client Integration/Kernel Integration/Clustering Integration/SqlClustering", pack)
-            self.assertIn('test -d "$project/bin/Release/net10.0"', pack)
+            self.assertIn('test -d "$project/bin/Release/net11.0"', pack)
             self.assertIn("exit 1", pack)
             self.assertEqual("error", steps[-1]["with"]["if-no-files-found"])
             per_project = next(step for step in steps if step["name"] == "Pack per-project integration build output")
@@ -686,7 +689,7 @@ class IntegrationSingleBuildContracts(unittest.TestCase):
     def test_per_project_artifacts_are_packed_for_exactly_the_lanes_that_download_them(self):
         action = (WORKFLOWS.parents[0] / "actions/pack-integration-output/action.yml").read_text(encoding="utf-8")
         self.assertIn("for project in Client Kernel Clustering; do", action)
-        self.assertIn('test -d "Integration/$project/bin/Release/net10.0"', action)
+        self.assertIn('test -d "Integration/$project/bin/Release/net11.0"', action)
         self.assertIn('tar -I \'zstd -T0\' -cf "${PREFIX}-${project,,}.tar.zst" "Integration/$project/bin"', action)
         for lane in ("client", "kernel", "clustering"):
             self.assertIn("name: ${{ inputs.prefix }}-" + lane, action)
@@ -720,7 +723,7 @@ class IntegrationSingleBuildContracts(unittest.TestCase):
             'set -euo pipefail\n'
             'line=$(python3 .github/scripts/derive-build-version.py)\n'
             'echo "$line" >> "$GITHUB_ENV"\n'
-            'if ! grep -a -F -q -- "${line#*=}" Source/Clients/DotNET/bin/Release/net10.0/Cratis.Chronicle.dll; then\n'
+            'if ! grep -a -F -q -- "${line#*=}" Source/Clients/DotNET/bin/Release/net11.0/Cratis.Chronicle.dll; then\n'
             '  echo "::error::Downloaded client does not contain the stamped build version ${line#*=}."\n'
             '  exit 1\n'
             'fi\n', stamp["run"])

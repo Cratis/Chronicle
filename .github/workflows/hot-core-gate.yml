@@ -19,9 +19,9 @@ on:
       - "**"
 
 env:
-  DOTNET8_VERSION: "8.0.410"
-  DOTNET9_VERSION: "9.0.x"
-  DOTNET_VERSION: "10.0.x"
+  # GA follow-up: drop DOTNET_QUALITY, set global.json to 11.0.100 and remove allowPrerelease.
+  DOTNET_VERSION: "11.0.x"
+  DOTNET_QUALITY: preview
   # Own image tag; this workflow builds and uploads its own output for its matrix.
   HOT_CORE_IMAGE: "ghcr.io/cratis/chronicle:hot-core-${{ github.sha }}"
 
@@ -85,10 +85,8 @@ jobs:
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: |
-            ${{ env.DOTNET8_VERSION }}
-            ${{ env.DOTNET9_VERSION }}
-            ${{ env.DOTNET_VERSION }}
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+          dotnet-quality: ${{ env.DOTNET_QUALITY }}
 
       - name: Cache NuGet packages
         uses: actions/cache@v4
@@ -147,7 +145,7 @@ jobs:
         run: |
           set -euo pipefail
           for project in Integration/Client Integration/Kernel Integration/Clustering Integration/SqlClustering; do
-            test -d "$project/bin/Release/net10.0" || { echo "Missing build output for $project" >&2; exit 1; }
+            test -d "$project/bin/Release/net11.0" || { echo "Missing build output for $project" >&2; exit 1; }
           done
           find . -type d -name bin -not -path '*/node_modules/*' -prune -print0 | tar --null -I 'zstd -T0' -cf hot-core-build-output.tar.zst -T -
 

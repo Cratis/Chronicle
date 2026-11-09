@@ -12,8 +12,8 @@ const root = fileURLToPath(new URL('../../', import.meta.url));
 const artifacts = path.join(os.tmpdir(), 'chronicle-stamp-spec-artifacts');
 
 const generators = [
-    { project: 'Source/Kernel/Contracts/Contracts.csproj', target: '_PrepareProtoGeneration', property: '_ProtoGenerationStamp', stamp: 'GenerateProtoFiles.stamp', extra: ['-p:TargetFramework=net10.0'] },
-    { project: 'Source/Kernel/Core/Core.csproj', target: '_PrepareGrpcContractGeneration', property: '_GrpcContractGenerationStamp', stamp: 'GenerateGrpcContracts.stamp', extra: ['-p:TargetFramework=net10.0'] }
+    { project: 'Source/Kernel/Contracts/Contracts.csproj', target: '_PrepareProtoGeneration', property: '_ProtoGenerationStamp', stamp: 'GenerateProtoFiles.stamp', extra: ['-p:TargetFramework=net11.0'] },
+    { project: 'Source/Kernel/Core/Core.csproj', target: '_PrepareGrpcContractGeneration', property: '_GrpcContractGenerationStamp', stamp: 'GenerateGrpcContracts.stamp', extra: ['-p:TargetFramework=net11.0'] }
 ];
 
 function stampPath(generator, extra) {
