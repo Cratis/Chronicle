@@ -12,8 +12,8 @@ public class and_the_batch_methods_are_valid : Specification
         {
             [Observes<UserRegistered>]
             [Observes<UserRenamed>]
-            public async Task Index(EventBatch batch, BatchContext context, CancellationToken cancellationToken, ISearchIndex other) =>
-                await Task.Delay(0, cancellationToken);
+            public Task Index(EventBatch batch, BatchContext context, CancellationToken cancellationToken, ISearchIndex other) =>
+                Task.CompletedTask;
 
             public void Removed(UserRemoved @event, EventContext context) { }
         }

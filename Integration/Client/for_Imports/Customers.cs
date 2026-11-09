@@ -14,7 +14,7 @@ public static class Customers
     {
         for (var index = 0; index < count; index++)
         {
-            await Task.Yield();
+            await Task.CompletedTask;
             yield return new EventForEventSourceId($"{prefix}-{index}", new CustomerImported($"{prefix}-{index}"), new Causation(Epoch, "LegacySystem", new Dictionary<string, string> { ["row"] = index.ToString() }))
             {
                 Occurred = Epoch.AddMinutes(index),
