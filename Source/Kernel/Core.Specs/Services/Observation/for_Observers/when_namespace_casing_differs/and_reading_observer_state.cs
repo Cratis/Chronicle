@@ -118,16 +118,16 @@ public class and_reading_observer_state : for_Observers.given.a_case_sensitive_o
     {
         var pending = new TaskCompletionSource<EventStoreNamespaceName>(TaskCreationOptions.RunContinuationsAsynchronously);
         var casing = NamespaceCasingContext.Create();
-        casing.Canonicalize("store", "cratis").Returns(new ValueTask<EventStoreNamespaceName>(pending.Task));
+        casing.Canonicalize("store", "cratis").Returns(_ => new ValueTask<EventStoreNamespaceName>(pending.Task));
         using var cancellation = new CancellationTokenSource();
         var completed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         using var subscription = CreateService(casing).ObserveObservers(
             new AllObserversRequest { EventStore = "store", Namespace = "cratis" },
             new CallContext(new CallOptions(cancellationToken: cancellation.Token)))
-            .Subscribe(_ => { }, () => completed.SetResult());
+            .Subscribe(_ => { }, completed.SetResult);
 
         await cancellation.CancelAsync();
-        await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await completed.Task.WaitAsync(TimeSpan.FromSeconds(5), _service.CompletionTimeProvider);
         pending.SetResult("Cratis");
     }
 

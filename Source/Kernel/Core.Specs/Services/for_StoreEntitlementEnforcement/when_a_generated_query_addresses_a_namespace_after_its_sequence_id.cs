@@ -36,7 +36,10 @@ public class when_a_generated_query_addresses_a_namespace_after_its_sequence_id 
         result.IsAuthorized.ShouldEqual(allowed);
         result.HasExceptions.ShouldBeFalse();
         result.Data.ShouldEqual(allowed);
-        if (allowed) await sequence.Received(1).IsStreamCompleted(Arg.Any<EventStreamType>(), Arg.Any<EventStreamId>());
+        if (allowed)
+        {
+            await sequence.Received(1).IsStreamCompleted(Arg.Any<EventStreamType>(), Arg.Any<EventStreamId>());
+        }
         else
         {
             await sequence.DidNotReceive().IsStreamCompleted(Arg.Any<EventStreamType>(), Arg.Any<EventStreamId>());

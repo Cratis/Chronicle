@@ -13,7 +13,6 @@ using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.InMemory;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Chronicle.Storage.Sinks;
-using Cratis.Types;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 

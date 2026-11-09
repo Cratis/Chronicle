@@ -19,7 +19,7 @@ public class when_a_non_administrator_requests_incidents : for_StoreCapabilityGu
         Decide(AuthorizationReason.NotGranted, false);
         _storage = Substitute.For<IStorage>();
         _readiness = Substitute.For<IAlertIncidentsReadiness>();
-        _alerts = new(_storage, _readiness, NullLogger<Alerts>.Instance);
+        _alerts = new(_storage, _readiness, NamespaceCasingContext.Create(), NullLogger<Alerts>.Instance);
     }
 
     async Task Because()

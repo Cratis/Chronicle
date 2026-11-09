@@ -41,8 +41,14 @@ public class when_an_observable_query_loses_access
             caller.Clock.Advance(TimeSpan.FromMinutes(3));
             failed.Task.IsCompleted.ShouldBeFalse();
         }
-        if (expireLease) caller.Clock.Advance(TimeSpan.FromMinutes(6));
-        else caller.Revoke();
+        if (expireLease)
+        {
+            caller.Clock.Advance(TimeSpan.FromMinutes(6));
+        }
+        else
+        {
+            caller.Revoke();
+        }
         var error = await failed.Task.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
         ((RpcException)error).StatusCode.ShouldEqual(StatusCode.PermissionDenied);
         var atRefusal = received;
