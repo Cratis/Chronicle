@@ -297,6 +297,7 @@ The migration:
 - copies the erasure record of an address before its keys, and never copies a key that an erasure under either name covers.
 - reads every copy back and compares it with the key under the earlier name.
 - keeps the keys under their earlier names, so an earlier version still works after it. Add `--remove-migrated-legacy-keys` to remove them once their copies are verified. It removes only the observed version, after checking for replacement and changed erasure fences; it never destroys key metadata or all history. This soft deletion is not key erasure. Nothing is removed when any copy failed or conflicts.
+- copies the key value only. Per-key Vault metadata that an operator set by hand (a deletion schedule, a version limit, custom metadata) is not copied to the new address; settings on the mount itself apply to the copy as usual.
 - never touches an entry that cannot be tied to one address. Such entries are counted; find them with Vault tooling and decide on them yourself.
 - is safe to run again. A run that stops part way resumes where it left off, and keys already copied are counted as already migrated.
 
