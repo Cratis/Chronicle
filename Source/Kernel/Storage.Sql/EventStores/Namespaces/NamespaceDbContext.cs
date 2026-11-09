@@ -254,6 +254,7 @@ public class NamespaceDbContext(DbContextOptions<NamespaceDbContext> options) : 
             modelBuilder.Entity<Encryption.EncryptionKey>().Property(e => e.Identifier).UseCollation(Encryption.EncryptionKeyIdentifierColumn.Collation);
             modelBuilder.Entity<Encryption.EncryptionKeyErasure>().Property(e => e.Identifier).UseCollation(Encryption.EncryptionKeyIdentifierColumn.Collation);
             modelBuilder.Entity<Encryption.EncryptionKeyExternalFence>().Property(e => e.Identifier).UseCollation(Encryption.EncryptionKeyIdentifierColumn.Collation);
+            UseExactClosedStreamColumns(modelBuilder);
         }
 
         modelBuilder.Entity<Alerts.AlertIncidentEntity>(entity =>
@@ -296,6 +297,15 @@ public class NamespaceDbContext(DbContextOptions<NamespaceDbContext> options) : 
         foreach (var (entityType, propertyName) in NamespaceJsonStringColumns.All)
         {
             modelBuilder.Entity(entityType).Property(propertyName).HasColumnType("jsonb");
+        }
+    }
+
+    static void UseExactClosedStreamColumns(ModelBuilder modelBuilder)
+    {
+        var entity = modelBuilder.Entity<ClosedStreamEntry>();
+        foreach (var column in new[] { nameof(ClosedStreamEntry.StreamType), nameof(ClosedStreamEntry.StreamId), nameof(ClosedStreamEntry.EventSourceId), nameof(ClosedStreamEntry.EventSourceType) })
+        {
+            entity.Property(column).HasMaxLength(ClosedStreamColumn.MaxLength).UseCollation(ClosedStreamColumn.Collation);
         }
     }
 }

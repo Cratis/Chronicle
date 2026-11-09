@@ -42,6 +42,8 @@ Some examples:
 | Stream type `monthly-report`, stream id `2026-04` | The April stream of every event source |
 | Event source type `Report` | Every event source of that type |
 
+Values are compared by exact spelling on every storage: letter case, character width, accents and trailing spaces all count, so a closure for `Order-1` does not refuse an append for `order-1`. On SQL Server, closures stored before this behavior keep the spelling they were stored with; close any other spelling you need separately.
+
 `EventSourceId.Unspecified`, `EventSourceType.Unspecified` and an empty stream type or stream id count as unset. `EventStreamType.All` and `EventStreamId.Default` are real values: the scope event source `report-7` + `All` + `Default` closes exactly the default stream of `report-7`.
 
 :::caution[The default stream cannot be closed on its own]
