@@ -65,29 +65,18 @@ internal class VaultKeyStoreMigrator(IVaultSecretStore store, ILogger<VaultKeySt
             return run.Report(layoutUnusable: true, complete: false);
         }
 
-        var complete = true;
         try
         {
-            await CopyAll(run, cancellationToken);
-            if (!dryRun)
-            {
-                await Verify(run, cancellationToken);
-            }
-
-            if (!dryRun && removeVerifiedLegacy && run.Failed == 0 && run.ConflictsKept == 0)
-            {
-                await RemoveVerified(run, cancellationToken);
-            }
+            await Execute(run, removeVerifiedLegacy, cancellationToken);
+            return run.Report(layoutUnusable: false, complete: true);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
             // Counts and the kind of failure only: what the key store answers may hold paths.
             run.Failed++;
-            complete = false;
             logger.MigrationStopped(exception.GetType().Name);
+            return run.Report(layoutUnusable: false, complete: false);
         }
-
-        return run.Report(layoutUnusable: false, complete: complete);
     }
 
     static (bool Present, Fence? Fence) ReadFence(VaultSecret? erasure)
@@ -214,25 +203,25 @@ internal class VaultKeyStoreMigrator(IVaultSecretStore store, ILogger<VaultKeySt
             return Compare(legacy, existing);
         }
 
-        if (dryRun)
-        {
-            return Outcome.Copied;
-        }
+        return dryRun ? Outcome.Copied : await Write(entry, legacy);
+    }
 
+    async Task<Outcome> Write(VaultLegacyEntry entry, VaultSecret legacy)
+    {
         if (await store.WriteIfAbsent(entry.Destination!, VaultLegacyLayout.CopyOf(legacy)) is not { } version)
         {
             // Another writer got there first; whatever it wrote is never overwritten.
             return await store.Read(entry.Destination!) is { } winner ? Compare(legacy, winner) : Outcome.ConflictKept;
         }
 
-        if (await store.Read(entry.Path) is { } again && VaultLegacyLayout.SameContent(legacy, again))
+        if (await IsUnchanged(entry.Path, legacy))
         {
             return Outcome.Copied;
         }
 
         // The earlier secret changed or went away while it was copied, for instance through an erasure. The copy is
         // taken back, but only when it is still the version this run wrote.
-        if (await store.Read(entry.Destination!) is { } copy && copy.Version == version && VaultLegacyLayout.SameContent(legacy, copy))
+        if (await IsOwnCopy(entry.Destination!, legacy, version))
         {
             await store.Remove(entry.Destination!);
         }
@@ -240,31 +229,47 @@ internal class VaultKeyStoreMigrator(IVaultSecretStore store, ILogger<VaultKeySt
         return Outcome.ConflictKept;
     }
 
-    async Task Verify(Run run, CancellationToken cancellationToken)
+    async Task<bool> IsUnchanged(string path, VaultSecret legacy) =>
+        await store.Read(path) is { } again && VaultLegacyLayout.SameContent(legacy, again);
+
+    async Task<bool> IsOwnCopy(string path, VaultSecret legacy, int version) =>
+        await store.Read(path) is { } copy && copy.Version == version && VaultLegacyLayout.SameContent(legacy, copy);
+
+    async Task Execute(Run run, bool removeVerifiedLegacy, CancellationToken cancellationToken)
     {
-        foreach (var entry in run.Migrated)
+        await CopyAll(run, cancellationToken);
+        if (run.DryRun)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            if (await IsSame(entry))
-            {
-                run.Verified.Add(entry);
-            }
-            else
-            {
-                run.Failed++;
-            }
+            return;
+        }
+
+        // Every copy is read back; only those that still match may lead to removing the earlier secret.
+        await ForEachSame(run.Migrated, run.Verify, () => run.Failed++, cancellationToken);
+        if (removeVerifiedLegacy && run.Clean)
+        {
+            // Each earlier secret is compared with its copy once more right before it is removed.
+            await ForEachSame([.. run.Verified], RemoveLegacy, () => { }, cancellationToken);
+        }
+
+        async Task RemoveLegacy(VaultLegacyEntry entry)
+        {
+            await store.Remove(entry.Path);
+            run.LegacyRemoved++;
         }
     }
 
-    async Task RemoveVerified(Run run, CancellationToken cancellationToken)
+    async Task ForEachSame(IEnumerable<VaultLegacyEntry> entries, Func<VaultLegacyEntry, Task> same, Action different, CancellationToken cancellationToken)
     {
-        foreach (var entry in run.Verified)
+        foreach (var entry in entries)
         {
             cancellationToken.ThrowIfCancellationRequested();
             if (await IsSame(entry))
             {
-                await store.Remove(entry.Path);
-                run.LegacyRemoved++;
+                await same(entry);
+            }
+            else
+            {
+                different();
             }
         }
     }
@@ -299,6 +304,17 @@ internal class VaultKeyStoreMigrator(IVaultSecretStore store, ILogger<VaultKeySt
         public List<VaultLegacyEntry> Migrated { get; } = [];
 
         public List<VaultLegacyEntry> Verified { get; } = [];
+
+        /// <summary>
+        /// Gets whether nothing failed and nothing was kept because it conflicts, so verified earlier secrets may be removed.
+        /// </summary>
+        public bool Clean => Failed == 0 && ConflictsKept == 0;
+
+        public Task Verify(VaultLegacyEntry entry)
+        {
+            Verified.Add(entry);
+            return Task.CompletedTask;
+        }
 
         public void Count(VaultLegacyEntry entry, Outcome outcome)
         {

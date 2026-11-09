@@ -36,4 +36,9 @@ public record EncryptionKeyMigrationReport(
     /// Gets whether anything is left for an operator to review.
     /// </summary>
     public bool NeedsReview => ConflictsKept + AmbiguousForReview > 0;
+
+    /// <summary>
+    /// Gets whether a dry run found anything it would copy.
+    /// </summary>
+    public bool WouldCopy => DryRun && Copied + ErasureRecordsCopied > 0;
 }

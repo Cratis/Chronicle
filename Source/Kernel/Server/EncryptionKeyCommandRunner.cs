@@ -56,16 +56,25 @@ internal static class EncryptionKeyCommandRunner
 
         if (check is null)
         {
-            if (command.Verify)
-            {
-                await output.WriteLineAsync("The encryption key storage has no keys stored under earlier names to inspect.");
-                return Clean;
-            }
+            return await NothingToInspect(command, output);
+        }
 
+        return await Inspect(check, logger, command, output, handling == LegacyKeyHandling.Refuse);
+    }
+
+    static async Task<int?> NothingToInspect(EncryptionKeyCommand command, TextWriter output)
+    {
+        if (!command.Verify)
+        {
             return null;
         }
 
-        var refuse = handling == LegacyKeyHandling.Refuse;
+        await output.WriteLineAsync("The encryption key storage has no keys stored under earlier names to inspect.");
+        return Clean;
+    }
+
+    static async Task<int?> Inspect(IEncryptionKeyStoreUpgradeCheck check, ILogger logger, EncryptionKeyCommand command, TextWriter output, bool refuse)
+    {
         EncryptionKeyStoreUpgradeStatus status;
         try
         {
@@ -96,17 +105,32 @@ internal static class EncryptionKeyCommandRunner
 
         if (!command.Verify)
         {
-            if (refuse && status.EarlierMaterialPresent)
-            {
-                logger.EarlierEncryptionKeysRefused(EncryptionKeyCommand.MigrateFlag);
-                return UpgradeNeeded;
-            }
-
-            return null;
+            return StartOrRefuse(logger, status, refuse);
         }
 
         await output.WriteLineAsync($"Earlier keys: {status.EarlierNameKeys}; earlier erasure records: {status.EarlierNameErasures}; entries that cannot be addressed unambiguously: {status.UnresolvedShapes}; already migrated and kept: {status.MigratedLegacyRetained}; complete: {status.Complete}");
         return status.EarlierMaterialPresent ? UpgradeNeeded : Clean;
+    }
+
+    static int? StartOrRefuse(ILogger logger, EncryptionKeyStoreUpgradeStatus status, bool refuse)
+    {
+        if (!refuse || !status.EarlierMaterialPresent)
+        {
+            return null;
+        }
+
+        logger.EarlierEncryptionKeysRefused(EncryptionKeyCommand.MigrateFlag);
+        return UpgradeNeeded;
+    }
+
+    static int ExitCodeFor(EncryptionKeyMigrationReport report)
+    {
+        if (report.Failed > 0 || !report.Complete)
+        {
+            return MigrationFailed;
+        }
+
+        return report.NeedsReview || report.WouldCopy ? UpgradeNeeded : Clean;
     }
 
     static async Task<int> Migrate(IEncryptionKeyStoreMigrator? migrator, ILogger logger, EncryptionKeyCommand command, TextWriter output)
@@ -143,16 +167,6 @@ internal static class EncryptionKeyCommandRunner
             $"conflicts kept: {report.ConflictsKept}; entries that cannot be addressed unambiguously: {report.AmbiguousForReview}; " +
             $"failed: {report.Failed}; verified: {report.Verified}; removed under earlier names: {report.LegacyRemoved}; complete: {report.Complete}");
 
-        if (report.Failed > 0 || !report.Complete)
-        {
-            return MigrationFailed;
-        }
-
-        if (report.NeedsReview || (report.DryRun && report.Copied + report.ErasureRecordsCopied > 0))
-        {
-            return UpgradeNeeded;
-        }
-
-        return Clean;
+        return ExitCodeFor(report);
     }
 }
