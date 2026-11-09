@@ -7,14 +7,16 @@ using DotNet.Testcontainers.Containers;
 using DotNet.Testcontainers.Networks;
 using Neo4j.Driver;
 
-namespace Cratis.Chronicle.Integration.GraphProjections;
+namespace Cratis.Chronicle.Integration;
 
 /// <summary>
-/// Represents the Neo4j server the graph projection specifications run against.
+/// Represents the Neo4j server the graph specifications run against: the graph projection specifications of the client suite and the
+/// storage level specifications of the Neo4j suite share it.
 /// </summary>
 /// <remarks>
-/// The server is the Community edition, which has one user database, so the sink runs in single database mode. The password is
-/// generated for every run and only ever leaves this type as an environment variable of the containers and as a configuration value.
+/// The server is the Community edition unless <c language="text">CHRONICLE_NEO4J_IMAGE</c> names another, and that has one user database, so the sink
+/// runs in single database mode. The password is generated for every run and only ever leaves this type as an environment variable of
+/// the containers and as a configuration value.
 /// </remarks>
 public sealed class Neo4jGraphServer : IAsyncDisposable
 {
@@ -22,6 +24,11 @@ public sealed class Neo4jGraphServer : IAsyncDisposable
     /// The image of the server unless <c language="text">CHRONICLE_NEO4J_IMAGE</c> names another. The Community edition needs no license agreement.
     /// </summary>
     public const string DefaultImage = "neo4j:5-community";
+
+    /// <summary>
+    /// The name of the environment variable that names the image of the server.
+    /// </summary>
+    public const string ImageVariable = "CHRONICLE_NEO4J_IMAGE";
 
     /// <summary>
     /// The host name of the server on the docker network, which is how the kernel container reaches it.
@@ -43,11 +50,22 @@ public sealed class Neo4jGraphServer : IAsyncDisposable
     readonly IContainer _container;
     IDriver? _driver;
 
-    Neo4jGraphServer(IContainer container, string password)
+    Neo4jGraphServer(IContainer container, string password, string image)
     {
         _container = container;
         Password = password;
+        Image = image;
     }
+
+    /// <summary>
+    /// Gets the image the server runs.
+    /// </summary>
+    public string Image { get; }
+
+    /// <summary>
+    /// Gets a value indicating whether the server is the Enterprise edition, the only one with multiple databases.
+    /// </summary>
+    public bool IsEnterprise => IsEnterpriseImage(Image);
 
     /// <summary>
     /// Gets the generated password.
@@ -70,18 +88,18 @@ public sealed class Neo4jGraphServer : IAsyncDisposable
     public IDriver Driver => _driver ??= GraphDatabase.Driver(HostUri, AuthTokens.Basic(UserName, Password));
 
     /// <summary>
-    /// Start a server on a network.
+    /// Start a server, optionally on a network.
     /// </summary>
-    /// <param name="network">The <see cref="INetwork"/> to attach the server to.</param>
+    /// <param name="network">The <see cref="INetwork"/> to attach the server to, which is what lets a kernel container reach it. Without one, only the test process reaches the server.</param>
     /// <returns>The started <see cref="Neo4jGraphServer"/>.</returns>
-    public static Neo4jGraphServer Start(INetwork network)
+    public static Neo4jGraphServer Start(INetwork? network = null)
     {
         var password = Convert.ToHexString(RandomNumberGenerator.GetBytes(16)).ToLowerInvariant();
-        var image = Environment.GetEnvironmentVariable("CHRONICLE_NEO4J_IMAGE") is { Length: > 0 } named ? named : DefaultImage;
+        var image = Environment.GetEnvironmentVariable(ImageVariable) is { Length: > 0 } named ? named : DefaultImage;
+
+        // The readiness probe reads the credentials from the environment of the container, so the generated password is in no command line Testcontainers logs.
         var builder = new ContainerBuilder(image)
             .WithImage(image)
-            .WithHostname(HostName)
-            .WithNetwork(network)
             .WithPortBinding(BoltPort, assignRandomHostPort: true)
             .WithEnvironment("NEO4J_AUTH", $"{UserName}/{password}")
             .WithEnvironment("NEO4J_server_memory_heap_max__size", "512M")
@@ -89,18 +107,23 @@ public sealed class Neo4jGraphServer : IAsyncDisposable
             .WithTmpfsMount("/data")
             .WithWaitStrategy(Wait.ForUnixContainer()
                 .UntilInternalTcpPortIsAvailable(BoltPort)
-                .UntilCommandIsCompleted("cypher-shell", "-u", UserName, "-p", password, "RETURN 1"));
+                .UntilCommandIsCompleted("/bin/sh", "-c", "cypher-shell -u \"${NEO4J_AUTH%%/*}\" -p \"${NEO4J_AUTH#*/}\" 'RETURN 1'"));
 
         // The Enterprise edition, the only one with multiple databases, will not start without a license decision.
         // The Evaluation Agreement is what the per namespace lane runs under for now; the license follow-up is tracked in Cratis/Chronicle#5739.
-        if (image.Contains("enterprise", StringComparison.OrdinalIgnoreCase))
+        if (IsEnterpriseImage(image))
         {
             builder = builder.WithEnvironment("NEO4J_ACCEPT_LICENSE_AGREEMENT", "eval");
         }
 
+        if (network is not null)
+        {
+            builder = builder.WithHostname(HostName).WithNetwork(network);
+        }
+
         var container = builder.Build();
         container.StartAsync().GetAwaiter().GetResult();
-        return new(container, password);
+        return new(container, password, image);
     }
 
     /// <summary>
@@ -117,6 +140,8 @@ public sealed class Neo4jGraphServer : IAsyncDisposable
             await cursor.ConsumeAsync();
         }
     }
+
+    static bool IsEnterpriseImage(string image) => image.Contains("enterprise", StringComparison.OrdinalIgnoreCase);
 
     async Task<List<string>> UserDatabases()
     {
