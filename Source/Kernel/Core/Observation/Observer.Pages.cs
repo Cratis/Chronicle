@@ -67,12 +67,6 @@ public partial class Observer
         return merged;
     }
 
-    EventSequenceNumber CursorAfter(EventSequenceNumber candidate) =>
-        _pageFloor is null || candidate > State.NextEventSequenceNumber ? candidate : State.NextEventSequenceNumber;
-
-    EventSequenceNumber TailAfter(EventSequenceNumber candidate) =>
-        _pageFloor is null || State.TailEventSequenceNumber == EventSequenceNumber.Unavailable || candidate > State.TailEventSequenceNumber ? candidate : State.TailEventSequenceNumber;
-
     static List<List<ObserverPartitionBatch>> WithinLiveBudget(Observers configuration, IReadOnlyList<ObserverPartitionBatch> candidates)
     {
         // Partitions are taken in the order they arrived and cut into pages that each stay within the live delivery budget. A
@@ -97,6 +91,12 @@ public partial class Observer
         pages.Add(current);
         return [.. pages.Where(_ => _.Count > 1 && !ExceedsLiveBudget(configuration, _.Sum(batch => batch.Events.Count)))];
     }
+
+    EventSequenceNumber CursorAfter(EventSequenceNumber candidate) =>
+        _pageFloor is null || candidate > State.NextEventSequenceNumber ? candidate : State.NextEventSequenceNumber;
+
+    EventSequenceNumber TailAfter(EventSequenceNumber candidate) =>
+        _pageFloor is null || State.TailEventSequenceNumber == EventSequenceNumber.Unavailable || candidate > State.TailEventSequenceNumber ? candidate : State.TailEventSequenceNumber;
 
     async Task DeliverPage(IReadOnlyList<ObserverPartitionBatch> batches)
     {
