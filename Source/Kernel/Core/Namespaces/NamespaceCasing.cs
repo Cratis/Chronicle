@@ -29,13 +29,12 @@ public class NamespaceCasing(IGrainFactory grainFactory, ILogger<NamespaceCasing
             return ValueTask.FromResult(EventStoreNamespaceName.Default);
         }
         var names = _names.GetOrAdd(eventStore, _ => new(StringComparer.OrdinalIgnoreCase));
-        lock (names)
+
+        // Cache hits are lock-free so appends across namespaces never serialize on this path.
+        if (names.TryGetValue(@namespace.Value, out var canonical))
         {
-            if (names.TryGetValue(@namespace.Value, out var canonical))
-            {
-                Log(eventStore, @namespace, canonical);
-                return ValueTask.FromResult(canonical);
-            }
+            Log(eventStore, @namespace, canonical);
+            return ValueTask.FromResult(canonical);
         }
         return Resolve(eventStore, @namespace, names);
     }
@@ -48,10 +47,11 @@ public class NamespaceCasing(IGrainFactory grainFactory, ILogger<NamespaceCasing
         {
             _versions.AddOrUpdate(eventStore, 1, (_, version) => version + 1);
             names.TryRemove(@namespace.Value, out _);
-            foreach (var key in _logged.Keys.Where(key => key.Store == eventStore && key.Requested.Equals(@namespace.Value, StringComparison.OrdinalIgnoreCase)))
-            {
-                _logged.TryRemove(key, out _);
-            }
+        }
+
+        foreach (var key in _logged.Keys.Where(key => key.Store == eventStore && key.Requested.Equals(@namespace.Value, StringComparison.OrdinalIgnoreCase)))
+        {
+            _logged.TryRemove(key, out _);
         }
     }
 
