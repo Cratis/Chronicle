@@ -86,6 +86,9 @@ public partial class EventStore
 
         if (failures.Count == 1) ExceptionDispatchInfo.Capture(failures[0]).Throw();
         if (failures.Count > 1) throw new AggregateException(failures);
+
+        // The kernel knows the artifacts again, so materialized read model streams can follow.
+        (ReadModelReactors as ReadModels.ReadModelReactors)?.ResumeAfterReconnect();
     }
 
     async Task<bool> WasNamespaceRemoved()

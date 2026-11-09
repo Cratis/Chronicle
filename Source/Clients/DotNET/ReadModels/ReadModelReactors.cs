@@ -82,6 +82,26 @@ public class ReadModelReactors(
         }
     }
 
+    /// <summary>
+    /// Re-establishes the materialized streams a dropped connection took down, without starting read model reactors
+    /// that were never started. Used after artifacts registered explicitly have been registered again on a reconnect.
+    /// </summary>
+    internal void ResumeAfterReconnect()
+    {
+        IResumableReadModelSubscription[] resumable;
+        lock (_sync)
+        {
+            if (_released || !_started)
+            {
+                return;
+            }
+
+            resumable = [.. _subscriptions.OfType<IResumableReadModelSubscription>()];
+        }
+
+        Resume(resumable);
+    }
+
     /// <inheritdoc/>
     public void Stop() => Dispose();
 
