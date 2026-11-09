@@ -21,7 +21,7 @@ public class when_an_observable_query_loses_access
     {
         using var caller = new an_entitled_caller();
         var storage = Substitute.For<IStorage>();
-        var service = new Occurrences(Substitute.For<ICommandPipeline>(), storage, NullLogger<Occurrences>.Instance);
+        var service = new Occurrences(Substitute.For<ICommandPipeline>(), storage, NamespaceCasingContext.Create(), NullLogger<Occurrences>.Instance);
         var initial = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var failed = new TaskCompletionSource<Exception>(TaskCreationOptions.RunContinuationsAsynchronously);
         var received = 0;
@@ -55,7 +55,7 @@ public class when_an_observable_query_loses_access
     public async Task should_keep_an_audit_only_query_open()
     {
         using var caller = new an_entitled_caller(enforce: false);
-        var service = new Occurrences(Substitute.For<ICommandPipeline>(), Substitute.For<IStorage>(), NullLogger<Occurrences>.Instance);
+        var service = new Occurrences(Substitute.For<ICommandPipeline>(), Substitute.For<IStorage>(), NamespaceCasingContext.Create(), NullLogger<Occurrences>.Instance);
         var initial = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         Exception? error = null;
         using var subscription = service.ObserveOccurrences(new ObserveOccurrencesRequest { EventStore = "store", Namespace = "ns", Trigger = "trigger" }, caller.Context)

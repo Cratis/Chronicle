@@ -240,19 +240,20 @@ internal sealed class TestingServices : IServices
                 commandPipeline.Value,
                 storage,
                 jsonSerializerOptions,
+                namespaceCasing,
                 NullLogger<KernelCapturesService>.Instance));
 
         _occurrences = new(() =>
-            new Occurrences.OccurrenceReplies(new KernelOccurrencesService(commandPipeline.Value, storage, NullLogger<KernelOccurrencesService>.Instance), replies ?? new()));
+            new Occurrences.OccurrenceReplies(new KernelOccurrencesService(commandPipeline.Value, storage, namespaceCasing, NullLogger<KernelOccurrencesService>.Instance), replies ?? new()));
 
         _eventStoreSubscriptions = new(() =>
             new KernelSubscriptionsService(grainFactory, storage, Options.Create(new KernelCore::Cratis.Chronicle.Configuration.ChronicleOptions())));
 
         _jobs = new(() =>
-            new KernelJobsService(commandPipeline.Value, storage, grainFactory, NullLogger<KernelJobsService>.Instance));
+            new KernelJobsService(commandPipeline.Value, storage, grainFactory, namespaceCasing, NullLogger<KernelJobsService>.Instance));
 
         _seeding = new(() =>
-            new KernelSeedingService(commandPipeline.Value, grainFactory, NullLogger<KernelSeedingService>.Instance));
+            new KernelSeedingService(commandPipeline.Value, grainFactory, namespaceCasing, NullLogger<KernelSeedingService>.Instance));
 
         _sequences = new(() =>
             new EventSequences.SequenceReplies(
@@ -263,6 +264,7 @@ internal sealed class TestingServices : IServices
                     jsonSerializerOptions,
                     new EventSequences.InProcessQueryContextManager(),
                     grainFactory,
+                    namespaceCasing,
                     NullLogger<KernelSequencesService>.Instance),
                 replies ?? new()));
 
@@ -270,7 +272,7 @@ internal sealed class TestingServices : IServices
             new KernelNamespacesService(commandPipeline.Value, storage, NullLogger<KernelNamespacesService>.Instance));
 
         _identities = new(() =>
-            new KernelIdentitiesService(commandPipeline.Value, storage, NullLogger<KernelIdentitiesService>.Instance));
+            new KernelIdentitiesService(commandPipeline.Value, storage, namespaceCasing, NullLogger<KernelIdentitiesService>.Instance));
 
         _eventSources = new(() =>
             new KernelEventSourcesService(
@@ -293,11 +295,12 @@ internal sealed class TestingServices : IServices
                 new KernelFacetSetGenerator(),
                 new KernelPatternMatcher(),
                 patternOptions,
+                namespaceCasing,
                 NullLogger<KernelPatternsService>.Instance);
         });
 
         _recommendations = new(() =>
-            new KernelRecommendationsService(commandPipeline.Value, storage, NullLogger<KernelRecommendationsService>.Instance));
+            new KernelRecommendationsService(commandPipeline.Value, storage, namespaceCasing, NullLogger<KernelRecommendationsService>.Instance));
 
         _constraints = new(() => new KernelConstraintsService(grainFactory));
 

@@ -24,7 +24,7 @@ public class a_case_sensitive_observer_store : for_QueryExecutor.given.a_routed_
     protected static readonly DateTimeOffset _changedAt = new(2026, 1, 2, 3, 4, 5, TimeSpan.Zero);
     protected static readonly EventType _eventType = new("event-type", 1);
 
-    protected Observers _service;
+    internal Observers _service;
     protected IStorage _storage;
     protected IEventStoreNamespaceStorage _canonicalStorage;
     protected IGrainFactory _grains;
@@ -58,7 +58,7 @@ public class a_case_sensitive_observer_store : for_QueryExecutor.given.a_routed_
         _service = CreateService(_casing);
     }
 
-    protected Observers CreateService(INamespaceCasing casing) =>
+    internal Observers CreateService(INamespaceCasing casing) =>
         new(_grains, _storage, Substitute.For<IObserverRemover>(), Substitute.For<IConnectedClientsVisibility>(), Options.Create(new ChronicleOptions()), casing);
 
     void Destroy() => _stores.Dispose();

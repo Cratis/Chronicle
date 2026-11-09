@@ -51,6 +51,6 @@ public class all_dependencies : Specification
         Catch<IImmutableList<JobStepState>> failedSteps = _exception;
         _jobStepStorage.GetForJob(Arg.Any<JobId>(), Arg.Any<JobStepStatus[]>()).Returns(Task.FromResult(failedSteps));
 
-        _service = new Jobs(_commandPipeline, _storage, _grainFactory, _logger);
+        _service = new Jobs(_commandPipeline, _storage, _grainFactory, NamespaceCasingContext.Create(), _logger);
     }
 }
