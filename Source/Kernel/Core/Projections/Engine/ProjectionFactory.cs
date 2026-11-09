@@ -629,10 +629,37 @@ public class ProjectionFactory(
         }
 
         var keyPath = new PropertyPath(propertyPath.Path[(markerIndex + marker.Length)..]);
-        if (eventSchema.GetSchemaPropertyForPropertyPath(keyPath) is null)
+        if (!EventSchemaHasExactPropertyPath(eventSchema, keyPath))
         {
             throw new EventContentKeyNotInEvent(propertyPath, eventType, keyPath);
         }
+    }
+
+    /// <summary>
+    /// Check that every segment of a path names a property of the event schema exactly as written.
+    /// </summary>
+    /// <remarks>
+    /// The key is read from the event content with the names compared exactly, so a key path that only matches the
+    /// schema when ignoring case would never resolve a key - refuse it when registering instead.
+    /// </remarks>
+    /// <param name="eventSchema">The schema of the event type.</param>
+    /// <param name="keyPath">The key path within the event content.</param>
+    /// <returns>True when the event schema has the path.</returns>
+    static bool EventSchemaHasExactPropertyPath(JsonSchema eventSchema, PropertyPath keyPath)
+    {
+        var schema = eventSchema;
+        foreach (var segment in keyPath.Segments)
+        {
+            var schemaProperty = schema?.GetFlattenedProperties().FirstOrDefault(_ => _.Name.Equals(segment.Value, StringComparison.Ordinal));
+            if (schemaProperty is null)
+            {
+                return false;
+            }
+
+            schema = schemaProperty.ActualTypeSchema;
+        }
+
+        return true;
     }
 
     static JsonSchemaProperty ResolveDynamicValueSchemaProperty(Projection projection, string propertyPathString, string expression)
