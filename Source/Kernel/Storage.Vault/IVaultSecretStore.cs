@@ -9,6 +9,21 @@ namespace Cratis.Chronicle.Storage.Vault;
 internal interface IVaultSecretStore
 {
     /// <summary>
+    /// Verifies that the configured mount is KV v2 before using versioned operations.
+    /// </summary>
+    /// <returns>Whether the mount is proven to be KV v2.</returns>
+    Task<bool> IsKv2();
+
+    /// <summary>
+    /// Removes only the observed version, after checking that it is still current.
+    /// </summary>
+    /// <param name="path">The path of the secret.</param>
+    /// <param name="expected">The observed secret.</param>
+    /// <param name="canRemove">A final check of the other secrets on which deletion depends.</param>
+    /// <returns>Whether that version was removed.</returns>
+    Task<bool> RemoveVersionIfUnchanged(string path, VaultSecret expected, Func<Task<bool>> canRemove);
+
+    /// <summary>
     /// Lists the entries directly under a path. Directories end in <c language="csharp">/</c>.
     /// </summary>
     /// <param name="path">The path, or an empty string for the root of the mount.</param>

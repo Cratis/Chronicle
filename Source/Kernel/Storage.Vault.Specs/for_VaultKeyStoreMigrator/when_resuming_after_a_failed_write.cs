@@ -15,8 +15,8 @@ public class when_resuming_after_a_failed_write : given.a_migrator
         _store.Put($"{Address}/1", Key(1));
         _store.Put($"{Address}/2", Key(2));
 
-        // The first write is the layout marker, the second the first key; the third fails.
-        _store.FailOnWrite = 3;
+        // The writes are the marker, lock and first key; the second key fails.
+        _store.FailOnWrite = 4;
         _failed = await Migrate();
         _store.FailOnWrite = null;
     }

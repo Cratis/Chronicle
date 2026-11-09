@@ -165,7 +165,7 @@ Encryption keys are stored at:
 secret/k1/<event-store>/<namespace>/<identifier>/<revision>
 ```
 
-Every path written by this version starts with the root `k1`, so it can never be the same as a path written by an earlier version. Before the root is used for the first time, Chronicle checks that nothing from an earlier version sits there and writes a small marker secret, `secret/~layout`, that records the layout in use. If something from an earlier version occupies the root, or the marker cannot be written or read, the server does not start and says so in the log.
+Every path written by this version starts with the root `k1`, so it can never be the same as a path written by an earlier version. Chronicle first verifies that the mount is KV v2 by reading `sys/mounts/secret` (substitute your mount name). KV v1, other engine types, and unreadable configuration fail closed with exit code 4, before any marker or migration write. Before the root is used for the first time, Chronicle checks that nothing from an earlier version sits there and writes a small marker secret, `secret/~layout`, that records the layout in use. If something from an earlier version occupies the root, or the marker cannot be written or read, the server does not start and says so in the log.
 
 Each revision is an independent secret, which means individual revisions can be deleted without affecting others (for example, when rotating keys or when the full key history is required for a limited time).
 
@@ -178,6 +178,7 @@ Keys stored by earlier versions, at `secret/<event-store>/<namespace>/<identifie
 The token needs these capabilities on the mount:
 
 ```hcl
+path "sys/mounts/secret"    { capabilities = ["read"] }
 path "secret/data/k1/*"     { capabilities = ["create", "read", "update"] }
 path "secret/metadata/k1/*" { capabilities = ["read", "list", "delete"] }
 path "secret/data/~layout"  { capabilities = ["create", "read"] }
@@ -284,14 +285,18 @@ The environment variable is `Cratis__Chronicle__Compliance__Encryption__LegacyKe
 
 For HashiCorp Vault, run the server with `--migrate-encryption-keys` to copy keys stored under earlier names to their paths under `k1`. It prints counts and exits; it never prints or logs a path, an identifier or key material.
 
-**Stop every node, of every version, before upgrading and before running the migration. Start them again only after `--verify-encryption-keys` exits 0.** The migration defends itself against writes it can detect, but it does not make the copy atomic with a running node.
+**Offline operation is required: stop every node, of every version, and all other key/erasure writers before upgrading and before running the migration, including deletion. Start them again only after `--verify-encryption-keys` exits 0.** Erasure-fence checks are snapshots; neither fence checks nor ownership-check/delete is atomic with writers. Detected fence changes or replacements skip deletion and are reported as conflicts; undetected online writes are not safe.
+
+A writing migration takes exclusive ownership of the mount with a CAS-0 secret at `secret/data/k1/~migration-lock`, carrying a random owner ID. A second writing migration refuses with exit code 6 and an operator-recovery message. The owner releases it in `finally`, including on failure or cancellation. A crash or failed release leaves the lock in place; locks never expire and are never automatically stolen. Dry runs remain read-only.
+
+For a stale lock, **first stop every migrator and confirm none can resume**, as well as keeping all writers stopped. Inspect `vault kv get -mount=secret 'k1/~migration-lock'`, then explicitly remove its metadata with `vault kv metadata delete -mount=secret 'k1/~migration-lock'` and rerun. Substitute the configured mount name. Never remove an active owner's lock. Soft deletion is insufficient because CAS-0 requires absent metadata.
 
 The migration:
 
 - copies each key as it is, keeping its revision, and only where nothing exists yet. It never overwrites anything under `k1`. If something different is already there, it is kept and counted as a conflict for review.
 - copies the erasure record of an address before its keys, and never copies a key that an erasure under either name covers.
 - reads every copy back and compares it with the key under the earlier name.
-- keeps the keys under their earlier names, so an earlier version still works after it. Add `--remove-migrated-legacy-keys` to remove them once their copies are verified. Nothing is removed when any copy failed or conflicts.
+- keeps the keys under their earlier names, so an earlier version still works after it. Add `--remove-migrated-legacy-keys` to remove them once their copies are verified. It removes only the observed version, after checking for replacement and changed erasure fences; it never destroys key metadata or all history. This soft deletion is not key erasure. Nothing is removed when any copy failed or conflicts.
 - never touches an entry that cannot be tied to one address. Such entries are counted; find them with Vault tooling and decide on them yourself.
 - is safe to run again. A run that stops part way resumes where it left off, and keys already copied are counted as already migrated.
 
@@ -303,8 +308,9 @@ Add `--dry-run` to only count what would be copied; nothing is written or remove
 | 2 | Entries are left for review, or a dry run would copy something |
 | 4 | The key layout conflicts with earlier material, or could not be verified; nothing was done |
 | 5 | A copy failed or did not verify, or the run stopped before it finished; run it again |
+| 6 | Another migration owns the mount, or a stale lock needs explicit operator removal |
 
-Besides the policy above, the token needs read and list on the earlier paths, and create on `secret/data/k1/*`. It needs delete on `secret/metadata/` for the earlier paths only when `--remove-migrated-legacy-keys` is used.
+Besides the policy above, the token needs read and list on the earlier paths, and create on `secret/data/k1/*`. It needs delete on `secret/metadata/k1/~migration-lock` to release ownership, and update on `secret/delete/k1/*` for version-scoped rollback. With `--remove-migrated-legacy-keys`, it also needs update on `secret/delete/` for the earlier paths.
 
 Chronicle connects to Vault at the `connectionDetails` address as given. Use an `https://` address to protect keys in transit; there is no further TLS configuration for Vault in this version.
 

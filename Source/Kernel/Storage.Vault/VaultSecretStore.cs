@@ -20,6 +20,35 @@ internal class VaultSecretStore(IVaultClient vaultClient, string? mountPointName
     readonly string _mountPoint = string.IsNullOrEmpty(mountPointName) ? DefaultMountPoint : mountPointName;
 
     /// <inheritdoc/>
+    public async Task<bool> IsKv2()
+    {
+        var mount = await vaultClient.V1.System.GetSecretBackendAsync(_mountPoint);
+
+        // Vault reports both KV versions as type "kv"; only options.version distinguishes v2.
+        return mount.Data.Type == VaultSharp.V1.SecretsEngines.SecretsEngineType.KeyValueV1 &&
+            mount.Data.Options is not null &&
+            mount.Data.Options.TryGetValue("version", out var version) && version switch
+            {
+                string text => text == "2",
+                JsonElement { ValueKind: JsonValueKind.String } element => element.GetString() == "2",
+                _ => false
+            };
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> RemoveVersionIfUnchanged(string path, VaultSecret expected, Func<Task<bool>> canRemove)
+    {
+        if (await Read(path) is not { } current || current.Version != expected.Version || !VaultLegacyLayout.SameContent(expected, current) || !await canRemove())
+        {
+            return false;
+        }
+
+        // Never destroy metadata here: a writer may have added a newer version since the read.
+        await vaultClient.V1.Secrets.KeyValue.V2.DeleteSecretVersionsAsync(path, [expected.Version], mountPoint: _mountPoint);
+        return true;
+    }
+
+    /// <inheritdoc/>
     public async Task<IReadOnlyList<string>> List(string path)
     {
         try

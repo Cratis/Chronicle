@@ -32,6 +32,11 @@ internal static class EncryptionKeyCommandRunner
     internal const int MigrationFailed = 5;
 
     /// <summary>
+    /// The exit code when another migration owns the mount or a stale lock needs operator review.
+    /// </summary>
+    internal const int MigrationLocked = 6;
+
+    /// <summary>
     /// Inspects or migrates the key store.
     /// </summary>
     /// <param name="check">The <see cref="IEncryptionKeyStoreUpgradeCheck"/>, or null when the key storage has none.</param>
@@ -157,6 +162,12 @@ internal static class EncryptionKeyCommandRunner
             // Only the kind of failure: what the key store answered may hold paths.
             logger.EncryptionKeyMigrationFailed(exception.GetType().Name);
             return MigrationFailed;
+        }
+
+        if (report.MigrationLocked)
+        {
+            await output.WriteLineAsync("The Vault mount is locked by another migration. If the lock is stale, stop all migrators and remove it manually as described in the compliance storage documentation.");
+            return MigrationLocked;
         }
 
         if (report.LayoutUnusable)

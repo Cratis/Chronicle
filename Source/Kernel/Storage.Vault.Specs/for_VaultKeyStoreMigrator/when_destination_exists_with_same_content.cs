@@ -19,6 +19,6 @@ public class when_destination_exists_with_same_content : given.a_migrator
     async Task Because() => _report = await Migrate();
 
     [Fact] void should_count_it_as_already_migrated() => _report.AlreadyMigrated.ShouldEqual(1L);
-    [Fact] void should_write_nothing() => _store.Writes.ShouldEqual(0);
+    [Fact] void should_only_write_the_lock() => _store.Writes.ShouldEqual(1);
     [Fact] void should_verify_it() => _report.Verified.ShouldEqual(1L);
 }

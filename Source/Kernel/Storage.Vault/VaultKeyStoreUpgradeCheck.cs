@@ -88,6 +88,11 @@ internal class VaultKeyStoreUpgradeCheck(IVaultSecretStore store) : IEncryptionK
     {
         try
         {
+            if (!await store.IsKv2())
+            {
+                return Layout(verified: false, conflict: false);
+            }
+
             if (await HasMarker())
             {
                 return Layout(verified: true, conflict: false);
@@ -118,6 +123,11 @@ internal class VaultKeyStoreUpgradeCheck(IVaultSecretStore store) : IEncryptionK
     {
         try
         {
+            if (!await store.IsKv2())
+            {
+                return Layout(verified: false, conflict: false);
+            }
+
             if (await HasMarker())
             {
                 return Layout(verified: true, conflict: false);

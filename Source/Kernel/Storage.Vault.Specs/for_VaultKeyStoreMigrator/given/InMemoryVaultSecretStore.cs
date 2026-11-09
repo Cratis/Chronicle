@@ -10,6 +10,10 @@ public class InMemoryVaultSecretStore : IVaultSecretStore
 {
     readonly Dictionary<string, (int Version, Dictionary<string, string> Data)> _secrets = new(StringComparer.Ordinal);
 
+    public bool Kv2 { get; set; } = true;
+
+    public Action<string>? BeforeRemove { get; set; }
+
     public int Writes { get; private set; }
 
     public int Removes { get; private set; }
@@ -35,6 +39,25 @@ public class InMemoryVaultSecretStore : IVaultSecretStore
     public bool Has(string path) => _secrets.ContainsKey(path);
 
     public IReadOnlyDictionary<string, string> DataOf(string path) => _secrets[path].Data;
+
+    Task<bool> IVaultSecretStore.IsKv2()
+    {
+        ThrowIfFailing();
+        return Task.FromResult(Kv2);
+    }
+
+    async Task<bool> IVaultSecretStore.RemoveVersionIfUnchanged(string path, VaultSecret expected, Func<Task<bool>> canRemove)
+    {
+        BeforeRemove?.Invoke(path);
+        if (await ((IVaultSecretStore)this).Read(path) is not { } current || current.Version != expected.Version || !VaultLegacyLayout.SameContent(expected, current) || !await canRemove())
+        {
+            return false;
+        }
+
+        Removes++;
+        _secrets.Remove(path);
+        return true;
+    }
 
     Task<IReadOnlyList<string>> IVaultSecretStore.List(string path)
     {
@@ -74,8 +97,9 @@ public class InMemoryVaultSecretStore : IVaultSecretStore
         }
 
         Put(path, data);
+        var version = _secrets[path].Version;
         AfterWrite?.Invoke(path);
-        return Task.FromResult<int?>(_secrets[path].Version);
+        return Task.FromResult<int?>(version);
     }
 
     Task IVaultSecretStore.Remove(string path)

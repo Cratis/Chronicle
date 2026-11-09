@@ -22,7 +22,7 @@ public class when_run_twice : given.a_migrator
 
     [Fact] void should_find_everything_already_migrated() => _second.AlreadyMigrated.ShouldEqual(2L);
     [Fact] void should_copy_nothing() => _second.Copied.ShouldEqual(0L);
-    [Fact] void should_write_nothing() => _store.Writes.ShouldEqual(_writesAfterFirst);
+    [Fact] void should_only_write_the_lock() => _store.Writes.ShouldEqual(_writesAfterFirst + 1);
     [Fact] void should_verify_what_is_there() => _second.Verified.ShouldEqual(2L);
     [Fact] void should_leave_nothing_for_review() => _second.NeedsReview.ShouldBeFalse();
 }

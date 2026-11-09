@@ -25,7 +25,7 @@ public class when_an_erasure_record_exists : given.a_migrator
 
     async Task Because() => _report = await Migrate();
 
-    [Fact] void should_copy_the_erasure_record_before_any_key() => _written[1].ShouldEqual($"{Current}/erasure");
+    [Fact] void should_copy_the_erasure_record_before_any_key() => _written.First(_ => _ != VaultPathSegments.LayoutMarker && _ != VaultKeyStoreMigrator.MigrationLockPath).ShouldEqual($"{Current}/erasure");
     [Fact] void should_count_the_erasure_record() => _report.ErasureRecordsCopied.ShouldEqual(1L);
     [Fact] void should_not_copy_a_revision_it_erased() => _store.Has($"{Current}/1").ShouldBeFalse();
     [Fact] void should_not_copy_a_key_whose_fingerprint_it_holds() => _store.Has($"{Current}/3").ShouldBeFalse();

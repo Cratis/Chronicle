@@ -30,6 +30,11 @@ namespace Cratis.Chronicle.Storage.Vault;
 /// <param name="logger">The <see cref="ILogger"/>.</param>
 internal class VaultKeyStoreMigrator(IVaultSecretStore store, ILogger<VaultKeyStoreMigrator> logger) : IEncryptionKeyStoreMigrator
 {
+    /// <summary>
+    /// The reserved, mount-scoped migration ownership secret.
+    /// </summary>
+    internal const string MigrationLockPath = "k1/~migration-lock";
+    const string OwnerField = "owner";
     const string PublicKeyField = "publicKey";
     const string ErasedThroughField = "erasedThrough";
     const string ErasedKeyFingerprintsField = "erasedKeyFingerprints";
@@ -65,18 +70,36 @@ internal class VaultKeyStoreMigrator(IVaultSecretStore store, ILogger<VaultKeySt
             return run.Report(layoutUnusable: true, complete: false);
         }
 
+        var owner = Guid.NewGuid().ToString("N");
+        var ownsLock = false;
         try
         {
+            if (!dryRun)
+            {
+                ownsLock = await store.WriteIfAbsent(MigrationLockPath, new Dictionary<string, string> { [OwnerField] = owner }) is not null;
+                if (!ownsLock)
+                {
+                    return run.Report(layoutUnusable: false, complete: false) with { MigrationLocked = true };
+                }
+            }
+
             await Execute(run, removeVerifiedLegacy, cancellationToken);
-            return run.Report(layoutUnusable: false, complete: true);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
             // Counts and the kind of failure only: what the key store answers may hold paths.
             run.Failed++;
             logger.MigrationStopped(exception.GetType().Name);
-            return run.Report(layoutUnusable: false, complete: false);
         }
+        finally
+        {
+            if (ownsLock)
+            {
+                await ReleaseLock(owner, run);
+            }
+        }
+
+        return run.Report(layoutUnusable: false, complete: run.Failed == 0);
     }
 
     static (bool Present, Fence? Fence) ReadFence(VaultSecret? erasure)
@@ -139,6 +162,31 @@ internal class VaultKeyStoreMigrator(IVaultSecretStore store, ILogger<VaultKeySt
         }
     }
 
+    static IEnumerable<string> FencePaths(VaultLegacyEntry entry) =>
+        [$"{entry.Directory}/{VaultKeyLocations.ErasureLeaf}", $"{entry.Path[..entry.Path.LastIndexOf('/')]}/{VaultKeyLocations.ErasureLeaf}"];
+
+    async Task ReleaseLock(string owner, Run run)
+    {
+        try
+        {
+            if (await store.Read(MigrationLockPath) is { } secret &&
+                secret.Data.TryGetValue(OwnerField, out var actual) && actual == owner)
+            {
+                // Only the lock uses metadata deletion, so a subsequent CAS-0 acquisition can succeed.
+                await store.Remove(MigrationLockPath);
+            }
+            else
+            {
+                run.Failed++;
+            }
+        }
+        catch (Exception exception)
+        {
+            run.Failed++;
+            logger.MigrationStopped(exception.GetType().Name);
+        }
+    }
+
     async Task CopyAll(Run run, CancellationToken cancellationToken)
     {
         var earlierRoots = (await store.List(string.Empty)).Where(VaultLegacyLayout.IsEarlierEntry).ToList();
@@ -154,13 +202,17 @@ internal class VaultKeyStoreMigrator(IVaultSecretStore store, ILogger<VaultKeySt
 
     async Task CopyAddress(List<VaultLegacyEntry> entries, Run run, CancellationToken cancellationToken)
     {
+        await RememberFences(entries, run);
+
         // The erasure record goes first, so a key it covers is never readable under the new names without it.
         var erasure = entries.FirstOrDefault(_ => _.IsErasure);
         if (erasure is not null)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            run.Count(erasure, await Copy(erasure, run.DryRun));
+            run.Count(erasure, await Copy(erasure, run));
         }
+
+        await RememberFences(entries, run);
 
         // An erasure under either name covers the key: one recorded by this version may exist without an earlier one.
         var fences = new List<(bool Present, Fence? Fence)>
@@ -181,11 +233,11 @@ internal class VaultKeyStoreMigrator(IVaultSecretStore store, ILogger<VaultKeySt
                 continue;
             }
 
-            run.Count(key, await Copy(key, run.DryRun));
+            run.Count(key, await Copy(key, run));
         }
     }
 
-    async Task<Outcome> Copy(VaultLegacyEntry entry, bool dryRun)
+    async Task<Outcome> Copy(VaultLegacyEntry entry, Run run)
     {
         if (await store.Read(entry.Path) is not { } legacy)
         {
@@ -203,10 +255,10 @@ internal class VaultKeyStoreMigrator(IVaultSecretStore store, ILogger<VaultKeySt
             return Compare(legacy, existing);
         }
 
-        return dryRun ? Outcome.Copied : await Write(entry, legacy);
+        return run.DryRun ? Outcome.Copied : await Write(entry, legacy, run);
     }
 
-    async Task<Outcome> Write(VaultLegacyEntry entry, VaultSecret legacy)
+    async Task<Outcome> Write(VaultLegacyEntry entry, VaultSecret legacy, Run run)
     {
         if (await store.WriteIfAbsent(entry.Destination!, VaultLegacyLayout.CopyOf(legacy)) is not { } version)
         {
@@ -219,11 +271,13 @@ internal class VaultKeyStoreMigrator(IVaultSecretStore store, ILogger<VaultKeySt
             return Outcome.Copied;
         }
 
-        // The earlier secret changed or went away while it was copied, for instance through an erasure. The copy is
-        // taken back, but only when it is still the version this run wrote.
-        if (await IsOwnCopy(entry.Destination!, legacy, version))
+        // A missing source may have been removed after another process verified this copy. Never remove the last
+        // copy. Only roll back a version this run created, and never destroy a replacement's metadata or history.
+        if (await store.Read(entry.Path) is not null && await FencesUnchanged(entry, run) &&
+            await store.Read(entry.Destination!) is { } copy && copy.Version == version && VaultLegacyLayout.SameContent(legacy, copy))
         {
-            await store.Remove(entry.Destination!);
+            await store.RemoveVersionIfUnchanged(entry.Destination!, copy, async () =>
+                await store.Read(entry.Path) is not null && await FencesUnchanged(entry, run));
         }
 
         return Outcome.ConflictKept;
@@ -231,9 +285,6 @@ internal class VaultKeyStoreMigrator(IVaultSecretStore store, ILogger<VaultKeySt
 
     async Task<bool> IsUnchanged(string path, VaultSecret legacy) =>
         await store.Read(path) is { } again && VaultLegacyLayout.SameContent(legacy, again);
-
-    async Task<bool> IsOwnCopy(string path, VaultSecret legacy, int version) =>
-        await store.Read(path) is { } copy && copy.Version == version && VaultLegacyLayout.SameContent(legacy, copy);
 
     async Task Execute(Run run, bool removeVerifiedLegacy, CancellationToken cancellationToken)
     {
@@ -248,14 +299,48 @@ internal class VaultKeyStoreMigrator(IVaultSecretStore store, ILogger<VaultKeySt
         if (removeVerifiedLegacy && run.Clean)
         {
             // Each earlier secret is compared with its copy once more right before it is removed.
-            await ForEachSame([.. run.Verified], RemoveLegacy, () => { }, cancellationToken);
+            await ForEachSame(run.Verified.OrderBy(_ => _.IsErasure), RemoveLegacy, () => run.ConflictsKept++, cancellationToken);
         }
 
         async Task RemoveLegacy(VaultLegacyEntry entry)
         {
-            await store.Remove(entry.Path);
-            run.LegacyRemoved++;
+            if (await store.Read(entry.Path) is { } legacy &&
+                await store.Read(entry.Destination!) is { } current &&
+                VaultLegacyLayout.SameContent(legacy, current) &&
+                await FencesUnchanged(entry, run) &&
+                await store.RemoveVersionIfUnchanged(entry.Path, legacy, async () =>
+                    await IsSame(entry) && await FencesUnchanged(entry, run)))
+            {
+                run.LegacyRemoved++;
+            }
+            else
+            {
+                run.ConflictsKept++;
+            }
         }
+    }
+
+    async Task RememberFences(List<VaultLegacyEntry> entries, Run run)
+    {
+        foreach (var path in FencePaths(entries[0]))
+        {
+            run.Fences[path] = await store.Read(path);
+        }
+    }
+
+    async Task<bool> FencesUnchanged(VaultLegacyEntry entry, Run run)
+    {
+        foreach (var path in FencePaths(entry))
+        {
+            var before = run.Fences[path];
+            var now = await store.Read(path);
+            if (before is null ? now is not null : now is null || before.Version != now.Version || !VaultLegacyLayout.SameContent(before, now))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     async Task ForEachSame(IEnumerable<VaultLegacyEntry> entries, Func<VaultLegacyEntry, Task> same, Action different, CancellationToken cancellationToken)
@@ -300,6 +385,8 @@ internal class VaultKeyStoreMigrator(IVaultSecretStore store, ILogger<VaultKeySt
         public long Failed { get; set; }
 
         public long LegacyRemoved { get; set; }
+
+        public Dictionary<string, VaultSecret?> Fences { get; } = new(StringComparer.Ordinal);
 
         public List<VaultLegacyEntry> Migrated { get; } = [];
 

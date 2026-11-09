@@ -14,7 +14,7 @@ internal static partial class EncryptionKeyCommandLogging
     [LoggerMessage(LogLevel.Warning, "Encryption keys stored under earlier names were found: at least {Keys} keys, {Erasures} erasure records and {Shapes} entries that cannot be addressed unambiguously (complete: {Complete}). Operations on the affected keys are refused until the key upgrade is run; see the compliance storage documentation")]
     internal static partial void EarlierEncryptionKeysFound(this ILogger logger, long keys, long erasures, long shapes, bool complete);
 
-    [LoggerMessage(LogLevel.Error, "The encryption key layout is in conflict with earlier material or could not be verified, so the server will not start. See the compliance storage documentation")]
+    [LoggerMessage(LogLevel.Error, "The encryption key layout is in conflict with earlier material or could not be verified, so the server will not start. Vault requires a KV v2 mount and permission to read its configuration. See the compliance storage documentation")]
     internal static partial void EncryptionKeyLayoutUnusable(this ILogger logger);
 
     [LoggerMessage(LogLevel.Error, "Encryption keys stored under earlier names still need the key upgrade and the configured legacy key handling refuses them, so the server will not start. Run {MigrateFlag}; see the compliance storage documentation")]

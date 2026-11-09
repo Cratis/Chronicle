@@ -33,6 +33,11 @@ public record EncryptionKeyMigrationReport(
     long LegacyRemoved)
 {
     /// <summary>
+    /// Gets whether another migration owns the mount, or an operator must clear a stale lock.
+    /// </summary>
+    public bool MigrationLocked { get; init; }
+
+    /// <summary>
     /// Gets whether anything is left for an operator to review.
     /// </summary>
     public bool NeedsReview => ConflictsKept + AmbiguousForReview > 0;
