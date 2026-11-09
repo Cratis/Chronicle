@@ -6,7 +6,7 @@ using BenchmarkDotNet.Attributes;
 namespace Cratis.Chronicle.Benchmarks.HotPaths;
 
 /// <summary>
-/// Compares a <c>lock</c> on an <see cref="object"/> with one on <see cref="System.Threading.Lock"/>, uncontended and
+/// Compares a <see langword="lock"/> on an <see cref="object"/> with one on <see cref="System.Threading.Lock"/>, uncontended and
 /// with four threads. Run with --filter '*LockBenchmark*' --runtimes net10.0 net11.0 --memory.
 /// </summary>
 [MemoryDiagnoser]

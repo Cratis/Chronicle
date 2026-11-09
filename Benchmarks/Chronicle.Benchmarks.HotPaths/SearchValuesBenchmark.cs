@@ -7,7 +7,7 @@ using BenchmarkDotNet.Attributes;
 namespace Cratis.Chronicle.Benchmarks.HotPaths;
 
 /// <summary>
-/// Compares <c>IndexOfAny(char[])</c> with <see cref="SearchValues{T}"/> for locating a number's exponent, the search done by
+/// Compares <c language="csharp">IndexOfAny(char[])</c> with <see cref="SearchValues{T}"/> for locating a number's exponent, the search done by
 /// the sequence content comparison. Run with --filter '*SearchValuesBenchmark*' --runtimes net10.0 net11.0 --memory.
 /// </summary>
 [MemoryDiagnoser]

@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 namespace Cratis.Chronicle.Benchmarks.HotPaths;
 
 /// <summary>
-/// Compares a direct <c>ILogger.LogError</c> call with a source-generated <see cref="LoggerMessageAttribute"/> method
+/// Compares a direct <c language="csharp">ILogger.LogError</c> call with a source-generated <see cref="LoggerMessageAttribute"/> method
 /// when the level is disabled. Run with --filter '*LoggerMessageBenchmark*' --runtimes net10.0 net11.0 --memory.
 /// </summary>
 [MemoryDiagnoser]
