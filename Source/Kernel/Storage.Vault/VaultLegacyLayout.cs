@@ -93,7 +93,7 @@ internal static class VaultLegacyLayout
             {
                 await Walk(store, segments, entries, cancellationToken);
             }
-            else
+            else if (!await store.IsTombstone(string.Join('/', segments)))
             {
                 entries.Add(VaultLegacyEntry.From(segments));
             }

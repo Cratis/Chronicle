@@ -1,10 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Globalization;
 using System.Net;
 using System.Text.Json;
 using VaultSharp;
 using VaultSharp.Core;
+using VaultSharp.V1.Commons;
 
 namespace Cratis.Chronicle.Storage.Vault;
 
@@ -63,6 +65,21 @@ internal class VaultSecretStore(IVaultClient vaultClient, string? mountPointName
     }
 
     /// <inheritdoc/>
+    public async Task<bool> IsTombstone(string path)
+    {
+        try
+        {
+            var metadata = (await vaultClient.V1.Secrets.KeyValue.V2.ReadSecretMetadataAsync(path, mountPoint: _mountPoint)).Data;
+            return AllVersionsDeleted(metadata);
+        }
+        catch (Exception)
+        {
+            // A missing value alone proves nothing: unreadable or absent metadata must stay pending.
+            return false;
+        }
+    }
+
+    /// <inheritdoc/>
     public async Task<VaultSecret?> Read(string path)
     {
         try
@@ -110,6 +127,17 @@ internal class VaultSecretStore(IVaultClient vaultClient, string? mountPointName
 
     /// <inheritdoc/>
     public Task Remove(string path) => vaultClient.V1.Secrets.KeyValue.V2.DeleteMetadataAsync(path, mountPoint: _mountPoint);
+
+    static bool AllVersionsDeleted(FullSecretMetadata metadata) =>
+        metadata.CurrentVersion > 0 &&
+        metadata.Versions is { Count: > 0 } versions &&
+        versions.ContainsKey(metadata.CurrentVersion.ToString(CultureInfo.InvariantCulture)) &&
+        versions.Values.All(IsDeletedOrDestroyed);
+
+    static bool IsDeletedOrDestroyed(SecretMetadata? version) =>
+        version is not null &&
+        (version.Destroyed ||
+            (DateTimeOffset.TryParse(version.DeletionTime, CultureInfo.InvariantCulture, DateTimeStyles.None, out var deleted) && deleted <= DateTimeOffset.UtcNow));
 
     static string? AsText(object? value) => value switch
     {

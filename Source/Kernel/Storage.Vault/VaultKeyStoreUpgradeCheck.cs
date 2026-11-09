@@ -45,8 +45,7 @@ internal class VaultKeyStoreUpgradeCheck(IVaultSecretStore store) : IEncryptionK
         var earlierRoots = (await store.List(string.Empty)).Where(VaultLegacyLayout.IsEarlierEntry).ToList();
         if (!full)
         {
-            // Each earlier root is an event store with at least one entry, so this is a lower bound.
-            return layout with { EarlierNameKeys = earlierRoots.Count };
+            return layout with { EarlierNameKeys = await CountEarlierRoots(store, earlierRoots, cancellationToken) };
         }
 
         long keys = 0, erasures = 0, unresolved = 0, retained = 0;
@@ -144,6 +143,21 @@ internal class VaultKeyStoreUpgradeCheck(IVaultSecretStore store) : IEncryptionK
 
     static EncryptionKeyStoreUpgradeStatus Layout(bool verified, bool conflict) =>
         new(verified, conflict, 0, 0, 0, false);
+
+    static async Task<long> CountEarlierRoots(IVaultSecretStore store, IReadOnlyList<string> roots, CancellationToken cancellationToken)
+    {
+        // LIST retains tombstones, so only count roots with entries not confirmed deleted.
+        long rootsWithMaterial = 0;
+        foreach (var root in roots)
+        {
+            if ((await VaultLegacyLayout.Walk(store, [root], cancellationToken)).Count > 0)
+            {
+                rootsWithMaterial++;
+            }
+        }
+
+        return rootsWithMaterial;
+    }
 
     async Task<bool> IsRetainedCopy(VaultLegacyEntry entry) =>
         await store.Read(entry.Destination!) is { } current &&

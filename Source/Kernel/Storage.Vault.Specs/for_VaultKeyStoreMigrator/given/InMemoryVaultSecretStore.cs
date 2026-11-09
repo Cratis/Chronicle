@@ -9,6 +9,9 @@ namespace Cratis.Chronicle.Storage.Vault.for_VaultKeyStoreMigrator.given;
 public class InMemoryVaultSecretStore : IVaultSecretStore
 {
     readonly Dictionary<string, (int Version, Dictionary<string, string> Data)> _secrets = new(StringComparer.Ordinal);
+    readonly Dictionary<string, Dictionary<int, bool>> _versions = new(StringComparer.Ordinal);
+
+    public HashSet<string> UnreadablePaths { get; } = new(StringComparer.Ordinal);
 
     public bool Kv2 { get; set; } = true;
 
@@ -26,15 +29,26 @@ public class InMemoryVaultSecretStore : IVaultSecretStore
 
     public Action<string>? AfterWrite { get; set; }
 
-    public IReadOnlyCollection<string> Paths => _secrets.Keys;
+    public IReadOnlyCollection<string> Paths => _versions.Keys;
 
     public void Put(string path, IReadOnlyDictionary<string, string> data)
     {
-        var version = _secrets.TryGetValue(path, out var existing) ? existing.Version + 1 : 1;
+        if (!_versions.TryGetValue(path, out var versions))
+        {
+            versions = [];
+            _versions[path] = versions;
+        }
+
+        var version = versions.Count == 0 ? 1 : versions.Keys.Max() + 1;
+        versions[version] = false;
         _secrets[path] = (version, new(data, StringComparer.Ordinal));
     }
 
-    public void Delete(string path) => _secrets.Remove(path);
+    public void Delete(string path)
+    {
+        _secrets.Remove(path);
+        _versions.Remove(path);
+    }
 
     public bool Has(string path) => _secrets.ContainsKey(path);
 
@@ -55,6 +69,7 @@ public class InMemoryVaultSecretStore : IVaultSecretStore
         }
 
         Removes++;
+        _versions[path][expected.Version] = true;
         _secrets.Remove(path);
         return true;
     }
@@ -63,7 +78,7 @@ public class InMemoryVaultSecretStore : IVaultSecretStore
     {
         ThrowIfFailing();
         var prefix = path.Length == 0 ? string.Empty : $"{path}/";
-        IReadOnlyList<string> entries = _secrets.Keys
+        IReadOnlyList<string> entries = _versions.Keys
             .Where(key => key.StartsWith(prefix, StringComparison.Ordinal))
             .Select(key => key[prefix.Length..])
             .Select(rest => rest.Contains('/') ? $"{rest[..rest.IndexOf('/')]}/" : rest)
@@ -73,10 +88,14 @@ public class InMemoryVaultSecretStore : IVaultSecretStore
         return Task.FromResult(entries);
     }
 
+    Task<bool> IVaultSecretStore.IsTombstone(string path) =>
+        Task.FromResult(FailEverything is null && !UnreadablePaths.Contains(path) &&
+            _versions.TryGetValue(path, out var versions) && versions.Count > 0 && versions.Values.All(deleted => deleted));
+
     Task<VaultSecret?> IVaultSecretStore.Read(string path)
     {
         ThrowIfFailing();
-        return Task.FromResult(_secrets.TryGetValue(path, out var secret)
+        return Task.FromResult(!UnreadablePaths.Contains(path) && _secrets.TryGetValue(path, out var secret)
             ? new VaultSecret(secret.Version, new Dictionary<string, string>(secret.Data, StringComparer.Ordinal))
             : null);
     }
@@ -91,7 +110,7 @@ public class InMemoryVaultSecretStore : IVaultSecretStore
             throw new InvalidOperationException($"write failed at {path}");
         }
 
-        if (_secrets.ContainsKey(path))
+        if (_versions.ContainsKey(path))
         {
             return Task.FromResult<int?>(null);
         }
@@ -106,7 +125,7 @@ public class InMemoryVaultSecretStore : IVaultSecretStore
     {
         ThrowIfFailing();
         Removes++;
-        _secrets.Remove(path);
+        Delete(path);
         return Task.CompletedTask;
     }
 

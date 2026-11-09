@@ -31,6 +31,13 @@ internal interface IVaultSecretStore
     Task<IReadOnlyList<string>> List(string path);
 
     /// <summary>
+    /// Checks metadata for a secret whose versions are all deleted or destroyed.
+    /// </summary>
+    /// <param name="path">The path of the secret.</param>
+    /// <returns>True only when metadata confirms a tombstone; false for live, missing or unreadable metadata.</returns>
+    Task<bool> IsTombstone(string path);
+
+    /// <summary>
     /// Reads the current version of a secret.
     /// </summary>
     /// <param name="path">The path of the secret.</param>
