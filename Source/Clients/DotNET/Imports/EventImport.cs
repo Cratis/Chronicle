@@ -55,7 +55,11 @@ public sealed class EventImport(
     readonly SemaphoreSlim _inFlight = new(Math.Max(1, options.MaxChunksInFlight));
     readonly List<Task> _sends = [];
     readonly List<ImportEvent> _buffer = [];
+#if NET8_0
+    readonly object _lock = new();
+#else
     readonly Lock _lock = new();
+#endif
     readonly CancellationTokenSource _abandoning = new();
     int _bufferBytes;
     int _nextChunkIndex = acknowledgedChunks;
