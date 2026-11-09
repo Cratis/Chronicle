@@ -33,6 +33,8 @@ public class the_reservation_answers_after_the_timeout : given.a_two_silo_cluste
             return await new TaskCompletionSource<bool>().Task;
         }
 
+        public Task<bool> IsHeldBy(ConnectionOwner owner) => inner.IsHeldBy(owner);
+
         public Task Release(ConnectionOwner owner, Guid token) => inner.Release(owner, token);
     }
 }

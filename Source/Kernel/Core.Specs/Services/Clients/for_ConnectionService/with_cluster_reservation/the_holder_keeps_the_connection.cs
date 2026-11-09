@@ -31,6 +31,8 @@ public class the_holder_keeps_the_connection : given.a_two_silo_cluster
             return inner.Claim(owner, silo, token, lease);
         }
 
+        public Task<bool> IsHeldBy(ConnectionOwner owner) => inner.IsHeldBy(owner);
+
         public Task Release(ConnectionOwner owner, Guid token) => inner.Release(owner, token);
     }
 }
