@@ -1,0 +1,20 @@
+---
+title: "CHR0069: [Sink] cannot be combined with [Passive]"
+description: "CHR0069 reports a read model marked both [Sink] and [Passive]."
+---
+
+## Rule description
+
+`[Passive]` declares that a read model is never stored: it is projected on demand and has no sink. `[Sink("name")]` names the sink configuration a read model is stored in. A read model is one or the other.
+
+## Severity
+
+Error
+
+## How to fix
+
+Remove `[Sink]` to keep the read model passive, or remove `[Passive]` to store it in the named sink.
+
+## Related topics
+
+- [Sinks](../sinks/index.mdx)

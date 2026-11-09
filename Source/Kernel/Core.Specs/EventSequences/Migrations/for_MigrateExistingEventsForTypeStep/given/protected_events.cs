@@ -53,11 +53,7 @@ public class protected_events : Specification
     async Task Establish()
     {
         _keys = new InMemoryEncryptionKeyStorage();
-        _keyAccess = Substitute.For<IEncryptionKeyStorage>();
-        _keyAccess.TryGetFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>(), Arg.Any<EncryptionKeyRevision?>())
-            .Returns(call => _keys.TryGetFor(call.ArgAt<EventStoreName>(0), call.ArgAt<EventStoreNamespaceName>(1), call.ArgAt<EncryptionKeyIdentifier>(2), call.ArgAt<EncryptionKeyRevision?>(3)));
-        _keyAccess.GetErasureFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>())
-            .Returns(call => _keys.GetErasureFor(call.ArgAt<EventStoreName>(0), call.ArgAt<EventStoreNamespaceName>(1), call.ArgAt<EncryptionKeyIdentifier>(2)));
+        ConfigureKeyAccess();
         var encryption = new Encryption();
         _manager = new JsonSchemaMetadataManager(
             new KnownInstancesOf<IJsonSchemaMetadataValueHandler>(new PIICompliancePropertyValueHandler(new ManagedEncryptionKeyProvisioner(_keys, encryption), _keyAccess, encryption)),
@@ -74,7 +70,7 @@ public class protected_events : Specification
         migrations.MigrateToAllGenerations(Arg.Any<EventTypeDefinition>(), Arg.Any<EventType>(), Arg.Any<JsonObject>(), Arg.Any<ExpandoObject>()).Returns(call =>
         {
             var plaintext = call.ArgAt<JsonObject>(2);
-            var name = (UsesObjectArray ? plaintext["contacts"]![0]!["name"] : plaintext["name"])!.GetValue<string>();
+            var name = (UsesObjectArray ? plaintext["contacts"][0]["name"] : plaintext["name"]).GetValue<string>();
             _migrationInputs.Add(name);
             _plaintextEvents.Add(call.ArgAt<ExpandoObject>(3));
             return Task.FromResult<IDictionary<EventTypeGeneration, ExpandoObject>>(new Dictionary<EventTypeGeneration, ExpandoObject>
@@ -85,7 +81,7 @@ public class protected_events : Specification
         });
         foreach (var (number, subject) in new[] { (1UL, "erased-owner"), (2UL, "active-owner") })
         {
-            var content = await _manager.Apply(Store, Namespace, _sourceSchema, subject, JsonNode.Parse(SourceContentJson)!.AsObject());
+            var content = await _manager.Apply(Store, Namespace, _sourceSchema, subject, JsonNode.Parse(SourceContentJson).AsObject());
             var storedContent = _converter.ToExpandoObject(content, _sourceSchema);
             _stored[number] = new Dictionary<EventTypeGeneration, ExpandoObject> { [1] = storedContent };
             _events.Add(new AppendedEvent(EventContext.From(Store, Namespace, new EventType(typeId, 1), EventSourceType.Default, "not-the-subject", EventStreamType.All, EventStreamId.Default, number, CorrelationId.NotSet, subject: subject), storedContent));
@@ -100,7 +96,7 @@ public class protected_events : Specification
         {
             var number = call.Arg<EventSequenceNumber>();
             var @event = _events.Single(_ => _.Context.SequenceNumber == number);
-            return new StoredEventGenerations(number, typeId, @event.Context.EventSourceId, @event.Context.Subject!, 1, _stored[number.Value].ToDictionary(_ => _.Key, _ => JsonSerializer.Serialize(_.Value)), 0, string.Empty);
+            return new StoredEventGenerations(number, typeId, @event.Context.EventSourceId, @event.Context.Subject, 1, _stored[number.Value].ToDictionary(_ => _.Key, _ => JsonSerializer.Serialize(_.Value)), 0, string.Empty);
         });
         _sequence.TryAddGenerations(Arg.Any<StoredEventGenerations>(), Arg.Any<IEnumerable<GenerationToAdd>>()).Returns(call =>
         {
@@ -126,13 +122,24 @@ public class protected_events : Specification
         silo.AddService(new JsonSerializerOptions());
         silo.AddService(Substitute.For<IJobStepThrottle>());
         silo.AddService(NullLogger<MigrateExistingEventsForTypeStep>.Instance);
-        silo.AddPersistentStateStorage<MigrateExistingEventsForTypeStepState>(nameof(MigrateExistingEventsForTypeStepState), Cratis.Choreography.WellKnownGrainStorageProviders.JobSteps);
+        silo.AddPersistentStateStorage<MigrateExistingEventsForTypeStepState>(nameof(MigrateExistingEventsForTypeStepState), Choreography.WellKnownGrainStorageProviders.JobSteps);
         _step = await silo.CreateGrainAsync<MigrateExistingEventsForTypeStep>(JobStepId.New(), new JobStepKey(JobId.New(), Store, Namespace));
         _state = new MigrateExistingEventsForTypeStepState { EventTypeId = typeId };
     }
 
     protected async Task Perform() => _result = await (Task<Catch<JobStepResult>>)typeof(MigrateExistingEventsForTypeStep)
-        .GetMethod("PerformStep", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(_step, [_state, CancellationToken.None])!;
+        .GetMethod("PerformStep", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(_step, [_state, CancellationToken.None]);
 
     protected JsonObject Target(ulong number) => _converter.ToJsonObject(_stored[number][2], _targetSchema);
+
+    void ConfigureKeyAccess()
+    {
+        _keyAccess = Substitute.For<IEncryptionKeyStorage>();
+        _keyAccess.TryGetFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>(), Arg.Any<EncryptionKeyRevision?>())
+            .Returns(call => _keys.TryGetFor(call.ArgAt<EventStoreName>(0), call.ArgAt<EventStoreNamespaceName>(1), call.ArgAt<EncryptionKeyIdentifier>(2), call.ArgAt<EncryptionKeyRevision?>(3)));
+        _keyAccess.TryGetLatestFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>())
+            .Returns(call => _keys.TryGetLatestFor(call.ArgAt<EventStoreName>(0), call.ArgAt<EventStoreNamespaceName>(1), call.ArgAt<EncryptionKeyIdentifier>(2)));
+        _keyAccess.GetErasureForRelease(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>())
+            .Returns(call => _keys.GetErasureForRelease(call.ArgAt<EventStoreName>(0), call.ArgAt<EventStoreNamespaceName>(1), call.ArgAt<EncryptionKeyIdentifier>(2)));
+    }
 }

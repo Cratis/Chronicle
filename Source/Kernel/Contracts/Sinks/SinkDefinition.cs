@@ -26,4 +26,13 @@ public class SinkDefinition
     /// </summary>
     [ProtoMember(3)]
     public EventSequenceSinkConfiguration? EventSequence { get; set; }
+
+    /// <summary>
+    /// Gets or sets the name of the sink configuration to store to. Empty means the default sink for the kind of read model.
+    /// </summary>
+    /// <remarks>
+    /// Kernels that do not know named sinks ignore it, and <see cref="ConfigurationId"/> stays for clients that do not send it.
+    /// </remarks>
+    [ProtoMember(4)]
+    public string Name { get; set; } = string.Empty;
 }

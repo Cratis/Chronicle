@@ -13,7 +13,7 @@ public class and_the_key_storage_is_unavailable : given.a_stored_protected_inten
     {
         var unavailable = Substitute.For<IEncryptionKeyStorage>();
         _failure = new("subject", []);
-        unavailable.TryGetFor("store", "ns", "subject", _original.ProtectedParts[0].Revision).Returns(Task.FromException<EncryptionKey?>(_failure));
+        unavailable.TryGetAtRevisionFor("store", "ns", "subject", _original.ProtectedParts[0].Revision).Returns(Task.FromException<EncryptionKeyAtRevision?>(_failure));
         _cache = new(unavailable);
     }
     async Task Because() => _error = await Catch.Exception(Compare);

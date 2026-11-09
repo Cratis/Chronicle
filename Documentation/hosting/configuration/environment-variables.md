@@ -36,6 +36,10 @@ the same way (`compliance.encryption.migrateFromDefaultStorage` becomes
 | Cratis__Chronicle__Telemetry__GrpcClientTracing | Enable kernel gRPC client tracing (default `false`); see [OpenTelemetry trace volume defaults](open-telemetry.md#trace-volume-defaults) |
 | Cratis__Chronicle__Health__Port | Dedicated HTTP/1.1 port for the health endpoint |
 | Cratis__Chronicle__Health__Tls | Whether the dedicated health port uses TLS (default `true`) |
+| Cratis__Chronicle__Federation__Enabled | Opens the dedicated federation listener and runs consumer bindings (default `false`); see [Federation](federation.md) |
+| Cratis__Chronicle__Federation__Port | Port of the federation listener (default `35100`) |
+| Cratis__Chronicle__Federation__CertificatePath | PKCS#12 certificate of the federation listener |
+| Cratis__Chronicle__Federation__CertificatePasswordPath | File holding the federation certificate password |
 | Cratis__Chronicle__Features__Api | Enable REST API endpoint |
 | Cratis__Chronicle__Features__Workbench | Enable Workbench UI |
 | Cratis__Chronicle__Features__ChangesetStorage | Enable changeset storage |
@@ -43,6 +47,9 @@ the same way (`compliance.encryption.migrateFromDefaultStorage` becomes
 | Cratis__Chronicle__Features__IsolatedPartitionReplay | Reserved: rebuild a replayed partition in isolation (default `false`, no effect yet) |
 | Cratis__Chronicle__Storage__Type | Storage provider type |
 | Cratis__Chronicle__Storage__ConnectionDetails | Storage connection string |
+| Cratis__Chronicle__Storage__ConnectionDetailsFile | Path of a file holding the storage connection string, such as a mounted Kubernetes Secret; set either this or `ConnectionDetails` |
+| Cratis__Chronicle__Sinks__Configurations__\<name\>__ConnectionDetailsFile | Path of a file holding the connection string of a named sink; set either this or its `ConnectionDetails` |
+| Cratis__Chronicle__Sinks__Configurations__\<name\>__PasswordFile | Path of a file holding the password of a named Neo4j sink; set either this or its `PasswordSecret` |
 | Cratis__Chronicle__Storage__Schema | SQL schema for Chronicle's tables |
 | Cratis__Chronicle__Storage__CreateIfMissing | Whether Chronicle creates missing databases and schemas |
 | Cratis__Chronicle__Storage__PostgreSqlPooling__MaxPoolSize | Maximum PostgreSQL connections per database pool (default 20; connection string values take precedence) |

@@ -186,6 +186,11 @@ public class ChronicleOptions : IValidatableObject
     public ReadModels ReadModels { get; init; } = new ReadModels();
 
     /// <summary>
+    /// Gets the named sinks read models and graphs store to, and which of them are the defaults.
+    /// </summary>
+    public SinksOptions Sinks { get; init; } = new SinksOptions();
+
+    /// <summary>
     /// Gets or inits the trusted reverse proxies used for forwarded headers.
     /// </summary>
     public ForwardedHeaders ForwardedHeaders { get; init; } = new ForwardedHeaders();
@@ -222,6 +227,11 @@ public class ChronicleOptions : IValidatableObject
     public Tls Tls { get; init; } = new Tls();
 
     /// <summary>
+    /// Gets or inits the dedicated federation listener configuration. Federation is off by default.
+    /// </summary>
+    public Federation Federation { get; init; } = new Federation();
+
+    /// <summary>
     /// Gets or inits the bootstrap client configurations.
     /// Clients defined here are registered on startup with hashed secrets.
     /// </summary>
@@ -232,6 +242,7 @@ public class ChronicleOptions : IValidatableObject
     /// </summary>
     /// <param name="services">Service collection to add to.</param>
     /// <param name="configuration">Application configuration.</param>
+    /// <exception cref="InvalidConnectionFile">Thrown when a connection setting that names a file cannot be resolved.</exception>
     public static void AddConfiguration(IServiceCollection services, IConfiguration configuration)
     {
         // Load chronicle.json at the root level and bind it to the Cratis:Chronicle section
@@ -245,6 +256,8 @@ public class ChronicleOptions : IValidatableObject
         {
             configuration[$"{SectionPath}:{kvp.Key}"] = kvp.Value;
         }
+
+        ConnectionFiles.Resolve(configuration);
 
         services
             .AddOptions<ChronicleOptions>()
@@ -264,6 +277,13 @@ public class ChronicleOptions : IValidatableObject
                 [$"{nameof(Telemetry)}.{nameof(Telemetry.EventSourceIdHashKey)}"]);
         }
 
+        if (Federation.Enabled && (Federation.Port == Port || Federation.Port == DedicatedHealthPort))
+        {
+            yield return new ValidationResult(
+                "Federation:Port must differ from the main port and the dedicated health port; federation is served on its own listener.",
+                [$"{nameof(Federation)}.{nameof(Federation.Port)}"]);
+        }
+
         if (ReadModels.MaxBatchSize <= 0)
         {
             yield return new ValidationResult(
@@ -279,9 +299,23 @@ public class ChronicleOptions : IValidatableObject
         foreach (var error in ValidateSingleWriterLease().Concat(alertErrors)) yield return error;
         foreach (var error in ObserverRetryOverrides.SelectMany(_ => _.Value.Validate(_.Key))) yield return error;
         foreach (var error in ConstraintIndexRepair.Validate()) yield return error;
+        if (ValidateSinks() is { } sinksError) yield return sinksError;
         if (!Webhooks.Probe.HasValidTiming)
         {
             yield return new ValidationResult("Invalid webhook probe timing settings.", [$"{nameof(Webhooks)}.{nameof(Configuration.Webhooks.Probe)}"]);
+        }
+    }
+
+    ValidationResult? ValidateSinks()
+    {
+        try
+        {
+            Sinks.Validate();
+            return null;
+        }
+        catch (InvalidSinkConfiguration exception)
+        {
+            return new ValidationResult(exception.Message, [nameof(Sinks)]);
         }
     }
 

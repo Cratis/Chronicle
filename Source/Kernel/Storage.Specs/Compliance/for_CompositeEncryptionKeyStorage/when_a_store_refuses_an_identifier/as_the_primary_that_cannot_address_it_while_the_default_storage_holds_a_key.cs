@@ -16,6 +16,7 @@ public class as_the_primary_that_cannot_address_it_while_the_default_storage_hol
     {
         await Save(_secondary, KeyNamed("default"));
         var refusing = Substitute.For<IEncryptionKeyStorage>();
+        refusing.TryGetLatestFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>()).ThrowsAsync(new InvalidEncryptionKeyAddress("identifier"));
         refusing.TryGetFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>(), Arg.Any<EncryptionKeyRevision?>()).ThrowsAsync(new InvalidEncryptionKeyAddress("identifier"));
         _composite = new CompositeEncryptionKeyStorage(refusing, _secondary);
     }

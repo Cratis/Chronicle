@@ -5,13 +5,13 @@ using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage.Compliance;
 using Cratis.Chronicle.Storage.MongoDB;
-using Cratis.Chronicle.Storage.MongoDB.Sinks;
+using Cratis.Chronicle.Storage.MongoDB.EventSequences;
 using MongoDB.Driver;
 
 namespace Cratis.Compliance.MongoDB.for_EncryptionKeyStorage.when_getting_or_adding_an_internal_secret;
 
-[Collection(MongoDBCollection.Name)]
-public class and_subject_keys_share_its_name(MongoDBFixture fixture) : Specification
+[Collection(ReplicaSetMongoDBCollection.Name)]
+public class and_subject_keys_share_its_name(ReplicaSetMongoDBFixture fixture) : Specification
 {
     static readonly EventStoreName _eventStore = "event-store";
     static readonly EncryptionKeyIdentifier _alias = InternalSecretPurpose.MutationReceiptDigest.Value;
@@ -26,7 +26,8 @@ public class and_subject_keys_share_its_name(MongoDBFixture fixture) : Specifica
     async Task Establish()
     {
         // The event store database and the namespace database are one physical database, so the spec shows the
-        // separation comes from the collections rather than from the databases being different.
+        // separation comes from the collections rather than from the databases being different. Key fences read with
+        // linearizable read concern, which only a replica set serves (Chronicle requires one), hence the replica set fixture.
         var mongo = new MongoClient(fixture.ConnectionString).GetDatabase($"internal-secrets-{Guid.NewGuid():N}");
         _store = StoreOver(mongo);
         _racingStore = StoreOver(mongo);

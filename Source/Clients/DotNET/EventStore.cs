@@ -291,7 +291,7 @@ public partial class EventStore : IEventStore
         {
             GenerationDelivery = options.Value.EventGenerationDelivery,
             SoftwareVersion = options.Value.SoftwareVersion,
-            Graphs = new(clientArtifactsProvider, artifactActivator, namingPolicy, EventTypes, schemaGenerator, options.Value.DefaultGraphSinkTypeId)
+            Graphs = new(clientArtifactsProvider, artifactActivator, namingPolicy, EventTypes, schemaGenerator, options.Value.DefaultGraphSinkTypeId, options.Value.DefaultGraphSinkName)
         };
 
         _projections = projections;

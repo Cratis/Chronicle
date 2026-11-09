@@ -120,6 +120,8 @@ Kernels before 19.117 named the System event store's databases `System+es`, `Sys
 
 Releases 19.117 to 20.0 recorded the patch as applied without moving anything, which left the old databases in place and the kernel running against empty new ones. The next 19.x release repeats the move; it keeps whatever the kernel wrote under the new name, copies what is missing, and drops the old databases. A kernel older than 19.117 looks for the old names, so after the move it no longer finds the System event store's data. To keep the old names, set `storage.systemDatabaseName` to `System` before upgrading; nothing is moved then. A move runs once per patch, so changing the name later does not move the data again.
 
+Dropping the old databases needs the `dropDatabase` action on them, or at least `dropCollection`; when the database cannot be dropped, the kernel drops its collections instead, which removes it as well. If the MongoDB user the kernel connects with has neither, the content is still moved and the kernel starts from the new databases, but the old ones remain as stale copies. The kernel logs a warning naming them on every start until they are gone. Drop them with a user that has those actions, and do not set `storage.systemDatabaseName` back to `System` while they exist, since the kernel would then start against the stale copy.
+
 The repeat move ships as a patch of the next 19.x release, not 20.1. A leftover `System+[NotSet]` database, with `EventTypeStatistics-<timestamp>` collections, was never part of the move and is not read by the kernel; once you have confirmed that the System event store is intact under its configured name, drop it by hand.
 
 **Downgrading.** The data is not copied back. After the move, a kernel older than 19.117 needs `storage.systemDatabaseName` set explicitly to `_system`, otherwise it starts against the near-empty old names and fails on the administrator roster. A current kernel that finds its configured System databases empty while the other name holds events refuses to start and names both, instead of creating a fresh administrator roster in an empty store.
@@ -287,12 +289,44 @@ When you host Chronicle programmatically, select the in-memory backend with the 
 | --- | --- | --- | --- |
 | type | string | Yes | Storage type: `MongoDB`, `PostgreSql`, `MsSql`, `Sqlite`, or `InMemory` |
 | connectionDetails | string | Conditional | Connection string for the chosen storage backend. Required for all backends except `InMemory`, which ignores it |
+| connectionDetailsFile | string | No | Path of a file holding the connection string, such as a mounted Kubernetes Secret. Read once at startup and trimmed of a trailing newline. Set either this or `connectionDetails`, not both |
 | databaseNamePrefix | string | No | Prefix prepended to every MongoDB database name. Defaults to empty; ignored by other storage backends |
 | systemDatabaseName | string | No | Name the System event store's MongoDB databases are named by. Defaults to `_system`; ignored by other storage backends |
 | schema | string | No | SQL schema Chronicle keeps its tables in. Defaults to empty, the database user's default schema; ignored by MongoDB and SQLite |
 | createIfMissing | boolean | No | Whether Chronicle creates missing databases and schemas. Defaults to `true` |
 | connectionResolution | object | No | Resolves the server, database, schema and identity per event store, namespace and purpose. See [storage connection resolution](storage-connection-resolution.md) |
 
+
+## Read the connection from a file
+
+In Kubernetes a connection string is a Secret, and the safe way to hand a Secret to a pod is a mounted file. An environment variable exposes the value to anything that can read the pod's environment. Set `connectionDetailsFile` to the path of the file instead of `connectionDetails`:
+
+```json
+{
+  "storage": {
+    "type": "PostgreSql",
+    "connectionDetailsFile": "/var/run/secrets/chronicle/storage"
+  }
+}
+```
+
+Or through the environment:
+
+```bash
+Cratis__Chronicle__Storage__ConnectionDetailsFile=/var/run/secrets/chronicle/storage
+```
+
+The Kernel reads the file once, at startup, and trims a trailing newline. It stops startup with exit code 4 and a message naming the setting when:
+
+- `connectionDetails` and `connectionDetailsFile` are both set;
+- the file does not exist, is a directory, cannot be read, or is empty.
+
+The message names the setting and the path of the file, never what the file holds.
+
+> [!NOTE]
+> The development and local images ship a `chronicle.json` that sets `connectionDetails` to `mongodb://localhost:27017`. To use `connectionDetailsFile` with them, clear it with `Cratis__Chronicle__Storage__ConnectionDetails=` (empty). The production image has no such default.
+
+Named sinks read their connections from files the same way; see [Named sinks](sinks.md#connections-from-files).
 
 ## Single-writer lease storage
 

@@ -46,6 +46,9 @@ internal static partial class ChronicleServerStartupTaskLogging
     [LoggerMessage(LogLevel.Critical, "Startup refused: {Description}")]
     internal static partial void StartupRefusedBecauseSystemDataIsMisplaced(this ILogger<ChronicleServerStartupTask> logger, string description);
 
+    [LoggerMessage(LogLevel.Warning, "{Description}")]
+    internal static partial void LegacySystemDataRetained(this ILogger<ChronicleServerStartupTask> logger, string description);
+
     [LoggerMessage(LogLevel.Critical, "Patch manager could not relocate to a kernel at least as new as the caller. Local release: {LocalRelease}; cluster releases: {ClusterReleases}")]
     internal static partial void PatchManagerCouldNotRelocate(this ILogger<ChronicleServerStartupTask> logger, string localRelease, string clusterReleases);
 

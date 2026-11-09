@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Storage.Compliance;
+
 namespace Cratis.Chronicle.EventSequences.Migrations.for_MigrateExistingEventsForTypeStep.when_performing;
 
 public class and_an_object_array_member_key_is_missing : given.protected_events
@@ -9,10 +11,10 @@ public class and_an_object_array_member_key_is_missing : given.protected_events
 
     protected override bool UsesObjectArray => true;
 
-    async Task Establish()
+    void Establish()
     {
         _original = _converter.ToJsonObject(_stored[1][1], _sourceSchema).ToJsonString();
-        await _keys.DeleteFor(Store, Namespace, "erased-owner");
+        _keyAccess.TryGetLatestFor(Store, Namespace, "erased-owner").Returns(Task.FromResult<EncryptionKeyAtRevision?>(null));
     }
 
     async Task Because() => await Perform();

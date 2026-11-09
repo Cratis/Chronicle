@@ -14,11 +14,12 @@ public class and_a_racing_save_stored_the_same_revision_first : racing_encryptio
     Exception _result;
 
     void Establish() =>
-        _keys.ReplaceOneAsync(Arg.Any<FilterDefinition<EncryptionKeyForIdentifier>>(), Arg.Any<EncryptionKeyForIdentifier>(), Arg.Any<ReplaceOptions>(), Arg.Any<CancellationToken>())
-            .Returns(Task.FromException<ReplaceOneResult>(duplicate_keys.Duplicate()));
+        _keys.InsertOneAsync(Arg.Any<EncryptionKeyForIdentifier>(), Arg.Any<InsertOneOptions>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromException(duplicate_keys.Duplicate()));
 
-    async Task Because() => _result = await Catch.Exception(() => _storage.SaveFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, "identifier", new EncryptionKey([1], [2])));
+    async Task Because() => _result = await Catch.Exception(() => _storage.SaveFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, "identifier", new EncryptionKey([1], [2]), 1u));
 
     [Fact] void should_surface_the_duplicate_key_error() => _result.ShouldBeOfExactType<MongoWriteException>();
-    [Fact] void should_not_overwrite_the_stored_key() => _keys.ReceivedWithAnyArgs(1).ReplaceOneAsync(default!, default!, default(ReplaceOptions)!, default);
+    [Fact] void should_try_the_explicit_revision_only_once() => _keys.ReceivedWithAnyArgs(1).InsertOneAsync(default!, default!, default);
+    [Fact] void should_not_overwrite_the_stored_key() => _keys.DidNotReceiveWithAnyArgs().ReplaceOneAsync(default!, default!, default(ReplaceOptions)!, default);
 }

@@ -50,7 +50,8 @@ public partial class ReadModels
                 Sink = new()
                 {
                     ConfigurationId = Guid.Empty,
-                    TypeId = GetSinkTypeIdFor(readModel.ReadModelType)
+                    TypeId = GetSinkTypeIdFor(readModel.ReadModelType),
+                    Name = GetSinkNameFor(readModel.ReadModelType)
                 },
                 Schema = schemaGenerator.GenerateForReadModel(readModel.ReadModelType).ToJson(),
                 Indexes = GetIndexesForType(readModel.ReadModelType),
