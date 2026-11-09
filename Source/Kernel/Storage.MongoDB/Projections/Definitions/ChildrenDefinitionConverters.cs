@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Properties;
 using KernelDefs = Cratis.Chronicle.Concepts.Projections.Definitions;
 
@@ -28,7 +29,8 @@ public static class ChildrenDefinitionConverters
             source.FromEventProperty?.ToKernel(),
             AutoMap: source.AutoMap,
             Nested: source.Nested?.ToDictionary(kv => (PropertyPath)kv.Key, kv => kv.Value.ToKernel()),
-            NoAutoMapProperties: source.NoAutoMapProperties?.Select(_ => (PropertyPath)_).ToList());
+            NoAutoMapProperties: source.NoAutoMapProperties?.Select(_ => (PropertyPath)_).ToList(),
+            Ordering: source.Ordering?.ToKernel());
 
     /// <summary>
     /// Converts a Kernel ChildrenDefinition to a MongoDB ChildrenDefinition.
@@ -48,6 +50,32 @@ public static class ChildrenDefinitionConverters
             FromEventProperty = source.FromEventProperty?.ToMongoDB(),
             AutoMap = source.AutoMap,
             Nested = (source.Nested ?? new Dictionary<PropertyPath, KernelDefs.ChildrenDefinition>()).ToDictionary(kv => kv.Key.ToString(), kv => kv.Value.ToMongoDB()),
-            NoAutoMapProperties = (source.NoAutoMapProperties ?? []).Select(_ => _.ToString()).ToList()
+            NoAutoMapProperties = (source.NoAutoMapProperties ?? []).Select(_ => _.ToString()).ToList(),
+            Ordering = source.Ordering?.ToMongoDB()
         };
+
+    /// <summary>
+    /// Convert from MongoDB representation of a children ordering to the kernel representation.
+    /// </summary>
+    /// <param name="source">The MongoDB <see cref="ChildrenOrderingDefinition"/>.</param>
+    /// <returns>The kernel <see cref="ChildrenOrdering"/>, or null for the default append ordering.</returns>
+    public static ChildrenOrdering? ToKernel(this ChildrenOrderingDefinition source) =>
+        source.Placement == ChildrenPlacement.Append
+            ? null
+            : new(source.Placement, string.IsNullOrEmpty(source.SortBy) ? PropertyPath.NotSet : new PropertyPath(source.SortBy), source.Direction);
+
+    /// <summary>
+    /// Convert from the kernel representation of a children ordering to the MongoDB representation.
+    /// </summary>
+    /// <param name="source">The kernel <see cref="ChildrenOrdering"/>.</param>
+    /// <returns>The MongoDB <see cref="ChildrenOrderingDefinition"/>, or null for the default append ordering.</returns>
+    public static ChildrenOrderingDefinition? ToMongoDB(this ChildrenOrdering source) =>
+        source.Placement == ChildrenPlacement.Append
+            ? null
+            : new()
+            {
+                Placement = source.Placement,
+                SortBy = source.SortBy.IsSet ? source.SortBy.Path : string.Empty,
+                Direction = source.Direction
+            };
 }

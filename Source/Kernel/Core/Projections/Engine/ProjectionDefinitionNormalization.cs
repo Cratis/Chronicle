@@ -39,7 +39,11 @@ internal static class ProjectionDefinitionNormalization
             Nested = definition.Nested is { Count: > 0 } ? NormalizeChildren(definition.Nested, hasLegacyStorageFields) : null,
             NoAutoMapProperties = definition.NoAutoMapProperties ?? []
         };
-        return normalized is ChildrenDefinition child ? child with { All = fromEvery } : normalized;
+
+        // An explicit append ordering is the default ordering - it is not a change from no ordering at all.
+        return normalized is ChildrenDefinition child
+            ? child with { All = fromEvery, Ordering = child.Ordering?.IsAppend() == true ? null : child.Ordering }
+            : normalized;
     }
 
     /// <summary>

@@ -153,6 +153,17 @@ json Cratis.Chronicle.Captures.Engine.CaptureValidationMessage
   column: int
   line: int
   message: string
+json Cratis.Chronicle.Changes.ChildrenOrdering
+  direction: Cratis.Chronicle.Changes.SortDirection
+  placement: Cratis.Chronicle.Changes.ChildrenPlacement
+  sortBy: Cratis.Chronicle.Properties.PropertyPath
+enum Cratis.Chronicle.Changes.ChildrenPlacement : int
+  Append = 0
+  Prepend = 1
+  Sorted = 2
+enum Cratis.Chronicle.Changes.SortDirection : int
+  Ascending = 0
+  Descending = 1
 orleans [Alias("Cratis.Chronicle.Clients.ConnectionOwner")] Cratis.Chronicle.Clients.ConnectionOwner
   [Id(0)] Issuer: string
   [Id(1)] Subject: string
@@ -664,6 +675,7 @@ json Cratis.Chronicle.Concepts.Projections.Definitions.ChildrenDefinition
   lastUpdated: System.DateTimeOffset?
   nested: System.Collections.Generic.IDictionary<Cratis.Chronicle.Properties.PropertyPath,Cratis.Chronicle.Concepts.Projections.Definitions.ChildrenDefinition>
   noAutoMapProperties: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Properties.PropertyPath>
+  ordering: Cratis.Chronicle.Changes.ChildrenOrdering
   owner: Cratis.Chronicle.Concepts.Projections.ProjectionOwner
   readModel: Cratis.Chronicle.Concepts.ReadModels.ReadModelIdentifier
   removedWith: System.Collections.Generic.IDictionary<Cratis.Chronicle.Concepts.Events.EventType,Cratis.Chronicle.Concepts.Projections.Definitions.RemovedWithDefinition>
