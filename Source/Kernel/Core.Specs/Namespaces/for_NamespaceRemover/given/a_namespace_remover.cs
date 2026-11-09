@@ -67,7 +67,7 @@ public class a_namespace_remover : Specification
 
         _grainFactory.GetGrain<IObserver>(_keyWithoutState).Returns(_observerWithoutState);
 
-        _remover = new NamespaceRemover(_grainFactory, _storage, _reminderTable, NullLogger<NamespaceRemover>.Instance);
+        _remover = new NamespaceRemover(_grainFactory, _storage, _reminderTable, NullLogger<NamespaceRemover>.Instance, NamespaceCasingContext.Create());
     }
 
     static ReminderEntry Reminder(string key) => new()

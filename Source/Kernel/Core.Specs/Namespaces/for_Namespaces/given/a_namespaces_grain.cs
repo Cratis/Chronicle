@@ -20,6 +20,7 @@ public class a_namespaces_grain : Specification
     protected IEventSequence _systemSequence;
     protected IBroadcastChannelWriter<NamespaceAdded> _writer;
     protected NamespacesState _state;
+    protected INamespaceCasing _namespaceCasing;
     protected EventStoreName _eventStore = "some-store";
     protected EventStoreNamespaceName _namespace = "future";
     ServiceProvider _services;
@@ -35,6 +36,7 @@ public class a_namespaces_grain : Specification
         _client = Substitute.For<IClusterClient>();
         _client.ServiceProvider.Returns(_services);
         _silo.AddService(_client);
+        _namespaceCasing = _silo.AddNamespaceCasing();
         _silo.AddService(NullLogger<Namespaces>.Instance);
 
         _systemSequence = Substitute.For<IEventSequence>();

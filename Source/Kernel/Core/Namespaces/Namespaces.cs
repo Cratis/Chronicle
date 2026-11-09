@@ -18,10 +18,12 @@ namespace Cratis.Chronicle.Namespaces;
 /// </remarks>
 /// <param name="clusterClient"><see cref="IClusterClient"/> instance.</param>
 /// <param name="logger"><see cref="ILogger{TCategoryName}"/> instance.</param>
+/// <param name="namespaceCasing">The namespace casing cache.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.Namespaces)]
 public class Namespaces(
     IClusterClient clusterClient,
-    ILogger<Namespaces> logger) : Grain<NamespacesState>, INamespaces
+    ILogger<Namespaces> logger,
+    INamespaceCasing namespaceCasing) : Grain<NamespacesState>, INamespaces
 {
     readonly IBroadcastChannelProvider _namespaceAddedChannel = clusterClient.GetBroadcastChannelProvider(WellKnownBroadcastChannelNames.NamespaceAdded);
 
@@ -90,6 +92,7 @@ public class Namespaces(
 
         var eventStoreName = (EventStoreName)this.GetPrimaryKeyString();
         State.Namespaces.Remove(existing);
+        namespaceCasing.Forget(eventStoreName, existing.Name);
 
         // Recorded once the namespace is gone, so a retry of a half-done removal is not reported as done.
         var result = await GrainFactory.GetSystemEventSequence().Append($"{eventStoreName}/{@namespace}", new NamespaceRemoved(eventStoreName, @namespace));
