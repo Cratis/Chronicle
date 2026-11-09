@@ -46,6 +46,18 @@ public interface IStorage
     Task<string?> FindMisplacedSystemEventStoreData() => Task.FromResult<string?>(null);
 
     /// <summary>
+    /// Finds System event store data left behind under its previous name after it was moved.
+    /// </summary>
+    /// <returns>A description of what remains and what to do about it, or null when nothing remains.</returns>
+    /// <remarks>
+    /// Moving the System event store copies its data and then drops the source, which some installations do not grant
+    /// the kernel's user the rights to do. The kernel then runs from the moved data while the stale source remains,
+    /// which is harmless until someone points the kernel back at it. A provider that keeps the System event store in
+    /// one place has nothing to find.
+    /// </remarks>
+    Task<string?> FindRetainedLegacySystemEventStoreData() => Task.FromResult<string?>(null);
+
+    /// <summary>
     /// Get all the <see cref="EventStoreName">event stores</see> available.
     /// </summary>
     /// <returns>Collection of <see cref="EventStoreName"/>.</returns>

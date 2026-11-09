@@ -16,6 +16,12 @@ internal static partial class SystemEventStoreRelocationLogging
     [LoggerMessage(LogLevel.Information, "Moved the System event store's databases from '{From}' to '{To}'")]
     internal static partial void Moved(this ILogger<SystemEventStoreRelocation> logger, string from, string to);
 
+    [LoggerMessage(LogLevel.Warning, "Moved the System event store's databases from '{From}' to '{To}', but the MongoDB user may not drop some of the '{From}' databases, so they remain as stale copies the kernel does not read. Drop them with a user that has the dropDatabase action, and do not set storage.systemDatabaseName back to '{From}'")]
+    internal static partial void MovedWithSourcesRetained(this ILogger<SystemEventStoreRelocation> logger, string from, string to);
+
+    [LoggerMessage(LogLevel.Warning, "Moved database '{From}' to '{To}', but the server refused to drop '{From}' on authorization grounds. It remains as a stale copy the kernel does not read")]
+    internal static partial void DatabaseMovedSourceRetained(this ILogger<SystemEventStoreRelocation> logger, string from, string to);
+
     [LoggerMessage(LogLevel.Information, "Moved database '{From}' to '{To}'")]
     internal static partial void DatabaseMoved(this ILogger<SystemEventStoreRelocation> logger, string from, string to);
 
