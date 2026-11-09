@@ -31,6 +31,7 @@ public class a_namespace_remover : Specification
     protected static readonly ObserverKey _keyWithoutState = new("Some->Other", _eventStore, _namespace, EventSequenceId.Outbox);
     protected IObserver _observer;
     protected NamespaceRemover _remover;
+    protected INamespaceCasing _namespaceCasing;
 
     void Establish()
     {
@@ -67,7 +68,8 @@ public class a_namespace_remover : Specification
 
         _grainFactory.GetGrain<IObserver>(_keyWithoutState).Returns(_observerWithoutState);
 
-        _remover = new NamespaceRemover(_grainFactory, _storage, _reminderTable, NullLogger<NamespaceRemover>.Instance, NamespaceCasingContext.Create());
+        _namespaceCasing = NamespaceCasingContext.Create();
+        _remover = new NamespaceRemover(_grainFactory, _storage, _reminderTable, NullLogger<NamespaceRemover>.Instance, _namespaceCasing);
     }
 
     static ReminderEntry Reminder(string key) => new()

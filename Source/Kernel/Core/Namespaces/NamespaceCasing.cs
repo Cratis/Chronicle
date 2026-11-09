@@ -29,10 +29,13 @@ public class NamespaceCasing(IGrainFactory grainFactory, ILogger<NamespaceCasing
             return ValueTask.FromResult(EventStoreNamespaceName.Default);
         }
         var names = _names.GetOrAdd(eventStore, _ => new(StringComparer.OrdinalIgnoreCase));
-        if (names.TryGetValue(@namespace.Value, out var canonical))
+        lock (names)
         {
-            Log(eventStore, @namespace, canonical);
-            return ValueTask.FromResult(canonical);
+            if (names.TryGetValue(@namespace.Value, out var canonical))
+            {
+                Log(eventStore, @namespace, canonical);
+                return ValueTask.FromResult(canonical);
+            }
         }
         return Resolve(eventStore, @namespace, names);
     }

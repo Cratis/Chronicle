@@ -7,6 +7,7 @@ public class when_removing_a_namespace : given.a_namespace_remover
 {
     async Task Because() => await _remover.Remove(_eventStore, _namespace);
 
+    [Fact] void should_invalidate_the_cached_casing() => _namespaceCasing.Received(1).Forget(_eventStore, _namespace);
     [Fact] async Task should_unsubscribe_the_observer() => await _observer.Received(1).Unsubscribe();
     [Fact] async Task should_remove_the_observer() => await _observer.Received(1).Remove();
     [Fact] async Task should_drop_the_data_of_the_namespace() => await _eventStoreStorage.Received(1).DropNamespace(_namespace);
