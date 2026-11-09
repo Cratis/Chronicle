@@ -226,6 +226,12 @@ public sealed class EventImport(
 
         _buffer.Add(converted);
         _bufferBytes += bytes;
+
+        // A full chunk is sent as soon as it is full, so a producer that stops after an Add has handed over every whole chunk.
+        if (_buffer.Count >= _maxEventsPerChunk)
+        {
+            await Flush(waitToken, cancellationToken);
+        }
     }
 
     async Task Flush(CancellationToken waitToken, CancellationToken cancellationToken)
