@@ -120,12 +120,12 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
     }
 
     /// <inheritdoc/>
-    public void AddChild(PropertyPath childrenProperty, object child)
+    public void AddChild(PropertyPath childrenProperty, object child, ChildrenOrdering? ordering = default)
     {
         var workingState = CurrentState.Clone()!;
         var items = workingState.EnsureCollection<TTarget, object>(childrenProperty, ArrayIndexers.NoIndexers);
-        items.Add(child);
-        Add(new ChildAdded(child, childrenProperty, PropertyPath.Root, null!, ArrayIndexers.NoIndexers));
+        items.InsertChild(child, ordering);
+        Add(new ChildAdded(child, childrenProperty, PropertyPath.Root, null!, ArrayIndexers.NoIndexers, ordering));
         CurrentState = workingState;
     }
 
@@ -136,7 +136,8 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
         object key,
         IEnumerable<PropertyMapper<TSource, TTarget>> propertyMappers,
         ArrayIndexers arrayIndexers,
-        TTarget? childInitialState = default)
+        TTarget? childInitialState = default,
+        ChildrenOrdering? ordering = default)
         where TChild : new()
     {
         var workingState = CurrentState.Clone();
@@ -168,7 +169,8 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
                 existingChildAdded.ChildrenProperty,
                 existingChildAdded.IdentifiedByProperty,
                 existingChildAdded.Key,
-                existingChildAdded.ArrayIndexers);
+                existingChildAdded.ArrayIndexers,
+                existingChildAdded.Ordering);
 
             // Update the item in the current state's collection
             var collection = CurrentState.EnsureCollection<TTarget, object>(childrenProperty, arrayIndexers);
@@ -214,6 +216,8 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
 
         if (item is not null)
         {
+            // Appended first so an unidentified child is addressed by its appended index while it is populated, and
+            // placed afterwards so a sorted collection is ordered on the values the child was populated with.
             items.Add(item);
             foreach (var difference in SetProperties(workingState, propertyMappers, arrayIndexers))
             {
@@ -225,9 +229,17 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
                 var propertyPath = PropertyPath.CreateFrom(hasCollectionPrefix
                     ? differenceSegments.Skip(childSegments.Length).ToArray()
                     : differenceSegments);
-                propertyPath.SetValue(item, difference.Changed!, arrayIndexers);
+                if (difference.IsRemoval)
+                {
+                    propertyPath.RemoveValue(item, arrayIndexers);
+                }
+                else
+                {
+                    propertyPath.SetValue(item, difference.Changed!, arrayIndexers);
+                }
             }
-            Add(new ChildAdded(item, childrenProperty, identifiedByProperty, key!, arrayIndexers));
+            items.PlaceAppendedChild(ordering);
+            Add(new ChildAdded(item, childrenProperty, identifiedByProperty, key!, arrayIndexers, ordering));
         }
 
         CurrentState = workingState;
@@ -378,6 +390,12 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
         differences.ForEach(difference =>
         {
             var propertyPath = PropertyPath.CreateFrom([difference.PropertyPath.LastSegment]);
+            if (difference.IsRemoval)
+            {
+                propertyPath.RemoveValue(child, difference.ArrayIndexers);
+                return;
+            }
+
             propertyPath.SetValue(child, difference.Changed!, difference.ArrayIndexers);
         });
 
@@ -385,11 +403,18 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
     {
         if (ancestor.PropertyPath == descendant.PropertyPath)
         {
-            return new PropertyDifference(ancestor.PropertyPath, ancestor.Original, descendant.Changed, ancestor.ArrayIndexers);
+            return descendant.IsRemoval
+                ? PropertyDifference.Removal(ancestor.PropertyPath, ancestor.Original, ancestor.ArrayIndexers)
+                : new PropertyDifference(ancestor.PropertyPath, ancestor.Original, descendant.Changed, ancestor.ArrayIndexers);
         }
 
         if (!TryGetValueAtPath(state, ancestor.PropertyPath, ancestor.ArrayIndexers, out var changed))
         {
+            if (ancestor.IsRemoval)
+            {
+                return ancestor;
+            }
+
             changed = ancestor.Changed;
         }
 
@@ -541,7 +566,14 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
                     {
                         // Apply the property change to the child
                         var propertyPath = PropertyPath.CreateFrom([diff.PropertyPath.LastSegment]);
-                        propertyPath.SetValue(matchingChildAdded.Child, diff.Changed!, diff.ArrayIndexers);
+                        if (diff.IsRemoval)
+                        {
+                            propertyPath.RemoveValue(matchingChildAdded.Child, diff.ArrayIndexers);
+                        }
+                        else
+                        {
+                            propertyPath.SetValue(matchingChildAdded.Child, diff.Changed!, diff.ArrayIndexers);
+                        }
                     }
                     else
                     {
@@ -732,7 +764,7 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
             var difference = propertyMapper(Incoming, (TTarget)target, arrayIndexers);
             if (difference.HasChanges())
             {
-                difference.PropertyPath.SetValue(target, difference.Changed!, difference.ArrayIndexers);
+                difference.ApplyTo(target);
             }
         }
     }
