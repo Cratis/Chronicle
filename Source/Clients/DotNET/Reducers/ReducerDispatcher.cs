@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Contracts.Observation.Reducers;
@@ -36,7 +37,11 @@ internal sealed class ReducerDispatcher(
     IActivitySource<Reducers> activitySource,
     ILogger<Reducers> logger)
 {
-    readonly ReducerStateCache _stateCache = new();
+    /// <summary>
+    /// Keeps cached states separate across handler generations, including reductions finishing after reconnect.
+    /// Each cache is released when its handler is no longer referenced.
+    /// </summary>
+    readonly ConditionalWeakTable<IReducerHandler, ReducerStateCache> _stateCaches = new();
 
     /// <summary>Gets or sets the client span naming convention.</summary>
     internal ClientSpanNames SpanNames { get; set; }
@@ -55,15 +60,16 @@ internal sealed class ReducerDispatcher(
         EventStoreNamespaceName @namespace,
         Action<ReducerResult> publish)
     {
+        var stateCache = _stateCaches.GetValue(handler, _ => new());
         if (operation.ReplayState != ReplayState.None)
         {
             if (string.IsNullOrEmpty(operation.Partition))
             {
-                _stateCache.ForgetAll(handler.Id);
+                stateCache.ForgetAll(handler.Id);
             }
             else
             {
-                _stateCache.Forget(handler.Id, operation.Partition);
+                stateCache.Forget(handler.Id, operation.Partition);
             }
 
             await HandleReplayNotification(handler, @namespace, operation.ReplayState, operation.Partition);
@@ -111,11 +117,11 @@ internal sealed class ReducerDispatcher(
                 await using var serviceProviderScope = serviceProvider.CreateAsyncScope();
                 identityProvider.SetCurrentIdentity(Identity.System);
                 var initialStateJson = partition.InitialState;
-                if (partition.InitialStateUnchanged && !_stateCache.TryGet(handler.Id, partitionKey, out initialStateJson))
+                if (partition.InitialStateUnchanged && !stateCache.TryGet(handler.Id, partitionKey, out initialStateJson))
                 {
                     // The kernel believes we hold the state, but we do not (evicted, restarted or never cached). Failing clears
                     // the kernel's record of it, so the redelivery carries the full state.
-                    _stateCache.Forget(handler.Id, partitionKey);
+                    stateCache.Forget(handler.Id, partitionKey);
                     return PartitionOutcome.Failed(partitionKey, new InvalidOperationException($"The kernel sent the state of partition '{partitionKey}' as unchanged, but reducer '{handler.Id}' has no cached state for it. The state is requested in full on redelivery."));
                 }
 
@@ -126,7 +132,7 @@ internal sealed class ReducerDispatcher(
 
                 if (reduceResult.RetryAfter is { } retryAfter)
                 {
-                    _stateCache.Forget(handler.Id, partitionKey);
+                    stateCache.Forget(handler.Id, partitionKey);
                     return new(partitionKey, ObservationState.Deferred, EventSequenceNumber.Unavailable, [], string.Empty) { RetryAfter = retryAfter };
                 }
 
@@ -135,14 +141,14 @@ internal sealed class ReducerDispatcher(
                     var readModelState = reduceResult.ReadModelState is null ? null : JsonSerializer.Serialize(reduceResult.ReadModelState, jsonSerializerOptions);
 
                     // Remember exactly what the kernel is told, so an unchanged marker resolves to the state the kernel fingerprinted.
-                    _stateCache.Set(handler.Id, partitionKey, readModelState);
+                    stateCache.Set(handler.Id, partitionKey, readModelState);
                     return new(partitionKey, ObservationState.Success, reduceResult.LastSuccessfullyObservedEvent, [], string.Empty)
                     {
                         ReadModelState = readModelState
                     };
                 }
 
-                _stateCache.Forget(handler.Id, partitionKey);
+                stateCache.Forget(handler.Id, partitionKey);
 
                 span?.Activity?.RecordFailure(reduceResult.ExceptionType ?? "reducer_error");
                 logger.ReducerFailed(handler.Id, firstEvent, lastEvent, string.Join(Environment.NewLine, reduceResult.ErrorMessages));
@@ -150,7 +156,7 @@ internal sealed class ReducerDispatcher(
             }
             catch (Exception ex)
             {
-                _stateCache.Forget(handler.Id, partitionKey);
+                stateCache.Forget(handler.Id, partitionKey);
                 span?.Activity?.RecordFailure(ex);
                 logger.ErrorWhileHandlingEvents(ex, firstEvent, lastEvent, handler.Id);
                 return PartitionOutcome.Failed(partitionKey, ex);
