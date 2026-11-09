@@ -103,7 +103,7 @@ public static class ImplementationMethods
             ? $"global::{context.ContractsNamespace}.{method.Name}Request request, {CallContextType} callContext = default"
             : $"{CallContextType} callContext = default";
 
-        var source = QueryDispatch(method.Name, method.Method, invocation, parameters, readModelType, serviceName, context, RoutingFor(wireParameters, StoreCapability(readModelType), readModelType.FullName ?? readModelType.Name), CanonicalizationFor(wireParameters, context))
+        var source = QueryDispatch(method.Name, method.Method, invocation, parameters, readModelType, serviceName, context, (RoutingFor(wireParameters, StoreCapability(readModelType), readModelType.FullName ?? readModelType.Name), CanonicalizationFor(wireParameters, context)))
             .Replace("    public ", AuthorizationAttributes(readModelType, method.Method) + "    public ", StringComparison.Ordinal);
         return AllowsAnonymous(readModelType) || AllowsAnonymous(method.Method)
             ? source.Replace("    public ", "    [global::Microsoft.AspNetCore.Authorization.AllowAnonymous]\n    public ", StringComparison.Ordinal)
@@ -136,7 +136,7 @@ public static class ImplementationMethods
             ? $"global::{context.ContractsNamespace}.{method.Name}Request request, {CallContextType} callContext = default"
             : $"{CallContextType} callContext = default";
 
-        return QueryDispatch(method.Name, method.Method, invocation, parameters, null, serviceName, context, RoutingFor([.. method.KeyParameters, .. method.Parameters]), CanonicalizationFor([.. method.KeyParameters, .. method.Parameters], context));
+        return QueryDispatch(method.Name, method.Method, invocation, parameters, null, serviceName, context, (RoutingFor([.. method.KeyParameters, .. method.Parameters]), CanonicalizationFor([.. method.KeyParameters, .. method.Parameters], context)));
     }
 
     /// <summary>
@@ -178,17 +178,17 @@ public static class ImplementationMethods
     /// <param name="readModelType">The read model the query is declared on, or null when it is not declared on one.</param>
     /// <param name="serviceName">The name of the service the query belongs to.</param>
     /// <param name="context">The generation context.</param>
-    /// <param name="routing">The expression creating the query routing, or null when the query addresses no event store routing values.</param>
-    /// <param name="canonicalization">The namespace canonicalization statements, if needed.</param>
+    /// <param name="routing">The query routing expression and namespace canonicalization statements, if needed.</param>
     /// <returns>The C# source for the method.</returns>
     /// <exception cref="UnsupportedServiceShape">Thrown when a query without a result addresses event store routing values.</exception>
-    static string QueryDispatch(string name, MethodInfo method, string invocation, string parameters, Type? readModelType, string serviceName, ImplementationContext context, string? routing = null, string canonicalization = "")
+    static string QueryDispatch(string name, MethodInfo method, string invocation, string parameters, Type? readModelType, string serviceName, ImplementationContext context, (string? Expression, string? Canonicalization) routing = default)
     {
-        var routed = routing is null ? string.Empty : $"callContext,\n            {routing},\n            ";
+        var canonicalization = routing.Canonicalization ?? string.Empty;
+        var routed = routing.Expression is null ? string.Empty : $"callContext,\n            {routing.Expression},\n            ";
 
         if (TypeHelper.IsVoidTask(method.ReturnType))
         {
-            if (routing is not null)
+            if (routing.Expression is not null)
             {
                 throw new UnsupportedServiceShape(name, "it has no result to carry a refusal but addresses event store routing values.");
             }
@@ -351,9 +351,7 @@ public static class ImplementationMethods
     static string CanonicalizationFor(IReadOnlyList<ParameterInfo> parameters, ImplementationContext context)
     {
         var store = parameters.FirstOrDefault(IsStore);
-        var @namespace = parameters.FirstOrDefault(parameter =>
-            parameter.ParameterType.FullName == "Cratis.Chronicle.Concepts.EventStoreNamespaceName" ||
-            (parameter.ParameterType == typeof(string) && parameter.Name == "namespace"));
+        var @namespace = parameters.FirstOrDefault(IsNamespace);
         if (store is null || @namespace is null) return string.Empty;
 
         var casing = context.Dependencies.NameFor("global::Cratis.Chronicle.Namespaces.INamespaceCasing", "namespaceCasing");
@@ -401,9 +399,7 @@ public static class ImplementationMethods
             return null;
         }
 
-        var @namespace = routing.FirstOrDefault(parameter =>
-            parameter.ParameterType.FullName == "Cratis.Chronicle.Concepts.EventStoreNamespaceName" ||
-            (parameter.ParameterType == typeof(string) && parameter.Name == "namespace"));
+        var @namespace = routing.FirstOrDefault(IsNamespace);
         var components = routing.Where(p => p != store && p != @namespace).ToList();
         if (components.Count + (@namespace is null ? 0 : 1) > MaximumRoutingComponents)
         {
@@ -432,6 +428,10 @@ public static class ImplementationMethods
     static string RequestField(ParameterInfo parameter) => $"request.{ImplementationValues.PropertyName(parameter.Name ?? "value")}";
 
     static bool IsRouting(ParameterInfo parameter) => IsStore(parameter) || IsComponent(parameter);
+
+    static bool IsNamespace(ParameterInfo parameter) =>
+        parameter.ParameterType.FullName == "Cratis.Chronicle.Concepts.EventStoreNamespaceName" ||
+        (parameter.ParameterType == typeof(string) && parameter.Name is "namespace");
 
     static bool IsStore(ParameterInfo parameter) =>
         parameter.ParameterType.FullName == "Cratis.Chronicle.Concepts.EventStoreName" ||
