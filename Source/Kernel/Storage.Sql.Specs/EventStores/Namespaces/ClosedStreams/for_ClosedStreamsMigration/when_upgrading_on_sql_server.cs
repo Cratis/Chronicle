@@ -20,7 +20,7 @@ public class when_upgrading_on_sql_server(SqlServerFixture fixture) : for_Closed
             "INSERT INTO [ClosedStreams] ([EventSequenceId], [StreamType], [StreamId], [EventSourceId], [EventSourceType], [Owner], [Dimensions], [SequenceNumber], [ClosedAt]) VALUES " +
             "(N'event-log', N'Orders', N'Alice', N'Alice', N'Default', N'owner', 15, 1, '2024-01-02T03:04:05+00:00'), " +
             "(N'event-log', N'Orders', N'bob ', N'bob ', N'Default', N'owner', 15, 2, NULL), " +
-            "(N'event-log', N'Orders', N'carol' + NCHAR(1), N'carol' + NCHAR(1), N'Default', N'owner', 15, 3, NULL)");
+            "(N'event-log', N'Orders', N'carol' + NCHAR(127), N'carol' + NCHAR(127), N'Default', N'owner', 15, 3, NULL)");
         _collations = await _harness.Query<string>($"SELECT collation_name AS [Value] FROM sys.columns WHERE object_id = OBJECT_ID(N'ClosedStreams') AND name IN ('StreamType', 'StreamId', 'EventSourceId', 'EventSourceType')");
         _lengths = await _harness.Query<int>($"SELECT CAST(max_length AS int) AS [Value] FROM sys.columns WHERE object_id = OBJECT_ID(N'ClosedStreams') AND name IN ('StreamType', 'StreamId', 'EventSourceId', 'EventSourceType')");
         _rows = await Rows();

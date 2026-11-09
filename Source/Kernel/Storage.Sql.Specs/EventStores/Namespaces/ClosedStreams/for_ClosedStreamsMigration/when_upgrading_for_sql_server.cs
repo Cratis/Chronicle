@@ -44,11 +44,11 @@ public class when_upgrading_for_sql_server : Specification
 
     [Fact]
     void should_encode_legacy_values_without_encoding_already_widened_columns_again() =>
-        _columns.Select(column => _statements[IndexOf("UPDATE")].Contains($"[{column}] = CASE WHEN @Encode{column} = 1 AND UNICODE(RIGHT([{column}], 1)) IN (32, 1) THEN [{column}] + NCHAR(1) ELSE [{column}] END", StringComparison.Ordinal)).ShouldEqual([true, true, true, true]);
+        _columns.Select(column => _statements[IndexOf("UPDATE")].Contains($"[{column}] = CASE WHEN @Encode{column} = 1 AND UNICODE(RIGHT([{column}], 1)) IN (32, 127) THEN [{column}] + NCHAR(127) ELSE [{column}] END", StringComparison.Ordinal)).ShouldEqual([true, true, true, true]);
 
     [Fact]
     void should_only_backfill_legacy_columns_with_trailing_spaces_or_terminators() =>
-        _statements[IndexOf("UPDATE")].ShouldContain("WHERE @EncodeStreamType = 1 AND UNICODE(RIGHT([StreamType], 1)) IN (32, 1) OR @EncodeStreamId = 1 AND UNICODE(RIGHT([StreamId], 1)) IN (32, 1) OR @EncodeEventSourceId = 1 AND UNICODE(RIGHT([EventSourceId], 1)) IN (32, 1) OR @EncodeEventSourceType = 1 AND UNICODE(RIGHT([EventSourceType], 1)) IN (32, 1);");
+        _statements[IndexOf("UPDATE")].ShouldContain("WHERE @EncodeStreamType = 1 AND UNICODE(RIGHT([StreamType], 1)) IN (32, 127) OR @EncodeStreamId = 1 AND UNICODE(RIGHT([StreamId], 1)) IN (32, 127) OR @EncodeEventSourceId = 1 AND UNICODE(RIGHT([EventSourceId], 1)) IN (32, 127) OR @EncodeEventSourceType = 1 AND UNICODE(RIGHT([EventSourceType], 1)) IN (32, 127);");
     [Fact] void should_terminate_after_changing_the_columns() => IndexOf("UPDATE").ShouldBeGreaterThan(IndexOf("ALTER TABLE [ClosedStreams] ALTER COLUMN [EventSourceType]"));
     [Fact] void should_create_the_primary_key_after_terminating() => IndexOf("ALTER TABLE [ClosedStreams] ADD CONSTRAINT").ShouldBeGreaterThan(IndexOf("UPDATE"));
 

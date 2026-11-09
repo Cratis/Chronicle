@@ -25,7 +25,7 @@ public class when_downgrading_for_sql_server : Specification
     void should_only_decode_columns_that_were_widened() =>
         _statements.ShouldContain("DECLARE @EncodeStreamId bit = CASE WHEN EXISTS (SELECT 1 FROM sys.columns WHERE [object_id] = OBJECT_ID(N'[ClosedStreams]') AND [name] = N'StreamId' AND [max_length] = 512) THEN 1 ELSE 0 END;");
 
-    [Fact] void should_strip_one_terminator() => _statements[IndexOf("UPDATE")].ShouldContain("[StreamId] = CASE WHEN @EncodeStreamId = 1 AND UNICODE(RIGHT([StreamId], 1)) = 1 THEN LEFT([StreamId], DATALENGTH([StreamId]) / 2 - 1) ELSE [StreamId] END");
+    [Fact] void should_strip_one_terminator() => _statements[IndexOf("UPDATE")].ShouldContain("[StreamId] = CASE WHEN @EncodeStreamId = 1 AND UNICODE(RIGHT([StreamId], 1)) = 127 THEN LEFT([StreamId], DATALENGTH([StreamId]) / 2 - 1) ELSE [StreamId] END");
     [Fact] void should_strip_before_restoring_the_collation() => IndexOf("ALTER TABLE [ClosedStreams] ALTER COLUMN").ShouldBeGreaterThan(IndexOf("UPDATE"));
     [Fact] void should_restore_the_database_default_collation() => _statements.ShouldContain("ALTER TABLE [ClosedStreams] ALTER COLUMN [StreamId] nvarchar(255) COLLATE DATABASE_DEFAULT NOT NULL;");
     [Fact] void should_create_the_primary_key_last() => _statements[^2].StartsWith("ALTER TABLE [ClosedStreams] ADD CONSTRAINT [PK_ClosedStreams] PRIMARY KEY", StringComparison.Ordinal).ShouldBeTrue();
