@@ -18,7 +18,7 @@ public class and_validation_calls_keep_failing : given.an_import_being_committed
 
     [Fact] void should_try_as_many_times_as_it_may() => _validationFirsts.Count.ShouldEqual(3);
     [Fact] void should_fail_the_import() => _record.State.ShouldEqual(ImportState.Failed);
-    [Fact] void should_tell_why() => _record.FailureReason!.ShouldContain("The grain call timed out.");
+    [Fact] void should_tell_why() => _record.FailureReason.ShouldContain("The grain call timed out.");
     [Fact] async Task should_release_the_claims() => await _sequence.Received().EndImportValidation(_key.ImportId);
     [Fact] async Task should_commit_nothing() => await _sequence.DidNotReceive().AppendImportChunk(Arg.Any<ImportId>(), Arg.Any<int>(), Arg.Any<EventSequenceNumber>(), Arg.Any<bool>(), Arg.Any<IReadOnlyList<ImportEventToAppend>>());
 }
