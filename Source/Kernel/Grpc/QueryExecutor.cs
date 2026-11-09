@@ -3,6 +3,7 @@
 
 using System.Reactive.Linq;
 using Cratis.Chronicle.Contracts.Queries;
+using Cratis.Reactive;
 using Cratis.Chronicle.Contracts.Validation;
 using Cratis.Chronicle.Security;
 using ProtoBuf.Grpc;
@@ -93,6 +94,16 @@ internal static class QueryExecutor
 
         return ExecuteForSystem(callContext, query, onError);
     }
+
+    /// <summary>
+    /// Defers an observable query until its namespace has been resolved inside the guarded query delegate.
+    /// </summary>
+    /// <typeparam name="TData">The observed data type.</typeparam>
+    /// <param name="query">The asynchronous preparation of the query stream.</param>
+    /// <param name="cancellationToken">The cancellation token for the call.</param>
+    /// <returns>The prepared query stream.</returns>
+    internal static IObservable<TData> Canonicalize<TData>(Func<Task<IObservable<TData>>> query, CancellationToken cancellationToken) =>
+        Observable.FromAsync(query).SelectMany(stream => stream).CompletedBy(cancellationToken);
 
     static IObservable<QueryResult<TData>> ExecuteObservableForStore<TData>(CallContext callContext, QueryRouting routing, Func<IObservable<TData>> query, Action<Exception>? onError) =>
         Observable.FromAsync(() => StoreCapabilityGuard.Permits(callContext, routing))

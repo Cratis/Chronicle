@@ -21,7 +21,8 @@ public class when_a_generated_query_addresses_a_namespace_after_its_sequence_id 
         var sequence = Substitute.For<IEventSequence>();
         grains.GetGrain<IEventSequence>(Arg.Any<string>()).Returns(sequence);
         sequence.IsStreamCompleted(Arg.Any<EventStreamType>(), Arg.Any<EventStreamId>()).Returns(true);
-        var query = new EventSequenceQueries(grains, NullLogger<EventSequenceQueries>.Instance);
+        var casing = NamespaceCasingContext.Create();
+        var query = new EventSequenceQueries(grains, casing, NullLogger<EventSequenceQueries>.Instance);
         var request = new Contracts.EventSequences.IsStreamCompletedRequest
         {
             EventStore = "store",
@@ -36,6 +37,10 @@ public class when_a_generated_query_addresses_a_namespace_after_its_sequence_id 
         result.HasExceptions.ShouldBeFalse();
         result.Data.ShouldEqual(allowed);
         if (allowed) await sequence.Received(1).IsStreamCompleted(Arg.Any<EventStreamType>(), Arg.Any<EventStreamId>());
-        else await sequence.DidNotReceive().IsStreamCompleted(Arg.Any<EventStreamType>(), Arg.Any<EventStreamId>());
+        else
+        {
+            await sequence.DidNotReceive().IsStreamCompleted(Arg.Any<EventStreamType>(), Arg.Any<EventStreamId>());
+            await casing.DidNotReceive().Canonicalize(Arg.Any<Concepts.EventStoreName>(), Arg.Any<Concepts.EventStoreNamespaceName>());
+        }
     }
 }

@@ -17,11 +17,31 @@ public sealed class ImplementationDependencies
 {
     readonly Dictionary<Type, string> _names = [];
     readonly List<(Type Type, string Name)> _ordered = [];
+    readonly Dictionary<string, string> _named = [];
 
     /// <summary>
     /// Gets the dependencies in the order they were first seen.
     /// </summary>
     public IReadOnlyList<(Type Type, string Name)> All => _ordered;
+
+    /// <summary>
+    /// Gets dependencies registered by their fully qualified type names.
+    /// </summary>
+    public IReadOnlyDictionary<string, string> Named => _named;
+
+    /// <summary>
+    /// Registers a dependency whose assembly is not referenced by the generator.
+    /// </summary>
+    /// <param name="typeName">The fully qualified type name.</param>
+    /// <param name="parameterName">The preferred parameter name.</param>
+    /// <returns>The parameter name.</returns>
+    public string NameFor(string typeName, string parameterName)
+    {
+        if (_named.TryGetValue(typeName, out var existing)) return existing;
+        var name = Unique(parameterName);
+        _named.Add(typeName, name);
+        return name;
+    }
 
     /// <summary>
     /// Gets the name to refer to a dependency by, registering it the first time it is seen.
@@ -84,13 +104,13 @@ public sealed class ImplementationDependencies
 
     string Unique(string candidate)
     {
-        if (!_names.ContainsValue(candidate))
+        if (!_names.ContainsValue(candidate) && !_named.ContainsValue(candidate))
         {
             return candidate;
         }
 
         var index = 2;
-        while (_names.ContainsValue($"{candidate}{index}"))
+        while (_names.ContainsValue($"{candidate}{index}") || _named.ContainsValue($"{candidate}{index}"))
         {
             index++;
         }

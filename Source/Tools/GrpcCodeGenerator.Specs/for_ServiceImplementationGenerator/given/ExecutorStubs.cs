@@ -39,6 +39,9 @@ public static class ExecutorStubs
 
         internal static class QueryExecutor
         {
+            internal static IObservable<TData> Canonicalize<TData>(Func<Task<IObservable<TData>>> query, System.Threading.CancellationToken cancellationToken) =>
+                throw new NotSupportedException();
+
             internal static IObservable<QueryResult<TData>> Execute<TData>(Func<IObservable<TData>> query, Action<Exception>? onError = null) =>
                 throw new NotSupportedException();
 
