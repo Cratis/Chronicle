@@ -18,7 +18,7 @@ public class ConnectionLifecycle(ILogger<ConnectionLifecycle> logger) : IConnect
     /// <summary>
     /// Guards the two handler lists.
     /// </summary>
-    readonly object _handlers = new();
+    readonly Lock _handlers = new();
     Connected _onConnected = Nothing;
     Disconnected _onDisconnected = Nothing;
 
