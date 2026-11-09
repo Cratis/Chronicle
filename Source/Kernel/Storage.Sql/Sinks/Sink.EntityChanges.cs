@@ -6,6 +6,7 @@ using System.Globalization;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Properties;
+using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
@@ -195,20 +196,21 @@ public partial class Sink
         var identifierName = childAdded.IdentifiedByProperty;
         var identifierValue = UnwrapConceptValue(childAdded.Key);
         var list = current as IList<object?> ?? new List<object?>();
+        var childSchema = _schema.GetSchemaForPropertyPath(childAdded.ChildrenProperty);
         if (pathSegments.Length == 1)
         {
             // Top-level children collection on the column: upsert by identifier so repeated
             // ChildAdded events for the same identifier (e.g. during replay) update in place
             // instead of duplicating. Mirrors how MongoDB's projection engine treats a child
             // re-introduced via ChildAdded as a replacement when the identifier already exists.
-            UpsertChildInList(list, identifierName, identifierValue, unwrappedState, childAdded.Ordering);
+            UpsertChildInList(list, identifierName, identifierValue, unwrappedState, childAdded.Ordering, childSchema);
         }
         else
         {
             // Nested children — e.g. Configurations.Hubs — locate the matching parent inside the
             // column's JSON tree using ArrayIndexers, then upsert into its child collection.
             var indexers = childAdded.ArrayIndexers ?? ArrayIndexers.NoIndexers;
-            UpsertNestedChild(list, 1, new ChildUpsert(pathSegments, indexers, identifierName, identifierValue, unwrappedState, childAdded.Ordering));
+            UpsertNestedChild(list, 1, new ChildUpsert(pathSegments, indexers, identifierName, identifierValue, unwrappedState, childAdded.Ordering, childSchema));
         }
 
         entry.Entity[column.Name] = SerializeJsonColumn(list, column);

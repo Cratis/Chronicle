@@ -8,6 +8,7 @@ using System.Text.Json;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Properties;
+using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
 using Cratis.Reflection;
 
@@ -22,6 +23,8 @@ namespace Cratis.Chronicle.Storage.Sql.Sinks;
 /// </summary>
 internal static class JsonColumnDocuments
 {
+    static readonly TypeFormats _typeFormats = new();
+
     internal static object? CoerceForColumn(ProjectedColumn column, object? value)
     {
         if (value is null)
@@ -282,7 +285,7 @@ internal static class JsonColumnDocuments
         }
     }
 
-    internal static void UpsertChildInList(IList<object?> list, PropertyPath identifierName, object? identifierValue, object? newChild, ChildrenOrdering? ordering = default)
+    internal static void UpsertChildInList(IList<object?> list, PropertyPath identifierName, object? identifierValue, object? newChild, ChildrenOrdering? ordering = default, JsonSchema? childSchema = default)
     {
         // Upsert by identifier so repeated ChildAdded events (e.g. during replay, or when a
         // projection re-introduces the same child after a redaction) update in place instead of
@@ -294,7 +297,7 @@ internal static class JsonColumnDocuments
         {
             // Only a new child is placed by the ordering; an existing one is updated where it is and never moves.
             list.Add(AsExpando(newChild));
-            list.PlaceAppendedChild(ordering, identifierName);
+            PlaceAppendedChild(list, ordering, identifierName, childSchema);
             return;
         }
 
@@ -330,11 +333,94 @@ internal static class JsonColumnDocuments
         var childList = GetOrCreateChildList(parentDict, upsert.Segments[index].Value);
         if (index == upsert.Segments.Length - 1)
         {
-            UpsertChildInList(childList, upsert.IdentifierName, upsert.IdentifierValue, upsert.NewChild, upsert.Ordering);
+            UpsertChildInList(childList, upsert.IdentifierName, upsert.IdentifierValue, upsert.NewChild, upsert.Ordering, upsert.ChildSchema);
             return;
         }
 
         UpsertNestedChild(childList, index + 1, upsert);
+    }
+
+    /// <summary>
+    /// Place a child just appended to a list read back from a JSON column, by the list's ordering.
+    /// </summary>
+    /// <remarks>
+    /// The children read back from the column hold a Guid or a date as the string it is stored as, while the appended
+    /// child holds typed values. Compare them as the values the schema declares, the way the engine and MongoDB compare
+    /// them, rather than as strings ranked before every Guid and date.
+    /// </remarks>
+    /// <param name="list">The list the child was appended to.</param>
+    /// <param name="ordering">The optional ordering of the list.</param>
+    /// <param name="identifierName">The property identifying a child, breaking ties between equal sort values.</param>
+    /// <param name="childSchema">The optional schema of a child.</param>
+    static void PlaceAppendedChild(IList<object?> list, ChildrenOrdering? ordering, PropertyPath identifierName, JsonSchema? childSchema)
+    {
+        if (ordering?.IsAppend() != false || ordering.Placement != ChildrenPlacement.Sorted || list.Count < 2)
+        {
+            list.PlaceAppendedChild(ordering, identifierName);
+            return;
+        }
+
+        var sortValue = SortValueReader(ordering.SortBy, childSchema);
+        var comparer = Comparer<object?>.Create(ChildrenOrderingExtensions.CompareSortValues);
+        var ordered = ordering.Direction == SortDirection.Descending
+            ? list.OrderByDescending(sortValue, comparer)
+            : list.OrderBy(sortValue, comparer);
+        var sorted = (identifierName.IsSet ? ordered.ThenBy(SortValueReader(identifierName, childSchema), comparer) : ordered).ToArray();
+
+        list.Clear();
+        foreach (var child in sorted)
+        {
+            list.Add(child);
+        }
+    }
+
+    static Func<object?, object?> SortValueReader(PropertyPath path, JsonSchema? childSchema)
+    {
+        var declaredType = childSchema?.GetTargetTypeForPropertyPath(path, _typeFormats);
+        var storedAsText = declaredType is not null && IsStoredAsText(declaredType) ? declaredType : null;
+
+        return child =>
+        {
+            var value = UnwrapConceptValue(ValueAt(child, path));
+            if (value is string text && storedAsText is not null)
+            {
+                return TryConvertStoredText(storedAsText, text);
+            }
+
+            // Without a declared type, compare a typed value as the text it is stored as - the form the other children have.
+            return storedAsText is null && value is not null && IsStoredAsText(value.GetType())
+                ? ConvertJsonElement(JsonSerializer.SerializeToElement(value, ReadModelDbContext.JsonSerializerOptions))
+                : value;
+        };
+    }
+
+    static bool IsStoredAsText(Type type) =>
+        type == typeof(Guid) || type == typeof(DateTimeOffset) || type == typeof(DateTime) || type == typeof(DateOnly) || type == typeof(TimeOnly);
+
+    static object TryConvertStoredText(Type type, string text)
+    {
+        try
+        {
+            return ConvertToClrType(type, text) ?? text;
+        }
+        catch (FormatException)
+        {
+            return text;
+        }
+    }
+
+    static object? ValueAt(object? child, PropertyPath path)
+    {
+        var current = child;
+        foreach (var segment in path.Segments)
+        {
+            if (current is not IDictionary<string, object?> dictionary || !dictionary.TryGetValue(segment.Value, out current))
+            {
+                return null;
+            }
+        }
+
+        return current;
     }
 
     static object? ConvertToClrType(Type clr, object value)
@@ -657,5 +743,6 @@ internal static class JsonColumnDocuments
     /// <param name="IdentifierValue">The identifier value of the child.</param>
     /// <param name="NewChild">The child to upsert.</param>
     /// <param name="Ordering">The optional <see cref="ChildrenOrdering"/> placing a new child.</param>
-    internal sealed record ChildUpsert(IPropertyPathSegment[] Segments, ArrayIndexers Indexers, PropertyPath IdentifierName, object? IdentifierValue, object? NewChild, ChildrenOrdering? Ordering = default);
+    /// <param name="ChildSchema">The optional schema of a child, giving the types its values are compared as when placing it.</param>
+    internal sealed record ChildUpsert(IPropertyPathSegment[] Segments, ArrayIndexers Indexers, PropertyPath IdentifierName, object? IdentifierValue, object? NewChild, ChildrenOrdering? Ordering = default, JsonSchema? ChildSchema = default);
 }
