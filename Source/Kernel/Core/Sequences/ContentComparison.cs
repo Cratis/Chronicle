@@ -87,18 +87,15 @@ internal static class ContentComparison
             return left is null && right is null;
         }
 
-        if (left.GetValueKind() != right.GetValueKind())
-        {
-            return false;
-        }
-
-        return (left, right) switch
-        {
-            (JsonObject a, JsonObject b) => ObjectsEqual(a, b),
-            (JsonArray a, JsonArray b) => ArraysEqual(a, b),
-            _ => ScalarsEqual(left, right)
-        };
+        return left.GetValueKind() == right.GetValueKind() && NodesEqual(left, right);
     }
+
+    static bool NodesEqual(JsonNode left, JsonNode right) => (left, right) switch
+    {
+        (JsonObject a, JsonObject b) => ObjectsEqual(a, b),
+        (JsonArray a, JsonArray b) => ArraysEqual(a, b),
+        _ => ScalarsEqual(left, right)
+    };
 
     static bool ObjectsEqual(JsonObject left, JsonObject right) =>
         left.Count == right.Count && left.All(property => right.TryGetPropertyValue(property.Key, out var value) && Equals(property.Value, value));
@@ -133,7 +130,7 @@ internal static class ContentComparison
         {
             var definition = properties.FirstOrDefault(_ => _.Name == property.Key) ??
                 properties.FirstOrDefault(_ => _.Name.Equals(property.Key, StringComparison.OrdinalIgnoreCase));
-            if (property.Value is null || (properties.Length > 0 && definition is null))
+            if (property.Value is null || IsUndeclared(properties, definition))
             {
                 return true;
             }
@@ -142,6 +139,8 @@ internal static class ContentComparison
                 PreservesValues(property.Value, value, definition ?? new JsonSchema());
         });
     }
+
+    static bool IsUndeclared(JsonSchemaProperty[] properties, JsonSchemaProperty? definition) => properties.Length > 0 && definition is null;
 
     static bool PreservesArray(JsonArray array, JsonArray converted, JsonSchema schema)
     {
