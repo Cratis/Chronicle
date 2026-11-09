@@ -260,7 +260,7 @@ public class ProjectionReplayHandler(
             if (projection is null)
             {
                 logger.ProjectionMissing(observerDetails.Key);
-                return ICanHandleReplayForObserver.Error.Unknown;
+                return ICanHandleReplayForObserver.Error.ProjectionNotFound;
             }
 
             if (projection.Scope == ProjectionScope.Global)
@@ -285,7 +285,7 @@ public class ProjectionReplayHandler(
         catch (Exception ex) when (ex is not GlobalProjectionReplayNotSupported)
         {
             logger.Failed(ex, observerDetails.Key.ObserverId, observerDetails.Type);
-            return ICanHandleReplayForObserver.Error.Unknown;
+            return ICanHandleReplayForObserver.Error.Failed;
         }
     }
 }
