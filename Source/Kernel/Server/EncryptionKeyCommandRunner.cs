@@ -84,7 +84,13 @@ internal static class EncryptionKeyCommandRunner
         {
             // An inspection that did not finish proves nothing about the layout, whatever stopped it - a timeout, a server
             // error, a network failure, a cancellation or anything unexpected - so the server does not start on it.
-            logger.EncryptionKeyInspectionFailed(exception);
+            logger.EncryptionKeyInspectionFailed(exception switch
+            {
+                OperationCanceledException => "Cancelled",
+                TimeoutException => "Timeout",
+                HttpRequestException => "Network",
+                _ => "InspectionFailed"
+            });
             return LayoutUnusable;
         }
 

@@ -26,6 +26,6 @@ internal static partial class EncryptionKeyCommandLogging
     [LoggerMessage(LogLevel.Error, "The encryption key migration failed with a failure of kind {Kind}. Nothing already copied is lost; running it again resumes")]
     internal static partial void EncryptionKeyMigrationFailed(this ILogger logger, string kind);
 
-    [LoggerMessage(LogLevel.Warning, "The encryption key store could not be inspected for keys stored under earlier names")]
-    internal static partial void EncryptionKeyInspectionFailed(this ILogger logger, Exception exception);
+    [LoggerMessage(LogLevel.Warning, "The encryption key store could not be inspected for keys stored under earlier names (failure category: {Category})")]
+    internal static partial void EncryptionKeyInspectionFailed(this ILogger logger, string category);
 }
