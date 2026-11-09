@@ -14,7 +14,7 @@ public class and_reactor_infers_external_inbox_subscription(context context) : G
     public class context(ChronicleFixture chronicleInProcessFixture) : Specification(chronicleInProcessFixture)
     {
         public const string LobbyEventStoreName = "Lobby";
-        public const string AdminEventStoreName = "Admin";
+        public const string AdminEventStoreName = "subscription-admin";
         public IEnumerable<EventStoreSubscriptionDefinition> StoredSubscriptions { get; private set; } = [];
 
         public override IEnumerable<Type> EventTypes => [typeof(AdminUserInvited)];
