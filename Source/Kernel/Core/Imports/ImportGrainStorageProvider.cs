@@ -16,7 +16,7 @@ public class ImportGrainStorageProvider(IStorage storage) : IGrainStorage
     /// <inheritdoc/>
     public async Task ClearStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
     {
-        var key = ImportKey.Parse(grainId.Key.ToString()!);
+        var key = ImportKey.Parse(grainId.Key.ToString());
         await storage.GetEventStore(key.EventStore).GetNamespace(key.Namespace).Imports.Remove(key.ImportId);
     }
 
