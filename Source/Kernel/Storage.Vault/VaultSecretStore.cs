@@ -70,7 +70,7 @@ internal class VaultSecretStore(IVaultClient vaultClient, string? mountPointName
         try
         {
             var metadata = (await vaultClient.V1.Secrets.KeyValue.V2.ReadSecretMetadataAsync(path, mountPoint: _mountPoint)).Data;
-            return AllVersionsDeleted(metadata);
+            return await AllVersionsDeleted(path, metadata);
         }
         catch (Exception)
         {
@@ -128,21 +128,52 @@ internal class VaultSecretStore(IVaultClient vaultClient, string? mountPointName
     /// <inheritdoc/>
     public Task Remove(string path) => vaultClient.V1.Secrets.KeyValue.V2.DeleteMetadataAsync(path, mountPoint: _mountPoint);
 
-    static bool AllVersionsDeleted(FullSecretMetadata metadata) =>
-        metadata.CurrentVersion > 0 &&
-        metadata.Versions is { Count: > 0 } versions &&
-        versions.ContainsKey(metadata.CurrentVersion.ToString(CultureInfo.InvariantCulture)) &&
-        versions.Values.All(IsDeletedOrDestroyed);
-
-    static bool IsDeletedOrDestroyed(SecretMetadata? version) =>
-        version is not null &&
-        (version.Destroyed ||
-            (DateTimeOffset.TryParse(version.DeletionTime, CultureInfo.InvariantCulture, DateTimeStyles.None, out var deleted) && deleted <= DateTimeOffset.UtcNow));
-
     static string? AsText(object? value) => value switch
     {
         string text => text,
         JsonElement { ValueKind: JsonValueKind.String } element => element.GetString(),
         _ => null
     };
+
+    async Task<bool> AllVersionsDeleted(string path, FullSecretMetadata metadata)
+    {
+        if (metadata.CurrentVersion <= 0 ||
+            metadata.Versions is not { Count: > 0 } versions ||
+            !versions.ContainsKey(metadata.CurrentVersion.ToString(CultureInfo.InvariantCulture)))
+        {
+            return false;
+        }
+
+        foreach (var (number, version) in versions)
+        {
+            if (!await IsDeletedOrDestroyed(path, number, version))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    async Task<bool> IsDeletedOrDestroyed(string path, string number, SecretMetadata? metadata) =>
+        metadata is not null &&
+        (metadata.Destroyed ||
+            (int.TryParse(number, NumberStyles.None, CultureInfo.InvariantCulture, out var version) &&
+                version > 0 && await IsVersionDeleted(path, version)));
+
+    async Task<bool> IsVersionDeleted(string path, int version)
+    {
+        try
+        {
+            // deletion_time can be scheduled: only Vault's version-specific response can confirm deletion.
+            var secret = await vaultClient.V1.Secrets.KeyValue.V2.ReadSecretAsync(path, version: version, mountPoint: _mountPoint);
+            return secret?.Data is { Data: null, Metadata: { } metadata } &&
+                metadata.Version == version &&
+                (metadata.Destroyed || DateTimeOffset.TryParse(metadata.DeletionTime, CultureInfo.InvariantCulture, DateTimeStyles.None, out _));
+        }
+        catch (VaultApiException ex) when (ex.HttpStatusCode == HttpStatusCode.NotFound)
+        {
+            return true;
+        }
+    }
 }
