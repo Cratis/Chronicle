@@ -27,6 +27,8 @@ public class and_an_identical_authorization_wins_the_compare_and_swap : racing_e
     async Task Because() => _result = await Catch.Exception(() => _storage.AllowNewKeyFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, "identifier", 1, 1));
 
     [Fact] void should_accept_the_identical_authorization() => _result.ShouldBeNull();
+    [Fact] void should_read_linearly() => _erasures.Received(2).WithReadConcern(ReadConcern.Linearizable);
+    [Fact] void should_write_with_majority_and_journal() => _erasures.Received(1).WithWriteConcern(Arg.Is<WriteConcern>(_ => _.W.Equals(WriteConcern.WMajority.W) && _.Journal == true && _.WTimeout != null));
     [Fact] void should_not_write_again() => _writes.ShouldEqual(1);
     [Fact] void should_keep_the_authorized_lifecycle() => _fence.Lifecycle.ShouldEqual(2u);
 }

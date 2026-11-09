@@ -38,10 +38,11 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     const string SrvNameServerKey = "srvNameServer";
     const string CertificatePathKey = "certificatePath";
     const string CertificatePasswordKey = "certificatePassword";
+    const string CaCertificatePathKey = "caCertificatePath";
     const string SrvScheme = "chronicle+srv";
     const int DefaultPort = 35000;
 
-    static readonly HashSet<string> _keysThatMayHoldAtSign = new([ApiKeyKey, CertificatePathKey, CertificatePasswordKey, LoadBalancerKey, SrvNameServerKey], StringComparer.OrdinalIgnoreCase);
+    static readonly HashSet<string> _keysThatMayHoldAtSign = new([ApiKeyKey, CertificatePathKey, CertificatePasswordKey, CaCertificatePathKey, LoadBalancerKey, SrvNameServerKey], StringComparer.OrdinalIgnoreCase);
 
     static readonly HashSet<string> _keysWithDedicatedRendering =
     [
@@ -60,7 +61,8 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
         LoadBalancerKey,
         SrvNameServerKey,
         CertificatePathKey,
-        CertificatePasswordKey
+        CertificatePasswordKey,
+        CaCertificatePathKey
     ];
 
     readonly bool _hasUncertainDiagnosticInput = true;
@@ -459,6 +461,32 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     }
 
     /// <summary>
+    /// Gets or sets the path to a file with the certificate authorities (CA) the server certificate must chain to,
+    /// expressed as <c language="csharp">caCertificatePath=</c> in the connection string.
+    /// </summary>
+    /// <remarks>
+    /// The file holds one or more CA certificates in PEM or PKCS#7 format. The certificate authorities are used only
+    /// when certificate validation is enabled (<c language="csharp">skipTlsValidation=false</c>); the server certificate
+    /// is then accepted only when its chain builds to one of them. The file is read when the connection is created, also when
+    /// validation is skipped or TLS is disabled; a missing or unreadable file, or one without certificates, fails the connection setup.
+    /// </remarks>
+    public string? CaCertificatePath
+    {
+        get => ContainsKey(CaCertificatePathKey) ? (string)this[CaCertificatePathKey] : null;
+        set
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                Remove(CaCertificatePathKey);
+            }
+            else
+            {
+                this[CaCertificatePathKey] = value;
+            }
+        }
+    }
+
+    /// <summary>
     /// Gets whether certificate validation was explicitly configured.
     /// </summary>
     internal bool HasExplicitSkipTlsValidation => ContainsKey(SkipTlsValidationKey);
@@ -534,6 +562,11 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
         if (ContainsKey(CertificatePasswordKey))
         {
             queryParams.Add($"certificatePassword={Uri.EscapeDataString((string)this[CertificatePasswordKey])}");
+        }
+
+        if (ContainsKey(CaCertificatePathKey))
+        {
+            queryParams.Add($"caCertificatePath={Uri.EscapeDataString((string)this[CaCertificatePathKey])}");
         }
 
         // Add any other query parameters that aren't our special keys

@@ -24,7 +24,7 @@ public class and_an_existing_inbox_name_is_reserved : given.a_reserved_name_chec
         _constraintResult = await Check("inbox-orders+email+constraint");
     }
 
-    [Fact] void should_allow_the_existing_closed_streams_name() => _closedStreamsResult.ShouldBeTrue();
-    [Fact] void should_allow_the_existing_constraint_name() => _constraintResult.ShouldBeTrue();
+    [Fact] void should_refuse_the_existing_closed_streams_name() => _closedStreamsResult.ShouldBeFalse();
+    [Fact] void should_refuse_the_existing_constraint_name() => _constraintResult.ShouldBeFalse();
     [Fact] void should_consult_the_reservation_provider() => _reservedEventSequenceIds.Received(1).IsReserved(new EventSequenceId("inbox-orders+closed_streams"));
 }

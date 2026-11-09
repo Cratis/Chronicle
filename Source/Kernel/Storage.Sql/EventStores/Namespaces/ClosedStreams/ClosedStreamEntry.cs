@@ -8,6 +8,10 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ClosedStreams;
 /// <summary>
 /// Represents a SQL entity for a closed stream entry.
 /// </summary>
+/// <remarks>
+/// <see cref="StreamType"/>, <see cref="StreamId"/>, <see cref="EventSourceId"/> and <see cref="EventSourceType"/> hold the
+/// stored form described by <see cref="ClosedStreamColumn"/>, which on SQL Server can end with a terminator character.
+/// </remarks>
 public class ClosedStreamEntry
 {
     /// <summary>

@@ -304,6 +304,7 @@ Server certificate validation is separate: `SkipCertificateValidation` defaults 
 |---|---|---|
 | `CertificatePath` | `string?` | Path to a PFX client certificate file |
 | `CertificatePassword` | `string?` | Password for the client certificate file |
+| `CaCertificatePath` | `string?` | Path to a PEM or PKCS#7 file with the certificate authorities the server certificate must chain to when validation is enabled; see [TLS](tls#trusting-a-private-certificate-authority) |
 | `SkipCertificateValidation` | `bool` | Skip server certificate validation; defaults to `true` |
 
 ### Occurrences

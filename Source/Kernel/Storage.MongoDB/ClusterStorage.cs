@@ -1,10 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Concurrent;
 using System.Reactive.Subjects;
 using System.Text.Json;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Configuration;
+using Cratis.Chronicle.EventStores;
 using Cratis.Chronicle.Storage.EventSequences.Mutations;
 using Cratis.Reactive;
 using Microsoft.Extensions.Logging;
@@ -33,6 +35,8 @@ public class ClusterStorage(
     ILoggerFactory loggerFactory,
     IEventSequenceMutationDigestKeys? mutationDigestKeys = null) : IClusterStorage
 {
+    readonly ConcurrentDictionary<string, bool> _skippedNames = new();
+
     /// <inheritdoc/>
     public async Task<IReadOnlyDictionary<EventStoreName, Concepts.Projections.Generations.Enablement.GenerationFloor>> ReadGenerationFloors()
     {
@@ -54,7 +58,7 @@ public class ClusterStorage(
     {
         var collection = GetCollection();
         using var result = await collection.FindAsync(_ => true);
-        return (await result.ToListAsync()).Select(_ => _.Name);
+        return Usable((await result.ToListAsync()).Select(_ => _.Name));
     }
 
     /// <inheritdoc/>
@@ -63,7 +67,7 @@ public class ClusterStorage(
         var collection = GetCollection();
         return new TransformingSubject<IEnumerable<EventStore>, IEnumerable<EventStoreName>>(
             collection.Observe(),
-            _ => _.Select(_ => _.Name));
+            _ => Usable(_.Select(_ => _.Name)));
     }
 
     /// <inheritdoc/>
@@ -95,8 +99,35 @@ public class ClusterStorage(
         return (await cursor.ToListAsync())
             .Where(_ => _.StartsWith(prefix, StringComparison.Ordinal) && _.EndsWith("+es", StringComparison.Ordinal))
             .Select(_ => _[prefix.Length..^3])
-            .Where(_ => !string.IsNullOrWhiteSpace(_) && !_.Contains('+'))
+            .Where(_ => !string.IsNullOrWhiteSpace(_) && !_.Contains('+') && !ReservedEventStoreNames.IsInternalDatabaseName(_) && !ReservedEventStoreNames.AliasesInternalDatabaseName(prefix, _))
             .Select(_ => DatabaseNames.EventStoreFor(_, options.Value.Storage.SystemDatabaseName));
+    }
+
+    /// <summary>
+    /// Leave out registered names that can no longer be resolved to a database, so one bad registration never stops a loop over the event stores.
+    /// </summary>
+    /// <param name="names">The registered names.</param>
+    /// <returns>The names that can be resolved.</returns>
+    List<EventStoreName> Usable(IEnumerable<EventStoreName> names)
+    {
+        var systemDatabaseName = options.Value.Storage.SystemDatabaseName;
+        var prefix = options.Value.Storage.DatabaseNamePrefix;
+        var usable = new List<EventStoreName>();
+        foreach (var name in names)
+        {
+            if (name is null || name == EventStoreName.System || !ReservedEventStoreNames.IsReserved(name.Value, systemDatabaseName, prefix))
+            {
+                usable.Add(name!);
+                continue;
+            }
+
+            if (_skippedNames.TryAdd(name.Value, true))
+            {
+                loggerFactory.CreateLogger<ClusterStorage>().SkippingEventStoreWithReservedName(name.Value);
+            }
+        }
+
+        return usable;
     }
 
     IMongoCollection<EventStore> GetCollection() => database.GetCollection<EventStore>(WellKnownCollectionNames.EventStores);

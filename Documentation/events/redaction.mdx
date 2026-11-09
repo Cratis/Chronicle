@@ -1,6 +1,6 @@
 ---
 title: "Cratis Chronicle event redaction and its erasure boundaries"
-description: "Redaction replaces stored event content in Cratis Chronicle with a marker. Metadata remains, and copies, read models, and external effects need separate handling."
+description: "Redaction replaces stored event content with a marker while metadata remains; learn what it erases and how to handle copies, read models and external effects."
 ---
 
 Redaction in Cratis Chronicle replaces a stored event's payload with a marker while keeping its sequence number and audit metadata. Use it when event content must be removed, but treat it as one part of an erasure workflow: it does not remove every copy of the data or every identifier associated with the event.

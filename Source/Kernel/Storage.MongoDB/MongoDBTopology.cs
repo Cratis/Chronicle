@@ -124,7 +124,7 @@ public class MongoDBTopology : IMongoDBTopology
         }
         catch (Exception exception) when (exception is MongoException or TimeoutException or OperationCanceledException)
         {
-            _logger.TopologyUnknown(exception);
+            _logger.TopologyUnknown(exception.GetType().Name);
         }
     }
 }

@@ -76,17 +76,19 @@ public class Storage(
         // Use Task.Run to avoid deadlocking Orleans grain task schedulers: the async continuations inside these
         // methods must not be posted back to the Orleans ActivationTaskScheduler, which would be the case if called
         // directly with GetAwaiter().GetResult() from within a grain method.
+        // The storage is created first: creating it validates the name and throws for one that cannot be resolved,
+        // and such a name must never be registered.
+        var created = clusterStorage.CreateStorageForEventStore(
+            eventStore,
+            (eventStoreNamespaceName) =>
+                new Sinks.Sinks(eventStore, eventStoreNamespaceName, sinkFactories, sinkConfigurations));
+
         var eventStores = Task.Run(clusterStorage.GetEventStores).GetAwaiter().GetResult();
         var existingEventStore = eventStores.SingleOrDefault(e => e == eventStore);
         if (existingEventStore is null)
         {
             Task.Run(() => clusterStorage.SaveEventStore(eventStore)).GetAwaiter().GetResult();
         }
-
-        var created = clusterStorage.CreateStorageForEventStore(
-            eventStore,
-            (eventStoreNamespaceName) =>
-                new Sinks.Sinks(eventStore, eventStoreNamespaceName, sinkFactories, sinkConfigurations));
 
         return _eventStores.GetOrAdd(eventStore, created);
     }

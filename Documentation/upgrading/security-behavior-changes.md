@@ -1,6 +1,6 @@
 ---
 title: Security-related behavior changes
-description: Behavior changes in access checks, compliance key operations and connection handling, and what to do about each.
+description: "Review behavior changes in access checks, compliance key operations and connection handling, and learn what to do about each one when you upgrade."
 ---
 
 This page lists behavior that differs from earlier releases in how Chronicle checks callers and

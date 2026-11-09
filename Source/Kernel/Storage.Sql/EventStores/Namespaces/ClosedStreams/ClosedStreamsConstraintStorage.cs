@@ -14,6 +14,10 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ClosedStreams;
 /// <summary>
 /// Represents an implementation of <see cref="IClosedStreamsConstraintStorage"/> for SQL.
 /// </summary>
+/// <remarks>
+/// Stream types, stream ids, event source ids and event source types are stored and compared by exact spelling, see
+/// <see cref="ClosedStreamColumn"/>. On SQL Server this also makes <see cref="GetAll"/> order them by code point.
+/// </remarks>
 /// <param name="eventStore">The event store.</param>
 /// <param name="namespace">The namespace.</param>
 /// <param name="eventSequenceId">The event sequence.</param>
@@ -24,20 +28,20 @@ public class ClosedStreamsConstraintStorage(EventStoreName eventStore, EventStor
     public async Task<IEnumerable<ClosedStream>> GetCovering(ClosedStreamScope target, IEnumerable<ClosedStreamDimensions> masks)
     {
         target = target.Normalized();
+        await using var context = await database.Namespace(eventStore, @namespace);
         var parameter = Expression.Parameter(typeof(ClosedStreamEntry), "row");
         Expression clauses = Expression.Constant(false);
         foreach (var mask in masks.Distinct().Where(mask => mask != ClosedStreamDimensions.None && (mask & target.Dimensions) == mask))
         {
             var scope = ClosedStreamScope.ForAppend(target.EventSourceId ?? EventSourceId.Unspecified, target.EventSourceType ?? EventSourceType.Unspecified, target.EventStreamType ?? EventStreamType.All, target.EventStreamId ?? EventStreamId.Default, mask);
-            var clause = ExactScope(scope);
+            var clause = ExactScope(context.DbContext, scope);
             clauses = Expression.OrElse(clauses, new ReplaceParameter(clause.Parameters[0], parameter).Visit(clause.Body));
         }
 
-        await using var context = await database.Namespace(eventStore, @namespace);
         var predicate = Expression.Lambda<Func<ClosedStreamEntry, bool>>(clauses, parameter);
         var rows = await ForSequence(context.DbContext).Where(predicate).ToArrayAsync();
 
-        return rows.Select(ToClosure).ToArray();
+        return rows.Select(row => ToClosure(context.DbContext, row)).ToArray();
     }
 
     /// <inheritdoc/>
@@ -54,16 +58,16 @@ public class ClosedStreamsConstraintStorage(EventStoreName eventStore, EventStor
     {
         var scope = closure.Scope.Normalized();
         await using var context = await database.Namespace(eventStore, @namespace);
-        var row = await ForSequence(context.DbContext).Where(row => row.Owner == closure.Owner.Value).FirstOrDefaultAsync(ExactScope(scope), cancellationToken);
+        var row = await ForSequence(context.DbContext).Where(row => row.Owner == closure.Owner.Value).FirstOrDefaultAsync(ExactScope(context.DbContext, scope), cancellationToken);
         if (row is null)
         {
             row = new ClosedStreamEntry
             {
                 EventSequenceId = eventSequenceId.Value,
-                StreamType = scope.EventStreamType?.Value ?? string.Empty,
-                StreamId = scope.EventStreamId?.Value ?? string.Empty,
-                EventSourceId = scope.EventSourceId?.Value ?? string.Empty,
-                EventSourceType = scope.EventSourceType?.Value ?? string.Empty,
+                StreamType = ClosedStreamColumn.Encode(context.DbContext, scope.EventStreamType?.Value ?? string.Empty),
+                StreamId = ClosedStreamColumn.Encode(context.DbContext, scope.EventStreamId?.Value ?? string.Empty),
+                EventSourceId = ClosedStreamColumn.Encode(context.DbContext, scope.EventSourceId?.Value ?? string.Empty),
+                EventSourceType = ClosedStreamColumn.Encode(context.DbContext, scope.EventSourceType?.Value ?? string.Empty),
                 Owner = closure.Owner.Value,
                 Dimensions = (int)scope.Dimensions
             };
@@ -79,7 +83,7 @@ public class ClosedStreamsConstraintStorage(EventStoreName eventStore, EventStor
     public async Task<bool> Reopen(ClosedStreamOwner owner, ClosedStreamScope scope, CancellationToken cancellationToken = default)
     {
         await using var context = await database.Namespace(eventStore, @namespace);
-        var rows = await ForSequence(context.DbContext).Where(row => row.Owner == owner.Value).Where(ExactScope(scope.Normalized())).ToArrayAsync(cancellationToken);
+        var rows = await ForSequence(context.DbContext).Where(row => row.Owner == owner.Value).Where(ExactScope(context.DbContext, scope.Normalized())).ToArrayAsync(cancellationToken);
         context.DbContext.ClosedStreams.RemoveRange(rows);
         await context.DbContext.SaveChangesAsync(cancellationToken);
 
@@ -90,8 +94,8 @@ public class ClosedStreamsConstraintStorage(EventStoreName eventStore, EventStor
     public async Task<ClosedStream?> GetFor(ClosedStreamOwner owner, ClosedStreamScope scope, CancellationToken cancellationToken = default)
     {
         await using var context = await database.Namespace(eventStore, @namespace);
-        var row = await ForSequence(context.DbContext).Where(row => row.Owner == owner.Value).FirstOrDefaultAsync(ExactScope(scope.Normalized()), cancellationToken);
-        return row is null ? null : ToClosure(row);
+        var row = await ForSequence(context.DbContext).Where(row => row.Owner == owner.Value).FirstOrDefaultAsync(ExactScope(context.DbContext, scope.Normalized()), cancellationToken);
+        return row is null ? null : ToClosure(context.DbContext, row);
     }
 
     /// <inheritdoc/>
@@ -101,7 +105,7 @@ public class ClosedStreamsConstraintStorage(EventStoreName eventStore, EventStor
         var position = (decimal)sequenceNumber.Value;
         var rows = await ForSequence(context.DbContext).Where(row => row.Owner == owner.Value && row.SequenceNumber == position).ToArrayAsync(cancellationToken);
 
-        return rows.Select(ToClosure).ToArray();
+        return rows.Select(row => ToClosure(context.DbContext, row)).ToArray();
     }
 
     /// <inheritdoc/>
@@ -110,7 +114,7 @@ public class ClosedStreamsConstraintStorage(EventStoreName eventStore, EventStor
         await using var context = await database.Namespace(eventStore, @namespace);
         var rows = await ForSequence(context.DbContext).Where(row => row.Owner == owner.Value).ToArrayAsync(cancellationToken);
 
-        return rows.Select(ToClosure).ToArray();
+        return rows.Select(row => ToClosure(context.DbContext, row)).ToArray();
     }
 
     /// <inheritdoc/>
@@ -131,17 +135,36 @@ public class ClosedStreamsConstraintStorage(EventStoreName eventStore, EventStor
         {
             var scope = within.Normalized();
             if (scope.IsEmpty) return [];
-            if (scope.EventSourceId is not null) query = query.Where(row => row.EventSourceId == scope.EventSourceId.Value);
-            if (scope.EventSourceType is not null) query = query.Where(row => row.EventSourceType == scope.EventSourceType.Value);
-            if (scope.EventStreamType is not null) query = query.Where(row => row.StreamType == scope.EventStreamType.Value);
-            if (scope.EventStreamId is not null) query = query.Where(row => row.StreamId == scope.EventStreamId.Value);
+            if (scope.EventSourceId is not null)
+            {
+                var sourceId = ClosedStreamColumn.Encode(context.DbContext, scope.EventSourceId.Value);
+                query = query.Where(row => row.EventSourceId == sourceId);
+            }
+
+            if (scope.EventSourceType is not null)
+            {
+                var sourceType = ClosedStreamColumn.Encode(context.DbContext, scope.EventSourceType.Value);
+                query = query.Where(row => row.EventSourceType == sourceType);
+            }
+
+            if (scope.EventStreamType is not null)
+            {
+                var streamType = ClosedStreamColumn.Encode(context.DbContext, scope.EventStreamType.Value);
+                query = query.Where(row => row.StreamType == streamType);
+            }
+
+            if (scope.EventStreamId is not null)
+            {
+                var streamId = ClosedStreamColumn.Encode(context.DbContext, scope.EventStreamId.Value);
+                query = query.Where(row => row.StreamId == streamId);
+            }
         }
 
         query = query.OrderBy(row => row.Owner).ThenBy(row => row.EventSourceId).ThenBy(row => row.EventSourceType)
             .ThenBy(row => row.StreamType).ThenBy(row => row.StreamId).Skip(skip);
         if (take is not null) query = query.Take(take.Value);
 
-        return (await query.ToArrayAsync()).Select(ToClosure).ToArray();
+        return (await query.ToArrayAsync()).Select(row => ToClosure(context.DbContext, row)).ToArray();
     }
 
     /// <inheritdoc/>
@@ -152,27 +175,34 @@ public class ClosedStreamsConstraintStorage(EventStoreName eventStore, EventStor
     public Task CloseStream(EventStreamType streamType, EventStreamId streamId) =>
         Close(new(new(EventStreamType: streamType, EventStreamId: streamId), ClosedStreamOwner.Manual, EventSequenceNumber.Unavailable, null));
 
-    static Expression<Func<ClosedStreamEntry, bool>> ExactScope(ClosedStreamScope scope)
+    static Expression<Func<ClosedStreamEntry, bool>> ExactScope(DbContext context, ClosedStreamScope scope)
     {
-        var sourceId = scope.EventSourceId?.Value ?? string.Empty;
-        var sourceType = scope.EventSourceType?.Value ?? string.Empty;
-        var streamType = scope.EventStreamType?.Value ?? string.Empty;
-        var streamId = scope.EventStreamId?.Value ?? string.Empty;
+        var sourceId = ClosedStreamColumn.Encode(context, scope.EventSourceId?.Value ?? string.Empty);
+        var sourceType = ClosedStreamColumn.Encode(context, scope.EventSourceType?.Value ?? string.Empty);
+        var streamType = ClosedStreamColumn.Encode(context, scope.EventStreamType?.Value ?? string.Empty);
+        var streamId = ClosedStreamColumn.Encode(context, scope.EventStreamId?.Value ?? string.Empty);
 
         var dimensions = (int)scope.Dimensions;
 
         return row => row.EventSourceId == sourceId && row.EventSourceType == sourceType && row.StreamType == streamType && row.StreamId == streamId && row.Dimensions == dimensions;
     }
 
-    static ClosedStream ToClosure(ClosedStreamEntry row) => new(
-        new(
-            row.EventSourceId.Length == 0 ? null : new EventSourceId(row.EventSourceId),
-            row.EventSourceType.Length == 0 ? null : new EventSourceType(row.EventSourceType),
-            ((ClosedStreamDimensions)row.Dimensions).HasFlag(ClosedStreamDimensions.EventStreamType) ? new EventStreamType(row.StreamType) : null,
-            ((ClosedStreamDimensions)row.Dimensions).HasFlag(ClosedStreamDimensions.EventStreamId) ? new EventStreamId(row.StreamId) : null),
-        row.Owner,
-        new EventSequenceNumber((ulong)row.SequenceNumber),
-        row.ClosedAt);
+    static ClosedStream ToClosure(DbContext context, ClosedStreamEntry row)
+    {
+        var sourceId = ClosedStreamColumn.Decode(context, row.EventSourceId);
+        var sourceType = ClosedStreamColumn.Decode(context, row.EventSourceType);
+        var dimensions = (ClosedStreamDimensions)row.Dimensions;
+
+        return new(
+            new(
+                sourceId.Length == 0 ? null : new EventSourceId(sourceId),
+                sourceType.Length == 0 ? null : new EventSourceType(sourceType),
+                dimensions.HasFlag(ClosedStreamDimensions.EventStreamType) ? new EventStreamType(ClosedStreamColumn.Decode(context, row.StreamType)) : null,
+                dimensions.HasFlag(ClosedStreamDimensions.EventStreamId) ? new EventStreamId(ClosedStreamColumn.Decode(context, row.StreamId)) : null),
+            row.Owner,
+            new EventSequenceNumber((ulong)row.SequenceNumber),
+            row.ClosedAt);
+    }
 
     IQueryable<ClosedStreamEntry> ForSequence(NamespaceDbContext context) =>
         context.ClosedStreams.Where(row => row.EventSequenceId == eventSequenceId.Value);
