@@ -3,7 +3,6 @@
 
 using System.Globalization;
 using System.IO.Compression;
-using System.Net.Http.Json;
 using System.Text.Json;
 
 namespace Cratis.Chronicle.Tools.WireCompatibility;

@@ -9,6 +9,11 @@
         <NoWarn>$(NoWarn);CRSPECEXP01</NoWarn>
     </PropertyGroup>
 
+    <!-- .NET 11 makes the System.Net.Http.Json extensions reachable without this namespace; the net10.0 package build still needs it. -->
+    <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
+        <Using Include="System.Net.Http.Json" />
+    </ItemGroup>
+
     <ItemGroup>
         <Compile Include="../XUnit.Integration/**/*.cs" Exclude="../XUnit.Integration/bin/**;../XUnit.Integration/obj/**;../XUnit.Integration/ChronicleClientFixture.Lifetime.cs" LinkBase="Shared" />
         <InternalsVisibleTo Include="Cratis.Chronicle.InProcess.Integration" />

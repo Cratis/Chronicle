@@ -15,7 +15,7 @@ public class and_the_event_is_already_redacted : given.a_scenario_with_notes
     async Task Because()
     {
         _error = await Catch.Exception(() => _scenario.EventSequence.Redact(_firstNote, "second"));
-        _payload = JsonDocument.Parse(await _scenario.ReadContentAtRest(_firstNote)).RootElement;
+        _payload = JsonSerializer.Deserialize<JsonElement>(await _scenario.ReadContentAtRest(_firstNote));
     }
 
     [Fact] void should_not_fail() => _error.ShouldBeNull();

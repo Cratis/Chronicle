@@ -50,7 +50,9 @@ public class connection_files : Specification
 
     protected ChronicleOptions Options()
     {
+#pragma warning disable SYSLIB0066 // The synchronous IStartupValidator is what ValidateOnStart registers and the spec exercises.
         _services!.GetRequiredService<IStartupValidator>().Validate();
+#pragma warning restore SYSLIB0066
         return _services!.GetRequiredService<IOptions<ChronicleOptions>>().Value;
     }
 }

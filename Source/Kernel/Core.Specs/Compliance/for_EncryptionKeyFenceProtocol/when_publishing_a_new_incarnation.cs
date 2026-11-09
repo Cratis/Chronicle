@@ -51,7 +51,7 @@ public class when_publishing_a_new_incarnation : Specification
 
     [Fact] void should_not_reuse_the_previous_incarnation_record() => _newId.ShouldNotEqual(_oldId);
     [Fact] void should_preserve_the_previous_record() => _oldRecord.ShouldNotBeNull();
-    [Fact] void should_publish_the_current_protocol() => JsonDocument.Parse(_newRecord).RootElement.GetProperty("Protocol").GetInt32().ShouldEqual(1);
+    [Fact] void should_publish_the_current_protocol() => JsonSerializer.Deserialize<JsonElement>(_newRecord).GetProperty("Protocol").GetInt32().ShouldEqual(1);
     [Fact] void should_not_claim_a_floor_attestation() => _newRecord.Contains("ProtocolFloor", StringComparison.Ordinal).ShouldBeFalse();
 
     string Id() => "protocol/" + Convert.ToHexStringLower(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(new[] { "cluster", _silo.SiloAddress.ToParsableString() })));

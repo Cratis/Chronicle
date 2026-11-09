@@ -35,7 +35,7 @@ public partial class Observer
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
 
         var tail = await _eventSequence.GetTailSequenceNumber();
-        if (!tail.IsActualValue || (previous.IsActualValue && previous > tail && !State.CatchingUpPartitions.Any() && !Failures.HasFailedPartitions))
+        if (!tail.IsActualValue || (previous.IsActualValue && previous > tail && State.CatchingUpPartitions.Count == 0 && !Failures.HasFailedPartitions))
         {
             return new(FastForwardOutcome.AlreadyAtTail, previous, previous);
         }

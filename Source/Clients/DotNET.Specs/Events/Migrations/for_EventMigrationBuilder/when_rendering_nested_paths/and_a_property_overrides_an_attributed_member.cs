@@ -24,8 +24,12 @@ public class and_a_property_overrides_an_attributed_member : Specification
     {
         var policy = new given.PrefixPolicy();
         _builder = new(policy);
+
+        // The generic GetTypeInfo<T>() overload is new in .NET 11; this spec also runs on net10.0.
+#pragma warning disable CA2263
         _serializedName = _serializerOptions.GetTypeInfo(typeof(Derived)).Properties
             .Single(property => property.AttributeProvider is PropertyInfo member && member.DeclaringType == typeof(Derived)).Name;
+#pragma warning restore CA2263
     }
 
     void Because()

@@ -51,5 +51,16 @@ public class when_different_event_source_ids_are_acquired_concurrently : Specifi
     [Fact]
     void should_hold_both_event_source_ids_at_the_same_time() => _bothHeldConcurrently.ShouldBeTrue();
 
-    static async Task<bool> Completes(Task task) => await Task.WhenAny(task, Task.Delay(_timeout)) == task;
+    static async Task<bool> Completes(Task task)
+    {
+        try
+        {
+            await task.WaitAsync(_timeout);
+            return true;
+        }
+        catch (TimeoutException)
+        {
+            return false;
+        }
+    }
 }

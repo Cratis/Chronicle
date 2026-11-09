@@ -36,10 +36,14 @@ public sealed class ConcurrentCallGate(int expectedCalls)
             _allCallsArrived.TrySetResult();
         }
 
-        var left = await Task.WhenAny(_allCallsArrived.Task, Task.Delay(_waitForRemainingCalls));
-        if (left == _allCallsArrived.Task)
+        try
         {
+            await _allCallsArrived.Task.WaitAsync(_waitForRemainingCalls);
             Interlocked.Increment(ref _callsThatLeftThroughTheGate);
+        }
+        catch (TimeoutException)
+        {
+            // The remaining calls never arrived, so this call did not leave through the gate.
         }
     }
 }

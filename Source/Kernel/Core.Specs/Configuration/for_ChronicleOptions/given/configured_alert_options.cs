@@ -10,7 +10,9 @@ namespace Cratis.Chronicle.Configuration.for_ChronicleOptions.given;
 public class configured_alert_options : Specification
 {
     protected ServiceProvider _services;
+#pragma warning disable SYSLIB0066 // The synchronous IStartupValidator is what ValidateOnStart registers and the spec exercises.
     protected IStartupValidator _startupValidator;
+#pragma warning restore SYSLIB0066
 
     protected void Configure(string raiseAfter, string condition = "partition-failing")
     {
@@ -24,7 +26,9 @@ public class configured_alert_options : Specification
         services.AddSingleton<IConfiguration>(configuration);
         ChronicleOptions.AddConfiguration(services, configuration);
         _services = services.BuildServiceProvider();
+#pragma warning disable SYSLIB0066 // See the field declaration.
         _startupValidator = _services.GetRequiredService<IStartupValidator>();
+#pragma warning restore SYSLIB0066
     }
 
     void Destroy() => _services.Dispose();

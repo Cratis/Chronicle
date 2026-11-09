@@ -33,11 +33,13 @@ public class when_named_sinks_are_configured : Specification
         _services = services.BuildServiceProvider();
     }
 
+#pragma warning disable SYSLIB0066 // The synchronous IStartupValidator is what ValidateOnStart registers and the spec exercises.
     void Because()
     {
         _error = Catch.Exception(() => _services.GetRequiredService<IStartupValidator>().Validate());
         _sinks = _services.GetRequiredService<IOptions<ChronicleOptions>>().Value.Sinks;
     }
+#pragma warning restore SYSLIB0066
 
     [Fact] void should_accept_startup() => _error.ShouldBeNull();
     [Fact] void should_bind_the_read_model_default() => _sinks.ReadModels.ShouldEqual("primary");

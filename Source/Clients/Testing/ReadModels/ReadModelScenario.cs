@@ -378,7 +378,7 @@ public partial class ReadModelScenario<TReadModel>(TReadModel? initialState, Def
     {
         _eventStore?.Dispose();
         if (_borrowedStore is not null && _syntheticInputSequenceId is not null) _borrowedStore.TestingStore.RemoveSequence(_syntheticInputSequenceId);
-        if (serviceProvider is null && Services.Any() && _resolvedServiceProvider is IDisposable disposable) disposable.Dispose();
+        if (serviceProvider is null && Services.Count > 0 && _resolvedServiceProvider is IDisposable disposable) disposable.Dispose();
         GC.SuppressFinalize(this);
     }
 
@@ -428,7 +428,7 @@ public partial class ReadModelScenario<TReadModel>(TReadModel? initialState, Def
 
     IServiceProvider BuildServiceProvider()
     {
-        if (!Services.Any())
+        if (Services.Count == 0)
         {
             return ((EventStoreForTesting)defaults.EventStore).ServiceProvider;
         }
