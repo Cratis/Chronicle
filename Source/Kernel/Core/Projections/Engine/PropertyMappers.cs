@@ -302,11 +302,11 @@ public static class PropertyMappers
     /// <param name="propertyPath">The property path holding the dynamic segment, for reporting.</param>
     /// <param name="value">The resolved value.</param>
     /// <returns>The dictionary key.</returns>
-    /// <exception cref="InvalidDictionaryKey">Thrown when the key holds a '.', '[' or ']' or starts with '$'.</exception>
+    /// <exception cref="InvalidDictionaryKey">Thrown when the key is empty, holds a '.', '[', ']' or a null character, or starts with '$'.</exception>
     static string EventContentDictionaryKeyFor(PropertyPath propertyPath, object? value)
     {
         var key = FormatDynamicKeyValue(value);
-        if (key.Contains('.') || key.Contains('[') || key.Contains(']') || key.StartsWith('$'))
+        if (key.Length == 0 || key.AsSpan().IndexOfAny(".[]\0") >= 0 || key.StartsWith('$'))
         {
             throw new InvalidDictionaryKey(propertyPath, key);
         }

@@ -12,6 +12,8 @@ public class when_setting_with_an_event_content_key_that_cannot_be_a_dictionary_
     Exception _withDot;
     Exception _withDollar;
     Exception _withBracket;
+    Exception _empty;
+    Exception _withNullCharacter;
 
     void Establish() => _propertyMapper = PropertyMappers.FromEventValueProvider(
         "slots.$eventContent.slot",
@@ -22,9 +24,13 @@ public class when_setting_with_an_event_content_key_that_cannot_be_a_dictionary_
         _withDot = Catch.Exception(() => _propertyMapper(given.an_appended_event.with_slot("a.b", "series-1"), new(), ArrayIndexers.NoIndexers));
         _withDollar = Catch.Exception(() => _propertyMapper(given.an_appended_event.with_slot("$set", "series-1"), new(), ArrayIndexers.NoIndexers));
         _withBracket = Catch.Exception(() => _propertyMapper(given.an_appended_event.with_slot("[0]", "series-1"), new(), ArrayIndexers.NoIndexers));
+        _empty = Catch.Exception(() => _propertyMapper(given.an_appended_event.with_slot(string.Empty, "series-1"), new(), ArrayIndexers.NoIndexers));
+        _withNullCharacter = Catch.Exception(() => _propertyMapper(given.an_appended_event.with_slot("a\0b", "series-1"), new(), ArrayIndexers.NoIndexers));
     }
 
     [Fact] void should_refuse_a_key_with_a_dot() => _withDot.ShouldBeOfExactType<InvalidDictionaryKey>();
     [Fact] void should_refuse_a_key_starting_with_a_dollar() => _withDollar.ShouldBeOfExactType<InvalidDictionaryKey>();
     [Fact] void should_refuse_a_key_with_a_bracket() => _withBracket.ShouldBeOfExactType<InvalidDictionaryKey>();
+    [Fact] void should_refuse_an_empty_key() => _empty.ShouldBeOfExactType<InvalidDictionaryKey>();
+    [Fact] void should_refuse_a_key_with_a_null_character() => _withNullCharacter.ShouldBeOfExactType<InvalidDictionaryKey>();
 }

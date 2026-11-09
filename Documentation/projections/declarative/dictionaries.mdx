@@ -17,7 +17,7 @@ The key of each entry is read from the event that is being projected:
 
 Keys are strings. A key value that is a strongly typed concept is stored by its underlying value. Values are turned into keys the same way on every server, regardless of its culture, with numbers in the invariant format. Dates and times read from event content use ISO 8601 with a comma before the fraction of a second, for example `2026-03-04T05:06:07,0000000+02:00`. Dates read from the event context, such as when the event occurred, keep their general invariant format, for example `03/04/2026 05:06:07 +02:00`.
 
-A key read from event content cannot contain `.`, `[` or `]`, and cannot start with `$`, because these characters address properties within the read model and its storage. A key is never escaped silently: an event that resolves such a key fails, and the failure shows on its partition in the Workbench. Choose a key source that cannot hold these characters, such as an identifier, rather than free text or a number with decimals.
+A key read from event content cannot be empty, cannot contain `.`, `[`, `]` or a null character, and cannot start with `$`, because the storage cannot address a property by such a key. A key is never escaped silently: an event that resolves such a key fails, and the failure shows on its partition in the Workbench. Choose a key source that cannot hold these characters, such as an identifier, rather than free text or a number with decimals.
 
 A key read from the event context or the causing identity is not checked. A `.` in such a key, for example in a user name such as `john.doe`, nests the value one level deeper instead of making a single entry. Prefer the subject, which is an identifier, when keying by the causing identity.
 
