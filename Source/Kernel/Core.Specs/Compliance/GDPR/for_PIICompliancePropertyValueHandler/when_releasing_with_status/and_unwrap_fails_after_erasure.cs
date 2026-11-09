@@ -19,7 +19,7 @@ public class and_unwrap_fails_after_erasure : given.a_property_handler
         _value = JsonValue.Create(Convert.ToBase64String(new byte[256]));
         _encryption.IsEncrypted(Arg.Any<byte[]>()).Returns(true);
         _encryption.Decrypt(Arg.Any<byte[]>(), _key).Returns(_ => throw new EncryptionKeyUnwrapFailed(new CryptographicException("unwrap failed")));
-        _keyStore.GetErasureFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, Identifier).Returns(new EncryptionKeyErasure(1, [], false));
+        _keyStore.GetErasureForRelease(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, Identifier).Returns(new EncryptionKeyErasure(1, [], false));
     }
 
     async Task Because() => _result = await _handler.ReleaseWithStatus(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, Identifier, _value);

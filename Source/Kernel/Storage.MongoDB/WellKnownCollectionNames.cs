@@ -331,6 +331,16 @@ public static class WellKnownCollectionNames
     public const string EncryptionKeyErasures = "encryption-key-erasures";
 
     /// <summary>
+    /// The collection that holds external encryption key fences.
+    /// </summary>
+    public const string EncryptionKeyExternalFences = "EncryptionKeyExternalFences";
+
+    /// <summary>
+    /// The collection that holds encryption key fence records.
+    /// </summary>
+    public const string EncryptionKeyFenceRecords = "EncryptionKeyFenceRecords";
+
+    /// <summary>
     /// The collection that holds generation initialization receipts.
     /// </summary>
     public const string GenerationInitialization = "generation-initialization";

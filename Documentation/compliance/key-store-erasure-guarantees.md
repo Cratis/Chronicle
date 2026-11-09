@@ -39,7 +39,15 @@ The key store is the default. Erasing a subject's key calls `DeleteMany` on the 
 
 The delete removes the matching documents rather than marking them as soft-deleted. That operation alone does not establish when every possible reader or replica stops returning them.
 
-Chronicle sets no read or write concern of its own for the key store, so your MongoDB connection string and server defaults apply. Chronicle does not establish a bound for visibility or durability during replica-set failover. Confirm an erasure that coincides with failover and repeat it if needed; [Chronicle issue 4977](https://github.com/Cratis/Chronicle/issues/4977) records the consistency concern.
+### Erasure requires a replica set
+
+Confirmed erasure needs a MongoDB replica set; a single-node replica set is enough. Chronicle reads the fence with the `linearizable` read concern and writes it with the `majority` write concern, and a standalone `mongod` can provide neither.
+
+On a standalone server Chronicle still starts, and storing, reading and deleting keys work as before. It logs a warning the first time it checks the fence, and it records each erasure without confirming it: the erasure stays pending and is never reported as confirmed. Production deployments already need a replica set; see [Running Chronicle in production](../hosting/production.md).
+
+Each fence read and write is bounded by `compliance.encryption.fenceTimeout`, three seconds by default. A fence the server cannot serve in that time fails the erasure call with `EncryptionKeyFenceUnavailable` rather than holding the call open; repeat the erasure once the replica set is healthy.
+
+Outside the fence, your MongoDB connection string and server defaults apply. Chronicle does not establish a bound for visibility or durability during replica-set failover. Confirm an erasure that coincides with failover and repeat it if needed; [Chronicle issue 4977](https://github.com/Cratis/Chronicle/issues/4977) records the consistency concern.
 
 Inventory backups, `mongodump` files, oplog copies and snapshots that can restore the document. Their retention and restore procedures determine how long a deleted key remains recoverable outside the live collection. This page does not establish erasure behavior for sharded MongoDB.
 

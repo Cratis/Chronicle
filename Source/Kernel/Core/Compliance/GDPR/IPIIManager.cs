@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Compliance.GDPR;
 /// <summary>
 /// Represents a manager of PII in the system.
 /// </summary>
-[Version(1)]
+[Version(2)]
 public interface IPIIManager : IGrainWithGuidCompoundKey
 {
     /// <summary>
@@ -50,6 +50,13 @@ public interface IPIIManager : IGrainWithGuidCompoundKey
     /// <param name="eventStores">The authorized event stores.</param>
     /// <returns>Awaitable task.</returns>
     Task DeleteEncryptionKeyIn(EncryptionKeyIdentifier identifier, EventStoreName[] eventStores);
+
+    /// <summary>Erase with a caller-supplied opaque retry identity.</summary>
+    /// <param name="identifier">The key identifier.</param>
+    /// <param name="eventStores">The authorized event stores.</param>
+    /// <param name="requestId">The stable retry identity.</param>
+    /// <returns>Awaitable task.</returns>
+    Task DeleteEncryptionKeyInWithRequest(EncryptionKeyIdentifier identifier, EventStoreName[] eventStores, string requestId);
 
     /// <summary>
     /// Authorize a fresh key in exactly the authorized event stores of this manager's namespace.

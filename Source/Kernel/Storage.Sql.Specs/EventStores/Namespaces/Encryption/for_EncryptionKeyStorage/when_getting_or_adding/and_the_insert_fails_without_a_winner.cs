@@ -3,11 +3,12 @@
 
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.Encryption.for_EncryptionKeyStorage.when_getting_or_adding;
 
-public class and_the_insert_fails_without_a_winner : Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.given.a_migrated_namespace_database
+public class and_the_insert_fails_without_a_winner : Namespaces.given.a_migrated_namespace_database
 {
     EncryptionKeyStorage _storage;
     EncryptionKeyIdentifier _identifier = Guid.NewGuid().ToString();
@@ -23,6 +24,7 @@ public class and_the_insert_fails_without_a_winner : Cratis.Chronicle.Storage.Sq
     async Task Because() => _exception = await Catch.Exception(() => _storage.GetOrAddFor(
         EventStoreName.NotSet, EventStoreNamespaceName.NotSet, _identifier, new([1], [2])));
 
-    [Fact] void should_rethrow_the_database_failure() => _exception.ShouldBeOfExactType<DbUpdateException>();
+    /// <summary>Key writes are raw parameterised SQL (fenced CAS), so the provider exception surfaces unwrapped instead of as DbUpdateException.</summary>
+    [Fact] void should_rethrow_the_database_failure() => _exception.ShouldBeOfExactType<SqliteException>();
     [Fact] async Task should_not_return_an_unpersisted_key() => (await _storage.TryGetFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, _identifier)).ShouldBeNull();
 }

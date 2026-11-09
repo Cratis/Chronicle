@@ -19,8 +19,8 @@ public class when_an_administrator_operates_across_stores : given.a_compliance_b
         (await Operate(allowNew)).ShouldBeEmpty();
         foreach (var store in new[] { EventStore, OtherEventStore })
         {
-            if (allowNew) await _keyStore.Received(1).AllowNewKeyFor(store, EventStoreNamespace, Identifier);
-            else await _keyStore.Received(1).DeleteFor(store, EventStoreNamespace, Identifier);
+            if (allowNew) await _keyStore.Received(1).AuthorizeConfirmedSuccessorFor(store, EventStoreNamespace, Identifier);
+            else await _keyStore.Received(1).DeleteThroughFor(store, EventStoreNamespace, Identifier, Arg.Any<string>());
         }
     }
 }

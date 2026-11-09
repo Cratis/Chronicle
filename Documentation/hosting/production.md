@@ -45,6 +45,8 @@ Before changing a Compose file from `latest-development` to `latest`, configure 
 
 Chronicle uses MongoDB transactions to append events and change streams to follow storage changes. A standalone `mongod` cannot provide these operations. Use a replica set, even for a single-node installation; MongoDB sharded clusters also support these operations.
 
+Encryption key erasure needs a replica set too: Chronicle confirms an erasure only through linearizable reads and majority writes. On a standalone server Chronicle logs a warning and leaves every erasure pending instead of confirming it. See [Erasure requires a replica set](../compliance/key-store-erasure-guarantees.md#erasure-requires-a-replica-set).
+
 The Compose examples initialize a single-node replica set named `rs0`. Their connection strings include `?directConnection=true` so Chronicle connects to the supplied address instead of following the member's advertised hostname, `localhost:27017`, into its own container. This does not disable transactions. For a production database, plan replication and failover with a multi-member replica set or a managed service rather than relying on this single-node example.
 
 ## Port Configuration

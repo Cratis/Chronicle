@@ -19,8 +19,8 @@ public class when_called_in_process : given.a_compliance_boundary
         (await Operate(allowNew)).ShouldBeEmpty();
         foreach (var store in new[] { EventStore, OtherEventStore, ThirdEventStore })
         {
-            if (allowNew) await _keyStore.Received(1).AllowNewKeyFor(store, EventStoreNamespace, Identifier);
-            else await _keyStore.Received(1).DeleteFor(store, EventStoreNamespace, Identifier);
+            if (allowNew) await _keyStore.Received(1).AuthorizeConfirmedSuccessorFor(store, EventStoreNamespace, Identifier);
+            else await _keyStore.Received(1).DeleteThroughFor(store, EventStoreNamespace, Identifier, Arg.Any<string>());
         }
     }
 }

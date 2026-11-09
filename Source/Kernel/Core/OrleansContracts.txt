@@ -65,11 +65,12 @@ interface [GrainInterfaceType("Cratis.Chronicle.Clients.IConnectionReservation")
 
 class [GrainType("encryptionkeycachegrainservice")] Cratis.Chronicle.Compliance.EncryptionKeyCacheGrainService
 
-interface [GrainInterfaceType("Cratis.Chronicle.Compliance.GDPR.IPIIManager")] Cratis.Chronicle.Compliance.GDPR.IPIIManager [Version(1)]
+interface [GrainInterfaceType("Cratis.Chronicle.Compliance.GDPR.IPIIManager")] Cratis.Chronicle.Compliance.GDPR.IPIIManager [Version(2)]
   C7F9B124: AllowNewEncryptionKeyFor(Cratis.Chronicle.Compliance.EncryptionKeyIdentifier) -> Task
   E6B4130E: AllowNewEncryptionKeyIn(Cratis.Chronicle.Compliance.EncryptionKeyIdentifier, Cratis.Chronicle.Concepts.EventStoreName[]) -> Task
   F86C64B2: DeleteEncryptionKeyFor(Cratis.Chronicle.Compliance.EncryptionKeyIdentifier) -> Task
   2D88ED08: DeleteEncryptionKeyIn(Cratis.Chronicle.Compliance.EncryptionKeyIdentifier, Cratis.Chronicle.Concepts.EventStoreName[]) -> Task
+  2521D46B: DeleteEncryptionKeyInWithRequest(Cratis.Chronicle.Compliance.EncryptionKeyIdentifier, Cratis.Chronicle.Concepts.EventStoreName[], string) -> Task
 
 class [GrainType("piimanager")] Cratis.Chronicle.Compliance.GDPR.PIIManager
 

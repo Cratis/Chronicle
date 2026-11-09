@@ -21,16 +21,26 @@ namespace Cratis.Chronicle.Storage.Compliance;
 /// </para>
 /// <para>
 /// The fence is not a ban on the subject identifier. A later, lawful lifecycle for the same person is supported
-/// through <see cref="IEncryptionKeyStorage.AllowNewKeyFor"/>; it is simply never an accident.
+/// through <see cref="IEncryptionKeyStorage.AllowNewKeyFor(Concepts.EventStoreName, Concepts.EventStoreNamespaceName, EncryptionKeyIdentifier)"/>; it is simply never an accident.
 /// </para>
 /// </remarks>
 /// <param name="ErasedThrough">The highest <see cref="EncryptionKeyRevision"/> the erasure covered. No key at or below it may be provisioned, saved or healed again.</param>
 /// <param name="ErasedKeyFingerprints">Fingerprints of the key material that was destroyed. That material may never be stored again, at any revision.</param>
 /// <param name="NewKeyAllowed">Whether an explicitly authorized new lifecycle may mint a fresh key above the fence.</param>
+/// <param name="Version">The version incremented by every fence write.</param>
+/// <param name="Lifecycle">The current authorized lifecycle.</param>
+/// <param name="ErasedLifecycle">The greatest lifecycle covered by a request.</param>
+/// <param name="Requests">The never-evicted inline request log.</param>
+/// <param name="Seal">The optional rollout integrity seal.</param>
 public record EncryptionKeyErasure(
     EncryptionKeyRevision ErasedThrough,
     IReadOnlyList<string> ErasedKeyFingerprints,
-    bool NewKeyAllowed)
+    bool NewKeyAllowed,
+    ulong Version = 0,
+    uint Lifecycle = 1,
+    uint ErasedLifecycle = 0,
+    IReadOnlyList<EncryptionKeyErasureRequest>? Requests = null,
+    string? Seal = null)
 {
     /// <summary>
     /// Gets the <see cref="EncryptionKeyRevision"/> a new lifecycle mints its first key at.
@@ -60,6 +70,14 @@ public record EncryptionKeyErasure(
             .Distinct(StringComparer.Ordinal)
             .ToArray();
 
-        return new(floor, fingerprints, NewKeyAllowed: false);
+        return new(
+            floor,
+            Array.AsReadOnly(fingerprints),
+            NewKeyAllowed: false,
+            Version: checked((existing?.Version ?? 0) + 1),
+            Lifecycle: existing?.Lifecycle ?? 1,
+            ErasedLifecycle: Math.Max(existing?.ErasedLifecycle ?? 0, existing?.Lifecycle ?? 1),
+            Requests: existing?.Requests,
+            Seal: existing?.Seal);
     }
 }
