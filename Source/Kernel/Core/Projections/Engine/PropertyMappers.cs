@@ -264,7 +264,7 @@ public static class PropertyMappers
         if (expression == WellKnownExpressions.EventContent)
         {
             var key = ReadExistingEventContentValue(@event.Content, new PropertyPath(property));
-            return key is null ? null : new PropertyPath($"{staticPrefix}.{DictionaryKeyFor(propertyPath, key)}");
+            return key is null ? null : new PropertyPath($"{staticPrefix}.{EventContentDictionaryKeyFor(propertyPath, key)}");
         }
 
         var contextPath = expression switch
@@ -275,17 +275,35 @@ public static class PropertyMappers
         };
         var resolvedValue = EventValueProviders.EventContext(new PropertyPath(contextPath))(@event);
 
-        return new PropertyPath($"{staticPrefix}.{DictionaryKeyFor(propertyPath, resolvedValue)}");
+        // Keys from the event context and the causing identity predate key validation: keep forming them the way they
+        // always have, so existing read models keep their keys and a name holding a '.' does not start failing events.
+        return resolvedValue is null ? null : new PropertyPath($"{staticPrefix}.{FormatEventContextKeyValue(resolvedValue)}");
     }
 
     /// <summary>
-    /// Format a resolved dynamic-key value as a dictionary key, refusing a key that cannot be stored as one.
+    /// Format a resolved event-context value as a dictionary key the way it has always been formatted.
+    /// </summary>
+    /// <remarks>
+    /// The value is formatted with the invariant culture, giving the same key on every host and on replay. That is the
+    /// key earlier versions produced when the kernel ran with the invariant culture.
+    /// </remarks>
+    /// <param name="value">The resolved value.</param>
+    /// <returns>The dictionary key.</returns>
+    static string FormatEventContextKeyValue(object value) => value switch
+    {
+        _ when value.IsConcept() => value.GetConceptValue() is { } conceptValue ? FormatEventContextKeyValue(conceptValue) : string.Empty,
+        IFormattable formattable => formattable.ToString(null, CultureInfo.InvariantCulture),
+        _ => value.ToString() ?? string.Empty
+    };
+
+    /// <summary>
+    /// Format a resolved event-content value as a dictionary key, refusing a key that cannot be stored as one.
     /// </summary>
     /// <param name="propertyPath">The property path holding the dynamic segment, for reporting.</param>
     /// <param name="value">The resolved value.</param>
     /// <returns>The dictionary key.</returns>
     /// <exception cref="InvalidDictionaryKey">Thrown when the key holds a '.', '[' or ']' or starts with '$'.</exception>
-    static string DictionaryKeyFor(PropertyPath propertyPath, object? value)
+    static string EventContentDictionaryKeyFor(PropertyPath propertyPath, object? value)
     {
         var key = FormatDynamicKeyValue(value);
         if (key.Contains('.') || key.Contains('[') || key.Contains(']') || key.StartsWith('$'))
