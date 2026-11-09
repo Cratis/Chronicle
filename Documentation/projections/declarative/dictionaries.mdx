@@ -21,6 +21,10 @@ When the key's source is an event property that is missing or null on a particul
 
 The dictionary property must be a dictionary on the read model, or an object without properties of its own. Using a dynamic key on a property with a fixed shape fails when the projection is registered.
 
+In the next example the slot on each event picks the entry. Assigning a series to a slot that already has one replaces it, and clearing a slot removes its entry:
+
+<ChronicleClientTabs snippet="projections/declarative/dictionaries/keyed-by-event-content" />
+
 ## Operations on a dictionary entry
 
 Every property operation works on the entry the key selects:
@@ -34,6 +38,10 @@ Every property operation works on the entry the key selects:
 | Remove | Removes the key from the dictionary. |
 
 Values follow the dictionary's declared value type. When the dictionary declares no value type, set and set once store the event value as it is, and the counting and arithmetic operations use 64-bit integers.
+
+The next example keeps revenue and a sales count per category from the event, counts sales per user from the identity that caused each event, and records when each category sold first:
+
+<ChronicleClientTabs snippet="projections/declarative/dictionaries/operations" />
 
 ## Removing a key
 

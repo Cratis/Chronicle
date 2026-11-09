@@ -102,6 +102,12 @@ Ordering only places **new** children. Updating an existing child never moves it
 
 A sorted collection uses a stable sort: children with equal values keep their relative order. Children with a missing or null sort value come first when sorting ascending and last when sorting descending. Because the whole collection is ordered on each insert, a child whose sort value changed since it was added takes its sorted place the next time a child is inserted.
 
+In the next example the newest comment comes first, and tasks stay sorted with the highest priority first:
+
+<ChronicleClientTabs snippet="projections/declarative/children/ordering" />
+
+A collection has one ordering. Declaring a second one for the same collection fails when the projection is built.
+
 ## Multiple child collections
 
 Call `Children` for each collection the read model needs. Each collection has its own identity and event mappings:
