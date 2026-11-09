@@ -8,6 +8,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
@@ -581,6 +582,42 @@ public class ProjectionFactory(
         throw new DynamicPropertyPathOnNonDynamicProperty(propertyPath, basePropertyPath);
     }
 
+    static JsonSchemaProperty ResolveDynamicValueSchemaProperty(Projection projection, string propertyPathString, string expression)
+    {
+        var basePropertyPath = propertyPathString[..propertyPathString.IndexOf(".$", StringComparison.Ordinal)];
+        var baseSchema = projection.TargetReadModelSchema.GetSchemaPropertyForPropertyPath(new PropertyPath(basePropertyPath));
+        if (baseSchema?.ActualTypeSchema.AdditionalPropertiesSchema?.ActualSchema is { } valueSchema &&
+            (valueSchema.Type != JsonObjectType.None || valueSchema.Format is not null))
+        {
+            var valueSchemaProperty = new JsonSchemaProperty
+            {
+                Type = valueSchema.Type,
+                Format = valueSchema.Format,
+                Item = valueSchema.Item
+            };
+            foreach (var property in valueSchema.GetFlattenedProperties())
+            {
+                valueSchemaProperty.Properties[property.Name] = property;
+            }
+
+            return valueSchemaProperty;
+        }
+
+        return IsArithmeticExpression(expression)
+            ? new JsonSchemaProperty { Type = JsonObjectType.Integer, Format = "int64" }
+            : new JsonSchemaProperty { Type = JsonObjectType.None };
+    }
+
+    static ChildrenOrdering? ChildrenOrderingFor(ProjectionLevel level) =>
+        level.IsChild && !level.IsNested && level.Definition is ChildrenDefinition children ? children.Ordering : null;
+
+    static bool IsArithmeticExpression(string expression) =>
+        expression.StartsWith(Concepts.WellKnownExpressions.Add, StringComparison.Ordinal) ||
+        expression.StartsWith(Concepts.WellKnownExpressions.Subtract, StringComparison.Ordinal) ||
+        expression.StartsWith(Concepts.WellKnownExpressions.Increment, StringComparison.Ordinal) ||
+        expression.StartsWith(Concepts.WellKnownExpressions.Decrement, StringComparison.Ordinal) ||
+        expression.StartsWith(Concepts.WellKnownExpressions.Count, StringComparison.Ordinal);
+
     /// <summary>
     /// Gets the operations contributed by derivative and from-event-property registrations. A parent derives ChildrenAffected from its
     /// children's entries, so an event type a child handles only that way must be in the child's map.
@@ -943,7 +980,7 @@ public class ProjectionFactory(
         projection.Subscriptions.Add(
             projection.Event
                 .WhereEventTypeEquals(fromEventProperty.Event, projection.GenerationDelivery)
-                .AddChildFromEventProperty(level.AccessorPath, valueProvider).Subscribe());
+                .AddChildFromEventProperty(level.AccessorPath, valueProvider, ChildrenOrderingFor(level)).Subscribe());
     }
 
     void SetupFromWithJoins(ProjectionLevel level, SubscriptionContext context, FromRegistration registration, IEnumerable<PropertyMapper<AppendedEvent, ExpandoObject>> propertyMappersForAllEventTypes)
@@ -986,7 +1023,8 @@ public class ProjectionFactory(
                 level.IdentifiedBy,
                 propertyMappersForEveryEventType,
                 level.AccessorPath.IsRoot ? null : projection.InitialModelState,
-                subscriptions: projection.Subscriptions);
+                subscriptions: projection.Subscriptions,
+                ordering: ChildrenOrderingFor(level));
     }
 
     void LogUnmappedCollectionProperties(ProjectionLevel level, SubscriptionContext context)
@@ -1039,7 +1077,8 @@ public class ProjectionFactory(
                 level.IdentifiedBy,
                 propertyMappers,
                 level.AccessorPath.IsRoot ? null : projection.InitialModelState,
-                subscriptions: projection.Subscriptions);
+                subscriptions: projection.Subscriptions,
+                ordering: ChildrenOrderingFor(level));
     }
 
     void SetupJoinsForFromDefinition(ProjectionLevel level, SubscriptionContext context, FromSubscription from)
@@ -1080,8 +1119,10 @@ public class ProjectionFactory(
         // therefore its value type). A dictionary has no declared value schema of its own, so default to the
         // int64 shape count/increment/decrement/add/subtract need; a concrete base property is still honored
         // and validated below.
+        // A dictionary that declares its value type (additionalProperties) has that honored for every operation; a
+        // plain set or set once without one keeps the event value as is, rather than forcing it into a number.
         var schemaProperty = isDynamicPropertyPath
-            ? new JsonSchemaProperty { Type = JsonObjectType.Integer, Format = "int64" }
+            ? ResolveDynamicValueSchemaProperty(projection, propertyPathString, expression)
             : ResolveStaticSchemaProperty(projection, propertyPath);
 
         if (isDynamicPropertyPath)
