@@ -3,7 +3,9 @@
 
 using Cratis.Arc.Commands;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Configuration;
 using FluentValidation;
+using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.EventStores;
 
@@ -15,8 +17,13 @@ internal class EnsureEventStoreValidator : CommandValidator<EnsureEventStore>
     /// <summary>
     /// Initializes a new instance of the <see cref="EnsureEventStoreValidator"/> class.
     /// </summary>
-    public EnsureEventStoreValidator()
+    /// <param name="options">The optional <see cref="IOptions{T}"/> for <see cref="ChronicleOptions"/>, giving the database name prefix and System database name the name is checked against.</param>
+    public EnsureEventStoreValidator(IOptions<ChronicleOptions>? options = null)
     {
+        var storage = options?.Value.Storage;
+        var systemDatabaseName = storage?.SystemDatabaseName ?? Configuration.Storage.DefaultSystemDatabaseName;
+        var prefix = storage?.DatabaseNamePrefix ?? string.Empty;
+
         // Name is the event store being created, not a reference to one that must already exist - the
         // cross-cutting EventStoreNameValidator existence check does not apply here.
         RuleFor(_ => _.Name).IgnoreConceptRules().NotEmpty().WithMessage("Event store name is required.");
@@ -25,7 +32,7 @@ internal class EnsureEventStoreValidator : CommandValidator<EnsureEventStore>
             .WithMessage("The System event store is reserved for the kernel and cannot be created through the public API.");
         RuleFor(_ => _.Name)
             .Must(name => string.IsNullOrEmpty(name) || string.Equals(name, EventStoreName.System.Value, StringComparison.OrdinalIgnoreCase) ||
-                !ReservedEventStoreNames.IsReserved(name))
+                !ReservedEventStoreNames.IsReserved(name, systemDatabaseName, prefix))
             .WithMessage("The event store name is not allowed.");
     }
 }

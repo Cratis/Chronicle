@@ -99,7 +99,7 @@ public class ClusterStorage(
         return (await cursor.ToListAsync())
             .Where(_ => _.StartsWith(prefix, StringComparison.Ordinal) && _.EndsWith("+es", StringComparison.Ordinal))
             .Select(_ => _[prefix.Length..^3])
-            .Where(_ => !string.IsNullOrWhiteSpace(_) && !_.Contains('+') && !ReservedEventStoreNames.IsInternalDatabaseName(_))
+            .Where(_ => !string.IsNullOrWhiteSpace(_) && !_.Contains('+') && !ReservedEventStoreNames.IsInternalDatabaseName(_) && !ReservedEventStoreNames.AliasesInternalDatabaseName(prefix, _))
             .Select(_ => DatabaseNames.EventStoreFor(_, options.Value.Storage.SystemDatabaseName));
     }
 
@@ -111,10 +111,11 @@ public class ClusterStorage(
     List<EventStoreName> Usable(IEnumerable<EventStoreName> names)
     {
         var systemDatabaseName = options.Value.Storage.SystemDatabaseName;
+        var prefix = options.Value.Storage.DatabaseNamePrefix;
         var usable = new List<EventStoreName>();
         foreach (var name in names)
         {
-            if (name is null || name == EventStoreName.System || !ReservedEventStoreNames.IsReserved(name.Value, systemDatabaseName))
+            if (name is null || name == EventStoreName.System || !ReservedEventStoreNames.IsReserved(name.Value, systemDatabaseName, prefix))
             {
                 usable.Add(name!);
                 continue;

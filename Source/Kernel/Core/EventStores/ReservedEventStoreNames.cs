@@ -19,15 +19,40 @@ public static class ReservedEventStoreNames
     /// </summary>
     /// <param name="name">The event store name.</param>
     /// <param name="systemDatabaseName">The name the System event store's databases are named by.</param>
+    /// <param name="prefix">The configured database name prefix; the name is also not allowed when prefix and name together make a database-internal name.</param>
     /// <returns>True when the name is not allowed.</returns>
     /// <remarks>
     /// The <see cref="EventStoreName.System"/> event store itself is not covered, it is the one event store that is
     /// allowed to resolve to the System databases.
     /// </remarks>
-    public static bool IsReserved(string name, string systemDatabaseName = Configuration.Storage.DefaultSystemDatabaseName) =>
+    public static bool IsReserved(string name, string systemDatabaseName = Configuration.Storage.DefaultSystemDatabaseName, string prefix = "") =>
         name.Contains('+') ||
         string.Equals(name, systemDatabaseName, StringComparison.OrdinalIgnoreCase) ||
-        IsInternalDatabaseName(name);
+        IsInternalDatabaseName(name) ||
+        AliasesInternalDatabaseName(prefix, name);
+
+    /// <summary>
+    /// Check whether a database name prefix followed by a name makes one of the databases the database server keeps for itself.
+    /// </summary>
+    /// <param name="prefix">The configured database name prefix.</param>
+    /// <param name="name">The name that follows the prefix.</param>
+    /// <returns>True when the two together are a reserved name. Never allocates.</returns>
+    public static bool AliasesInternalDatabaseName(string prefix, string name)
+    {
+        var length = prefix.Length + name.Length;
+        if (prefix.Length == 0 || length is < 5 or > 6)
+        {
+            return false;
+        }
+
+        Span<char> composed = stackalloc char[6];
+        prefix.CopyTo(composed);
+        name.CopyTo(composed[prefix.Length..]);
+        var value = composed[..length];
+        return value.Equals("admin", StringComparison.OrdinalIgnoreCase) ||
+            value.Equals("local", StringComparison.OrdinalIgnoreCase) ||
+            value.Equals("config", StringComparison.OrdinalIgnoreCase);
+    }
 
     /// <summary>
     /// Check whether a name is one of the databases the database server keeps for itself.

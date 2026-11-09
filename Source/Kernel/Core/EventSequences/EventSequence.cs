@@ -92,7 +92,10 @@ public partial class EventSequence(
     IEncryptionKeyStorage? encryptionKeyStorage = null,
     TimeProvider? timeProvider = null) : Grain<EventSequenceState>, IEventSequence, IOnBroadcastChannelSubscribed
 {
-    static readonly System.Collections.Concurrent.ConcurrentDictionary<string, bool> _warnedReservedSequences = new();
+    /// <summary>
+    /// Caps the reports of refused names, so a caller cycling through distinct names cannot grow memory or the log.
+    /// </summary>
+    static readonly BoundedReporter _reservedNameReports = new(8);
 
     readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
     readonly IdentifierTelemetry _spanIdentifiers = new(options.Value.Telemetry);
@@ -133,7 +136,7 @@ public partial class EventSequence(
         if (ReservedEventSequenceRules.MayBeReserved(reservedEventSequenceIds, _eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId))
         {
             _mayWriteSequence = false;
-            if (_warnedReservedSequences.TryAdd($"{_eventSequenceKey.EventStore}/{_eventSequenceKey.Namespace}/{_eventSequenceId}", true))
+            if (_reservedNameReports.TryReport())
             {
                 logger.RefusedReservedEventSequenceName(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId);
             }
