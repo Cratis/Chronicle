@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Configuration;
 
 namespace Cratis.Chronicle.Observation;
 
@@ -72,6 +73,31 @@ public partial class Observer
     EventSequenceNumber TailAfter(EventSequenceNumber candidate) =>
         _pageFloor is null || State.TailEventSequenceNumber == EventSequenceNumber.Unavailable || candidate > State.TailEventSequenceNumber ? candidate : State.TailEventSequenceNumber;
 
+    static List<List<ObserverPartitionBatch>> WithinLiveBudget(Observers configuration, IReadOnlyList<ObserverPartitionBatch> candidates)
+    {
+        // Partitions are taken in the order they arrived and cut into pages that each stay within the live delivery budget. A
+        // partition left on its own, including one larger than the budget, is not part of any page: Handle delivers it, and hands
+        // it to catch-up when it is over the budget, as it does any single partition.
+        var pages = new List<List<ObserverPartitionBatch>>();
+        var current = new List<ObserverPartitionBatch>();
+        var events = 0;
+        foreach (var candidate in candidates)
+        {
+            if (current.Count > 0 && ExceedsLiveBudget(configuration, events + candidate.Events.Count))
+            {
+                pages.Add(current);
+                current = [];
+                events = 0;
+            }
+
+            current.Add(candidate);
+            events += candidate.Events.Count;
+        }
+
+        pages.Add(current);
+        return [.. pages.Where(_ => _.Count > 1 && !ExceedsLiveBudget(configuration, _.Sum(batch => batch.Events.Count)))];
+    }
+
     async Task DeliverPage(IReadOnlyList<ObserverPartitionBatch> batches)
     {
         var candidates = FindPageCandidates(batches);
@@ -81,11 +107,18 @@ public partial class Observer
         }
 
         var configuration = await configurationProvider.GetFor(_observerKeyText);
-        if (ExceedsLiveBudget(configuration, candidates.Sum(_ => _.Events.Count)))
+        foreach (var page in WithinLiveBudget(configuration, candidates))
         {
-            return;
+            await DeliverPageWithinBudget(page, configuration);
+            if (!_observerExists)
+            {
+                return;
+            }
         }
+    }
 
+    async Task DeliverPageWithinBudget(List<ObserverPartitionBatch> candidates, Observers configuration)
+    {
         logger.DeliveringPage(candidates.Sum(_ => _.Events.Count), candidates.Count);
 
         // Every partition of the page is in flight until it is settled, and that is made durable before the subscriber sees any of it,
@@ -136,11 +169,6 @@ public partial class Observer
     List<ObserverPartitionBatch> FindPageCandidates(IReadOnlyList<ObserverPartitionBatch> batches)
     {
         var candidates = new List<ObserverPartitionBatch>();
-        if (_subscription.Filters is not null)
-        {
-            return candidates;
-        }
-
         var floor = _pageFloor ?? State.NextEventSequenceNumber;
         var now = _clock.GetUtcNow();
         foreach (var batch in batches)
@@ -149,7 +177,8 @@ public partial class Observer
             if (events.Length == 0 ||
                 !ShouldHandleEvent(batch.Partition) ||
                 _deliveryFences.IsHeld(batch.Partition, now) ||
-                (!State.SubscribesToAllEvents && !events.Any(_ => _subscription.EventTypes.Any(et => et.Id == _.Context.EventType.Id))))
+                (!State.SubscribesToAllEvents && !events.Any(_ => _subscription.EventTypes.Any(et => et.Id == _.Context.EventType.Id))) ||
+                ExcludedByFilters(events))
             {
                 continue;
             }
@@ -158,6 +187,24 @@ public partial class Observer
         }
 
         return candidates;
+    }
+
+    /// <summary>
+    /// Gets whether the subscription's filters leave out every one of the events, the same way <see cref="HandleEventsForPartition"/>
+    /// skips a partition without delivering it.
+    /// </summary>
+    /// <param name="events">The events of one partition.</param>
+    /// <returns>True if the filters exclude all of them; otherwise false.</returns>
+    bool ExcludedByFilters(IReadOnlyCollection<AppendedEvent> events)
+    {
+        if (_subscription.Filters is not { } filters)
+        {
+            return false;
+        }
+
+        return (filters.EventSourceType is { } eventSourceType && eventSourceType != EventSourceType.Unspecified && !events.Any(_ => _.Context.EventSourceType == eventSourceType)) ||
+            (filters.EventStreamType is { } eventStreamType && !eventStreamType.IsAll && !events.Any(_ => _.Context.EventStreamType == eventStreamType)) ||
+            (filters.Tags.Any() && !events.Any(_ => _.Context.Tags.Any(t => filters.Tags.Contains(t.Value))));
     }
 
     sealed record PrefetchedDelivery(ObserverSubscriberResult? Result, Exception? Failure, DeliveryFenceContext? Fence);
