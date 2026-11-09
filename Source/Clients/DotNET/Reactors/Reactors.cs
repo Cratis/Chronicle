@@ -26,11 +26,7 @@ namespace Cratis.Chronicle.Reactors;
 /// </summary>
 public partial class Reactors : IReactors, IReactorPartitionRecovery
 {
-#if NET8_0
-    static readonly object _registerLock = new();
-#else
     static readonly Lock _registerLock = new();
-#endif
     readonly IEventStore _eventStore;
     readonly IEventTypes _eventTypes;
     readonly IClientArtifactsProvider _clientArtifactsProvider;

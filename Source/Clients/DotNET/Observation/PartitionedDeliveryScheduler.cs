@@ -14,11 +14,7 @@ internal sealed class PartitionedDeliveryScheduler : IDisposable
 
     readonly SemaphoreSlim _slots;
     readonly Dictionary<string, Task> _tails = [];
-#if NET8_0
-    readonly object _lock = new();
-#else
     readonly Lock _lock = new();
-#endif
     Task _barrier = Task.CompletedTask;
     volatile bool _stopped;
 

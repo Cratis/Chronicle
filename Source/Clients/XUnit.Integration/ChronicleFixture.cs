@@ -22,11 +22,7 @@ public abstract class ChronicleFixture : IChronicleFixture
     /// </summary>
     public const int MongoDBPort = 27018;
 
-#if NET8_0
-    readonly object _containerLock = new();
-#else
     readonly Lock _containerLock = new();
-#endif
 
     readonly IntegrationTimings _timings;
     MongoDBContextStorage? _contextStorage;

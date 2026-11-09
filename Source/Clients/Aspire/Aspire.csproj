@@ -17,13 +17,4 @@
         <PackageReference Include="OpenTelemetry" />
     </ItemGroup>
 
-    <!-- Aspire.Hosting requires these at 10.0.12 or later on every target framework. The net8.0 and net9.0 central
-         pins are lower, and a lower direct dependency wins over Aspire.Hosting's in a consumer's restore, which then
-         fails with NU1605. Keep them at the net10.0 line here. -->
-    <ItemGroup Condition=" '$(TargetFramework)' == 'net8.0' or '$(TargetFramework)' == 'net9.0' ">
-        <PackageReference Update="Microsoft.Extensions.DependencyInjection.Abstractions" VersionOverride="10.0.13" />
-        <PackageReference Update="Microsoft.Extensions.Hosting" VersionOverride="10.0.13" />
-        <PackageReference Update="Microsoft.Extensions.Logging.Abstractions" VersionOverride="10.0.13" />
-        <PackageReference Update="System.Text.Json" VersionOverride="10.0.13" />
-    </ItemGroup>
 </Project>

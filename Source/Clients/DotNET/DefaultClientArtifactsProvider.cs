@@ -41,11 +41,7 @@ public class DefaultClientArtifactsProvider(ICanProvideAssembliesForDiscovery as
     /// <returns>The default <see cref="DefaultClientArtifactsProvider"/>.</returns>
     public static readonly DefaultClientArtifactsProvider Default = new(new CompositeAssemblyProvider(ProjectReferencedAssemblies.Instance, PackageReferencedAssemblies.Instance));
 
-#if NET8_0
-    readonly object _initLock = new();
-#else
     readonly Lock _initLock = new();
-#endif
     volatile bool _initialized;
     bool _initializing;
     IEnumerable<Type> _eventTypes = [];

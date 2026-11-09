@@ -23,11 +23,7 @@ public class and_the_native_payload_is_invalid : given.a_certificate_file
 
     void Because()
     {
-#if NET8_0
-        _nativeFailure = Catch.Exception(() => _nativeResult = new X509Certificate2(_certificatePath, Password));
-#else
         _nativeFailure = Catch.Exception(() => _nativeResult = X509CertificateLoader.LoadPkcs12FromFile(_certificatePath, Password));
-#endif
         _failure = Catch.Exception(() => _result = CertificateLoader.LoadCertificate(_certificatePath, Password));
     }
 

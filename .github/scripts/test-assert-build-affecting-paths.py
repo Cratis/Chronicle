@@ -17,8 +17,6 @@ spec.loader.exec_module(checker)
 ROOT = str(SCRIPT.parents[2])
 CENTRAL_FILES = (
     "Directory.Packages.props",
-    "Directory.Packages.NET8.props",
-    "Directory.Packages.NET9.props",
     "Directory.Build.props",
     "Directory.Build.targets",
     "global.json",

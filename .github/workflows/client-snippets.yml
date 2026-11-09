@@ -22,8 +22,6 @@ on:
       - "Documentation/validate-client-snippets.py"
       - "Source/**"
       - "Directory.Packages.props"
-      - "Directory.Packages.NET8.props"
-      - "Directory.Packages.NET9.props"
       - "Directory.Build.props"
       - "Directory.Build.targets"
       - "global.json"

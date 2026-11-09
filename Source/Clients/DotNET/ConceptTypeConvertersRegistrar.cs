@@ -12,11 +12,7 @@ public static class ConceptTypeConvertersRegistrar
 {
     static readonly HashSet<Assembly> _registeredAssemblies = [];
 
-#if NET8_0
-    static readonly object _sync = new();
-#else
     static readonly Lock _sync = new();
-#endif
 
     static ConceptTypeConvertersRegistrar() => EnsureFor(typeof(ConceptTypeConvertersRegistrar).Assembly);
 
