@@ -19,7 +19,7 @@ public interface IReactors
     Task Discover();
 
     /// <summary>
-    /// Register all Reactors with Chronicle. Does nothing after the event store has been released.
+    /// Register all Reactors with Chronicle.
     /// </summary>
     /// <returns>Awaitable task.</returns>
     Task Register();
@@ -29,7 +29,6 @@ public interface IReactors
     /// </summary>
     /// <typeparam name="TReactor">The reactor type.</typeparam>
     /// <returns>Awaitable task.</returns>
-    /// <exception cref="ObjectDisposedException">The event store has been released.</exception>
     Task<IReactorHandler> Register<TReactor>()
         where TReactor : IReactor;
 
@@ -39,7 +38,6 @@ public interface IReactors
     /// <param name="reactorType">The reactor CLR type.</param>
     /// <returns>The registered handler.</returns>
     /// <exception cref="TypeBasedArtifactRegistrationNotSupported">The custom registry does not support type-based registration.</exception>
-    /// <exception cref="ObjectDisposedException">The event store has been released.</exception>
     Task<IReactorHandler> Register(Type reactorType) => throw new TypeBasedArtifactRegistrationNotSupported(GetType());
 
     /// <summary>
@@ -52,7 +50,6 @@ public interface IReactors
     /// <remarks>Delegate handlers report <see cref="IReactorHandler.ReactorType"/> as <see cref="object"/>.</remarks>
     /// <exception cref="NoEventTypesForReactor">Thrown when no event types are configured.</exception>
     /// <exception cref="ReactorAlreadyRegistered">Thrown when the identifier already belongs to a reactor in this client.</exception>
-    /// <exception cref="ObjectDisposedException">The event store has been released.</exception>
     Task<IReactorHandler> Register(ReactorId id, Action<IReactorDefinitionBuilder> configure, Func<ReactorEvent, CancellationToken, Task> handle);
 
     /// <summary>
@@ -81,7 +78,6 @@ public interface IReactors
     /// <exception cref="NoEventTypesForReactor">Thrown when the definition subscribes to no event types.</exception>
     /// <exception cref="Events.TypeIsNotAnEventType">Thrown when a typed handler names a type that is not a known event type.</exception>
     /// <exception cref="ReactorAlreadyRegistered">Thrown when the identifier already belongs to a reactor in this client.</exception>
-    /// <exception cref="ObjectDisposedException">The event store has been released.</exception>
     Task<IReactorHandler> Register(ReactorId id, Action<IReactorBuilder> define);
 
     /// <summary>
@@ -98,7 +94,6 @@ public interface IReactors
     /// <see cref="object"/>.
     /// </remarks>
     /// <exception cref="ReactorAlreadyRegistered">Thrown when the identifier already belongs to a reactor in this client.</exception>
-    /// <exception cref="ObjectDisposedException">The event store has been released.</exception>
     Task<IReactorHandler> Register(IReactorDefinition definition);
 
     /// <summary>

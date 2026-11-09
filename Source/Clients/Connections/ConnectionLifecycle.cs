@@ -23,11 +23,6 @@ public class ConnectionLifecycle(ILogger<ConnectionLifecycle> logger) : IConnect
     /// net8.0 as well, and that type is net9.0 and later. The net10.0 build the gate runs would not have noticed.
     /// </remarks>
     readonly object _handlers = new();
-    readonly object _generationGate = new();
-    TimeSpan _fenceTimeout = Timeout.InfiniteTimeSpan;
-    TimeProvider _fenceTime = TimeProvider.System;
-    CancellationToken _fenceToken;
-    Task _disconnecting = Task.CompletedTask;
     Connected _onConnected = Nothing;
     Disconnected _onDisconnected = Nothing;
 
@@ -104,15 +99,11 @@ public class ConnectionLifecycle(ILogger<ConnectionLifecycle> logger) : IConnect
     public ConnectionId ConnectionId { get; private set; } = ConnectionId.New();
 
     /// <inheritdoc/>
-    /// <remarks>
-    /// Generations are ordered: the <c language="csharp">Disconnected</c> callbacks of one generation complete and the
-    /// <see cref="ConnectionId"/> rotates before the next <c language="csharp">Connected</c> sets <see cref="IsConnected"/> and runs its
-    /// handlers. A disconnect that starts after <c language="csharp">Connected</c> has set <see cref="IsConnected"/> overlaps that
-    /// generation's own handlers, which is accepted; the generation after it is fenced behind that disconnect.
-    /// </remarks>
     public async Task Connected()
     {
-        await WaitForPreviousDisconnect();
+        // Set IsConnected = true before invoking handlers so that any handler that accesses
+        // services via IChronicleServicesAccessor does not deadlock on the connection lock.
+        IsConnected = true;
 
         logger.Connected();
 
@@ -143,92 +134,9 @@ public class ConnectionLifecycle(ILogger<ConnectionLifecycle> logger) : IConnect
     }
 
     /// <inheritdoc/>
-    public Task Disconnected()
+    public async Task Disconnected()
     {
-        lock (_generationGate)
-        {
-            IsConnected = false;
-
-            // Handlers are dispatched through Task.Run, so none of them runs inline under the gate.
-            var run = RunDisconnected();
-            _disconnecting = _disconnecting.IsCompleted ? run : Task.WhenAll(_disconnecting, run);
-            return run;
-        }
-    }
-
-    /// <inheritdoc/>
-    public Task DisconnectCompleted() => WaitForDisconnects(false);
-
-    /// <inheritdoc/>
-    public void BoundDisconnectFence(TimeSpan timeout, TimeProvider timeProvider, CancellationToken cancellationToken)
-    {
-        _fenceTimeout = timeout;
-        _fenceTime = timeProvider;
-        _fenceToken = cancellationToken;
-    }
-
-    static Task Nothing() => Task.CompletedTask;
-
-    Task WaitForPreviousDisconnect() => WaitForDisconnects(true);
-
-    async Task WaitForDisconnects(bool connecting)
-    {
-        // IsConnected is set before the handlers run so that a handler accessing services through
-        // IChronicleServicesAccessor does not deadlock on the connection lock.
-        Task fence;
-        lock (_generationGate)
-        {
-            if (_disconnecting.IsCompleted)
-            {
-                if (connecting)
-                {
-                    IsConnected = true;
-                }
-
-                return;
-            }
-
-            fence = _disconnecting;
-        }
-
-        // A disconnect handler that itself awaits a connect would otherwise wait on this fence forever,
-        // so the whole wait is bounded by the connect timeout and the connection lifetime.
-        using var deadline = new CancellationTokenSource(_fenceTimeout, _fenceTime);
-        using var linked = CancellationTokenSource.CreateLinkedTokenSource(deadline.Token, _fenceToken);
-        try
-        {
-            while (true)
-            {
-                // Logged on both paths: the connection holds its handshake here before it ever reaches Connected, so
-                // this is where the next generation is actually held back behind the disconnect.
-                logger.WaitingForDisconnectToComplete();
-
-                await fence.WaitAsync(linked.Token);
-
-                lock (_generationGate)
-                {
-                    if (_disconnecting.IsCompleted)
-                    {
-                        if (connecting)
-                        {
-                            IsConnected = true;
-                        }
-
-                        return;
-                    }
-
-                    fence = _disconnecting;
-                }
-            }
-        }
-        catch (OperationCanceledException) when (deadline.IsCancellationRequested && !_fenceToken.IsCancellationRequested)
-        {
-            throw new ConnectionTimedOut();
-        }
-    }
-
-    async Task RunDisconnected()
-    {
+        IsConnected = false;
         logger.Disconnected();
         var tasks = _onDisconnected.GetInvocationList().Select(_ => ExecutionContextDetached.Start(() => Task.Run(async () =>
         {
@@ -246,4 +154,6 @@ public class ConnectionLifecycle(ILogger<ConnectionLifecycle> logger) : IConnect
 
         ConnectionId = ConnectionId.New();
     }
+
+    static Task Nothing() => Task.CompletedTask;
 }

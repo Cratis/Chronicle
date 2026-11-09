@@ -44,11 +44,6 @@ public class an_explicit_store : Specification
     protected bool _auto;
     protected ILoggerFactory _loggerFactory = NullLoggerFactory.Instance;
 
-    /// <summary>
-    /// Gets the logger the real connection lifecycle logs to. Specs override this to observe the lifecycle.
-    /// </summary>
-    protected virtual ILogger<ConnectionLifecycle> LifecycleLogger => NullLogger<ConnectionLifecycle>.Instance;
-
     void Establish()
     {
         _options = new() { ArtifactIdentityDrift = ArtifactIdentityDriftPolicy.Ignore };
@@ -57,7 +52,7 @@ public class an_explicit_store : Specification
         _artifacts = Substitute.For<IClientArtifactsProvider>();
         _connection = Substitute.For<IChronicleConnection, IChronicleServicesAccessor, IKernelCapabilities>();
         ((IKernelCapabilities)_connection).Capabilities.Returns([KernelCapabilities.PreciseEventTypeSchemas]);
-        _connection.Lifecycle.Returns(new ConnectionLifecycle(LifecycleLogger));
+        _connection.Lifecycle.Returns(new ConnectionLifecycle(NullLogger<ConnectionLifecycle>.Instance));
         _services = Substitute.For<IServices>();
         ((IChronicleServicesAccessor)_connection).Services.Returns(_services);
         _services.EventStores.EnsureEventStore(Arg.Any<EnsureEventStoreRequest>()).Returns(CommandResult.Success(Guid.NewGuid()));
