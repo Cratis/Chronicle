@@ -20,8 +20,7 @@ public partial class InMemorySink
 
         return propertiesChanged with
         {
-            Differences = [.. propertiesChanged.Differences.Select(difference =>
-                new PropertyDifference(difference.PropertyPath, difference.Original, Detached(difference.Changed), difference.ArrayIndexers))]
+            Differences = [.. propertiesChanged.Differences.Select(difference => difference.WithChanged(Detached(difference.Changed)))]
         };
     }
 
@@ -131,7 +130,7 @@ public partial class InMemorySink
 
                 case ChildAdded childAdded:
                     var collection = state.EnsureCollection<ExpandoObject, object>(childAdded.ChildrenProperty, childAdded.ArrayIndexers);
-                    collection.Add(Detached(childAdded.State)!);
+                    collection.InsertChild(Detached(childAdded.State)!, childAdded.Ordering);
                     break;
 
                 case ChildRemoved childRemoved:

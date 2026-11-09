@@ -14,6 +14,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using ChildrenSortDirection = Cratis.Chronicle.Changes.SortDirection;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 
@@ -151,7 +152,7 @@ public class ChangesetConverter(
                 case PropertiesChanged<ExpandoObject> propertiesChanged:
                     foreach (var difference in propertiesChanged.Differences.Where(_ => !_.PropertyPath.IsMongoDBKey() && !_.PropertyPath.IsSinkOwnedSystemProperty()))
                     {
-                        difference.PropertyPath.SetValue(child, difference.Changed!, ArrayIndexers.NoIndexers);
+                        difference.ApplyTo(child, ArrayIndexers.NoIndexers);
                     }
 
                     break;
@@ -232,6 +233,28 @@ public class ChangesetConverter(
 
         var arrayPath = string.Join('.', segments.Take(childMarkerIndex));
         return new BsonDocument(arrayPath, new BsonDocument("$elemMatch", elementMatch));
+    }
+
+    static UpdateDefinition<BsonDocument> BuildChildPush(UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder, UpdateDefinition<BsonDocument>? updateBuilder, string property, BsonValue bsonValue, ChildrenOrdering? ordering)
+    {
+        // The default append keeps the plain $push it has always been.
+        if (ordering?.IsAppend() != false)
+        {
+            return updateBuilder is not null
+                ? updateBuilder.Push(property, bsonValue)
+                : updateDefinitionBuilder.Push(property, bsonValue);
+        }
+
+        // Prepend: $push with $each and $position 0. Sorted: $push with $each and $sort, ordering the whole array the
+        // same way the engine does - MongoDB orders missing and null values first ascending and last descending.
+        int? position = ordering.Placement == ChildrenPlacement.Prepend ? 0 : null;
+        var sort = ordering.Placement == ChildrenPlacement.Sorted
+            ? new BsonDocumentSortDefinition<BsonValue>(new BsonDocument(ordering.SortBy.ToMongoDB(), ordering.Direction == ChildrenSortDirection.Descending ? -1 : 1))
+            : null;
+
+        return updateBuilder is not null
+            ? updateBuilder.PushEach<BsonDocument, BsonValue>(property, [bsonValue], position: position, sort: sort)
+            : updateDefinitionBuilder.PushEach<BsonValue>(property, [bsonValue], position: position, sort: sort);
     }
 
     async Task<UpdateDefinitionAndArrayFilters> ToUpdateDefinition(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber, SinkMultiDocumentWrites directWrites)
@@ -364,6 +387,18 @@ public class ChangesetConverter(
 
         foreach (var propertyDifference in applicableDifferences)
         {
+            if (propertyDifference.IsRemoval)
+            {
+                // A removal takes the key away entirely. $unset of a field - or of a field under a parent - that does not
+                // exist is a no-op in MongoDB, so no missing parents need to be created first.
+                var (removedProperty, removedArrayFilters) = converter.ToMongoDBProperty(propertyDifference.PropertyPath, propertyDifference.ArrayIndexers);
+                arrayFiltersForDocument.AddRange(removedProperty, removedArrayFilters);
+                updateBuilder = updateBuilder is not null
+                    ? updateBuilder.Unset(removedProperty)
+                    : updateDefinitionBuilder.Unset(removedProperty);
+                continue;
+            }
+
             foreach (var parent in MissingParents(initialState, propertyDifference.PropertyPath, propertyDifference.ArrayIndexers))
             {
                 var (parentProperty, parentFilters) = converter.ToMongoDBProperty(parent, propertyDifference.ArrayIndexers);
@@ -425,9 +460,7 @@ public class ChangesetConverter(
         var (property, arrayFilters) = converter.ToMongoDBProperty(childrenProperty, arrayIndexers);
         arrayFiltersForDocument.AddRange(property, arrayFilters);
 
-        updateBuilder = updateBuilder is not null
-            ? updateBuilder.Push(property, bsonValue)
-            : updateDefinitionBuilder.Push(property, bsonValue);
+        updateBuilder = BuildChildPush(updateDefinitionBuilder, updateBuilder, property, bsonValue, childAdded.Ordering);
     }
 
     void BuildNestedCleared(UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder, ref UpdateDefinition<BsonDocument>? updateBuilder, ArrayFilters arrayFiltersForDocument, NestedCleared nestedCleared)

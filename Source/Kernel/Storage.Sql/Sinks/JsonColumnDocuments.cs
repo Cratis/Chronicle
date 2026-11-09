@@ -5,6 +5,7 @@ using System.Collections;
 using System.Dynamic;
 using System.Globalization;
 using System.Text.Json;
+using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
@@ -281,7 +282,7 @@ internal static class JsonColumnDocuments
         }
     }
 
-    internal static void UpsertChildInList(IList<object?> list, PropertyPath identifierName, object? identifierValue, object? newChild)
+    internal static void UpsertChildInList(IList<object?> list, PropertyPath identifierName, object? identifierValue, object? newChild, ChildrenOrdering? ordering = default)
     {
         // Upsert by identifier so repeated ChildAdded events (e.g. during replay, or when a
         // projection re-introduces the same child after a redaction) update in place instead of
@@ -291,7 +292,9 @@ internal static class JsonColumnDocuments
         var index = FindChildIndex(list, ChildIdentifier.For(identifierName, identifierValue), false);
         if (index < 0)
         {
+            // Only a new child is placed by the ordering; an existing one is updated where it is and never moves.
             list.Add(AsExpando(newChild));
+            list.PlaceAppendedChild(ordering);
             return;
         }
 
@@ -327,7 +330,7 @@ internal static class JsonColumnDocuments
         var childList = GetOrCreateChildList(parentDict, upsert.Segments[index].Value);
         if (index == upsert.Segments.Length - 1)
         {
-            UpsertChildInList(childList, upsert.IdentifierName, upsert.IdentifierValue, upsert.NewChild);
+            UpsertChildInList(childList, upsert.IdentifierName, upsert.IdentifierValue, upsert.NewChild, upsert.Ordering);
             return;
         }
 
@@ -653,5 +656,6 @@ internal static class JsonColumnDocuments
     /// <param name="IdentifierName">The name of the property identifying a child.</param>
     /// <param name="IdentifierValue">The identifier value of the child.</param>
     /// <param name="NewChild">The child to upsert.</param>
-    internal sealed record ChildUpsert(IPropertyPathSegment[] Segments, ArrayIndexers Indexers, PropertyPath IdentifierName, object? IdentifierValue, object? NewChild);
+    /// <param name="Ordering">The optional <see cref="ChildrenOrdering"/> placing a new child.</param>
+    internal sealed record ChildUpsert(IPropertyPathSegment[] Segments, ArrayIndexers Indexers, PropertyPath IdentifierName, object? IdentifierValue, object? NewChild, ChildrenOrdering? Ordering = default);
 }
