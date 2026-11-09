@@ -106,8 +106,15 @@ public partial class Observer
             return;
         }
 
+        // A page goes to one subscriber, while each partition is kept with the client instance the subscription selects for it.
+        // Partitions are therefore paged with the others that go to the same instance, never moved to another one.
         var configuration = await configurationProvider.GetFor(_observerKeyText);
-        foreach (var page in WithinLiveBudget(configuration, candidates))
+        var byTarget = candidates.GroupBy(_ =>
+        {
+            var target = subscriberSelector.Select(_subscription, _.Partition);
+            return (target.SiloAddress, Connection: target.ConnectedClient?.ConnectionId);
+        });
+        foreach (var page in byTarget.SelectMany(_ => WithinLiveBudget(configuration, [.. _])))
         {
             await DeliverPageWithinBudget(page, configuration);
             if (!_observerExists)
