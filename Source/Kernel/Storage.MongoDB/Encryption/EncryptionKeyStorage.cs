@@ -323,38 +323,18 @@ public partial class EncryptionKeyStorage(IDatabase database, IMongoDBTopology? 
     }
 
     /// <inheritdoc/>
-    public async Task AllowNewKeyFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, ulong observedVersion, uint observedLifecycle)
-    {
-        var observed = await RequiredFence(eventStore, eventStoreNamespace, identifier, strong: true);
-        if (IsAuthorizationRetry(observed, observedVersion, observedLifecycle))
-        {
-            return;
-        }
-
-        if (observed.NewKeyAllowed || observed.Version != observedVersion || observed.Lifecycle != observedLifecycle)
-        {
-            throw new EncryptionKeyFenceChanged(identifier);
-        }
-
-        var next = observed with { Version = checked(observed.Version + 1), Lifecycle = checked(observed.Lifecycle + 1), NewKeyAllowed = true };
-        var filter = EncryptionKeyFenceUpdates.Observed(identifier, observed) & _fences.Eq(_ => _.NewKeyAllowed, false);
-        if (!await WriteFence(eventStore, eventStoreNamespace, identifier, filter, EncryptionKeyFenceUpdates.Authorize(next), strong: true))
-        {
-            var current = await RequiredFence(eventStore, eventStoreNamespace, identifier, strong: true);
-            if (!IsAuthorizationRetry(current, observedVersion, observedLifecycle))
-            {
-                throw new EncryptionKeyFenceChanged(identifier);
-            }
-        }
-    }
+    public Task AllowNewKeyFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, ulong observedVersion, uint observedLifecycle) =>
+        AllowNewKeyFor(eventStore, eventStoreNamespace, identifier, observedVersion, observedLifecycle, strong: true);
 
     /// <inheritdoc/>
     public async Task AllowNewKeyFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
     {
-        var observed = await ReadFence(eventStore, eventStoreNamespace, identifier, strong: true);
+        // Legacy authorization makes no confirmation claim; keep replica-set operations strong throughout.
+        var strong = !_topology.IsStandalone;
+        var observed = await ReadFence(eventStore, eventStoreNamespace, identifier, strong);
         if (observed?.NewKeyAllowed == false)
         {
-            await AllowNewKeyFor(eventStore, eventStoreNamespace, identifier, observed.Version, observed.Lifecycle);
+            await AllowNewKeyFor(eventStore, eventStoreNamespace, identifier, observed.Version, observed.Lifecycle, strong);
         }
     }
 
@@ -535,6 +515,31 @@ public partial class EncryptionKeyStorage(IDatabase database, IMongoDBTopology? 
         }
 
         return await RequiredFence(eventStore, eventStoreNamespace, identifier);
+    }
+
+    async Task AllowNewKeyFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, ulong observedVersion, uint observedLifecycle, bool strong)
+    {
+        var observed = await RequiredFence(eventStore, eventStoreNamespace, identifier, strong);
+        if (IsAuthorizationRetry(observed, observedVersion, observedLifecycle))
+        {
+            return;
+        }
+
+        if (observed.NewKeyAllowed || observed.Version != observedVersion || observed.Lifecycle != observedLifecycle)
+        {
+            throw new EncryptionKeyFenceChanged(identifier);
+        }
+
+        var next = observed with { Version = checked(observed.Version + 1), Lifecycle = checked(observed.Lifecycle + 1), NewKeyAllowed = true };
+        var filter = EncryptionKeyFenceUpdates.Observed(identifier, observed) & _fences.Eq(_ => _.NewKeyAllowed, false);
+        if (!await WriteFence(eventStore, eventStoreNamespace, identifier, filter, EncryptionKeyFenceUpdates.Authorize(next), strong))
+        {
+            var current = await RequiredFence(eventStore, eventStoreNamespace, identifier, strong);
+            if (!IsAuthorizationRetry(current, observedVersion, observedLifecycle))
+            {
+                throw new EncryptionKeyFenceChanged(identifier);
+            }
+        }
     }
 
     void EnsureConfirmationAvailable(EncryptionKeyIdentifier identifier)
