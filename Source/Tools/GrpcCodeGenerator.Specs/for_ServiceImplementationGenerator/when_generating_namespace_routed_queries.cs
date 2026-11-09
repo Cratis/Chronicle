@@ -24,7 +24,10 @@ public class when_generating_namespace_routed_queries : given.a_generated_servic
     {
         _serviceDefinition = new("CasingQueries", typeof(CasingReadModel).Namespace!);
         var methods = typeof(CasingReadModel).GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
-            .Where(method => method.Name is nameof(CasingReadModel.ForNamespace) or nameof(CasingReadModel.ForApplication) or nameof(CasingReadModel.ForStore) or nameof(CasingReadModel.ObserveNamespace))
+            .Where(method => string.Equals(method.Name, nameof(CasingReadModel.ForNamespace), StringComparison.Ordinal) ||
+                string.Equals(method.Name, nameof(CasingReadModel.ForApplication), StringComparison.Ordinal) ||
+                string.Equals(method.Name, nameof(CasingReadModel.ForStore), StringComparison.Ordinal) ||
+                string.Equals(method.Name, nameof(CasingReadModel.ObserveNamespace), StringComparison.Ordinal))
             .Select(method => new QueryMethodDefinition(method)).ToList();
         _serviceDefinition.Queries.Add(new QueryDefinition(typeof(CasingReadModel), methods));
         _serviceDefinition.KeyedQueries.Add(new KeyedQueryDefinition(typeof(ICasingGrain), typeof(CasingKey), typeof(ICasingGrain).GetMethod(nameof(ICasingGrain.HasData))!));

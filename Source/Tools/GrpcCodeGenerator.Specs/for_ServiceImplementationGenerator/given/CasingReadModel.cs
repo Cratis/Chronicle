@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Reactive.Linq;
+using System.Reactive.Subjects;
 using Cratis.Arc.Queries.ModelBound;
 
 namespace Cratis.Chronicle.Tools.GrpcCodeGenerator.for_ServiceImplementationGenerator.given;
@@ -15,5 +15,5 @@ public record CasingReadModel(string Name)
 
     public static Task<CasingReadModel> ForStore(string eventStore) => Task.FromResult(new CasingReadModel(eventStore));
 
-    public static IObservable<CasingReadModel> ObserveNamespace(string eventStore, string @namespace) => Observable.Return(new CasingReadModel(@namespace));
+    public static ISubject<CasingReadModel> ObserveNamespace(string eventStore, string @namespace) => new BehaviorSubject<CasingReadModel>(new(@namespace));
 }
