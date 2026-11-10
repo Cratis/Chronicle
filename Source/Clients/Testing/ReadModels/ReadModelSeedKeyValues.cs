@@ -3,6 +3,7 @@
 
 using System.Globalization;
 using System.Text.Json;
+using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
 using Cratis.Concepts;
@@ -60,7 +61,7 @@ internal sealed class ReadModelSeedKeyValues(Type modelType, PropertyPath proper
         converted.GetType() == _target && IsLossless(input, converted) && IsAllowedEnumValue(converted);
 
     bool IsLossless(object input, object converted) =>
-        !IsNumber(_target!) || System.Convert.ToDecimal(input, CultureInfo.InvariantCulture) == System.Convert.ToDecimal(converted, CultureInfo.InvariantCulture);
+        !IsNumber(_target!) || DecimalValues.ToDecimal(input) == DecimalValues.ToDecimal(converted);
 
     object Unwrap(object input)
     {

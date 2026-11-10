@@ -7,6 +7,7 @@ using System.Globalization;
 using System.Text.Json;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Dynamic;
+using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
@@ -438,6 +439,11 @@ internal static class JsonColumnDocuments
         if (value is string text && ParseTemporalText(clr, text) is { } parsed)
         {
             return parsed;
+        }
+
+        if (clr == typeof(decimal))
+        {
+            return DecimalValues.ToDecimal(value);
         }
 
         return Convert.ChangeType(value, clr, CultureInfo.InvariantCulture);
