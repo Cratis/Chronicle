@@ -1,0 +1,22 @@
+---
+title: Settings that must match the kernel
+description: Client settings that have to agree with the Chronicle kernel's configuration, with the symptom of a mismatch and the page that explains each setting.
+---
+
+A client and the kernel it connects to are configured separately. Most settings are independent, but the ones below only work when both sides agree. When a connection fails in a way the error message does not explain, check this table first.
+
+| Setting | Client side | Kernel side | If they differ | Details |
+| --- | --- | --- | --- | --- |
+| gRPC message size | `MaxReceiveMessageSize`, `MaxSendMessageSize` (100 MiB each) | `maxReceiveMessageSize` (100 MiB) | A message larger than the receiving side's limit is refused with a gRPC `ResourceExhausted` status. Raise the receiver's limit, then check the sender's | [gRPC Message Size](grpc-message-size.mdx) |
+| Client credentials | Credentials in the connection string. The built-in development credentials are `chronicle-dev-client` and `chronicle-dev-secret` | The development image accepts the development credentials. A production kernel does not | A client using the development credentials against a production kernel is refused | [Connection strings](../connection-strings/index.md), [Authentication](../hosting/configuration/authentication.md) |
+| TLS and certificate trust | `Tls` options and `skipTlsValidation`, `disableTls`, `caCertificatePath`, `certificatePath` in the connection string | `tls` section: certificate and `enabled` | A client that uses TLS cannot connect to a kernel with TLS disabled, and the other way around. With validation on, the client must trust the CA of the kernel certificate | [TLS](tls.mdx), [Kernel TLS](../hosting/configuration/tls.md) |
+| Authority and port behind a proxy | The URL the client connects to | `Authentication:Authority`, which must be the public HTTPS URL when the kernel runs without TLS behind a proxy | The authority a token is issued for does not match the URL the client uses | [Authentication](../hosting/configuration/authentication.md), [Production hosting](../hosting/production.md) |
+| Cluster identity | Not set by clients | `clustering.clusterId`, `clustering.serviceId` identical on every node | Nodes with different values form separate clusters | [Clustering](../hosting/configuration/clustering.md) |
+| Event type generation validation | `EnableEventTypeGenerationValidation` | Honored only by the development kernel. A production kernel always validates strictly | Setting it to `false` has no effect against a production kernel | [Validation](../migrations/validation.mdx), [ChronicleOptions Reference](chronicle-options.mdx#enableeventtypegenerationvalidation) |
+
+## Check the pair
+
+- Change message limits on both sides. Raising only the sender's limit moves the failure to the receiver.
+- Use explicit credentials in every environment except local development.
+- Enable certificate validation in production and give the client a CA file for private certificate authorities.
+- Give every node of a cluster the same `clusterId` and `serviceId` and the same cluster database.
