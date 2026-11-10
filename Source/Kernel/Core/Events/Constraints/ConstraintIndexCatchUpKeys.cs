@@ -49,6 +49,27 @@ internal sealed class ConstraintIndexCatchUpKeys
         else if (definition.SupportsEventType(context.EventTypeId)) IncludeClaim(definition, context, scope);
     }
 
+    /// <summary>
+    /// Conservatively excludes every value of a live source whose content cannot be released.
+    /// </summary>
+    /// <param name="definition">The unique declaration.</param>
+    /// <param name="context">The still-readable stored dimensions.</param>
+    internal void IncludeSource(UniqueConstraintDefinition definition, EventContext context)
+    {
+        if (!definition.SupportsEventType(context.EventType.Id) && !definition.RemovedWith.Contains(context.EventType.Id)) return;
+        var scope = definition.Scope.BuildScopeKey(context.EventSourceType, context.EventStreamType, context.EventStreamId);
+        Add(definition, scope, context.EventSourceId, null);
+    }
+
+    static Fingerprint Hash(ConstraintName name, string scope, EventSourceId source, UniqueConstraintValue? value)
+    {
+        // Length-prefix each component: domain strings may themselves contain separators.
+        var components = new[] { name.Value, scope, source.Value, value?.Value };
+        var input = string.Concat(components.Select(component => component is null ? "-1:" : $"{component.Length}:{component}"));
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(input));
+        return new(BitConverter.ToUInt64(hash, 0), BitConverter.ToUInt64(hash, 8), BitConverter.ToUInt64(hash, 16), BitConverter.ToUInt64(hash, 24));
+    }
+
     void IncludeRemoval(UniqueConstraintDefinition definition, ConstraintValidationContext context, string scope)
     {
         var removal = definition.RemovalEventDefinitions.SingleOrDefault(item => item.EventTypeId == context.EventTypeId);
@@ -70,27 +91,6 @@ internal sealed class ConstraintIndexCatchUpKeys
         {
             Add(definition, scope, context.EventSourceId, properties.Length == 0 ? null : new(properties.GetValue(definition.IgnoreCasing)));
         }
-    }
-
-    /// <summary>
-    /// Conservatively excludes every value of a live source whose content cannot be released.
-    /// </summary>
-    /// <param name="definition">The unique declaration.</param>
-    /// <param name="context">The still-readable stored dimensions.</param>
-    internal void IncludeSource(UniqueConstraintDefinition definition, EventContext context)
-    {
-        if (!definition.SupportsEventType(context.EventType.Id) && !definition.RemovedWith.Contains(context.EventType.Id)) return;
-        var scope = definition.Scope.BuildScopeKey(context.EventSourceType, context.EventStreamType, context.EventStreamId);
-        Add(definition, scope, context.EventSourceId, null);
-    }
-
-    static Fingerprint Hash(ConstraintName name, string scope, EventSourceId source, UniqueConstraintValue? value)
-    {
-        // Length-prefix each component: domain strings may themselves contain separators.
-        var components = new[] { name.Value, scope, source.Value, value?.Value };
-        var input = string.Concat(components.Select(component => component is null ? "-1:" : $"{component.Length}:{component}"));
-        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(input));
-        return new(BitConverter.ToUInt64(hash, 0), BitConverter.ToUInt64(hash, 8), BitConverter.ToUInt64(hash, 16), BitConverter.ToUInt64(hash, 24));
     }
 
     void Add(UniqueConstraintDefinition definition, string scope, EventSourceId source, UniqueConstraintValue? value) =>
