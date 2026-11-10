@@ -468,7 +468,7 @@ The HTTP request header used to resolve the event store namespace on a per-reque
 ```
 
 > [!WARNING]
-> The caller sets this header, so any client that can reach your application can pick any tenant. In a multi-tenant production deployment, either configure a trusted resolver (for example the claims-based resolver, which reads the tenant from a validated token, or the subdomain resolver) or make sure the header is set only by trusted infrastructure such as your gateway, which must overwrite any value the client sends. See [Namespaces](../namespaces/index.md).
+> The caller sets this header, so any client that can reach your application can pick any tenant. In a multi-tenant production deployment, either configure the claims-based resolver, which reads the tenant from a validated token, or make sure the header is set only by trusted infrastructure such as your gateway, which must overwrite any value the client sends. The subdomain resolver is no safer on its own: the caller sets the Host header too, so use it only when trusted infrastructure controls the host. Whichever resolver you use, your application must still check that the signed-in caller is allowed to use the resolved tenant. See [Namespaces](../namespaces/index.md).
 
 ### UseAutomaticMiddleware
 

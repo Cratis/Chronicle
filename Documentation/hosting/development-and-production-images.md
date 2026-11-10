@@ -7,7 +7,7 @@ Chronicle ships a development image and a production image. They are not the sam
 
 ## The `DEVELOPMENT` symbol, not the environment name
 
-Which image behavior you get is decided when the kernel is compiled. `ASPNETCORE_ENVIRONMENT` and `DOTNET_ENVIRONMENT` do not turn the development behavior on or off, so setting `ASPNETCORE_ENVIRONMENT=Production` on the development image does not make it behave like the production image, and setting `Development` on the production image does not enable the features below.
+The behaviors in the table below are decided when the kernel is compiled. `ASPNETCORE_ENVIRONMENT` and `DOTNET_ENVIRONMENT` do not turn them on or off, so setting `ASPNETCORE_ENVIRONMENT=Production` on the development image does not make it behave like the production image, and setting `Development` on the production image does not enable them. The runtime environment does control the webhook and external-service exceptions described [below](#webhook-and-external-service-validation), so never run a production deployment with the `Development` environment.
 
 | Behavior | Development image (`DEVELOPMENT` defined) | Production image |
 | --- | --- | --- |
@@ -25,7 +25,9 @@ Because the production image ignores `DefaultAdminPassword` silently, a configur
 
 ## Webhook and external-service validation
 
-`Webhooks:Validation` and `ExternalServices:Validation` choose how Chronicle treats a destination that resolves to a local or private address. The code default is `BlockLocalAddresses` in production builds and `Warn` in development builds, so a webhook that targets `localhost` delivers on the development image and is blocked on the production image. `AllowInsecureHttp` is honored only in Development and is ignored in the production image. To reach an internal destination in production, add it to `AllowedHosts` (or `EventStoreAllowedHosts` per event store) instead of weakening validation. See [Webhooks](../webhooks/index.mdx) and [External services](../external-services/index.md).
+`Webhooks:Validation` and `ExternalServices:Validation` choose how Chronicle treats a destination that resolves to a local or private address. The code default is `BlockLocalAddresses` in production builds and `Warn` in development builds, so by default a webhook that targets `localhost` delivers on the development image and is blocked on the production image.
+
+Two exceptions depend on the runtime environment, not on the image: `AllowInsecureHttp`, and the exemption that lets loopback and `host.docker.internal` destinations skip the `AllowedHosts` and address checks. Both apply only when the kernel runs with the `Development` environment, and they apply on either image. A production image started with `ASPNETCORE_ENVIRONMENT=Development` therefore accepts plain-HTTP and loopback destinations; run production with the `Production` environment. To reach an internal destination in production, add it to `AllowedHosts` (or `EventStoreAllowedHosts` per event store) instead of weakening validation. See [Webhooks](../webhooks/index.mdx) and [External services](../external-services/index.md).
 
 ## Values that differ from the code defaults
 
