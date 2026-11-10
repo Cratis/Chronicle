@@ -89,6 +89,11 @@ try
     {
         throw new ArgumentException($"{EncryptionKeyCommand.VerifyFlag} cannot be combined with schema actions.");
     }
+
+    if (encryptionKeyCommand.Migrate && schemaCommand.Action != SchemaAction.None)
+    {
+        throw new ArgumentException($"{EncryptionKeyCommand.MigrateFlag} cannot be combined with schema actions.");
+    }
 }
 catch (ArgumentException exception)
 {
@@ -141,6 +146,11 @@ try
     if (!Enum.IsDefined(chronicleOptions.Storage.SchemaMode))
     {
         throw new ArgumentException("Storage.SchemaMode is invalid.");
+    }
+
+    if (!Enum.IsDefined(chronicleOptions.Compliance.Encryption.LegacyKeyHandling))
+    {
+        throw new ArgumentException("Compliance.Encryption.LegacyKeyHandling is invalid.");
     }
 }
 catch (Exception exception) when (exception is ArgumentException or InvalidOperationException)
@@ -414,12 +424,15 @@ logger = app.Services.GetRequiredService<ILogger<Kernel>>();
 logger.ServerConfigured();
 
 // Look for encryption keys stored under earlier names before anything starts. A layout that cannot be used, or
-// --verify-encryption-keys, ends the process here; otherwise the counts are logged and startup continues.
+// --verify-encryption-keys, --migrate-encryption-keys, or keys still needing the upgrade while the configured handling
+// refuses them, ends the process here; otherwise the counts are logged and startup continues.
 var encryptionKeyExit = await EncryptionKeyCommandRunner.Run(
     app.Services.GetService<Cratis.Chronicle.Storage.Compliance.IEncryptionKeyStoreUpgradeCheck>(),
     logger,
     encryptionKeyCommand,
-    Console.Out);
+    Console.Out,
+    app.Services.GetService<Cratis.Chronicle.Storage.Compliance.IEncryptionKeyStoreMigrator>(),
+    chronicleOptions.Compliance.Encryption.LegacyKeyHandling);
 if (encryptionKeyExit is { } exitCode)
 {
     return exitCode;
