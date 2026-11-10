@@ -12,7 +12,7 @@ public class when_a_destination_has_an_earlier_version_with_attributes : given.a
     void Establish()
     {
         _vault.Put(Legacy(1), Key(1));
-        _vault.Put(Current(1), Key(9), expires: DateTimeOffset.UnixEpoch.AddYears(80));
+        _vault.Put(Current(1), Key(1), expires: DateTimeOffset.UnixEpoch.AddYears(80));
         _vault.Put(Current(1), Key(1));
     }
 
