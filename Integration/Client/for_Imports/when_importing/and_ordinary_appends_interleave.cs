@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using System.Diagnostics;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Imports;
 using Cratis.Chronicle.Reactors;
@@ -26,6 +27,7 @@ public class and_ordinary_appends_interleave(context context) : Given<context>(c
 
         async Task Because()
         {
+            var started = Stopwatch.StartNew();
             ImportedCustomersReactor.Handled.Clear();
             await EventStore.Reactors.WaitTillActive<ImportedCustomersReactor>();
             await using var import = await EventStore.EventLog.BeginImport(new ImportOptions { MaxEventsPerChunk = 1000, WaitForCommit = false });
@@ -41,8 +43,17 @@ public class and_ordinary_appends_interleave(context context) : Given<context>(c
 
             await import.WaitTill(ImportProgressWaits.IsTerminal, TimeSpan.FromSeconds(120));
             Result = await import.Complete();
+            var committedAfter = started.Elapsed;
             All = await EventStore.EventLog.GetFromSequenceNumber(EventSequenceNumber.First);
-            await EventStore.Reactors.WaitTillReachesEventSequenceNumber<ImportedCustomersReactor>(All[^1].Context.SequenceNumber);
+            var tail = All[^1].Context.SequenceNumber;
+            try
+            {
+                await EventStore.Reactors.WaitTillReachesEventSequenceNumber<ImportedCustomersReactor>(tail);
+            }
+            catch (OperationCanceledException)
+            {
+                throw new ReactorDidNotReachTheTail(tail, await EventStore.Reactors.GetStateFor<ImportedCustomersReactor>(), ImportedCustomersReactor.Handled.Count, committedAfter, started.Elapsed);
+            }
         }
 
         public bool IsImported(AppendedEvent @event) => ((CustomerImported)@event.Content).Name.StartsWith("interleaved-", StringComparison.Ordinal);
