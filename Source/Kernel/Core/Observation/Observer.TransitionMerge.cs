@@ -42,6 +42,7 @@ public partial class Observer
     /// <inheritdoc/>
     protected override Task OnAfterLeavingState(IState<ObserverState> state)
     {
+        ForgetEventsHeldBackForSweepWhenLeaving(state);
         KeepWhatWasRecordedDuringTransitionHook();
         return Task.CompletedTask;
     }

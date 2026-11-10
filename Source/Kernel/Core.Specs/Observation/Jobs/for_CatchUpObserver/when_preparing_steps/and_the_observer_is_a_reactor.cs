@@ -19,6 +19,7 @@ public class and_the_observer_is_a_reactor : given.a_catch_up_observer_job
     void Establish()
     {
         _request = _request with { ObserverType = ObserverType.Reactor };
+        _observer.CatchesUpInOneSweep().Returns(false);
         _keyIndex.GetKeys(Arg.Any<EventSequenceNumber>()).Returns(CreateKeys(_key1, _key2));
     }
 

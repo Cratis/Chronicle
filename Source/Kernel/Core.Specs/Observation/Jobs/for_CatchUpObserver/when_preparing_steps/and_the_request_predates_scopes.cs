@@ -18,6 +18,7 @@ public class and_the_request_predates_scopes : given.a_catch_up_observer_job
     void Establish()
     {
         _request = _request with { ObserverType = ObserverType.Reactor };
+        _observer.CatchesUpInOneSweep().Returns(false);
         _keyIndex.GetKeys(Arg.Any<EventSequenceNumber>()).Returns(CreateKeys(_key));
     }
 

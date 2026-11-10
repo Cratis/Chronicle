@@ -16,6 +16,7 @@ public class and_a_legacy_request_differs_from_the_stored_definition : given.a_c
     void Establish()
     {
         _request = _request with { ObserverType = ObserverType.Reactor, EventTypes = [new("legacy-type", EventTypeGeneration.First)] };
+        _observer.CatchesUpInOneSweep().Returns(false);
         _eventStoreStorage.Observers.Get(_request.ObserverKey.ObserverId)
             .Returns(ObserverDefinition.Empty with { EventTypes = [_storedType] });
         _keyIndex.GetKeys(Arg.Any<EventSequenceNumber>()).Returns(CreateKeys(_key));

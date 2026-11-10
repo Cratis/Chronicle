@@ -86,6 +86,7 @@ public partial class Observer
         if (!ShouldHandleEvent(partition))
         {
             NoteHeldBackEvents(partition, events);
+            KeepEventsHeldBackForSweep(partition, events);
             return;
         }
 
@@ -676,7 +677,9 @@ public partial class Observer
         return await eventCompliance.Release(eventsToDecrypt, _eventTypeSchemas);
     }
 
-    bool ShouldHandleEvent(Key partition)
+    bool ShouldHandleEvent(Key partition) => ShouldHandleEvent(partition, ignoringCatchUpPreparation: false);
+
+    bool ShouldHandleEvent(Key partition, bool ignoringCatchUpPreparation)
     {
         if (IsRetired || _removed || !_observerExists) return false;
         if (!_subscription.IsSubscribed)
@@ -697,7 +700,7 @@ public partial class Observer
             return false;
         }
 
-        if (_isPreparingCatchup)
+        if (_isPreparingCatchup && !ignoringCatchUpPreparation)
         {
             logger.ObserverIsPreparingCatchup();
             return false;

@@ -101,6 +101,14 @@ public interface IObserver : IGrainWithStringKey
     Task<ObserverSubscription> GetSubscription();
 
     /// <summary>
+    /// Gets whether the observer is caught up in one sweep of the event sequence across every partition rather than by a
+    /// step per partition. The catch-up job shapes its steps from this, and the observer holds back live delivery from it.
+    /// </summary>
+    /// <returns>True if catch-up sweeps every partition in one walk.</returns>
+    [AlwaysInterleave]
+    Task<bool> CatchesUpInOneSweep();
+
+    /// <summary>
     /// Gets active abandoned-delivery fences independently of failure state.
     /// </summary>
     /// <returns>The current fences.</returns>

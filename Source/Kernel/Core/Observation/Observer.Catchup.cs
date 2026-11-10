@@ -28,6 +28,7 @@ public partial class Observer
     {
         if (IsRetired || _removed) return;
         _isPreparingCatchup = true;
+        StartKeepingEventsHeldBackForSweep();
         using var scope = logger.BeginObserverScope(State.Identifier, _observerKey);
 
         if (await AdoptedPendingCatchUpJob()) return;
@@ -81,8 +82,9 @@ public partial class Observer
         // the sequence - also for partitions first appended to after the job enumerated its keys. Handing those
         // partitions to live delivery now would deliver their events twice (#5786), so live delivery stays held back
         // for every partition until the sweep reports back through CaughtUp, which then routes from the position the
-        // sweep reached. A catch-up per partition owns only the partitions registered here, so the rest go live.
-        if (!_subscription.CatchesUpInOneSweep(Definition.Type))
+        // sweep reached, handing it what was held back above that. A catch-up per partition owns only the partitions
+        // registered here, so the rest go live.
+        if (!CatchesUpInOneSweepNow())
         {
             _isPreparingCatchup = false;
         }
@@ -229,6 +231,11 @@ public partial class Observer
         // preparation and routing all belong to the newer job, which reports back on its own.
         if (!await ShadowHandOverCaughtUpObserverWide(jobId)) return;
 
+        // What live delivery held back while a sweep was in flight is only this round's to hand over while the hold
+        // is still raised; anything that lowered it has routed or rescued on its own.
+        var heldBack = _isPreparingCatchup ? _sweepHeldBack : null;
+        _sweepHeldBack = null;
+
         var madeProgress = CatchUpMadeProgress(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber);
         HandleNewLastHandledEvent(lastHandledEventSequenceNumber);
         State.CatchingUpPartitions.ExceptWith(releasable);
@@ -244,8 +251,14 @@ public partial class Observer
         Skips.ClearJobReported();
         await WriteStateAsync();
 
+        // Under a steady stream of appends a sweep always ends with events above what it read, which live delivery
+        // held back. Routing would start another sweep for them, ending the same way, so the observer would never
+        // return to live delivery. Handing them over here, before the hold comes down, closes that gap within this
+        // turn: live delivery cannot run until it ends, and what it delivers afterwards follows what was handed over.
+        var handedOver = heldBack is not null && await HandHeldBackEventsToLiveDelivery(heldBack);
+
         _isPreparingCatchup = false;
-        var settleInObserving = NoteCatchUpLap(madeProgress);
+        var settleInObserving = NoteCatchUpLap(madeProgress) || handedOver;
 
         if (IsRetired || _removed) return;
         if (!IsQuarantined)

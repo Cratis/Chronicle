@@ -322,6 +322,15 @@ internal static partial class ObserverLogMessages
 
     [LoggerMessage(LogLevel.Warning, "Looking for stalled observer jobs failed")]
     internal static partial void FindingStalledObserverJobsFailed(this ILogger<Observer> logger, Exception exception);
+
+    [LoggerMessage(LogLevel.Debug, "Handing {Count} events held back during the catch-up sweep to live delivery from {From}")]
+    internal static partial void HandingHeldBackEventsToLiveDelivery(this ILogger<Observer> logger, int count, EventSequenceNumber from);
+
+    [LoggerMessage(LogLevel.Debug, "Events held back during the catch-up sweep do not account for everything from {From}; catching up again")]
+    internal static partial void HeldBackEventsDoNotCoverTheGap(this ILogger<Observer> logger, EventSequenceNumber from);
+
+    [LoggerMessage(LogLevel.Warning, "Handing events held back during the catch-up sweep to live delivery failed; catching up again from {From}")]
+    internal static partial void HandingHeldBackEventsFailed(this ILogger<Observer> logger, EventSequenceNumber from, Exception exception);
 }
 
 internal static class ObserverScopes

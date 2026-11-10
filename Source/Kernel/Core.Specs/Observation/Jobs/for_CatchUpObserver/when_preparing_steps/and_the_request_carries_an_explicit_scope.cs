@@ -17,6 +17,7 @@ public class and_the_request_carries_an_explicit_scope : given.a_catch_up_observ
     {
         _scope = ObserverReaderScope.Explicit([_eventType]);
         _request = _request with { ObserverType = ObserverType.Reactor, ReaderScope = _scope };
+        _observer.CatchesUpInOneSweep().Returns(false);
         _keyIndex.GetKeys(Arg.Any<EventSequenceNumber>()).Returns(CreateKeys(_key));
     }
 

@@ -155,8 +155,9 @@ public class CatchUpObserver(
         // The keys are registered whichever shape the steps take: live delivery is held back per partition while
         // that partition is catching up, and the observer clears the whole set when it routes again afterwards.
         // A sweep also covers partitions first appended to after this enumeration, so the observer holds back live
-        // delivery for every partition until the sweep reports back, deciding that from the same subscription.
-        var steps = CreateStepsFor(request, keysToCatchUp, (await observer.GetSubscription()).CatchesUpInOneSweep(request.ObserverType));
+        // delivery for every partition until the sweep reports back. The observer decides the shape, so the job and the
+        // hold never disagree about whether this is a sweep.
+        var steps = CreateStepsFor(request, keysToCatchUp, await observer.CatchesUpInOneSweep());
         if (steps.Count == 0)
         {
             // The job logs its own "no job steps to start" with no observer in its scope, so say which observer it was.

@@ -108,6 +108,7 @@ public class a_catch_up_observer_job : Specification
 
         _observer = Substitute.For<IObserver>();
         _observer.GetSubscription().Returns(ObserverSubscription.Unsubscribed);
+        _observer.CatchesUpInOneSweep().Returns(true);
         _observer.GetFailedPartitionKeys().Returns(Task.FromResult(Enumerable.Empty<Key>()));
         _silo.AddProbe(_ => _observer);
 

@@ -18,7 +18,7 @@ public class and_the_observer_takes_pages_spanning_partitions : given.a_catch_up
     void Establish()
     {
         _request = _request with { ObserverType = ObserverType.Reactor };
-        _observer.GetSubscription().Returns(ObserverSubscription.Unsubscribed with { SubscriberType = typeof(IObserverPartitionPageSubscriber) });
+        _observer.CatchesUpInOneSweep().Returns(true);
         _keyIndex.GetKeys(Arg.Any<EventSequenceNumber>()).Returns(CreateKeys(_key1, _key2));
     }
 

@@ -296,6 +296,9 @@ public partial class Observer(
     public Task<ObserverSubscription> GetSubscription() => Task.FromResult(_subscription);
 
     /// <inheritdoc/>
+    public Task<bool> CatchesUpInOneSweep() => Task.FromResult(CatchesUpInOneSweepNow());
+
+    /// <inheritdoc/>
     public Task<bool> IsSubscribed() => Task.FromResult(_subscription.IsSubscribed);
 
     /// <inheritdoc/>

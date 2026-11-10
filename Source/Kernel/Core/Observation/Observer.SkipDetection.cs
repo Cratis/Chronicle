@@ -56,7 +56,7 @@ public partial class Observer
         Failures.IsFailed(partition);
 
     /// <summary>
-    /// Gets why live events for a partition are held back right now, mirroring the precedence of <see cref="ShouldHandleEvent"/> without its side effects.
+    /// Gets why live events for a partition are held back right now, mirroring the precedence of <see cref="ShouldHandleEvent(Key)"/> without its side effects.
     /// </summary>
     /// <param name="partition">The partition.</param>
     /// <returns>The reason, or null if the events are not held back for a reason that catch-up or replay answers.</returns>
