@@ -44,7 +44,9 @@ public static class AzureKeyVaultChronicleBuilderExtensions
         }
 
         builder.Services.AddSingleton<IEncryptionKeyStoreUpgradeCheck>(_ =>
-            new Storage.AzureKeyVault.AzureKeyVaultKeyStoreUpgradeCheck(CreateSecretClient(complianceStorage.ConnectionDetails)));
+            new Storage.AzureKeyVault.AzureKeyVaultKeyStoreUpgradeCheck(
+                new Storage.AzureKeyVault.SecretClientVault(CreateSecretClient(complianceStorage.ConnectionDetails)),
+                [.. options.Compliance.Encryption.LegacyKeyScopes.Select(scope => new Storage.AzureKeyVault.LegacyScope(scope.EventStore, scope.Namespace))]));
         builder.Services.AddSingleton<IEncryptionKeyStoreMigrator>(serviceProvider =>
             new Storage.AzureKeyVault.AzureKeyVaultKeyStoreMigrator(
                 new Storage.AzureKeyVault.SecretClientVault(CreateSecretClient(complianceStorage.ConnectionDetails)),

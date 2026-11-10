@@ -227,9 +227,11 @@ internal class AzureKeyVaultKeyStoreMigrator(
     async Task<(CopyOutcome Outcome, VerifiedCopy? Verified)> Place(LegacyEntry entry, SecretValue pinned, bool dryRun, CancellationToken cancellationToken)
     {
         var verified = new VerifiedCopy(entry, pinned.Info.Version);
-        if (await vault.Read(entry.Destination, null, cancellationToken) is { } existing)
+        if (await vault.Read(entry.Destination, null, cancellationToken) is not null)
         {
-            return SameValue(pinned, existing) ? (CopyOutcome.AlreadyMigrated, verified) : (CopyOutcome.ConflictKept, null);
+            return await DestinationCheck.EqualsSource(vault, entry.Destination, pinned, cancellationToken)
+                ? (CopyOutcome.AlreadyMigrated, verified)
+                : (CopyOutcome.ConflictKept, null);
         }
 
         if (dryRun)
@@ -295,8 +297,7 @@ internal class AzureKeyVaultKeyStoreMigrator(
         }
 
         var latest = await vault.Read(copy.Entry.Source, null, cancellationToken);
-        var current = await vault.Read(copy.Entry.Destination, null, cancellationToken);
-        return SameValue(latest, current);
+        return latest is not null && await DestinationCheck.EqualsSource(vault, copy.Entry.Destination, latest, cancellationToken);
     }
 
     sealed record CopyContext(bool DryRun, IReadOnlySet<string> Deleted, IReadOnlyList<LegacyErasureFence> Fences);

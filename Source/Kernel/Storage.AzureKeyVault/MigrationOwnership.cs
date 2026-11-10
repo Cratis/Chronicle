@@ -33,8 +33,17 @@ internal class MigrationOwnership(ISecretVault vault)
     /// <returns>True when this migration owns the vault; false when another does or may. When false, nothing is held.</returns>
     public async Task<bool> TryAcquire(string owner, CancellationToken cancellationToken)
     {
-        await vault.Write(LockName, HeldPrefix + owner, cancellationToken);
-        if (await OtherHolders(owner, cancellationToken))
+        var held = HeldPrefix + owner;
+        var version = await vault.Write(LockName, held, cancellationToken);
+
+        // A lock name held by a deleted secret cannot be written, so nothing proves this migration owns the vault.
+        if (version is null)
+        {
+            return false;
+        }
+
+        var readBack = await vault.Read(LockName, version, cancellationToken);
+        if (!string.Equals(readBack?.Value, held, StringComparison.Ordinal) || await OtherHolders(owner, cancellationToken))
         {
             await Release(owner, cancellationToken);
             return false;

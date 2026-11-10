@@ -77,9 +77,9 @@ internal sealed class MigrationRun(bool dryRun)
     public List<VerifiedCopy> Verified { get; } = [];
 
     /// <summary>
-    /// Gets whether nothing failed and nothing was kept, so verified earlier secrets may be removed.
+    /// Gets whether nothing failed and nothing was kept or left ambiguous, so verified earlier secrets may be removed.
     /// </summary>
-    public bool Clean => Failed == 0 && ConflictsKept == 0;
+    public bool Clean => Failed == 0 && ConflictsKept == 0 && AmbiguousForReview == 0;
 
     /// <summary>
     /// Counts the outcome of one entry.
