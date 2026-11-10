@@ -55,7 +55,7 @@ Replace `<image>` with the Chronicle production image and tag you deploy, and re
 
 ## Size from your own peak
 
-Memory use depends on your workload. It grows with the number of event stores, namespaces and observers, because observer grains stay resident once they are activated.
+Memory use depends on your workload. It grows with the number of event stores, namespaces and observers, because a subscribed observer stays resident, at roughly 40 KB of heap each. An observer without a subscription is released after it has been idle for a while; see [Releasing idle observers](configuration/observers.md#releasing-idle-observers).
 
 1. Run your real workload without a hard heap limit.
 2. Observe peak resident memory. Use the .NET runtime metrics described in [OpenTelemetry](configuration/open-telemetry.md), or `docker stats`.
