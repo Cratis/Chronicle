@@ -74,11 +74,15 @@ public class a_held_silo : Specification
         });
         if (Standby) RegisterContendedLease(builder.Services);
         builder.Services.AddSingleton<ILifecycleParticipant<ISiloLifecycle>>(_hold);
+
+        // The lease lifetime keeps the first renewal (TTL/3) and the stop deadline (TTL/2) well beyond the held phase,
+        // so a slow renewal under parallel load cannot stop the host mid-specification, while the retry interval
+        // (TTL/10) stays short enough for a quick takeover.
         var chronicleOptions = new ChronicleOptions
         {
             Health = new Health { Port = _healthPort, Exclusive = true },
             Storage = new Configuration.Storage { Type = StorageType.InMemory },
-            Clustering = new Clustering { SingleWriterLease = new SingleWriterLease { Standby = Standby, Ttl = TimeSpan.FromSeconds(5) } },
+            Clustering = new Clustering { SingleWriterLease = new SingleWriterLease { Standby = Standby, Ttl = TimeSpan.FromSeconds(15) } },
             Authentication = new Configuration.Authentication { Enabled = AuthenticationEnabled, EnforceStoreEntitlements = EnforceStoreEntitlements, Authority = "https://identity.example" }
         };
         builder.Services.AddSingleton(Options.Create(chronicleOptions));

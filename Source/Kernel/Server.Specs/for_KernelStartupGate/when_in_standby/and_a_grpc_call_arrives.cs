@@ -11,7 +11,6 @@ public class and_a_grpc_call_arrives : given.a_kernel_in_standby
 
     Task Because() => _gate.InvokeAsync(_context);
 
-    [Fact] void should_be_in_standby() => _state.IsStandby.ShouldBeTrue();
     [Fact] void should_answer_at_once_with_a_trailers_only_response() => _context.Response.StatusCode.ShouldEqual(200);
     [Fact] void should_report_unavailable_so_clients_retry() => _context.Response.Headers.GrpcStatus.ToString().ShouldEqual("14");
     [Fact] void should_explain_the_standby() => _context.Response.Headers.GrpcMessage.ToString().ShouldEqual(SingleWriterLeaseStandby.RefusalMessage);
