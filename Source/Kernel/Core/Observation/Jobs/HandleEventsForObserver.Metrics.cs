@@ -22,8 +22,7 @@ public partial class HandleEventsForObserver
     void RecordSuccessfulObservation(ObserverKey observerKey)
     {
         if (observerMeter is null) return;
-        _metrics ??= observerMeter.BeginObserverScope(
-            observerKey.ObserverId,
+        _metrics ??= observerMeter.BeginObservationScope(
             observerKey,
             _options.Value?.Telemetry.MetricNames ?? MetricNames.Legacy);
         _metrics.SuccessfulObservation(replay: _origin == ObservationOrigin.Replay);

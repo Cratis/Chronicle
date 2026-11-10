@@ -17,7 +17,18 @@ internal static class ObserverMetricsScopes
     /// <param name="names">The naming mode.</param>
     /// <returns>The cached metrics.</returns>
     internal static ObserverMetrics BeginObserverScope(this IMeter<Observer> meter, ObserverId observerId, ObserverKey observerKey, MetricNames names = MetricNames.Legacy) =>
-        new(new MetricSet(
+        new(CreateMetricSet(meter, observerId, observerKey, names));
+
+    /// <summary>Creates only the successful observations instrument and tags in the selected naming mode.</summary>
+    /// <param name="meter">The meter.</param>
+    /// <param name="observerKey">The observer key.</param>
+    /// <param name="names">The naming mode.</param>
+    /// <returns>The cached metrics.</returns>
+    internal static ObserverObservationMetrics BeginObservationScope(this IMeter<Observer> meter, ObserverKey observerKey, MetricNames names = MetricNames.Legacy) =>
+        new(CreateMetricSet(meter, observerKey.ObserverId, observerKey, names));
+
+    static MetricSet CreateMetricSet(IMeter<Observer> meter, ObserverId observerId, ObserverKey observerKey, MetricNames names) =>
+        new(
             meter.ActualMeter,
             names,
             [
@@ -25,5 +36,5 @@ internal static class ObserverMetricsScopes
                 new(WellKnownTelemetryAttributes.EventStoreName, observerKey.EventStore),
                 new(WellKnownTelemetryAttributes.EventStoreNamespace, observerKey.Namespace),
                 new(WellKnownTelemetryAttributes.EventSequenceId, observerKey.EventSequenceId)
-            ]));
+            ]);
 }

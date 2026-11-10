@@ -12,10 +12,7 @@ namespace Cratis.Chronicle.Observation;
 
 internal sealed class ObserverMetrics(MetricSet metrics) : IDisposable
 {
-    static readonly object _replay = true;
-    static readonly object _notReplay = false;
-
-    readonly MetricInstrument<int, CounterMetricRecorder<int>> _successful = metrics.Counter<int>(WellKnownMetricNames.ObserverSuccessfulObservations, WellKnownMetricNames.ObserverSuccessfulObservationsUnit, "Number of successful observations per observer in a given event store and namespace", WellKnownTelemetryAttributes.Replay);
+    readonly MetricInstrument<int, CounterMetricRecorder<int>> _successful = ObserverObservationMetrics.SuccessfulObservations(metrics);
     readonly MetricInstrument<int, CounterMetricRecorder<int>> _failed = metrics.Counter<int>(WellKnownMetricNames.ObserverPartitionFailures, WellKnownMetricNames.ObserverPartitionFailuresUnit, "Number of failed handling attempts for partitions per observer in a given event store and namespace. Every failure is counted, including failures of retries, so the same partition counts once per failed attempt. Replaces the legacy partition retry attempts counter, which repeated it exactly");
     readonly MetricInstrument<int, CounterMetricRecorder<int>> _retryAttempt = metrics.PartitionRetryAttempts();
     readonly MetricInstrument<int, CounterMetricRecorder<int>> _partitionQuarantined = metrics.Counter<int>(WellKnownMetricNames.ObserverPartitionsQuarantined, WellKnownMetricNames.ObserverPartitionsQuarantinedUnit, "Number of partitions per observer that ran out of retry attempts and were quarantined. Does not count the observer itself being quarantined, see cratis.chronicle.observer.quarantines");
@@ -38,7 +35,7 @@ internal sealed class ObserverMetrics(MetricSet metrics) : IDisposable
         // Instruments belong to the injected meter, not to an observer activation.
     }
 
-    internal void SuccessfulObservation(bool replay) => _successful.Record(1, replay ? _replay : _notReplay);
+    internal void SuccessfulObservation(bool replay) => _successful.Record(1, ObserverObservationMetrics.ReplayValue(replay));
 
     internal void PartitionFailed() => _failed.Record(1);
     internal void LegacyPartitionRetryAttempt() => _retryAttempt.Record(1);

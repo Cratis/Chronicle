@@ -80,7 +80,7 @@ public partial class HandleEventsForObserver(
     IReadOnlyDictionary<SiloAddress, Guid[]>? _bulkWindowPin;
     Exception? _checkpointFailure;
     ReplayHandledEventsPage? _replayReports;
-    ObserverMetrics? _metrics;
+    ObserverObservationMetrics? _metrics;
 
     /// <summary>
     /// Gets or sets how long to wait before a handling attempt that timed out is made again. Exposed for testing.

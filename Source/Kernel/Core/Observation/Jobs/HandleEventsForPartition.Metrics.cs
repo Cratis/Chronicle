@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Observation.Jobs;
 /// </summary>
 public partial class HandleEventsForPartition
 {
-    ObserverMetrics? _metrics;
+    ObserverObservationMetrics? _metrics;
 
     /// <summary>
     /// Records one successful observation for the observer, marked as replay when the step replays.
@@ -25,8 +25,7 @@ public partial class HandleEventsForPartition
     void RecordSuccessfulObservation(HandleEventsForPartitionState currentState)
     {
         if (observerMeter is null) return;
-        _metrics ??= observerMeter.BeginObserverScope(
-            currentState.ObserverKey.ObserverId,
+        _metrics ??= observerMeter.BeginObservationScope(
             currentState.ObserverKey,
             options?.Value?.Telemetry.MetricNames ?? MetricNames.Legacy);
         var retry = currentState.EpisodeId is not null || currentState.DeferralId is not null;
