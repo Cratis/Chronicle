@@ -16,7 +16,6 @@ public partial class Observer
     /// Identifies the durable wakeup dedicated to alert reconciliation.
     /// </summary>
     internal const string AlertReminderName = "chronicle-observer:alerts";
-    const string LegacyAlertReminderName = "chronicle-observer-alert-reconciliation";
     readonly SemaphoreSlim _alertMutationLock = new(1, 1);
     readonly SemaphoreSlim _stateWriteLock = new(1, 1);
     readonly Dictionary<IncidentId, AlertClearedReason> _alertEndings = [];
@@ -255,10 +254,10 @@ public partial class Observer
         // The state provider supplies an identifier even for missing records. Consult storage rather than
         // treating a management probe (or a shared definition in another namespace) as observer creation.
         var source = await storage.GetEventStore(_observerKey.EventStore).GetNamespace(_observerKey.Namespace).Observers.Get(_observerId);
-        if (!Failures.Partitions.Any(partition => partition.Partition.ToString() == LegacyAlertReminderName))
-        {
-            await UnregisterReminderNamed(LegacyAlertReminderName);
-        }
+
+        // A reminder under the legacy alert name is not looked up here: that is a reminder-table read on every
+        // activation, the cold-start storm #5677 removes. ReceiveReminder unregisters it when it next ticks, unless a
+        // deferred failed partition shares its name.
 
         // An activation under another event sequence than the definition's is not this observer, even though it
         // loads its record. It must neither keep the reminder that reactivates it nor count as existing.
