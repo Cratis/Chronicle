@@ -222,6 +222,7 @@ public partial class Observer(
         _statePersistenceBatchInterval = config.StatePersistenceBatchInterval < 1 ? 1 : config.StatePersistenceBatchInterval;
         _writeCoalescingInterval = TimeSpan.FromSeconds(Math.Max(config.WriteCoalescingInterval, 0));
         RegisterWatchdog(config.WatchdogInterval);
+        ConfigureIdleDeactivation(config.IdleDeactivationAfter);
         _webhookProbe = State.WebhookProbe;
         RestoreShadowClaims();
         await InitializeAlertState();
