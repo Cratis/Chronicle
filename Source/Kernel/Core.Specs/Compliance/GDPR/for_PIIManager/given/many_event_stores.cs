@@ -87,7 +87,6 @@ public class many_event_stores : a_pii_manager
 
         if (inFlight >= Math.Min(PIIManager.MaxConcurrentEventStores, NumberOfEventStores)) _gate.TrySetResult();
         await _gate.Task;
-        await Task.Yield();
 
         Interlocked.Decrement(ref _inFlight);
         _steps.Enqueue((phase, eventStore, false));
