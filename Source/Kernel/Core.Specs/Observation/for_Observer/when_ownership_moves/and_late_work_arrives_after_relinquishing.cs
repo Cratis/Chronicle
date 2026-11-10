@@ -21,6 +21,7 @@ public class and_late_work_arrives_after_relinquishing : given.a_live_observer_w
     async Task Establish()
     {
         await _observer.PartitionFailed("partition", 42UL, ["failure"], "stack trace");
+        await _silo.TimerRegistry.FireAllAsync();
         await _observer.RunWatchdogAsync();
         _retryReminder = await _observer.GetReminder(Observer.PartitionReminderName(_failedPartitionsState.Partitions.Single().Id));
         _alertReminder = await _observer.GetReminder(Observer.AlertReminderName);
