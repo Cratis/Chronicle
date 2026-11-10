@@ -280,13 +280,6 @@ public partial class HandleEventsForObserver(
                 ? [.. await _observer.GetFailedPartitionKeys()]
                 : [];
 
-            // A catch-up walking every partition at once covers only the partitions it registered as catching up, as a step per
-            // partition would. Live delivery holds those back and keeps every other partition, including one whose first event
-            // is appended after the walk was prepared, so walking that partition too would deliver its events twice.
-            var heldPartitions = currentState.SkipFailedPartitions && _subscription.DeliversPartitionPages
-                ? (await _observer.GetState()).CatchingUpPartitions.ToHashSet()
-                : null;
-
             var subscriberTimeout = await configurationProvider.GetSubscriberTimeoutForObserver(currentState.ObserverKey);
             await DrainAbandonedDeliveriesBeforeHandling(currentState.ObserverKey, cancellationToken);
 
@@ -306,11 +299,6 @@ public partial class HandleEventsForObserver(
                 if ((usePages || usePartitionPages) && failedPartitions.Count > 0)
                 {
                     eventsToHandle = eventsToHandle.Where(_ => !failedPartitions.Contains(_.Context.EventSourceId)).ToArray();
-                }
-
-                if (heldPartitions is not null)
-                {
-                    eventsToHandle = eventsToHandle.Where(_ => heldPartitions.Contains(_.Context.EventSourceId)).ToArray();
                 }
 
                 foreach (var unit in usePages ? eventsToHandle.Chunk(_options.Value.ReadModels.MaxBatchSize) : Enumerable.Repeat(eventsToHandle, 1))
