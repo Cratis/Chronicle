@@ -715,14 +715,26 @@ class IntegrationSingleBuildContracts(unittest.TestCase):
         stamp = next(step for step in steps if step["name"] == "Read the stamped build version")
         self.assertEqual(steps.index(extract) + 1, steps.index(stamp))
         self.assertEqual("matrix.provider == 'RollingUpgrade'", stamp.get("if"))
-        self.assertEqual(
-            'set -euo pipefail\n'
-            'line=$(python3 .github/scripts/derive-build-version.py)\n'
-            'echo "$line" >> "$GITHUB_ENV"\n'
-            'if ! grep -a -F -q -- "${line#*=}" Source/Clients/DotNET/bin/Release/net10.0/Cratis.Chronicle.dll; then\n'
-            '  echo "::error::Downloaded client does not contain the stamped build version ${line#*=}."\n'
-            '  exit 1\n'
-            'fi\n', stamp["run"])
+        # The version is read from the downloaded client, never derived again: a release tagged between
+        # the build and this job would otherwise change the derived base version.
+        self.assertNotIn("derive-build-version", stamp["run"])
+
+        def run_stamp(client_bytes):
+            with tempfile.TemporaryDirectory() as root:
+                dll = Path(root) / "Source/Clients/DotNET/bin/Release/net10.0/Cratis.Chronicle.dll"
+                dll.parent.mkdir(parents=True)
+                dll.write_bytes(client_bytes)
+                github_env = Path(root) / "github_env"
+                github_env.write_text("")
+                result = subprocess.run(["bash", "-c", stamp["run"]], cwd=root, capture_output=True, text=True,
+                                        env={**os.environ, "GITHUB_RUN_NUMBER": "1056", "GITHUB_ENV": str(github_env)})
+                return result.returncode, github_env.read_text()
+
+        code, env = run_stamp(b"\x00InformationalVersion\x0019.154.0-ci-1056+abc\x0019.153.0-ci-10567\x00")
+        self.assertEqual(0, code)
+        self.assertEqual("CRATIS_CHRONICLE_BUILD_VERSION=19.154.0-ci-1056\n", env)
+        self.assertNotEqual(0, run_stamp(b"\x00no stamped version here\x00")[0])
+        self.assertNotEqual(0, run_stamp(b"\x0019.154.0-ci-1056\x0019.155.0-ci-1056\x00")[0])
         for step in steps:
             self.assertNotIn("CRATIS_CHRONICLE_" + "CLIENT_VERSION", step.get("run", ""))
 

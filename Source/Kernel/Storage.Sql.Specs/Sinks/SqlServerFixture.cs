@@ -234,8 +234,10 @@ public sealed class SqlServerFixture : IAsyncLifetime
         var escaped = name.Replace("]", "]]", StringComparison.Ordinal);
 
         // Evicts only this database's sessions on the server, so unrelated pools stay warm. The name is unique per specification.
-        // A session can end between the lookup and its KILL, so each KILL ignores its own failure and DROP still runs.
-        var sql = $"DECLARE @k nvarchar(max) = N''; SELECT @k += N'BEGIN TRY KILL ' + CAST(session_id AS nvarchar(10)) + N'; END TRY BEGIN CATCH END CATCH;' FROM (SELECT session_id FROM sys.dm_exec_sessions WHERE database_id = DB_ID(@name) UNION SELECT request_session_id FROM sys.dm_tran_locks WHERE resource_type = 'DATABASE' AND resource_database_id = DB_ID(@name)) s WHERE session_id <> @@SPID; EXEC (@k); DROP DATABASE [{escaped}]";
+        // A session can end between the lookup and its KILL, and SQL Server reuses the id of an ended session for the next connection
+        // that opens, which may belong to another specification. Each KILL therefore re-checks the id against the login time seen
+        // by the lookup, ignores its own failure, and DROP still runs.
+        var sql = $"DECLARE @k nvarchar(max) = N''; SELECT @k += N'BEGIN TRY IF EXISTS (SELECT 1 FROM sys.dm_exec_sessions WHERE session_id = ' + CAST(s.session_id AS nvarchar(10)) + N' AND login_time = ''' + CONVERT(nvarchar(30), s.login_time, 126) + N''') KILL ' + CAST(s.session_id AS nvarchar(10)) + N'; END TRY BEGIN CATCH END CATCH;' FROM sys.dm_exec_sessions s WHERE s.session_id <> @@SPID AND (s.database_id = DB_ID(@name) OR s.session_id IN (SELECT request_session_id FROM sys.dm_tran_locks WHERE resource_type = 'DATABASE' AND resource_database_id = DB_ID(@name))); EXEC (@k); DROP DATABASE [{escaped}]";
         if (await TryDrop(sql, name) || await TryDrop(sql, name))
         {
             return;
