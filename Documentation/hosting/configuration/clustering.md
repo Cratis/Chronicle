@@ -100,6 +100,7 @@ After a node is lost, observers can lag behind the event log until the observer 
 | singleWriterLease.ttl | timespan | 00:00:30 | Database lease lifetime; minimum five seconds. |
 | singleWriterLease.acquireTimeout | timespan | 00:02:00 | Maximum startup wait. Zero makes one acquisition attempt; negative values are invalid. |
 | singleWriterLease.standby | boolean | false | Reports ready in standby while waiting for the lease, so start-before-stop rollouts converge. See [Standby](#standby-for-start-before-stop-rollouts). |
+| singleWriterLease.standbyStartupTimeout | timespan | 00:10:00 | How long after taking the lease a standby kernel may keep reporting standby while it starts; readiness then reports `Unhealthy`. Zero ends standby once the lease is held; negative values are invalid. |
 | roles.eventSequences | boolean | true | When `true`, event sequence grains can be activated on this node. When `false`, event sequence grains will not be placed on this node. |
 | roles.observers | boolean | true | When `true`, observer grains (reactors, reducers, projections) can be activated on this node. When `false`, observer grains will not be placed on this node. |
 
@@ -142,6 +143,12 @@ Azure Container Apps in single-revision mode, Cloud Run, and a one-replica Kuber
 with `maxSurge: 1` and `maxUnavailable: 0`. Without standby the replacement waits for the lease, never
 becomes ready, and the rollout times out while the old instance keeps running.
 
+That deadlock, and everything standby does about it, depends on the platform probing readiness through
+the kernel's health endpoint: the Kubernetes or Azure Container Apps readiness probe, or the Cloud Run
+startup probe, must target `/health` or `/health/ready`. With a TCP probe or a `/health/live` probe the
+platform already routes traffic to a kernel that is still waiting for the lease, so there is no deadlock
+to resolve and standby changes nothing the platform sees.
+
 Set `singleWriterLease.standby` to `true` on those platforms:
 
 ```json
@@ -161,7 +168,8 @@ Cratis__Chronicle__Clustering__SingleWriterLease__Standby=true
 ```
 
 With standby enabled, a kernel reports ready with the body `Standby` from the moment it starts waiting
-for the lease until its startup has completed. The rollout then proceeds:
+for the lease until its startup has completed, bounded by `standbyStartupTimeout` once it holds the lease.
+The rollout then proceeds:
 
 1. The replacement binds its ports and reports ready in standby while the old instance still holds the lease.
 2. The platform shifts traffic and stops the old instance, which releases the lease on a graceful stop.
@@ -171,13 +179,41 @@ Standby changes only what readiness reports. The lease is still acquired before 
 initialization, so the gateway, observer rehydration and event processing start only once it is held;
 two kernels never process events at the same time. Until the replacement has started, every non-health
 request is refused at once with HTTP 503 and `Retry-After`, or gRPC `Unavailable`; both are
-retryable, and clients should retry them. Expect a short window of refused requests during the handover: the old instance's
-shutdown, the lease acquisition (at most two seconds after release) and the replacement's startup.
+retryable, and clients should retry them. Expect refused requests for the whole handover: the old
+instance's shutdown, the lease acquisition (at most two seconds after release) and the replacement's full
+startup, including rehydration. On a large store that startup can take minutes, not seconds.
+
+**Standby gives up readiness as a rollout gate.** The replacement reports ready before it has acquired
+the lease, started the silo or rehydrated, so the platform stops the old instance before the replacement
+has shown that it can start. A broken release (bad configuration, a failing startup step, a storage
+schema mismatch) then takes the service down, and the platform does not refuse to proceed. Validate
+images before rolling them out, for example in a staging environment against a copy of production data,
+and keep a rollback path such as the previous image tag or revision ready to redeploy.
 
 `acquireTimeout` still bounds the wait. A standby kernel that never gets the lease, for example because
-a second replica was configured by mistake, exits when it expires instead of reporting ready forever, so
-set it to cover the platform's time to stop the old instance plus the TTL. A lost lease, an abandoned
-acquisition and shutdown all end standby and make readiness fail. Standby has no effect without the lease
+a second replica was configured by mistake, exits when it expires, so set it to cover the platform's time
+to stop the old instance plus the TTL. Exiting does not take the mistaken replica out of rotation: the
+platform restarts it, it reports ready in standby again, and it keeps receiving its share of traffic and
+refusing it with HTTP 503 or gRPC `Unavailable`, intermittently and indefinitely. Watch for repeated
+lease acquisition timeouts and restarts, and run exactly one replica. A lost lease, an abandoned
+acquisition and shutdown all end standby and make readiness fail.
+
+`standbyStartupTimeout` (default 10 minutes) bounds the phase after the replacement has taken the lease.
+While it starts, the kernel holds the lease, refuses traffic and still reports `Standby`, so a startup
+that hangs would otherwise look ready indefinitely; liveness does not restart it either. When startup has
+not completed that long after the lease was acquired, readiness reports `Unhealthy` (HTTP 503) and the
+kernel logs a warning naming the setting, so the platform and your alerting see the stuck startup. The
+kernel keeps holding the lease and keeps starting: the timeout makes the problem visible, it does not
+hand the lease on. Set it above the longest startup you expect, including rehydration of your largest
+store; zero ends standby as soon as the lease is held.
+
+```bash
+Cratis__Chronicle__Clustering__SingleWriterLease__StandbyStartupTimeout=00:30:00
+```
+
+Cloud Run can keep instances of a retired revision running for a while after traffic has moved. The
+handover on Cloud Run, and how `acquireTimeout` should be sized there, has not been verified; test a
+rollout before relying on it. Standby has no effect without the lease
 (`MongoDB` or `Sql` clustering, `InMemory` storage, or `enabled: false`); the kernel logs a warning
 when it is set there.
 

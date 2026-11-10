@@ -86,7 +86,10 @@ enabled. With `clustering.singleWriterLease.standby` set to `true`, `/health` an
 **200** with the body `Standby` from the moment the node starts waiting for the lease until its startup
 has completed; the checks involved report `Degraded` with a standby description. In standby the node
 still refuses all non-health traffic with HTTP 503 and `Retry-After`, or gRPC `Unavailable`. Once startup
-completes the body is `Healthy` (or `Degraded` for other reasons, as before). See
+completes the body is `Healthy` (or `Degraded` for other reasons, as before). If startup has not completed
+`clustering.singleWriterLease.standbyStartupTimeout` (default 10 minutes) after the node took the lease,
+readiness reports **503** `Unhealthy` instead, so a stuck startup does not look ready. Because the body
+`Standby` is a 200, alert on how long a node stays in standby rather than on the status code alone. See
 [Standby for start-before-stop rollouts](clustering.md#standby-for-start-before-stop-rollouts).
 
 ## Storage authorization

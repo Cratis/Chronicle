@@ -252,7 +252,11 @@ Cratis__Chronicle__Clustering__SingleWriterLease__Standby=true
 A replacement in standby reports ready (body `Standby`) while it waits for the lease, so the platform
 stops the old instance, which releases the lease. The replacement then takes over. It processes nothing
 before it holds the lease, and refuses requests with HTTP 503 and `Retry-After` or gRPC `Unavailable`
-until it has started, so expect a short window of retryable refusals during the handover. See
+until it has started, so expect retryable refusals for the whole handover, including the replacement's
+startup and rehydration. This relies on the readiness probe (the startup probe on Cloud Run) targeting
+`/health` or `/health/ready`. Standby gives up readiness as a rollout gate: the old instance is stopped
+before the replacement has shown that it can start, so validate images before rollout and keep a rollback
+path. See
 [Standby for start-before-stop rollouts](configuration/clustering.md#standby-for-start-before-stop-rollouts).
 Do not disable the lease to bypass this rollout failure. Without standby, a replacement waiting for the
 single-writer lease does not report ready. For multiple active nodes, use `MongoDB` or `Sql` clustering.
