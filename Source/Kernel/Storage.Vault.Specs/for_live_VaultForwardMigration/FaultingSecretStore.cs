@@ -36,7 +36,7 @@ internal sealed class FaultingSecretStore(IVaultSecretStore inner) : IVaultSecre
             if (InterruptAfterCopy)
             {
                 // A deliberately stalled test double exposes the acknowledged-write interruption boundary.
-                await Task.Delay(Timeout.InfiniteTimeSpan, Interruption);
+                await new TaskCompletionSource().Task.WaitAsync(Interruption);
             }
         }
 
