@@ -15,6 +15,25 @@ dotnet Benchmarks/Chronicle.Benchmarks.Kernel/bin/Release/net10.0/Chronicle.Benc
 
 The benchmarks use a short in-process job (`Job.ShortRun` with `InProcessEmitToolchain`) and `[MemoryDiagnoser]`. Every report includes an `Allocated` column. Allocations are deterministic, so they are the most reliable signal. Timings vary with machine load.
 
+## Observer activation footprint
+
+BenchmarkDotNet measures what a call allocates, not what stays resident between calls. The `--observer-footprint` mode measures what one observer grain activation keeps on the live heap. It starts an Orleans silo with Chronicle and in-memory storage in the process, subscribes a number of reactor observers, forces full compacting collections and reports the growth of the live heap divided by the number of observers. It then unsubscribes them, waits for the idle release (see `observers.idleDeactivationAfter`) and measures again.
+
+```sh
+dotnet build Benchmarks/Chronicle.Benchmarks.Kernel/Chronicle.Benchmarks.Kernel.csproj -c Release
+dotnet Benchmarks/Chronicle.Benchmarks.Kernel/bin/Release/net10.0/Chronicle.Benchmarks.Kernel.dll --observer-footprint --count 2000 --idle-deactivation 3 --collection-age 10
+```
+
+| Option | Default | Meaning |
+| --- | --- | --- |
+| `--count` | 2000 | Observers to activate after a warm-up of a tenth of that (at most 200). |
+| `--idle-deactivation` | 0 | `observers.idleDeactivationAfter` in seconds. `0` keeps every observer resident. |
+| `--collection-age` | Orleans default | Orleans' grain collection age in seconds, so grains without `[KeepAlive]`, such as the `ObserverAlerts` companion of each observer, are collected within the run. |
+| `--settle` | 120 s plus twice the longest period when idle release is on | Seconds to wait after unsubscribing. The first alert reminder tick, spread over the first two minutes, has to give the reminder up before an observer counts as idle. |
+| `--hold`, `--hold-unsubscribed` | 0 | Seconds to pause after the subscribed or the unsubscribed measurement, for `dotnet-gcdump collect -p <pid>`. |
+
+Compare runs with different `--count` values, or `dotnet-gcdump report` output from two runs, to attribute the growth to types. Results from November 2026 are in [decision 0029](../../decisions/0029-release-idle-unsubscribed-observers.md).
+
 ## Comparing a change with a baseline
 
 1. Build the project on the baseline (for example `origin/main`) and copy `bin/Release/net10.0/` somewhere outside the repository.
