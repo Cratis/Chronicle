@@ -166,12 +166,15 @@ While unready, non-health requests receive HTTP 503 with `Retry-After`, or gRPC 
 > Docker `HEALTHCHECK` and Compose `healthcheck:` commands run inside the container, so probes that
 > invoke those tools fail even when Chronicle is healthy.
 
-Use your orchestrator's own HTTP probe instead. The default TLS main port may use a self-signed certificate that some probers reject; a private h2c main port requires an HTTP/2-capable prober. Publish a dedicated plaintext HTTP/1.1 health port when either presents a problem:
+Use your orchestrator's own HTTP probe instead. The default TLS main port may use a self-signed certificate that some probers reject; a private h2c main port requires an HTTP/2-capable prober. Publish a dedicated plaintext HTTP/1.1 health port when either presents a problem, and make it exclusive:
 
 ```bash
 Cratis__Chronicle__Health__Port=8080
 Cratis__Chronicle__Health__Tls=false
+Cratis__Chronicle__Health__Exclusive=true
 ```
+
+`Health__Exclusive` makes the dedicated port answer the health endpoint and its `/live` and `/ready` subpaths only; every other path returns 404 there. Without it, the dedicated port is a second way into the Workbench, the REST API and the OAuth flows, in cleartext when `Health__Tls=false`. See [Health Endpoint](configuration/health-endpoint.md#restricting-the-dedicated-port-to-health-only).
 
 Then point the probe at it:
 
@@ -193,7 +196,7 @@ readinessProbe:
 
 You can instead use an HTTP startup probe on `/health/live` at port 8080. Do not use a TCP probe for readiness: an open listener does not mean the silo is ready. Raising `failureThreshold` is not the fix for backlog-dependent startup restarts; startup and liveness must probe the listener, not readiness.
 
-Treat that port as internal — it serves the other HTTP/1.1 endpoints too, so do not expose it publicly.
+With the health port exclusive, serve the Workbench from the main port, 35000. Route your ingress or reverse proxy there with HTTPS when the kernel keeps TLS, or with h2c when `Tls__Enabled=false`, because the main port then accepts cleartext HTTP/2 only. A route that targets the health port stops working as soon as exclusivity is on: the Workbench answers 404 there. [Workbench configuration](configuration/workbench.md#with-an-exclusive-health-port) shows the proxy setup.
 
 > **Note**: The health check endpoint path is configurable. See [Root Properties](configuration/root-properties.md#health-check-endpoint) for details, and [Health Endpoint](configuration/health-endpoint.md) for the dedicated port.
 
@@ -219,6 +222,8 @@ Start one node after a restore and read `GET /diagnostics/encryption-certificate
 Keep Chronicle and its storage on private networks, allow only the ports each caller needs, and use TLS for production connections. Store sensitive configuration outside the Compose file and keep deployed images updated through tested upgrades.
 
 The .NET client connects over TLS but accepts any server certificate unless the connection string sets `skipTlsValidation=false`. Trust the server's certificate authority on client machines and in application containers, or configure a matching `certificatePath` pin, then enable validation for each production connection. The client warns when validation is skipped for a non-loopback target or DNS SRV lookup; localhost, 127.0.0.0/8, and ::1 are exempt. See [Client TLS](../configuration/tls.mdx) and [Server connection strings](../connection-strings/server.md).
+
+Never publish the dedicated health port while `health.exclusive` is off. That port serves the Workbench, the REST API and the OAuth flows as well as the health endpoint, and often without TLS.
 
 Complete administrator setup before making the service reachable by users. The production image creates the administrator without a password; setup requires the token from server logs or `Authentication:InitialAdminSetupToken`. Protect that token and remove it from configuration after setup. To avoid interactive setup, supply the initial password from your secret store through `Authentication:AdminUser`. See [Authentication](configuration/authentication.md).
 

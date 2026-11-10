@@ -60,6 +60,8 @@ labels:
   - traefik.http.services.chronicle.loadbalancer.server.scheme=https
 ```
 
+Traefik verifies the kernel's certificate on this HTTPS hop. A self-signed or private-CA kernel certificate makes Traefik reject the backend, and the Workbench answers 500. Trust the CA that signed the kernel's certificate through a Traefik servers transport: set `rootCAs`, and `serverName` when the certificate does not name the address Traefik connects to. Skip verification with `--serversTransport.insecureSkipVerify=true` only for a private development certificate, as the [WorkbenchBehindProxy sample](https://github.com/Cratis/Chronicle/tree/main/Samples/WorkbenchBehindProxy) does.
+
 To strip the prefix before forwarding instead, add this `stripprefix` middleware to the router. Keep the same Workbench `basePath`:
 
 ```yaml
@@ -84,6 +86,33 @@ location /my-instance/chronicle/ {
 ```
 
 Chronicle sends live updates to the Workbench over server-sent events (SSE) and WebSockets. Keep response buffering off so SSE updates arrive as they happen, and allow connection upgrades for WebSockets. In nginx, configure `proxy_buffering off;`, `proxy_http_version 1.1;` and the `Upgrade` and `Connection` headers in the chosen location block. The path-routing examples above do not include those streaming settings.
+
+### With an exclusive health port
+
+When `health.exclusive` is on, the dedicated health port answers 404 for everything except the health endpoint, so the Workbench is reachable only on the main port. Route the proxy to port 35000 and use the health port for probes alone. The following Traefik labels and environment keep TLS on the kernel:
+
+```yaml
+environment:
+  - Cratis__Chronicle__Workbench__BasePath=/my-instance/chronicle
+  - Cratis__Chronicle__Health__Port=8080
+  - Cratis__Chronicle__Health__Tls=false
+  - Cratis__Chronicle__Health__Exclusive=true
+labels:
+  - traefik.enable=true
+  - traefik.http.routers.chronicle.rule=PathPrefix(`/my-instance/chronicle`)
+  - traefik.http.services.chronicle.loadbalancer.server.port=35000
+  - traefik.http.services.chronicle.loadbalancer.server.scheme=https
+```
+
+The same certificate trust applies here: give Traefik the kernel's CA through a servers transport, or skip verification only for a private development certificate, as described under [Traefik](#traefik).
+
+With `Cratis__Chronicle__Tls__Enabled=false` the main port accepts cleartext HTTP/2 (h2c) only, not HTTP/1.1. The proxy has to speak h2c to it: in Traefik, set the service scheme to `h2c`. nginx's `proxy_pass` forwards over HTTP/1.x only, so it cannot reach a main port without TLS. With authentication enabled, turning TLS off also requires an explicit HTTPS `Authentication:Authority`; see [Authentication](authentication.md).
+
+```yaml
+  - traefik.http.services.chronicle.loadbalancer.server.scheme=h2c
+```
+
+A proxy route that targets the health port works only while exclusivity is off, and returns 404 once it is on. Move the route to the main port before turning exclusivity on. See [Health Endpoint](health-endpoint.md#restricting-the-dedicated-port-to-health-only).
 
 ### Try it
 
