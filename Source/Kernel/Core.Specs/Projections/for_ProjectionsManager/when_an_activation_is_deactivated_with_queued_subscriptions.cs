@@ -6,6 +6,7 @@ namespace Cratis.Chronicle.Projections.for_ProjectionsManager;
 /// <summary>
 /// Both cancellation race orderings defer work; only a true grant is released.
 /// </summary>
+[PerFactSpecificationLifecycle]
 public class when_an_activation_is_deactivated_with_queued_subscriptions : given.a_projections_manager_grain
 {
     readonly TaskCompletionSource _queued = new(TaskCreationOptions.RunContinuationsAsynchronously);

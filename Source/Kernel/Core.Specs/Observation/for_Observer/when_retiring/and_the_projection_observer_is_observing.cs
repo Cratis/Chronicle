@@ -11,6 +11,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cratis.Chronicle.Observation.for_Observer.when_retiring;
 
+[PerFactSpecificationLifecycle]
 public class and_the_projection_observer_is_observing : given.an_observer_with_subscription
 {
     async Task Establish()
