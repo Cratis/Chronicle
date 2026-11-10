@@ -29,6 +29,18 @@ Transient failures (`5xx`, `408`, connection errors and timeouts) consume the re
 
 The default delays are **1s, 5s, 30s, 2m, 10m, 30m, then hourly**, with ±20% jitter (random variation) capped at one hour. Chronicle saves the chosen deadline before scheduling recovery. The default elapsed retry budget is **24 hours** from the first failure in the current budget. When that budget expires, Chronicle quarantines the partition, pausing its delivery. `MaxRetryAttempts` defaults to `0`, which removes the attempt-count limit but not the elapsed-time limit.
 
+These kernel settings under `Cratis:Chronicle:Webhooks` tune delivery:
+
+| Setting | Default | What it does |
+| --- | --- | --- |
+| `RequestTimeoutSeconds` | `60` | Timeout for each individual delivery request. Raise it for receivers that legitimately take longer to answer |
+| `TestTimeoutSeconds` | `10` | Timeout when testing a webhook endpoint |
+| `CircuitBreakerSamplingDurationSeconds` | `30` | Window over which failures are sampled by the delivery circuit breaker |
+| `CircuitBreakerBreakDurationSeconds` | `15` | How long the circuit breaker stays open after it trips |
+| `MaximumRetryAfterSeconds` | `86400` | Longest `Retry-After` delay Chronicle honors. Longer receiver deadlines are clamped to this bound |
+
+For example, `Cratis__Chronicle__Webhooks__RequestTimeoutSeconds=120` doubles the request timeout.
+
 The observer's subscriber timeout cancels the HTTP operation and waits for cancellation cleanup before another delivery starts. Cancelling a catch-up, replay, or partition-retry job also cancels its HTTP operation. The job does not immediately retry a timed-out call; the observer owns recovery.
 
 ## Circuit-open deferrals and manual retry
