@@ -14,5 +14,5 @@ public class when_no_event_store_is_configured : given.a_web_builder
         ResolveOptions();
     }
 
-    [Fact] void should_default_to_the_entry_assembly_name() => _options.EventStore.Value.ShouldEqual(Assembly.GetEntryAssembly()!.GetName().Name!);
+    [Fact] void should_default_to_the_mongo_safe_entry_assembly_name() => _options.EventStore.Value.ShouldEqual(Assembly.GetEntryAssembly()!.GetName().Name!.Replace('.', '-')[..32]);
 }

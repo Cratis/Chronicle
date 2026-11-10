@@ -14,7 +14,7 @@ static class StorageValidation
     const string ConnectionDetailsMessage =
         "Storage:ConnectionDetails is required. Set the Cratis__Chronicle__Storage__ConnectionDetails environment variable (or Cratis:Chronicle:Storage:ConnectionDetails, or Storage:ConnectionDetailsFile).";
 
-    static readonly string _typeMessage =
+    const string TypeMessage =
         $"Storage:Type could not be inferred from the connection details. Set the Cratis__Chronicle__Storage__Type environment variable (or Cratis:Chronicle:Storage:Type) to one of: {StorageType.MongoDB}, {StorageType.PostgreSql}, {StorageType.MsSql}, {StorageType.Sqlite}, {StorageType.InMemory}.";
 
     /// <summary>
@@ -41,7 +41,7 @@ static class StorageValidation
         }
         else if (string.IsNullOrWhiteSpace(storage.Type) && StorageTypeInference.Infer(storage.ConnectionDetails) is null)
         {
-            yield return new ValidationResult(_typeMessage, [$"{nameof(ChronicleOptions.Storage)}.{nameof(Storage.Type)}"]);
+            yield return new ValidationResult(TypeMessage, [$"{nameof(ChronicleOptions.Storage)}.{nameof(Storage.Type)}"]);
         }
     }
 }

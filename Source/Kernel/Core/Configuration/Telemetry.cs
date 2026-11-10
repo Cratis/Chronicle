@@ -11,6 +11,8 @@ namespace Cratis.Chronicle.Configuration;
 /// </summary>
 public class Telemetry
 {
+    EventSourceIdTracing? _eventSourceIdTracing;
+
     /// <summary>
     /// Gets or inits the metric naming mode. Legacy is the default until the next major release;
     /// Convention opts into the shared names, and Both publishes both sets during migration.
@@ -23,8 +25,6 @@ public class Telemetry
     /// </summary>
     public bool OrleansTracing { get; init; }
 
-    EventSourceIdTracing? _eventSourceIdTracing;
-
     /// <summary>
     /// Gets or inits how event source ids are included in spans. The default is Hashed. When no
     /// <see cref="EventSourceIdHashKey"/> is configured, a random key is generated for the lifetime of the process,
@@ -35,14 +35,6 @@ public class Telemetry
         get => _eventSourceIdTracing ?? EventSourceIdTracing.Hashed;
         init => _eventSourceIdTracing = value;
     }
-
-    /// <summary>
-    /// Gets whether a hash key must be valid: hashing was chosen explicitly, or a key was supplied.
-    /// The implicit default of hashing without any key uses a generated key and needs none.
-    /// </summary>
-    internal bool RequiresHashKey =>
-        EventSourceIdTracing == EventSourceIdTracing.Hashed &&
-        (_eventSourceIdTracing.HasValue || !string.IsNullOrEmpty(EventSourceIdHashKey));
 
     /// <summary>
     /// Gets or inits the deployment key used to hash event source ids. The key is never emitted in telemetry.
@@ -58,4 +50,12 @@ public class Telemetry
     /// of trace volume, so this instrumentation is opt-in.
     /// </remarks>
     public bool GrpcClientTracing { get; init; }
+
+    /// <summary>
+    /// Gets whether a hash key must be valid: hashing was chosen explicitly, or a key was supplied.
+    /// The implicit default of hashing without any key uses a generated key and needs none.
+    /// </summary>
+    internal bool RequiresHashKey =>
+        EventSourceIdTracing == EventSourceIdTracing.Hashed &&
+        (_eventSourceIdTracing.HasValue || !string.IsNullOrEmpty(EventSourceIdHashKey));
 }
