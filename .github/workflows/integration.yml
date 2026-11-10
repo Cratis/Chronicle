@@ -443,12 +443,16 @@ jobs:
         if: matrix.provider == 'RollingUpgrade'
         run: |
           set -euo pipefail
-          line=$(python3 .github/scripts/derive-build-version.py)
-          echo "$line" >> "$GITHUB_ENV"
-          if ! grep -a -F -q -- "${line#*=}" Source/Clients/DotNET/bin/Release/net10.0/Cratis.Chronicle.dll; then
-            echo "::error::Downloaded client does not contain the stamped build version ${line#*=}."
+          # Read the version the build stamped into the client rather than deriving it again: a release
+          # tagged between the build and this job would change the derived base version.
+          dll=Source/Clients/DotNET/bin/Release/net10.0/Cratis.Chronicle.dll
+          mapfile -t stamped < <(grep -a -o -P "[0-9]+\.[0-9]+\.0-ci-${GITHUB_RUN_NUMBER}(?![0-9])" "$dll" | sort -u)
+          if [ "${#stamped[@]}" -ne 1 ]; then
+            echo "::error::Expected one stamped build version for run ${GITHUB_RUN_NUMBER} in the downloaded client, found ${#stamped[@]}: ${stamped[*]:-none}."
             exit 1
           fi
+          echo "Stamped build version ${stamped[0]}"
+          echo "CRATIS_CHRONICLE_BUILD_VERSION=${stamped[0]}" >> "$GITHUB_ENV"
 
       - name: Login to GitHub Docker Registry
         uses: docker/login-action@v3
