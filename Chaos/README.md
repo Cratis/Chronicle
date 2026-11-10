@@ -5,6 +5,8 @@
 
 An opt-in, single-node durability probe against the **real Chronicle kernel**. This is no-release developer tooling, deliberately outside `Chronicle.slnx` and PR CI. It is not `Cratis.Chronicle.Testing`, an in-memory substitute, or a benchmark. Phase 1 covers single `AppendOnce` events only; network proxies, transactions, constraints, and multi-silo faults are future work.
 
+Resuming a Mongo fault also restores the kernel, which may have self-fenced during the storage outage. Recovery waits for kernel readiness before later worker starts and uses the existing workload deadline.
+
 The commands below require enough free disk space and an explicit release of any active disk hold. A completed smoke on one revision does not verify later changes to signal delivery, deadlines, or restart mappings.
 
 ## Prerequisites

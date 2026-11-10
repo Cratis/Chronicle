@@ -59,15 +59,23 @@ internal sealed class FaultExecutor(DockerEnvironment environment, ChildWorker p
     /// <returns>The recovery task.</returns>
     public async Task Recover(CancellationToken cancellation)
     {
-        foreach (var container in new[] { environment.Mongo, environment.Kernel })
-        {
-            await ResumeContainer(container, cancellation);
-        }
+        await ResumeContainer(environment.Mongo, cancellation);
         if (consumer.IsRunning) await consumer.Signal("CONT", cancellation);
         else await consumer.Start(cancellation);
         if (producer.IsRunning) await producer.Signal("CONT", cancellation);
         else await producer.Start(cancellation);
     }
+
+    /// <summary>
+    /// Restores the kernel after Mongo because a storage outage can make it self-fence.
+    /// </summary>
+    /// <typeparam name="T">The fault target identity type.</typeparam>
+    /// <param name="container">The target whose fault is being resumed.</param>
+    /// <param name="mongo">The Mongo target.</param>
+    /// <param name="kernel">The dependent kernel target.</param>
+    /// <returns>The dependency-ordered targets that must recover before dependent workers restart.</returns>
+    internal static IReadOnlyList<T> RecoveryOrder<T>(T container, T mongo, T kernel) =>
+        EqualityComparer<T>.Default.Equals(container, mongo) ? [mongo, kernel] : [container];
 
     static bool IsKill(FaultKind kind) => kind is FaultKind.KillKernel or FaultKind.KillMongo or FaultKind.KillProducer or FaultKind.KillConsumer;
 
@@ -103,10 +111,13 @@ internal sealed class FaultExecutor(DockerEnvironment environment, ChildWorker p
 
     async Task ResumeContainer(IContainer container, CancellationToken cancellation)
     {
-        // Unpause is harmless for an exited or non-paused target; start also recovers a self-fenced kernel.
-        await ContainerSignals.Unpause(container.Id, cancellation);
-        await environment.Restart(container, cancellation);
-        if (container == environment.Kernel) await environment.WaitForKernel(cancellation);
+        // A resumed Mongo fault must restore a self-fenced kernel before the next worker start.
+        foreach (var target in RecoveryOrder(container, environment.Mongo, environment.Kernel))
+        {
+            await ContainerSignals.Unpause(target.Id, cancellation);
+            await environment.Restart(target, cancellation);
+            if (target == environment.Kernel) await environment.WaitForKernel(cancellation);
+        }
     }
 
     async Task WorkerKill(ChildWorker worker, bool resume, CancellationToken cancellation)
