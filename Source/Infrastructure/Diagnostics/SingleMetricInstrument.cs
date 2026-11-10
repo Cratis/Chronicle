@@ -12,8 +12,8 @@ namespace Cratis.Chronicle.Diagnostics;
 /// <typeparam name="TRecorder">The concrete instrument recorder.</typeparam>
 /// <param name="recorder">The precreated instrument's recorder.</param>
 /// <param name="tags">The cached scope tags.</param>
-/// <param name="firstKey">The preselected first additional tag key.</param>
-/// <param name="secondKey">The preselected second additional tag key.</param>
+/// <param name="firstKey">The preselected first additional tag key; empty when the naming mode has no such key.</param>
+/// <param name="secondKey">The preselected second additional tag key; empty when the naming mode has no such key.</param>
 internal sealed class SingleMetricInstrument<T, TRecorder>(TRecorder recorder, TagList tags, string firstKey, string secondKey)
     where T : struct
     where TRecorder : struct, IMetricRecorder<T>
@@ -28,7 +28,7 @@ internal sealed class SingleMetricInstrument<T, TRecorder>(TRecorder recorder, T
     internal void Record(T value, object? tag)
     {
         var measurementTags = tags;
-        measurementTags.Add(firstKey, tag);
+        if (firstKey.Length > 0) measurementTags.Add(firstKey, tag);
         recorder.Record(value, in measurementTags);
     }
 
@@ -39,8 +39,8 @@ internal sealed class SingleMetricInstrument<T, TRecorder>(TRecorder recorder, T
     internal void Record(T value, object? firstTag, object? secondTag)
     {
         var measurementTags = tags;
-        measurementTags.Add(firstKey, firstTag);
-        measurementTags.Add(secondKey, secondTag);
+        if (firstKey.Length > 0) measurementTags.Add(firstKey, firstTag);
+        if (secondKey.Length > 0) measurementTags.Add(secondKey, secondTag);
         recorder.Record(value, in measurementTags);
     }
 }

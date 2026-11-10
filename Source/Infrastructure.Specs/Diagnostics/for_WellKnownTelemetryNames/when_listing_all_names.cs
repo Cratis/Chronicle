@@ -37,6 +37,8 @@ public partial class when_listing_all_names : given.all_telemetry_names
         ["Attributes.SqlLiveQueryName"] = "cratis.chronicle.sql.live_query.name",
         ["Attributes.SqlLiveQueryFailureKind"] = "cratis.chronicle.sql.live_query.failure_kind",
         ["Attributes.SqlUpsertOperation"] = "cratis.chronicle.sql.upsert.operation",
+        ["Attributes.ObserverRunningState"] = "cratis.chronicle.observer.running_state",
+        ["Attributes.JobType"] = "cratis.chronicle.job.type",
         ["Metrics.ObserverSuccessfulObservations"] = "cratis.chronicle.observer.successful_observations",
         ["Metrics.ObserverPartitionFailures"] = "cratis.chronicle.observer.partition_failures",
         ["Metrics.ObserverPartitionsQuarantined"] = "cratis.chronicle.observer.partitions_quarantined",
@@ -88,6 +90,14 @@ public partial class when_listing_all_names : given.all_telemetry_names
         ["Metrics.SqlEncryptionKeyIdentifiersRefused"] = "cratis.chronicle.sql.encryption_key.refused_identifiers",
         ["Metrics.SqlCompositeKeyStampFailures"] = "cratis.chronicle.sql.composite_key.stamp_failures",
         ["Metrics.SqlCompositeKeyCollisions"] = "cratis.chronicle.sql.composite_key.collisions",
+        ["Metrics.ObserverFailedPartitions"] = "cratis.chronicle.observer.failed_partitions",
+        ["Metrics.ObserverQuarantinedPartitions"] = "cratis.chronicle.observer.quarantined_partitions",
+        ["Metrics.ObserverRunningState"] = "cratis.chronicle.observer.running_state",
+        ["Metrics.ObserverResident"] = "cratis.chronicle.observer.resident",
+        ["Metrics.JobRunning"] = "cratis.chronicle.job.running",
+        ["Metrics.ObserverJobHandledSteps"] = "cratis.chronicle.observer.job.handled_steps",
+        ["Metrics.ObserverJobTotalSteps"] = "cratis.chronicle.observer.job.total_steps",
+        ["Metrics.EventSequenceAppendDuration"] = "cratis.chronicle.event_sequence.append.duration",
         ["Spans.EventSequenceAppend"] = "cratis.chronicle.event_sequence.append",
         ["Spans.EventSequenceAppendMany"] = "cratis.chronicle.event_sequence.append_many",
         ["Spans.ObserverHandle"] = "cratis.chronicle.observer.handle",
@@ -153,7 +163,15 @@ public partial class when_listing_all_names : given.all_telemetry_names
         ["Metrics.SqlUpsertRecoveredCollisionsUnit"] = "{collision}",
         ["Metrics.SqlEncryptionKeyIdentifiersRefusedUnit"] = "{operation}",
         ["Metrics.SqlCompositeKeyStampFailuresUnit"] = "{failure}",
-        ["Metrics.SqlCompositeKeyCollisionsUnit"] = "{collision}"
+        ["Metrics.SqlCompositeKeyCollisionsUnit"] = "{collision}",
+        ["Metrics.ObserverFailedPartitionsUnit"] = "{partition}",
+        ["Metrics.ObserverQuarantinedPartitionsUnit"] = "{partition}",
+        ["Metrics.ObserverRunningStateUnit"] = "1",
+        ["Metrics.ObserverResidentUnit"] = "{observer}",
+        ["Metrics.JobRunningUnit"] = "{job}",
+        ["Metrics.ObserverJobHandledStepsUnit"] = "{step}",
+        ["Metrics.ObserverJobTotalStepsUnit"] = "{step}",
+        ["Metrics.EventSequenceAppendDurationUnit"] = "s"
     };
 
     static string Render(IEnumerable<KeyValuePair<string, string>> names) =>
