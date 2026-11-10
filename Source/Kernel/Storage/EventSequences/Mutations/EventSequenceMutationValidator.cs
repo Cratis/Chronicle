@@ -432,10 +432,11 @@ public static class EventSequenceMutationValidator
         Enum.IsDefined(phase) && Enum.IsDefined(blockedFrom) && Enum.IsDefined(repairState);
 
     static bool IsValidCommand(EventSequenceMutationCommandEnvelope? command) =>
-        command is { Payload: not null, Hash: not null } &&
+        command is { Payload: not null } &&
         IsStrictText(command.Payload) &&
-        !string.IsNullOrEmpty(command.Hash.Value) &&
-        IsStrictText(command.Hash.Value);
+        command.Hash is { } hash &&
+        !string.IsNullOrEmpty(hash.Value) &&
+        IsStrictText(hash.Value);
 
     static bool HasValidTokenState(EventSequenceMutationStateToken token) =>
         token.TargetKey.IsInitialized &&
