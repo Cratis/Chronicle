@@ -17,7 +17,10 @@ public class when_listing_the_metric_map : Specification
 
     [Fact]
     void should_map_or_explicitly_exclude_every_metric() =>
-        _conventionMetricNames.Where(_ => !LegacyTelemetryNames.Metrics.ContainsKey(_) && !LegacyTelemetryNames.ObservableMetrics.Contains(_)).ShouldBeEmpty();
+        _conventionMetricNames.Where(_ =>
+            !LegacyTelemetryNames.Metrics.ContainsKey(_) &&
+            !LegacyTelemetryNames.ObservableMetrics.Contains(_) &&
+            !LegacyTelemetryNames.ConventionOnlyMetrics.Contains(_)).ShouldBeEmpty();
 
     [Fact]
     void should_not_map_unknown_metrics() =>
@@ -25,7 +28,11 @@ public class when_listing_the_metric_map : Specification
 
     [Fact]
     void should_not_map_what_is_excluded() =>
-        LegacyTelemetryNames.ObservableMetrics.Any(LegacyTelemetryNames.Metrics.ContainsKey).ShouldBeFalse();
+        LegacyTelemetryNames.ObservableMetrics.Concat(LegacyTelemetryNames.ConventionOnlyMetrics).Any(LegacyTelemetryNames.Metrics.ContainsKey).ShouldBeFalse();
+
+    [Fact]
+    void should_only_exclude_known_metrics_from_legacy_naming() =>
+        LegacyTelemetryNames.ConventionOnlyMetrics.Where(_ => !_conventionMetricNames.Contains(_)).ShouldBeEmpty();
 
     [Fact]
     void should_not_publish_the_same_legacy_name_twice() =>

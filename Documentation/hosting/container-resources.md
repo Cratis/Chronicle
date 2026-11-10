@@ -55,7 +55,7 @@ Replace `<image>` with the Chronicle production image and tag you deploy, and re
 
 ## Size from your own peak
 
-Memory use depends on your workload. It grows with the number of event stores, namespaces and observers, because observer grains stay resident once they are activated.
+Memory use depends on your workload. It grows with the number of event stores, namespaces and observers, because observer grains stay resident once they are activated. `cratis.chronicle.observer.resident` reports how many observers each process holds, per event store, namespace and observer type, so you can relate memory to that count (see [Observer state, jobs and append latency](configuration/open-telemetry.md#observer-state-jobs-and-append-latency)).
 
 1. Run your real workload without a hard heap limit.
 2. Observe peak resident memory. Use the .NET runtime metrics described in [OpenTelemetry](configuration/open-telemetry.md), or `docker stats`.

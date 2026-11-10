@@ -34,6 +34,7 @@ the same way (`compliance.encryption.migrateFromDefaultStorage` becomes
 | Cratis__Chronicle__HealthCheckEndpoint | Health check endpoint path |
 | Cratis__Chronicle__Telemetry__OrleansTracing | Export Orleans runtime and grain-call spans (default `false`); trace context propagation remains enabled; see [OpenTelemetry](open-telemetry.md#orleans-trace-volume) |
 | Cratis__Chronicle__Telemetry__GrpcClientTracing | Enable kernel gRPC client tracing (default `false`); see [OpenTelemetry trace volume defaults](open-telemetry.md#trace-volume-defaults) |
+| Cratis__Chronicle__Telemetry__MetricSeriesLimit | Most series each metric instrument holds (default `500`); see [how many series to expect](open-telemetry.md#how-many-series-to-expect) |
 | Cratis__Chronicle__Health__Port | Dedicated HTTP/1.1 port for the health endpoint |
 | Cratis__Chronicle__Health__Tls | Whether the dedicated health port uses TLS (default `true`) |
 | Cratis__Chronicle__Federation__Enabled | Opens the dedicated federation listener and runs consumer bindings (default `false`); see [Federation](federation.md) |

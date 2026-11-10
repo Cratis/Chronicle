@@ -91,4 +91,10 @@ public static class WellKnownTelemetryAttributes
 
     /// <summary>The operation of an upsert.</summary>
     public const string SqlUpsertOperation = "cratis.chronicle.sql.upsert.operation";
+
+    /// <summary>The running state of an observer, in lowercase. Distinct from the running-state metric's name.</summary>
+    public const string ObserverState = "cratis.chronicle.observer.state";
+
+    /// <summary>The type of a job, in lowercase.</summary>
+    public const string JobType = "cratis.chronicle.job.type";
 }

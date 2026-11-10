@@ -23,11 +23,13 @@ namespace Cratis.Chronicle.Observation.Jobs;
 /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
 /// <param name="jsonSerializerOptions">The serializer options used for JSON serialization.</param>
 /// <param name="logger">The logger.</param>
+/// <param name="jobGauges">The <see cref="IObserverJobGauges"/> the job reports its progress to.</param>
 public class ReplayObserver(
     IObserverServiceClient replayStateServiceClient,
     IStorage storage,
     JsonSerializerOptions jsonSerializerOptions,
-    ILogger<ReplayObserver> logger) : Job<ReplayObserverRequest, JobStateWithLastHandledEvent>, IReplayObserver
+    ILogger<ReplayObserver> logger,
+    IObserverJobGauges? jobGauges = null) : Job<ReplayObserverRequest, JobStateWithLastHandledEvent>, IReplayObserver
 {
     /// <summary>
     /// The number of times the observer is notified that the replay concluded before it is left to the observer's watchdog.
@@ -44,6 +46,7 @@ public class ReplayObserver(
     /// </remarks>
     internal const int ActiveStepWindow = 16;
 
+    readonly ObserverJobGaugeReporter _gauge = new(jobGauges, ObserverJobGaugeType.Replay);
     bool _refusalNotificationScheduled;
 
     /// <summary>
@@ -103,6 +106,13 @@ public class ReplayObserver(
         }
 
         return await base.Resume();
+    }
+
+    /// <inheritdoc/>
+    public override Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
+    {
+        _gauge.Release();
+        return base.OnDeactivateAsync(reason, cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -181,6 +191,7 @@ public class ReplayObserver(
         await EnsureReplaySupported();
         await DeleteAllOtherJobsForObserver();
         await replayStateServiceClient.BeginReplayFor(State.ObserverDetails);
+        _gauge.Report(JobId, Request.ObserverKey, State.Progress);
     }
 
     /// <inheritdoc/>
@@ -245,6 +256,7 @@ public class ReplayObserver(
         }
 
         await replayStateServiceClient.ResumeReplayFor(State.ObserverDetails);
+        _gauge.Report(JobId, Request.ObserverKey, State.Progress);
     }
 
     /// <inheritdoc/>
@@ -275,6 +287,7 @@ public class ReplayObserver(
         }
 
         var progress = State.Progress;
+        _gauge.Update(progress);
         if (progress.TotalSteps > 0)
         {
             var completedSteps = progress.SuccessfulSteps + progress.FailedSteps + progress.StoppedSteps;
@@ -284,7 +297,11 @@ public class ReplayObserver(
     }
 
     /// <inheritdoc/>
-    protected override Task OnStopped() => base.OnStopped();
+    protected override Task OnStopped()
+    {
+        _gauge.Release();
+        return base.OnStopped();
+    }
 
     /// <inheritdoc/>
     protected override async Task OnFailedToPrepare()
@@ -312,6 +329,7 @@ public class ReplayObserver(
     /// <inheritdoc/>
     protected override async Task OnAllStepsCompleted()
     {
+        _gauge.Release();
         await EnsureReplaySupported();
         using var scope = logger.BeginJobScope(JobId, JobKey);
         var finalized = true;

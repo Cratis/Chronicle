@@ -52,6 +52,7 @@ public partial class EventSequence
         Occurrences.EffectReceipt? effectReceipt = null,
         ConcurrencyScopes? legacyScopes = null)
     {
+        var started = System.Diagnostics.Stopwatch.GetTimestamp();
         using var span = activitySource.AppendMany();
         span?.Activity?.Tag(_eventSequenceKey.EventStore);
         span?.Activity?.Tag(_eventSequenceKey.Namespace);
@@ -66,6 +67,10 @@ public partial class EventSequence
         {
             span?.Activity?.RecordFailure(ex);
             throw;
+        }
+        finally
+        {
+            _metrics?.AppendDuration(System.Diagnostics.Stopwatch.GetElapsedTime(started), _eventSequenceKey.EventSequenceId);
         }
     }
 
