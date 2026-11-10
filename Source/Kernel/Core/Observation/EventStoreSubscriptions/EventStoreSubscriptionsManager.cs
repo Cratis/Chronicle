@@ -281,14 +281,23 @@ public class EventStoreSubscriptionsManager(
     async Task RefreshSubscription(EventStoreSubscriptionDefinition definition, IEnumerable<EventStoreNamespaceName> namespaces)
     {
         var canonical = await CanonicalNamespaces(definition, namespaces);
-        var tasks = canonical.Select(namespaceName => RefreshSubscription(definition, namespaceName));
-        await Task.WhenAll(tasks);
+        var refreshing = Task.WhenAll(canonical.Select(namespaceName => RefreshSubscription(definition, namespaceName)));
+        try
+        {
+            await refreshing;
+        }
+        catch when (refreshing.Exception is { InnerExceptions.Count: > 1 } failures)
+        {
+            // The caller logs the failure once; carry every namespace's failure to it, not only the first.
+            throw failures.Flatten();
+        }
     }
 
     async Task RefreshSubscription(EventStoreSubscriptionDefinition definition, EventStoreNamespaceName namespaceName)
     {
         var observer = await GetObserver(definition, namespaceName);
 
+        // A failure is logged once, by the caller that handles it - not here as well, which wrote every stack trace twice.
         try
         {
             var subscribed = await observer.IsSubscribed();
@@ -311,10 +320,9 @@ public class EventStoreSubscriptionsManager(
             logger.Subscribing(definition.Identifier, namespaceName);
             await Subscribe(observer, definition);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            logger.ErrorRefreshingSubscription(ex, definition.Identifier, namespaceName);
-            throw;
+            throw new EventStoreSubscriptionRefreshFailed(definition.Identifier, namespaceName, ex);
         }
     }
 

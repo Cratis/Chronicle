@@ -6,6 +6,7 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.Namespaces;
+using Microsoft.Extensions.Logging;
 using Moq;
 using Orleans.TestKit;
 
@@ -21,12 +22,15 @@ public class a_manager_with_a_quarantined_subscription : Specification
     protected EventStoreSubscriptionsManager _manager;
     protected IObserver _observer;
     protected INamespaces _namespaces;
+    protected RecordingLogger _logger;
 
     async Task Establish()
     {
         _silo = new TestKitSilo();
         _silo.AddNamespaceCasing();
         _silo.AddService(Substitute.For<ILocalSiloDetails>());
+        _logger = new();
+        _silo.AddService<ILogger<EventStoreSubscriptionsManager>>(_logger);
         _namespaces = Substitute.For<INamespaces>();
         _namespaces.GetAll().Returns([EventStoreNamespaceName.Default]);
         _silo.AddProbe(_ => _namespaces);
