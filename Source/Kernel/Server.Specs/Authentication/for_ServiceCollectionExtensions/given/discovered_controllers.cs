@@ -18,10 +18,12 @@ public class discovered_controllers : chronicle_authentication_services
             configureServices: services => services.AddControllers()).ServiceProvider;
 
         var manager = provider.GetRequiredService<ApplicationPartManager>();
-        var serverAssembly = typeof(AuthorizationController).Assembly;
-        if (!manager.ApplicationParts.OfType<AssemblyPart>().Any(_ => _.Assembly == serverAssembly))
+        foreach (var assembly in new[] { typeof(AuthorizationController).Assembly, typeof(UnrelatedController).Assembly })
         {
-            manager.ApplicationParts.Add(new AssemblyPart(serverAssembly));
+            if (!manager.ApplicationParts.OfType<AssemblyPart>().Any(_ => _.Assembly == assembly))
+            {
+                manager.ApplicationParts.Add(new AssemblyPart(assembly));
+            }
         }
 
         var feature = new ControllerFeature();

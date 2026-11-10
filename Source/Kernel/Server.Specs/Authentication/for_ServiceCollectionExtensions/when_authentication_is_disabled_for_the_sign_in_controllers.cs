@@ -13,4 +13,5 @@ public class when_authentication_is_disabled_for_the_sign_in_controllers : given
 
     [Fact] void should_not_map_the_token_endpoint_controller() => _controllers.ShouldNotContain(typeof(AuthorizationController));
     [Fact] void should_not_map_the_login_controller() => _controllers.ShouldNotContain(typeof(LoginController));
+    [Fact] void should_still_map_other_controllers() => _controllers.ShouldContain(typeof(given.UnrelatedController));
 }
