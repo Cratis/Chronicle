@@ -30,18 +30,43 @@ internal static class ChaosRun
         foreach (var item in schedule) Console.WriteLine($"PLAN {item.At.TotalSeconds:F1}s {item.Kind} resume={item.Resume}");
         await Save(options.Output, "options.json", options, cancellation);
         await Save(options.Output, "schedule.json", schedule, cancellation);
+        try
+        {
+            return await Execute(options, runId, schedule, cancellation);
+        }
+        catch (Exception exception)
+        {
+            var failure = RunFailure.From(options.Seed, runId, exception, cancellation.IsCancellationRequested);
+            return await RecordFailure(options.Output, failure);
+        }
+    }
+
+    static async Task<int> RecordFailure(string output, RunFailure failure)
+    {
+        await Console.Error.WriteLineAsync($"COULD NOT RUN ({failure.Status}): {failure.Reason}");
+        using var diagnostic = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        try
+        {
+            await Save(output, "failure.json", failure, diagnostic.Token).WaitAsync(diagnostic.Token);
+        }
+        catch (Exception exception)
+        {
+            await Console.Error.WriteLineAsync($"Could not persist failure.json: {exception.Message}");
+        }
+        return failure.ExitCode;
+    }
+
+    static async Task<int> Execute(RunOptions options, string runId, IReadOnlyList<ScheduledFault> schedule, CancellationToken cancellation)
+    {
         await using var environment = new DockerEnvironment(runId, options.KeepContainers);
         try
         {
-            using var startup = CancellationTokenSource.CreateLinkedTokenSource(cancellation);
-            startup.CancelAfter(TimeSpan.FromMinutes(3));
-            await environment.Start(startup.Token);
             return await Workload(options, environment, schedule, cancellation);
         }
         finally
         {
             using var logs = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-            await environment.CaptureLogs(options.Output, logs.Token);
+            await DockerEnvironment.CaptureLogsFor("containers", () => environment.CaptureLogs(options.Output, logs.Token).WaitAsync(logs.Token));
             if (options.KeepContainers) Console.WriteLine($"Containers retained. Cleanup: dotnet run --project Chaos/ChaosRig -- cleanup --run-id {runId}");
         }
     }
@@ -51,22 +76,33 @@ internal static class ChaosRun
         var storeName = $"chaos-{environment.RunId}";
         await using var consumer = new ChildWorker("consumer", environment, storeName, options.Output);
         await using var producer = new ChildWorker("producer", environment, storeName, options.Output);
-        await consumer.Start(cancellation);
-        await producer.Start(cancellation);
+        using var startup = CancellationTokenSource.CreateLinkedTokenSource(cancellation);
+        startup.CancelAfter(TimeSpan.FromMinutes(3));
+        await environment.Start(startup.Token).WaitAsync(startup.Token);
+        await consumer.Start(startup.Token);
+        await producer.Start(startup.Token);
+        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellation);
+        deadline.CancelAfter(RunTiming.Remaining(options.Duration, options.Settle, TimeSpan.Zero));
+        Console.WriteLine($"DEADLINE workload={options.Duration + options.Settle} (duration + settle)");
         var executor = new FaultExecutor(environment, producer, consumer);
-        await executor.Run(schedule, options.Duration, cancellation);
-        await executor.Recover(cancellation);
+        await executor.Run(schedule, options.Duration, deadline.Token);
+        await executor.Recover(deadline.Token);
+        return await Observe(options, environment, producer, consumer, deadline.Token);
+    }
 
+    static async Task<int> Observe(RunOptions options, DockerEnvironment environment, ChildWorker producer, ChildWorker consumer, CancellationToken cancellation)
+    {
         // Killing fences even an append whose transport timed out. Its prewritten intention remains unknown/intended.
         await producer.Kill();
         if (!consumer.IsRunning) throw new InvalidOperationException("Consumer exited outside a scheduled fault.");
         using var ledgerClient = new MongoClient(environment.LedgerConnection);
         var sideLedger = new SideLedger(ledgerClient, environment.RunId);
-        using var host = WorkloadHost.Create("reader", environment.Connection, storeName, sideLedger);
-        await host.StartAsync(cancellation);
+        await using var lifetime = new BoundedHost(environment.Connection, $"chaos-{environment.RunId}", sideLedger);
+        var host = lifetime.Host;
         try
         {
-            var store = await host.Services.GetRequiredService<IChronicleClient>().GetEventStore(storeName).WaitAsync(TimeSpan.FromSeconds(60), cancellation);
+            await host.StartAsync(cancellation).WaitAsync(cancellation);
+            var store = await host.Services.GetRequiredService<IChronicleClient>().GetEventStore($"chaos-{environment.RunId}").WaitAsync(TimeSpan.FromSeconds(60), cancellation);
 
             // Local metadata is needed for native model reads; the reader must not register or run consumers.
             await store.DiscoverAll().WaitAsync(TimeSpan.FromSeconds(60), cancellation);
@@ -77,7 +113,7 @@ internal static class ChaosRun
         finally
         {
             using var shutdown = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-            await host.StopAsync(shutdown.Token);
+            await host.StopAsync(shutdown.Token).WaitAsync(shutdown.Token);
         }
     }
 
@@ -93,7 +129,7 @@ internal static class ChaosRun
             sample.CancelAfter(budget - clock.Elapsed);
             try
             {
-                latest = await reader.Collect(sample.Token);
+                latest = await reader.Collect(sample.Token).WaitAsync(sample.Token);
                 cleanSamples = Verdict.Compare(latest).IsClean ? cleanSamples + 1 : 0;
 
                 // Require repeated settled observations, not a momentary empty work list.

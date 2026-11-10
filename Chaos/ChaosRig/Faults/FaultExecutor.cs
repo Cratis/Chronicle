@@ -26,15 +26,30 @@ internal sealed class FaultExecutor(DockerEnvironment environment, ChildWorker p
     public async Task Run(IReadOnlyList<ScheduledFault> schedule, TimeSpan duration, CancellationToken cancellation)
     {
         var clock = Stopwatch.StartNew();
-        foreach (var fault in schedule)
+        try
         {
-            await DelayUntil(fault.At, clock, cancellation);
+            foreach (var fault in schedule)
+            {
+                await DelayUntil(fault.At, clock, cancellation);
+                EnsureWorkers();
+                Console.WriteLine($"FAULT {fault.At.TotalSeconds:F1}s {fault.Kind} resume={fault.Resume}");
+                await Execute(fault, cancellation);
+            }
+            await DelayUntil(duration, clock, cancellation);
             EnsureWorkers();
-            Console.WriteLine($"FAULT {fault.At.TotalSeconds:F1}s {fault.Kind} resume={fault.Resume}");
-            await Execute(fault, cancellation);
         }
-        await DelayUntil(duration, clock, cancellation);
-        EnsureWorkers();
+        finally
+        {
+            // CONT must not depend on the canceled run token or a spawned control process.
+            try
+            {
+                producer.Resume();
+            }
+            finally
+            {
+                consumer.Resume();
+            }
+        }
     }
 
     /// <summary>
@@ -51,7 +66,7 @@ internal sealed class FaultExecutor(DockerEnvironment environment, ChildWorker p
                 await ContainerSignals.Unpause(container.Id, cancellation);
                 _paused.Remove(container.Id);
             }
-            await ContainerSignals.Restart(container.Id, cancellation);
+            await environment.Restart(container, cancellation);
         }
         await environment.WaitForKernel(cancellation);
         if (consumer.IsRunning) await consumer.Signal("CONT", cancellation);
@@ -82,13 +97,14 @@ internal sealed class FaultExecutor(DockerEnvironment environment, ChildWorker p
 
     async Task ContainerFault(ScheduledFault fault, CancellationToken cancellation)
     {
-        var id = fault.Kind is FaultKind.KillKernel or FaultKind.StopKernel ? environment.Kernel.Id : environment.Mongo.Id;
+        var container = fault.Kind is FaultKind.KillKernel or FaultKind.StopKernel ? environment.Kernel : environment.Mongo;
+        var id = container.Id;
         if (!IsKill(fault.Kind))
         {
             await ContainerPause(id, fault.Resume, cancellation);
             return;
         }
-        if (fault.Resume) await ContainerSignals.Restart(id, cancellation);
+        if (fault.Resume) await environment.Restart(container, cancellation);
         else await ContainerSignals.Send(id, "KILL", cancellation);
     }
 

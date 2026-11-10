@@ -6,6 +6,7 @@
     <RootNamespace>Cratis.Chronicle.Chaos</RootNamespace>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <DisableDockerBuild>true</DisableDockerBuild>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Cratis.Fundamentals" />

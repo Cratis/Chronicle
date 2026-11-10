@@ -66,6 +66,7 @@ internal static class Verdict
         if (byId.Keys.Except(intentions.Keys).Any()) result.Add("Events without ledger intentions.");
         var failed = input.Ledger.Where(item => item.Status == "failed" || item.Status == "rejected");
         if (failed.Any(item => byId.ContainsKey(item.Id))) result.Add("Definitively failed append present in event log.");
+        if (input.Ledger.Any(item => item.Status == "conflict")) result.Add("Idempotency conflict for a durable intention.");
         var known = input.Events.Where(item => intentions.ContainsKey(item.Id));
         if (known.Any(item => item.Source != intentions[item.Id].Source || item.Payload != intentions[item.Id].Payload)) result.Add("Event content differs from its durable intention.");
     }

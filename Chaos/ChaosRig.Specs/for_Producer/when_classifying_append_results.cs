@@ -23,5 +23,5 @@ public class when_classifying_append_results : Specification
     [Fact] void should_keep_other_errors_unknown() => Producer.StatusFor(new() { Errors = [AppendError.Unknown] }).ShouldEqual("unknown");
     [Fact] void should_record_concurrency_refusals_as_failed() => Producer.StatusFor(new() { ConcurrencyViolation = new("source", 0, 1) }).ShouldEqual("failed");
     [Fact] void should_record_constraint_refusals_as_failed() => Producer.StatusFor(new() { ConstraintViolations = [new("type", 0, ConstraintType.Unique, "unique", "refused", new())] }).ShouldEqual("failed");
-    [Fact] void should_record_idempotency_refusals_as_failed() => Producer.StatusFor(new() { IdempotencyConflicts = [new(new("key"), 0, new("type", 1), 1, IdempotencyConflictReason.Content)] }).ShouldEqual("failed");
+    [Fact] void should_distinguish_a_refused_retry_key_from_a_failed_initial_append() => Producer.StatusFor(new() { IdempotencyConflicts = [new(new("key"), 0, new("type", 1), 1, IdempotencyConflictReason.Content)] }).ShouldEqual("conflict");
 }

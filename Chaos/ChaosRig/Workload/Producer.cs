@@ -39,7 +39,10 @@ internal static class Producer
     /// <returns>The durable ledger outcome.</returns>
     internal static string StatusFor(AppendResult result)
     {
-        if (result.HasConstraintViolations || result.HasConcurrencyViolations || result.HasIdempotencyConflicts) return "failed";
+        // A refused retry key does not prove the earlier append with that key was absent.
+        if (result.HasIdempotencyConflicts) return "conflict";
+        if (result.HasConstraintViolations) return "failed";
+        if (result.HasConcurrencyViolations) return "failed";
         return result.IsSuccess ? "acked" : "unknown";
     }
 

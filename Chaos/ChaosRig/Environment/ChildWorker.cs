@@ -18,11 +18,13 @@ internal sealed class ChildWorker(string role, DockerEnvironment environment, st
     Task _stdout = Task.CompletedTask;
     Task _stderr = Task.CompletedTask;
     int _generation;
+    int? _stoppedProcess;
+    CancellationTokenSource? _outputCancellation;
 
     /// <summary>
     /// Gets whether the child process is running.
     /// </summary>
-    public bool IsRunning => _process is { HasExited: false };
+    public bool IsRunning => _stoppedProcess is not null || _process is { HasExited: false };
 
     /// <summary>
     /// Starts the child and waits for its readiness marker.
@@ -39,8 +41,9 @@ internal sealed class ChildWorker(string role, DockerEnvironment environment, st
         _process = Process.Start(start) ?? throw new InvalidOperationException($"Could not start {role}.");
         _generation++;
         var ready = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        _stdout = Pump(_process.StandardOutput, Path.Combine(output, $"{role}-{_generation}.stdout.log"), ready);
-        _stderr = Pump(_process.StandardError, Path.Combine(output, $"{role}-{_generation}.stderr.log"), null);
+        _outputCancellation = new();
+        _stdout = Pump(_process.StandardOutput, Path.Combine(output, $"{role}-{_generation}.stdout.log"), ready, _outputCancellation.Token);
+        _stderr = Pump(_process.StandardError, Path.Combine(output, $"{role}-{_generation}.stderr.log"), null, _outputCancellation.Token);
         var exit = _process.WaitForExitAsync(cancellation);
         var completed = await Task.WhenAny(ready.Task, exit).WaitAsync(TimeSpan.FromSeconds(100), cancellation);
         if (completed == exit) throw new InvalidOperationException($"{role} exited before READY with code {_process.ExitCode}.");
@@ -54,10 +57,31 @@ internal sealed class ChildWorker(string role, DockerEnvironment environment, st
     /// <param name="cancellation">The command cancellation token.</param>
     /// <returns>The signal task.</returns>
     /// <exception cref="InvalidOperationException">The child is not running.</exception>
-    public async Task Signal(string signal, CancellationToken cancellation)
+    public Task Signal(string signal, CancellationToken cancellation)
     {
+        cancellation.ThrowIfCancellationRequested();
+        if (signal == "CONT")
+        {
+            Resume();
+            return Task.CompletedTask;
+        }
         if (_process is not { HasExited: false }) throw new InvalidOperationException($"{role} is not running.");
-        await NativeCommand.Run("kill", [$"-{signal}", _process.Id.ToString(System.Globalization.CultureInfo.InvariantCulture)], cancellation);
+        _stoppedProcess = _process.Id;
+        Console.WriteLine($"SIGNAL {role} pid={_stoppedProcess} {signal}");
+        NativeSignals.Send(_stoppedProcess.Value, signal);
+        Console.WriteLine($"SIGNAL {role} {signal} delivered");
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Resumes an owned stopped child even when the run token is already canceled.
+    /// </summary>
+    public void Resume()
+    {
+        if (_stoppedProcess is not { } processId) return;
+        NativeSignals.Send(processId, "CONT");
+        _stoppedProcess = null;
+        Console.WriteLine($"SIGNAL {role} pid={processId} CONT delivered");
     }
 
     /// <summary>
@@ -66,6 +90,7 @@ internal sealed class ChildWorker(string role, DockerEnvironment environment, st
     /// <returns>The termination task.</returns>
     public async Task Kill()
     {
+        Resume();
         if (_process is { HasExited: false }) _process.Kill(entireProcessTree: true);
         await Finish();
     }
@@ -73,22 +98,47 @@ internal sealed class ChildWorker(string role, DockerEnvironment environment, st
     /// <inheritdoc/>
     public async ValueTask DisposeAsync() => await Kill();
 
-    static async Task Pump(StreamReader reader, string path, TaskCompletionSource? ready)
+    static async Task Pump(StreamReader reader, string path, TaskCompletionSource? ready, CancellationToken cancellation)
     {
-        await using var file = new StreamWriter(path) { AutoFlush = true };
-        while (await reader.ReadLineAsync() is { } line)
+        try
         {
-            await file.WriteLineAsync(line);
-            if (line == "READY") ready?.TrySetResult();
+            await using var file = new StreamWriter(path) { AutoFlush = true };
+            while (await reader.ReadLineAsync(cancellation) is { } line)
+            {
+                await file.WriteLineAsync(line.AsMemory(), cancellation);
+                if (line == "READY") ready?.TrySetResult();
+            }
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
         }
     }
 
     async Task Finish()
     {
         if (_process is null) return;
-        await _process.WaitForExitAsync(CancellationToken.None);
-        await Task.WhenAll(_stdout, _stderr);
-        _process.Dispose();
-        _process = null;
+        try
+        {
+            await _process.WaitForExitAsync(CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(10));
+            await Task.WhenAll(_stdout, _stderr).WaitAsync(TimeSpan.FromSeconds(5));
+        }
+        catch (TimeoutException exception)
+        {
+            throw new TimeoutException($"Timed out waiting for {role} pid={_process.Id} exit/output drain.", exception);
+        }
+        finally
+        {
+            try
+            {
+                if (_outputCancellation is not null) await _outputCancellation.CancelAsync().WaitAsync(TimeSpan.FromSeconds(2));
+            }
+            finally
+            {
+                _outputCancellation?.Dispose();
+                _outputCancellation = null;
+                _process.Dispose();
+                _process = null;
+            }
+        }
     }
 }

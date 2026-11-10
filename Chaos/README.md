@@ -5,13 +5,13 @@
 
 An opt-in, single-node durability probe against the **real Chronicle kernel**. This is no-release developer tooling, deliberately outside `Chronicle.slnx` and PR CI. It is not `Cratis.Chronicle.Testing`, an in-memory substitute, or a benchmark. Phase 1 covers single `AppendOnce` events only; network proxies, transactions, constraints, and multi-silo faults are future work.
 
-**Current verification status:** authored under a disk hold. Not built, restored, tested, or run yet. The commands below are for use **after the hold is lifted**, not evidence of a passing rig.
+The commands below require enough free disk space and an explicit release of any active disk hold. A completed smoke on one revision does not verify later changes to signal delivery, deadlines, or restart mappings.
 
 ## Prerequisites
 
 - .NET 10, Bash, Docker with Linux containers, and the repository's normal package feeds.
-- macOS or Linux (`kill -STOP` / `kill -CONT` must be available).
-- Free host ports **35000**, **27017**, **27018**. Never point this rig at an existing stack or production database. It creates an isolated network and dedicated kernel, replica-set MongoDB, and independent side-ledger MongoDB containers. The rig explicitly disables kernel authentication and TLS; use only on an isolated development machine. Readiness probes use HTTP/2 cleartext on `/health/ready`.
+- macOS or Linux (child STOP/CONT signals are delivered directly through libc).
+- Local Docker and available loopback ports. The rig reserves three free ports once, then publishes explicit `127.0.0.1:<port>` mappings that remain fixed across container restarts. Reservations are released just before Docker binds; another process claiming a port in that interval causes startup to fail rather than silently choosing a new endpoint. Actual mappings are logged at startup and before/after restarts. Never point this rig at an existing stack or production database. It creates an isolated network and dedicated kernel, replica-set MongoDB, and independent side-ledger MongoDB containers. The rig explicitly disables kernel authentication and TLS; use only on an isolated development machine. Readiness probes use HTTP/2 cleartext on `/health/ready`.
 - Adequate disk space before publishing or starting Docker. On the shared development machine, stop below 25 GiB free; flag below 40 GiB.
 - A local slim kernel image. Through the required phase runner, run:
 
@@ -43,6 +43,8 @@ It prints the seed, run ID, output directory, and planned fault times before sta
 
 Durations must be positive. A window too short for a fault plus recovery has an empty fault schedule. `--faults none` is the baseline smoke run.
 
+Infrastructure and worker readiness share a three-minute startup budget. Once both workers are ready, an absolute `duration + settle` deadline includes faults, recovery, reader startup, and collection; individual operations cannot extend it. Deadline expiry records `failure.json` and exits **1**, not a clean or dirty durability verdict. Docker control commands have a thirty-second limit. Child exit and output drainage are bounded separately, and cleanup has its own sixty-second budget. A stopped child receives CONT in scheduler recovery and before termination, independent of run cancellation. If cleanup times out, use the explicit cleanup command below.
+
 ## Faults
 
 | Name | Action and purpose |
@@ -60,7 +62,7 @@ Faults are globally serialized (thus never overlap on one target). Every fault h
 
 ## Workload and oracle
 
-Before each append the producer durably journals a unique ledger ID, source, timestamp and numeric payload in the independent MongoDB container. It uses `AppendOnce` with that ID as the key. Success becomes `acked`; a failed response or transport exception becomes `unknown`; abrupt termination can leave `intended`. A restarted producer retries pending intentions with the original event and key. There is no lost-event assertion for an absent unknown/intended append: acknowledgement may never have happened.
+Before each append the producer durably journals a unique ledger ID, source, timestamp and numeric payload in the independent MongoDB container. It uses `AppendOnce` with that ID as the key. Success becomes `acked`; an ambiguous response or transport exception becomes `unknown`; abrupt termination can leave `intended`. Constraint and concurrency refusals become `failed`. An idempotency-key refusal becomes `conflict`, which is a violation but does not assert that an earlier append using that key was absent. A restarted producer retries only `intended` and `unknown` intentions with the original event and key. There is no lost-event assertion for an absent unknown/intended append: acknowledgement may never have happened.
 
 The consumer registers a reactor, active reducer, and projection. The reactor inserts **every delivery** into an external side-ledger using a fresh document ID; duplicates are deliberately not suppressed. A duplicate here is a finding about externally visible redelivery, not an assumption that arbitrary reactor side effects are exactly-once. The reducer and projection count and sum contributions per source.
 
@@ -87,7 +89,7 @@ These codes intentionally follow this rig's plan (not a general-purpose scanner'
 
 ## Output and cleanup
 
-The output directory contains `options.json`, `schedule.json`, stdout/stderr logs per child generation and container, `snapshot.json`, and `verdict.json`. A self-test additionally writes its modified snapshot; the original remains unchanged. Settle exceptions are logged separately. Do not commit run outputs; inspect/redact logs before sharing.
+The output directory contains `options.json`, `schedule.json`, stdout/stderr logs per child generation and container, `snapshot.json`, and `verdict.json`. A self-test additionally writes its modified snapshot; the original remains unchanged. An incomplete run instead records `failure.json` with the seed, run ID, timeout/cancellation/infrastructure classification, diagnostic reason, and exit code 1. Settle exceptions are logged separately. Do not commit run outputs; inspect/redact logs before sharing.
 
 Normal completion, exceptions and Ctrl-C terminate owned child processes and remove labeled containers, anonymous data volumes, and the network. `--keep-containers` retains Docker resources but still terminates child processes. If the driver itself is killed, clean up explicitly:
 
