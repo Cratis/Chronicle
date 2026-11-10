@@ -3,6 +3,8 @@
 
 namespace Cratis.Chronicle.ReadModels.for_DecisionReads;
 
+// Each fact points the shared projection definition at a different read model, so every fact needs its own context.
+[PerFactSpecificationLifecycle]
 public class when_admitting_a_projection : given.a_decision_reader
 {
     [Theory]
