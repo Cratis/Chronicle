@@ -1,0 +1,56 @@
+# Copyright (c) Cratis. All rights reserved.
+# Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+name: Chaos Rig
+
+on:
+  pull_request:
+    paths:
+      - "Chaos/**"
+      - ".github/workflows/chaos-rig.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "Chaos/**"
+      - ".github/workflows/chaos-rig.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# Match dotnet-build.yml; dotnet resolves the repository's global.json from the checkout.
+env:
+  DOTNET8_VERSION: "8.0.410"
+  DOTNET9_VERSION: "9.0.x"
+  DOTNET_VERSION: "10.0.x"
+
+jobs:
+  chaos-rig:
+    name: Build and test chaos rig
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
+        with:
+          dotnet-version: |
+            ${{ env.DOTNET8_VERSION }}
+            ${{ env.DOTNET9_VERSION }}
+            ${{ env.DOTNET_VERSION }}
+
+      - name: Build chaos rig specs
+        run: dotnet build Chaos/ChaosRig.Specs/ChaosRig.Specs.csproj -c Release -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
+
+      - name: Test chaos rig specs
+        run: dotnet test Chaos/ChaosRig.Specs/ChaosRig.Specs.csproj -c Release --no-build
