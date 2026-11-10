@@ -16,7 +16,7 @@ public class when_connecting_fails : given.a_chronicle_client_startup
         try
         {
             await StartAndSignalStarted();
-            await WaitForWarning();
+            await _logger.WarningLogged.Task.WaitAsync(TimeSpan.FromSeconds(10));
         }
         catch (Exception ex)
         {
@@ -26,21 +26,4 @@ public class when_connecting_fails : given.a_chronicle_client_startup
 
     [Fact] void should_not_throw() => _error.ShouldBeNull();
     [Fact] void should_warn_that_it_could_not_connect() => _logger.Entries.ShouldContain(e => e.Level == LogLevel.Warning && e.Message.Contains("Could not connect"));
-
-    async Task WaitForWarning()
-    {
-        var deadline = DateTime.UtcNow.AddSeconds(10);
-        while (DateTime.UtcNow < deadline)
-        {
-            lock (_logger.Entries)
-            {
-                if (_logger.Entries.Exists(e => e.Level == LogLevel.Warning))
-                {
-                    return;
-                }
-            }
-
-            await Task.Delay(10);
-        }
-    }
 }

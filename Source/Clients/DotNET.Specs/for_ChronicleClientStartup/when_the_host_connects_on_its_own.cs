@@ -5,14 +5,15 @@ namespace Cratis.Chronicle.for_ChronicleClientStartup;
 
 public class when_the_host_connects_on_its_own : given.a_chronicle_client_startup
 {
-    bool _decided;
+    TaskCompletionSource _decided;
 
     void Establish()
     {
         _shouldConnect = false;
+        _decided = new(TaskCreationOptions.RunContinuationsAsynchronously);
         _startup = new(_options, _client, _environment, _lifetime, _logger, () =>
         {
-            _decided = true;
+            _decided.TrySetResult();
             return _shouldConnect;
         });
     }
@@ -20,11 +21,7 @@ public class when_the_host_connects_on_its_own : given.a_chronicle_client_startu
     async Task Because()
     {
         await StartAndSignalStarted();
-        var deadline = DateTime.UtcNow.AddSeconds(10);
-        while (!_decided && DateTime.UtcNow < deadline)
-        {
-            await Task.Delay(10);
-        }
+        await _decided.Task.WaitAsync(TimeSpan.FromSeconds(10));
     }
 
     [Fact] void should_not_connect() => _connection.DidNotReceive().Connect();

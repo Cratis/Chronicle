@@ -60,6 +60,8 @@ public class a_chronicle_client_startup : Specification
     {
         public List<(LogLevel Level, string Message)> Entries { get; } = [];
 
+        public TaskCompletionSource WarningLogged { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
         public IDisposable? BeginScope<TState>(TState state)
             where TState : notnull => null;
 
@@ -70,6 +72,11 @@ public class a_chronicle_client_startup : Specification
             lock (Entries)
             {
                 Entries.Add((logLevel, formatter(state, exception)));
+            }
+
+            if (logLevel == LogLevel.Warning)
+            {
+                WarningLogged.TrySetResult();
             }
         }
     }
