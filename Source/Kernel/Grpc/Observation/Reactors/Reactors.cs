@@ -190,7 +190,8 @@ internal sealed class Reactors(
                         registration.ConnectionId,
                         registration.EventStore,
                         registration.Namespace,
-                        deliverPage);
+                        deliverPage,
+                        registration.PageDelivery.ToChronicle());
                 }
 
                 reactorMediator.SubscribeReplayNotifications(

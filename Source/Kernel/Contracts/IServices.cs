@@ -173,6 +173,12 @@ public interface IServices
     IEventSources EventSources { get; }
 
     /// <summary>
+    /// Gets the import sessions service.
+    /// </summary>
+    /// <exception cref="NotSupportedException">The service container does not provide imports.</exception>
+    Imports.IImports Imports => throw new NotSupportedException("Imports are not supported by this service container.");
+
+    /// <summary>
     /// Gets the occurrence service when supported by this service container.
     /// </summary>
     /// <exception cref="NotSupportedException">This container predates occurrence support.</exception>

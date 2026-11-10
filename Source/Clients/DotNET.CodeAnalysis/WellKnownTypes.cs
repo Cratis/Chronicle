@@ -108,6 +108,21 @@ public static class WellKnownTypes
     public const string EventContextName = "Cratis.Chronicle.Events.EventContext";
 
     /// <summary>
+    /// The full name of the EventBatch type a batch method takes as its first parameter.
+    /// </summary>
+    public const string EventBatchName = "Cratis.Chronicle.Observation.EventBatch";
+
+    /// <summary>
+    /// The full name of the BatchContext type only batch methods may take.
+    /// </summary>
+    public const string BatchContextName = "Cratis.Chronicle.Observation.BatchContext";
+
+    /// <summary>
+    /// The metadata name of the generic Observes attribute a batch method declares its event types with.
+    /// </summary>
+    public const string ObservesAttributeName = "Cratis.Chronicle.Observation.ObservesAttribute`1";
+
+    /// <summary>
     /// The full name of the EventForEventSourceId type.
     /// </summary>
     public const string EventForEventSourceIdName = "Cratis.Chronicle.EventSequences.EventForEventSourceId";

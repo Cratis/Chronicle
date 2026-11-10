@@ -1,0 +1,25 @@
+---
+title: "CHR0073: BatchContext is only for batch methods"
+description: "CHR0073 reports a Cratis Chronicle per-event reactor or reducer method that takes a BatchContext."
+---
+
+## Rule description
+
+`BatchContext` describes the page of events a batch method is called for: its partitions, its event count, its origin and its deadline. A per-event method is called once per event and receives that event's `EventContext` instead. Chronicle refuses to register an observer whose per-event method takes a `BatchContext`.
+
+For a reducer, CHR0073 reports a method shaped like a reduce method, taking an event and the current read model, whose third parameter is a `BatchContext` where a reduce method takes the `EventContext`. Without the rule such a method would not be a reduce method at all, and its events would be skipped without a word. Other methods that happen to take an event and a `BatchContext` are not reduce methods and are not reported.
+
+A reducer that has a batch method is not reported either. There a method shaped like a reduce method but taking the `BatchContext` is a helper the batch method calls for each event with the context it was given, such as `Account? Apply(Deposited @event, Account? current, BatchContext context)`. Chronicle registers such a reducer and only calls the batch method.
+
+## Severity
+
+Error
+
+## How to fix
+
+- Take an `EventContext` instead, if the method needs the event's metadata.
+- Turn the method into a batch method, taking an `EventBatch` first and declaring `[Observes<TEvent>]`, if it needs to know about the page.
+
+## Related topics
+
+- [Reactor batch methods](../reactors/batches.mdx#the-batch-context)

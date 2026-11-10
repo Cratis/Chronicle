@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
+using Orleans.CodeGeneration;
 using Orleans.Concurrency;
 
 namespace Cratis.Chronicle.EventSequences;
@@ -10,6 +11,7 @@ namespace Cratis.Chronicle.EventSequences;
 /// <summary>
 /// Defines the system that manages the queues for appended events.
 /// </summary>
+[Version(1)]
 public interface IAppendedEventsQueues : IGrainWithStringKey
 {
     /// <summary>
@@ -74,4 +76,19 @@ public interface IAppendedEventsQueues : IGrainWithStringKey
     /// observer that believes it is subscribed uses this to tell "still being delivered to" from "silently dropped".
     /// </remarks>
     Task<bool> IsSubscribed(ObserverKey observerKey);
+
+    /// <summary>
+    /// Hands every subscribed observer the given events are meant for to its catch-up path, dropping its live
+    /// subscription, without delivering the events live.
+    /// </summary>
+    /// <param name="appendedEvents">The durable events that were committed without live delivery.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// Used by an import commit (decision 0023), after each chunk is durable: the chunk is not delivered live, so an
+    /// ordinary append delivered after it would carry an observer's cursor past imported events it has not seen. This is
+    /// the spill the queue applies to a lagging observer under back-pressure; an observer that is not subscribed, because
+    /// it is already catching up, is left alone and gets no second catch-up. Catch-up reads from the observer's own
+    /// cursor, so it delivers the imported events and any ordinary appends that interleave with them, in order.
+    /// </remarks>
+    Task SpillMatchingToCatchup(IEnumerable<AppendedEvent> appendedEvents);
 }

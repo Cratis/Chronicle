@@ -28,6 +28,7 @@ public partial class Observer
     {
         if (IsRetired || _removed) return;
         _isPreparingCatchup = true;
+        _walkingEveryPartition = false;
         using var scope = logger.BeginObserverScope(State.Identifier, _observerKey);
 
         if (await AdoptedPendingCatchUpJob()) return;
@@ -49,6 +50,7 @@ public partial class Observer
         try
         {
             var stampedEpoch = default(ulong?);
+            await LiveDeliveriesSettled();
             jobId = await AcquireCatchUpJob(epoch => stampedEpoch = epoch);
             ClaimCatchUpJob(jobId, stampedEpoch);
         }
@@ -78,6 +80,7 @@ public partial class Observer
         await WriteStateAsync();
 
         _isPreparingCatchup = false;
+        _walkingEveryPartition = _subscription.DeliversPartitionPages;
 
         // Reached when a brand-new job's steps prepared. Only a job that has partitions to catch up is forward
         // progress; one with none is the zero-work lap and must not reset the consecutive-stranding count the

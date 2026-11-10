@@ -5,6 +5,7 @@ using System.Collections.Immutable;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.EventSources;
+using Cratis.Chronicle.Imports;
 using Cratis.Monads;
 
 namespace Cratis.Chronicle.EventSequences;
@@ -770,4 +771,53 @@ public interface IEventSequence
     /// <returns>The matching closed scopes.</returns>
     /// <exception cref="ClosedStreamScopesNotSupported">The implementation does not support scopes.</exception>
     Task<IImmutableList<ClosedStream>> GetClosedStreams(ClosedStreamScope? within = default) => throw new ClosedStreamScopesNotSupported();
+
+    /// <summary>
+    /// Imports events into the event sequence, reading them lazily as they are uploaded (decision 0023).
+    /// </summary>
+    /// <param name="events">The events, in the order they are to be committed. Each keeps its own occurred time, correlation, causation, caused-by identity, tags and generation.</param>
+    /// <param name="options">Optional <see cref="ImportOptions"/>; by default an invalid event fails the whole import and nothing is committed.</param>
+    /// <param name="progress">Optional <see cref="IProgress{T}"/> receiving the progress the kernel reports.</param>
+    /// <param name="cancellationToken">The <see cref="CancellationToken"/>.</param>
+    /// <returns>The <see cref="ImportResult"/>.</returns>
+    /// <exception cref="ImportsNotSupported">This event sequence does not support importing.</exception>
+    Task<ImportResult> Import(
+        IAsyncEnumerable<EventForEventSourceId> events,
+        ImportOptions? options = default,
+        IProgress<ImportProgress>? progress = default,
+        CancellationToken cancellationToken = default) => throw new ImportsNotSupported();
+
+    /// <summary>
+    /// Imports events into the event sequence, reading them lazily as they are uploaded (decision 0023).
+    /// </summary>
+    /// <param name="events">The events, in the order they are to be committed.</param>
+    /// <param name="options">Optional <see cref="ImportOptions"/>.</param>
+    /// <param name="progress">Optional <see cref="IProgress{T}"/> receiving the progress the kernel reports.</param>
+    /// <param name="cancellationToken">The <see cref="CancellationToken"/>.</param>
+    /// <returns>The <see cref="ImportResult"/>.</returns>
+    /// <exception cref="ImportsNotSupported">This event sequence does not support importing.</exception>
+    Task<ImportResult> Import(
+        IEnumerable<EventForEventSourceId> events,
+        ImportOptions? options = default,
+        IProgress<ImportProgress>? progress = default,
+        CancellationToken cancellationToken = default) => throw new ImportsNotSupported();
+
+    /// <summary>
+    /// Begins an import session, for producers that are not a single stream.
+    /// </summary>
+    /// <param name="options">Optional <see cref="ImportOptions"/>.</param>
+    /// <param name="cancellationToken">The <see cref="CancellationToken"/>.</param>
+    /// <returns>The <see cref="IEventImport"/>.</returns>
+    /// <exception cref="ImportsNotSupported">This event sequence does not support importing.</exception>
+    Task<IEventImport> BeginImport(ImportOptions? options = default, CancellationToken cancellationToken = default) => throw new ImportsNotSupported();
+
+    /// <summary>
+    /// Reattaches to an import session that was begun earlier, for example by a process that stopped while staging.
+    /// </summary>
+    /// <param name="importId">The <see cref="ImportId"/> of the import.</param>
+    /// <param name="options">Optional <see cref="ImportOptions"/>; the import keeps what it was begun with for invalid events.</param>
+    /// <param name="cancellationToken">The <see cref="CancellationToken"/>.</param>
+    /// <returns>The <see cref="IEventImport"/>, continuing after the events the kernel already holds.</returns>
+    /// <exception cref="ImportsNotSupported">This event sequence does not support importing.</exception>
+    Task<IEventImport> BeginImport(ImportId importId, ImportOptions? options = default, CancellationToken cancellationToken = default) => throw new ImportsNotSupported();
 }

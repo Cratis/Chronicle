@@ -420,48 +420,16 @@ public partial class Observer
             return;
         }
 
-        if (_subscription.Filters is { } filters)
+        if (ExcludedByFilters([.. events]))
         {
-            if (filters.EventSourceType is { } eventSourceType &&
-                eventSourceType != EventSourceType.Unspecified &&
-                !events.Any(_ => _.Context.EventSourceType == eventSourceType))
+            State = State with
             {
-                State = State with
-                {
-                    NextEventSequenceNumber = CursorAfter(observedTailEventSequenceNumber.Next()),
-                    TailEventSequenceNumber = TailAfter(observedTailEventSequenceNumber)
-                };
-                RecordedHandlingState();
-                await WriteProgressStateDebounced();
-                return;
-            }
-
-            if (filters.EventStreamType is { } eventStreamType &&
-                !eventStreamType.IsAll &&
-                !events.Any(_ => _.Context.EventStreamType == eventStreamType))
-            {
-                State = State with
-                {
-                    NextEventSequenceNumber = CursorAfter(observedTailEventSequenceNumber.Next()),
-                    TailEventSequenceNumber = TailAfter(observedTailEventSequenceNumber)
-                };
-                RecordedHandlingState();
-                await WriteProgressStateDebounced();
-                return;
-            }
-
-            if (filters.Tags.Any() &&
-                !events.Any(_ => _.Context.Tags.Any(t => filters.Tags.Contains(t.Value))))
-            {
-                State = State with
-                {
-                    NextEventSequenceNumber = CursorAfter(observedTailEventSequenceNumber.Next()),
-                    TailEventSequenceNumber = TailAfter(observedTailEventSequenceNumber)
-                };
-                RecordedHandlingState();
-                await WriteProgressStateDebounced();
-                return;
-            }
+                NextEventSequenceNumber = CursorAfter(observedTailEventSequenceNumber.Next()),
+                TailEventSequenceNumber = TailAfter(observedTailEventSequenceNumber)
+            };
+            RecordedHandlingState();
+            await WriteProgressStateDebounced();
+            return;
         }
 
         var failed = false;
@@ -485,6 +453,9 @@ public partial class Observer
         IReadOnlyDictionary<EventTypeId, EventCount> handledCountsPerEventType = ImmutableDictionary<EventTypeId, EventCount>.Empty;
         if (await CanDispatchDelivery(partition, eventsToHandle))
         {
+            // Only a delivery that reaches the subscriber can race a catch-up; a hand-over holds its partition instead.
+            using var delivery = BeginLiveDelivery();
+
             // Record this partition as in-flight on the observer state and make it durable *before* the subscriber
             // is invoked. If the silo dies between this point and the post-handling state write, the marker survives
             // on the reloaded observer state and drives partition catch-up on the next activation.
@@ -712,6 +683,14 @@ public partial class Observer
         if (State.CatchingUpPartitions.Contains(partition))
         {
             logger.PartitionCatchingUpCannotHandleNewEvents(partition);
+            return false;
+        }
+
+        // The walk reads every partition to the end of the log, including one whose first event arrives after it registered
+        // its partitions; delivering that event live as well would hand it to the subscriber twice.
+        if (_walkingEveryPartition)
+        {
+            logger.CatchUpWalkCoversNewEvents(partition);
             return false;
         }
 

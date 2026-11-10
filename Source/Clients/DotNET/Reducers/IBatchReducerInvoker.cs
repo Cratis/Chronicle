@@ -12,6 +12,11 @@ namespace Cratis.Chronicle.Reducers;
 internal interface IBatchReducerInvoker
 {
     /// <summary>
+    /// Gets a value indicating whether the reducer reduces with a batch method rather than per-event methods.
+    /// </summary>
+    bool HasBatchMethod { get; }
+
+    /// <summary>
     /// Reduces the events of one partition.
     /// </summary>
     /// <param name="serviceProvider">The <see cref="IServiceProvider"/> for the reduction.</param>

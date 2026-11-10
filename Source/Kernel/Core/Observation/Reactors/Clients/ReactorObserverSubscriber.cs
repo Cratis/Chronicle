@@ -26,12 +26,14 @@ namespace Cratis.Chronicle.Observation.Reactors.Clients;
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 /// <param name="timeProvider">The delivery clock.</param>
 /// <param name="options">The telemetry configuration.</param>
+/// <param name="configurationProvider">The <see cref="IConfigurationForObserverProvider"/> holding the kernel's page maximums, read for every delivery.</param>
 [ConnectedObserverPlacement]
 public class ReactorObserverSubscriber(
     IReactorMediator reactorMediator,
     ILogger<ReactorObserverSubscriber> logger,
     TimeProvider? timeProvider = null,
-    IOptions<ChronicleOptions>? options = null) : Grain, IReactorObserverSubscriber, IReactorPageObserverSubscriber
+    IOptions<ChronicleOptions>? options = null,
+    IConfigurationForObserverProvider? configurationProvider = null) : Grain, IReactorObserverSubscriber, IReactorPageObserverSubscriber
 {
     readonly ClientObserverSubscriberMetrics _metrics = new(options?.Value?.Telemetry.MetricNames ?? MetricNames.Legacy);
     readonly TimeProvider _clock = timeProvider ?? TimeProvider.System;
@@ -48,7 +50,35 @@ public class ReactorObserverSubscriber(
     }
 
     /// <inheritdoc/>
-    public async Task<ObserverSubscriberResult> OnNext(Key partition, IEnumerable<AppendedEvent> events, ObserverSubscriberContext context)
+    public async Task<ObserverSubscriberResult> OnNext(Key partition, IEnumerable<AppendedEvent> events, ObserverSubscriberContext context) =>
+        await BoundedPageDelivery.Deliver(await PageBoundsFor(context), events, page => DeliverPartition(partition, page, context));
+
+    /// <inheritdoc/>
+    public async Task<ObserverPageResult> OnNextPartitions(IReadOnlyList<ObserverPartitionBatch> batches, ObserverSubscriberContext context) =>
+        await BoundedPageDelivery.Deliver(await PageBoundsFor(context), batches, page => DeliverPartitions(page, context));
+
+    static ObserverPageResult Settled(IReadOnlyList<ObserverPartitionBatch> batches, ObserverSubscriberResult result) =>
+        new(batches.ToDictionary(_ => _.Partition, _ => result));
+
+    /// <summary>
+    /// Gets the bounds of the pages the connection receives: the bounds the client declared, capped by the kernel's maximums.
+    /// </summary>
+    /// <param name="context">The <see cref="ObserverSubscriberContext"/> of the delivery.</param>
+    /// <returns>The <see cref="PageBounds"/>; unbounded for a client that did not declare page delivery.</returns>
+    async Task<PageBounds> PageBoundsFor(ObserverSubscriberContext context)
+    {
+        if (context.Metadata is not ConnectedClient connectedClient ||
+            reactorMediator.GetPageDelivery(_key.ObserverId, connectedClient.ConnectionId, _key.EventStore, _key.Namespace) is not { } declared)
+        {
+            return PageBounds.Unbounded;
+        }
+
+        // Read for every delivery, like the job cursor reads its bounds, so a changed setting takes effect without a restart.
+        var configuration = configurationProvider is null ? new Observers() : await configurationProvider.GetFor(_key);
+        return PageBounds.For(declared, configuration);
+    }
+
+    async Task<ObserverSubscriberResult> DeliverPartition(Key partition, IEnumerable<AppendedEvent> events, ObserverSubscriberContext context)
     {
         var deliveryWait = new ClientDeliveryWait(_clock, logger, _key, partition, _metrics);
         if (deliveryWait.Expired(context))
@@ -89,8 +119,7 @@ public class ReactorObserverSubscriber(
         }
     }
 
-    /// <inheritdoc/>
-    public async Task<ObserverPageResult> OnNextPartitions(IReadOnlyList<ObserverPartitionBatch> batches, ObserverSubscriberContext context)
+    async Task<ObserverPageResult> DeliverPartitions(IReadOnlyList<ObserverPartitionBatch> batches, ObserverSubscriberContext context)
     {
         var deliveryWait = new ClientDeliveryWait(_clock, logger, _key, ObserverSubscriberKey.AllPartitions, _metrics);
         if (deliveryWait.Expired(context))
@@ -131,7 +160,4 @@ public class ReactorObserverSubscriber(
             return Settled(batches, ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, "Task was cancelled"));
         }
     }
-
-    static ObserverPageResult Settled(IReadOnlyList<ObserverPartitionBatch> batches, ObserverSubscriberResult result) =>
-        new(batches.ToDictionary(_ => _.Partition, _ => result));
 }

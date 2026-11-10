@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Configuration;
 
 namespace Cratis.Chronicle.Observation;
 
@@ -31,6 +32,7 @@ public partial class Observer
 
         // The cursor is single, but the partitions of a page are settled one at a time in whatever order. Every partition is filtered
         // against where the cursor stood when the page arrived, and settling only ever moves the cursor forward.
+        using var delivery = BeginLiveDelivery();
         _pageFloor = State.NextEventSequenceNumber;
         try
         {
@@ -66,6 +68,31 @@ public partial class Observer
         return merged;
     }
 
+    static List<List<ObserverPartitionBatch>> WithinLiveBudget(Observers configuration, IReadOnlyList<ObserverPartitionBatch> candidates)
+    {
+        // Partitions are taken in the order they arrived and cut into pages that each stay within the live delivery budget. A
+        // partition larger than the budget is never part of a page, so it does not keep the partitions around it apart: Handle
+        // hands it to catch-up, as it does any single partition over the budget. A partition left on its own is delivered by Handle.
+        var pages = new List<List<ObserverPartitionBatch>>();
+        var current = new List<ObserverPartitionBatch>();
+        var events = 0;
+        foreach (var candidate in candidates.Where(_ => !ExceedsLiveBudget(configuration, _.Events.Count)))
+        {
+            if (current.Count > 0 && ExceedsLiveBudget(configuration, events + candidate.Events.Count))
+            {
+                pages.Add(current);
+                current = [];
+                events = 0;
+            }
+
+            current.Add(candidate);
+            events += candidate.Events.Count;
+        }
+
+        pages.Add(current);
+        return [.. pages.Where(_ => _.Count > 1 && !ExceedsLiveBudget(configuration, _.Sum(batch => batch.Events.Count)))];
+    }
+
     EventSequenceNumber CursorAfter(EventSequenceNumber candidate) =>
         _pageFloor is null || candidate > State.NextEventSequenceNumber ? candidate : State.NextEventSequenceNumber;
 
@@ -80,12 +107,26 @@ public partial class Observer
             return;
         }
 
+        // A page goes to one subscriber, while each partition is kept with the client instance the subscription selects for it.
+        // Partitions are therefore paged with the others that go to the same instance, never moved to another one.
         var configuration = await configurationProvider.GetFor(_observerKeyText);
-        if (ExceedsLiveBudget(configuration, candidates.Sum(_ => _.Events.Count)))
+        var byTarget = candidates.GroupBy(_ =>
         {
-            return;
+            var target = subscriberSelector.Select(_subscription, _.Partition);
+            return (target.SiloAddress, Connection: target.ConnectedClient?.ConnectionId);
+        });
+        foreach (var page in byTarget.SelectMany(_ => WithinLiveBudget(configuration, [.. _])))
+        {
+            await DeliverPageWithinBudget(page, configuration);
+            if (!_observerExists)
+            {
+                return;
+            }
         }
+    }
 
+    async Task DeliverPageWithinBudget(List<ObserverPartitionBatch> candidates, Observers configuration)
+    {
         logger.DeliveringPage(candidates.Sum(_ => _.Events.Count), candidates.Count);
 
         // Every partition of the page is in flight until it is settled, and that is made durable before the subscriber sees any of it,
@@ -136,11 +177,6 @@ public partial class Observer
     List<ObserverPartitionBatch> FindPageCandidates(IReadOnlyList<ObserverPartitionBatch> batches)
     {
         var candidates = new List<ObserverPartitionBatch>();
-        if (_subscription.Filters is not null)
-        {
-            return candidates;
-        }
-
         var floor = _pageFloor ?? State.NextEventSequenceNumber;
         var now = _clock.GetUtcNow();
         foreach (var batch in batches)
@@ -149,7 +185,8 @@ public partial class Observer
             if (events.Length == 0 ||
                 !ShouldHandleEvent(batch.Partition) ||
                 _deliveryFences.IsHeld(batch.Partition, now) ||
-                (!State.SubscribesToAllEvents && !events.Any(_ => _subscription.EventTypes.Any(et => et.Id == _.Context.EventType.Id))))
+                (!State.SubscribesToAllEvents && !events.Any(_ => _subscription.EventTypes.Any(et => et.Id == _.Context.EventType.Id))) ||
+                ExcludedByFilters(events))
             {
                 continue;
             }
@@ -158,6 +195,24 @@ public partial class Observer
         }
 
         return candidates;
+    }
+
+    /// <summary>
+    /// Gets whether the subscription's filters leave out every one of the events, the same way <see cref="HandleEventsForPartition"/>
+    /// skips a partition without delivering it.
+    /// </summary>
+    /// <param name="events">The events of one partition.</param>
+    /// <returns>True if the filters exclude all of them; otherwise false.</returns>
+    bool ExcludedByFilters(IReadOnlyCollection<AppendedEvent> events)
+    {
+        if (_subscription.Filters is not { } filters)
+        {
+            return false;
+        }
+
+        return (filters.EventSourceType is { } eventSourceType && eventSourceType != EventSourceType.Unspecified && !events.Any(_ => _.Context.EventSourceType == eventSourceType)) ||
+            (filters.EventStreamType is { } eventStreamType && !eventStreamType.IsAll && !events.Any(_ => _.Context.EventStreamType == eventStreamType)) ||
+            (filters.Tags.Any() && !events.Any(_ => _.Context.Tags.Any(t => filters.Tags.Contains(t.Value))));
     }
 
     sealed record PrefetchedDelivery(ObserverSubscriberResult? Result, Exception? Failure, DeliveryFenceContext? Fence);

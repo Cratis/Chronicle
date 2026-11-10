@@ -97,28 +97,31 @@ class [GrainType("eventsequence")] Cratis.Chronicle.EventSequences.EventSequence
 
 class [GrainType("eventsequences")] Cratis.Chronicle.EventSequences.EventSequences
 
-interface [GrainInterfaceType("Cratis.Chronicle.EventSequences.IAppendedEventsQueue")] Cratis.Chronicle.EventSequences.IAppendedEventsQueue [Version(0)]
+interface [GrainInterfaceType("Cratis.Chronicle.EventSequences.IAppendedEventsQueue")] Cratis.Chronicle.EventSequences.IAppendedEventsQueue [Version(1)]
   A21C2489: Enqueue(System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.AppendedEvent>) -> Task
   D17FC975: GetSubscriptions() -> Task<System.Collections.Generic.IReadOnlyList<Cratis.Chronicle.EventSequences.AppendedEventsQueueObserverSubscription>>
   BA26AC21: ResetForDevelopment() -> Task
+  D8D0078E: SpillMatchingToCatchup(System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.AppendedEvent>) -> Task
   001631A1: SpillToCatchup() -> Task
   EE476BF4: Subscribe(Cratis.Chronicle.Concepts.Observation.ObserverKey, System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.EventType>, Cratis.Chronicle.Concepts.Observation.ObserverFilters?) -> Task
   A5B87E35: SubscribeToAllEventTypes(Cratis.Chronicle.Concepts.Observation.ObserverKey, Cratis.Chronicle.Concepts.Observation.ObserverFilters?) -> Task
   CC8BAF71: Unsubscribe(Cratis.Chronicle.Concepts.Observation.ObserverKey) -> Task
 
-interface [GrainInterfaceType("Cratis.Chronicle.EventSequences.IAppendedEventsQueues")] Cratis.Chronicle.EventSequences.IAppendedEventsQueues [Version(0)]
+interface [GrainInterfaceType("Cratis.Chronicle.EventSequences.IAppendedEventsQueues")] Cratis.Chronicle.EventSequences.IAppendedEventsQueues [Version(1)]
   67AB967A: Enqueue(System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.AppendedEvent>) -> Task
   68B51930: IsSubscribed(Cratis.Chronicle.Concepts.Observation.ObserverKey) -> Task<bool>
   BB5FDFB6: ResetForDevelopment() -> Task
+  64C75630: SpillMatchingToCatchup(System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.AppendedEvent>) -> Task
   FDF94063: SpillToCatchup() -> Task
   3CC5C800: Subscribe(Cratis.Chronicle.Concepts.Observation.ObserverKey, System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.EventType>, Cratis.Chronicle.Concepts.Observation.ObserverFilters?) -> Task<Cratis.Chronicle.EventSequences.AppendedEventsQueueSubscription>
   018752D9: SubscribeToAllEventTypes(Cratis.Chronicle.Concepts.Observation.ObserverKey, Cratis.Chronicle.Concepts.Observation.ObserverFilters?) -> Task<Cratis.Chronicle.EventSequences.AppendedEventsQueueSubscription>
   3774DB6B: Unsubscribe(Cratis.Chronicle.EventSequences.AppendedEventsQueueSubscription) -> Task
 
-interface [GrainInterfaceType("Cratis.Chronicle.EventSequences.IEventSequence")] Cratis.Chronicle.EventSequences.IEventSequence [Version(1)]
+interface [GrainInterfaceType("Cratis.Chronicle.EventSequences.IEventSequence")] Cratis.Chronicle.EventSequences.IEventSequence [Version(2)]
   F3BC261C: Append(Cratis.Chronicle.Concepts.Events.EventSourceId, object, Cratis.Execution.CorrelationId?, System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Auditing.Causation>, Cratis.Chronicle.Concepts.Identities.Identity?, System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.Tag>, Cratis.Chronicle.Concepts.Events.EventSourceType?, Cratis.Chronicle.Concepts.Events.EventStreamType?, Cratis.Chronicle.Concepts.Events.EventStreamId?) -> Task<Cratis.Chronicle.EventSequences.AppendResult>
   B0E401DD: Append(Cratis.Chronicle.Concepts.Events.EventSourceType, Cratis.Chronicle.Concepts.Events.EventSourceId, Cratis.Chronicle.Concepts.Events.EventStreamType, Cratis.Chronicle.Concepts.Events.EventStreamId, Cratis.Chronicle.Concepts.Events.EventType, System.Text.Json.Nodes.JsonObject, Cratis.Execution.CorrelationId, System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Auditing.Causation>, Cratis.Chronicle.Concepts.Identities.Identity, System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.Tag>, Cratis.Chronicle.Concepts.EventSequences.Concurrency.ConcurrencyScope, System.DateTimeOffset?, Cratis.Chronicle.Concepts.Events.Subject?) -> Task<Cratis.Chronicle.EventSequences.AppendResult>
   384CCA2A: Append(Cratis.Chronicle.Concepts.Events.EventSourceType, Cratis.Chronicle.Concepts.Events.EventSourceId, Cratis.Chronicle.Concepts.Events.EventStreamType, Cratis.Chronicle.Concepts.Events.EventStreamId, Cratis.Chronicle.Concepts.Events.EventType, System.Text.Json.Nodes.JsonObject, Cratis.Execution.CorrelationId, System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Auditing.Causation>, Cratis.Chronicle.Concepts.Identities.Identity, System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.Tag>, Cratis.Chronicle.Concepts.EventSequences.Concurrency.ConcurrencyScope, System.DateTimeOffset?, Cratis.Chronicle.Concepts.Events.Subject?, System.Collections.Generic.IReadOnlyCollection<Cratis.Chronicle.Concepts.Events.NamedTag>, Cratis.Chronicle.Concepts.Events.EventSourceName?) -> Task<Cratis.Chronicle.EventSequences.AppendResult>
+  2FFFDC4D: AppendImportChunk(Cratis.Chronicle.Concepts.Imports.ImportId, int, Cratis.Chronicle.Concepts.Events.EventSequenceNumber, bool, System.Collections.Generic.IReadOnlyList<Cratis.Chronicle.Imports.ImportEventToAppend>) -> Task<Cratis.Chronicle.Imports.ImportChunkAppendResult>
   A0E71A3D: AppendMany(System.Collections.Generic.IEnumerable<Cratis.Chronicle.EventSequences.EventToAppend>, Cratis.Execution.CorrelationId, System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Auditing.Causation>, Cratis.Chronicle.Concepts.Identities.Identity, Cratis.Chronicle.Concepts.EventSequences.Concurrency.ConcurrencyScopes) -> Task<Cratis.Chronicle.EventSequences.AppendManyResult>
   8BBAB730: AppendManyWithConjunctions(System.Collections.Generic.IEnumerable<Cratis.Chronicle.EventSequences.EventToAppend>, Cratis.Execution.CorrelationId, System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Auditing.Causation>, Cratis.Chronicle.Concepts.Identities.Identity, Cratis.Chronicle.Concepts.EventSequences.Concurrency.ConcurrencyScopeConjunctions) -> Task<Cratis.Chronicle.EventSequences.AppendManyResult>
   045FDF16: AppendManyWithConjunctionsAndEffectReceipt(System.Collections.Generic.IEnumerable<Cratis.Chronicle.EventSequences.EventToAppend>, Cratis.Execution.CorrelationId, System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Auditing.Causation>, Cratis.Chronicle.Concepts.Identities.Identity, Cratis.Chronicle.Concepts.EventSequences.Concurrency.ConcurrencyScopeConjunctions, Cratis.Chronicle.Occurrences.EffectReceipt) -> Task<Cratis.Chronicle.EventSequences.AppendManyResult>
@@ -132,6 +135,7 @@ interface [GrainInterfaceType("Cratis.Chronicle.EventSequences.IEventSequence")]
   8F0DD585: ConstraintIndexRebuildStarting(Cratis.Chronicle.EventSequences.ConstraintIndexRebuildRunId, System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.Constraints.ConstraintName>) -> Task
   254DDE36: ConstraintIndexRebuilt(Cratis.Chronicle.EventSequences.ConstraintIndexRebuildRunId, System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.Constraints.ConstraintName>, Cratis.Chronicle.EventSequences.ConstraintIndexRebuildOutcome) -> Task
   DACE315E: DrainAppends() -> Task
+  9D4B8469: EndImportValidation(Cratis.Chronicle.Concepts.Imports.ImportId) -> Task
   C524BBE5: GetNextSequenceNumber() -> Task<Cratis.Chronicle.Concepts.Events.EventSequenceNumber>
   79229773: GetNextSequenceNumberGreaterOrEqualTo(Cratis.Chronicle.Concepts.Events.EventSequenceNumber, System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.EventType>, Cratis.Chronicle.Concepts.Events.EventSourceId?) -> Task<Cratis.Monads.Result<Cratis.Chronicle.Concepts.Events.EventSequenceNumber, Cratis.Chronicle.EventSequences.GetSequenceNumberError>>
   B1E98318: GetTailSequenceNumber() -> Task<Cratis.Chronicle.Concepts.Events.EventSequenceNumber>
@@ -145,6 +149,7 @@ interface [GrainInterfaceType("Cratis.Chronicle.EventSequences.IEventSequence")]
   A5192D55: Rehydrate() -> Task
   B03C5716: ReopenCompletedStream(Cratis.Chronicle.Concepts.Events.Constraints.ClosedStreamScope, string, Cratis.Execution.CorrelationId, System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Auditing.Causation>, Cratis.Chronicle.Concepts.Identities.Identity) -> Task<Cratis.Monads.Result<Cratis.Chronicle.Sequences.ReopenStreamScopeError>>
   8EBCE7E3: Revise(Cratis.Chronicle.Concepts.Events.EventSequenceNumber, Cratis.Chronicle.Concepts.Events.EventType, System.Text.Json.Nodes.JsonObject, Cratis.Execution.CorrelationId, System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Auditing.Causation>, Cratis.Chronicle.Concepts.Identities.Identity) -> Task
+  6E5460C4: ValidateImportChunk(Cratis.Chronicle.Concepts.Imports.ImportId, bool, System.Collections.Generic.IReadOnlyList<Cratis.Chronicle.Imports.ImportEventToAppend>) -> Task<Cratis.Chronicle.Imports.ImportChunkValidationResult>
 
 interface [GrainInterfaceType("Cratis.Chronicle.EventSequences.IEventSequences")] Cratis.Chronicle.EventSequences.IEventSequences [Version(0)]
   4CBBD45D: GetEventSequences() -> Task<System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.EventSequences.EventSequenceId>>
@@ -207,6 +212,39 @@ class [GrainType("generationinitializer")] Cratis.Chronicle.Generations.Enableme
 
 interface [GrainInterfaceType("Cratis.Chronicle.Generations.Enablement.IGenerationInitializer")] Cratis.Chronicle.Generations.Enablement.IGenerationInitializer [Version(0)]
   821C1699: Initialize(Cratis.Chronicle.Concepts.EventStoreName) -> Task<GenerationInitializationResult>
+
+interface [GrainInterfaceType("Cratis.Chronicle.Imports.IImport")] Cratis.Chronicle.Imports.IImport [Version(0)]
+  66C19E1C: Abandon(string) -> Task<Cratis.Chronicle.Imports.ImportOperationResult>
+  CA401AC6: AbandonIfExpired() -> Task<bool>
+  D92C09C3: Begin(Cratis.Chronicle.Concepts.EventSequences.EventSequenceId, Cratis.Chronicle.Concepts.Imports.OnInvalidEvent) -> Task<Cratis.Chronicle.Imports.ImportOperationResult>
+  104722C8: ChunkCommitted(int, System.Collections.Generic.IEnumerable<Cratis.Chronicle.Imports.ImportEventOutcome>) -> Task
+  234C5585: ChunkStaged(Cratis.Chronicle.Storage.Imports.ImportChunkSummary) -> Task<bool>
+  B2CFA14F: CommitCompleted() -> Task
+  8D19E69C: CommitStarted(Cratis.Chronicle.Concepts.Events.EventSequenceNumber) -> Task
+  D4A6B7DC: Complete(int, long) -> Task<Cratis.Chronicle.Imports.ImportOperationResult>
+  EA567765: EnsureAcceptsChunks() -> Task<Cratis.Chronicle.Imports.ImportOperationResult>
+  326570E4: Fail(string) -> Task
+  53C69EC7: FailIfStalled() -> Task<bool>
+  0D08411E: Get() -> Task<Cratis.Chronicle.Storage.Imports.ImportRecord?>
+  87858093: RemoveIfExpired() -> Task<bool>
+  E7D223B9: ValidationRejected(System.Collections.Generic.IEnumerable<Cratis.Chronicle.Storage.Imports.ImportRejection>) -> Task
+
+interface [GrainInterfaceType("Cratis.Chronicle.Imports.IImportEvents")] Cratis.Chronicle.Imports.IImportEvents [Version(0)]
+
+interface [GrainInterfaceType("Cratis.Chronicle.Imports.IImportEventsStep")] Cratis.Chronicle.Imports.IImportEventsStep [Version(0)]
+
+interface [GrainInterfaceType("Cratis.Chronicle.Imports.IImportStager")] Cratis.Chronicle.Imports.IImportStager [Version(0)]
+  EECD0B0C: Stage(Cratis.Chronicle.Concepts.Imports.ImportKey, int, long, System.Collections.Generic.IReadOnlyList<Cratis.Chronicle.Imports.ImportEvent>, System.Collections.Generic.IReadOnlyList<Cratis.Chronicle.Concepts.Identities.Identity>) -> Task<Cratis.Chronicle.Imports.ImportChunkStagingResult>
+
+# Cratis.Chronicle.Imports.Import
+class [GrainType("chronicle-import")] Cratis.Chronicle.Imports.Import
+
+class [GrainType("importevents")] Cratis.Chronicle.Imports.ImportEvents
+
+class [GrainType("importeventsstep")] Cratis.Chronicle.Imports.ImportEventsStep
+
+# Cratis.Chronicle.Imports.ImportStager
+class [GrainType("chronicle-import-stager")] Cratis.Chronicle.Imports.ImportStager
 
 interface [GrainInterfaceType("Cratis.Chronicle.Namespaces.INamespaces")] Cratis.Chronicle.Namespaces.INamespaces [Version(1)]
   DCF49287: Ensure(Cratis.Chronicle.Concepts.EventStoreNamespaceName) -> Task
@@ -409,6 +447,8 @@ interface [GrainInterfaceType("Cratis.Chronicle.Observation.Reducers.Clients.IRe
   762ECBBD: Unsubscribe() -> Task
 
 interface [GrainInterfaceType("Cratis.Chronicle.Observation.Reducers.Clients.IReducerObserverSubscriber")] Cratis.Chronicle.Observation.Reducers.Clients.IReducerObserverSubscriber [Version(0)]
+
+interface [GrainInterfaceType("Cratis.Chronicle.Observation.Reducers.Clients.IReducerPageObserverSubscriber")] Cratis.Chronicle.Observation.Reducers.Clients.IReducerPageObserverSubscriber [Version(0)]
 
 interface [GrainInterfaceType("Cratis.Chronicle.Observation.Reducers.Clients.IReducersManager")] Cratis.Chronicle.Observation.Reducers.Clients.IReducersManager [Version(0)]
   0E9E79CB: Register(Cratis.Chronicle.Concepts.Clients.ConnectionId, System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Observation.Reducers.ReducerDefinition>) -> Task

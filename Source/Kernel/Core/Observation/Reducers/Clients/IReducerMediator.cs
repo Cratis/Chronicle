@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Reducers;
 
 namespace Cratis.Chronicle.Observation.Reducers.Clients;
@@ -43,6 +44,39 @@ public interface IReducerMediator
     /// <param name="operation"><see cref="ReduceOperation"/> to send.</param>
     /// <param name="taskCompletionSource"><see cref="TaskCompletionSource{T}"/> to return <see cref="ObserverSubscriberResult"/> to.</param>
     void OnNext(ReducerId reducerId, ConnectionId connectionId, EventStoreName eventStore, EventStoreNamespaceName @namespace, ReduceOperation operation, TaskCompletionSource<ReducerSubscriberResult> taskCompletionSource);
+
+    /// <summary>
+    /// Subscribe to pages of partitions for a specific <see cref="ConnectionId"/>. A connection that does not subscribe
+    /// to pages is given a page one partition at a time.
+    /// </summary>
+    /// <param name="reducerId"><see cref="ReducerId"/> to subscribe for.</param>
+    /// <param name="connectionId"><see cref="ConnectionId"/> to subscribe for.</param>
+    /// <param name="eventStore"><see cref="EventStoreName"/> to subscribe for.</param>
+    /// <param name="namespace"><see cref="EventStoreNamespaceName"/> to subscribe for.</param>
+    /// <param name="target"><see cref="ReducerPageObserver"/> delegate that will be called with pages.</param>
+    /// <param name="pageDelivery">The <see cref="PageDeliveryDefinition"/> bounds the client declared, if any.</param>
+    void SubscribePages(ReducerId reducerId, ConnectionId connectionId, EventStoreName eventStore, EventStoreNamespaceName @namespace, ReducerPageObserver target, PageDeliveryDefinition? pageDelivery = null);
+
+    /// <summary>
+    /// Gets the page bounds a connection declared when it subscribed to pages.
+    /// </summary>
+    /// <param name="reducerId"><see cref="ReducerId"/> to get for.</param>
+    /// <param name="connectionId"><see cref="ConnectionId"/> to get for.</param>
+    /// <param name="eventStore"><see cref="EventStoreName"/> to get for.</param>
+    /// <param name="namespace"><see cref="EventStoreNamespaceName"/> to get for.</param>
+    /// <returns>The <see cref="PageDeliveryDefinition"/>, or null when the connection does not receive pages.</returns>
+    PageDeliveryDefinition? GetPageDelivery(ReducerId reducerId, ConnectionId connectionId, EventStoreName eventStore, EventStoreNamespaceName @namespace);
+
+    /// <summary>
+    /// Notify that a page of partitions should be reduced.
+    /// </summary>
+    /// <param name="reducerId"><see cref="ReducerId"/> to send to.</param>
+    /// <param name="connectionId"><see cref="ConnectionId"/> to send to.</param>
+    /// <param name="eventStore"><see cref="EventStoreName"/> to send to.</param>
+    /// <param name="namespace"><see cref="EventStoreNamespaceName"/> to send to.</param>
+    /// <param name="operations">The <see cref="ReduceOperation"/> of each partition in the page.</param>
+    /// <param name="completions">The <see cref="TaskCompletionSource{T}"/> of each partition to return its <see cref="ReducerSubscriberResult"/> to.</param>
+    void OnNextPage(ReducerId reducerId, ConnectionId connectionId, EventStoreName eventStore, EventStoreNamespaceName @namespace, IReadOnlyList<ReduceOperation> operations, IReadOnlyDictionary<Key, TaskCompletionSource<ReducerSubscriberResult>> completions);
 
     /// <summary>
     /// Notify that a replay has begun for a specific reducer.

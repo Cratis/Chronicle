@@ -24,6 +24,8 @@ public class a_provider_with_retry_overrides : Specification
             LiveDeliveryBudget = 47,
             AbandonedDeliveryHold = 13,
             MaxEventsPerSubscriberCall = 17,
+            MaxEventsPerPage = 321,
+            MaxBytesPerSubscriberCall = 1234,
             SubscriptionReadyTimeout = 19,
             MaxRetryAttempts = 23,
             BackoffDelay = 3,

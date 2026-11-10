@@ -23,6 +23,7 @@ internal static class ReducerBatchMethods
     /// <exception cref="ReducerHasMoreThanOneBatchMethod">The reducer declares more than one batch method.</exception>
     /// <exception cref="ReducerMixesBatchAndPerEventMethods">The reducer declares a batch method and per-event methods.</exception>
     /// <exception cref="InvalidReducerBatchMethod">The batch method does not take the current read model or return it.</exception>
+    /// <exception cref="BatchMethodParameterCannotBeSupplied">The batch method declares a parameter Chronicle cannot supply.</exception>
     public static BatchMethod? Find(Type reducerType, Type readModelType, IEnumerable<Type> eventTypes, bool hasPerEventMethods)
     {
         var batchMethods = BatchMethods.For(reducerType, eventTypes);
@@ -53,6 +54,7 @@ internal static class ReducerBatchMethods
             throw new InvalidReducerBatchMethod(reducerType, method.Name, $"Return '{readModelType.Name}?' or 'Task<{readModelType.Name}?>'; null removes the read model.");
         }
 
+        BatchMethods.ThrowIfParametersCannotBeSupplied(reducerType, method, 2);
         return batchMethods[0];
     }
 

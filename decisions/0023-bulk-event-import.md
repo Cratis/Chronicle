@@ -1,11 +1,13 @@
 ---
 id: 0023-bulk-event-import
-title: Import large volumes of events into an event sequence through a resumable, chunked import session that stages and validates every event before committing any, commits in ordered chunks through a job without locking, and hands observers one catch-up
-status: proposed
+title: Import large volumes of events into an event sequence through a resumable, chunked import session that stages and validates every event before committing any, commits in ordered chunks through a job without locking, and hands affected observers to catch-up as each chunk commits
+status: accepted
 stage: none
 class: contract
 reversibility: costly
 proposed: 2026-11-03
+decided: 2026-11-08
+decider: Einar
 applies-to:
   - Source/Kernel/Core/EventSequences/**
   - Source/Kernel/Core/Sequences/**
@@ -24,7 +26,7 @@ applies-to:
 ---
 
 <!-- markdownlint-disable-next-line MD025 -->
-# Import large volumes of events into an event sequence through a resumable, chunked import session that stages and validates every event before committing any, commits in ordered chunks through a job without locking, and hands observers one catch-up
+# Import large volumes of events into an event sequence through a resumable, chunked import session that stages and validates every event before committing any, commits in ordered chunks through a job without locking, and hands affected observers to catch-up as each chunk commits
 
 ## Context
 
@@ -75,7 +77,7 @@ Chronicle gets an **import session**. An import is a durable object with an id. 
   - It then validates constraints over the whole import in staging order, against the persisted indexes plus the import's own claims. This is the batch rule `ConstraintBatchClaims` already applies, extended to the import.
   - If anything is rejected and `OnInvalid = Reject` (the default), the import fails and **nothing is committed**.
   - Otherwise it starts the commit job.
-- **The commit job** (`ImportEvents`, a `Cratis.Choreography` job) commits staged events in staging order. It calls a new event sequence grain method, `AppendImportChunk`, with chunks of `Imports.CommitChunkSize` (proposed 1 000 events).
+- **The commit job** (`ImportEvents`, a `Cratis.Orleans.Jobs` job) commits staged events in staging order. It calls a new event sequence grain method, `AppendImportChunk`, with chunks of `Imports.CommitChunkSize` (proposed 1 000 events).
   - Each chunk follows the existing path: PII encryption, migration, hashing, numbering, one storage transaction, and constraint index updates.
   - Nothing is locked. Constraints are checked again on every chunk, because an ordinary writer can claim a unique value between `CompleteImport` and the chunk's commit. An event that loses such a race is not committed and is reported as a rejection on the `ImportResult`. The rest of the import continues, since the committed chunks are never rolled back.
   - The grain is released between chunks, so ordinary appends interleave with the import instead of waiting behind it.
@@ -106,12 +108,12 @@ Each event may carry an `IdempotencyKey`, typically the source system's event id
 
 Imported events are ordinary events. Every reactor, reducer and projection sees each of them exactly once, the same way it sees any other appended event. There is no import-specific observation flag, no opt-out, and nothing for `[OnceOnly]` to do, because the events are delivered as catch-up, not as a replay.
 
-`AppendImportChunk` does not push the events through the live queue, `IAppendedEventsQueues`, one chunk at a time:
+`AppendImportChunk` does not push the events through the live queue, `IAppendedEventsQueues`, as live deliveries, and it never pauses live delivery:
 
-- When the commit job completes, each subscribed observer of the sequence whose event types intersect the import catches up once, with the existing `CatchUpObserver` job.
-- With [decision 0022](0022-observers-receive-batches-on-every-path.md), that catch-up delivers pages, so an observer in batch mode receives the import in large batches.
-
-Live delivery of ordinary appends that interleave with the import continues as normal. The catch-up starts from each observer's own `NextEventSequenceNumber`, so nothing is skipped.
+- An observer's cursor is a single sequence number, so a live append delivered after imported events that the observer has not seen would carry its cursor past them. Each committed chunk therefore hands every subscribed observer of the sequence whose event types intersect the chunk to the existing catch-up path, the same way the appended-events queue hands a lagging observer to catch-up today.
+- The `CatchUpObserver` job reads from the observer's own `NextEventSequenceNumber`, so it delivers the imported events and any ordinary appends that interleave with them, in sequence order, and nothing is skipped or delivered twice. An observer that is already catching up is not given a second job.
+- Observers keep progressing while the commit runs, lagging only by catch-up speed. A long commit can give an observer several catch-ups in a row rather than exactly one.
+- With [decision 0022](0022-observers-receive-batches-on-every-path.md), catch-up delivers pages, so an observer in batch mode receives the import in large batches.
 
 ### 5. Reading the source is the client's business
 
@@ -146,9 +148,24 @@ IObservable<ImportProgress> progress = import.Progress;
 - `BeginImport(ImportId)` reattaches to an existing session, so a process that crashed mid-staging resumes from the last acknowledged chunk.
 - `EventForEventSourceId` gains the per-event fields an import needs that it does not yet have: `Occurred`, `CorrelationId`, `CausedBy`, `Tags`, `NamedTags` and `Generation`.
 
+### 8. Every client takes a non-blocking stream
+
+Each client takes its language's native lazy, asynchronous stream of events. It reads the stream as it uploads, so the caller is never blocked while the whole source is read into memory, and a 300 000-event import never holds 300 000 events at once. Chunking, pipelining and resume behave as in point 6. A language with no asynchronous stream also takes its lazy synchronous sequence.
+
+| Client | Takes | Returns |
+| --- | --- | --- |
+| .NET | `IAsyncEnumerable<EventForEventSourceId>` (or `IEnumerable<…>`) | `Task<ImportResult>` |
+| TypeScript | `AsyncIterable<EventForEventSourceId>` (or `Iterable<…>`) | `Promise<ImportResult>`, cancellable with an `AbortSignal` |
+| Kotlin | `Flow<EventForEventSourceId>` (or `Sequence<…>`) | `suspend` → `ImportResult` |
+| Java | `Flow.Publisher<EventForEventSourceId>` (or `Stream<…>`) | `CompletableFuture<ImportResult>` |
+| Elixir | any `Enumerable`, a lazy `Stream` included | `{:ok, ImportResult}`; `import_async` runs it under a `Task` |
+| Go | `iter.Seq2[EventForEventSourceId, error]` with a `context.Context` | `(ImportResult, error)`; cancelled through the context |
+
+Each client also has the explicit session from point 7 (`BeginImport`, `Add`, `Complete`, reattach by `ImportId`) for producers that are not one stream, and reports progress in its own idiom: `IProgress`/`IObservable` in .NET, a callback or async iterable in TypeScript, a `Flow` in Kotlin, a callback in Java, messages to a process in Elixir and a callback in Go.
+
 ## Options considered
 
-- **Loop `AppendMany` in client-side chunks, as seeding does (not taken).** It needs no kernel change, but a rejected chunk 200 into a 300-chunk import leaves 199 committed and the rest not. There is no validate-first, no resume, no single catch-up, and every chunk goes through live fan-out.
+- **Loop `AppendMany` in client-side chunks, as seeding does (not taken).** It needs no kernel change, but a rejected chunk 200 into a 300-chunk import leaves 199 committed and the rest not. There is no validate-first, no resume, no validated catch-up hand-off, and every chunk goes through live fan-out.
 - **One client-streaming gRPC `Import` RPC (not taken, see the rulings below).** It is natural for streaming, but it is the first hand-written append contract outside the generated wire. A dropped stream loses its position unless chunk acknowledgements are added, which rebuilds the session anyway. It is also unusable from the Workbench and from HTTP. Unary chunk commands give the same throughput with pipelining and come out of the generator unchanged. The client API still streams.
 - **One giant transaction for atomic visibility (not taken).** MongoDB's 16 MB and 60 s transaction limits rule it out at this volume, and it would block every appender to the sequence for minutes. Validate-everything-first followed by a resumable, never-rolled-back commit gives "all or nothing *rejected*" without that.
 - **Exclusive lock on the sequence during the commit, so imported events are contiguous (rejected, see the rulings below).** Importing must not lock the system in any way, so there is no exclusive mode, not even as an option.
@@ -177,14 +194,14 @@ People import by looping `AppendMany` themselves, as seeding does. Large imports
   - file formats and file reading, in the kernel or the client
   - cross-sequence or cross-store imports in one session (one import targets one event sequence)
   - importing into the outbox
-  - SDKs outside this repository
+  - landing the TypeScript, Kotlin/Java, Elixir and Go client APIs in this repository's release; each lands in its own repository against the published contracts, with the stream types in point 8
 - **Release:** additive, `minor`.
 - **Horizon:** holds for the current major. Revisit if decision 0004 replaces observer cursors, because the catch-up hand-off in point 4 would become a lane re-read.
 
 ## Verification
 
 - **Done when:**
-  - Importing 300 000 events from an `IAsyncEnumerable` into an empty MongoDB-backed store completes with every event committed once, `Occurred` and causation preserved, and one catch-up per affected observer.
+  - Importing 300 000 events from an `IAsyncEnumerable` into an empty MongoDB-backed store completes with every event committed once, `Occurred` and causation preserved, and every affected observer having seen each event exactly once.
   - Killing the kernel during staging and during the commit, then resuming, yields the same log with no duplicates.
   - An import with one schema-invalid event commits nothing and reports that event by index.
   - Re-importing the same events with idempotency keys reports every event `AlreadyAppended`.
@@ -213,16 +230,18 @@ People import by looping `AppendMany` themselves, as seeding does. Large imports
   - Because nothing is locked, an event can pass validation at `CompleteImport` and then lose a unique-constraint race at commit. It is reported as a rejection, which makes "nothing is committed if anything is invalid" hold at validation time only.
 - **Forecloses:**
   - Atomic visibility of a whole import to readers. Events become visible chunk by chunk during the commit; readers that must not see a partial import should wait for `Completed`.
-- **Open questions:**
-  - How PII in imported events is keyed when the subject does not yet exist.
-  - Staging retention and size quotas per namespace.
+- **Settled at acceptance:**
+  - PII in imported events is keyed exactly as for an ordinary append. The commit runs the existing encryption step, which creates a subject's key on its first encrypted value, so a subject that does not exist yet gets its key when its first imported event is committed. Staging stores the payloads as received and never encrypts, so an abandoned import leaves no keys behind.
+  - Staging retention is `Imports.StagingRetention`, 24 h by default. There is no size quota per namespace in this release; `BeginImport` reports the server's chunk limits, and an operator who needs a quota can lower `Imports.StagingRetention` or abandon imports through the Workbench.
 
 ## Rulings from review
 
-Rulings given by Einar on 2026-11-03 while the record is still proposed. The rest of the record stays open for a verdict.
+Rulings given by Einar on 2026-11-03 and 2026-11-04 while the record was proposed. Einar accepted the record on 2026-11-08 by asking for the remaining work to be delivered and shipped.
 
 - **Observers see imported events once, through the existing mechanics.** Reactors and reducers handle imported events as normal. There is no import flag and no extra need for `[OnceOnly]`.
 - **Importing locks nothing.** No exclusive mode, no lock on the event sequence, no held-back writers.
 - **The C# client takes an `IAsyncEnumerable` of events.** The client-side API in point 7 is endorsed.
 - **Chunked unary calls on the wire, streaming in the client.** Chunking is kept for continuation after a dropped connection; there is no client-streaming RPC.
 - **No file import.** The JSON Lines format and the file-reading client API are dropped. The client chooses how to read its source.
+- **Every client imports from a streaming API where its language has one** (given 2026-11-04). Streaming keeps the import non-blocking: the client reads the source lazily while it uploads. Point 8 lists the type each client takes.
+- **Observers catch up chunk by chunk during a commit** (given 2026-11-08). Live delivery is never paused for an import; each committed chunk hands affected observers to catch-up, so they keep progressing during the commit instead of waiting for it to end. Point 4 describes it.

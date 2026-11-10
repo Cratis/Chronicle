@@ -1,0 +1,29 @@
+---
+title: "CHR0072: An event type reaches more than one method"
+description: "CHR0072 reports a Cratis Chronicle reactor where one event type is observed by two batch methods, or by a batch method and a per-event method."
+---
+
+## Rule description
+
+Every event type a reactor handles reaches exactly one of its methods. Chronicle never calls a batch method and a per-event method, or two batch methods, for the same event, so there is no question about which method handles it. CHR0072 reports:
+
+- an event type observed by two batch methods
+- an event type observed by a batch method and also handled by a per-event method
+
+An `[Observes<TEvent>]` that names an interface or base type covers every event type that implements or derives from it, so it can overlap a per-event method for one of those types.
+
+## Severity
+
+Error
+
+## How to fix
+
+Move the event type to one method. When two side effects for the same event must happen in order, do both in that method: Chronicle keeps order within a method, not across a reactor's methods.
+
+## Related rules
+
+- [CHR0075](CHR0075.mdx): A reducer with a batch method has no other reduce methods.
+
+## Related topics
+
+- [Reactor batch methods](../reactors/batches.mdx)
