@@ -112,6 +112,7 @@
 1 Source/Clients/DotNET.Specs/Events/for_EventTypeRegistryCache/given/CollectibleDispatchTypes.cs  # readiness: GC collect/finalize retry while a collectible assembly unloads
 1 Source/Clients/DotNET.Specs/Observation/for_AppendResultWaitForCompletionExtensions/when_waiting_for_completion/and_the_client_timeout_expires.cs  # knob
 1 Source/Clients/DotNET.Specs/Observation/for_AppendResultWaitForCompletionExtensions/when_waiting_for_completion/and_the_timeout_is_infinite.cs  # knob
+1 Source/Clients/DotNET.Specs/Reducers/for_ReducerDispatcher/when_dispatching_a_page/and_the_reducer_reduces_one_event_source_at_a_time.cs  # knob
 1 Source/Clients/XUnit.Integration/ChronicleFixture.cs  # readiness
 1 Source/Clients/XUnit.Integration/ChronicleOrleansFixture.cs
 # MongoDB pending-drop readiness has no awaitable driver event; retry the server command,

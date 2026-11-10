@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
-using System.Runtime.CompilerServices;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Operations;
@@ -14,7 +13,7 @@ namespace Cratis.Chronicle.CodeAnalysis;
 /// </summary>
 internal sealed class ExplicitRegistrationEvidence
 {
-    static readonly ConditionalWeakTable<Compilation, Lazy<ExplicitRegistrationEvidence>> _cache = new();
+    static readonly CompilationCache<ExplicitRegistrationEvidence> _cache = new();
 
     readonly ImmutableHashSet<ITypeSymbol> _events;
     readonly ImmutableHashSet<ITypeSymbol> _reactors;
@@ -38,32 +37,8 @@ internal sealed class ExplicitRegistrationEvidence
     /// <param name="compilation">Compilation to inspect.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The shared explicit registrations.</returns>
-    internal static ExplicitRegistrationEvidence For(Compilation compilation, CancellationToken cancellationToken)
-    {
-        while (true)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            var evidence = _cache.GetValue(compilation, key => new Lazy<ExplicitRegistrationEvidence>(() => Create(key, cancellationToken)));
-            try
-            {
-                return evidence.Value;
-            }
-            catch (OperationCanceledException)
-            {
-                // The shared Lazy caches the cancellation of whichever caller created it. Drop that entry
-                // (only if it is still the one we observed) and let a caller whose own token is live rebuild it.
-                if (_cache.TryGetValue(compilation, out var current) && ReferenceEquals(current, evidence))
-                {
-                    _cache.Remove(compilation);
-                }
-
-                if (cancellationToken.IsCancellationRequested)
-                {
-                    throw;
-                }
-            }
-        }
-    }
+    internal static ExplicitRegistrationEvidence For(Compilation compilation, CancellationToken cancellationToken) =>
+        _cache.For(compilation, Create, cancellationToken);
 
     /// <summary>
     /// Checks an event attribute before requesting shared registration evidence.

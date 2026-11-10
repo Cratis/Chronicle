@@ -70,6 +70,34 @@ public class Observers
     public int MaxEventsPerSubscriberCall { get; init; } = 100;
 
     /// <summary>
+    /// Gets the most events in one page handed to a client reactor or reducer that declared page delivery, on every path.
+    /// Zero or less leaves pages unbounded by count.
+    /// </summary>
+    /// <remarks>
+    /// A client may declare a smaller bound and is capped by this one; a client that declares none gets this one. This only
+    /// caps the pages a client declared; it never makes them larger than what a path hands over in the first place, so
+    /// catch-up, replay and recovery stay bounded by <see cref="MaxEventsPerSubscriberCall"/> and live delivery by
+    /// <see cref="LiveDeliveryBudget"/>. Defaults to 1 000.
+    /// </remarks>
+    public int MaxEventsPerPage { get; init; } = 1000;
+
+    /// <summary>
+    /// Gets the most bytes of event content, and for a reducer of the states it reduces from, handed to a client reactor
+    /// or reducer that declared page delivery, in one call, on every path. Zero or less leaves pages unbounded by size.
+    /// </summary>
+    /// <remarks>
+    /// An event's size is the UTF-8 length of its JSON content. A reducer page also holds the state of every partition in
+    /// it, so the size the state had when it was last reduced counts toward the bound too; a state the kernel has not seen
+    /// since it started counts once it has been read. A client may declare a smaller bound and is capped by this one; a
+    /// client that declares none gets this one. An event larger than the bound is still delivered, alone in its page, so an
+    /// oversize event never stalls its partition. <see cref="MaxEventsPerPage"/> caps the declared event count the same
+    /// way. Defaults to 4 MiB, which is also the default most gRPC clients accept in one message; the page envelope -
+    /// event metadata, partition keys and reducer states - comes on top of the event content, so a client that keeps its
+    /// receive limit at that default should declare a smaller bound.
+    /// </remarks>
+    public int MaxBytesPerSubscriberCall { get; init; } = 4 * 1024 * 1024;
+
+    /// <summary>
     /// Gets the timeout in seconds to wait for an event store subscription to become ready before returning to the client.
     /// </summary>
     /// <remarks>

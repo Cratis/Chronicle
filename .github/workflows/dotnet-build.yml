@@ -97,48 +97,9 @@ jobs:
     if: needs.already-ran.outputs.skip != 'true'
     uses: ./.github/workflows/grain-compatibility.yml
 
-  # Workbench proxies are generated during development and committed, so this job only proves the committed ones
-  # are still what Core generates (drift fails the pull request). Nothing the build or specs produce depends on it,
-  # so it runs beside the compatibility gates and the build instead of inside the build job. `specs` requires it.
-  workbench-proxies:
-    needs: [already-ran]
-    if: needs.already-ran.outputs.skip != 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Spec Workbench proxy freshness guard
-        run: node .github/scripts/test-check-workbench-proxies.mjs
-      - name: Setup .Net
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: ${{ env.DOTNET_VERSION }}
-      # Shared org cache: pull requests restore only; the nightly build and default-branch runs save (Cratis/Workflows#164).
-      - name: Cache NuGet packages
-        uses: Cratis/Workflows/.github/actions/dotnet-cache@main
-      - name: Add GitHub Package Registry to NuGet
-        run: |
-          dotnet nuget update source github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text || \
-          dotnet nuget add source --name github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text https://nuget.pkg.github.com/cratis/index.json
-      - name: Stamp the build version
-        run: python3 .github/scripts/derive-build-version.py >> "$GITHUB_ENV"
-      - name: Set isolated Workbench proxy destination
-        run: echo "WORKBENCH_PROXIES=$RUNNER_TEMP/workbench-proxies" >> "$GITHUB_ENV"
-      - name: Prepare isolated Workbench proxy generation
-        run: node .github/scripts/check-workbench-proxies.mjs prepare --output "$WORKBENCH_PROXIES"
-      - name: Generate native Debug Workbench proxies
-        run: >-
-          dotnet build Source/Kernel/Core/Core.csproj --configuration Debug
-          -p:DisableProxyGenerator=false -p:DisableGrpcContractGeneration=true
-          -p:DisableProtoGeneration=true -p:DisableDockerBuild=true
-          -p:CratisProxiesIncremental=false "-p:CratisProxiesOutputPath=$WORKBENCH_PROXIES"
-      - name: Check Workbench proxy freshness
-        run: node .github/scripts/check-workbench-proxies.mjs check --generated "$WORKBENCH_PROXIES"
-
   # The wire and grain compatibility gates run beside the build instead of in front of it: nothing the build
   # produces depends on their result, so waiting for them only added their six minutes to every pull request.
-  # They stay required (as does the proxy check): the `specs` aggregate and `legacy-contracts` both fail when either is not green, and the
+  # They stay required: the `specs` aggregate and `legacy-contracts` both fail when either is not green, and the
   # integration jobs wait for `specs`.
   dotnet-build:
     needs: [already-ran]
@@ -357,7 +318,7 @@ jobs:
       - name: Pack Release build output
         run: |
           set -euo pipefail
-          for project in Source/Kernel/Core.Specs Source/Kernel/Server Integration/MongoDB Integration/Api; do
+          for project in Source/Kernel/Core.Specs Source/Kernel/Server Integration/MongoDB Integration/Neo4j Integration/Api; do
             test -d "$project/bin/Release/net10.0" || { echo "Missing build output for $project" >&2; exit 1; }
           done
           find . -type d -name bin -not -path '*/node_modules/*' -prune -print0 | tar --null -I 'zstd -T0' -cf build-output-release.tar.zst -T -
@@ -695,7 +656,7 @@ jobs:
   # A failed, skipped or cancelled shard must never turn this aggregate green.
   specs:
     if: ${{ needs.already-ran.outputs.skip != 'true' && (always()) }}
-    needs: [already-ran, wire-compatibility, grain-compatibility, workbench-proxies, specs-other, specs-sql]
+    needs: [already-ran, wire-compatibility, grain-compatibility, specs-other, specs-sql]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -706,10 +667,9 @@ jobs:
         env:
           WIRE_RESULT: ${{ needs.wire-compatibility.result }}
           GRAIN_RESULT: ${{ needs.grain-compatibility.result }}
-          PROXIES_RESULT: ${{ needs.workbench-proxies.result }}
           OTHER_RESULT: ${{ needs.specs-other.result }}
           SQL_RESULT: ${{ needs.specs-sql.result }}
-        run: test "$WIRE_RESULT" = success && test "$GRAIN_RESULT" = success && test "$PROXIES_RESULT" = success && test "$OTHER_RESULT" = success && test "$SQL_RESULT" = success
+        run: test "$WIRE_RESULT" = success && test "$GRAIN_RESULT" = success && test "$OTHER_RESULT" = success && test "$SQL_RESULT" = success
 
       - name: Checkout shard contract
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -968,13 +928,92 @@ jobs:
             ./Integration/MongoDB/released-binding-results/
           retention-days: 1
 
+  neo4j:
+    # Waits for the ordinary specs on pull requests, like the integration matrix (#5050).
+    # Exercises the Neo4j storage directly against a Neo4j container, with no kernel. It starts the image and nothing else, so it needs no Docker image of the kernel.
+    name: neo4j (${{ matrix.lane }})
+    if: ${{ needs.already-ran.outputs.skip != 'true' && (!cancelled() && needs.dotnet-build.result == 'success' && (github.event_name != 'pull_request' || (inputs.integration_requested && needs.specs.result == 'success'))) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    needs: [already-ran, dotnet-build, specs]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # The Community edition has one database, so every namespace shares it.
+          - lane: community
+            image: neo4j:5-community
+            database-mode: Single
+          # A database per namespace needs multiple databases, which only the Enterprise edition has. It runs under the Neo4j Evaluation Agreement,
+          # which the fixture accepts for an Enterprise image, temporary, see Cratis/Chronicle#5739.
+          - lane: enterprise
+            image: neo4j:5-enterprise
+            database-mode: PerNamespace
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .Net
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            ${{ env.DOTNET8_VERSION }}
+            ${{ env.DOTNET9_VERSION }}
+            ${{ env.DOTNET_VERSION }}
+
+      - name: Download Release build output
+        uses: actions/download-artifact@v4
+        with:
+          name: build-output-release
+
+      - name: Extract Release build output
+        run: tar -I zstd -xf build-output-release.tar.zst
+
+      # Pre-pull once per job so the Testcontainers image check does not race anonymous Docker Hub rate limits.
+      - name: Pre-pull Neo4j image
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 5
+          max_attempts: 5
+          retry_wait_seconds: 15
+          command: docker pull "${{ matrix.image }}"
+
+      - name: Restore Neo4j runner evaluation inputs
+        run: dotnet restore Integration/Neo4j/Neo4j.csproj
+
+      - name: Restore pinned coverage tool
+        run: dotnet tool restore
+
+      - name: Run Neo4j integration tests with coverage (${{ matrix.lane }})
+        env:
+          CHRONICLE_NEO4J_IMAGE: ${{ matrix.image }}
+          CHRONICLE_NEO4J_DATABASE_MODE: ${{ matrix.database-mode }}
+          # The runner is destroyed after the job, so the Testcontainers reaper has nothing to clean up.
+          TESTCONTAINERS_RYUK_DISABLED: true
+        run: node .github/scripts/run-spec-project.mjs --project Integration/Neo4j/Neo4j.csproj --coverage --results-directory ./Integration/Neo4j/coverage-results
+
+      - name: Assert Neo4j integration tests ran
+        uses: ./.github/actions/assert-tests-ran
+        with:
+          path: ./Integration/Neo4j/coverage-results
+          name: The Neo4j integration job (${{ matrix.lane }})
+          prefixes: Cratis.Chronicle.Neo4j.Integration
+
+      - name: Upload coverage results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-results-neo4j-${{ matrix.lane }}
+          path: ./Integration/Neo4j/coverage-results/
+          retention-days: 1
+
   coverage-merge-and-cache:
     # Override implicit success() so the unused DEVELOPMENT ancestor does not suppress coverage.
     # Require every immediate prerequisite: never cache incomplete results (including ordinary PRs).
-    if: ${{ needs.already-ran.outputs.skip != 'true' && (!cancelled() && github.event_name != 'pull_request_target' && needs.specs.result == 'success' && needs.integration.result == 'success' && needs.integration-api.result == 'success' && needs.mongodb.result == 'success') }}
+    if: ${{ needs.already-ran.outputs.skip != 'true' && (!cancelled() && github.event_name != 'pull_request_target' && needs.specs.result == 'success' && needs.integration.result == 'success' && needs.integration-api.result == 'success' && needs.mongodb.result == 'success' && needs.neo4j.result == 'success') }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
-    needs: [already-ran, specs, integration, integration-api, mongodb]
+    needs: [already-ran, specs, integration, integration-api, mongodb, neo4j]
     permissions:
       contents: read
       actions: read

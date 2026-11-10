@@ -78,6 +78,7 @@
         <Project Path="Integration/SqlClustering/SqlClustering.csproj" />
         <Project Path="Integration/Kernel/Kernel.csproj" />
         <Project Path="Integration/MongoDB/MongoDB.csproj" />
+        <Project Path="Integration/Neo4j/Neo4j.csproj" />
     </Folder>
     <Folder Name="/Samples/">
         <Project Path="Samples/Backoffice/Backoffice.csproj" />

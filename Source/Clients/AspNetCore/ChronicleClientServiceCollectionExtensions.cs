@@ -3,6 +3,7 @@
 
 using System.Diagnostics;
 using Cratis.Chronicle;
+using Cratis.Chronicle.AspNetCore;
 using Cratis.Chronicle.AspNetCore.Identities;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
@@ -13,6 +14,7 @@ using Cratis.Serialization;
 using Cratis.Traces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -85,6 +87,9 @@ public static class ChronicleClientServiceCollectionExtensions
                 new ChronicleClient(connection, options, artifactsProvider, sp, identityProvider, correlationIdAccessor, namespaceResolver, loggerFactory, namingPolicy);
         });
 
+        services.AddSingleton<ChronicleUseMarker>();
+        services.AddSingleton<IHostedService>(CreateStartup);
+
         services.AddScoped(sp =>
         {
             var options = sp.GetRequiredService<IOptions<ChronicleAspNetCoreOptions>>().Value;
@@ -129,6 +134,25 @@ public static class ChronicleClientServiceCollectionExtensions
         services.AddKeyedSingleton(typeof(IActivitySource<>), ClientActivity.SourceName, typeof(KeyedActivitySource<>));
 
         return services.ConfigureChronicleClientServices();
+    }
+
+    static ChronicleClientStartup CreateStartup(IServiceProvider sp)
+    {
+        var options = sp.GetRequiredService<IOptions<ChronicleAspNetCoreOptions>>().Value;
+        var marker = sp.GetRequiredService<ChronicleUseMarker>();
+        var diagnostics = new ChronicleAspNetCoreStartupDiagnostics(
+            marker,
+            sp.GetRequiredService<IEventStoreNamespaceResolver>(),
+            options.NamespaceHttpHeader);
+
+        return new ChronicleClientStartup(
+            options,
+            sp.GetRequiredService<IChronicleClient>(),
+            sp.GetRequiredService<IHostEnvironment>(),
+            sp.GetRequiredService<IHostApplicationLifetime>(),
+            sp.GetRequiredService<ILogger<ChronicleClientStartup>>(),
+            () => !marker.Called,
+            diagnostics.Report);
     }
 
     sealed class KeyedActivitySource<T>(IServiceProvider serviceProvider, [ServiceKey] string? key = null) : IActivitySource<T>

@@ -117,6 +117,12 @@ public partial class Observer(
     IAppendedEventsQueues _appendedEventsQueues = null!;
     ObserverMetrics? _metrics;
     bool _isPreparingCatchup;
+
+    /// <summary>
+    /// An observer taking pages spanning partitions catches up in one walk to the end of the log, which covers every partition,
+    /// not only the ones it registered as catching up. While that walk runs, live delivery leaves every partition to it.
+    /// </summary>
+    bool _walkingEveryPartition;
     int _catchUpHandoversInFlight;
 
     /// <summary>

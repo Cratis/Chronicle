@@ -17,6 +17,7 @@ public class when_named_sinks_are_configured : Specification
     {
         var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
         {
+            { "Cratis:Chronicle:Storage:Type", "inmemory" },
             { "Cratis:Chronicle:Sinks:ReadModels", "primary" },
             { "Cratis:Chronicle:Sinks:Graphs", "people" },
             { "Cratis:Chronicle:Sinks:Configurations:primary:Type", "MongoDB" },

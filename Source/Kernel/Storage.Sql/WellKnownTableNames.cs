@@ -344,6 +344,16 @@ public static class WellKnownTableNames
     public const string InFlightEvents = "InFlightEvents";
 
     /// <summary>
+    /// The table that holds import sessions.
+    /// </summary>
+    public const string Imports = "Imports";
+
+    /// <summary>
+    /// The table that holds the staged chunks of import sessions.
+    /// </summary>
+    public const string ImportChunks = "ImportChunks";
+
+    /// <summary>
     /// The table that holds handled-event counts per observer, partition and event type.
     /// </summary>
     public const string ObserverHandledCounts = "ObserverHandledCounts";

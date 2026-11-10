@@ -6,6 +6,8 @@
   href: azure.md
 - name: Container Apps, App Service and Cloud Run
   href: azure-container-hosting.md
+- name: Development and Production Images
+  href: development-and-production-images.md
 - name: Container Resources
   href: container-resources.md
 - name: The System Event Store

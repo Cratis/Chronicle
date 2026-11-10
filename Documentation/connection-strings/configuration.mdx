@@ -44,6 +44,22 @@ The named fallback lets a host use a connection string supplied by Aspire withou
 
 This precedence chooses between Chronicle settings. Within a configuration key, the host's configuration providers decide the value. With the default .NET host setup, command-line arguments override environment variables, which override `appsettings.{Environment}.json` and `appsettings.json`. If an endpoint change has no effect, check for a callback assignment before changing another configuration source.
 
+### Settings available as both options and connection string keys
+
+Some connection settings exist as a `ChronicleOptions` property and as a connection string key. The client combines them as follows:
+
+| Setting | Options property | Connection string key | Combined result |
+| --- | --- | --- | --- |
+| Client certificate path and password | `Tls:CertificatePath`, `Tls:CertificatePassword` | `certificatePath`, `certificatePassword` | The option wins; the connection string key is used only when the option is not set |
+| CA certificate path | `Tls:CaCertificatePath` | `caCertificatePath` | The option wins; the connection string key is used only when the option is not set |
+| Server certificate validation | `Tls:SkipCertificateValidation` | `skipTlsValidation` | Validation is on if either setting is explicitly `false`. Otherwise validation is skipped, also when both are omitted in this release. `disableTls=true` turns validation off because TLS is not used |
+| Skip compatibility check | `SkipCompatibilityCheck` | `skipCompatibilityCheck` | The check is skipped if either is `true` |
+| Skip keep-alive | `SkipKeepAlive` | `skipKeepAlive` | Keep-alive is skipped if either is `true`, or when serverless mode is on |
+| Serverless mode | `Serverless:Mode` | `serverless` | Serverless mode is on if either asks for it |
+| TLS on or off | none | `disableTls` | Connection string only |
+
+Boolean settings that are combined with "either" cannot be switched off from the other source. To turn one off, remove it from both.
+
 ## Environment-specific configuration
 
 Use per-environment files to change the endpoint while keeping the same registration. With the default .NET host setup, `appsettings.{Environment}.json` overrides matching values in `appsettings.json`.

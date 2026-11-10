@@ -33,6 +33,8 @@
 
     <ItemGroup>
         <Compile Include="../Clustering/for_Occurrences/OccurrenceRecoveryAssertions.cs" Link="for_OccurrenceProcessRecovery/OccurrenceRecoveryAssertions.cs" />
+        <!-- The Neo4j container is shared with Integration/Neo4j, which exercises the Neo4j storage without a kernel. -->
+        <Compile Include="../Shared/Neo4jGraphServer.cs" Link="GraphProjections/Neo4jGraphServer.cs" />
     </ItemGroup>
 
     <!-- When building on macOS the publish must target linux-arm64 so the Docker image gets a

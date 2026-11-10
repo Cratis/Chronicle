@@ -118,6 +118,7 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
         ReplayContexts = new ReplayContexts(new ReplayContextsStorage(eventStoreNamespaceDatabase));
         ReplayedReadModels = new ReplayedReadModelsStorage(eventStoreNamespaceDatabase);
         EventSeeding = new Seeding.EventSeedingStorage(eventStoreNamespaceDatabase);
+        Imports = new Imports.ImportStorage(eventStoreNamespaceDatabase);
         ProjectionFutures = new Projections.ProjectionFuturesStorage(eventStoreNamespaceDatabase, jsonSerializerOptions);
         EventSequenceMutations = new DigestKeyedEventSequenceMutationRegistry(
             eventStore,
@@ -131,6 +132,9 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
             Identities,
             expandoObjectConverter);
     }
+
+    /// <inheritdoc/>
+    public Chronicle.Storage.Imports.IImportStorage Imports { get; }
 
     /// <inheritdoc/>
     public Chronicle.Storage.Occurrences.IOccurrencesStorage Occurrences => _occurrences;

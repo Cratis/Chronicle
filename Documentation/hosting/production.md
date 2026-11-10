@@ -361,4 +361,5 @@ address works. When you instead run multiple nodes directly on one host, set
 
 ## See also
 
+- [Development and production images](development-and-production-images.md) for the behaviors and defaults that differ between the two images.
 - [Run Chronicle on Azure with Microsoft Entra ID](azure.md) for Azure SQL, Azure Database for PostgreSQL and managed identities.

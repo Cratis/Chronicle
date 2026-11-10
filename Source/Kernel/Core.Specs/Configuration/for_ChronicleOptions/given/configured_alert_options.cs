@@ -17,6 +17,7 @@ public class configured_alert_options : Specification
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
+                ["Cratis:Chronicle:Storage:Type"] = "inmemory",
                 [$"Cratis:Chronicle:Alerts:Conditions:{condition}:RaiseAfter"] = raiseAfter
             })
             .Build();

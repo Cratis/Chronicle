@@ -151,6 +151,11 @@ public class VaultEncryptionKeyStorage : IEncryptionKeyStorage
         EncryptionKeyRevision? revision = null)
     {
         var locations = await Resolve(eventStore, eventStoreNamespace, identifier);
+        if (await GetErasureFor(locations) is not null)
+        {
+            return await TryGetFor(eventStore, eventStoreNamespace, identifier, revision) is not null;
+        }
+
         if (IsLatest(revision))
         {
             return (await ListRevisions(locations)).Count > 0;
@@ -173,8 +178,7 @@ public class VaultEncryptionKeyStorage : IEncryptionKeyStorage
             return (await TryGetLatest(locations))?.Key;
         }
 
-        return await ReadKey(locations.Path(revision!)) ??
-            (locations.LegacyPath(revision!) is { } legacyPath ? await ReadKey(legacyPath) : null);
+        return await ReadAvailableKey(locations, revision!);
     }
 
     /// <inheritdoc/>
@@ -321,8 +325,27 @@ public class VaultEncryptionKeyStorage : IEncryptionKeyStorage
         }
 
         var (revision, path) = revisions.MaxBy(pair => pair.Key.Value);
+        var erasure = await GetErasureFor(locations);
+        if (revision.Value <= erasure?.ErasedThrough.Value)
+        {
+            return null;
+        }
+
         var key = await ReadKey(path);
-        return key is null ? null : new(key, revision);
+        return key is null || erasure.Covers(new(key, revision)) ? null : new(key, revision);
+    }
+
+    async Task<EncryptionKey?> ReadAvailableKey(VaultKeyLocations locations, EncryptionKeyRevision revision)
+    {
+        var erasure = await GetErasureFor(locations);
+        if (revision.Value <= erasure?.ErasedThrough.Value)
+        {
+            return null;
+        }
+
+        var key = await ReadKey(locations.Path(revision)) ??
+            (locations.LegacyPath(revision) is { } legacyPath ? await ReadKey(legacyPath) : null);
+        return key is null || erasure.Covers(new(key, revision)) ? null : key;
     }
 
     async Task<EncryptionKey?> ReadKey(string path)

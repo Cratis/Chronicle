@@ -1,0 +1,27 @@
+---
+title: "CHR0075: A reducer with a batch method has no other reduce methods"
+description: "CHR0075 reports a Cratis Chronicle reducer with two batch methods, or with a batch method and per-event reduce methods."
+---
+
+## Rule description
+
+A reducer is a single fold over one event source's events in order. Splitting those events between methods would break the fold, so a reducer has either per-event reduce methods or exactly one batch method. The batch method's `[Observes<TEvent>]` list is the reducer's whole set of event types. CHR0075 reports a reducer, or a self-reducing read model, that declares:
+
+- two batch methods
+- a batch method and per-event reduce methods
+
+## Severity
+
+Error
+
+## How to fix
+
+Keep one batch method and add an `[Observes<TEvent>]` to it for each event type the other methods handled, folding them inside it. Or remove the batch method and keep per-event reduce methods.
+
+## Related rules
+
+- [CHR0072](CHR0072.mdx): An event type reaches more than one method.
+
+## Related topics
+
+- [Reducer batch methods](../reducers/batches.mdx)

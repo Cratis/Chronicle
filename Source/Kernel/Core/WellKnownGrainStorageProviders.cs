@@ -114,6 +114,11 @@ public static class WellKnownGrainStorageProviders
     public const string EventSeeding = "event-seeding";
 
     /// <summary>
+    /// The name of the storage provider used for import sessions.
+    /// </summary>
+    public const string Imports = "imports";
+
+    /// <summary>
     /// The name of the storage provider used for data protection keys.
     /// </summary>
     public const string DataProtectionKeys = "data-protection-keys";

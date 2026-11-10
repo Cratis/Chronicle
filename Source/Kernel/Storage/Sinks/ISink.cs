@@ -29,6 +29,16 @@ public interface ISink
     bool SupportsIsolatedReplace => false;
 
     /// <summary>
+    /// Gets a value indicating whether a bulk window is open on the sink, so writes are buffered in it.
+    /// </summary>
+    /// <remarks>
+    /// A caller that wants its own writes in one window opens one only when none is open: beginning a window replaces an
+    /// open one, and an open replay window is abandoned by it. Sinks that write every change straight away have no window
+    /// and use the default implementation.
+    /// </remarks>
+    bool IsInBulkMode => false;
+
+    /// <summary>
     /// Replaces an isolated instance unless its stored watermark is beyond the supplied watermark.
     /// </summary>
     /// <param name="key">The instance to replace.</param>

@@ -56,12 +56,15 @@ Set the initial administrator's password with `Cratis__Chronicle__Authentication
 
 ## Configuration
 
+The kernel requires explicit storage connection details. The Development and Local images start an embedded MongoDB and, only when nothing else supplies a connection (no environment variable, no connection details file and no storage connection in a `chronicle.json` in the working directory), default to `mongodb://localhost:27017`. The Production and slim images have no embedded database and fail to start with a clear message until you configure the connection.
+
 Configuration lives in `chronicle.json`. Every setting can be overridden with an environment variable by prefixing the path with `Cratis__Chronicle__` and separating levels with a double underscore.
 
 | Environment variable | Default | Purpose |
 |---|---|---|
 | `Cratis__Chronicle__Storage__Type` | `mongodb` | Storage backend: `mongodb`, `postgresql`, `mssql`, `sqlite` or `inmemory` |
-| `Cratis__Chronicle__Storage__ConnectionDetails` | `mongodb://localhost:27017` | Connection string for the backend |
+| `Cratis__Chronicle__Storage__ConnectionDetails` | none (see below) | Connection string for the backend |
+| `Cratis__Chronicle__Storage__ConnectionDetailsFile` | | Path to a file holding the connection string; use instead of `ConnectionDetails` |
 | `Cratis__Chronicle__Port` | `35000` | Port Chronicle listens on |
 | `Cratis__Chronicle__Authentication__Enabled` | `true` | Whether the Workbench and API require authentication |
 | `Cratis__Chronicle__Authentication__AdminUser__Password` | | Initial password for the administrator; supply it from a secret store |

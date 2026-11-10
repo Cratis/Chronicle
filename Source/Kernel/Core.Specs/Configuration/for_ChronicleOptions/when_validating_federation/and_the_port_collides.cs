@@ -20,7 +20,7 @@ public class and_the_port_collides : Specification
         _disabled = Validate(new() { Port = 35000, Federation = new() { Enabled = false, Port = 35000 } });
     }
 
-    static List<ValidationResult> Validate(ChronicleOptions options) => [.. options.Validate(new ValidationContext(options))];
+    static List<ValidationResult> Validate(ChronicleOptions options) => [.. options.Validate(new ValidationContext(options)).Where(_ => !_.MemberNames.Any(name => name.StartsWith(nameof(ChronicleOptions.Storage))))];
 
     [Fact] void should_reject_the_main_port() => _collidingWithMain.ShouldContain(_ => _.MemberNames.Contains("Federation.Port"));
     [Fact] void should_reject_the_health_port() => _collidingWithHealth.ShouldContain(_ => _.MemberNames.Contains("Federation.Port"));

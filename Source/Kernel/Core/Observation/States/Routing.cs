@@ -229,6 +229,9 @@ public class Routing(
         else
         {
             logger.Observing();
+
+            // Nothing is left to catch up, so live delivery takes over from a catch-up that walked every partition.
+            (StateMachine as Observer)?.ResumeLiveDeliveryAfterWalk();
             if (_tailEventSequenceNumber.IsActualValue)
             {
                 state = state with

@@ -684,7 +684,7 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
             ConnectionId = _eventStore.Connection.Lifecycle.ConnectionId,
             EventStore = _eventStore.Name,
             Namespace = _eventStore.Namespace,
-            PageDelivery = new() { Enabled = true },
+            PageDelivery = ObserverBatchSize.For(handler.ReactorType).ToContract(),
             Reactor = new ReactorDefinition
             {
                 GenerationDelivery = (Contracts.Observation.EventGenerationDelivery)GenerationDelivery,

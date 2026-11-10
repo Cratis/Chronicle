@@ -32,14 +32,16 @@ namespace Cratis.Chronicle.Observation.Reducers.Clients;
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 /// <param name="timeProvider"><see cref="TimeProvider"/> for deciding when the cached pipeline is due for a refresh.</param>
 /// <param name="options">The telemetry configuration.</param>
+/// <param name="configurationProvider">The <see cref="IConfigurationForObserverProvider"/> holding the kernel's page maximums, read for every delivery.</param>
 [ConnectedObserverPlacement]
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.Reducers)]
-public class ReducerObserverSubscriber(
+public partial class ReducerObserverSubscriber(
     IReducerPipelineFactory reducerPipelineFactory,
     IReducerMediator reducerMediator,
     ILogger<ReducerObserverSubscriber> logger,
     TimeProvider? timeProvider = null,
-    IOptions<ChronicleOptions>? options = null) : Grain<ReducerDefinition>, IReducerObserverSubscriber
+    IOptions<ChronicleOptions>? options = null,
+    IConfigurationForObserverProvider? configurationProvider = null) : Grain<ReducerDefinition>, IReducerObserverSubscriber, IReducerPageObserverSubscriber
 {
     /// <summary>
     /// How long a built pipeline - and the sink it resolved the target read model's definition to - is
@@ -78,7 +80,68 @@ public class ReducerObserverSubscriber(
     }
 
     /// <inheritdoc/>
-    public async Task<ObserverSubscriberResult> OnNext(Key partition, IEnumerable<AppendedEvent> events, ObserverSubscriberContext context)
+    public async Task<ObserverSubscriberResult> OnNext(Key partition, IEnumerable<AppendedEvent> events, ObserverSubscriberContext context) =>
+        await BoundedPageDelivery.Deliver(await PageBoundsFor(context), events, page => DeliverPartition(partition, page, context), StateSizeOf(partition));
+
+    /// <summary>
+    /// Reports only what the read model actually holds.
+    /// </summary>
+    /// <remarks>
+    /// A reducer folds a whole batch into one state, and the pipeline writes that state only for a successful result.
+    /// A failed result can still report a successful prefix of the batch as handled, but nothing of that prefix was
+    /// written. Passing it on would move the observer past events the read model never received, and recovery would
+    /// then start from the failing event on top of the stale state - losing the prefix's fold for good. Reporting no
+    /// events as handled makes the observer record the failure at the batch's first event, so every path that drives
+    /// this subscriber - live handling, catch-up, replay and retry - starts the batch over from the stored state.
+    /// </remarks>
+    /// <param name="result">The <see cref="ObserverSubscriberResult"/> the client reported.</param>
+    /// <param name="events">The events the client was asked to reduce.</param>
+    /// <returns>The <see cref="ObserverSubscriberResult"/> to report to the observer.</returns>
+    static ObserverSubscriberResult AsHandledByThePipeline(ObserverSubscriberResult result, IEnumerable<AppendedEvent> events) =>
+        result.State switch
+        {
+            ObserverSubscriberState.Failed => result with { LastSuccessfulObservation = EventSequenceNumber.Unavailable },
+
+            // A reducer writes no state for a deferred batch either, so the whole batch is delivered again.
+            ObserverSubscriberState.Deferred => (result with
+            {
+                LastSuccessfulObservation = EventSequenceNumber.Unavailable,
+                Deferral = result.Deferral is { } deferral ? deferral with { ResumeFrom = EventSequenceNumber.Unavailable } : null
+            }).ResumingDeferralWithin(events),
+            _ => result
+        };
+
+    /// <summary>
+    /// Gets the bounds of the pages the connection receives: the bounds the client declared, capped by the kernel's maximums.
+    /// </summary>
+    /// <remarks>
+    /// A partition split across pages is reduced page by page, each from the state the page before it wrote. A page holds
+    /// the state of every partition in it as well as its events, so the size of each state counts toward the byte bound,
+    /// estimated from the size it had when it was last reduced (see <see cref="StateSizeOf"/>).
+    /// </remarks>
+    /// <param name="context">The <see cref="ObserverSubscriberContext"/> of the delivery.</param>
+    /// <returns>The <see cref="PageBounds"/>; unbounded for a client that did not declare page delivery.</returns>
+    async Task<PageBounds> PageBoundsFor(ObserverSubscriberContext context)
+    {
+        if (context.Metadata is not ConnectedClient connectedClient ||
+            reducerMediator.GetPageDelivery(_key.ObserverId, connectedClient.ConnectionId, _key.EventStore, _key.Namespace) is not { } declared)
+        {
+            return PageBounds.Unbounded;
+        }
+
+        // Read for every delivery, like the job cursor reads its bounds, so a changed setting takes effect without a restart.
+        var configuration = configurationProvider is null ? new Observers() : await configurationProvider.GetFor(_key);
+        return PageBounds.For(declared, configuration);
+    }
+
+    /// <summary>
+    /// Gets the size the state of a partition had when it was last reduced, zero when it is not known.
+    /// </summary>
+    /// <param name="partition">The <see cref="Key"/> of the partition.</param>
+    /// <returns>The estimated size in bytes.</returns>
+    long StateSizeOf(Key partition) => _pipeline?.StateSizeOf(partition) ?? 0;
+
+    async Task<ObserverSubscriberResult> DeliverPartition(Key partition, IEnumerable<AppendedEvent> events, ObserverSubscriberContext context)
     {
         var deliveryWait = new ClientDeliveryWait(_clock, logger, _key, partition, _metrics);
         if (!await PrepareDelivery(deliveryWait, context))
@@ -125,34 +188,6 @@ public class ReducerObserverSubscriber(
             return await RecordSinkWriteFailures(partition, failed, tcs.Task);
         }
     }
-
-    /// <summary>
-    /// Reports only what the read model actually holds.
-    /// </summary>
-    /// <remarks>
-    /// A reducer folds a whole batch into one state, and the pipeline writes that state only for a successful result.
-    /// A failed result can still report a successful prefix of the batch as handled, but nothing of that prefix was
-    /// written. Passing it on would move the observer past events the read model never received, and recovery would
-    /// then start from the failing event on top of the stale state - losing the prefix's fold for good. Reporting no
-    /// events as handled makes the observer record the failure at the batch's first event, so every path that drives
-    /// this subscriber - live handling, catch-up, replay and retry - starts the batch over from the stored state.
-    /// </remarks>
-    /// <param name="result">The <see cref="ObserverSubscriberResult"/> the client reported.</param>
-    /// <param name="events">The events the client was asked to reduce.</param>
-    /// <returns>The <see cref="ObserverSubscriberResult"/> to report to the observer.</returns>
-    static ObserverSubscriberResult AsHandledByThePipeline(ObserverSubscriberResult result, IEnumerable<AppendedEvent> events) =>
-        result.State switch
-        {
-            ObserverSubscriberState.Failed => result with { LastSuccessfulObservation = EventSequenceNumber.Unavailable },
-
-            // A reducer writes no state for a deferred batch either, so the whole batch is delivered again.
-            ObserverSubscriberState.Deferred => (result with
-            {
-                LastSuccessfulObservation = EventSequenceNumber.Unavailable,
-                Deferral = result.Deferral is { } deferral ? deferral with { ResumeFrom = EventSequenceNumber.Unavailable } : null
-            }).ResumingDeferralWithin(events),
-            _ => result
-        };
 
     async Task<bool> IsWatched()
     {
@@ -231,23 +266,35 @@ public class ReducerObserverSubscriber(
     async Task<ObserverSubscriberResult> RecordSinkWriteFailures(Key partition, ReducerSinkWriteFailed failed, Task<ObserverSubscriberResult> result)
     {
         var others = failed.FailedPartitions.Where(failure => !Equals(failure.EventSourceId.Value, partition.Value)).ToArray();
-        if (others.Length > 0)
-        {
-            var observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(_key.ObserverId, _key.EventStore, _key.Namespace, _key.EventSequenceId));
-            foreach (var failure in others)
-            {
-                await observer.PartitionFailed(
-                    failure.EventSourceId,
-                    failure.EventSequenceNumber,
-                    [ReducerSinkWriteFailed.MessageFor(failure)],
-                    string.Empty,
-                    FailureKind.Handling);
-            }
-        }
+        await RecordFailedPartitions(others);
 
         return others.Length == failed.FailedPartitions.Count && result.IsCompleted
             ? await result
             : ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, failed.Message);
+    }
+
+    /// <summary>
+    /// Records partitions outside the delivery whose writes a shared bulk flush reported as failed, so they are retried.
+    /// </summary>
+    /// <param name="failures">The <see cref="Storage.Sinks.FailedPartition"/> instances to record.</param>
+    /// <returns>Awaitable task.</returns>
+    async Task RecordFailedPartitions(Storage.Sinks.FailedPartition[] failures)
+    {
+        if (failures.Length == 0)
+        {
+            return;
+        }
+
+        var observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(_key.ObserverId, _key.EventStore, _key.Namespace, _key.EventSequenceId));
+        foreach (var failure in failures)
+        {
+            await observer.PartitionFailed(
+                failure.EventSourceId,
+                failure.EventSequenceNumber,
+                [ReducerSinkWriteFailed.MessageFor(failure)],
+                string.Empty,
+                FailureKind.Handling);
+        }
     }
 
     async Task HandlePipeline()

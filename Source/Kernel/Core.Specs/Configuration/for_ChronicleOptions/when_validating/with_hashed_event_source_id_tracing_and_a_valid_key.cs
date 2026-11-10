@@ -3,6 +3,7 @@
 
 using System.ComponentModel.DataAnnotations;
 using Cratis.Chronicle.Diagnostics;
+using Cratis.Chronicle.Storage;
 
 namespace Cratis.Chronicle.Configuration.for_ChronicleOptions.when_validating;
 
@@ -12,7 +13,7 @@ public class with_hashed_event_source_id_tracing_and_a_valid_key : Specification
 
     void Because()
     {
-        var options = new ChronicleOptions { Telemetry = new() { EventSourceIdTracing = EventSourceIdTracing.Hashed, EventSourceIdHashKey = new string('x', 32) } };
+        var options = new ChronicleOptions { Storage = new() { Type = StorageType.InMemory }, Telemetry = new() { EventSourceIdTracing = EventSourceIdTracing.Hashed, EventSourceIdHashKey = new string('x', 32) } };
         _errors = options.Validate(new ValidationContext(options)).ToArray();
     }
 
