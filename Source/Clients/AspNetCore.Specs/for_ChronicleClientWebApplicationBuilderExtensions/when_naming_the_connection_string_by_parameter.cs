@@ -11,7 +11,7 @@ public class when_naming_the_connection_string_by_parameter : given.a_web_builde
 
     void Because()
     {
-        _builder.AddCratisChronicle(connectionStringName: "events");
+        _builder.AddCratisChronicleUsingConnectionString("events");
         ResolveOptions();
     }
 

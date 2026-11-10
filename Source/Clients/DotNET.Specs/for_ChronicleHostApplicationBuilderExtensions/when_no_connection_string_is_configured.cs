@@ -12,7 +12,7 @@ public class when_no_connection_string_is_configured : given.a_host_builder
 
     void Because()
     {
-        _builder.AddCratisChronicle(configureOptions: null);
+        _builder.AddCratisChronicle(null);
         ResolveOptions();
     }
 
