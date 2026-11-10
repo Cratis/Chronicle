@@ -38,8 +38,10 @@ internal sealed class DrainStability
     }
 
     static bool SameProgress(VerdictInput previous, VerdictInput current) =>
-        previous.Events.Max(item => item.Sequence) == current.Events.Max(item => item.Sequence) &&
+        Tail(previous) == Tail(current) &&
         previous.Observers.OrderBy(item => item.Id, StringComparer.Ordinal).SequenceEqual(current.Observers.OrderBy(item => item.Id, StringComparer.Ordinal)) &&
         previous.Projections.OrderBy(item => item.Source, StringComparer.Ordinal).SequenceEqual(current.Projections.OrderBy(item => item.Source, StringComparer.Ordinal)) &&
         previous.Reductions.OrderBy(item => item.Source, StringComparer.Ordinal).SequenceEqual(current.Reductions.OrderBy(item => item.Source, StringComparer.Ordinal));
+
+    static ulong Tail(VerdictInput input) => input.Events.Select(item => item.Sequence).DefaultIfEmpty().Max();
 }
