@@ -74,10 +74,13 @@ Every observer, reactor and reducer is an activation in the Kernel's memory, and
 
 The watchdog releases such an observer once it has found it idle for `idleDeactivationAfter` seconds. Idle means all of the following:
 
-- It has no subscription and is disconnected.
+- It has not been removed, has no subscription and is disconnected.
 - It has no failed partitions and is not quarantined.
 - It is not replaying or catching up, and has no catch-up starting.
-- It has no alert, webhook probe or state write waiting.
+- It has no alert, webhook probe, state write or retry reminder waiting.
+- It holds no request for later, such as a start-at-tail request waiting for its subscription or a partition recovery that an operator asked for.
+
+An observer is not idle while an alert reminder is registered for it. An observer with nothing to report gives the reminder up on its first tick, one to two minutes after it was activated, so an observer that has a reminder when a call activates it is released after about two minutes plus `idleDeactivationAfter`. A call for an observer that does not exist in the namespace has no alerts to report, so that activation only waits for the idle period.
 
 When anything calls a released observer again, for example a client that reconnects, it is activated from storage.
 

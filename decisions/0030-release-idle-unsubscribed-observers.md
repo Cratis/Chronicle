@@ -1,13 +1,13 @@
 ---
-id: 0029-release-idle-unsubscribed-observers
+id: 0030-release-idle-unsubscribed-observers
 title: Keep subscribed observers resident and release observers that have no subscription and no pending work after an idle period
 status: proposed
 stage: none
-class: working
+class: contract
 reversibility: reversible
 proposed: 2026-11-10
 decided: —
-decider: —
+decider: einari (to accept)
 applies-to:
   - Source/Kernel/Core/Observation/Observer*.cs
   - Source/Kernel/Core/Configuration/Observers.cs
@@ -55,19 +55,29 @@ Something must call `Subscribe` again:
 ### What an activation retains
 
 Measured with `Benchmarks/Chronicle.Benchmarks.Kernel --observer-footprint` (in-process silo with in-memory
-storage, 2 000 subscribed reactor observers, forced compacting full collections, `GC.GetTotalMemory`):
+storage, 2 000 reactor observers served by one client connection registered with the silo, forced compacting full
+collections, `GC.GetTotalMemory`). 200 warmup observers stay subscribed for the whole run, so they are in the
+baseline and in both measurements, and the subscribed phase checks `IObserver.IsSubscribed` on every measured
+observer after measuring:
 
-| Phase | Live heap over baseline | Per observer | Observer activations |
+| Run (2 000 observers) | Subscribed | After unsubscribe | Observer activations after unsubscribe |
 | --- | --- | --- | --- |
-| Subscribed | +83 to +88 MiB | 42-45 KiB | 2 000 |
-| Unsubscribed, idle release off (`idleDeactivationAfter: 0`), after 145 s | +61.9 MiB | 31.7 KiB | 2 000 |
-| Unsubscribed, idle release after 3 s, after 145 s | +3.3 MiB | 1.7 KiB | 0 |
+| Idle release off, Orleans default collection age, 5 s wait | +85.5 MiB, 43.8 KiB each | +82.1 MiB, 42.0 KiB | 2 201 (baseline 201) |
+| Idle release off (`idleDeactivationAfter: 0`), collection age 10 s, 145 s wait | +89.9 MiB, 46.0 KiB | +62.2 MiB, 31.8 KiB | 2 201 (baseline 201) |
+| Idle release after 3 s, collection age 10 s, 145 s wait | +87.6 MiB, 44.9 KiB | +10.0 MiB, 5.1 KiB | 200 (baseline 200) |
 
-The per-observer figure matches the production regression. Both runs set Orleans' collection age to 10 s so that the
-companion `ObserverAlerts` grain, which every observer activates and which has no `[KeepAlive]`, is collected in
-both. Under the default collection age it stays resident for that period too, which is the difference between 42 and
-32 KiB. The remaining 1.7 KiB is the in-memory storage's own copy of the observer state, which MongoDB holds outside
-the process.
+All 2 000 measured observers were subscribed when the subscribed phase was measured, and all 200 warmup observers
+were still subscribed at the end of every run. A repeat of the last run gave +9.8 MiB, 5.0 KiB.
+
+The per-observer figure matches the production regression. The 10 s collection age lets Orleans collect the
+companion `ObserverAlerts` grain, which every observer activates and which has no `[KeepAlive]`; the harness waits
+for the warmup observers' companions to be collected before it takes the baseline. Under the default collection age
+the companion stays resident too, which is the difference between 42 and 32 KiB. The 5 KiB that remains for each
+released observer is not held by an activation. A heap snapshot of the released state shows it in the in-memory
+storage's tables of observer states and definitions, the connected client's record of its observers, and Orleans'
+reminder and grain directory tables; it was not attributed byte by byte. With MongoDB the storage copies live outside
+the process. The method measures the managed heap only; native memory and
+pooled buffers are not included.
 
 A `dotnet-gcdump` difference between 200 and 2 000 observers attributes about 20 KiB per observer to identifiable
 objects. The largest Chronicle-owned item is the per-observer metric scope: 17 instruments, each a
@@ -86,12 +96,20 @@ reminder records.
 2. **An observer with no subscription and nothing pending is released.** On each watchdog tick, an observer that is
    - not removed, has no subscription, and is `Disconnected` or has no stored observer,
    - not quarantined, not replaying, not catching up, and has no catch-up acquisition in flight,
-   - free of failed partitions, alert work, a registered alert reminder and webhook probes, and
-   - free of pending state, failure, handled-count or retry-reminder writes,
+   - free of failed partitions and webhook probes,
+   - free of pending state, failure, handled-count, running-state timestamp or retry-reminder writes,
+   - holding no request kept for later: a start-at-tail request waiting for a subscription, a scheduled partition
+     recovery turn, or a requested recovery of all failed partitions or retry job sweep, and
+   - when it is stored, free of alert work: no report pending or running and no registered alert reminder. An
+     activation with no stored observer behind it, such as a management probe or a key under another event sequence
+     than the definition's, has no alerts to report and unregisters the alert reminder when it activates,
 
    starts an idle period. A tick that finds it otherwise starts the period over. Once the period has lasted
-   `observers.idleDeactivationAfter` seconds, the watchdog calls `DeactivateOnIdle()`. `OnDeactivateAsync` runs as it
-   does for any other deactivation, so the next call activates it from storage exactly as after a silo restart.
+   `observers.idleDeactivationAfter` seconds, the watchdog calls `DeactivateOnIdle()`. Every condition is a field the
+   observer holds, rather than a guess from recent calls, because some of them, such as a start-at-tail request, can
+   outlast any idle period. `OnDeactivateAsync` writes nothing for an observer released this way, the same as at silo
+   shutdown: it is disconnected already and has nothing pending. The next call activates it from storage exactly as
+   after a silo restart.
 3. **The default is 900 seconds; `0` turns it off.** The setting is in `Observers`, so a per-observer retry override
    inherits it, and it is documented in `Documentation/hosting/configuration/observers.md`.
 4. **No grain interface or payload changes.** The release is internal to the observer grain; nothing a mixed-version
@@ -142,9 +160,13 @@ stops, and kernels hosting many namespaces keep paying about 40 KiB for each obs
 - **Verify by:**
   - The specs under `Source/Kernel/Core.Specs/Observation/for_Observer/when_watchdog_runs` covering an idle observer, an
     observer idle for less than the period, a subscribed observer, a period interrupted by a subscription, an observer
-    still holding its alert reminder, and the setting at `0`.
+    still holding its alert reminder, failed partitions, a retry reminder still to register, quarantine, a pending
+    replay, a partition catching up, an activation with no stored observer, a tick after the release, and a
+    deactivation after the release that writes nothing and registers no reminder, and the setting at `0`.
   - `dotnet Benchmarks/Chronicle.Benchmarks.Kernel/bin/Release/net10.0/Chronicle.Benchmarks.Kernel.dll --observer-footprint --count 2000 --idle-deactivation 3 --collection-age 10`
-    reporting no measured observer activations resident and under 5 KiB per observer after the unsubscribe phase.
+    reporting all 2 000 measured observers subscribed in the subscribed phase, observer activations back at the
+    baseline count after the unsubscribe phase, and under 6 KiB per observer retained after it (5.0-5.1 KiB measured
+    in November 2026, none of it held by an observer activation).
   - In production: observer activations per silo falling to roughly the number of subscribed observers after
     `idleDeactivationAfter` plus one watchdog interval, and live heap after GC following them.
 
@@ -152,7 +174,7 @@ stops, and kernels hosting many namespaces keep paying about 40 KiB for each obs
 
 - Memory held by observers whose clients have gone, or which were only activated to answer a query, a job callback
   or a reminder, is returned within `idleDeactivationAfter` plus one watchdog interval.
-- Subscribed observers still cost about 40 KiB each. On the production kernel in #5792 most of the 17 000 observer
+- Subscribed observers still cost about 44-46 KiB each. On the production kernel in #5792 most of the 17 000 observer
   activations on the busier silo are likely subscribed (five clients registering their reactors and reducers in up to
   20 namespaces, plus projections per namespace), so this release does not remove the bulk of that heap. Reducing the
   cost of a subscribed observer is the next step: the metric scope first, then the companion `ObserverAlerts`
