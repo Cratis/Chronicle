@@ -12,14 +12,24 @@ public class ScopedSecretVault(ISecretVault inner, string prefix) : ISecretVault
 {
     /// <inheritdoc/>
     public async Task<IReadOnlyList<SecretVersionInfo>> ListLive(CancellationToken cancellationToken) =>
-        [.. (await inner.ListLive(cancellationToken)).Where(_ => _.Name.StartsWith(prefix, StringComparison.Ordinal))];
+        [.. (await inner.ListLive(cancellationToken)).Where(_ => _.Name.StartsWith(prefix, StringComparison.Ordinal)).Select(WithoutEmulatorDefaults)];
+
+    /// <summary>
+    /// The emulator stamps every secret created without attributes with NotBefore = creation time and ExpiresOn = one year later,
+    /// and re-stamps them when properties are updated, so the pair is not a stable constant.
+    /// Real Azure Key Vault leaves both unset, so production <see cref="SecretVersionInfo.HasAttributes"/> stays strict;
+    /// this removes that emulator-only default so a plain secret looks plain, as it does in Azure.
+    /// </summary>
+    static SecretVersionInfo WithoutEmulatorDefaults(SecretVersionInfo info) =>
+        info with { NotBefore = null, ExpiresOn = null };
 
     /// <inheritdoc/>
     public async Task<IReadOnlySet<string>> ListDeleted(CancellationToken cancellationToken) =>
         new HashSet<string>((await inner.ListDeleted(cancellationToken)).Where(_ => _.StartsWith(prefix, StringComparison.Ordinal)), StringComparer.OrdinalIgnoreCase);
 
     /// <inheritdoc/>
-    public Task<IReadOnlyList<SecretVersionInfo>> ListVersions(string name, CancellationToken cancellationToken) => inner.ListVersions(name, cancellationToken);
+    public async Task<IReadOnlyList<SecretVersionInfo>> ListVersions(string name, CancellationToken cancellationToken) =>
+        [.. (await inner.ListVersions(name, cancellationToken)).Select(WithoutEmulatorDefaults)];
 
     /// <inheritdoc/>
     public Task<SecretValue?> Read(string name, string? version, CancellationToken cancellationToken) => inner.Read(name, version, cancellationToken);
