@@ -81,6 +81,23 @@ Every convention suffix in this table has the prefix `cratis.chronicle.`. Legacy
 
 The meter is `Cratis.Chronicle`, except for the two composite-key instruments, which use `Cratis.Chronicle.Storage.Sql.CompositeKeyShadow`. Scope names do not change.
 
+### Metrics without a legacy name
+
+These instruments were added after the convention. They have no legacy name and are published under their convention name and shared attribute keys in every `Telemetry:MetricNames` mode, `Legacy` included. [OpenTelemetry](open-telemetry.md#observer-state-jobs-and-append-latency) describes what they report.
+
+| Convention suffix | Unit |
+| --- | --- |
+| `observer.failed_partitions` | `{partition}` |
+| `observer.quarantined_partitions` | `{partition}` |
+| `observer.running_state` | `1` |
+| `observer.resident` | `{observer}` |
+| `job.running` | `{job}` |
+| `observer.job.handled_steps` | `{step}` |
+| `observer.job.total_steps` | `{step}` |
+| `event_sequence.append.duration` | `s` |
+
+`observer.successful_observations` now also counts catch-up, replay and retry deliveries, in every mode. Its convention series carry `cratis.replay`. Its legacy series keep their original tags. [OpenTelemetry](open-telemetry.md#successful-observations-include-recovery-work) describes the change.
+
 ## Metric attributes
 
 The convention series use only the shared keys below, not both sets of keys on each measurement. Legacy series retain the legacy keys. Event source ids and partition ids remain excluded from metric dimensions in every identifier exposure mode.
@@ -104,6 +121,8 @@ The convention series use only the shared keys below, not both sets of keys on e
 | `query` | `cratis.chronicle.sql.live_query.name` |
 | `kind` | `cratis.chronicle.sql.live_query.failure_kind` |
 | `operation` | `cratis.chronicle.sql.upsert.operation` |
+
+The keys `cratis.replay`, `cratis.observer.type`, `cratis.chronicle.observer.state` and `cratis.chronicle.job.type` have no legacy key. Instruments with a legacy name never carry them on their legacy series.
 
 ## Span names and attributes
 

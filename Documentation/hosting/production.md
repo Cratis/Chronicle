@@ -247,11 +247,24 @@ rolling update (`maxSurge: 1`, `maxUnavailable: 0`) cannot converge: the new nod
 the platform waits for it to become ready before stopping the old holder.
 
 **Azure Container Apps single-revision deployments and Cloud Run have the same readiness deadlock.**
-They wait for the replacement to be ready before retiring the active revision. There is currently no
-supported zero-downtime handover for Localhost mode on those platforms. Explicitly stop the old revision
-before starting its replacement (accepting downtime), or use `MongoDB` or `Sql` clustering for multiple active nodes.
-Do not disable the lease to bypass this rollout failure. A replacement waiting for the single-writer
-lease does not report ready.
+They wait for the replacement to be ready before retiring the active revision. On those platforms, and
+for a one-replica Kubernetes rolling update with `maxSurge: 1`, enable standby:
+
+```bash
+Cratis__Chronicle__Clustering__SingleWriterLease__Standby=true
+```
+
+A replacement in standby reports ready (body `Standby`) while it waits for the lease, so the platform
+stops the old instance, which releases the lease. The replacement then takes over. It processes nothing
+before it holds the lease, and refuses requests with HTTP 503 and `Retry-After` or gRPC `Unavailable`
+until it has started, so expect retryable refusals for the whole handover, including the replacement's
+startup and rehydration. This relies on the readiness probe (the startup probe on Cloud Run) targeting
+`/health` or `/health/ready`. Standby gives up readiness as a rollout gate: the old instance is stopped
+before the replacement has shown that it can start, so validate images before rollout and keep a rollback
+path. See
+[Standby for start-before-stop rollouts](configuration/clustering.md#standby-for-start-before-stop-rollouts).
+Do not disable the lease to bypass this rollout failure. Without standby, a replacement waiting for the
+single-writer lease does not report ready. For multiple active nodes, use `MongoDB` or `Sql` clustering.
 
 A lost renewal for half the TTL causes Critical logging and process shutdown with a nonzero exit code;
 a stuck shutdown is force-terminated before another holder can acquire the lease. Configure the restart

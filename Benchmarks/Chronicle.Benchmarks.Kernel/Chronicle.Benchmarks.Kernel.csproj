@@ -18,6 +18,7 @@
   <ItemGroup>
     <ProjectReference Include="../../Source/Kernel/Core/Core.csproj" />
     <ProjectReference Include="../../Source/Kernel/Concepts/Concepts.csproj" />
+    <ProjectReference Include="../../Source/Kernel/Grpc/Grpc.csproj" />
     <ProjectReference Include="../../Source/Kernel/Storage.InMemory/Storage.InMemory.csproj" />
   </ItemGroup>
 </Project>
