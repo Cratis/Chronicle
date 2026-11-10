@@ -53,6 +53,7 @@ public class a_startup_task : Specification
     protected IGrainFactory _grainFactory = null!;
     IAuthenticationService _authenticationService = null!;
     protected IStorageErrorClassifier _storageErrorClassifier = null!;
+    protected IBusySilos _busySilos = null!;
     protected bool _bootstrapClientsEnsured;
     protected IEventStoreStorage _eventStoreStorage = null!;
     protected IEventStoreNamespaceStorage _namespaceStorage = null!;
@@ -99,7 +100,8 @@ public class a_startup_task : Specification
             _clusterReleases,
             _kernelProjectionRetries,
             new StartupLogger(_logMessages),
-            _timeProvider);
+            _timeProvider,
+            busySilos: _busySilos);
     }
 
     void Establish()
@@ -116,6 +118,8 @@ public class a_startup_task : Specification
         _grainFactory = Substitute.For<IGrainFactory>();
         _authenticationService = new TestAuthenticationService(() => _bootstrapClientsEnsured = true);
         _storageErrorClassifier = Substitute.For<IStorageErrorClassifier>();
+        _busySilos = Substitute.For<IBusySilos>();
+        _busySilos.FindBusySilo(Arg.Any<Exception>()).Returns((BusySilo?)null);
         _eventStoreStorage = Substitute.For<IEventStoreStorage>();
         _namespaceStorage = Substitute.For<IEventStoreNamespaceStorage>();
         _observerStateStorage = Substitute.For<IObserverStateStorage>();
