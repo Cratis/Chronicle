@@ -50,9 +50,28 @@ public class all_dependencies : Specification
 
     protected virtual Func<double> ReconnectJitter => Random.Shared.NextDouble;
 
-    protected virtual Func<TimeSpan, CancellationToken, Task> WaitBeforeReconnect => Task.Delay;
+    protected virtual Func<TimeSpan, CancellationToken, Task> WaitBeforeReconnect => WaitOnAStoppedClock;
 
     protected virtual Func<Func<Task>, Task> ScheduleReconnectWork => work => Task.Run(work);
+
+    /// <summary>
+    /// Waits as if no time passes in a specification: a zero wait is over at once, and any other wait ends only
+    /// when it is cancelled - a fact the specification controls - instead of on the wall clock.
+    /// </summary>
+    /// <param name="wait">The wait the reconnect asked for.</param>
+    /// <param name="cancellationToken">The <see cref="CancellationToken"/> that ends the wait.</param>
+    /// <returns>A <see cref="Task"/> that completes at once for a zero wait, and is cancelled otherwise.</returns>
+    static Task WaitOnAStoppedClock(TimeSpan wait, CancellationToken cancellationToken)
+    {
+        if (wait == TimeSpan.Zero)
+        {
+            return Task.CompletedTask;
+        }
+
+        var cancelled = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        cancellationToken.Register(() => cancelled.TrySetCanceled(cancellationToken));
+        return cancelled.Task;
+    }
 
     void Establish()
     {

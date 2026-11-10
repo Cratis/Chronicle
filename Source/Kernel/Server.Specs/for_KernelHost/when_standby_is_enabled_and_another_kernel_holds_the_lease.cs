@@ -30,7 +30,10 @@ public class when_standby_is_enabled_and_another_kernel_holds_the_lease : given.
     async Task Because()
     {
         _start = _app.StartAsync(_startup.Token);
-        (_standbyReady, _standbyBody) = await WaitForReadiness();
+        await _leaseContended.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        using var ready = await _client.GetAsync("/health/ready");
+        _standbyReady = ready.StatusCode;
+        _standbyBody = await ready.Content.ReadAsStringAsync();
         using var live = await _client.GetAsync("/health/live");
         _live = live.StatusCode;
         using var health = await _client.GetAsync("/health");
@@ -64,19 +67,4 @@ public class when_standby_is_enabled_and_another_kernel_holds_the_lease : given.
     [Fact] void should_stay_in_standby_until_startup_completes() => _bodyWhileStarting.ShouldEqual(SingleWriterLeaseStandby.Status);
     [Fact] void should_be_ready_once_started() => _readyAfterStart.ShouldEqual(HttpStatusCode.OK);
     [Fact] void should_report_healthy_once_started() => _bodyAfterStart.ShouldEqual("Healthy");
-
-    async Task<(HttpStatusCode Status, string Body)> WaitForReadiness()
-    {
-        var deadline = DateTimeOffset.UtcNow.AddSeconds(10);
-        while (true)
-        {
-            using var response = await _client.GetAsync("/health/ready");
-            if (response.StatusCode == HttpStatusCode.OK || DateTimeOffset.UtcNow > deadline)
-            {
-                return (response.StatusCode, await response.Content.ReadAsStringAsync());
-            }
-
-            await Task.Delay(50);
-        }
-    }
 }

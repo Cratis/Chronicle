@@ -40,6 +40,7 @@ public class a_held_silo : Specification
     protected virtual bool Standby => false;
     protected ISingleWriterLeaseStorage _leaseStorage;
     protected volatile bool _leaseFree;
+    protected readonly TaskCompletionSource _leaseContended = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     void Establish()
     {
@@ -152,7 +153,15 @@ public class a_held_silo : Specification
         _leaseStorage = Substitute.For<ISingleWriterLeaseStorage>();
         var holder = new SingleWriterLeaseHolder(new("current-kernel"), "current", "1", DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddSeconds(5));
         _leaseStorage.TryAcquire(Arg.Any<SingleWriterLeaseClaim>(), Arg.Any<CancellationToken>())
-            .Returns(_ => Task.FromResult(_leaseFree ? new SingleWriterLeaseAttempt(true, null) : new SingleWriterLeaseAttempt(false, holder)));
+            .Returns(_ =>
+            {
+                if (_leaseFree) return Task.FromResult(new SingleWriterLeaseAttempt(true, null));
+
+                // The kernel is waiting for the lease by the time it asks for it, and it only asks once its listeners
+                // are bound - so a refused attempt is the fact that the kernel is in standby.
+                _leaseContended.TrySetResult();
+                return Task.FromResult(new SingleWriterLeaseAttempt(false, holder));
+            });
         _leaseStorage.Renew(Arg.Any<SingleWriterLeaseOwner>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>()).Returns(true);
         services.AddSingleton(_leaseStorage);
         services.AddSingleton(Substitute.For<IShutdownDrainBudget>());
