@@ -15,6 +15,7 @@ using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Sinks;
+using Cratis.Metrics;
 using Cratis.Monads;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -38,6 +39,7 @@ namespace Cratis.Chronicle.Observation.Jobs;
 /// <param name="logger">The logger.</param>
 /// <param name="eventGenerationRelease">The pinned generation release boundary.</param>
 /// <param name="timeProvider">The delivery fence clock.</param>
+/// <param name="observerMeter">The <see cref="IMeter{T}"/> the observer metrics are recorded with.</param>
 public partial class HandleEventsForObserver(
     [PersistentState(nameof(JobStepState), Choreography.WellKnownGrainStorageProviders.JobSteps)]
     IPersistentState<HandleEventsForObserverState> state,
@@ -51,7 +53,8 @@ public partial class HandleEventsForObserver(
     IOptions<ChronicleOptions> options,
     ILogger<HandleEventsForObserver> logger,
     IEventGenerationRelease? eventGenerationRelease = null,
-    TimeProvider? timeProvider = null) : JobStep<HandleEventsForObserverArguments, HandleEventsForPartitionResult, HandleEventsForObserverState>(state, throttle, logger), IHandleEventsForObserver
+    TimeProvider? timeProvider = null,
+    [FromKeyedServices(WellKnown.MeterName)] IMeter<Observer>? observerMeter = null) : JobStep<HandleEventsForObserverArguments, HandleEventsForPartitionResult, HandleEventsForObserverState>(state, throttle, logger), IHandleEventsForObserver
 {
     const string SubscriberDisconnected = "Subscriber is disconnected";
 
@@ -77,6 +80,7 @@ public partial class HandleEventsForObserver(
     IReadOnlyDictionary<SiloAddress, Guid[]>? _bulkWindowPin;
     Exception? _checkpointFailure;
     ReplayHandledEventsPage? _replayReports;
+    ObserverMetrics? _metrics;
 
     /// <summary>
     /// Gets or sets how long to wait before a handling attempt that timed out is made again. Exposed for testing.
@@ -839,6 +843,7 @@ public partial class HandleEventsForObserver(
         switch (eventObserverResult.State)
         {
             case ObserverSubscriberState.Ok:
+                RecordSuccessfulObservation(currentState.ObserverKey);
                 if (!await RecordAndReportSubscriberEvents(partition, handledEvents, eventObserverResult.LastSuccessfulObservation, page, cancellationToken))
                 {
                     // This batch is neither checkpointed nor counted here. The next run resumes from the last durable
