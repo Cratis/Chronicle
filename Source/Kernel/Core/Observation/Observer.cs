@@ -49,6 +49,7 @@ namespace Cratis.Chronicle.Observation;
 /// <param name="optionsMonitor">The webhook retry configuration.</param>
 /// <param name="eventGenerationRelease">The pinned generation release boundary.</param>
 /// <param name="timeProvider">The delivery fence clock.</param>
+/// <param name="observerGauges">The <see cref="IObserverGauges"/> the observer reports its current state to.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.ObserverState)]
 [KeepAlive]
 [ObserverPlacement]
@@ -68,7 +69,8 @@ public partial class Observer(
     ILoggerFactory loggerFactory,
     IOptionsMonitor<ChronicleOptions> optionsMonitor,
     IEventGenerationRelease? eventGenerationRelease = null,
-    TimeProvider? timeProvider = null) : StateMachine<ObserverState>, IObserver, IObserverDevelopmentReset, IRemindable, IDisposable
+    TimeProvider? timeProvider = null,
+    IObserverGauges? observerGauges = null) : StateMachine<ObserverState>, IObserver, IObserverDevelopmentReset, IRemindable, IDisposable
 {
     readonly TimeProvider _clock = timeProvider ?? TimeProvider.System;
     readonly HashSet<JobId> _concludedCatchUpJobs = [];
@@ -229,6 +231,8 @@ public partial class Observer(
         {
             logger.ActivatedOnAnotherEventSequence(_observerId, _observerKey.EventSequenceId, Definition.EventSequenceId);
         }
+
+        PublishFailedPartitionsGauge();
     }
 
     /// <inheritdoc/>
@@ -263,6 +267,7 @@ public partial class Observer(
         }
         finally
         {
+            ReleaseGauge();
             Dispose();
         }
     }
@@ -755,6 +760,7 @@ public partial class Observer(
     {
         _stateTransitionInProgress = false;
         KeepWhatWasRecordedDuringTransitionHook();
+        PublishRunningStateGauge();
         if (state is States.Replay { StartRefusal: { } refusal })
         {
             // Nothing drives this replay forward, so it settles no owed recovery; routing decides that afresh.
@@ -838,6 +844,7 @@ public partial class Observer(
             }
 
             _persistedStateWrites++;
+            PublishRunningStateGauge();
             if (revision == _alertRevision)
             {
                 _alertStateNeedsPersistence = false;

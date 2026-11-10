@@ -55,10 +55,12 @@ public partial class Observer
         try
         {
             await failures.WriteStateAsync();
+            PublishFailedPartitionsGauge();
         }
         catch (ObserverKeyDoesNotMatchDefinition)
         {
             await RelinquishOwnershipIfMoved();
+            PublishFailedPartitionsGauge();
         }
     }
 
