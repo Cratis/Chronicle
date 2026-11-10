@@ -19,6 +19,8 @@ The benchmarks use a short in-process job (`Job.ShortRun` with `InProcessEmitToo
 
 BenchmarkDotNet measures what a call allocates, not what stays resident between calls. The `--observer-footprint` mode measures what one observer grain activation keeps on the live heap. It starts an Orleans silo with Chronicle and in-memory storage in the process, subscribes a number of reactor observers, forces full compacting collections and reports the growth of the live heap divided by the number of observers. It then unsubscribes them, waits for the idle release (see `observers.idleDeactivationAfter`) and measures again.
 
+All observers are served by one client connection that the harness registers with the silo, so the watchdog keeps their subscriptions. The warm-up observers stay subscribed for the whole run, so they are part of the baseline and of both measurements. The output reports how many measured observers were subscribed when the subscribed phase was measured, and how many warm-up observers were still subscribed at the end. The harness stops with an error if it can no longer remove the kernel's startup task, or if an option is not a whole number of zero or more.
+
 ```sh
 dotnet build Benchmarks/Chronicle.Benchmarks.Kernel/Chronicle.Benchmarks.Kernel.csproj -c Release
 dotnet Benchmarks/Chronicle.Benchmarks.Kernel/bin/Release/net10.0/Chronicle.Benchmarks.Kernel.dll --observer-footprint --count 2000 --idle-deactivation 3 --collection-age 10
@@ -28,11 +30,11 @@ dotnet Benchmarks/Chronicle.Benchmarks.Kernel/bin/Release/net10.0/Chronicle.Benc
 | --- | --- | --- |
 | `--count` | 2000 | Observers to activate after a warm-up of a tenth of that (at most 200). |
 | `--idle-deactivation` | 0 | `observers.idleDeactivationAfter` in seconds. `0` keeps every observer resident. |
-| `--collection-age` | Orleans default | Orleans' grain collection age in seconds, so grains without `[KeepAlive]`, such as the `ObserverAlerts` companion of each observer, are collected within the run. |
+| `--collection-age` | Orleans default | Orleans' grain collection age in seconds, so grains without `[KeepAlive]`, such as the `ObserverAlerts` companion of each observer, are collected within the run. The harness waits for the warm-up observers' companions to be collected before it takes the baseline. |
 | `--settle` | 120 s plus twice the longest period when idle release is on | Seconds to wait after unsubscribing. The first alert reminder tick, spread over the first two minutes, has to give the reminder up before an observer counts as idle. |
 | `--hold`, `--hold-unsubscribed` | 0 | Seconds to pause after the subscribed or the unsubscribed measurement, for `dotnet-gcdump collect -p <pid>`. |
 
-Compare runs with different `--count` values, or `dotnet-gcdump report` output from two runs, to attribute the growth to types. Results from November 2026 are in [decision 0029](../../decisions/0029-release-idle-unsubscribed-observers.md).
+Compare runs with different `--count` values, or `dotnet-gcdump report` output from two runs, to attribute the growth to types. Results from November 2026 are in [decision 0030](../../decisions/0030-release-idle-unsubscribed-observers.md).
 
 ## Comparing a change with a baseline
 
