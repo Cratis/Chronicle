@@ -45,26 +45,30 @@ internal sealed class ConstraintIndexCatchUpKeys
     internal void Include(UniqueConstraintDefinition definition, ConstraintValidationContext context)
     {
         var scope = definition.Scope.BuildScopeKey(context.EventSourceType, context.EventStreamType, context.EventStreamId);
-        if (definition.RemovedWith.Contains(context.EventTypeId))
+        if (definition.RemovedWith.Contains(context.EventTypeId)) IncludeRemoval(definition, context, scope);
+        else if (definition.SupportsEventType(context.EventTypeId)) IncludeClaim(definition, context, scope);
+    }
+
+    void IncludeRemoval(UniqueConstraintDefinition definition, ConstraintValidationContext context, string scope)
+    {
+        var removal = definition.RemovalEventDefinitions.SingleOrDefault(item => item.EventTypeId == context.EventTypeId);
+        if (definition.Mode == UniqueConstraintMode.PerValue && removal?.Properties.Any() == true)
         {
-            var removal = definition.RemovalEventDefinitions.SingleOrDefault(item => item.EventTypeId == context.EventTypeId);
-            if (definition.Mode == UniqueConstraintMode.PerValue && removal?.Properties.Any() == true)
-            {
-                var properties = removal.GetPropertiesAndValues(context).ToArray();
-                if (properties.Length > 0) Add(definition, scope, context.EventSourceId, new(properties.GetValue(definition.IgnoreCasing)));
-            }
-            else
-            {
-                Add(definition, scope, context.EventSourceId, null);
-            }
+            var properties = removal.GetPropertiesAndValues(context).ToArray();
+            if (properties.Length > 0) Add(definition, scope, context.EventSourceId, new(properties.GetValue(definition.IgnoreCasing)));
         }
-        else if (definition.SupportsEventType(context.EventTypeId))
+        else
         {
-            var properties = definition.GetPropertiesAndValues(context).ToArray();
-            if (definition.Mode == UniqueConstraintMode.PerEventSource || properties.Length > 0)
-            {
-                Add(definition, scope, context.EventSourceId, properties.Length == 0 ? null : new(properties.GetValue(definition.IgnoreCasing)));
-            }
+            Add(definition, scope, context.EventSourceId, null);
+        }
+    }
+
+    void IncludeClaim(UniqueConstraintDefinition definition, ConstraintValidationContext context, string scope)
+    {
+        var properties = definition.GetPropertiesAndValues(context).ToArray();
+        if (definition.Mode == UniqueConstraintMode.PerEventSource || properties.Length > 0)
+        {
+            Add(definition, scope, context.EventSourceId, properties.Length == 0 ? null : new(properties.GetValue(definition.IgnoreCasing)));
         }
     }
 
