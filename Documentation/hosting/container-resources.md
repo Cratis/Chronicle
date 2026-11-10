@@ -1,6 +1,6 @@
 ---
 title: Size the kernel for a container
-description: Memory, CPU and garbage collection settings for the Chronicle kernel image, how to size a container from your own peak with a measured example, and how to choose between a shared kernel and a kernel per tenant.
+description: Memory, CPU and garbage collection settings for the Chronicle kernel image, small-container and throughput profiles, how to size a container from your own peak with a measured example, and how to choose between a shared kernel and a kernel per tenant.
 ---
 
 This page describes how the Chronicle kernel image runs today, which .NET garbage collection (GC) settings you can change, and how to size a container limit from your own workload. For the general production checklist, see [Production deployment](production.md). For single-instance platforms, see [Container Apps, App Service and Cloud Run](azure-container-hosting.md).
@@ -11,11 +11,11 @@ The production image is built with these settings:
 
 - **Server GC.** The kernel project sets `ServerGarbageCollection` to `true`.
 - **Conserve memory.** The runtime configuration sets `System.GC.ConserveMemory` to `5`. A higher value makes the GC trade more frequent collections, and possibly longer pauses, for a smaller heap.
-- **Self-contained ReadyToRun publish.** The release workflow publishes `linux-x64` and `linux-arm64` with `PublishReadyToRun=true` and `--self-contained`.
+- **Self-contained ReadyToRun publish.** The release workflow publishes `linux-x64` and `linux-arm64` with `PublishReadyToRun=true` and `--self-contained`, so every Chronicle assembly in the image carries precompiled code and the kernel does less just-in-time compilation during startup.
 - **Base image.** `mcr.microsoft.com/dotnet/runtime-deps:10.0-noble-chiseled-extra`. The kernel is self-contained, so the image needs only the native dependencies, including ICU and time zone data, and no shared .NET runtime. The image runs `./Cratis.Chronicle.Server` directly as the entry point.
 - **Host shutdown timeout.** The host waits 10 seconds for a graceful stop.
 
-The kernel does not set any other GC option, such as `GCHeapHardLimit`, `GCDynamicAdaptationMode` or `GCHeapCount`.
+The kernel does not set any other GC option, such as `GCHeapHardLimit`, `GCDynamicAdaptationMode` or `GCHeapCount`. Since .NET 9, the runtime turns on dynamic adaptation to application sizes (DATAS) by default whenever Server GC is used, so the image runs Server GC with DATAS.
 
 ## How the runtime reads container limits
 
@@ -31,7 +31,7 @@ Set a GC option as an environment variable on the container, or as a `configProp
 | `DOTNET_GCConserveMemory` | `System.GC.ConserveMemory` | `0` to `9` | Higher values keep the heap smaller, with more frequent collections and possibly longer pauses. |
 | `DOTNET_GCHeapHardLimit` | `System.GC.HeapHardLimit` | Bytes, hexadecimal in the environment | Caps the commit size of the GC heap and its bookkeeping. |
 | `DOTNET_GCHeapHardLimitPercent` | `System.GC.HeapHardLimitPercent` | Percentage, hexadecimal in the environment | Caps the heap as a percentage of the container limit. Ignored when `GCHeapHardLimit` is set. |
-| `DOTNET_GCDynamicAdaptationMode` | `System.GC.DynamicAdaptationMode` | `1` enabled, `0` disabled | Turns dynamic adaptation to application sizes (DATAS) on or off. DATAS aims to keep the heap roughly proportional to the long-lived data size. |
+| `DOTNET_GCDynamicAdaptationMode` | `System.GC.DynamicAdaptationMode` | `1` enabled, `0` disabled | Turns DATAS on or off. It only applies to Server GC, where it is on by default. DATAS starts with one heap, adds heaps as the workload needs them and aims to keep the heap roughly proportional to the long-lived data size. `0` gives classic Server GC, with one heap per CPU the container may use. |
 
 Each option is described in [Runtime configuration options for garbage collection](https://learn.microsoft.com/dotnet/core/runtime-config/garbage-collector).
 
@@ -52,6 +52,55 @@ services:
 ```
 
 Replace `<image>` with the Chronicle production image and tag you deploy, and replace the example limits with values from your own workload.
+
+## Choose a container profile
+
+The image defaults suit a kernel that serves real traffic. When you run Chronicle in a small container, or want the most throughput from a larger one, start from one of these two profiles. They are guidance built on how the .NET GC behaves under container limits, not measured sizing: the memory figures in either profile must still come from your own peak, as described in [Size from your own peak](#size-from-your-own-peak).
+
+| | Small container | Throughput |
+| --- | --- | --- |
+| Fits | Development and test environments, a kernel per tenant, low event rates, cost-bound hosting | A shared kernel with many namespaces and observers, sustained appends, catch-up after deployments |
+| CPU | One CPU for low event rates. Allow more during cold start, or accept a slower start | Two or more CPUs, with the limit sized from the cold-start peak |
+| GC | Workstation GC: `DOTNET_gcServer=0` | Keep the image default, Server GC with DATAS |
+| Memory limit | Above your observed working-set peak, with headroom for cold start | Above your observed working-set peak, with headroom for cold start |
+| Heap cap | Leave the default of 75 % of the limit, or lower it with `DOTNET_GCHeapHardLimitPercent` when the container runs other processes | Leave the default |
+
+### Small container
+
+Workstation GC uses a single heap and collects on the thread that triggered the collection, plus one thread for background collections, so it keeps the smallest footprint and spends the least CPU on GC threads. It suits a container that cannot give the GC several cores. The cost is longer pauses and lower peak throughput when many threads allocate at once.
+
+With a CPU limit of one, Server GC also has a single heap, because the runtime sizes its heap count from the CPUs the container may use. Switching to Workstation GC then changes little, so do it for the CPU it saves rather than the memory.
+
+```bash
+docker run --cpus 1 --memory 1g -e DOTNET_gcServer=0 <image>
+```
+
+The image keeps `System.GC.ConserveMemory` at `5`, which also applies to Workstation GC.
+
+### Throughput
+
+Server GC runs collections on one thread per heap and lets each CPU allocate into its own heap, which is what a kernel appending and delivering events on several cores needs. DATAS, on by default, starts with one heap and adjusts the number of heaps to the workload, so an idle kernel does not hold a heap per core.
+
+When memory is plentiful and you want the most throughput, turn DATAS off to get classic Server GC, with one heap per CPU from the start. Expect a larger working set in return, and size the limit from a peak taken with this setting:
+
+```bash
+docker run --cpus 4 --memory 4g -e DOTNET_GCDynamicAdaptationMode=0 <image>
+```
+
+Avoid Workstation GC on a kernel that has several cores and a busy workload: its single heap does on one thread the collection work Server GC spreads across cores.
+
+### Measure a profile yourself
+
+The Chronicle repository has a [container profile harness](https://github.com/Cratis/Chronicle/blob/main/Benchmarks/Chronicle.Benchmarks/ContainerProfile/README.md) that runs the kernel image under Docker CPU and memory limits with each GC variant, and records time to `/health/ready`, resident and cgroup memory when idle and under an append workload, append throughput, observer catch-up time and out-of-memory outcomes. Run it from a clone of the repository on a host with no other heavy work, because a busy host skews every figure. The harness waits for the host load to drop and skips runs it cannot take on a quiet host:
+
+```bash
+dotnet build Benchmarks/Chronicle.Benchmarks/Chronicle.Benchmarks.csproj -c Release -p:DisableDockerBuild=true
+dotnet run --no-build -c Release --project Benchmarks/Chronicle.Benchmarks -- --container-profile build-images --variants r2r
+dotnet run --no-build -c Release --project Benchmarks/Chronicle.Benchmarks -- --container-profile run --matrix core \
+  --cells 1cpu-1g-server-r2r,1cpu-1g-workstation-r2r,1cpu-1g-server-datas-off-r2r,2cpu-2g-server-r2r,2cpu-2g-workstation-r2r,2cpu-2g-server-datas-off-r2r
+```
+
+Each cell runs three times by default. Compare medians across repetitions and treat a wide spread as a sign of a noisy host, not of the setting. The harness workload is synthetic, three event stores with five namespaces each, so use its results to compare settings with each other, and your own peak to size the container.
 
 ## Size from your own peak
 
