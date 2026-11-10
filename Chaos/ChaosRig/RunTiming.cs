@@ -9,6 +9,15 @@ namespace Cratis.Chronicle.Chaos;
 internal static class RunTiming
 {
     /// <summary>
+    /// Allocates only the unspent workload budget to observation, without canceling verdict persistence.
+    /// </summary>
+    /// <param name="options">The original run options.</param>
+    /// <param name="elapsed">The fault and recovery time already consumed.</param>
+    /// <returns>Observation options with the remaining drain allowance.</returns>
+    internal static RunOptions ForObservation(RunOptions options, TimeSpan elapsed) =>
+        options with { Settle = Remaining(options.Duration, options.Settle, elapsed) };
+
+    /// <summary>
     /// Calculates remaining workload time, clamped at the duration-plus-settle deadline.
     /// </summary>
     /// <param name="duration">The configured fault window.</param>

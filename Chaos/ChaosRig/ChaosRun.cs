@@ -81,17 +81,20 @@ internal static class ChaosRun
         await environment.Start(startup.Token).WaitAsync(startup.Token);
         await consumer.Start(startup.Token);
         await producer.Start(startup.Token);
+        var clock = Stopwatch.StartNew();
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellation);
-        deadline.CancelAfter(RunTiming.Remaining(options.Duration, options.Settle, TimeSpan.Zero));
+        deadline.CancelAfter(RunTiming.Remaining(options.Duration, options.Settle, clock.Elapsed));
         Console.WriteLine($"DEADLINE workload={options.Duration + options.Settle} (duration + settle)");
         var executor = new FaultExecutor(environment, producer, consumer);
         await executor.Run(schedule, options.Duration, deadline.Token);
         await executor.Recover(deadline.Token);
-        return await Observe(options, environment, producer, consumer, deadline.Token);
+        return await Observe(RunTiming.ForObservation(options, clock.Elapsed), environment, producer, consumer, cancellation);
     }
 
     static async Task<int> Observe(RunOptions options, DockerEnvironment environment, ChildWorker producer, ChildWorker consumer, CancellationToken cancellation)
     {
+        var clock = Stopwatch.StartNew();
+
         // Killing fences even an append whose transport timed out. Its prewritten intention remains unknown/intended.
         await producer.Kill();
         if (!consumer.IsRunning) throw new InvalidOperationException("Consumer exited outside a scheduled fault.");
@@ -99,15 +102,20 @@ internal static class ChaosRun
         var sideLedger = new SideLedger(ledgerClient, environment.RunId);
         await using var lifetime = new BoundedHost(environment.Connection, $"chaos-{environment.RunId}", sideLedger);
         var host = lifetime.Host;
+        using var startup = CancellationTokenSource.CreateLinkedTokenSource(cancellation);
+        startup.CancelAfter(RunTiming.Remaining(TimeSpan.Zero, options.Settle, clock.Elapsed));
         try
         {
-            await host.StartAsync(cancellation).WaitAsync(cancellation);
-            var store = await host.Services.GetRequiredService<IChronicleClient>().GetEventStore($"chaos-{environment.RunId}").WaitAsync(TimeSpan.FromSeconds(60), cancellation);
+            await host.StartAsync(startup.Token).WaitAsync(startup.Token);
+            var store = await host.Services.GetRequiredService<IChronicleClient>().GetEventStore($"chaos-{environment.RunId}").WaitAsync(TimeSpan.FromSeconds(60), startup.Token);
 
             // Local metadata is needed for native model reads; the reader must not register or run consumers.
-            await store.DiscoverAll().WaitAsync(TimeSpan.FromSeconds(60), cancellation);
+            await store.DiscoverAll().WaitAsync(TimeSpan.FromSeconds(60), startup.Token);
             var reader = new Reader(store, new Ledger(ledgerClient, environment.RunId), sideLedger, new(environment.MongoConnection));
-            var snapshot = await Settle(reader, options.Settle, options.Output, cancellation);
+            var budget = RunTiming.Remaining(TimeSpan.Zero, options.Settle, clock.Elapsed);
+
+            // Sample expiry ends the drain, but only caller cancellation may discard a complete snapshot.
+            var snapshot = await Settle(reader, budget, options.Output, cancellation);
             return await Finish(snapshot, options, cancellation);
         }
         finally
