@@ -329,6 +329,11 @@ hostBuilder
            logger.LocalhostClusteringAgainstSharedStorage();
        }
 
+       if (chronicleOptions.Clustering.SingleWriterLease.Standby && localhostGuard != LocalhostClusteringGuardAction.Lease)
+       {
+           logger.StandbyWithoutSingleWriterLease();
+       }
+
        ClusterEndpointConfiguration.Configure(_, clustering);
 
        // Applies to all clustering types, and to calls a silo makes to itself as well as to a

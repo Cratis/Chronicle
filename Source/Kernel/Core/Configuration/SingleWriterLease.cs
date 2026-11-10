@@ -24,6 +24,20 @@ public class SingleWriterLease
     public TimeSpan AcquireTimeout { get; set; } = TimeSpan.FromMinutes(2);
 
     /// <summary>
+    /// Gets or sets whether a kernel waiting for the lease reports ready in standby, so platforms that start the
+    /// replacement before stopping the old instance can complete a rollout. Requests are still refused with a
+    /// retryable status until the lease is held and startup has completed.
+    /// </summary>
+    public bool Standby { get; set; }
+
+    /// <summary>
+    /// Gets or sets how long, after taking the lease, a kernel in standby keeps reporting standby while it finishes
+    /// starting. Once exceeded, readiness reports unhealthy so a stuck startup becomes visible. Zero ends standby as
+    /// soon as the lease is held.
+    /// </summary>
+    public TimeSpan StandbyStartupTimeout { get; set; } = TimeSpan.FromMinutes(10);
+
+    /// <summary>
     /// Determines whether this lease applies to the configured clustering and storage.
     /// </summary>
     /// <param name="clustering">The clustering mode.</param>

@@ -24,4 +24,5 @@ public class and_the_acquire_timeout_elapses : given.a_keeper
 
     [Fact] void should_fail_with_the_lease_specific_error() => _error.ShouldBeOfExactType<SingleWriterLeaseNotAcquired>();
     [Fact] void should_not_hold_a_lease() => Keeper.IsHeld.ShouldBeFalse();
+    [Fact] void should_stop_waiting_so_standby_ends() => Keeper.IsWaiting.ShouldBeFalse();
 }

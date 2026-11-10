@@ -28,11 +28,26 @@ internal static partial class ChronicleServerStartupTaskLogging
     [LoggerMessage(LogLevel.Warning, "Skipping persisted projection definition '{Identifier}' during startup because the current engine rejected it. Chronicle will continue starting so a client can re-register the projection with its current definition")]
     internal static partial void FailedRegisteringPersistedProjectionDefinition(this ILogger<ChronicleServerStartupTask> logger, Exception exception, ProjectionId identifier);
 
-    [LoggerMessage(LogLevel.Warning, "Startup step '{Step}' did not complete in time on attempt {Attempt} of {MaxAttempts} - retrying in {Delay}. A silo that is still catching up, or a cluster that is still forming, answers late, which is not a failure of the step itself")]
+    [LoggerMessage(LogLevel.Warning, "Startup step '{Step}' failed on attempt {Attempt} of {MaxAttempts} - retrying in {Delay}. A cluster that is still forming, or storage under contention, fails calls for a while, which is not a failure of the step itself")]
     internal static partial void RetryingStartupStep(this ILogger<ChronicleServerStartupTask> logger, Exception exception, string step, int attempt, int maxAttempts, TimeSpan delay);
 
-    [LoggerMessage(LogLevel.Error, "Startup step '{Step}' still did not complete after {MaxAttempts} attempts. The silo stays running and not ready, and tries the step again in {Delay} (round {Round} of {MaxRounds}). The call may have been to this silo itself, which is then busy catching up, rather than to a sibling")]
-    internal static partial void StartupStepStillBusy(this ILogger<ChronicleServerStartupTask> logger, Exception exception, string step, int maxAttempts, TimeSpan delay, int round, int maxRounds);
+    [LoggerMessage(LogLevel.Error, "Startup step '{Step}' still did not complete after {MaxAttempts} attempts. The silo stays running and not ready, and tries the step again in {Delay} (round {Round} of {MaxRounds}). The calls did not reach a silo the cluster reports as active, or storage did not answer")]
+    internal static partial void StartupStepStillFailing(this ILogger<ChronicleServerStartupTask> logger, Exception exception, string step, int maxAttempts, TimeSpan delay, int round, int maxRounds);
+
+    [LoggerMessage(LogLevel.Warning, "Startup step '{Step}' timed out calling this silo itself ({Silo}), which is busy catching up - no sibling is involved. The silo stays running and not ready, and tries again in {Delay} (wait {Waits}, waiting {Waited} so far); this does not count as a failed attempt")]
+    internal static partial void StartupStepWaitingForThisSilo(this ILogger<ChronicleServerStartupTask> logger, Exception? exception, string step, string silo, TimeSpan delay, int waits, TimeSpan waited);
+
+    [LoggerMessage(LogLevel.Error, "Startup step '{Step}' is still timing out calling this silo itself ({Silo}) after {Waits} waits ({Waited}). The silo keeps running and not ready rather than restarting into the same backlog, and tries again in {Delay}. A silo that never catches up is either kept saturated or holds a grain that never answers (deadlock, storage hang)")]
+    internal static partial void StartupStepStillWaitingForThisSilo(this ILogger<ChronicleServerStartupTask> logger, Exception? exception, string step, string silo, TimeSpan delay, int waits, TimeSpan waited);
+
+    [LoggerMessage(LogLevel.Warning, "Startup step '{Step}' timed out calling sibling silo {Silo}, which the cluster reports as active and is therefore busy rather than gone. This silo stays running and not ready, and tries again in {Delay} (wait {Waits}, waiting {Waited} so far); this does not count as a failed attempt")]
+    internal static partial void StartupStepWaitingForBusySibling(this ILogger<ChronicleServerStartupTask> logger, Exception? exception, string step, string silo, TimeSpan delay, int waits, TimeSpan waited);
+
+    [LoggerMessage(LogLevel.Error, "Startup step '{Step}' is still timing out calling sibling silo {Silo}, which the cluster reports as active, after {Waits} waits ({Waited}). This silo keeps running and not ready rather than restarting and moving more work onto the busy sibling, and tries again in {Delay}. A sibling that never catches up is either kept saturated or holds a grain that never answers (deadlock, storage hang)")]
+    internal static partial void StartupStepStillWaitingForBusySibling(this ILogger<ChronicleServerStartupTask> logger, Exception? exception, string step, string silo, TimeSpan delay, int waits, TimeSpan waited);
+
+    [LoggerMessage(LogLevel.Critical, "Startup step '{Step}' gave up waiting for silo {Silo} after {Waits} waits ({Waited}), past the busy-silo wait limit of {Limit}. A silo that does not answer for that long is not just catching up - look for a grain that never answers (deadlock, storage hang) - so this is a real failure")]
+    internal static partial void StartupStepGaveUpWaitingForBusySilo(this ILogger<ChronicleServerStartupTask> logger, Exception exception, string step, string silo, int waits, TimeSpan waited, TimeSpan limit);
 
     [LoggerMessage(LogLevel.Critical, "Startup step '{Step}' still did not complete after {MaxRounds} rounds of {MaxAttempts} attempts. It is not waiting for a forming cluster or a busy silo any longer, so this is a real failure")]
     internal static partial void StartupStepExhaustedRetries(this ILogger<ChronicleServerStartupTask> logger, Exception exception, string step, int maxAttempts, int maxRounds);

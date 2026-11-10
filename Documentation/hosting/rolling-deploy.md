@@ -94,6 +94,8 @@ Event store and namespace databases migrate on first access rather than all at s
 
 Once the silo is active, `ChronicleServerStartupTask` registers event types, reactors and projections, and reactivates observers. Transient failures get up to five attempts, with waits of 2, 4, 8 and 16 seconds between attempts in addition to Orleans' response timeout. Most exhausted startup steps stop the host. Kernel projection registration can instead defer transient failures to background retries; incompatible-release failures still stop startup.
 
+A call that times out against this node itself, or against a sibling the cluster reports as active, is not counted as an attempt. That node is up and busy catching up, and restarting would only restart the same backlog, so the step waits for it: the node stays running and not ready, and logs every wait. The wait ends when the call succeeds, at shutdown, or once `startup.busySiloWaitLimit` (two hours by default) has passed. After the limit the step stops the host like any exhausted step. See [Busy silos at startup](configuration/root-properties.md#busy-silos-at-startup).
+
 ## Roll out the new version
 
 ### 1. Take a backup and read the release notes
@@ -140,6 +142,7 @@ Use `/health/live` for liveness, not `/health`. A TCP connection or successful l
 - **`DatabaseSchemaLockNotAcquired`.** Another node held the schema lock for more than 5 minutes. Look for a migration that is still running, or a node that crashed while holding it, and let the orchestrator restart the waiting node. Do not start more nodes meanwhile.
 - **`DatabaseMigrationIncomplete`.** A concurrent run hit an already-exists error and migrations are still pending. Restart the node. If it repeats, a person has to look at the database, since a duplicate object is in the way.
 - **A startup step reports exhausted retries.** The node could not reach its siblings through five attempts. Check that ports 11111 and 30000 are reachable between nodes, and that no other node is mid-restart.
+- **A startup step keeps waiting for a busy silo, or gives up waiting.** The node or an active sibling did not answer within the response timeout. Usually it is draining a backlog, and the wait is expected. If the wait escalates to errors and does not end, look for a grain that never answers, such as a deadlock or storage that hangs.
 - **A startup step reports an incompatible release, or fails with `Unable to resolve type alias`.** The old and new versions cannot share a cluster. See [Check that the two versions can share a cluster](#check-that-the-two-versions-can-share-a-cluster).
 
 If a new version cannot run against the migrated schema, restore the backup from step 1 and start the previous version. Chronicle does not downgrade a schema.

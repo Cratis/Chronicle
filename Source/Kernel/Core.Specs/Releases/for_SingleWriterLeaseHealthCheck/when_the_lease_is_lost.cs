@@ -5,19 +5,16 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 namespace Cratis.Chronicle.SingleWriter.for_SingleWriterLeaseHealthCheck;
 
-public class when_the_lease_is_not_held : Specification
+public class when_the_lease_is_lost : given.a_lease_health_check
 {
-    SingleWriterLeaseHealthCheck _check;
-    HealthCheckResult _result;
-
     void Establish()
     {
-        var lease = Substitute.For<ISingleWriterLease>();
-        lease.IsHeld.Returns(false);
-        _check = new(lease);
+        _options.Clustering.SingleWriterLease.Standby = true;
+        _lease.IsHeld.Returns(false);
+        _lease.IsWaiting.Returns(false);
     }
 
     async Task Because() => _result = await _check.CheckHealthAsync(new HealthCheckContext());
 
-    [Fact] void should_report_unhealthy() => _result.Status.ShouldEqual(HealthStatus.Unhealthy);
+    [Fact] void should_report_unhealthy_even_with_standby_enabled() => _result.Status.ShouldEqual(HealthStatus.Unhealthy);
 }

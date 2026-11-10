@@ -11,7 +11,7 @@ internal static partial class KernelProjectionRegistrationRetriesLogging
     [LoggerMessage(LogLevel.Information, "Kernel projections registered for event store '{EventStore}' after a background retry.")]
     internal static partial void RegistrationSucceeded(this ILogger<KernelProjectionRegistrationRetries> logger, EventStoreName eventStore);
 
-    [LoggerMessage(LogLevel.Warning, "Kernel projection registration for event store '{EventStore}' could not reach a sibling silo. Retrying in the background.")]
+    [LoggerMessage(LogLevel.Warning, "Kernel projection registration for event store '{EventStore}' did not complete in time - a silo busy catching up, or a cluster still forming, answers late. Retrying in the background.")]
     internal static partial void TransientRegistrationFailure(this ILogger<KernelProjectionRegistrationRetries> logger, EventStoreName eventStore, Exception exception);
 
     [LoggerMessage(LogLevel.Error, "Kernel projection registration for event store '{EventStore}' failed with a non-transient error. The store remains unready; retrying in the background.")]

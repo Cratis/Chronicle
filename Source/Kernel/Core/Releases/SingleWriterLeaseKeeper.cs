@@ -31,9 +31,12 @@ public class SingleWriterLeaseKeeper : ISingleWriterLease, ILifecycleParticipant
     readonly TimeSpan _retryInterval;
     Task _renewal = Task.CompletedTask;
     long _lastSuccessStart;
+    long _heldSince;
     bool _acquired;
     volatile bool _stopped;
     volatile bool _held;
+    volatile bool _waiting;
+    int _disposed;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SingleWriterLeaseKeeper"/> class.
@@ -79,6 +82,12 @@ public class SingleWriterLeaseKeeper : ISingleWriterLease, ILifecycleParticipant
     public bool IsHeld => _held;
 
     /// <inheritdoc/>
+    public bool IsWaiting => _waiting;
+
+    /// <inheritdoc/>
+    public TimeSpan HeldFor => _held ? _time.GetElapsedTime(Volatile.Read(ref _heldSince)) : TimeSpan.Zero;
+
+    /// <inheritdoc/>
     public SingleWriterLeaseOwner Owner { get; } = SingleWriterLeaseOwner.New();
 
     /// <inheritdoc/>
@@ -88,6 +97,8 @@ public class SingleWriterLeaseKeeper : ISingleWriterLease, ILifecycleParticipant
     /// <inheritdoc/>
     public void Dispose()
     {
+        // The container disposes this instance once per registration that exposes it.
+        if (Interlocked.Exchange(ref _disposed, 1) == 1) return;
         _renewalStop.Cancel();
         _stopDeadline.Dispose();
         _watchdog.Dispose();
@@ -95,6 +106,20 @@ public class SingleWriterLeaseKeeper : ISingleWriterLease, ILifecycleParticipant
     }
 
     async Task OnStart(CancellationToken cancellationToken)
+    {
+        _waiting = true;
+        try
+        {
+            await Acquire(cancellationToken);
+        }
+        finally
+        {
+            // Holding is recorded before waiting ends, so a standby kernel never looks as if it gave up in between.
+            _waiting = false;
+        }
+    }
+
+    async Task Acquire(CancellationToken cancellationToken)
     {
         _logger.Acquiring(Owner.Value);
         var started = _time.GetTimestamp();
@@ -118,6 +143,7 @@ public class SingleWriterLeaseKeeper : ISingleWriterLease, ILifecycleParticipant
                     lock (_gate)
                     {
                         _acquired = true;
+                        Volatile.Write(ref _heldSince, _time.GetTimestamp());
                         _held = true;
                         RecordSuccess(attemptStarted);
                         if (Remaining(_options.Ttl / 2) == TimeSpan.Zero)
