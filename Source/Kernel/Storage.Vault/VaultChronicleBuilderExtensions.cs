@@ -40,6 +40,10 @@ public static class VaultChronicleBuilderExtensions
 
         builder.Services.AddSingleton<IEncryptionKeyStoreUpgradeCheck>(_ =>
             new Storage.Vault.VaultKeyStoreUpgradeCheck(Storage.Vault.VaultClients.Create(complianceStorage.ConnectionDetails)));
+        builder.Services.AddSingleton<IEncryptionKeyStoreMigrator>(serviceProvider =>
+            new Storage.Vault.VaultKeyStoreMigrator(
+                Storage.Vault.VaultClients.Create(complianceStorage.ConnectionDetails),
+                logger: serviceProvider.GetRequiredService<ILoggerFactory>().CreateLogger<Storage.Vault.VaultKeyStoreMigrator>()));
 
         return builder.WithComplianceEncryptionKeyStorage(
             options,

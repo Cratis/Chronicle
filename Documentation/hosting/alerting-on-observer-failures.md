@@ -213,6 +213,34 @@ client connectivity and stuck handlers before retrying. These instruments delibe
 partition tags to avoid unbounded metric cardinality. See [configuration](configuration/observers.md#abandoned-client-deliveries)
 for hold limits, disabled behavior and restart limitations.
 
+## Configure alerts
+
+The `alerts` section at the root of `chronicle.json` controls which observers raise alerts and when. Environment variables use the `Cratis__Chronicle__Alerts__` prefix.
+
+```json
+{
+  "alerts": {
+    "enabled": true,
+    "incidentMetricsEnabled": true,
+    "excludeObservers": ["my-noisy-reactor-*"],
+    "conditions": {
+      "partition-failing": { "raiseAfter": "00:15:00" }
+    }
+  }
+}
+```
+
+| Setting | Default | Meaning |
+| --- | --- | --- |
+| `enabled` | `true` | Turns alerting on or off. |
+| `incidentMetricsEnabled` | `true` | Reports incident metrics. |
+| `excludeObservers` | `[]` | Observer identifiers to leave out of alerting, for known-noisy or development observers. An entry is an identifier or a glob pattern where `*` matches any number of characters and `?` matches one. The kernel's own alert observers are always excluded. |
+| `conditions.<name>.enabled` | per condition | Turns one condition on or off. |
+| `conditions.<name>.severity` | per condition | Severity to raise the condition with. Leave it out to keep the built-in severity. |
+| `conditions.<name>.raiseAfter` | `00:05:00` | How long a partition has to keep failing, while still being retried, before `partition-failing` raises. Zero raises immediately and a negative value is rejected at startup. It has no effect on the other conditions. |
+
+Condition names are the hyphenated names, for example `partition-failing`, `partition-retries-exhausted` and `observer-quarantined`, and they are not case sensitive. A condition without an entry, or a setting an entry leaves out, keeps its built-in default. An unknown condition is ignored with a warning the first time it is evaluated. Raise `raiseAfter` when observers retry through short outages and the default five minutes pages you for failures that recover on their own.
+
 ## When an alert fires
 
 1. See which partitions failed and why: `cratis chronicle failed-partitions list -e <store> -n <namespace>`, then `failed-partitions show` for the error and the failing sequence number. The Workbench shows the same under the event store's failed partitions.

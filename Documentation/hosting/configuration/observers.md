@@ -25,10 +25,18 @@ Observer configuration controls retry behavior, timeouts, watchdog monitoring, a
     "watchdogInterval": 60,
     "maxConcurrentPartitions": 32,
     "maxConcurrentRegistrations": 0,
-    "fanOutStrategy": "round-robin"
+    "fanOutStrategy": "round-robin",
+    "subscriptionReadyTimeout": 5,
+    "statePersistenceBatchInterval": 100,
+    "writeCoalescingInterval": 5,
+    "generationPromotion": "OnCatchUp",
+    "deploymentConditionGracePeriod": "00:01:00",
+    "pendingGenerationAlertAfter": "1.00:00:00"
   }
 }
 ```
+
+The example shows the defaults of a production build. The `-development` image ships two overrides, `subscriberTimeout` 5 and `replayOnDefinitionChange` true. See [Development and production images](../development-and-production-images.md).
 
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -51,6 +59,12 @@ Observer configuration controls retry behavior, timeouts, watchdog monitoring, a
 | maxConcurrentPartitions | number | 32 | Upper bound on how many job steps (replay and catch-up work) run in parallel. The effective limit is the smaller of this value and `jobs.maxParallelSteps`. Despite the name it does not limit live event delivery. See [Job throttling](job-throttling.md) |
 | maxConcurrentRegistrations | number | 0 (unlimited) | Maximum gRPC reactor and reducer registrations running concurrently on each silo. When configured above 0, excess registrations wait before any registration grain or read-model lookup. Values below 1 disable the gate. Does not limit event append or observer delivery. See [Registration concurrency](#registration-concurrency) |
 | fanOutStrategy | string | round-robin | Strategy for distributing events across multiple connected instances of the same client. `round-robin` distributes deterministically by partition key, keeping every partition sticky to one instance and preserving per-partition ordering. `random` picks a random instance per delivery |
+| subscriptionReadyTimeout | number | 5 | Seconds the Kernel waits for an event store subscription to become ready before it returns to the client. The wait keeps events from being missed when the client starts appending right away. When it elapses the subscription can still activate afterwards and the client is not blocked further. Raise it only when clients report subscriptions that are not ready on a slow or busy cluster |
+| statePersistenceBatchInterval | number | 100 | Number of batches that contain nothing the observer subscribes to after which its position (`NextEventSequenceNumber`) is made durable. The watchdog tick and deactivation also flush it. After a crash, catch-up re-scans events the observer already skipped, so nothing is lost or handled twice. A larger value means fewer writes and a longer re-scan after a crash |
+| writeCoalescingInterval | number | 5 | Most seconds the observer holds back reported handled-event counts and the follow-up writes of partition failures before it makes them durable. The sums stay exact; only their freshness is bounded. `0` writes everything through, which can make the observer's call queue grow past the grain call timeout during a large replay |
+| generationPromotion | string | OnCatchUp | How a new projection generation is promoted. `OnCatchUp` promotes automatically once catch-up and readiness are proven, `Operator` waits for an explicit operator request, `Deployment` waits until the connected declaring clients meet the required version, and `Gated` holds promotion until the gate is released. Applies only when `features.projectionGenerations` is enabled. See [Read models](read-models.md) |
+| deploymentConditionGracePeriod | timespan | `00:01:00` | How long the `Deployment` condition must hold before the generation is promoted. Applies only when `features.projectionGenerations` is enabled |
+| pendingGenerationAlertAfter | timespan | `1.00:00:00` | How long a generation can stay pending before Chronicle raises an alert. Applies only when `features.projectionGenerations` is enabled |
 
 ## Registration concurrency
 
