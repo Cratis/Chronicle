@@ -54,7 +54,7 @@ public class after_its_job_was_stopped(context context) : Given<context>(context
 
     [Fact] void should_stop_the_commit_part_way() => Context.Stopped.ShouldBeTrue();
     [Fact] void should_leave_the_import_committing_while_stopped() => Context.StateWhileStopped.ShouldEqual(ImportState.Committing);
-    [Fact] void should_complete_after_resuming() => Context.Result.State.ShouldEqual(ImportState.Completed);
+    [Fact] void should_complete_after_resuming() => (Context.Result.State, Context.Result.FailureReason).ShouldEqual((ImportState.Completed, default(string)));
     [Fact] void should_commit_every_event_once() => Context.Result.EventsCommitted.ShouldEqual(context.NumberOfEvents);
     [Fact] void should_store_every_event_once() => Context.All.Select(_ => ((CustomerImported)_.Content).Name).Distinct().Count().ShouldEqual(context.NumberOfEvents);
     [Fact] void should_deliver_every_event_to_the_observer_exactly_once() => ImportedCustomersReactor.Handled.Select(_ => _.SequenceNumber).Distinct().Count().ShouldEqual(context.NumberOfEvents);
