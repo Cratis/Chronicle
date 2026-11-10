@@ -64,6 +64,7 @@ public class a_startup_task : Specification
     readonly an_immediate_time_provider _timeProvider = new();
     protected IClusterReleases _clusterReleases = null!;
     readonly List<string> _logMessages = [];
+    readonly List<StartupLogEntry> _logEntries = [];
     protected INamespaces _systemNamespaces = null!;
     protected INamespaces _namespaces = null!;
     protected IEventStoreSubscriptionsManager _eventStoreSubscriptionsManager = null!;
@@ -82,6 +83,10 @@ public class a_startup_task : Specification
 
     protected IEnumerable<string> LogMessages => _logMessages;
 
+    protected IEnumerable<StartupLogEntry> LogEntries => _logEntries;
+
+    protected virtual Cratis.Chronicle.Configuration.ChronicleOptions ServerOptions => new();
+
     protected IReadOnlyList<TimeSpan> RequestedDelays => _timeProvider.Delays;
 
     void EstablishStartupTask()
@@ -99,9 +104,10 @@ public class a_startup_task : Specification
             _patchRunner,
             _clusterReleases,
             _kernelProjectionRetries,
-            new StartupLogger(_logMessages),
-            _timeProvider,
-            busySilos: _busySilos);
+            _busySilos,
+            Microsoft.Extensions.Options.Options.Create(ServerOptions),
+            new StartupLogger(_logMessages, _logEntries),
+            _timeProvider);
     }
 
     void Establish()

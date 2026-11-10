@@ -30,6 +30,8 @@ public class and_a_busy_sibling_keeps_timing_out : given.a_startup_task
 
     [Fact] void should_not_fail_the_host() => _error.ShouldBeNull();
     [Fact] void should_keep_trying_beyond_the_attempt_budget() => _calls.ShouldEqual(TimesOut + 1);
-    [Fact] void should_report_the_busy_sibling() => LogMessages.Any(_ => _.Contains($"calling sibling silo {Sibling}, which the cluster reports as active", StringComparison.Ordinal)).ShouldBeTrue();
-    [Fact] void should_not_report_a_failed_attempt() => LogMessages.Any(_ => _.Contains("failed on attempt", StringComparison.Ordinal)).ShouldBeFalse();
+    [Fact] void should_report_the_busy_sibling() => LogEntries.Any(_ => _.Event == nameof(ChronicleServerStartupTaskLogging.StartupStepWaitingForBusySibling)).ShouldBeTrue();
+    [Fact] void should_escalate_a_long_wait() => LogEntries.Any(_ => _.Event == nameof(ChronicleServerStartupTaskLogging.StartupStepStillWaitingForBusySibling)).ShouldBeTrue();
+    [Fact] void should_name_the_sibling() => LogMessages.Any(_ => _.Contains(Sibling, StringComparison.Ordinal)).ShouldBeTrue();
+    [Fact] void should_not_report_a_failed_attempt() => LogEntries.Any(_ => _.Event == nameof(ChronicleServerStartupTaskLogging.RetryingStartupStep)).ShouldBeFalse();
 }
