@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Diagnostics;
+using DotNet.Testcontainers.Containers;
 
 namespace Cratis.Chronicle.Chaos;
 
@@ -14,7 +15,6 @@ namespace Cratis.Chronicle.Chaos;
 internal sealed class FaultExecutor(DockerEnvironment environment, ChildWorker producer, ChildWorker consumer)
 {
     readonly HashSet<ChildWorker> _killed = [];
-    readonly HashSet<string> _paused = [];
 
     /// <summary>
     /// Applies the fault schedule over the workload duration.
@@ -61,14 +61,8 @@ internal sealed class FaultExecutor(DockerEnvironment environment, ChildWorker p
     {
         foreach (var container in new[] { environment.Mongo, environment.Kernel })
         {
-            if (_paused.Contains(container.Id))
-            {
-                await ContainerSignals.Unpause(container.Id, cancellation);
-                _paused.Remove(container.Id);
-            }
-            await environment.Restart(container, cancellation);
+            await ResumeContainer(container, cancellation);
         }
-        await environment.WaitForKernel(cancellation);
         if (consumer.IsRunning) await consumer.Signal("CONT", cancellation);
         else await consumer.Start(cancellation);
         if (producer.IsRunning) await producer.Signal("CONT", cancellation);
@@ -98,27 +92,21 @@ internal sealed class FaultExecutor(DockerEnvironment environment, ChildWorker p
     async Task ContainerFault(ScheduledFault fault, CancellationToken cancellation)
     {
         var container = fault.Kind is FaultKind.KillKernel or FaultKind.StopKernel ? environment.Kernel : environment.Mongo;
-        var id = container.Id;
-        if (!IsKill(fault.Kind))
+        if (fault.Resume)
         {
-            await ContainerPause(id, fault.Resume, cancellation);
+            await ResumeContainer(container, cancellation);
             return;
         }
-        if (fault.Resume) await environment.Restart(container, cancellation);
-        else await ContainerSignals.Send(id, "KILL", cancellation);
+        if (IsKill(fault.Kind)) await ContainerSignals.Send(container.Id, "KILL", cancellation);
+        else await ContainerSignals.Pause(container.Id, cancellation);
     }
 
-    async Task ContainerPause(string id, bool resume, CancellationToken cancellation)
+    async Task ResumeContainer(IContainer container, CancellationToken cancellation)
     {
-        // Docker pause freezes the whole cgroup, including Chronicle behind the image's tini PID 1.
-        if (resume)
-        {
-            await ContainerSignals.Unpause(id, cancellation);
-            _paused.Remove(id);
-            return;
-        }
-        await ContainerSignals.Pause(id, cancellation);
-        _paused.Add(id);
+        // Unpause is harmless for an exited or non-paused target; start also recovers a self-fenced kernel.
+        await ContainerSignals.Unpause(container.Id, cancellation);
+        await environment.Restart(container, cancellation);
+        if (container == environment.Kernel) await environment.WaitForKernel(cancellation);
     }
 
     async Task WorkerKill(ChildWorker worker, bool resume, CancellationToken cancellation)
