@@ -14,5 +14,5 @@ public class when_no_event_store_is_configured : given.a_host_builder
         ResolveOptions();
     }
 
-    [Fact] void should_default_to_the_entry_assembly_name() => _options.EventStore.Value.ShouldEqual(Assembly.GetEntryAssembly()!.GetName().Name!);
+    [Fact] void should_default_to_the_normalized_entry_assembly_name() => _options.EventStore.Value.ShouldEqual(Assembly.GetEntryAssembly()!.GetName().Name!.Replace('.', '-'));
 }

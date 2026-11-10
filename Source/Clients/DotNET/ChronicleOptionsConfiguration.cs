@@ -3,6 +3,7 @@
 
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Text;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Serverless;
 using Microsoft.Extensions.Configuration;
@@ -17,7 +18,13 @@ namespace Cratis.Chronicle;
 /// </summary>
 internal static class ChronicleOptionsConfiguration
 {
+    /// <summary>
+    /// The maximum length, in UTF-8 bytes, of an event store name derived by default.
+    /// </summary>
+    internal const int MaximumDerivedLength = 32;
+
     const string EventStoreConfigurationKey = "Cratis:Chronicle:EventStore";
+    static readonly HashSet<char> _forbiddenCharacters = ['/', '\\', '.', ' ', '"', '$', '*', '<', '>', ':', '|', '?', '+'];
 
     /// <summary>
     /// Binds Chronicle settings and applies the named fallback after explicit configuration.
@@ -78,21 +85,61 @@ internal static class ChronicleOptionsConfiguration
             })
             .Validate(
                 options => !string.IsNullOrWhiteSpace(options.EventStore.Value),
-                $"No event store name is configured. Set {EventStoreConfigurationKey} (environment variable Cratis__Chronicle__EventStore) or call AddCratisChronicle with a configureOptions that sets EventStore.");
+                $"No event store name is configured and none could be derived from the program identifier or entry assembly. Set {EventStoreConfigurationKey} (environment variable Cratis__Chronicle__EventStore) or call AddCratisChronicle with a configureOptions that sets EventStore.");
 
     /// <summary>
     /// Resolves the default event store name from the program identifier or, failing that, the entry assembly name.
     /// </summary>
+    /// <remarks>
+    /// The derived name becomes part of MongoDB database names, so it is normalized: characters MongoDB forbids in a database name
+    /// (and the <c language="csharp">+</c> Chronicle uses as separator) become <c language="csharp">-</c>, and the result is capped at
+    /// <see cref="MaximumDerivedLength"/> UTF-8 bytes to leave room for prefix, separators and namespace within MongoDB's 63-byte limit.
+    /// An explicitly configured event store name is never passed through here.
+    /// </remarks>
     /// <param name="programIdentifier">The configured program identifier.</param>
     /// <param name="entryAssemblyName">The entry assembly name, if there is one.</param>
     /// <returns>The default event store name, or <see langword="null"/> when none can be resolved.</returns>
     internal static string? ResolveDefaultEventStore(string programIdentifier, string? entryAssemblyName)
     {
-        if (!string.IsNullOrWhiteSpace(programIdentifier) && programIdentifier != ChronicleOptions.DefaultProgramIdentifier)
+        var source = !string.IsNullOrWhiteSpace(programIdentifier) && programIdentifier != ChronicleOptions.DefaultProgramIdentifier
+            ? programIdentifier
+            : entryAssemblyName;
+
+        return Normalize(source);
+    }
+
+    static string? Normalize(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
         {
-            return programIdentifier;
+            return null;
         }
 
-        return string.IsNullOrWhiteSpace(entryAssemblyName) ? null : entryAssemblyName;
+        var normalized = CollapseSeparators(name.Trim()).Trim('-');
+        while (Encoding.UTF8.GetByteCount(normalized) > MaximumDerivedLength)
+        {
+            normalized = normalized[..^1];
+        }
+
+        normalized = normalized.Trim('-');
+        return normalized.Length == 0 ? null : normalized;
+    }
+
+    static bool IsForbidden(char character) => char.IsControl(character) || _forbiddenCharacters.Contains(character);
+
+    static string CollapseSeparators(string name)
+    {
+        var builder = new StringBuilder(name.Length);
+        foreach (var character in name)
+        {
+            var replacement = IsForbidden(character) ? '-' : character;
+            var repeatsSeparator = replacement == '-' && builder.Length > 0 && builder[^1] == '-';
+            if (!repeatsSeparator)
+            {
+                builder.Append(replacement);
+            }
+        }
+
+        return builder.ToString();
     }
 }
