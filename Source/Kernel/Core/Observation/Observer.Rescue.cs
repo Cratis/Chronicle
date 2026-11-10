@@ -55,7 +55,8 @@ public partial class Observer
     /// Recovers an observer left believing it is preparing catch-up when nothing is going to finish that preparation.
     /// <see cref="CatchUp"/> raises the preparing flag before it asks for a catch-up job, and only
     /// <see cref="RegisterCatchingUpPartitions"/> - reached exclusively when a brand new job prepares its steps -
-    /// lowers it again. Every other outcome of the job request leaves the flag raised for the lifetime of the
+    /// lowers it again - and only for a catch-up per partition; a sweep keeps it raised while its job runs and
+    /// lowers it when the job reports back through <see cref="CaughtUp(Cratis.Choreography.Jobs.JobId, Cratis.Chronicle.Concepts.Events.EventSequenceNumber)"/>. Every other outcome of the job request leaves the flag raised for the lifetime of the
     /// activation: the request throws, no job could be started, a stopped job was resumed, or a job was already
     /// running and had prepared its steps long before. A raised flag makes <c language="csharp">Handle</c> drop every live event and
     /// makes <see cref="Observing"/> skip its missed-events check, so an observer left in it never observes anything

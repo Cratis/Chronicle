@@ -77,7 +77,15 @@ public partial class Observer
 
         await WriteStateAsync();
 
-        _isPreparingCatchup = false;
+        // A catch-up that sweeps every partition in one walk delivers each event from where it starts to the end of
+        // the sequence - also for partitions first appended to after the job enumerated its keys. Handing those
+        // partitions to live delivery now would deliver their events twice (#5786), so live delivery stays held back
+        // for every partition until the sweep reports back through CaughtUp, which then routes from the position the
+        // sweep reached. A catch-up per partition owns only the partitions registered here, so the rest go live.
+        if (!_subscription.CatchesUpInOneSweep(Definition.Type))
+        {
+            _isPreparingCatchup = false;
+        }
 
         // Reached when a brand-new job's steps prepared. Only a job that has partitions to catch up is forward
         // progress; one with none is the zero-work lap and must not reset the consecutive-stranding count the

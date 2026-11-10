@@ -80,6 +80,14 @@ public record ObserverSubscription(
     public bool DeliversPartitionPages => SubscriberType.IsAssignableTo(typeof(IObserverPartitionPageSubscriber));
 
     /// <summary>
+    /// Gets whether an observer of the given type, served by this subscription, is caught up in one sweep of the
+    /// event sequence across every partition rather than by a step per partition.
+    /// </summary>
+    /// <param name="observerType">The <see cref="ObserverType"/> of the observer being caught up.</param>
+    /// <returns>True if catch-up sweeps every partition in one walk.</returns>
+    public bool CatchesUpInOneSweep(ObserverType observerType) => observerType == ObserverType.Projection || DeliversPartitionPages;
+
+    /// <summary>
     /// Gets the <see cref="ObserverSubscriberKey"/> that resolves the subscriber a partition's events are
     /// delivered through.
     /// </summary>
