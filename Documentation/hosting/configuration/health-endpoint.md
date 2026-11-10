@@ -107,6 +107,8 @@ The restriction keys on the local port the connection was accepted on, which a c
 
 It defaults to `false` so that enabling a dedicated health port never silently removes endpoints from an existing deployment; turn it on deliberately when the probe port is reachable from somewhere the Workbench and API should not be.
 
+Once it is on, the Workbench is served from the main port only. A reverse proxy or ingress that routes Workbench traffic to the health port gets 404 and has to target the main port instead, over HTTPS or, with `tls.enabled=false`, over h2c. [Workbench configuration](workbench.md#with-an-exclusive-health-port) shows that setup.
+
 ## Why a plaintext health port helps in Kubernetes
 
 Kubernetes probes and self-signed certificates do not always get along, and the details are easy to get wrong.
