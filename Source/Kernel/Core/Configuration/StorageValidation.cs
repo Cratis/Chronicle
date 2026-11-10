@@ -31,6 +31,12 @@ static class StorageValidation
 
         if (string.IsNullOrWhiteSpace(storage.ConnectionDetails))
         {
+            if (!string.IsNullOrWhiteSpace(storage.ConnectionDetailsFile))
+            {
+                // The file is read into ConnectionDetails before binding; it satisfies the requirement.
+                yield break;
+            }
+
             yield return new ValidationResult(ConnectionDetailsMessage, [$"{nameof(ChronicleOptions.Storage)}.{nameof(Storage.ConnectionDetails)}"]);
         }
         else if (string.IsNullOrWhiteSpace(storage.Type) && StorageTypeInference.Infer(storage.ConnectionDetails) is null)

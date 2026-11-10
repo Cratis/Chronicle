@@ -138,6 +138,13 @@ try
     }
 
     chronicleOptions = builder.Configuration.GetSection(ChronicleOptions.SectionPath).Get<ChronicleOptions>() ?? new ChronicleOptions();
+    if (string.IsNullOrWhiteSpace(chronicleOptions.Storage.Type) && StorageTypeInference.Infer(chronicleOptions.Storage.ConnectionDetails) is { } inferredStorageType)
+    {
+        builder.Configuration[$"{ChronicleOptions.SectionPath}:Storage:Type"] = inferredStorageType;
+        chronicleOptions = builder.Configuration.GetSection(ChronicleOptions.SectionPath).Get<ChronicleOptions>() ?? new ChronicleOptions();
+        logger.StorageTypeInferred(inferredStorageType);
+    }
+
     if (!Enum.IsDefined(chronicleOptions.Storage.SchemaMode))
     {
         throw new ArgumentException("Storage.SchemaMode is invalid.");
@@ -193,6 +200,8 @@ const bool developmentBuild = true;
 #else
 const bool developmentBuild = false;
 #endif
+
+KernelStartupDiagnostics.ReportIgnoredDevelopmentOnlySettings(builder.Configuration, logger, developmentBuild);
 
 // Kestrel keeps the selected certificate alive for every TLS handshake until process shutdown.
 var certificate = KernelCertificateSelection.Select(chronicleOptions, logger, developmentBuild);
