@@ -285,7 +285,11 @@ internal sealed class Reducers(
                             span?.Activity?.Tag(key, ObserverType.Reducer);
 
                             clientObserver = grainFactory.GetGrain<IReducer>(key);
-                            await clientObserver.SetDefinitionAndSubscribe(reducerDefinition);
+                            var reducer = clientObserver;
+                            await ObserverRegistrationEstablishment.Establish(
+                                () => reducer.SetDefinitionAndSubscribe(reducerDefinition),
+                                (attempt, exception) => logger.SubscribingTimedOut(registration.Reducer.ReducerId, registration.ConnectionId, attempt, exception),
+                                cancellation.Token);
                         }
                         catch (Exception exception)
                         {

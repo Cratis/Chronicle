@@ -53,4 +53,7 @@ internal static partial class ReducersLogMessages
 
     [LoggerMessage(LogLevel.Warning, "Reducer {ReducerId} sends {Size} characters of state for partition {Partition} with every reduce - a read model this large makes each batch cost memory proportional to its size; consider splitting it into smaller read models")]
     internal static partial void LargeInitialState(this ILogger<Reducers> logger, ObserverId reducerId, string partition, int size);
+
+    [LoggerMessage(LogLevel.Warning, "Subscribing reducer {ReducerId} from connection {ConnectionId} timed out on attempt {Attempt} while its observer was busy; asking again on the same stream")]
+    internal static partial void SubscribingTimedOut(this ILogger<Reducers> logger, ReducerId reducerId, ConnectionId connectionId, int attempt, Exception exception);
 }

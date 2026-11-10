@@ -47,4 +47,7 @@ internal static partial class ReactorsLogMessages
 
     [LoggerMessage(LogLevel.Warning, "A reactor registration for connection {ConnectionId} was refused because the connection is not available to the caller")]
     internal static partial void ConnectionNotAvailableToCaller(this ILogger<Reactors> logger, ConnectionId connectionId);
+
+    [LoggerMessage(LogLevel.Warning, "Subscribing reactor {ReactorId} from connection {ConnectionId} timed out on attempt {Attempt} while its observer was busy; asking again on the same stream")]
+    internal static partial void SubscribingTimedOut(this ILogger<Reactors> logger, ReactorId reactorId, ConnectionId connectionId, int attempt, Exception exception);
 }

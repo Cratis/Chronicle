@@ -212,7 +212,11 @@ internal sealed class Reactors(
                         using var span = activitySource.Register();
                         span?.Activity?.Tag(key, ObserverType.Reactor);
                         clientObserver = grainFactory.GetGrain<IReactor>(key);
-                        await clientObserver.SetDefinitionAndSubscribe(definition);
+                        var reactor = clientObserver;
+                        await ObserverRegistrationEstablishment.Establish(
+                            () => reactor.SetDefinitionAndSubscribe(definition),
+                            (attempt, exception) => logger.SubscribingTimedOut(registration.Reactor.ReactorId, registration.ConnectionId, attempt, exception),
+                            cancellation.Token);
                     }
                     finally
                     {
