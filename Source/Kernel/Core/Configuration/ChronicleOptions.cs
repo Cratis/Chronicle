@@ -274,13 +274,15 @@ public class ChronicleOptions : IValidatableObject
     /// <inheritdoc/>
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
-        if (Telemetry.EventSourceIdTracing == EventSourceIdTracing.Hashed &&
+        if (Telemetry.RequiresHashKey &&
             (string.IsNullOrEmpty(Telemetry.EventSourceIdHashKey) || Telemetry.EventSourceIdHashKey.Length < IdentifierHasher.MinimumKeyLength))
         {
             yield return new ValidationResult(
                 "Telemetry:EventSourceIdHashKey must be at least 32 characters when Hashed is used",
                 [$"{nameof(Telemetry)}.{nameof(Telemetry.EventSourceIdHashKey)}"]);
         }
+
+        foreach (var error in StorageValidation.Validate(Storage)) yield return error;
 
         if (Federation.Enabled && (Federation.Port == Port || Federation.Port == DedicatedHealthPort))
         {
