@@ -11,7 +11,7 @@ The production image is built with these settings:
 
 - **Server GC.** The kernel project sets `ServerGarbageCollection` to `true`.
 - **Conserve memory.** The runtime configuration sets `System.GC.ConserveMemory` to `5`. A higher value makes the GC trade more frequent collections, and possibly longer pauses, for a smaller heap.
-- **Self-contained ReadyToRun publish.** The release workflow publishes `linux-x64` and `linux-arm64` with `PublishReadyToRun=true` and `--self-contained`, so every Chronicle assembly in the image carries precompiled code and the kernel does less just-in-time compilation during startup.
+- **Self-contained ReadyToRun publish.** The release workflow publishes `linux-x64` and `linux-arm64` with `PublishReadyToRun=true` and `--self-contained`, so the published assemblies carry precompiled code and the kernel does less just-in-time compilation during startup.
 - **Base image.** `mcr.microsoft.com/dotnet/runtime-deps:10.0-noble-chiseled-extra`. The kernel is self-contained, so the image needs only the native dependencies, including ICU and time zone data, and no shared .NET runtime. The image runs `./Cratis.Chronicle.Server` directly as the entry point.
 - **Host shutdown timeout.** The host waits 10 seconds for a graceful stop.
 
@@ -69,7 +69,7 @@ The image defaults suit a kernel that serves real traffic. When you run Chronicl
 
 Workstation GC uses a single heap and collects on the thread that triggered the collection, plus one thread for background collections, so it keeps the smallest footprint and spends the least CPU on GC threads. It suits a container that cannot give the GC several cores. The cost is longer pauses and lower peak throughput when many threads allocate at once.
 
-With a CPU limit of one, Server GC also has a single heap, because the runtime sizes its heap count from the CPUs the container may use. Switching to Workstation GC then changes little, so do it for the CPU it saves rather than the memory.
+With a CPU limit of one, the runtime sees a single processor and effectively runs a single-heap GC whichever mode is configured. Switching to Workstation GC then changes little, so do it for the CPU it saves rather than the memory.
 
 ```bash
 docker run --cpus 1 --memory 1g -e DOTNET_gcServer=0 <image>
