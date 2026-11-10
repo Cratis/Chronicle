@@ -43,6 +43,11 @@ namespace Cratis.Chronicle.Connections;
 /// </summary>
 public sealed class ChronicleConnection : IChronicleConnection, IChronicleServicesAccessor, IGetServicesAsynchronously, IKernelCapabilities, IConnectionKeepAlive
 {
+    /// <summary>
+    /// How many times in a row resolving the servers fails before it is logged as an error rather than a warning.
+    /// </summary>
+    internal const int ResolutionFailuresBeforeError = 10;
+
     readonly ChronicleConnectionString _connectionString;
     readonly int _connectTimeout;
     readonly int? _maxReceiveMessageSize;
@@ -71,6 +76,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     TaskCompletionSource? _connectTcs;
     ChronicleServerAddress? _lastDroppedAddress;
     DateTimeOffset? _lastConnectFailure;
+    int _consecutiveResolutionFailures;
     bool _hasEverConnected;
 
     /// <summary>
@@ -551,16 +557,32 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     /// unreachable as one that does not answer, and is treated the same way: the attempt fails, and the watchdog keeps
     /// resolving in the background instead of the failure taking the host down on its first connect. Without the
     /// watchdog nothing would try again, so the failure is surfaced as it is.
+    /// <para>
+    /// A misspelled name looks exactly like one whose records are not published yet. So once resolving has failed
+    /// <see cref="ResolutionFailuresBeforeError"/> times in a row, that is logged as an error, making a lasting
+    /// configuration error visible as one rather than as one more warning.
+    /// </para>
     /// </remarks>
     async Task<List<ChronicleServerAddress>> ResolveCandidates()
     {
         try
         {
-            return [.. await _serverAddressResolver.Resolve(_connectionString)];
+            List<ChronicleServerAddress> candidates = [.. await _serverAddressResolver.Resolve(_connectionString)];
+            Interlocked.Exchange(ref _consecutiveResolutionFailures, 0);
+            return candidates;
         }
         catch (Exception ex) when (!_skipKeepAlive && ex is NoSrvRecordsFound or DnsResponseException or SocketException)
         {
-            _logger.CouldNotResolveServers(_connectionString.Redacted, ex.Message);
+            var failures = Interlocked.Increment(ref _consecutiveResolutionFailures);
+            if (failures == ResolutionFailuresBeforeError)
+            {
+                _logger.StillCouldNotResolveServers(_connectionString.Redacted, failures, ex.Message);
+            }
+            else
+            {
+                _logger.CouldNotResolveServers(_connectionString.Redacted, ex.Message);
+            }
+
             return [];
         }
     }

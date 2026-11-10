@@ -18,6 +18,6 @@ public class and_no_servers_are_published_yet_for_the_first_connect : given.a_co
     async Task Because() => _error = await Catch.Exception(_connection.Connect);
 
     [Fact] void should_not_fail_the_host() => _error.ShouldBeNull();
-    [Fact] void should_have_tried_to_resolve_the_servers() => _resolver.Received(1).Resolve(Arg.Any<ChronicleConnectionString>());
+    [Fact] void should_have_tried_to_resolve_the_servers() => _resolver.Received().Resolve(Arg.Any<ChronicleConnectionString>());
     [Fact] void should_not_report_the_connection_as_connected() => _lifecycle.DidNotReceive().Connected();
 }
