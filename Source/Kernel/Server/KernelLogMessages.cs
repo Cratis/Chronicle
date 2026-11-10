@@ -72,4 +72,7 @@ internal static partial class KernelLogMessages
 
     [LoggerMessage(LogLevel.Warning, "Unobserved transient task exception occurred and was ignored; owner: {Owner}")]
     internal static partial void UnobservedTransientTaskException(this ILogger<Kernel> logger, Exception exception, string owner);
+
+    [LoggerMessage("{Suppressed} more unobserved {Exception} task exceptions were counted but not written; owner: {Owner}. The first for each owner in each {Seconds} second window is written in full")]
+    internal static partial void UnobservedTaskExceptionsSuppressed(this ILogger<Kernel> logger, LogLevel level, int suppressed, string exception, string owner, int seconds);
 }
