@@ -13,6 +13,8 @@ namespace Cratis.Chronicle.Chaos;
 /// <param name="runId">The isolated run identifier.</param>
 internal sealed class Ledger(IMongoClient client, string runId)
 {
+    static readonly string[] _retryableStatuses = ["intended", "unknown"];
+
     readonly IMongoCollection<BsonDocument> _entries = client.GetDatabase($"chaos-{runId}")
         .GetCollection<BsonDocument>("intentions").WithWriteConcern(WriteConcern.WMajority.With(journal: true));
 
@@ -30,12 +32,12 @@ internal sealed class Ledger(IMongoClient client, string runId)
     });
 
     /// <summary>
-    /// Finds an intention without an acknowledgement for retry.
+    /// Finds an intention with an unresolved outcome for retry.
     /// </summary>
     /// <returns>The pending intention and its event, if any.</returns>
     public async Task<(LedgerEntry Entry, ChaosEvent Event)?> Pending()
     {
-        var document = await _entries.Find(Builders<BsonDocument>.Filter.Ne("status", "acked")).FirstOrDefaultAsync();
+        var document = await _entries.Find(Builders<BsonDocument>.Filter.In("status", _retryableStatuses)).FirstOrDefaultAsync();
         if (document is null) return null;
         var entry = From(document);
         var timestamp = DateTimeOffset.Parse(document["timestamp"].AsString, System.Globalization.CultureInfo.InvariantCulture);

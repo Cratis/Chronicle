@@ -32,8 +32,21 @@ internal sealed class KernelObserverInspection(string connection)
             var collection = client.GetDatabase(name).GetCollection<BsonDocument>("observers");
             documents.AddRange(await collection.Find(filter).ToListAsync(cancellation));
         }
+        return Summarize(documents);
+    }
+
+    /// <summary>
+    /// Counts namespace state without mistaking observer definitions for state documents.
+    /// </summary>
+    /// <param name="documents">Documents matching the expected observer identifiers.</param>
+    /// <returns>The state document and in-flight partition counts.</returns>
+    /// <exception cref="InvalidDataException">A state document lacks its in-flight partition array.</exception>
+    internal static (int Documents, int InFlight) Summarize(IEnumerable<BsonDocument> documents)
+    {
+        // Event-store definitions share this collection name, but only definitions declare eventTypes.
+        var states = documents.Where(document => !document.Contains("eventTypes")).ToArray();
         var count = 0;
-        foreach (var document in documents)
+        foreach (var document in states)
         {
             if (!document.TryGetValue("inFlightPartitions", out var partitions) || !partitions.IsBsonArray)
             {
@@ -41,6 +54,6 @@ internal sealed class KernelObserverInspection(string connection)
             }
             count += partitions.AsBsonArray.Count;
         }
-        return (documents.Count, count);
+        return (states.Length, count);
     }
 }

@@ -28,15 +28,25 @@ internal static class WorkloadHost
         builder.Logging.AddConsole();
         builder.Logging.SetMinimumLevel(LogLevel.Warning);
         builder.AddCratisChronicle(
-            options =>
-            {
-                options.ConnectionString = new(connection);
-                options.EventStore = store;
-                options.ActivationScope = ActivationScope.PerProcess;
-                options.AutoDiscoverAndRegister = role != "reader";
-            },
+            options => ConfigureOptions(options, role, connection, store),
             configure: chronicle => chronicle.ClientArtifactsProvider = new DefaultClientArtifactsProvider(new ChaosDiscovery(role)));
         builder.Services.AddSingleton(_ => new ChaosReactor(sideLedger));
         return builder.Build();
+    }
+
+    /// <summary>
+    /// Configures registration without letting producers replace consumer artifacts.
+    /// </summary>
+    /// <param name="options">The Chronicle client options.</param>
+    /// <param name="role">The workload role.</param>
+    /// <param name="connection">The kernel connection string.</param>
+    /// <param name="store">The isolated event store.</param>
+    internal static void ConfigureOptions(ChronicleClientOptions options, string role, string connection, string store)
+    {
+        options.ConnectionString = new(connection);
+        options.EventStore = store;
+        options.ActivationScope = ActivationScope.PerProcess;
+        options.AutoDiscoverAndRegister = role != "reader";
+        options.RegistrationMode = role == "producer" ? RegistrationMode.EventTypesOnly : RegistrationMode.Inline;
     }
 }

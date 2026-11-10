@@ -27,10 +27,14 @@ internal sealed class DockerEnvironment : IAsyncDisposable
         RunId = runId;
         _keep = keep;
         _network = new NetworkBuilder().WithName($"chronicle-chaos-{runId}").WithLabel("chronicle-chaos", runId).WithCleanUp(false).Build();
-        Mongo = MongoContainer(runId, "mongo", 27017, replicaSet: true);
-        _ledger = MongoContainer(runId, "ledger", 27018, replicaSet: false);
+        Mongo = MongoContainer(runId, "mongo", replicaSet: true);
+        _ledger = MongoContainer(runId, "ledger", replicaSet: false);
         Kernel = new ContainerBuilder("cratis/chronicle:local-development-slim")
-            .WithNetwork(_network).WithNetworkAliases("kernel").WithPortBinding(35000, 35000)
+            .WithNetwork(_network).WithNetworkAliases("kernel").WithPortBinding(35000, true)
+            .WithCreateParameterModifier(parameters =>
+            {
+                foreach (var binding in parameters.HostConfig?.PortBindings?.Values.SelectMany(bindings => bindings) ?? []) binding.HostIP = "127.0.0.1";
+            })
             .WithLabel("chronicle-chaos", runId).WithCleanUp(false).WithAutoRemove(false)
             .WithEnvironment("DOTNET_ENVIRONMENT", "Development")
             .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development")
@@ -62,17 +66,17 @@ internal sealed class DockerEnvironment : IAsyncDisposable
     /// <summary>
     /// Gets the plaintext kernel connection string.
     /// </summary>
-    public string Connection => $"chronicle://{Kernel.Hostname}:35000/?development=true&disableTls=true";
+    public string Connection => $"chronicle://{Kernel.Hostname}:{Kernel.GetMappedPublicPort(35000)}/?development=true&disableTls=true";
 
     /// <summary>
     /// Gets the kernel storage connection string.
     /// </summary>
-    public string MongoConnection => $"mongodb://{Mongo.Hostname}:27017/?directConnection=true&replicaSet=rs0";
+    public string MongoConnection => $"mongodb://{Mongo.Hostname}:{Mongo.GetMappedPublicPort(27017)}/?directConnection=true&replicaSet=rs0";
 
     /// <summary>
     /// Gets the independent ledger connection string.
     /// </summary>
-    public string LedgerConnection => $"mongodb://{_ledger.Hostname}:27018/?directConnection=true";
+    public string LedgerConnection => $"mongodb://{_ledger.Hostname}:{_ledger.GetMappedPublicPort(27017)}/?directConnection=true";
 
     /// <summary>
     /// Starts storage and the kernel and waits for readiness.
@@ -111,7 +115,7 @@ internal sealed class DockerEnvironment : IAsyncDisposable
         {
             try
             {
-                using var response = await client.GetAsync($"http://{Kernel.Hostname}:35000/health/ready", deadline.Token);
+                using var response = await client.GetAsync($"http://{Kernel.Hostname}:{Kernel.GetMappedPublicPort(35000)}/health/ready", deadline.Token);
                 if (response.IsSuccessStatusCode) return;
             }
             catch (HttpRequestException) { }
@@ -130,10 +134,12 @@ internal sealed class DockerEnvironment : IAsyncDisposable
     {
         foreach (var (name, container) in new[] { ("kernel", Kernel), ("mongo", Mongo), ("ledger", _ledger) })
         {
-            if (string.IsNullOrEmpty(container.Id)) continue;
-            var logs = await container.GetLogsAsync(ct: cancellation);
-            await File.WriteAllTextAsync(Path.Combine(directory, $"{name}.stdout.log"), logs.Stdout, cancellation);
-            await File.WriteAllTextAsync(Path.Combine(directory, $"{name}.stderr.log"), logs.Stderr, cancellation);
+            await CaptureLogsFor(name, async () =>
+            {
+                var logs = await container.GetLogsAsync(ct: cancellation);
+                await File.WriteAllTextAsync(Path.Combine(directory, $"{name}.stdout.log"), logs.Stdout, cancellation);
+                await File.WriteAllTextAsync(Path.Combine(directory, $"{name}.stderr.log"), logs.Stderr, cancellation);
+            });
         }
     }
 
@@ -151,10 +157,32 @@ internal sealed class DockerEnvironment : IAsyncDisposable
         await _network.DisposeAsync();
     }
 
-    IContainer MongoContainer(string runId, string alias, int port, bool replicaSet)
+    /// <summary>
+    /// Captures diagnostics without masking a workload or startup failure.
+    /// </summary>
+    /// <param name="name">The diagnostic source name.</param>
+    /// <param name="capture">The best-effort capture operation.</param>
+    /// <returns>The diagnostic capture task.</returns>
+    internal static async Task CaptureLogsFor(string name, Func<Task> capture)
+    {
+        try
+        {
+            await capture();
+        }
+        catch (Exception exception)
+        {
+            await Console.Error.WriteLineAsync($"Could not capture {name} logs: {exception.Message}");
+        }
+    }
+
+    IContainer MongoContainer(string runId, string alias, bool replicaSet)
     {
         var builder = new ContainerBuilder("mongo:8.0").WithNetwork(_network).WithNetworkAliases(alias)
-            .WithPortBinding(port, 27017).WithLabel("chronicle-chaos", runId).WithCleanUp(false).WithAutoRemove(false)
+            .WithPortBinding(27017, true).WithLabel("chronicle-chaos", runId).WithCleanUp(false).WithAutoRemove(false)
+            .WithCreateParameterModifier(parameters =>
+            {
+                foreach (var binding in parameters.HostConfig?.PortBindings?.Values.SelectMany(bindings => bindings) ?? []) binding.HostIP = "127.0.0.1";
+            })
             .WithWaitStrategy(Wait.ForUnixContainer().UntilCommandIsCompleted("mongosh", "--quiet", "--eval", "db.adminCommand({ping:1})"));
         if (replicaSet) builder = builder.WithCommand("mongod", "--replSet", "rs0", "--bind_ip_all");
         return builder.Build();

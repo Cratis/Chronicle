@@ -32,13 +32,23 @@ internal static class Producer
         }
     }
 
+    /// <summary>
+    /// Classifies definitive refusals separately from ambiguous append failures.
+    /// </summary>
+    /// <param name="result">The append response.</param>
+    /// <returns>The durable ledger outcome.</returns>
+    internal static string StatusFor(AppendResult result)
+    {
+        if (result.HasConstraintViolations || result.HasConcurrencyViolations || result.HasIdempotencyConflicts) return "failed";
+        return result.IsSuccess ? "acked" : "unknown";
+    }
+
     static async Task Attempt(IEventStore store, Ledger ledger, string source, ChaosEvent @event, CancellationToken cancellation)
     {
         try
         {
             var result = await store.EventLog.AppendOnce(source, @event, new IdempotencyKey(@event.LedgerId)).WaitAsync(TimeSpan.FromSeconds(10), cancellation);
-            if (result.HasIdempotencyConflicts) throw new InvalidOperationException("Identical retry produced an idempotency conflict.");
-            await ledger.Outcome(@event.LedgerId, result.IsSuccess ? "acked" : "unknown");
+            await ledger.Outcome(@event.LedgerId, StatusFor(result));
         }
         catch (Exception exception) when (!cancellation.IsCancellationRequested && exception is not InvalidOperationException)
         {
