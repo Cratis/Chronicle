@@ -54,6 +54,7 @@ Also remove `cratis/chronicle:latest` if you ever ran `dockerize.sh`.
 | ----- | ------- | ----------- |
 | Client | `Integration/Client` | Runs the shared .NET integration specifications in either `inprocess` or `outofprocess` mode, with runtime storage selected through command-line arguments. |
 | Graph projections | `Integration/Client/GraphProjections` | Projects events onto a real Neo4j server and reads the graph back with Cypher. See [Graph projection specifications](#graph-projection-specifications). |
+| Neo4j storage | `Integration/Neo4j` | Exercises the Neo4j graph sink, connections and database creation directly against a Neo4j container, with no kernel or silo, the way `Integration/MongoDB` exercises MongoDB storage. See [Neo4j storage specifications](#neo4j-storage-specifications). |
 | API (out-of-process) | `Integration/Api` | Runs a full Chronicle server via Docker and tests the HTTP/gRPC client against it. |
 
 ## Graph projection specifications
@@ -65,6 +66,35 @@ The Community edition has one user database, so the sink runs in single database
 Multiple databases need the Enterprise edition, so CI runs one extra in-process lane against MongoDB with `CHRONICLE_NEO4J_IMAGE=neo4j:5-enterprise` and `PerNamespace`. When the image name contains `enterprise`, the fixture starts the container with `NEO4J_ACCEPT_LICENSE_AGREEMENT=eval`, which accepts the Neo4j Evaluation Agreement. This is temporary; the license follow-up is tracked in [Cratis/Chronicle#5739](https://github.com/Cratis/Chronicle/issues/5739). Every other lane stays on `neo4j:5-community` in single database mode.
 
 The same organization is declared with model-bound attributes, with the fluent builder and in the projection declaration language, and each declaration must leave the same graph behind. CI runs the namespace in process against MongoDB and out of process against every other storage backend the run selects.
+
+## Neo4j storage specifications
+
+`Integration/Neo4j` is the storage level of the graph integration specifications. It starts one Neo4j container for the run and uses `Neo4jGraphSink`, `Neo4jGraphSinkFactory` and `Neo4jConnections` the way the kernel does, with no kernel, no silo and no client. Every specification gets a namespace of its own, writes through the sink, and reads the result back with Cypher through a driver that is not the one under test. What it leaves behind is removed again: the nodes of its namespaces in single database mode, the databases of its namespaces otherwise.
+
+The two levels answer different questions:
+
+| Level | Project | Proves |
+| ----- | ------- | ------ |
+| Storage | `Integration/Neo4j` | What the sink does on a real server: upserts, the watermark that makes writes idempotent, deletes with and without detach, edge identity, replay mark and sweep, namespace isolation, the constraints, database creation and naming, value round trips. |
+| Client projection | `Integration/Client/GraphProjections` | That events projected by the kernel end up as the graph a declaration describes, whichever of model-bound attributes, the fluent builder or the projection declaration language declares it. |
+
+The server and its generated password are shared with the Client suite through `Integration/Shared/Neo4jGraphServer.cs`. The password is never committed or put in a command line the container tooling logs. Run the suite locally with Docker running:
+
+```bash
+dotnet build Integration/Neo4j/Neo4j.csproj -p:DisableDockerBuild=true
+dotnet Integration/Neo4j/bin/Debug/net10.0/Cratis.Chronicle.Neo4j.Integration.dll
+```
+
+It runs against `neo4j:5-community` in single database mode, where every namespace shares one database and is stamped on every node and edge. To run it with a database per namespace, point it at an Enterprise image, which accepts the Neo4j Evaluation Agreement for now (see [Cratis/Chronicle#5739](https://github.com/Cratis/Chronicle/issues/5739)):
+
+```bash
+CHRONICLE_NEO4J_IMAGE=neo4j:5-enterprise CHRONICLE_NEO4J_DATABASE_MODE=PerNamespace \
+    dotnet Integration/Neo4j/bin/Debug/net10.0/Cratis.Chronicle.Neo4j.Integration.dll
+```
+
+Asking for `PerNamespace` on an image with one database fails the fixture with a message naming the image. Specifications whose outcome depends on the mode assert the outcome of the mode they run in, so both lanes run the same specifications.
+
+CI runs the project as the `neo4j` job of the build workflow, once per lane: `neo4j:5-community` with `Single`, and `neo4j:5-enterprise` with `PerNamespace`. Like the MongoDB integration job, it needs no kernel image.
 
 ## Checking packed test-package startup
 

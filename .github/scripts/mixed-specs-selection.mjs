@@ -17,7 +17,7 @@ export const v3Projects = [
     'Source/Clients/XUnit.Integration.Specs',
     'Source/Clients/XUnit.Integration.v3.Specs',
     ...['Storage', 'Storage.InMemory', 'Storage.MongoDB', 'Storage.Neo4j', 'Storage.Sql'].map(x => `Source/Kernel/${x}.Specs`),
-    ...['Api', 'Client', 'Clustering', 'Kernel', 'MongoDB', 'SqlClustering'].map(x => `Integration/${x}`)
+    ...['Api', 'Client', 'Clustering', 'Kernel', 'MongoDB', 'Neo4j', 'SqlClustering'].map(x => `Integration/${x}`)
 ].map(project);
 // Shipping packages are libraries, not spec runners. Each one declares the xunit generation it ships against:
 // Cratis.Chronicle.Testing has none, XUnit.Integration is the xunit v2 package and XUnit.Integration.v3 the v3 one.
