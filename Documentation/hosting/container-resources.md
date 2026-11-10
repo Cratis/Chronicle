@@ -55,12 +55,14 @@ Replace `<image>` with the Chronicle production image and tag you deploy, and re
 
 ## Size from your own peak
 
-Memory use depends on your workload. It grows with the number of event stores, namespaces and observers, because a subscribed observer stays resident, at roughly 40 KB of heap each. An observer without a subscription is released after it has been idle for a while; see [Releasing idle observers](configuration/observers.md#releasing-idle-observers).
+Memory use depends on your workload. It grows with the number of event stores, namespaces and observers, because observer grains stay resident once they are activated.
 
 1. Run your real workload without a hard heap limit.
 2. Observe peak resident memory. Use the .NET runtime metrics described in [OpenTelemetry](configuration/open-telemetry.md), or `docker stats`.
 3. Set the container memory limit above the observed peak.
 4. Set a hard heap limit only when you have a reason to, and keep it above the peak heap size you observed.
+
+A subscribed observer, reactor or reducer keeps roughly 40 KB of heap for as long as it is subscribed. One without a subscription, for example because its client has gone, is released once it has been idle for a while; see [Releasing idle observers](configuration/observers.md#releasing-idle-observers).
 
 A limit below what the kernel needs is not safe. Docker warns that a process can be killed when a container runs out of memory; see [Resource constraints](https://docs.docker.com/engine/containers/resource_constraints/).
 
