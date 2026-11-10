@@ -11,6 +11,11 @@ namespace Cratis.Chronicle.Configuration;
 /// </summary>
 public class Telemetry
 {
+    /// <summary>
+    /// The default for <see cref="MetricSeriesLimit"/>.
+    /// </summary>
+    public const int DefaultMetricSeriesLimit = 500;
+
     EventSourceIdTracing? _eventSourceIdTracing;
 
     /// <summary>
@@ -50,6 +55,20 @@ public class Telemetry
     /// of trace volume, so this instrumentation is opt-in.
     /// </remarks>
     public bool GrpcClientTracing { get; init; }
+
+    /// <summary>
+    /// Gets or inits the most series each metric instrument holds. Defaults to <see cref="DefaultMetricSeriesLimit"/>.
+    /// </summary>
+    /// <remarks>
+    /// The SDK pre-allocates this many points per instrument, so raising it costs memory for every instrument. Beyond the
+    /// limit, measurements fold into one overflow series without attributes. A value below 1 uses the default.
+    /// </remarks>
+    public int MetricSeriesLimit { get; init; } = DefaultMetricSeriesLimit;
+
+    /// <summary>
+    /// Gets the series limit to apply: <see cref="MetricSeriesLimit"/>, or the default when it is below 1.
+    /// </summary>
+    internal int EffectiveMetricSeriesLimit => MetricSeriesLimit < 1 ? DefaultMetricSeriesLimit : MetricSeriesLimit;
 
     /// <summary>
     /// Gets whether a hash key must be valid: hashing was chosen explicitly, or a key was supplied.
