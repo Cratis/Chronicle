@@ -10,6 +10,7 @@ public class and_single_writer_lease_is_default : Specification
     [Fact] void should_select_automatic_enablement() => _options.SingleWriterLease.Enabled.ShouldBeNull();
     [Fact] void should_use_a_thirty_second_ttl() => _options.SingleWriterLease.Ttl.ShouldEqual(TimeSpan.FromSeconds(30));
     [Fact] void should_not_use_standby() => _options.SingleWriterLease.Standby.ShouldBeFalse();
+    [Fact] void should_bound_standby_after_takeover_to_ten_minutes() => _options.SingleWriterLease.StandbyStartupTimeout.ShouldEqual(TimeSpan.FromMinutes(10));
     [Fact] void should_wait_two_minutes() => _options.SingleWriterLease.AcquireTimeout.ShouldEqual(TimeSpan.FromMinutes(2));
     [Fact] void should_apply_to_localhost_persistent_storage() => _options.SingleWriterLease.AppliesTo(ClusteringType.Localhost, "PostgreSql").ShouldBeTrue();
     [Fact] void should_not_apply_to_in_memory_storage() => _options.SingleWriterLease.AppliesTo(ClusteringType.Localhost, "InMemory").ShouldBeFalse();

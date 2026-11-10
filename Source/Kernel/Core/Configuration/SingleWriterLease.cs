@@ -31,6 +31,13 @@ public class SingleWriterLease
     public bool Standby { get; set; }
 
     /// <summary>
+    /// Gets or sets how long, after taking the lease, a kernel in standby keeps reporting standby while it finishes
+    /// starting. Once exceeded, readiness reports unhealthy so a stuck startup becomes visible. Zero ends standby as
+    /// soon as the lease is held.
+    /// </summary>
+    public TimeSpan StandbyStartupTimeout { get; set; } = TimeSpan.FromMinutes(10);
+
+    /// <summary>
     /// Determines whether this lease applies to the configured clustering and storage.
     /// </summary>
     /// <param name="clustering">The clustering mode.</param>

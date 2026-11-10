@@ -8,7 +8,12 @@ public class and_the_lease_is_held_before_startup_completes : given.a_kernel_sta
     bool _standby;
     bool _ready;
 
-    void Establish() => _lease.IsHeld.Returns(true);
+    void Establish()
+    {
+        _options.Clustering.SingleWriterLease.StandbyStartupTimeout = TimeSpan.FromMinutes(10);
+        _lease.IsHeld.Returns(true);
+        _lease.HeldFor.Returns(TimeSpan.FromMinutes(9));
+    }
 
     void Because() => (_standby, _ready) = (_state.IsStandby, _state.IsReady);
 

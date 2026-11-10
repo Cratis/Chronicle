@@ -10,5 +10,5 @@ namespace Cratis.Chronicle.Server.given;
 internal static class startup_state
 {
     internal static KernelStartupState For(IHostApplicationLifetime lifetime, ChronicleOptions? options = null, ISingleWriterLease? lease = null) =>
-        new(lifetime, Microsoft.Extensions.Options.Options.Create(options ?? new()), lease is null ? [] : [lease]);
+        new(lifetime, Microsoft.Extensions.Options.Options.Create(options ?? new()), lease is null ? [] : [lease], Microsoft.Extensions.Logging.Abstractions.NullLogger<KernelStartupState>.Instance);
 }

@@ -31,6 +31,7 @@ public class SingleWriterLeaseKeeper : ISingleWriterLease, ILifecycleParticipant
     readonly TimeSpan _retryInterval;
     Task _renewal = Task.CompletedTask;
     long _lastSuccessStart;
+    long _heldSince;
     bool _acquired;
     volatile bool _stopped;
     volatile bool _held;
@@ -82,6 +83,9 @@ public class SingleWriterLeaseKeeper : ISingleWriterLease, ILifecycleParticipant
 
     /// <inheritdoc/>
     public bool IsWaiting => _waiting;
+
+    /// <inheritdoc/>
+    public TimeSpan HeldFor => _held ? _time.GetElapsedTime(Volatile.Read(ref _heldSince)) : TimeSpan.Zero;
 
     /// <inheritdoc/>
     public SingleWriterLeaseOwner Owner { get; } = SingleWriterLeaseOwner.New();
@@ -139,6 +143,7 @@ public class SingleWriterLeaseKeeper : ISingleWriterLease, ILifecycleParticipant
                     lock (_gate)
                     {
                         _acquired = true;
+                        Volatile.Write(ref _heldSince, _time.GetTimestamp());
                         _held = true;
                         RecordSuccess(attemptStarted);
                         if (Remaining(_options.Ttl / 2) == TimeSpan.Zero)

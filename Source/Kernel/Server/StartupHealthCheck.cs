@@ -15,8 +15,12 @@ internal sealed class StartupHealthCheck(KernelStartupState state) : IHealthChec
     /// <inheritdoc/>
     public Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
     {
-        if (state.IsReady) return Task.FromResult(HealthCheckResult.Healthy());
-        if (state.IsStandby) return Task.FromResult(SingleWriterLeaseStandby.Result("Standby: kernel startup waits for the single-writer lease."));
-        return Task.FromResult(HealthCheckResult.Unhealthy("Kernel startup is incomplete or the kernel is stopping."));
+        return Task.FromResult(state.Status switch
+        {
+            KernelStartupStatus.Ready => HealthCheckResult.Healthy(),
+            KernelStartupStatus.Standby => SingleWriterLeaseStandby.Result("Standby: kernel startup waits for the single-writer lease."),
+            KernelStartupStatus.StandbyExpired => HealthCheckResult.Unhealthy(KernelReadinessHealthCheck.StandbyExpiredDescription),
+            _ => HealthCheckResult.Unhealthy("Kernel startup is incomplete or the kernel is stopping.")
+        });
     }
 }

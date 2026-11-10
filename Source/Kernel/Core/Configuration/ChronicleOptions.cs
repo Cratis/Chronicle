@@ -346,5 +346,10 @@ public class ChronicleOptions : IValidatableObject
         {
             yield return new ValidationResult("Clustering.SingleWriterLease.AcquireTimeout must be non-negative.", ["Clustering.SingleWriterLease.AcquireTimeout"]);
         }
+
+        if (Clustering.SingleWriterLease.StandbyStartupTimeout < TimeSpan.Zero)
+        {
+            yield return new ValidationResult("Clustering.SingleWriterLease.StandbyStartupTimeout must be non-negative.", ["Clustering.SingleWriterLease.StandbyStartupTimeout"]);
+        }
     }
 }

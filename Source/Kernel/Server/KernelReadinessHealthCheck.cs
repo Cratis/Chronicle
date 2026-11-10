@@ -12,11 +12,20 @@ namespace Cratis.Chronicle.Server;
 /// <param name="state">The kernel startup state.</param>
 internal sealed class KernelReadinessHealthCheck(KernelStartupState state) : IHealthCheck
 {
+    /// <summary>
+    /// The description reported when startup did not complete within the standby startup timeout.
+    /// </summary>
+    internal const string StandbyExpiredDescription = "Chronicle did not finish starting within Clustering.SingleWriterLease.StandbyStartupTimeout after taking the single-writer lease.";
+
     /// <inheritdoc/>
     public Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
     {
-        if (state.IsReady) return Task.FromResult(HealthCheckResult.Healthy());
-        if (state.IsStandby) return Task.FromResult(SingleWriterLeaseStandby.Result("Standby: Chronicle starts serving once it holds the single-writer lease and has started."));
-        return Task.FromResult(HealthCheckResult.Unhealthy("Chronicle is not ready."));
+        return Task.FromResult(state.Status switch
+        {
+            KernelStartupStatus.Ready => HealthCheckResult.Healthy(),
+            KernelStartupStatus.Standby => SingleWriterLeaseStandby.Result("Standby: Chronicle starts serving once it holds the single-writer lease and has started."),
+            KernelStartupStatus.StandbyExpired => HealthCheckResult.Unhealthy(StandbyExpiredDescription),
+            _ => HealthCheckResult.Unhealthy("Chronicle is not ready.")
+        });
     }
 }

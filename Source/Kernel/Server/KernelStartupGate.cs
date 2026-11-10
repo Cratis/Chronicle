@@ -22,7 +22,8 @@ internal sealed class KernelStartupGate(RequestDelegate next, KernelStartupState
     /// <returns>A task representing request handling.</returns>
     public Task InvokeAsync(HttpContext context)
     {
-        if (state.IsReady || HealthOnlyPortPolicy.IsHealthCheckEndpoint(options.Value.HealthCheckEndpoint, context.Request.Path.Value))
+        var status = state.Status;
+        if (status == KernelStartupStatus.Ready || HealthOnlyPortPolicy.IsHealthCheckEndpoint(options.Value.HealthCheckEndpoint, context.Request.Path.Value))
         {
             return next(context);
         }
@@ -33,7 +34,7 @@ internal sealed class KernelStartupGate(RequestDelegate next, KernelStartupState
             context.Response.StatusCode = StatusCodes.Status200OK;
             context.Response.ContentType = "application/grpc";
             context.Response.Headers.GrpcStatus = "14";
-            context.Response.Headers.GrpcMessage = state.IsStandby ? SingleWriterLeaseStandby.RefusalMessage : "Chronicle is not ready.";
+            context.Response.Headers.GrpcMessage = status == KernelStartupStatus.Standby ? SingleWriterLeaseStandby.RefusalMessage : "Chronicle is not ready.";
         }
         else
         {
