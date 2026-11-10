@@ -49,6 +49,7 @@ public partial class Observer
         try
         {
             var stampedEpoch = default(ulong?);
+            await LiveDeliveriesSettled();
             jobId = await AcquireCatchUpJob(epoch => stampedEpoch = epoch);
             ClaimCatchUpJob(jobId, stampedEpoch);
         }

@@ -99,6 +99,9 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Warning, "Could not start recovery of failed partition {Partition}; it is tried again in a later turn")]
     internal static partial void CouldNotStartRecoveryOfFailedPartition(this ILogger<Observer> logger, Exception exception, Key partition);
 
+    [LoggerMessage(LogLevel.Debug, "Waiting for {Count} live deliveries to settle before choosing where catch-up starts")]
+    internal static partial void WaitingForLiveDeliveriesBeforeCatchUp(this ILogger<Observer> logger, int count);
+
     [LoggerMessage(LogLevel.Debug, "Skipping catch-up because observer is replaying")]
     internal static partial void SkippingCatchUpBecauseObserverIsReplaying(this ILogger<Observer> logger);
 

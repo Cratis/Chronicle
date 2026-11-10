@@ -32,6 +32,7 @@ public partial class Observer
 
         // The cursor is single, but the partitions of a page are settled one at a time in whatever order. Every partition is filtered
         // against where the cursor stood when the page arrived, and settling only ever moves the cursor forward.
+        using var delivery = BeginLiveDelivery();
         _pageFloor = State.NextEventSequenceNumber;
         try
         {

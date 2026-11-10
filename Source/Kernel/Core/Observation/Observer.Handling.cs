@@ -453,6 +453,9 @@ public partial class Observer
         IReadOnlyDictionary<EventTypeId, EventCount> handledCountsPerEventType = ImmutableDictionary<EventTypeId, EventCount>.Empty;
         if (await CanDispatchDelivery(partition, eventsToHandle))
         {
+            // Only a delivery that reaches the subscriber can race a catch-up; a hand-over holds its partition instead.
+            using var delivery = BeginLiveDelivery();
+
             // Record this partition as in-flight on the observer state and make it durable *before* the subscriber
             // is invoked. If the silo dies between this point and the post-handling state write, the marker survives
             // on the reloaded observer state and drives partition catch-up on the next activation.
