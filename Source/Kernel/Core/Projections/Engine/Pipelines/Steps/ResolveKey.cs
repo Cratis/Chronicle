@@ -2,11 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.Sinks;
-using Cratis.Types;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Projections.Engine.Pipelines.Steps;
@@ -67,7 +67,7 @@ public class ResolveKey(IEventSequenceStorage eventSequenceStorage, ISink sink, 
 
                     return arrayIndexer with
                     {
-                        Identifier = TypeConversion.Convert(targetType, arrayIndexer.Identifier)
+                        Identifier = DecimalValues.ConvertTo(targetType, arrayIndexer.Identifier)
                     };
                 }))
         };

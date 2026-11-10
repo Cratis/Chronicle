@@ -12,13 +12,13 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Dynamic;
+using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.ReadModels;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Monads;
 using Cratis.Reflection;
-using Cratis.Types;
 
 namespace Cratis.Chronicle.Storage.InMemory.Sinks;
 
@@ -87,7 +87,7 @@ public partial class InMemorySink(
 
         if (_keyTargetType is not null)
         {
-            return TypeConversion.Convert(_keyTargetType, key.Value);
+            return DecimalValues.ConvertTo(_keyTargetType, key.Value);
         }
 
         if (key.Value.IsConcept())
