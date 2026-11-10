@@ -43,7 +43,15 @@ public class ApplicationsReactor(IApplicationStorage applicationStorage) : React
             ]
         };
 
-        await applicationStorage.Create(application);
+        // Concurrent bootstraps append ApplicationAdded for the same deterministic application id; the last one wins.
+        if (await applicationStorage.GetById(application.Id) is null)
+        {
+            await applicationStorage.Create(application);
+        }
+        else
+        {
+            await applicationStorage.Update(application);
+        }
     }
 
     /// <summary>
