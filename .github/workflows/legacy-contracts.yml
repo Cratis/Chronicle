@@ -38,7 +38,6 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 11.0.x
-          dotnet-quality: preview
 
       # Deliberately build only this small tool. The proofs already ran upstream.
       - name: Build the matrix evaluator

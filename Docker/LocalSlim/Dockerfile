@@ -9,9 +9,8 @@
 # the layout parallels Docker/DevelopmentSlim so the local build mirrors the
 # published `cratis/chronicle:*-development-slim` image.
 ####################################
-# .NET 11 is in release candidate and MCR publishes no noble tags for it; Ubuntu 26.04 (resolute) is the distro, pinned to the RC.
-# GA: switch to 11.0-resolute (and 11.0-resolute-chiseled-extra) before any image ships from this file.
-FROM mcr.microsoft.com/dotnet/aspnet:11.0.0-rc.3-resolute
+# MCR publishes no .NET 11 noble tags; use the GA images on Ubuntu 26.04 (resolute).
+FROM mcr.microsoft.com/dotnet/aspnet:11.0-resolute
 
 # Tini propagates signals to the kernel process cleanly so docker stop works
 # without orphaning the .NET host. ca-certificates is needed for HTTPS pulls

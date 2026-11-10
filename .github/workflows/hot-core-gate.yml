@@ -19,9 +19,7 @@ on:
       - "**"
 
 env:
-  # GA follow-up: drop DOTNET_QUALITY, set global.json to 11.0.100 and remove allowPrerelease.
   DOTNET_VERSION: "11.0.x"
-  DOTNET_QUALITY: preview
   # Own image tag; this workflow builds and uploads its own output for its matrix.
   HOT_CORE_IMAGE: "ghcr.io/cratis/chronicle:hot-core-${{ github.sha }}"
 
@@ -86,7 +84,6 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
-          dotnet-quality: ${{ env.DOTNET_QUALITY }}
 
       - name: Cache NuGet packages
         uses: actions/cache@v4

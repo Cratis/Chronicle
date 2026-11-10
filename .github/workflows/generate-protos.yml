@@ -5,9 +5,7 @@ on:
   workflow_dispatch:
 
 env:
-  # GA follow-up: drop DOTNET_QUALITY, set global.json to 11.0.100 and remove allowPrerelease.
   DOTNET_VERSION: "11.0.x"
-  DOTNET_QUALITY: preview
 
 jobs:
   generate-protos:
@@ -22,7 +20,6 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
-          dotnet-quality: ${{ env.DOTNET_QUALITY }}
 
       - name: Build Contracts
         working-directory: ./Source/Kernel/Contracts

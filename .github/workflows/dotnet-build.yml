@@ -9,11 +9,9 @@ concurrency:
 
 env:
   # .NET 11 builds everything. .NET 10 is installed as well for the net10 client-library lane and the net10 packaging asset.
-  # GA follow-up: drop DOTNET_QUALITY, set global.json to 11.0.100 and remove allowPrerelease.
   DOTNET_VERSION: |
     10.0.x
     11.0.x
-  DOTNET_QUALITY: preview
   CRATIS_CHRONICLE_LOCAL_IMAGE: "ghcr.io/cratis/chronicle:${{ github.sha }}"
 
 on:
@@ -115,7 +113,6 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
-          dotnet-quality: ${{ env.DOTNET_QUALITY }}
       # Shared org cache: pull requests restore only; the nightly build and default-branch runs save (Cratis/Workflows#164).
       - name: Cache NuGet packages
         uses: Cratis/Workflows/.github/actions/dotnet-cache@main
@@ -224,7 +221,6 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
-          dotnet-quality: ${{ env.DOTNET_QUALITY }}
 
       - name: Spec the gRPC generator targeting
         run: node --test .github/scripts/test-grpc-generator-targeting.mjs
@@ -401,7 +397,6 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
-          dotnet-quality: ${{ env.DOTNET_QUALITY }}
 
       # Shared org cache: pull requests restore only; the nightly build and default-branch runs save (Cratis/Workflows#164).
       - name: Cache NuGet packages
@@ -470,7 +465,6 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
-          dotnet-quality: ${{ env.DOTNET_QUALITY }}
 
       # Shared org cache: pull requests restore only; the nightly build and default-branch runs save (Cratis/Workflows#164).
       - name: Cache NuGet packages
@@ -538,7 +532,6 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
-          dotnet-quality: ${{ env.DOTNET_QUALITY }}
 
       - name: Download Release build output
         uses: actions/download-artifact@v4
@@ -635,7 +628,6 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
-          dotnet-quality: ${{ env.DOTNET_QUALITY }}
 
       - name: Download Release build output
         uses: actions/download-artifact@v4
@@ -692,7 +684,6 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
-          dotnet-quality: ${{ env.DOTNET_QUALITY }}
 
       - name: Add GitHub Package Registry to NuGet
         run: |
@@ -814,7 +805,6 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
-          dotnet-quality: ${{ env.DOTNET_QUALITY }}
 
       - name: Download Release build output
         uses: actions/download-artifact@v4
@@ -875,7 +865,6 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
-          dotnet-quality: ${{ env.DOTNET_QUALITY }}
 
       - name: Download Release build output
         uses: actions/download-artifact@v4
@@ -1032,7 +1021,6 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
-          dotnet-quality: ${{ env.DOTNET_QUALITY }}
 
       - name: Download all coverage artifacts
         uses: actions/download-artifact@v4
@@ -1142,7 +1130,6 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
-          dotnet-quality: ${{ env.DOTNET_QUALITY }}
 
       - name: Download Release build output
         uses: actions/download-artifact@v4

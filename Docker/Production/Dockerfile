@@ -3,9 +3,8 @@
 ####################################
 # Cratis Chronicle Server - Preparation stage
 ####################################
-# .NET 11 is in release candidate and MCR publishes no noble tags for it; Ubuntu 26.04 (resolute) is the distro, pinned to the RC.
-# GA: switch to 11.0-resolute (and 11.0-resolute-chiseled-extra) before any image ships from this file.
-FROM mcr.microsoft.com/dotnet/aspnet:11.0.0-rc.3-resolute AS prep
+# MCR publishes no .NET 11 noble tags; use the GA images on Ubuntu 26.04 (resolute).
+FROM mcr.microsoft.com/dotnet/aspnet:11.0-resolute AS prep
 ARG VERSION
 
 WORKDIR /app
@@ -24,7 +23,7 @@ RUN rm appsettings.Development.json && rm ./chronicle.json
 # Cratis Chronicle Server - Runtime stage
 ####################################
 # The -extra variant carries ICU and tzdata: the server runs with full globalization, which SQL Server storage needs.
-FROM mcr.microsoft.com/dotnet/aspnet:11.0.0-rc.3-resolute-chiseled-extra
+FROM mcr.microsoft.com/dotnet/aspnet:11.0-resolute-chiseled-extra
 
 WORKDIR /app
 

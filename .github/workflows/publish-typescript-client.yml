@@ -20,9 +20,7 @@ on:
         default: '0.0.0'
 
 env:
-  # GA follow-up: drop DOTNET_QUALITY, set global.json to 11.0.100 and remove allowPrerelease.
   DOTNET_VERSION: "11.0.x"
-  DOTNET_QUALITY: preview
   PROTOC_VERSION: "28.3"
 
 jobs:
@@ -51,7 +49,6 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
-          dotnet-quality: ${{ env.DOTNET_QUALITY }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4

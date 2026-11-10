@@ -133,7 +133,6 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 11.0.x
-          dotnet-quality: preview
 
       - name: Download build output
         uses: actions/download-artifact@v4
@@ -257,7 +256,6 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 11.0.x
-          dotnet-quality: preview
 
       - name: Download build output
         uses: actions/download-artifact@v4
@@ -333,7 +331,6 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 11.0.x
-          dotnet-quality: preview
 
       - name: Download build output
         uses: actions/download-artifact@v4
@@ -431,7 +428,6 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 11.0.x
-          dotnet-quality: preview
 
       - name: Download build output
         uses: actions/download-artifact@v4

@@ -23,9 +23,7 @@ on:
         default: '0.0.0'
 
 env:
-  # GA follow-up: drop DOTNET_QUALITY, set global.json to 11.0.100 and remove allowPrerelease.
   DOTNET_VERSION: "11.0.x"
-  DOTNET_QUALITY: preview
   ELIXIR_VERSION: "1.18.4"
   OTP_VERSION: "27.3"
 
@@ -45,7 +43,6 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
-          dotnet-quality: ${{ env.DOTNET_QUALITY }}
 
       - name: Setup Elixir and Erlang
         uses: erlef/setup-beam@v1

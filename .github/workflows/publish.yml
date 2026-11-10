@@ -17,11 +17,9 @@ concurrency:
 env:
   NUGET_OUTPUT: ./Artifacts/NuGet
   # .NET 11 builds everything; .NET 10 is installed for the net10 client-library lane and asset.
-  # GA follow-up: drop DOTNET_QUALITY, set global.json to 11.0.100 and remove allowPrerelease.
   DOTNET_VERSION: |
     10.0.x
     11.0.x
-  DOTNET_QUALITY: preview
 
 on:
   workflow_dispatch:
@@ -205,7 +203,6 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
-          dotnet-quality: ${{ env.DOTNET_QUALITY }}
 
       - name: Build x64 Kernel - self contained, ready to run
         working-directory: ./Source/Kernel/Server
@@ -233,7 +230,6 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
-          dotnet-quality: ${{ env.DOTNET_QUALITY }}
 
       - name: Build arm64 Kernel - self contained, ready to run
         working-directory: ./Source/Kernel/Server
@@ -313,7 +309,6 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
-          dotnet-quality: ${{ env.DOTNET_QUALITY }}
 
       - name: Cache NuGet packages
         uses: Cratis/Workflows/.github/actions/dotnet-cache@main
@@ -372,7 +367,6 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
-          dotnet-quality: ${{ env.DOTNET_QUALITY }}
 
       - name: Cache NuGet packages
         uses: Cratis/Workflows/.github/actions/dotnet-cache@main
@@ -479,7 +473,6 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
-          dotnet-quality: ${{ env.DOTNET_QUALITY }}
 
       - name: Build development x64 Kernel (DEVELOPMENT symbol)
         working-directory: ./Source/Kernel/Server
@@ -507,7 +500,6 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
-          dotnet-quality: ${{ env.DOTNET_QUALITY }}
 
       - name: Build development arm64 Kernel (DEVELOPMENT symbol)
         working-directory: ./Source/Kernel/Server
