@@ -227,7 +227,6 @@ public partial class Observer
         var madeProgress = CatchUpMadeProgress(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber);
         HandleNewLastHandledEvent(lastHandledEventSequenceNumber);
         State.CatchingUpPartitions.ExceptWith(releasable);
-        _walkingEveryPartition = false;
         if (lastScannedEventSequenceNumber.IsActualValue &&
             (!State.NextEventSequenceNumber.IsActualValue || State.NextEventSequenceNumber <= lastScannedEventSequenceNumber))
         {

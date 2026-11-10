@@ -18,6 +18,16 @@ public partial class Observer
     int _liveDeliveriesInFlight;
     TaskCompletionSource? _liveDeliveriesSettled;
 
+    /// <summary>
+    /// Lets live delivery take over from a catch-up that walked every partition, once routing has found nothing left to catch up.
+    /// </summary>
+    /// <remarks>
+    /// The walk holds live delivery back until then rather than until it concludes: an event held back after the walk read
+    /// past it is behind the position the walk leaves, so routing catches it up in another walk. Resuming live delivery when
+    /// the walk concluded would let a later event move the position past it, and it would never be delivered.
+    /// </remarks>
+    internal void ResumeLiveDeliveryAfterWalk() => _walkingEveryPartition = false;
+
     LiveDelivery BeginLiveDelivery()
     {
         _liveDeliveriesInFlight++;

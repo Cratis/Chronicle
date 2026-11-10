@@ -688,7 +688,7 @@ public partial class Observer
 
         // The walk reads every partition to the end of the log, including one whose first event arrives after it registered
         // its partitions; delivering that event live as well would hand it to the subscriber twice.
-        if (_walkingEveryPartition && State.CatchingUpPartitions.Count > 0)
+        if (_walkingEveryPartition)
         {
             logger.CatchUpWalkCoversNewEvents(partition);
             return false;
