@@ -37,7 +37,7 @@ public partial class when_listing_all_names : given.all_telemetry_names
         ["Attributes.SqlLiveQueryName"] = "cratis.chronicle.sql.live_query.name",
         ["Attributes.SqlLiveQueryFailureKind"] = "cratis.chronicle.sql.live_query.failure_kind",
         ["Attributes.SqlUpsertOperation"] = "cratis.chronicle.sql.upsert.operation",
-        ["Attributes.ObserverRunningState"] = "cratis.chronicle.observer.running_state",
+        ["Attributes.ObserverState"] = "cratis.chronicle.observer.state",
         ["Attributes.JobType"] = "cratis.chronicle.job.type",
         ["Metrics.ObserverSuccessfulObservations"] = "cratis.chronicle.observer.successful_observations",
         ["Metrics.ObserverPartitionFailures"] = "cratis.chronicle.observer.partition_failures",
@@ -208,6 +208,10 @@ public partial class when_listing_all_names : given.all_telemetry_names
     [Fact]
     void should_have_unique_attribute_keys() =>
         In("Attributes").Select(_ => _.Value).Distinct().Count().ShouldEqual(In("Attributes").Count());
+
+    [Fact]
+    void should_not_reuse_a_metric_name_as_an_attribute_key() =>
+        In("Attributes").Select(_ => _.Value).Intersect(In("Metrics").Select(_ => _.Value)).ShouldBeEmpty();
 
     [Fact]
     void should_not_publish_kernel_names_under_the_client_prefix() =>

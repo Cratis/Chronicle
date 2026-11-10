@@ -68,4 +68,12 @@ public sealed class ObserverGaugeEntry
     /// Removes the observer from the gauges, unless a newer activation registered it since.
     /// </summary>
     public void Release() => _release(this);
+
+    /// <summary>
+    /// Gets the per-observer attributes together with a running state.
+    /// </summary>
+    /// <param name="state">The <see cref="ObserverRunningState"/> to add as an attribute.</param>
+    /// <returns>The attributes.</returns>
+    internal KeyValuePair<string, object?>[] TagsWithState(ObserverRunningState state) =>
+        [.. Tags, new(WellKnownTelemetryAttributes.ObserverState, ObserverTelemetryValues.For(state))];
 }

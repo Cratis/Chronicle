@@ -326,7 +326,7 @@ public static class WellKnownMetricNames
     /// <summary>Unit of <see cref="ObserverQuarantinedPartitions"/>.</summary>
     public const string ObserverQuarantinedPartitionsUnit = "{partition}";
 
-    /// <summary>Current running state code of a resident observer.</summary>
+    /// <summary>1 while a resident observer is in the running state named by its state attribute, for states needing attention.</summary>
     public const string ObserverRunningState = "cratis.chronicle.observer.running_state";
 
     /// <summary>Unit of <see cref="ObserverRunningState"/>.</summary>

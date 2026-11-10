@@ -12,7 +12,7 @@ public class and_observers_of_several_types_are_resident : given.the_observer_ga
         "cratis.event_store.name",
         "cratis.event_store.namespace",
         "cratis.observer.type",
-        "cratis.chronicle.observer.running_state"
+        "cratis.chronicle.observer.state"
     ];
 
     IReadOnlyList<RecordedMeasurement> _resident;
@@ -31,7 +31,7 @@ public class and_observers_of_several_types_are_resident : given.the_observer_ga
         _resident.Single(_ =>
             (string)_.TagMap["cratis.event_store.namespace"]! == @namespace &&
             (string)_.TagMap["cratis.observer.type"]! == type &&
-            (string)_.TagMap["cratis.chronicle.observer.running_state"]! == state);
+            (string)_.TagMap["cratis.chronicle.observer.state"]! == state);
 
     [Fact] void should_report_one_series_per_namespace_type_and_state() => _resident.Count.ShouldEqual(3);
     [Fact] void should_tag_with_exactly_the_bounded_dimensions() => _resident.All(_ => _.Tags.Select(tag => tag.Key).Order().SequenceEqual(_residentTagKeys.Order())).ShouldBeTrue();

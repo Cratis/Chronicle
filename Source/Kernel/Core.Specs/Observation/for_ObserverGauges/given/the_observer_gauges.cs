@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Diagnostics.Metrics;
+using Cratis.Chronicle.Alerts.for_AlertIncidentsGauge.given;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Metrics;
 
@@ -14,6 +15,7 @@ public class the_observer_gauges : Specification
     protected ObserverGauges _gauges;
     protected List<RecordedMeasurement> _measurements;
     protected ObserverKey _observerKey;
+    protected SettableTimeProvider _clock;
 
     void Establish()
     {
@@ -31,7 +33,8 @@ public class the_observer_gauges : Specification
 
         var meter = Substitute.For<IMeter<ObserverGauges>>();
         meter.ActualMeter.Returns(_meter);
-        _gauges = new(meter);
+        _clock = new(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero));
+        _gauges = new(meter, _clock);
         _observerKey = new("observer", "store", "namespace", "event-log");
     }
 
