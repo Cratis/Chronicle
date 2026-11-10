@@ -5,8 +5,18 @@ using Cratis.Chronicle.EventSequences;
 
 namespace Cratis.Chronicle.Chaos;
 
+/// <summary>
+/// Appends durable intentions with idempotent retry after uncertain outcomes.
+/// </summary>
 internal static class Producer
 {
+    /// <summary>
+    /// Produces contributions until cancellation.
+    /// </summary>
+    /// <param name="store">The isolated event store.</param>
+    /// <param name="ledger">The append intention ledger.</param>
+    /// <param name="cancellation">The workload cancellation token.</param>
+    /// <returns>The producer lifetime task.</returns>
     public static async Task Run(IEventStore store, Ledger ledger, CancellationToken cancellation)
     {
         var index = 0;
@@ -15,7 +25,7 @@ internal static class Producer
             var pending = await ledger.Pending();
             var id = pending?.Entry.Id ?? Guid.NewGuid().ToString("N");
             var source = pending?.Entry.Source ?? $"source-{index++ % 4}";
-            var @event = pending?.Event ?? new ChaosEvent(id, DateTimeOffset.UtcNow, index % 97 + 1);
+            var @event = pending?.Event ?? new ChaosEvent(id, DateTimeOffset.UtcNow, (index % 97) + 1);
             if (pending is null) await ledger.Intend(id, source, @event);
             await Attempt(store, ledger, source, @event, cancellation);
             await Task.Delay(TimeSpan.FromMilliseconds(20), cancellation);
@@ -33,7 +43,7 @@ internal static class Producer
         catch (Exception exception) when (!cancellation.IsCancellationRequested && exception is not InvalidOperationException)
         {
             // Transport exceptions, including timeouts, do not establish that the kernel rejected the append.
-            Console.Error.WriteLine($"Append outcome unknown: {exception.GetType().Name}");
+            await Console.Error.WriteLineAsync($"Append outcome unknown: {exception.GetType().Name}");
             await ledger.Outcome(@event.LedgerId, "unknown");
         }
     }

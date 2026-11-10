@@ -8,12 +8,20 @@ using DotNet.Testcontainers.Networks;
 
 namespace Cratis.Chronicle.Chaos;
 
+/// <summary>
+/// Owns the dedicated kernel, storage, and ledger containers for a run.
+/// </summary>
 internal sealed class DockerEnvironment : IAsyncDisposable
 {
     readonly INetwork _network;
     readonly IContainer _ledger;
     readonly bool _keep;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DockerEnvironment"/> class.
+    /// </summary>
+    /// <param name="runId">The isolated run identifier.</param>
+    /// <param name="keep">Whether to retain containers after the run.</param>
     public DockerEnvironment(string runId, bool keep)
     {
         RunId = runId;
@@ -36,13 +44,42 @@ internal sealed class DockerEnvironment : IAsyncDisposable
             .Build();
     }
 
+    /// <summary>
+    /// Gets the isolated run identifier.
+    /// </summary>
     public string RunId { get; }
+
+    /// <summary>
+    /// Gets the fault-target MongoDB container.
+    /// </summary>
     public IContainer Mongo { get; }
+
+    /// <summary>
+    /// Gets the fault-target kernel container.
+    /// </summary>
     public IContainer Kernel { get; }
+
+    /// <summary>
+    /// Gets the plaintext kernel connection string.
+    /// </summary>
     public string Connection => $"chronicle://{Kernel.Hostname}:35000/?development=true&disableTls=true";
+
+    /// <summary>
+    /// Gets the kernel storage connection string.
+    /// </summary>
     public string MongoConnection => $"mongodb://{Mongo.Hostname}:27017/?directConnection=true&replicaSet=rs0";
+
+    /// <summary>
+    /// Gets the independent ledger connection string.
+    /// </summary>
     public string LedgerConnection => $"mongodb://{_ledger.Hostname}:27018/?directConnection=true";
 
+    /// <summary>
+    /// Starts storage and the kernel and waits for readiness.
+    /// </summary>
+    /// <param name="cancellation">The startup cancellation token.</param>
+    /// <returns>The startup task.</returns>
+    /// <exception cref="InvalidOperationException">MongoDB replica-set initiation failed.</exception>
     public async Task Start(CancellationToken cancellation)
     {
         await _network.CreateAsync(cancellation);
@@ -55,6 +92,11 @@ internal sealed class DockerEnvironment : IAsyncDisposable
         await WaitForKernel(cancellation);
     }
 
+    /// <summary>
+    /// Waits for the kernel's HTTP/2 readiness endpoint.
+    /// </summary>
+    /// <param name="cancellation">The readiness cancellation token.</param>
+    /// <returns>The readiness task.</returns>
     public async Task WaitForKernel(CancellationToken cancellation)
     {
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellation);
@@ -78,6 +120,12 @@ internal sealed class DockerEnvironment : IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// Captures output from every container that was created.
+    /// </summary>
+    /// <param name="directory">The output directory.</param>
+    /// <param name="cancellation">The capture cancellation token.</param>
+    /// <returns>The capture task.</returns>
     public async Task CaptureLogs(string directory, CancellationToken cancellation)
     {
         foreach (var (name, container) in new[] { ("kernel", Kernel), ("mongo", Mongo), ("ledger", _ledger) })
@@ -89,9 +137,11 @@ internal sealed class DockerEnvironment : IAsyncDisposable
         }
     }
 
+    /// <inheritdoc/>
     public async ValueTask DisposeAsync()
     {
         if (_keep) return;
+
         // Label cleanup also handles partially started containers and does not depend on their running state.
         using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         await Cleanup.Run(RunId, deadline.Token);

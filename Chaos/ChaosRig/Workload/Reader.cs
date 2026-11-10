@@ -8,10 +8,22 @@ using Cratis.Chronicle.Observation;
 
 namespace Cratis.Chronicle.Chaos;
 
+/// <summary>
+/// Collects event, observer, model, and ledger snapshots for the verdict.
+/// </summary>
+/// <param name="store">The isolated event store.</param>
+/// <param name="ledger">The append intention ledger.</param>
+/// <param name="sideLedger">The reactor delivery ledger.</param>
+/// <param name="inspection">The persisted observer state reader.</param>
 internal sealed class Reader(IEventStore store, Ledger ledger, SideLedger sideLedger, KernelObserverInspection inspection)
 {
     static readonly string[] _expected = [ChaosReactor.Identifier, ChaosReducer.Identifier, ChaosProjection.Identifier];
 
+    /// <summary>
+    /// Collects one complete consistency snapshot.
+    /// </summary>
+    /// <param name="cancellation">The snapshot cancellation token.</param>
+    /// <returns>The verdict input snapshot.</returns>
     public async Task<VerdictInput> Collect(CancellationToken cancellation)
     {
         var events = await Events(cancellation);
@@ -21,8 +33,25 @@ internal sealed class Reader(IEventStore store, Ledger ledger, SideLedger sideLe
         var jobs = (await store.Jobs.GetJobs().WaitAsync(cancellation)).Count(job => job.Status is not (JobStatus.CompletedSuccessfully or JobStatus.CompletedWithFailures));
         var state = await inspection.Read(_expected, cancellation);
         var (projections, reductions) = await Models(events, cancellation);
-        return new(await ledger.Read().WaitAsync(cancellation), events, observers, _expected, failed, state.InFlight, jobs,
-            projections, reductions, await sideLedger.Read().WaitAsync(cancellation), state.Documents);
+        return new(
+            await ledger.Read().WaitAsync(cancellation),
+            events,
+            observers,
+            _expected,
+            failed,
+            state.InFlight,
+            jobs,
+            projections,
+            reductions,
+            await sideLedger.Read().WaitAsync(cancellation),
+            state.Documents);
+    }
+
+    static void EnsurePageAdvanced(EventSequenceNumber? current, EventSequenceNumber? next)
+    {
+        if (current is null) return;
+        if (next is null) return;
+        if (next.Value <= current.Value) throw new InvalidDataException("Event log pagination did not advance.");
     }
 
     async Task<IReadOnlyList<ObservedEvent>> Events(CancellationToken cancellation)
@@ -42,13 +71,6 @@ internal sealed class Reader(IEventStore store, Ledger ledger, SideLedger sideLe
         }
         while (next is not null);
         return result;
-    }
-
-    static void EnsurePageAdvanced(EventSequenceNumber? current, EventSequenceNumber? next)
-    {
-        if (current is null) return;
-        if (next is null) return;
-        if (next.Value <= current.Value) throw new InvalidDataException("Event log pagination did not advance.");
     }
 
     async Task<(IReadOnlyList<ModelValue> Projections, IReadOnlyList<ModelValue> Reductions)> Models(IReadOnlyList<ObservedEvent> events, CancellationToken cancellation)

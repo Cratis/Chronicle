@@ -5,11 +5,24 @@ using System.Diagnostics;
 
 namespace Cratis.Chronicle.Chaos;
 
+/// <summary>
+/// Applies scheduled faults and restores the dedicated workload environment.
+/// </summary>
+/// <param name="environment">The fault-target containers.</param>
+/// <param name="producer">The producer process.</param>
+/// <param name="consumer">The consumer process.</param>
 internal sealed class FaultExecutor(DockerEnvironment environment, ChildWorker producer, ChildWorker consumer)
 {
     readonly HashSet<ChildWorker> _killed = [];
     readonly HashSet<string> _paused = [];
 
+    /// <summary>
+    /// Applies the fault schedule over the workload duration.
+    /// </summary>
+    /// <param name="schedule">The ordered fault schedule.</param>
+    /// <param name="duration">The workload duration.</param>
+    /// <param name="cancellation">The run cancellation token.</param>
+    /// <returns>The schedule execution task.</returns>
     public async Task Run(IReadOnlyList<ScheduledFault> schedule, TimeSpan duration, CancellationToken cancellation)
     {
         var clock = Stopwatch.StartNew();
@@ -24,6 +37,11 @@ internal sealed class FaultExecutor(DockerEnvironment environment, ChildWorker p
         EnsureWorkers();
     }
 
+    /// <summary>
+    /// Resumes or restarts all fault targets before settling.
+    /// </summary>
+    /// <param name="cancellation">The recovery cancellation token.</param>
+    /// <returns>The recovery task.</returns>
     public async Task Recover(CancellationToken cancellation)
     {
         foreach (var container in new[] { environment.Mongo, environment.Kernel })
@@ -41,6 +59,10 @@ internal sealed class FaultExecutor(DockerEnvironment environment, ChildWorker p
         if (producer.IsRunning) await producer.Signal("CONT", cancellation);
         else await producer.Start(cancellation);
     }
+
+    static bool IsKill(FaultKind kind) => kind is FaultKind.KillKernel or FaultKind.KillMongo or FaultKind.KillProducer or FaultKind.KillConsumer;
+
+    static Task DelayUntil(TimeSpan at, Stopwatch clock, CancellationToken cancellation) => Task.Delay(at > clock.Elapsed ? at - clock.Elapsed : TimeSpan.Zero, cancellation);
 
     async Task Execute(ScheduledFault fault, CancellationToken cancellation)
     {
@@ -102,8 +124,4 @@ internal sealed class FaultExecutor(DockerEnvironment environment, ChildWorker p
             if (!worker.IsRunning && !_killed.Contains(worker)) throw new InvalidOperationException("A worker exited outside its scheduled kill; inspect child logs.");
         }
     }
-
-    static bool IsKill(FaultKind kind) => kind is FaultKind.KillKernel or FaultKind.KillMongo or FaultKind.KillProducer or FaultKind.KillConsumer;
-
-    static Task DelayUntil(TimeSpan at, Stopwatch clock, CancellationToken cancellation) => Task.Delay(at > clock.Elapsed ? at - clock.Elapsed : TimeSpan.Zero, cancellation);
 }

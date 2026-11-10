@@ -3,8 +3,17 @@
 
 namespace Cratis.Chronicle.Chaos;
 
+/// <summary>
+/// Dispatches the chaos driver, workers, and cleanup command.
+/// </summary>
 internal static class Program
 {
+    /// <summary>
+    /// Executes a rig command.
+    /// </summary>
+    /// <param name="args">Command and options.</param>
+    /// <returns>The command exit code.</returns>
+    /// <exception cref="ArgumentException">The command verb is missing or unknown.</exception>
     public static async Task<int> Main(string[] args)
     {
         using var cancellation = new CancellationTokenSource();
@@ -26,7 +35,7 @@ internal static class Program
         }
         catch (Exception exception)
         {
-            Console.Error.WriteLine(exception);
+            await Console.Error.WriteLineAsync(exception.ToString());
             return 1;
         }
     }

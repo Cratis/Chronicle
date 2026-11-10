@@ -6,10 +6,16 @@ using Cratis.Types;
 
 namespace Cratis.Chronicle.Chaos;
 
+/// <summary>
+/// Restricts discovered workload artifacts to the process role.
+/// </summary>
+/// <param name="role">The workload process role.</param>
 internal sealed class ChaosDiscovery(string role) : ICanProvideAssembliesForDiscovery
 {
+    /// <inheritdoc/>
     public IEnumerable<Assembly> Assemblies => [typeof(ChaosEvent).Assembly];
 
+    /// <inheritdoc/>
     public IEnumerable<Type> DefinedTypes => role switch
     {
         "producer" => [typeof(ChaosEvent)],
@@ -17,5 +23,8 @@ internal sealed class ChaosDiscovery(string role) : ICanProvideAssembliesForDisc
         _ => [typeof(ChaosEvent), typeof(ChaosReducer), typeof(ChaosProjection), typeof(ChaosProjectionModel), typeof(ChaosReductionModel)]
     };
 
-    public void Initialize() { }
+    /// <inheritdoc/>
+    public void Initialize()
+    {
+    }
 }

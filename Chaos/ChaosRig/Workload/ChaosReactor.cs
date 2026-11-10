@@ -19,6 +19,10 @@ public sealed class ChaosReactor : IReactor
 
     readonly SideLedger _ledger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ChaosReactor"/> class.
+    /// </summary>
+    /// <param name="ledger">The independent delivery ledger.</param>
     internal ChaosReactor(SideLedger ledger) => _ledger = ledger;
 
     /// <summary>

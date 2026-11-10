@@ -4,13 +4,23 @@
 using System.Diagnostics;
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
+using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Chaos;
 
+/// <summary>
+/// Coordinates a fault schedule and the final consistency verdict.
+/// </summary>
 internal static class ChaosRun
 {
     static readonly JsonSerializerOptions _json = new() { WriteIndented = true };
 
+    /// <summary>
+    /// Executes a dedicated chaos run.
+    /// </summary>
+    /// <param name="options">The validated run options.</param>
+    /// <param name="cancellation">The run cancellation token.</param>
+    /// <returns>The verdict exit code.</returns>
     public static async Task<int> Run(RunOptions options, CancellationToken cancellation)
     {
         Directory.CreateDirectory(options.Output);
@@ -46,18 +56,21 @@ internal static class ChaosRun
         var executor = new FaultExecutor(environment, producer, consumer);
         await executor.Run(schedule, options.Duration, cancellation);
         await executor.Recover(cancellation);
+
         // Killing fences even an append whose transport timed out. Its prewritten intention remains unknown/intended.
         await producer.Kill();
         if (!consumer.IsRunning) throw new InvalidOperationException("Consumer exited outside a scheduled fault.");
-        var sideLedger = new SideLedger(environment.LedgerConnection, environment.RunId);
+        using var ledgerClient = new MongoClient(environment.LedgerConnection);
+        var sideLedger = new SideLedger(ledgerClient, environment.RunId);
         using var host = WorkloadHost.Create("reader", environment.Connection, storeName, sideLedger);
         await host.StartAsync(cancellation);
         try
         {
             var store = await host.Services.GetRequiredService<IChronicleClient>().GetEventStore(storeName).WaitAsync(TimeSpan.FromSeconds(60), cancellation);
+
             // Local metadata is needed for native model reads; the reader must not register or run consumers.
             await store.DiscoverAll().WaitAsync(TimeSpan.FromSeconds(60), cancellation);
-            var reader = new Reader(store, new Ledger(environment.LedgerConnection, environment.RunId), sideLedger, new(environment.MongoConnection));
+            var reader = new Reader(store, new Ledger(ledgerClient, environment.RunId), sideLedger, new(environment.MongoConnection));
             var snapshot = await Settle(reader, options.Settle, options.Output, cancellation);
             return await Finish(snapshot, options, cancellation);
         }
@@ -82,6 +95,7 @@ internal static class ChaosRun
             {
                 latest = await reader.Collect(sample.Token);
                 cleanSamples = Verdict.Compare(latest).IsClean ? cleanSamples + 1 : 0;
+
                 // Require repeated settled observations, not a momentary empty work list.
                 if (cleanSamples >= 3) return latest;
             }
@@ -96,6 +110,7 @@ internal static class ChaosRun
         }
         cancellation.ThrowIfCancellationRequested();
         if (latest is null) throw new InvalidOperationException("Could not collect a complete snapshot before the settle deadline.", lastError);
+
         // Even a previously clean sample cannot pass if the final drain never stabilized.
         return latest with { Settled = false };
     }

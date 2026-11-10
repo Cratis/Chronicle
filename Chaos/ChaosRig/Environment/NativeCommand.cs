@@ -5,8 +5,19 @@ using System.Diagnostics;
 
 namespace Cratis.Chronicle.Chaos;
 
+/// <summary>
+/// Executes an owned process while preserving output and failure status.
+/// </summary>
 internal static class NativeCommand
 {
+    /// <summary>
+    /// Runs a command and kills its process tree if canceled.
+    /// </summary>
+    /// <param name="executable">The executable.</param>
+    /// <param name="arguments">Arguments passed without shell expansion.</param>
+    /// <param name="cancellation">Execution cancellation.</param>
+    /// <returns>Standard output on success.</returns>
+    /// <exception cref="InvalidOperationException">The command could not start or exited unsuccessfully.</exception>
     public static async Task<string> Run(string executable, IEnumerable<string> arguments, CancellationToken cancellation)
     {
         var start = new ProcessStartInfo(executable) { RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false };

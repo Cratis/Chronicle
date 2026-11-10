@@ -5,8 +5,16 @@ using Cratis.Chronicle.Events;
 
 namespace Cratis.Chronicle.Chaos;
 
+/// <summary>
+/// Compares a collected snapshot against the durability invariants.
+/// </summary>
 internal static class Verdict
 {
+    /// <summary>
+    /// Evaluates the snapshot without accessing infrastructure.
+    /// </summary>
+    /// <param name="input">The collected observations.</param>
+    /// <returns>Violation counts and diagnostics.</returns>
     public static VerdictResult Compare(VerdictInput input)
     {
         var byId = input.Events.GroupBy(item => item.Id).ToDictionary(group => group.Key, group => group.Count());
@@ -26,7 +34,7 @@ internal static class Verdict
         return observer.Active && observer.LastHandled >= tail;
     }
 
-    static IReadOnlyList<string> HealthViolations(VerdictInput input, Dictionary<string, int> byId)
+    static List<string> HealthViolations(VerdictInput input, Dictionary<string, int> byId)
     {
         var result = new List<string>();
         DrainViolations(input, result);
@@ -56,7 +64,7 @@ internal static class Verdict
     {
         var intentions = input.Ledger.ToDictionary(item => item.Id);
         if (byId.Keys.Except(intentions.Keys).Any()) result.Add("Events without ledger intentions.");
-        var failed = input.Ledger.Where(item => item.Status is "failed" or "rejected");
+        var failed = input.Ledger.Where(item => item.Status == "failed" || item.Status == "rejected");
         if (failed.Any(item => byId.ContainsKey(item.Id))) result.Add("Definitively failed append present in event log.");
         var known = input.Events.Where(item => intentions.ContainsKey(item.Id));
         if (known.Any(item => item.Source != intentions[item.Id].Source || item.Payload != intentions[item.Id].Payload)) result.Add("Event content differs from its durable intention.");

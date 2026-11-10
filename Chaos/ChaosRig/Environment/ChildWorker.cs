@@ -5,6 +5,13 @@ using System.Diagnostics;
 
 namespace Cratis.Chronicle.Chaos;
 
+/// <summary>
+/// Owns a restartable workload child process and its output streams.
+/// </summary>
+/// <param name="role">The producer or consumer role.</param>
+/// <param name="environment">The dedicated run environment.</param>
+/// <param name="store">The event store name.</param>
+/// <param name="output">The output directory.</param>
 internal sealed class ChildWorker(string role, DockerEnvironment environment, string store, string output) : IAsyncDisposable
 {
     Process? _process;
@@ -12,8 +19,17 @@ internal sealed class ChildWorker(string role, DockerEnvironment environment, st
     Task _stderr = Task.CompletedTask;
     int _generation;
 
+    /// <summary>
+    /// Gets whether the child process is running.
+    /// </summary>
     public bool IsRunning => _process is { HasExited: false };
 
+    /// <summary>
+    /// Starts the child and waits for its readiness marker.
+    /// </summary>
+    /// <param name="cancellation">The startup cancellation token.</param>
+    /// <returns>The startup task.</returns>
+    /// <exception cref="InvalidOperationException">The process could not start or exited before readiness.</exception>
     public async Task Start(CancellationToken cancellation)
     {
         if (IsRunning) return;
@@ -31,28 +47,31 @@ internal sealed class ChildWorker(string role, DockerEnvironment environment, st
         await ready.Task;
     }
 
+    /// <summary>
+    /// Sends a signal to the running child.
+    /// </summary>
+    /// <param name="signal">The signal name.</param>
+    /// <param name="cancellation">The command cancellation token.</param>
+    /// <returns>The signal task.</returns>
+    /// <exception cref="InvalidOperationException">The child is not running.</exception>
     public async Task Signal(string signal, CancellationToken cancellation)
     {
         if (_process is not { HasExited: false }) throw new InvalidOperationException($"{role} is not running.");
         await NativeCommand.Run("kill", [$"-{signal}", _process.Id.ToString(System.Globalization.CultureInfo.InvariantCulture)], cancellation);
     }
 
+    /// <summary>
+    /// Kills the child and drains its output streams.
+    /// </summary>
+    /// <returns>The termination task.</returns>
     public async Task Kill()
     {
         if (_process is { HasExited: false }) _process.Kill(entireProcessTree: true);
         await Finish();
     }
 
+    /// <inheritdoc/>
     public async ValueTask DisposeAsync() => await Kill();
-
-    async Task Finish()
-    {
-        if (_process is null) return;
-        await _process.WaitForExitAsync(CancellationToken.None);
-        await Task.WhenAll(_stdout, _stderr);
-        _process.Dispose();
-        _process = null;
-    }
 
     static async Task Pump(StreamReader reader, string path, TaskCompletionSource? ready)
     {
@@ -62,5 +81,14 @@ internal sealed class ChildWorker(string role, DockerEnvironment environment, st
             await file.WriteLineAsync(line);
             if (line == "READY") ready?.TrySetResult();
         }
+    }
+
+    async Task Finish()
+    {
+        if (_process is null) return;
+        await _process.WaitForExitAsync(CancellationToken.None);
+        await Task.WhenAll(_stdout, _stderr);
+        _process.Dispose();
+        _process = null;
     }
 }

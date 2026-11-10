@@ -6,14 +6,26 @@ using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Chaos;
 
+/// <summary>
+/// Inspects persisted observer drain state in the dedicated kernel database.
+/// </summary>
+/// <param name="connection">The kernel MongoDB connection.</param>
 internal sealed class KernelObserverInspection(string connection)
 {
+    /// <summary>
+    /// Reads observer document and in-flight partition counts.
+    /// </summary>
+    /// <param name="expected">The expected observer identifiers.</param>
+    /// <param name="cancellation">The inspection cancellation token.</param>
+    /// <returns>The persisted document and in-flight counts.</returns>
+    /// <exception cref="InvalidDataException">An observer document lacks the expected partition state.</exception>
     public async Task<(int Documents, int InFlight)> Read(IReadOnlyList<string> expected, CancellationToken cancellation)
     {
-        var client = new MongoClient(connection);
-        var databases = await client.ListDatabaseNamesAsync(cancellationToken: cancellation);
+        using var client = new MongoClient(connection);
+        using var databases = await client.ListDatabaseNamesAsync(cancellationToken: cancellation);
         var filter = Builders<BsonDocument>.Filter.In("_id", expected);
         var documents = new List<BsonDocument>();
+
         // Discover rather than duplicate Chronicle's physical database naming rules. This is a fresh, dedicated Mongo container.
         foreach (var name in await databases.ToListAsync(cancellation))
         {

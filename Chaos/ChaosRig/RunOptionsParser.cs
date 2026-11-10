@@ -6,8 +6,18 @@ using System.Security.Cryptography;
 
 namespace Cratis.Chronicle.Chaos;
 
+/// <summary>
+/// Parses the driver command line without starting infrastructure.
+/// </summary>
 internal static class RunOptionsParser
 {
+    static readonly string[] _valueOptions = ["--seed", "--duration", "--settle", "--faults", "--output"];
+
+    /// <summary>
+    /// Parses and validates options.
+    /// </summary>
+    /// <param name="args">Driver options.</param>
+    /// <returns>Validated options.</returns>
     public static RunOptions Parse(string[] args)
     {
         var values = Values(args);
@@ -23,12 +33,12 @@ internal static class RunOptionsParser
         for (var index = 0; index < args.Length; index++)
         {
             var flag = args[index];
-            if (flag is "--keep-containers" or "--self-test-violation")
+            if (flag == "--keep-containers" || flag == "--self-test-violation")
             {
                 values.Add(flag, "true");
                 continue;
             }
-            if (flag is not ("--seed" or "--duration" or "--settle" or "--faults" or "--output"))
+            if (!_valueOptions.Contains(flag))
             {
                 throw new ArgumentException($"Unknown option: {flag}");
             }
@@ -62,7 +72,7 @@ internal static class RunOptionsParser
         return amount;
     }
 
-    static IReadOnlyList<FaultKind> ParseFaults(string text)
+    static FaultKind[] ParseFaults(string text)
     {
         if (text == "all") return Enum.GetValues<FaultKind>();
         if (text == "none") return [];

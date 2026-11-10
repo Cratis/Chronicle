@@ -3,8 +3,17 @@
 
 namespace Cratis.Chronicle.Chaos;
 
+/// <summary>
+/// Removes only Docker resources labeled as owned by the rig.
+/// </summary>
 internal static class Cleanup
 {
+    /// <summary>
+    /// Removes a selected run or all labeled runs.
+    /// </summary>
+    /// <param name="runId">The run identity, or null for all runs.</param>
+    /// <param name="cancellation">Cancellation for Docker commands.</param>
+    /// <returns>The cleanup task.</returns>
     public static async Task Run(string? runId, CancellationToken cancellation)
     {
         var label = runId is null ? "chronicle-chaos" : $"chronicle-chaos={runId}";
@@ -21,5 +30,5 @@ internal static class Cleanup
         await NativeCommand.Run("docker", ["rm", "-f", "-v", id], cancellation);
     }
 
-    static IEnumerable<string> Ids(string output) => output.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    static string[] Ids(string output) => output.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 }
