@@ -150,6 +150,33 @@ An observer has a series on these instruments from its first failure, not before
 
 The SDK limits each instrument to 500 series. Beyond that it folds the excess into one series without the tags, which can no longer be attributed to an observer. That takes more than 500 observer instances in one process, counted across observers, namespaces and event stores.
 
+### Observer state, jobs and append latency
+
+The failure counters above say how often something went wrong. The gauges below say how things stand now: how many partitions an observer has failing at this moment, what state it is in, how far its catch-up or replay has come and how many observers a process keeps in memory. Each process reports only the observers and jobs it hosts. A per-observer series therefore comes from the one silo that hosts the observer; sum across silos for cluster totals.
+
+These instruments are new, so they have no legacy name. They are published under the names and attribute keys below whatever `Telemetry:MetricNames` selects.
+
+| Instrument | Kind | Tags | Meaning |
+| --- | --- | --- | --- |
+| `cratis.chronicle.observer.failed_partitions` | Gauge `{partition}` | event store, namespace, event sequence, observer | Failed partitions of the observer now, quarantined ones included. |
+| `cratis.chronicle.observer.quarantined_partitions` | Gauge `{partition}` | event store, namespace, event sequence, observer | Quarantined partitions of the observer now. |
+| `cratis.chronicle.observer.running_state` | Gauge `1` | event store, namespace, event sequence, observer | Running state code: 0 unknown, 1 active, 2 suspended, 3 replaying, 4 disconnected, 5 quarantined, 6 changing definition, 7 initializing. |
+| `cratis.chronicle.observer.resident` | Gauge `{observer}` | event store, namespace, `cratis.observer.type`, `cratis.chronicle.observer.running_state` | Observers resident in the process. |
+| `cratis.chronicle.job.running` | Gauge `{job}` | event store, namespace, `cratis.chronicle.job.type` | Running catch-up and replay jobs. |
+| `cratis.chronicle.observer.job.handled_steps` | Gauge `{step}` | event store, namespace, event sequence, observer, `cratis.chronicle.job.type` | Completed steps, successful or failed, of the observer's running jobs of that type. |
+| `cratis.chronicle.observer.job.total_steps` | Gauge `{step}` | event store, namespace, event sequence, observer, `cratis.chronicle.job.type` | Steps of the observer's running jobs of that type. |
+| `cratis.chronicle.event_sequence.append.duration` | Histogram `s` | event store, namespace, event sequence | Duration of an append or append-many call, from validation to its outcome, rejected appends included. |
+
+The tags use the shared keys `cratis.event_store.name`, `cratis.event_store.namespace`, `cratis.event_sequence.id` and `cratis.observer.id`. No partition, event source or job id is ever a tag. `cratis.observer.type` is `reactor`, `reducer`, `projection`, `external` or `unknown`; `cratis.chronicle.observer.running_state` uses the lowercase state names, such as `active` and `changing_definition`; `cratis.chronicle.job.type` is `catch_up` or `replay`.
+
+The per-observer gauges carry one series per resident observer, the same as the successful observations counter, so the 500-series limit per instrument applies to them. A process hosting more observers than that needs a higher limit; `cratis.chronicle.observer.resident` stays small whatever the number of observers and is the one to use for memory planning.
+
+A catch-up whose observer delivers pages across partitions, projections among them, runs as one step, so its progress moves from 0 to 1 of 1. Partitioned observers have one step per partition.
+
+The append-duration histogram uses the explicit buckets 1, 2.5, 5, 10, 25, 50, 100, 250 and 500 milliseconds, and 1, 2.5, 5 and 10 seconds.
+
+The successful observations counter counts catch-up, replay and retry deliveries too, not only live ones. The convention series (`cratis.chronicle.observer.successful_observations`) carry `cratis.replay`, `true` for replay deliveries. The legacy series (`chronicle-observer-successful-observations`) keep their four tags, so recovery work now raises them without a way to tell it apart.
+
 ### Suspected skipped events
 
 Two counters on the `Cratis.Chronicle` meter show how often an observer's position moved past a live event without any delivery path covering it. The first has the observer tags `EventStore`, `Namespace`, `ObserverId` and `EventSequenceId`, and no others. The second has the appended-events queue tags `EventStore`, `Namespace`, `EventSequenceId` and `QueueId`, plus `ObserverId`.
