@@ -52,6 +52,7 @@ AppDomain.CurrentDomain.UnhandledException += (_, args) =>
 };
 
 var unobservedFailures = new RepeatedFailureLog(RepeatedFailureLog.DefaultWindow, 1, TimeProvider.System);
+await using var unobservedFailuresReport = new Timer(_ => ReportUnobservedFailures(false), null, RepeatedFailureLog.DefaultWindow, RepeatedFailureLog.DefaultWindow);
 TaskScheduler.UnobservedTaskException += (_, args) =>
 {
     args.SetObserved();
@@ -648,6 +649,9 @@ Console.CancelKeyPress += (sender, eventArgs) =>
 // fixtures and orchestrators that gate on this line would then connect to a socket that did not exist yet.
 app.Lifetime.ApplicationStarted.Register(() => logger.ServerStarted(chronicleOptions.Port));
 
+// Report what is still being counted while the logging pipeline is still there, so the counts are not lost at shutdown.
+app.Lifetime.ApplicationStopped.Register(() => ReportUnobservedFailures(true));
+
 try
 {
     await app.RunAsync(cancellationToken.Token);
@@ -663,6 +667,28 @@ catch (OperationCanceledException)
 }
 
 return 0;
+
+void ReportUnobservedFailures(bool includeRunningWindows)
+{
+    var seconds = (int)unobservedFailures.Window.TotalSeconds;
+    foreach (var failures in unobservedFailures.TakeEnded(includeRunningWindows))
+    {
+        if (logger is not null)
+        {
+            try
+            {
+                logger.UnobservedTaskExceptionsSuppressed(failures.Level, failures.Suppressed, failures.Exception.Name, failures.Category, seconds);
+                continue;
+            }
+            catch (Exception loggingFailure)
+            {
+                Console.WriteLine(loggingFailure);
+            }
+        }
+
+        Console.WriteLine($"{failures.Suppressed} more unobserved {failures.Exception.Name} task exceptions were counted but not written; owner: {failures.Category}");
+    }
+}
 
 void LogCrash(Action<ILogger<Kernel>> log, Exception exception)
 {
