@@ -61,7 +61,8 @@ public class Telemetry
     /// </summary>
     /// <remarks>
     /// The SDK pre-allocates this many points per instrument, so raising it costs memory for every instrument. Beyond the
-    /// limit, measurements fold into one overflow series without attributes. A value below 1 uses the default.
+    /// limit, measurements fold into one overflow series that carries only the attribute otel.metric.overflow=true. A
+    /// value below 1 uses the default.
     /// </remarks>
     public int MetricSeriesLimit { get; init; } = DefaultMetricSeriesLimit;
 

@@ -109,7 +109,8 @@ public static class OpenTelemetryConfigurationExtensions
                 // count is the number of observers it ever reported while the process ran: the failure counters and the
                 // abnormal-only gauges hold the observers that were ever failing, the successful observations counter
                 // holds every observer that delivered anything. Raise the limit before that number is reached: the SDK
-                // folds the excess into an overflow series that has none of the tags, which cannot be attributed.
+                // folds the excess into an overflow series that has none of the tags, only otel.metric.overflow=true,
+                // so it cannot be attributed.
                 // Do not add a second view for a single instrument: every view that matches an instrument produces
                 // its own stream for it, so the instrument would be exported twice. Change this one view instead.
                 metrics
