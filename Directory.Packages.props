@@ -17,18 +17,18 @@
     <PackageVersion Include="Aspire.Hosting.Yarp" Version="13.4.6" />
     <!-- Cratis -->
     <!-- Cratis.Choreography requires at least Cratis.Fundamentals 7.32.0; a lower pin fails restore with NU1605. -->
-    <PackageVersion Include="Cratis.Fundamentals" Version="7.32.0" />
-    <PackageVersion Include="Cratis.Metrics.Roslyn" Version="7.32.0" />
+    <PackageVersion Include="Cratis.Fundamentals" Version="7.34.0" />
+    <PackageVersion Include="Cratis.Metrics.Roslyn" Version="7.34.0" />
     <!-- Keep the Arc runtime packages aligned; Chronicle.Testing declares Arc dependencies for its embedded kernel. -->
-    <PackageVersion Include="Cratis.Arc" Version="22.156.4" />
-    <PackageVersion Include="Cratis.Arc.Core" Version="22.156.4" />
-    <PackageVersion Include="Cratis.Arc.Connections.Azure" Version="22.156.4" />
-    <PackageVersion Include="Cratis.Arc.EntityFrameworkCore" Version="22.156.4" />
-    <PackageVersion Include="Cratis.Arc.MongoDB" Version="22.156.4" />
+    <PackageVersion Include="Cratis.Arc" Version="22.184.0" />
+    <PackageVersion Include="Cratis.Arc.Core" Version="22.184.0" />
+    <PackageVersion Include="Cratis.Arc.Connections.Azure" Version="22.184.0" />
+    <PackageVersion Include="Cratis.Arc.EntityFrameworkCore" Version="22.184.0" />
+    <PackageVersion Include="Cratis.Arc.MongoDB" Version="22.184.0" />
     <!-- Build-time tool only, kept at 22.23.0: the 22.30.0 generator aborts on Core with "Microsoft.Extensions.Options has already been loaded into this MetadataLoadContext". -->
-    <PackageVersion Include="Cratis.Arc.ProxyGenerator.Build" Version="22.156.4" />
-    <PackageVersion Include="Cratis.Arc.Swagger" Version="22.156.4" />
-    <PackageVersion Include="Cratis.Arc.Testing" Version="22.156.4" />
+    <PackageVersion Include="Cratis.Arc.ProxyGenerator.Build" Version="22.184.0" />
+    <PackageVersion Include="Cratis.Arc.Swagger" Version="22.184.0" />
+    <PackageVersion Include="Cratis.Arc.Testing" Version="22.184.0" />
     <PackageVersion Include="Cratis.Screenplay" Version="6.0.0" />
     <!-- Microsoft -->
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.403" />
@@ -110,9 +110,9 @@
     <!-- Testing & Specifications -->
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.11.0" />
     <PackageVersion Include="coverlet.collector" Version="10.1.0" />
-    <PackageVersion Include="Cratis.Specifications" Version="5.1.0" />
-    <PackageVersion Include="Cratis.Specifications.XUnit" Version="5.1.0" />
-    <PackageVersion Include="Cratis.Specifications.XUnit.v3" Version="5.1.0" />
+    <PackageVersion Include="Cratis.Specifications" Version="5.3.0" />
+    <PackageVersion Include="Cratis.Specifications.XUnit" Version="5.3.0" />
+    <PackageVersion Include="Cratis.Specifications.XUnit.v3" Version="5.3.0" />
     <PackageVersion Include="EphemeralMongo" Version="3.2.0" />
     <PackageVersion Include="Testcontainers" Version="4.16.0" />
     <PackageVersion Include="Testcontainers.PostgreSql" Version="4.16.0" />
