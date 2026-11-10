@@ -8,7 +8,6 @@ using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
 using Cratis.Concepts;
 using Cratis.Json;
-using Cratis.Types;
 
 namespace Cratis.Chronicle.Testing.ReadModels;
 
@@ -47,7 +46,7 @@ internal sealed class ReadModelSeedKeyValues(Type modelType, PropertyPath proper
     {
         try
         {
-            var converted = TypeConversion.Convert(_target!, input);
+            var converted = DecimalValues.ConvertTo(_target!, input);
             if (!IsValidResult(input, converted)) throw Invalid(input);
             return converted;
         }
