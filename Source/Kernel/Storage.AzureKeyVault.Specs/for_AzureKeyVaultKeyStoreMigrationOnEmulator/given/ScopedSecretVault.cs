@@ -20,6 +20,8 @@ public class ScopedSecretVault(ISecretVault inner, string prefix) : ISecretVault
     /// Real Azure Key Vault leaves both unset, so production <see cref="SecretVersionInfo.HasAttributes"/> stays strict;
     /// this removes that emulator-only default so a plain secret looks plain, as it does in Azure.
     /// </summary>
+    /// <param name="info">The version info as returned by the emulator.</param>
+    /// <returns>The version info without the emulator-only defaults.</returns>
     static SecretVersionInfo WithoutEmulatorDefaults(SecretVersionInfo info) =>
         info with { NotBefore = null, ExpiresOn = null };
 
