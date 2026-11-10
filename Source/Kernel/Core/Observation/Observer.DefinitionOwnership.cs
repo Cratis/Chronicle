@@ -75,6 +75,7 @@ public partial class Observer
         if (!_observerExists) return true;
 
         _observerExists = false;
+        ReleaseGauge();
         _subscription = ObserverSubscription.Unsubscribed;
         _pendingHandledCounts.Clear();
         _pendingRetryReminders.Clear();

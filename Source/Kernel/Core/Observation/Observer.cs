@@ -289,6 +289,7 @@ public partial class Observer(
         // re-persist the old cursor after the resetter wipes storage. This uses the same seal as observer removal,
         // without deleting any persisted definition here.
         _removed = true;
+        ReleaseGauge();
         DeactivateOnIdle();
     }
 
@@ -398,6 +399,7 @@ public partial class Observer(
             // callbacks nor deactivation can recreate the record. Reactivation consults authoritative storage.
             _removed = true;
             _stateWritingSuspended = true;
+            ReleaseGauge();
             try
             {
                 await namespaceStorage.Observers.Delete(_observerId);
@@ -479,6 +481,9 @@ public partial class Observer(
         await failures.ReadStateAsync();
         if (!reactivateRetired && State.AlertDisposition == AlertDisposition.Retired) return;
         await ClaimDefinitionForKey();
+
+        // The failures were re-read from storage; publish them so the gauges never keep counts from before the read.
+        PublishFailedPartitionsGauge();
         await ApplyPendingStartAtTail(storageWasReset);
         await BeginAlertLifecycle();
         await LeaveQuarantineForSubscription();
@@ -1042,6 +1047,9 @@ public partial class Observer(
 
             // Only an accepted subscription may move the definition; persist ownership before any cleanup writes.
             await ClaimDefinitionForKey();
+
+            // The failures may have been re-read from storage; publish them so the gauges never keep counts from before.
+            PublishFailedPartitionsGauge();
             await ApplyPendingStartAtTail(storageWasReset);
             await BeginAlertLifecycle();
             var webhookSubscription = typeof(IWebhookObserverSubscriber).IsAssignableFrom(typeof(TObserverSubscriber));
