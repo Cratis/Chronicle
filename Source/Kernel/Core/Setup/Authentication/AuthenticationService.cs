@@ -40,6 +40,13 @@ internal sealed class AuthenticationService(
     Security.IInitialAdminSetupTokens setupTokens,
     ILogger<AuthenticationService> logger) : IAuthenticationService
 {
+#if DEVELOPMENT
+    /// <summary>
+    /// The well-known identifier of the development client application, shared by every node.
+    /// </summary>
+    internal static readonly Guid DefaultClientApplicationId = new("5d0e2f6a-7c0b-4d4e-9a53-6b1c7e0f2d11");
+#endif
+
     static readonly PasswordHasher<object> _passwordHasher = new();
     readonly Configuration.ChronicleOptions _options = options.Value;
     readonly InitialAdminSetupTokenLogging _setupTokenLogging = new(setupTokens, options, logger);
@@ -151,7 +158,13 @@ internal sealed class AuthenticationService(
         logger.BootstrappingClients(clients.Count());
 
         var existingApplications = (await applicationStorage.GetAll()).ToArray();
-        var resolved = existingApplications.ToDictionary(application => application.ClientId.ToString(), application => application.Id.ToString());
+
+        // Concurrent nodes may have registered the same client twice; the first record wins and duplicates must never fail startup.
+        var resolved = new Dictionary<string, string>();
+        foreach (var application in existingApplications)
+        {
+            resolved.TryAdd(application.ClientId.ToString(), application.Id.ToString());
+        }
 
         foreach (var client in clients)
         {
@@ -216,7 +229,8 @@ internal sealed class AuthenticationService(
         // Write directly to storage for immediate availability. The event-driven path
         // (ApplicationsReactor) is asynchronous, which causes token endpoint failures
         // during integration test resets before the reactor has processed the event.
-        var applicationId = Guid.NewGuid();
+        // The identifier is deterministic so that nodes seeding concurrently converge on one record instead of each adding their own.
+        var applicationId = DefaultClientApplicationId;
         await applicationStorage.Create(new Application
         {
             Id = applicationId,

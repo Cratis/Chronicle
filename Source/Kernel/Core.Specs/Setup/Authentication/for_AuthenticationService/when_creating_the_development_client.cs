@@ -32,6 +32,7 @@ public class when_creating_the_development_client : Specification
 
     async Task Because() => await _service.EnsureDefaultClientCredentials();
 
+    [Fact] void should_use_the_well_known_application_identifier() => _application.Id.Value.ShouldEqual(AuthenticationService.DefaultClientApplicationId);
     [Fact] void should_use_the_persisted_application_subject() => _grants.Single().Holder.ShouldEqual(new PrincipalKey(PrincipalKey.LocalIssuer, _application.Id.ToString()));
     [Fact] void should_use_an_ordinary_all_store_configuration_grant() => _grants.Single().ShouldEqual(new ConfiguredGrant(new(PrincipalKey.LocalIssuer, _application.Id.ToString()), null, null, StoreAccess.Read | StoreAccess.Append | StoreAccess.Manage));
 }

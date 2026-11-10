@@ -52,7 +52,21 @@ public class ApplicationStorage(IDatabase database) : IApplicationStorage, IDisp
     {
         await using var scope = await database.Cluster();
         scope.DbContext.Applications.Add(ToEntity(application));
-        await scope.DbContext.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await scope.DbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException error) when (error.IsUniqueViolation())
+        {
+            // A concurrent writer registered the same application first; that is an acceptable outcome, anything else is a real conflict.
+            await using var winnerScope = await database.Cluster();
+            var winner = await winnerScope.DbContext.Applications.AsNoTracking().FirstOrDefaultAsync(a => a.Id == application.Id.Value, cancellationToken);
+            if (winner is null || winner.ClientId != application.ClientId.Value)
+            {
+                throw;
+            }
+        }
+
         await RefreshSubject();
     }
 
