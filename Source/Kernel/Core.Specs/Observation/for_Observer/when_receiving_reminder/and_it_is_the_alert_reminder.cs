@@ -11,6 +11,7 @@ public class and_it_is_the_alert_reminder : given.an_observer
     async Task Establish()
     {
         await Crash();
+        await _observer.RegisterOrUpdateReminder(Observer.AlertReminderName, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
         _observerAlerts.ClearReceivedCalls();
     }
 

@@ -55,6 +55,14 @@ connection attempts** per pool.
   `MongoWaitQueueFullException`, which Chronicle treats as transient.
 - `maxConnecting` limits simultaneous connection establishment. Raising it can warm pools faster,
   but can also increase connection pressure during rollouts.
+- `minPoolSize` has the driver open that many connections in the background and keep them open,
+  instead of waiting for demand. A cold pool opens connections only
+  `maxConnecting` at a time, so a kernel that activates many observers as it starts can fill the
+  wait queue before the pool has grown. A `minPoolSize` near the load you expect at start, or a
+  higher `maxConnecting`, lets the pool catch up sooner.
+  The first start after upgrading from a version that kept an alert reminder for every observer
+  still activates those observers together while their reminders fire one last time, so a
+  `minPoolSize` helps most for that start.
 
 Registration admission is unlimited by default (`observers.maxConcurrentRegistrations: 0`). If you opt
 into a positive cap, size the pool with headroom above that cap for appends, observer delivery and

@@ -193,7 +193,7 @@ public partial class Observer(
         await base.OnActivateAsync(cancellationToken);
         await ReconcilePartitionDeferrals();
         RememberHandledEventsReportsForTheResponseTimeout();
-        ScheduleAlertReport();
+        ScheduleActivationAlertReport();
     }
 
     /// <inheritdoc/>
