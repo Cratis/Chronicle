@@ -38,6 +38,7 @@ Without a `sinks` section the Kernel behaves as it always has: read models are s
 | connectionDetails | MongoDB, SQL | none | The connection string. For `SQL` the engine, PostgreSQL, Microsoft SQL Server or SQLite, is read from it |
 | connectionDetailsFile | MongoDB, SQL | none | Path of a file holding the connection string, such as a mounted Kubernetes Secret. Set either this or `connectionDetails`, not both |
 | server | Neo4j | none | The bolt URI of the server, such as `bolt://neo4j:7687` |
+| serverFile | Neo4j | none | Path of a file holding the bolt URI of the server, such as a mounted Kubernetes Secret. Set either this or `server`, not both |
 | userName | Neo4j | none | The user to authenticate with |
 | passwordSecret | Neo4j | none | The name of the configuration key that holds the password. The password itself is never written in the options |
 | passwordFile | Neo4j | none | Path of a file holding the password, such as a mounted Kubernetes Secret. Set either this or `passwordSecret`, not both |
@@ -115,14 +116,14 @@ Cratis__Chronicle__Sinks__Configurations__organization__Server=bolt://organizati
 
 ## Connections from files
 
-A connection string or a password is a Secret, and in Kubernetes the safe way to hand a Secret to a pod is a mounted file rather than an environment variable. Name the file with `connectionDetailsFile` instead of `connectionDetails`, and with `passwordFile` instead of `passwordSecret` for Neo4j:
+A connection string or a password is a Secret, and in Kubernetes the safe way to hand a Secret to a pod is a mounted file rather than an environment variable. Name the file with `connectionDetailsFile` instead of `connectionDetails`, and for Neo4j with `serverFile` instead of `server` and `passwordFile` instead of `passwordSecret`:
 
 ```json
 {
   "sinks": {
     "configurations": {
       "reporting": { "type": "SQL", "connectionDetailsFile": "/var/run/secrets/sinks/reporting" },
-      "people": { "type": "Neo4j", "server": "bolt://neo4j:7687", "userName": "chronicle", "passwordFile": "/var/run/secrets/sinks/people-password" }
+      "people": { "type": "Neo4j", "serverFile": "/var/run/secrets/sinks/people-server", "userName": "chronicle", "passwordFile": "/var/run/secrets/sinks/people-password" }
     }
   }
 }
@@ -132,10 +133,11 @@ The same through environment variables:
 
 ```bash
 Cratis__Chronicle__Sinks__Configurations__reporting__ConnectionDetailsFile=/var/run/secrets/sinks/reporting
+Cratis__Chronicle__Sinks__Configurations__people__ServerFile=/var/run/secrets/sinks/people-server
 Cratis__Chronicle__Sinks__Configurations__people__PasswordFile=/var/run/secrets/sinks/people-password
 ```
 
-Each file is read once, at startup, and trimmed of a trailing newline. A password read from a file is kept in the Kernel's configuration and `passwordSecret` points at it, so it is never written in the options. The Kernel's own storage takes `storage.connectionDetailsFile` the same way; see [Storage](storage#read-the-connection-from-a-file).
+Each file is read once, at startup, and trimmed of a trailing newline. A password read from a file is kept in the Kernel's configuration and `passwordSecret` points at it, so it is never written in the options. The Kernel's own storage takes `storage.connectionDetailsFile` the same way; see [Storage](storage#read-the-connection-from-a-file). The default graph connection takes `neo4j.serverFile` and `neo4j.passwordFile`; see [Neo4j graph sink](../../sinks/neo4j.mdx#read-the-connection-from-files).
 
 ## Validation at startup
 
@@ -145,8 +147,8 @@ The Kernel validates the section before it starts and refuses to start with a me
 - a `MongoDB` or `SQL` configuration has no `connectionDetails`, or a `Neo4j` configuration has no `server`;
 - `readModels` or `graphs` names a configuration that does not exist;
 - `readModels` names a `Neo4j` configuration, or `graphs` names a `MongoDB` or `SQL` configuration.
-- a setting and its file sibling are both set, such as `connectionDetails` and `connectionDetailsFile`, or `passwordSecret` and `passwordFile`; the message names both;
-- a file named by `connectionDetailsFile` or `passwordFile` does not exist, is a directory, cannot be read, or is empty; the message names the setting and the path, never what the file holds.
+- a setting and its file sibling are both set, such as `connectionDetails` and `connectionDetailsFile`, `server` and `serverFile`, or `passwordSecret` and `passwordFile`; the message names both;
+- a file named by `connectionDetailsFile`, `serverFile` or `passwordFile` does not exist, is a directory, cannot be read, or is empty; the message names the setting and the path, never what the file holds.
 
 A read model that names a sink the Kernel has no configuration for is refused when the client registers it.
 

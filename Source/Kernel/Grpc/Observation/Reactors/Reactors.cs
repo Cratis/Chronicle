@@ -77,21 +77,7 @@ internal sealed class Reactors(
                         break;
                     }
 
-                    if (!connectionOwnership.IsOwnedBy(register.ConnectionId, caller.Owner))
-                    {
-                        logger.ConnectionNotAvailableToCaller(register.ConnectionId);
-                        registrationTcs.TrySetException(new RpcException(new Status(StatusCode.PermissionDenied, "The connection is not available to the caller.")));
-                        break;
-                    }
-
-                    logger.Registering(
-                        register.Reactor.ReactorId,
-                        register.EventStore,
-                        register.Namespace,
-                        register.Reactor.EventSequenceId,
-                        register.ConnectionId);
-
-                    _ = SystemStoreGuard.CompleteRegistration(context, register.EventStore, register.Namespace, StoreAccess.Read | StoreAccess.Manage, registrationTcs, register);
+                    _ = VerifyRegistration(register);
                     break;
 
                 case ReactorResult result:
@@ -281,6 +267,40 @@ internal sealed class Reactors(
         });
 
         return MonitorRegistration(observable, registrationTcs.Task, context, (messagesSubscription, register));
+
+        async Task VerifyRegistration(RegisterReactor registration)
+        {
+            try
+            {
+                var verification = connectionOwnership.Verify(grainFactory, registration.ConnectionId, caller.Owner, options.Value.Clustering.ResponseTimeout, cancellationToken: context.CancellationToken);
+#pragma warning disable MA0042 // Result is read only after successful synchronous completion; the hot path must not block or allocate.
+                var access = verification.IsCompletedSuccessfully ? verification.Result : await verification;
+#pragma warning restore MA0042
+                if (access == ConnectionAccessOutcome.Unverifiable)
+                {
+                    logger.ConnectionOwnershipUnverifiable(registration.ConnectionId);
+                    registrationTcs.TrySetException(new RpcException(new Status(StatusCode.Unavailable, "The connection could not be verified.")));
+                    return;
+                }
+                if (access == ConnectionAccessOutcome.Denied)
+                {
+                    logger.ConnectionNotAvailableToCaller(registration.ConnectionId);
+                    registrationTcs.TrySetException(new RpcException(new Status(StatusCode.PermissionDenied, "The connection is not available to the caller.")));
+                    return;
+                }
+
+                logger.Registering(registration.Reactor.ReactorId, registration.EventStore, registration.Namespace, registration.Reactor.EventSequenceId, registration.ConnectionId);
+                await SystemStoreGuard.CompleteRegistration(context, registration.EventStore, registration.Namespace, StoreAccess.Read | StoreAccess.Manage, registrationTcs, registration);
+            }
+            catch (OperationCanceledException) when (context.CancellationToken.IsCancellationRequested)
+            {
+                registrationTcs.TrySetCanceled(context.CancellationToken);
+            }
+            catch (Exception exception)
+            {
+                registrationTcs.TrySetException(exception);
+            }
+        }
     }
 
     /// <inheritdoc/>

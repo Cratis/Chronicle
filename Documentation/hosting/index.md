@@ -12,7 +12,7 @@ The development image generates a self-signed TLS certificate. You only need [Lo
 
 ## Going to Production
 
-Follow [Production hosting](production.md) to deploy the production image with external storage, certificates, and health probes. Unlike the development image, it has no bundled MongoDB and does not generate certificates.
+Follow [Production hosting](production.md) to deploy the production image with external storage, certificates, and health probes. Unlike the development image, it has no bundled MongoDB and does not generate certificates. [Development and production images](development-and-production-images.md) lists every behavior and default that differs.
 
 TLS protects connections to Chronicle. A separate encryption-certificate setting protects stored ASP.NET Core Data Protection keys and supplies keys to Chronicle's internal OAuth authority, which issues authentication tokens. The internal authority requires this certificate in production. Using an external authority removes that startup requirement, but does not protect the stored keys: without an encryption certificate, Data Protection writes them unencrypted.
 
@@ -21,6 +21,7 @@ Before accepting traffic, configure [Data Protection Key Encryption](encryption-
 ## All Hosting Topics
 
 - [Production](production.md): Docker-based production deployment
+- [Development and Production Images](development-and-production-images.md): what differs between the two images
 - [Container Resources](container-resources.md): memory and garbage collection settings for the kernel image
 - [Tracing Client Operations](client-tracing): send client spans to OpenTelemetry
 - [Data Protection Key Encryption](encryption-certificate.md): configure, rotate, and back up encryption certificates

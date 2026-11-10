@@ -8,5 +8,7 @@
   href: grpc-message-size.mdx
 - name: Structural Dependencies
   href: structural-dependencies.mdx
+- name: Settings that must match the kernel
+  href: must-match-the-kernel.mdx
 - name: TLS
   href: tls.mdx

@@ -315,6 +315,23 @@ public partial class PropertyPath
     }
 
     /// <summary>
+    /// Remove the property at the path from the target, without creating anything along the way.
+    /// </summary>
+    /// <param name="target">Object to remove from. Only <see cref="ExpandoObject"/> targets can have properties removed.</param>
+    /// <param name="arrayIndexers">All <see cref="ArrayIndexer">array indexers</see>.</param>
+    /// <returns>True if the property existed and was removed, false otherwise.</returns>
+    public bool RemoveValue(object target, ArrayIndexers arrayIndexers)
+    {
+        if (target is not ExpandoObject targetAsExpandoObject)
+        {
+            return false;
+        }
+
+        var parent = targetAsExpandoObject.TryGetExistingPath(this, arrayIndexers);
+        return parent is not null && ((IDictionary<string, object?>)parent).Remove(LastSegment.Value);
+    }
+
+    /// <summary>
     /// Get the corresponding <see cref="PropertyInfo"/> for the full path from the root type.
     /// </summary>
     /// <typeparam name="TRoot">Type of root.</typeparam>

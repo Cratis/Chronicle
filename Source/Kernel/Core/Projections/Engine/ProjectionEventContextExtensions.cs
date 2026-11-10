@@ -178,6 +178,7 @@ public static class ProjectionEventContextExtensions
     /// <param name="propertyMappers">PropertyMappers used to map from the event to the child object.</param>
     /// <param name="childInitialState">Optional initial state for new child items. Used to pre-initialize nested collections.</param>
     /// <param name="subscriptions">Optional <see cref="CompositeDisposable"/> that receives ownership of the subscription, enabling explicit disposal.</param>
+    /// <param name="ordering">Optional <see cref="ChildrenOrdering"/> deciding where new children are inserted. Appended when null.</param>
     /// <returns>The observable for continuation.</returns>
     public static IObservable<ProjectionEventContext> Project(
         this IObservable<ProjectionEventContext> observable,
@@ -185,7 +186,8 @@ public static class ProjectionEventContextExtensions
         PropertyPath identifiedByProperty,
         IEnumerable<PropertyMapper<AppendedEvent, ExpandoObject>> propertyMappers,
         ExpandoObject? childInitialState = null,
-        CompositeDisposable? subscriptions = null)
+        CompositeDisposable? subscriptions = null,
+        ChildrenOrdering? ordering = null)
     {
         IDisposable subscription;
         if (childrenProperty.IsRoot)
@@ -226,7 +228,8 @@ public static class ProjectionEventContextExtensions
                         childrenPropertyIndexer.Identifier,
                         propertyMappers,
                         context.Key.ArrayIndexers,
-                        childInitialState);
+                        childInitialState,
+                        ordering);
                     return;
                 }
 
@@ -244,11 +247,13 @@ public static class ProjectionEventContextExtensions
     /// <param name="observable"><see cref="IObservable{T}"/> to work with.</param>
     /// <param name="childrenProperty">The property in which children are stored on the object.</param>///
     /// <param name="valueProvider">The <see cref="ValueProvider{T}"/> for getting the value from the event.</param>
+    /// <param name="ordering">Optional <see cref="ChildrenOrdering"/> deciding where new children are inserted. Appended when null.</param>
     /// <returns>The observable for continuation.</returns>
     public static IObservable<ProjectionEventContext> AddChildFromEventProperty(
         this IObservable<ProjectionEventContext> observable,
         PropertyPath childrenProperty,
-        ValueProvider<AppendedEvent> valueProvider)
+        ValueProvider<AppendedEvent> valueProvider,
+        ChildrenOrdering? ordering = null)
     {
         return observable.Do(_ =>
         {
@@ -258,7 +263,7 @@ public static class ProjectionEventContextExtensions
                 value = value is ExpandoObject content ? content.Clone() : value.AsExpandoObject();
             }
 
-            _.Changeset.AddChild(childrenProperty, value);
+            _.Changeset.AddChild(childrenProperty, value, ordering);
         });
     }
 

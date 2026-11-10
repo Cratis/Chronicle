@@ -18,6 +18,8 @@ Clustering configuration controls how multiple Chronicle Server nodes form one O
 > Unsupported combinations fail at startup: `Sql` requires `MsSql` or `PostgreSql` storage, and `MongoDB`
 > requires MongoDB storage. SQLite and in-memory storage do not support multi-node clustering.
 
+Clients behind a load balancer do not need sticky routing between silos; see [connection lifecycle](../../building-a-client/clustering-and-connection-lifecycle#several-silos-behind-a-load-balancer) for ownership checks and retry behavior.
+
 ## Use cases
 
 - **Horizontal scaling**: Run multiple nodes as one cluster; separate event ingestion (event sequences) from event processing (observers) to scale independently based on load
@@ -84,6 +86,7 @@ After a node is lost, observers can lag behind the event log until the observer 
 | gatewayEnabled | boolean | true | Set to `false` to disable the Orleans client gateway on this node. HTTP and gRPC remain available. |
 | clusterId | string | chronicle | The cluster id - all nodes that should form one cluster must share it. |
 | serviceId | string | chronicle | The service id - all nodes that should form one cluster must share it. |
+| distributedGrainDirectoryEnabled | boolean | false | Opts into Orleans' experimental distributed grain directory, which is strongly consistent and prevents duplicate activations. Every silo must use the same value. Changing it requires stopping every silo and starting them again, never a rolling upgrade, because silos on different directory implementations cannot share a cluster. |
 | advertisedIP | string | | In MongoDB and SQL clustering, the IP address advertised to other silos and bound by the silo and enabled gateway listeners. Must belong to a local interface and be reachable from peer nodes. When omitted, Orleans keeps its automatic address selection and listener defaults. Localhost clustering keeps its loopback address selection. |
 | defunctSiloCleanupPeriod | timespan | 01:00:00 | How often defunct silo entries are swept out of the membership table when using `MongoDB` or `Sql` clustering. Without the sweep, dead entries from restarts and failed rollouts accumulate and slow down or block new nodes joining. Set to `00:00:00` to disable the sweep. |
 | defunctSiloExpiration | timespan | 03:00:00 | The age at which a defunct membership entry is removed by the sweep. A node never reuses a silo identity, so dead entries only have diagnostic value. |

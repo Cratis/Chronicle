@@ -82,4 +82,10 @@ public class ChildrenDefinition
     /// </remarks>
     [ProtoMember(11, IsRequired = true)]
     public IList<string> NoAutoMapProperties { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the optional ordering for where new children are inserted. Appended when not set.
+    /// </summary>
+    [ProtoMember(12)]
+    public ChildrenOrderingDefinition? Ordering { get; set; }
 }

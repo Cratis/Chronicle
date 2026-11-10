@@ -110,22 +110,7 @@ internal sealed class Reducers(
                         break;
                     }
 
-                    if (!connectionOwnership.IsOwnedBy(register.ConnectionId, caller.Owner))
-                    {
-                        logger.ConnectionNotAvailableToCaller(register.ConnectionId);
-                        registrationTcs.TrySetException(new RpcException(new Status(StatusCode.PermissionDenied, "The connection is not available to the caller.")));
-                        break;
-                    }
-
-                    logger.Registering(
-                        register.Reducer.ReducerId,
-                        register.EventStore,
-                        register.Namespace,
-                        register.Reducer.EventSequenceId,
-                        register.ConnectionId);
-
-                    stateFingerprints.Enabled = register.StateCaching?.Enabled == true;
-                    _ = SystemStoreGuard.CompleteRegistration(context, register.EventStore, register.Namespace, StoreAccess.Read | StoreAccess.Manage, registrationTcs, register);
+                    _ = VerifyRegistration(register);
                     break;
 
                 case ReducerResult result:
@@ -324,6 +309,41 @@ internal sealed class Reducers(
         });
 
         return MonitorRegistration(observable, registrationTcs.Task, context, (messagesSubscription, register, () => revoked = true));
+
+        async Task VerifyRegistration(RegisterReducer registration)
+        {
+            try
+            {
+                var verification = connectionOwnership.Verify(grainFactory, registration.ConnectionId, caller.Owner, options.Value.Clustering.ResponseTimeout, cancellationToken: context.CancellationToken);
+#pragma warning disable MA0042 // Result is read only after successful synchronous completion; the hot path must not block or allocate.
+                var access = verification.IsCompletedSuccessfully ? verification.Result : await verification;
+#pragma warning restore MA0042
+                if (access == ConnectionAccessOutcome.Unverifiable)
+                {
+                    logger.ConnectionOwnershipUnverifiable(registration.ConnectionId);
+                    registrationTcs.TrySetException(new RpcException(new Status(StatusCode.Unavailable, "The connection could not be verified.")));
+                    return;
+                }
+                if (access == ConnectionAccessOutcome.Denied)
+                {
+                    logger.ConnectionNotAvailableToCaller(registration.ConnectionId);
+                    registrationTcs.TrySetException(new RpcException(new Status(StatusCode.PermissionDenied, "The connection is not available to the caller.")));
+                    return;
+                }
+
+                logger.Registering(registration.Reducer.ReducerId, registration.EventStore, registration.Namespace, registration.Reducer.EventSequenceId, registration.ConnectionId);
+                stateFingerprints.Enabled = registration.StateCaching?.Enabled == true;
+                await SystemStoreGuard.CompleteRegistration(context, registration.EventStore, registration.Namespace, StoreAccess.Read | StoreAccess.Manage, registrationTcs, registration);
+            }
+            catch (OperationCanceledException) when (context.CancellationToken.IsCancellationRequested)
+            {
+                registrationTcs.TrySetCanceled(context.CancellationToken);
+            }
+            catch (Exception exception)
+            {
+                registrationTcs.TrySetException(exception);
+            }
+        }
     }
 
     static bool IsInitialStateUnchanged(ReducerStateFingerprints stateFingerprints, string partition, ExpandoObject? initialState)

@@ -28,6 +28,9 @@ internal static partial class ProjectionsLogging
     [LoggerMessage(LogLevel.Warning, "Failed computing the signature of a projection registration; it will be registered without sharing the work with identical ones")]
     internal static partial void FailedComputingRegistrationSignature(this ILogger<Projections> logger, Exception exception);
 
+    [LoggerMessage(LogLevel.Warning, "Projection registration in event store {EventStore} could not verify connection {ConnectionId} across the cluster")]
+    internal static partial void ConnectionOwnershipUnverifiable(this ILogger<Projections> logger, string eventStore, string connectionId);
+
     [LoggerMessage(LogLevel.Warning, "Projection declarations in event store {EventStore} were not recorded because connection {ConnectionId} is not available to the caller")]
     internal static partial void DeclarationsSkippedForConnection(this ILogger<Projections> logger, string eventStore, string connectionId);
 }

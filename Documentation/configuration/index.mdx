@@ -35,6 +35,26 @@ Use `IHostApplicationBuilder` for worker and console hosts, or `WebApplicationBu
 
 The connection string above uses TLS, but the client skips server certificate validation by default. Before connecting beyond a trusted development environment, configure certificate trust and enable [TLS validation](./tls). See the [getting-started host guides](../get-started/toc.yml) for the surrounding application setup.
 
+## Minimal setup
+
+A client needs two settings: the kernel's connection string and the event store name. With the environment-variable form:
+
+```bash
+export Cratis__Chronicle__ConnectionString="chronicle://clientId:clientSecret@chronicle.example.com:35000"
+export Cratis__Chronicle__EventStore="my-store"
+```
+
+Everything else has a default. For a kernel on `localhost:35000` the connection string can be omitted, and the client uses the built-in development credentials.
+
+A production kernel needs a storage connection, because it has no embedded database. For example, with MongoDB or PostgreSQL:
+
+```bash
+export Cratis__Chronicle__Storage__Type=PostgreSql
+export Cratis__Chronicle__Storage__ConnectionDetails="Host=db.example.com;Database=chronicle;Username=chronicle"
+```
+
+A production kernel also needs a TLS certificate and an encryption certificate; see [Production hosting](../hosting/production.md). Check [Settings that must match the kernel](must-match-the-kernel) when both sides are configured.
+
 ## Topics
 
 - [ChronicleOptions Reference](chronicle-options) lists the settings available to direct clients and hosted applications.
@@ -43,6 +63,7 @@ The connection string above uses TLS, but the client skips server certificate va
 - [Camel Casing](camel-casing) configures serialized property names, projection mappings, and read model container names.
 - [gRPC Message Size](grpc-message-size) helps you fit large messages within both client and kernel limits.
 - [Structural Dependencies](structural-dependencies) supplies custom artifact discovery, identity providers, and namespace resolvers.
+- [Settings that must match the kernel](must-match-the-kernel) lists the client and kernel settings that have to agree.
 - [TLS](tls) explains how to enable server certificate validation and configure certificate handling.
 
 ## Explicit artifacts

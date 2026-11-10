@@ -13,4 +13,5 @@ namespace Cratis.Chronicle.Changes;
 /// <param name="IdentifiedByProperty">The property that identifies the key on the child object.</param>
 /// <param name="Key">Key of the object.</param>
 /// <param name="ArrayIndexers">The array indexers identifying the parent context.</param>
-public record ChildAdded(object Child, PropertyPath ChildrenProperty, PropertyPath IdentifiedByProperty, object Key, ArrayIndexers ArrayIndexers) : Change(Child);
+/// <param name="Ordering">Optional <see cref="ChildrenOrdering"/> deciding where the child is inserted. Appended when null.</param>
+public record ChildAdded(object Child, PropertyPath ChildrenProperty, PropertyPath IdentifiedByProperty, object Key, ArrayIndexers ArrayIndexers, ChildrenOrdering? Ordering = default) : Change(Child);
