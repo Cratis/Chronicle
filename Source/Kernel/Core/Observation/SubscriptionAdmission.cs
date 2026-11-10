@@ -29,6 +29,7 @@ public class SubscriptionAdmission : ISubscriptionAdmission
     internal const int MaximumAutomaticLimit = 16;
 
     readonly SemaphoreSlim _admission;
+    int _recoveriesAdmitted;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SubscriptionAdmission"/> class.
@@ -47,6 +48,7 @@ public class SubscriptionAdmission : ISubscriptionAdmission
     internal SubscriptionAdmission(int configuredLimit, int processorCount)
     {
         Limit = ResolveLimit(configuredLimit, processorCount);
+        RecoveryLimit = Math.Max(1, Limit / 2);
         _admission = new(Limit, Limit);
     }
 
@@ -54,13 +56,32 @@ public class SubscriptionAdmission : ISubscriptionAdmission
     public int Limit { get; }
 
     /// <inheritdoc/>
+    public int RecoveryLimit { get; }
+
+    /// <inheritdoc/>
     public Task<bool> WaitAsync(TimeSpan timeout, CancellationToken cancellationToken) => _admission.WaitAsync(timeout, cancellationToken);
 
     /// <inheritdoc/>
-    public bool TryEnter() => _admission.Wait(0);
+    public bool TryEnterForRecovery()
+    {
+        if (Interlocked.Increment(ref _recoveriesAdmitted) <= RecoveryLimit && _admission.Wait(0))
+        {
+            return true;
+        }
+
+        Interlocked.Decrement(ref _recoveriesAdmitted);
+        return false;
+    }
 
     /// <inheritdoc/>
     public void Release() => _admission.Release();
+
+    /// <inheritdoc/>
+    public void ReleaseRecovery()
+    {
+        _admission.Release();
+        Interlocked.Decrement(ref _recoveriesAdmitted);
+    }
 
     /// <summary>
     /// Resolves the effective limit.

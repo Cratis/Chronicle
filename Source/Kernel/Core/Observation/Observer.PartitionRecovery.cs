@@ -25,7 +25,10 @@ namespace Cratis.Chronicle.Observation;
 /// Each batch also takes the silo's <see cref="ISubscriptionAdmission"/>, the same bound every event store's projection
 /// subscriptions share, so a cold start does not run recoveries for thousands of observers at once on top of the
 /// subscriptions. A batch never waits for admission inside the turn - that would hold the observer while it queues for
-/// the silo - it tries, and when none is free comes back in a later turn.
+/// the silo - it tries, and when none is free comes back in a later turn. Recoveries only get their share of the
+/// admission (<see cref="ISubscriptionAdmission.RecoveryLimit"/>), so however long a batch runs, projection
+/// subscriptions still find room. Every subscribe asks for a retry-job sweep, so on a cold start every observer is
+/// turned away at once; the delay before trying again is jittered so they do not all come back in the same second.
 /// </para>
 /// </remarks>
 public partial class Observer
@@ -36,9 +39,14 @@ public partial class Observer
     internal const int MaxPartitionRecoveriesPerTurn = 10;
 
     /// <summary>
-    /// How long a recovery batch waits before trying again when the silo's subscription admission is fully taken.
+    /// The shortest wait before a recovery batch tries again when the silo's subscription admission is fully taken.
     /// </summary>
-    internal static readonly TimeSpan RecoveryAdmissionRetryDelay = TimeSpan.FromSeconds(1);
+    internal static readonly TimeSpan MinRecoveryAdmissionRetryDelay = TimeSpan.FromMilliseconds(500);
+
+    /// <summary>
+    /// The longest wait before a recovery batch tries again when the silo's subscription admission is fully taken.
+    /// </summary>
+    internal static readonly TimeSpan MaxRecoveryAdmissionRetryDelay = TimeSpan.FromMilliseconds(1500);
 
     static readonly TimeSpan _recoveryStartFailureDelay = TimeSpan.FromSeconds(5);
 
@@ -58,6 +66,14 @@ public partial class Observer
         _retryJobSweepRequested = true;
         SchedulePartitionRecoveryTurn();
     }
+
+    /// <summary>
+    /// Gets the jittered wait before a recovery batch turned away by the silo's admission tries again.
+    /// </summary>
+    /// <param name="jitter">A value in [0, 1) choosing where between the shortest and the longest wait this one lands.</param>
+    /// <returns>The wait.</returns>
+    internal static TimeSpan NextRecoveryAdmissionRetryDelay(double jitter) =>
+        MinRecoveryAdmissionRetryDelay + ((MaxRecoveryAdmissionRetryDelay - MinRecoveryAdmissionRetryDelay) * Math.Clamp(jitter, 0, 1));
 
     void SchedulePartitionRecoveryTurn(TimeSpan delay = default)
     {
@@ -79,11 +95,11 @@ public partial class Observer
             return;
         }
 
-        var admission = ServiceProvider.GetService<ISubscriptionAdmission>();
-        if (admission?.TryEnter() == false)
+        var admission = ServiceProvider.GetRequiredService<ISubscriptionAdmission>();
+        if (!admission.TryEnterForRecovery())
         {
             logger.DeferringRecoveryOfFailedPartitionsForAdmission();
-            SchedulePartitionRecoveryTurn(RecoveryAdmissionRetryDelay);
+            SchedulePartitionRecoveryTurn(NextRecoveryAdmissionRetryDelay(Random.Shared.NextDouble()));
             return;
         }
 
@@ -96,7 +112,7 @@ public partial class Observer
         finally
         {
             _retryJobDropBudget = null;
-            admission?.Release();
+            admission.ReleaseRecovery();
         }
     }
 

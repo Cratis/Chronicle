@@ -14,14 +14,14 @@ public class when_trying_to_enter_without_waiting : Specification
 
     async Task Because()
     {
-        _firstEntered = _admission.TryEnter();
+        _firstEntered = _admission.TryEnterForRecovery();
         _secondEntered = await _admission.WaitAsync(TimeSpan.Zero, CancellationToken.None);
-        _thirdEntered = _admission.TryEnter();
+        _thirdEntered = _admission.TryEnterForRecovery();
 
         var waiter = _admission.WaitAsync(Timeout.InfiniteTimeSpan, CancellationToken.None);
-        _admission.Release();
+        _admission.ReleaseRecovery();
         _queuedWaiterWasServedFirst = await waiter.WaitAsync(TimeSpan.FromSeconds(30));
-        _enteredAheadOfWaiter = _admission.TryEnter();
+        _enteredAheadOfWaiter = _admission.TryEnterForRecovery();
 
         _admission.Release();
         _admission.Release();

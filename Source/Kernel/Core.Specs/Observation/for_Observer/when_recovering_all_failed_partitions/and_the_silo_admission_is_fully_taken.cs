@@ -35,7 +35,7 @@ public class and_the_silo_admission_is_fully_taken : given.an_observer
 
     async Task Because()
     {
-        _admission.TryEnter();
+        await _admission.WaitAsync(TimeSpan.Zero, CancellationToken.None);
         await _observer.Subscribe<NullObserverSubscriber>(ObserverType.Reactor, [EventType.Unknown], SiloAddress.Zero);
 
         await _silo.TimerRegistry.FireAllAsync();
@@ -45,8 +45,8 @@ public class and_the_silo_admission_is_fully_taken : given.an_observer
         await _silo.TimerRegistry.FireAllAsync();
         _startedAfterRelease = RecoveryJobsStarted();
 
-        _admissionReturnedAfterBatch = _admission.TryEnter();
-        if (_admissionReturnedAfterBatch) _admission.Release();
+        _admissionReturnedAfterBatch = _admission.TryEnterForRecovery();
+        if (_admissionReturnedAfterBatch) _admission.ReleaseRecovery();
     }
 
     [Fact] void should_not_recover_while_the_silo_admission_is_taken() => _startedWhileTaken.ShouldEqual(0);
