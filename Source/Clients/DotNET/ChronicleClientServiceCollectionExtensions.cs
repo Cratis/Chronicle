@@ -11,6 +11,7 @@ using Cratis.Chronicle.ReadModels;
 using Cratis.Serialization;
 using Cratis.Traces;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -75,6 +76,14 @@ internal static class ChronicleClientServiceCollectionExtensions
                 new ChronicleClient(options, artifactsProvider, sp, identityProvider, correlationIdAccessor, namespaceResolver, loggerFactory, namingPolicy) :
                 new ChronicleClient(connection, options, artifactsProvider, sp, identityProvider, correlationIdAccessor, namespaceResolver, loggerFactory, namingPolicy);
         });
+
+        services.AddSingleton<IHostedService>(sp => new ChronicleClientStartup(
+            sp.GetRequiredService<IOptions<ChronicleClientOptions>>().Value,
+            sp.GetRequiredService<IChronicleClient>(),
+            sp.GetRequiredService<IHostEnvironment>(),
+            sp.GetRequiredService<IHostApplicationLifetime>(),
+            sp.GetRequiredService<ILogger<ChronicleClientStartup>>(),
+            () => true));
 
         services.AddScoped(sp =>
         {

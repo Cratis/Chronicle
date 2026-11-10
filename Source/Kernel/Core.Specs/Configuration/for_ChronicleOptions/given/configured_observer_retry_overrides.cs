@@ -17,6 +17,7 @@ public class configured_observer_retry_overrides : Specification
     protected void Configure(IDictionary<string, string?> values)
     {
         var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["Cratis:Chronicle:Storage:Type"] = "inmemory" })
             .AddInMemoryCollection(values)
             .Build();
         var services = new ServiceCollection();

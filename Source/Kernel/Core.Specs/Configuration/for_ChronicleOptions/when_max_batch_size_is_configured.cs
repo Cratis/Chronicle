@@ -14,7 +14,7 @@ public class when_max_batch_size_is_configured : Specification
 
     void Establish()
     {
-        var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> { { "Cratis:Chronicle:ReadModels:MaxBatchSize", "3" } }).Build();
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> { { "Cratis:Chronicle:Storage:Type", "inmemory" }, { "Cratis:Chronicle:ReadModels:MaxBatchSize", "3" } }).Build();
         var services = new ServiceCollection();
         services.AddSingleton<IConfiguration>(configuration);
         ChronicleOptions.AddConfiguration(services, configuration);

@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.ComponentModel.DataAnnotations;
+using Cratis.Chronicle.Storage;
 
 namespace Cratis.Chronicle.Configuration.for_ChronicleOptions.when_validating;
 
@@ -11,7 +12,7 @@ public class with_default_event_source_id_tracing_and_no_key : Specification
 
     void Because()
     {
-        var options = new ChronicleOptions();
+        var options = new ChronicleOptions { Storage = new() { Type = StorageType.InMemory } };
         _errors = options.Validate(new ValidationContext(options)).ToArray();
     }
 
