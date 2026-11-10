@@ -13,5 +13,5 @@ public class and_a_subscribed_observer_stays_idle_for_the_idle_period : given.an
         await RunWatchdogAfter(_idlePeriod * 2);
     }
 
-    [Fact] void should_keep_the_activation_for_its_live_subscription() => _observer.IsReleasedWhenIdle.ShouldBeFalse();
+    [Fact] void should_keep_the_activation_for_its_live_subscription() => ReleaseRequests.ShouldEqual(0);
 }

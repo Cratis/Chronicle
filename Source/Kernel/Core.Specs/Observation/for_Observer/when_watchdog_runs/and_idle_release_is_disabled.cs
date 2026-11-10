@@ -13,5 +13,5 @@ public class and_idle_release_is_disabled : given.an_idle_observer
         await RunWatchdogAfter(_idlePeriod * 2);
     }
 
-    [Fact] void should_keep_the_activation() => _observer.IsReleasedWhenIdle.ShouldBeFalse();
+    [Fact] void should_keep_the_activation() => ReleaseRequests.ShouldEqual(0);
 }

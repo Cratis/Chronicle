@@ -13,5 +13,5 @@ public class and_an_unsubscribed_observer_still_has_its_alert_reminder : given.a
         await RunWatchdogAfter(_idlePeriod * 2);
     }
 
-    [Fact] void should_keep_the_activation_until_the_reminder_is_given_up() => _observer.IsReleasedWhenIdle.ShouldBeFalse();
+    [Fact] void should_keep_the_activation_until_the_reminder_is_given_up() => ReleaseRequests.ShouldEqual(0);
 }

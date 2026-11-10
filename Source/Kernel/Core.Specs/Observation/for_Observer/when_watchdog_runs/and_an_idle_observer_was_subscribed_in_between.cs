@@ -15,5 +15,5 @@ public class and_an_idle_observer_was_subscribed_in_between : given.an_idle_obse
         await RunWatchdogAfter(_idlePeriod / 2);
     }
 
-    [Fact] void should_start_the_idle_period_over() => _observer.IsReleasedWhenIdle.ShouldBeFalse();
+    [Fact] void should_start_the_idle_period_over() => ReleaseRequests.ShouldEqual(0);
 }

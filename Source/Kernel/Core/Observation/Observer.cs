@@ -256,7 +256,8 @@ public partial class Observer(
                 return;
             }
 
-            if (reason.ReasonCode != DeactivationReasonCode.ShuttingDown)
+            // An observer released as idle is disconnected already and has nothing left to write, the same as at shutdown.
+            if (reason.ReasonCode != DeactivationReasonCode.ShuttingDown && !IsReleasedAsIdle)
             {
                 await TransitionTo<Disconnected>();
                 await base.OnDeactivateAsync(reason, cancellationToken);

@@ -11,5 +11,5 @@ public class and_an_unsubscribed_observer_has_not_been_idle_for_the_idle_period 
         await RunWatchdogAfter(_idlePeriod - TimeSpan.FromSeconds(1));
     }
 
-    [Fact] void should_keep_the_activation() => _observer.IsReleasedWhenIdle.ShouldBeFalse();
+    [Fact] void should_keep_the_activation() => ReleaseRequests.ShouldEqual(0);
 }
