@@ -1,0 +1,20 @@
+<!-- Copyright (c) Cratis. All rights reserved. -->
+<!-- Licensed under the MIT license. See LICENSE file in the project root for full license information. -->
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Cratis.Chronicle.Chaos</RootNamespace>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <DisableDockerBuild>true</DisableDockerBuild>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Cratis.Fundamentals" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" />
+    <PackageReference Include="MongoDB.Driver" />
+    <PackageReference Include="Testcontainers" />
+    <PackageReference Include="SSH.NET" />
+    <ProjectReference Include="../../Source/Clients/DotNET/DotNET.csproj" AdditionalProperties="DisableDockerBuild=true;DisableProxyGenerator=true" />
+    <InternalsVisibleTo Include="ChaosRig.Specs" />
+  </ItemGroup>
+</Project>

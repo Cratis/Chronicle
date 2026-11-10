@@ -1,0 +1,40 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using Cratis.Chronicle.EventSequences;
+
+namespace Cratis.Chronicle.Chaos;
+
+internal static class Producer
+{
+    public static async Task Run(IEventStore store, Ledger ledger, CancellationToken cancellation)
+    {
+        var index = 0;
+        while (!cancellation.IsCancellationRequested)
+        {
+            var pending = await ledger.Pending();
+            var id = pending?.Entry.Id ?? Guid.NewGuid().ToString("N");
+            var source = pending?.Entry.Source ?? $"source-{index++ % 4}";
+            var @event = pending?.Event ?? new ChaosEvent(id, DateTimeOffset.UtcNow, index % 97 + 1);
+            if (pending is null) await ledger.Intend(id, source, @event);
+            await Attempt(store, ledger, source, @event, cancellation);
+            await Task.Delay(TimeSpan.FromMilliseconds(20), cancellation);
+        }
+    }
+
+    static async Task Attempt(IEventStore store, Ledger ledger, string source, ChaosEvent @event, CancellationToken cancellation)
+    {
+        try
+        {
+            var result = await store.EventLog.AppendOnce(source, @event, new IdempotencyKey(@event.LedgerId)).WaitAsync(TimeSpan.FromSeconds(10), cancellation);
+            if (result.HasIdempotencyConflicts) throw new InvalidOperationException("Identical retry produced an idempotency conflict.");
+            await ledger.Outcome(@event.LedgerId, result.IsSuccess ? "acked" : "unknown");
+        }
+        catch (Exception exception) when (!cancellation.IsCancellationRequested && exception is not InvalidOperationException)
+        {
+            // Transport exceptions, including timeouts, do not establish that the kernel rejected the append.
+            Console.Error.WriteLine($"Append outcome unknown: {exception.GetType().Name}");
+            await ledger.Outcome(@event.LedgerId, "unknown");
+        }
+    }
+}

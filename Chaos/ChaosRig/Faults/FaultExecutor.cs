@@ -1,0 +1,87 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using System.Diagnostics;
+
+namespace Cratis.Chronicle.Chaos;
+
+internal sealed class FaultExecutor(DockerEnvironment environment, ChildWorker producer, ChildWorker consumer)
+{
+    readonly HashSet<ChildWorker> _killed = [];
+
+    public async Task Run(IReadOnlyList<ScheduledFault> schedule, TimeSpan duration, CancellationToken cancellation)
+    {
+        var clock = Stopwatch.StartNew();
+        foreach (var fault in schedule)
+        {
+            await DelayUntil(fault.At, clock, cancellation);
+            EnsureWorkers();
+            Console.WriteLine($"FAULT {fault.At.TotalSeconds:F1}s {fault.Kind} resume={fault.Resume}");
+            await Execute(fault, cancellation);
+        }
+        await DelayUntil(duration, clock, cancellation);
+        EnsureWorkers();
+    }
+
+    public async Task Recover(CancellationToken cancellation)
+    {
+        // CONT is harmless on a running container; starting an already running container is harmless too.
+        foreach (var container in new[] { environment.Mongo, environment.Kernel })
+        {
+            await ContainerSignals.Restart(container.Id, cancellation);
+            await ContainerSignals.Send(container.Id, "CONT", cancellation);
+        }
+        await environment.WaitForKernel(cancellation);
+        if (consumer.IsRunning) await consumer.Signal("CONT", cancellation);
+        else await consumer.Start(cancellation);
+        if (producer.IsRunning) await producer.Signal("CONT", cancellation);
+        else await producer.Start(cancellation);
+    }
+
+    async Task Execute(ScheduledFault fault, CancellationToken cancellation)
+    {
+        if (fault.Kind is FaultKind.KillKernel or FaultKind.StopKernel or FaultKind.KillMongo or FaultKind.StopMongo)
+        {
+            await ContainerFault(fault, cancellation);
+            return;
+        }
+        var worker = fault.Kind is FaultKind.KillProducer or FaultKind.StopProducer ? producer : consumer;
+        if (!IsKill(fault.Kind))
+        {
+            await worker.Signal(fault.Resume ? "CONT" : "STOP", cancellation);
+            return;
+        }
+        await WorkerKill(worker, fault.Resume, cancellation);
+    }
+
+    async Task ContainerFault(ScheduledFault fault, CancellationToken cancellation)
+    {
+        var id = fault.Kind is FaultKind.KillKernel or FaultKind.StopKernel ? environment.Kernel.Id : environment.Mongo.Id;
+        if (fault.Resume && IsKill(fault.Kind)) await ContainerSignals.Restart(id, cancellation);
+        else await ContainerSignals.Send(id, fault.Resume ? "CONT" : IsKill(fault.Kind) ? "KILL" : "STOP", cancellation);
+    }
+
+    async Task WorkerKill(ChildWorker worker, bool resume, CancellationToken cancellation)
+    {
+        if (resume)
+        {
+            await worker.Start(cancellation);
+            _killed.Remove(worker);
+            return;
+        }
+        _killed.Add(worker);
+        await worker.Kill();
+    }
+
+    void EnsureWorkers()
+    {
+        foreach (var worker in new[] { producer, consumer })
+        {
+            if (!worker.IsRunning && !_killed.Contains(worker)) throw new InvalidOperationException("A worker exited outside its scheduled kill; inspect child logs.");
+        }
+    }
+
+    static bool IsKill(FaultKind kind) => kind is FaultKind.KillKernel or FaultKind.KillMongo or FaultKind.KillProducer or FaultKind.KillConsumer;
+
+    static Task DelayUntil(TimeSpan at, Stopwatch clock, CancellationToken cancellation) => Task.Delay(at > clock.Elapsed ? at - clock.Elapsed : TimeSpan.Zero, cancellation);
+}
