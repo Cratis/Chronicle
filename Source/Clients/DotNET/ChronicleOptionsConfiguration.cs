@@ -116,7 +116,7 @@ internal static class ChronicleOptionsConfiguration
         }
 
         var normalized = CollapseSeparators(name.Trim()).Trim('-');
-        while (Encoding.UTF8.GetByteCount(normalized) > MaximumDerivedLength)
+        while (Encoding.UTF8.GetByteCount(normalized) > MaximumDerivedLength || EndsWithHighSurrogate(normalized))
         {
             normalized = normalized[..^1];
         }
@@ -124,6 +124,8 @@ internal static class ChronicleOptionsConfiguration
         normalized = normalized.Trim('-');
         return normalized.Length == 0 ? null : normalized;
     }
+
+    static bool EndsWithHighSurrogate(string name) => name.Length > 0 && char.IsHighSurrogate(name[^1]);
 
     static bool IsForbidden(char character) => char.IsControl(character) || _forbiddenCharacters.Contains(character);
 

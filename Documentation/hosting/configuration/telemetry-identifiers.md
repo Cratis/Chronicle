@@ -7,22 +7,24 @@ The Chronicle kernel hashes event source ids in its traces by default, so the or
 
 ## Configure kernel traces
 
-Set the mode in `chronicle.json`, without a `Cratis:Chronicle` wrapper:
+Leave `EventSourceIdTracing` unset to keep the default. Without a key, the default uses a random key generated when the kernel process starts.
+
+To choose a mode explicitly, set it in `chronicle.json`, without a `Cratis:Chronicle` wrapper:
 
 ```json
 {
   "Telemetry": {
-    "EventSourceIdTracing": "Hashed"
+    "EventSourceIdTracing": "Omitted"
   }
 }
 ```
 
-Without a key, `Hashed` uses a random key generated when the kernel process starts. Hashes then correlate within that process but change on every restart and differ between kernel instances. To get hashes that stay stable across restarts and instances, supply a key through `Cratis__Chronicle__Telemetry__EventSourceIdHashKey` from your deployment's secret store. A configured key must be at least 32 characters; a shorter one fails configuration validation before the kernel starts. Do not put the key in a checked-in configuration file, a span, or a log.
+Setting `Hashed` explicitly requires `EventSourceIdHashKey`; configuration validation fails before the kernel starts without one. Only the implicit default hashes without a key. Hashes then correlate within that process but change on every restart and differ between kernel instances. To get hashes that stay stable across restarts and instances, supply a key through `Cratis__Chronicle__Telemetry__EventSourceIdHashKey` from your deployment's secret store. A configured key must be at least 32 characters; a shorter one fails configuration validation before the kernel starts. Do not put the key in a checked-in configuration file, a span, or a log.
 
 | Setting | Default | Effect |
 | --- | --- | --- |
 | `Telemetry:EventSourceIdTracing` | `Hashed` on the kernel, `Raw` on clients | `Raw` includes the id, `Hashed` includes its keyed hash, and `Omitted` leaves out `cratis.eventsource.id` on kernel spans (`event_source_id` on client spans). |
-| `Telemetry:EventSourceIdHashKey` | random per process | Used by `Hashed`; set it for hashes that are stable across restarts and instances. At least 32 characters when set. |
+| `Telemetry:EventSourceIdHashKey` | random per process when `EventSourceIdTracing` is unset | Required when `Hashed` is set explicitly; set it for hashes that are stable across restarts and instances. At least 32 characters when set. |
 
 Choose `Raw` only when you want the original id in your tracing backend, including during local development. Protect that backend's access and retention accordingly. To omit ids instead, set `EventSourceIdTracing` to `Omitted`; no hash key is needed.
 
