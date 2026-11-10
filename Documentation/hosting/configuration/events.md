@@ -13,6 +13,7 @@ Put these settings at the root of `chronicle.json`, not inside a `Cratis` or `Ch
     "events": {
         "queues": 2,
         "queueBoundedCapacity": 2000,
+        "queueBoundedEvents": 5000,
         "statePersistenceInterval": 1000,
         "constraintsVersionCheckInterval": "00:00:01",
         "causationPropertyRetention": "Retain",
@@ -21,14 +22,15 @@ Put these settings at the root of `chronicle.json`, not inside a `Cratis` or `Ch
 }
 ```
 
-| Setting | Meaning |
-| --- | --- |
-| `queues` | Number of appended-event queues per event sequence. Each queue routes appended events to the observers assigned to it. See [How observers use the queues](#how-observers-use-the-queues). |
-| `queueBoundedCapacity` | Capacity in **batches**, not individual events, of each queue and of each observer's backlog within it. `0` makes both unbounded. |
-| `queueBoundedEvents` | Most **events** a queue, or one observer's backlog within it, may hold before spilling to catch-up. Bounds memory when batches are large. `0` makes it unbounded. Defaults to 5000. |
-| `statePersistenceInterval` | Appends between warm-start state snapshots. State is also persisted on the first append after activation and on deactivation. |
-| `constraintsVersionCheckInterval` | Maximum frequency of constraint-version polling during appends. A zero interval checks on every append. |
-| `queueDepletionWaitTimeoutMilliseconds` | Bounds the final queue-empty wait when awaiting depletion outside a debugger. |
+| Setting | Default | Meaning |
+| --- | --- | --- |
+| `queues` | `2` | Number of appended-event queues per event sequence. Each queue routes appended events to the observers assigned to it. See [How observers use the queues](#how-observers-use-the-queues). |
+| `queueBoundedCapacity` | `2000` | Capacity in **batches**, not individual events, of each queue and of each observer's backlog within it. `0` makes both unbounded. |
+| `queueBoundedEvents` | `5000` | Most **events** a queue, or one observer's backlog within it, may hold before spilling to catch-up. Bounds memory when batches are large. `0` makes it unbounded. |
+| `statePersistenceInterval` | `1000` | Appends between warm-start state snapshots. State is also persisted on the first append after activation and on deactivation. |
+| `constraintsVersionCheckInterval` | `00:00:01` | Maximum frequency of constraint-version polling during appends. A zero interval checks on every append. |
+| `causationPropertyRetention` | `Retain` | `Retain` or `Omit`. See [Causation property retention](#causation-property-retention). |
+| `queueDepletionWaitTimeoutMilliseconds` | `500` | Bounds the final queue-empty wait when awaiting depletion outside a debugger. |
 
 The state snapshot interval does not determine sequence-number correctness: activation can rebuild state from the event tail.
 

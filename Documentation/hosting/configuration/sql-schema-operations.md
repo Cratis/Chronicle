@@ -138,6 +138,17 @@ Receipts do not deduplicate redelivery. A redelivered cycle starts a new call wi
 
 Finished receipts are cleaned up in batches; receipts left by crashed owners are swept after 24 hours. That retention period is not a redelivery or exactly-once guarantee.
 
+## Runtime SQL timings
+
+Two settings under `sql` tune SQL storage at runtime.
+
+| Property | Type | Default | Description |
+| --- | --- | --- | --- |
+| sql.liveQueryPollIntervalSeconds | number | 2 | Seconds between polls of the database for live, database-watching queries. SQL backends have no push-based change stream, so Chronicle polls and re-emits only when the result changes. A larger value lowers database load and delays updates |
+| sql.shadowIndexDdlTimeoutSeconds | number | 600 | Timeout for shadow-index CREATE and DROP statements and their reconciliation deadline. Must be positive. Ordinary SQL commands keep their own timeout. Raise it for very large tables |
+
+Example: `Cratis__Chronicle__Sql__LiveQueryPollIntervalSeconds=5`.
+
 ## Plan schema changes during a rollout
 
 Verification ignores applied migration identifiers unknown to the current build, so that check alone does not establish compatibility with older replicas. Review schema changes for compatibility with every server version that will access the database during the rollout; do not treat a successful readiness probe as proof that mixed versions can run safely.
