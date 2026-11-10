@@ -15,5 +15,11 @@ public class when_formatting_results : Specification
     void should_format_the_clean_line() => VerdictFormatter.Format(new(0, 0, 0, 0, 0, 0, 0, 0, []), 17, 42, 3).ShouldEqual("VERDICT: clean, 42 events checked, 3 observers checked (seed 17)");
 
     [Fact]
+    void should_report_redeliveries_as_informational_on_a_clean_line() => VerdictFormatter.Format(new(0, 0, 0, 0, 0, 0, 0, 80, []), 17, 42, 3).ShouldEqual("VERDICT: clean, 42 events checked, 3 observers checked, 80 reactor duplicates (informational) (seed 17)");
+
+    [Fact]
+    void should_distinguish_an_inconclusive_line() => VerdictFormatter.Format(new(0, 0, 0, 0, 0, 0, 0, 80, []) { InconclusiveReason = "Window not observed." }, 17, 42, 3).ShouldEqual("VERDICT: inconclusive, 42 events checked, 3 observers checked, 80 reactor duplicates (informational) (seed 17): Window not observed.");
+
+    [Fact]
     void should_format_the_dirty_line() => VerdictFormatter.Format(new(1, 2, 3, 4, 5, 6, 7, 8, []), 17, 42, 3).ShouldEqual("VERDICT: 1 lost, 2 duplicated, 3 gaps, 4 observers behind, 5 projections behind, 6 reducers behind, 7 failed partitions, 8 reactor duplicates (seed 17)");
 }

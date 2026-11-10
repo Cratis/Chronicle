@@ -116,7 +116,7 @@ internal static class ChaosRun
 
             // Sample expiry ends the drain, but only caller cancellation may discard a complete snapshot.
             var snapshot = await Settle(reader, budget, options.Output, cancellation);
-            return await Finish(snapshot, options, cancellation);
+            return await Finish(snapshot, options, environment.RunId, cancellation);
         }
         finally
         {
@@ -130,7 +130,7 @@ internal static class ChaosRun
         var clock = Stopwatch.StartNew();
         VerdictInput? latest = null;
         Exception? lastError = null;
-        var cleanSamples = 0;
+        var stability = new DrainStability();
         while (clock.Elapsed < budget)
         {
             using var sample = CancellationTokenSource.CreateLinkedTokenSource(cancellation);
@@ -138,15 +138,14 @@ internal static class ChaosRun
             try
             {
                 latest = await reader.Collect(sample.Token).WaitAsync(sample.Token);
-                cleanSamples = Verdict.Compare(latest).IsClean ? cleanSamples + 1 : 0;
 
-                // Require repeated settled observations, not a momentary empty work list.
-                if (cleanSamples >= 3) return latest;
+                // Require unchanged durable progress, not unchanged delivery counters.
+                if (stability.Observe(latest)) return latest;
             }
             catch (Exception exception) when (!cancellation.IsCancellationRequested)
             {
                 lastError = exception;
-                cleanSamples = 0;
+                stability.Reset();
                 await File.AppendAllTextAsync(Path.Combine(output, "settle-errors.log"), $"{exception}\n", cancellation);
             }
             var remaining = budget - clock.Elapsed;
@@ -155,11 +154,11 @@ internal static class ChaosRun
         cancellation.ThrowIfCancellationRequested();
         if (latest is null) throw new InvalidOperationException("Could not collect a complete snapshot before the settle deadline.", lastError);
 
-        // Even a previously clean sample cannot pass if the final drain never stabilized.
+        // A finding-free final sample without the stability window is inconclusive, not a defect.
         return latest with { Settled = false };
     }
 
-    static async Task<int> Finish(VerdictInput snapshot, RunOptions options, CancellationToken cancellation)
+    static async Task<int> Finish(VerdictInput snapshot, RunOptions options, string runId, CancellationToken cancellation)
     {
         await Save(options.Output, "snapshot.json", snapshot, cancellation);
         if (options.SelfTestViolation)
@@ -173,6 +172,10 @@ internal static class ChaosRun
         await Save(options.Output, "verdict.json", verdict, cancellation);
         foreach (var violation in verdict.Violations) Console.WriteLine($"VIOLATION: {violation}");
         Console.WriteLine(VerdictFormatter.Format(verdict, options.Seed, snapshot.Events.Count, snapshot.Observers.Count));
+        if (verdict.ExitCode == 2)
+        {
+            return await RecordFailure(options.Output, new(options.Seed, runId, "inconclusive", verdict.InconclusiveReason));
+        }
         return verdict.ExitCode;
     }
 

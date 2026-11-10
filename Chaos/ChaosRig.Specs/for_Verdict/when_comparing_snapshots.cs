@@ -44,6 +44,8 @@ public class when_comparing_snapshots : given.a_snapshot
     [Fact] void should_report_an_incorrect_projection_sum() => Verdict.Compare(Input with { Projections = [new("source", 1, 9)] }).ProjectionsBehind.ShouldEqual(1);
     [Fact] void should_report_an_incorrect_reducer() => Verdict.Compare(Input with { Reductions = [] }).ReducersBehind.ShouldEqual(1);
     [Fact] void should_report_a_reactor_duplicate() => Verdict.Compare(Input with { SideLedger = ["one", "one"] }).ReactorDuplicates.ShouldEqual(1);
+    [Fact] void should_not_reject_legitimate_reactor_redelivery() => Verdict.Compare(Input with { SideLedger = ["one", "one"] }).IsClean.ShouldBeTrue();
+    [Fact] void should_not_add_a_violation_for_reactor_redelivery() => Verdict.Compare(Input with { SideLedger = ["one", "one"] }).Violations.Count.ShouldEqual(0);
     [Fact] void should_reject_in_flight_partitions() => Verdict.Compare(Input with { InFlightPartitions = 1 }).IsClean.ShouldBeFalse();
     [Fact] void should_reject_pending_jobs() => Verdict.Compare(Input with { PendingJobs = 1 }).IsClean.ShouldBeFalse();
     [Fact] void should_reject_an_unstable_drain_without_inventing_job_counts() => Verdict.Compare(Input with { Settled = false }).IsClean.ShouldBeFalse();

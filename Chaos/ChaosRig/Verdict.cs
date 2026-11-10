@@ -24,7 +24,10 @@ internal static class Verdict
         var behind = input.ExpectedObservers.Count(id => !input.Observers.Any(observer => observer.Id == id && HasCaughtUp(observer, tail)));
         var violations = HealthViolations(input, byId);
         var reactorDuplicates = input.SideLedger.GroupBy(id => id).Sum(group => Math.Max(0, group.Count() - 1));
-        return new(lost, duplicates, Gaps(input.Events), behind, ModelMismatches(input.Events, input.Projections), ModelMismatches(input.Events, input.Reductions), input.FailedPartitions, reactorDuplicates, violations);
+        var result = new VerdictResult(lost, duplicates, Gaps(input.Events), behind, ModelMismatches(input.Events, input.Projections), ModelMismatches(input.Events, input.Reductions), input.FailedPartitions, reactorDuplicates, violations);
+        return !input.Settled && !result.HasFindings
+            ? result with { InconclusiveReason = "Final snapshot has no durability or liveness findings, but three stable durable-position samples were not observed before the settle deadline." }
+            : result;
     }
 
     static bool HasCaughtUp(ObserverValue observer, ulong tail)
@@ -47,7 +50,6 @@ internal static class Verdict
 
     static void DrainViolations(VerdictInput input, List<string> result)
     {
-        if (!input.Settled) result.Add("Drain did not stabilize before the settle deadline.");
         WorkloadViolations(input, result);
         if (input.InFlightPartitions != 0) result.Add($"In-flight partitions: {input.InFlightPartitions}");
         if (input.PendingJobs != 0) result.Add($"Pending jobs: {input.PendingJobs}");

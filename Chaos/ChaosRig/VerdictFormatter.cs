@@ -16,7 +16,14 @@ internal static class VerdictFormatter
     /// <param name="eventsChecked">The number of events examined.</param>
     /// <param name="observersChecked">The number of observers examined.</param>
     /// <returns>The summary line.</returns>
-    public static string Format(VerdictResult result, int seed, int eventsChecked, int observersChecked) => result.IsClean
-        ? $"VERDICT: clean, {eventsChecked} events checked, {observersChecked} observers checked (seed {seed})"
-        : $"VERDICT: {result.Lost} lost, {result.Duplicated} duplicated, {result.Gaps} gaps, {result.ObserversBehind} observers behind, {result.ProjectionsBehind} projections behind, {result.ReducersBehind} reducers behind, {result.FailedPartitions} failed partitions, {result.ReactorDuplicates} reactor duplicates (seed {seed})";
+    public static string Format(VerdictResult result, int seed, int eventsChecked, int observersChecked) => result.ExitCode switch
+    {
+        0 => $"VERDICT: clean, {eventsChecked} events checked, {observersChecked} observers checked{Redeliveries(result)} (seed {seed})",
+        2 => $"VERDICT: inconclusive, {eventsChecked} events checked, {observersChecked} observers checked{Redeliveries(result)} (seed {seed}): {result.InconclusiveReason}",
+        _ => $"VERDICT: {result.Lost} lost, {result.Duplicated} duplicated, {result.Gaps} gaps, {result.ObserversBehind} observers behind, {result.ProjectionsBehind} projections behind, {result.ReducersBehind} reducers behind, {result.FailedPartitions} failed partitions, {result.ReactorDuplicates} reactor duplicates (seed {seed})"
+    };
+
+    static string Redeliveries(VerdictResult result) => result.ReactorDuplicates == 0
+        ? string.Empty
+        : $", {result.ReactorDuplicates} reactor duplicates (informational)";
 }

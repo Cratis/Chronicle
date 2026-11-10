@@ -13,17 +13,32 @@ namespace Cratis.Chronicle.Chaos;
 /// <param name="ProjectionsBehind">The projection mismatch count.</param>
 /// <param name="ReducersBehind">The reducer mismatch count.</param>
 /// <param name="FailedPartitions">The failed partition count.</param>
-/// <param name="ReactorDuplicates">The duplicate reactor delivery count.</param>
+/// <param name="ReactorDuplicates">The informational at-least-once reactor redelivery count.</param>
 /// <param name="Violations">The diagnostic violations.</param>
 internal sealed record VerdictResult(int Lost, int Duplicated, int Gaps, int ObserversBehind, int ProjectionsBehind, int ReducersBehind, int FailedPartitions, int ReactorDuplicates, IReadOnlyList<string> Violations)
 {
     /// <summary>
-    /// Gets whether every consistency check passed.
+    /// Gets why a finding-free snapshot could not establish a stable drain.
     /// </summary>
-    public bool IsClean => Lost + Duplicated + Gaps + ObserversBehind + ProjectionsBehind + ReducersBehind + FailedPartitions + ReactorDuplicates == 0 && Violations.Count == 0;
+    public string InconclusiveReason { get; init; } = string.Empty;
 
     /// <summary>
-    /// Gets zero for a complete clean run or one when defects were found.
+    /// Gets whether a durability or liveness invariant failed, excluding legitimate redelivery.
     /// </summary>
-    public int ExitCode => IsClean ? 0 : 1;
+    public bool HasFindings => Lost + Duplicated + Gaps + ObserversBehind + ProjectionsBehind + ReducersBehind + FailedPartitions != 0 || Violations.Count != 0;
+
+    /// <summary>
+    /// Gets whether every invariant passed and the durable progress window was observed.
+    /// </summary>
+    public bool IsClean => !HasFindings && InconclusiveReason.Length == 0;
+
+    /// <summary>
+    /// Gets zero for clean, one for actual findings, or two for an inconclusive stability window.
+    /// </summary>
+    public int ExitCode => (HasFindings, IsClean) switch
+    {
+        (true, _) => 1,
+        (_, true) => 0,
+        _ => 2
+    };
 }

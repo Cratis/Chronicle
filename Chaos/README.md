@@ -43,7 +43,7 @@ It prints the seed, run ID, output directory, and planned fault times before sta
 
 Durations must be positive. A window too short for a fault plus recovery has an empty fault schedule. `--faults none` is the baseline smoke run.
 
-Infrastructure and worker readiness share a three-minute startup budget. Once both workers are ready, an absolute `duration + settle` deadline includes faults, recovery, reader startup, and collection; individual operations cannot extend it. Deadline expiry records `failure.json` and exits **2**, not a clean or dirty durability verdict. Docker control commands have a thirty-second limit. Child exit and output drainage are bounded separately, and cleanup has its own sixty-second budget. A stopped child receives CONT in scheduler recovery and before termination, independent of run cancellation. If cleanup times out, use the explicit cleanup command below.
+Infrastructure and worker readiness share a three-minute startup budget. Once both workers are ready, an absolute `duration + settle` deadline includes faults, recovery, reader startup, and collection; individual operations cannot extend it. At the collection deadline, the last complete snapshot determines the outcome: actual durability/liveness findings exit **1**; a finding-free snapshot without the stable observation window is **inconclusive**, exits **2**, and records its reason in `verdict.json` and `failure.json`. Expiry before any complete snapshot also records `failure.json` and exits **2**. Docker control commands have a thirty-second limit. Child exit and output drainage are bounded separately, and cleanup has its own sixty-second budget. A stopped child receives CONT in scheduler recovery and before termination, independent of run cancellation. If cleanup times out, use the explicit cleanup command below.
 
 ## Faults
 
@@ -64,16 +64,19 @@ Faults are globally serialized (thus never overlap on one target). Every fault h
 
 Before each append the producer durably journals a unique ledger ID, source, timestamp and numeric payload in the independent MongoDB container. It uses `AppendOnce` with that ID as the key. Success becomes `acked`; an ambiguous response or transport exception becomes `unknown`; abrupt termination can leave `intended`. Constraint and concurrency refusals become `failed`. An idempotency-key refusal becomes `conflict`, which is a violation but does not assert that an earlier append using that key was absent. A restarted producer retries only `intended` and `unknown` intentions with the original event and key. There is no lost-event assertion for an absent unknown/intended append: acknowledgement may never have happened.
 
-The consumer registers a reactor, active reducer, and projection. The reactor inserts **every delivery** into an external side-ledger using a fresh document ID; duplicates are deliberately not suppressed. A duplicate here is a finding about externally visible redelivery, not an assumption that arbitrary reactor side effects are exactly-once. The reducer and projection count and sum contributions per source.
+The consumer registers a reactor, active reducer, and projection. The reactor inserts **every delivery** into an external side-ledger using a fresh document ID; duplicates are deliberately not suppressed. Reactor redelivery is expected at-least-once behavior, not a durability violation or an exactly-once side-effect guarantee. `ReactorDuplicates` remains informational in `verdict.json` and the summary; it neither makes a verdict dirty nor prevents stabilization. The reducer and projection count and sum contributions per source.
 
 After the chaos window, recover targets, fence the producer by terminating it, and leave consumers running. The reader pages the actual event log, reads native observers/failures/jobs and materialized models through the client, and reads both independent ledgers. A narrow **read-only** BSON inspection of the kernel `observers` collections supplies `inFlightPartitions`, which the client API does not expose. It discovers databases instead of duplicating Chronicle's physical naming rules, matches the three exact observer IDs, and rejects missing/repeated documents or an absent/non-array field. It never writes kernel storage.
 
-A clean verdict requires three consecutive clean snapshots: every acknowledged ID present, no definitively failed/rejected IDs present, no duplicate event IDs, no sequence holes/repeated positions, matching source/payload intentions, all three observers active and at the observed tail with actual (not sentinel) sequence positions, no failed/in-flight partitions or incomplete jobs, exact model counts/sums, and one side-ledger delivery per logged ID. Empty workloads cannot pass. Unknown IDs present once are allowed; twice are duplicates. Settle timeout cannot turn a transient clean sample into a pass.
+A clean verdict requires three consecutive finding-free snapshots with **unchanged durable progress**: event-log tail, observer sequence positions/active state, and projection/reducer state (compared by identifier, independent of enumeration order). Every sample must have every acknowledged ID present, no definitively failed/rejected IDs present, no duplicate event IDs, no sequence holes/repeated positions, matching source/payload intentions, all three observers active and caught up to the observed tail with actual (not sentinel) sequence positions, no failed/in-flight partitions or incomplete jobs, exact model counts/sums, and at least one side-ledger delivery per logged ID with no unknown delivery IDs. Delivery counts are not compared; legitimate redeliveries do not reset the window. Collection errors and actual findings reset it. Empty workloads cannot pass. Unknown append IDs present once are allowed; twice in the event log are duplicates.
+
+A finding-free final snapshot without all three stable samples is **inconclusive**, not a defect and not a clean pass. It exits **2** with a clear reason; consider a larger `--settle` budget before drawing conclusions. A nonzero durability/liveness metric or content invariant failure at the deadline still exits **1**, even if the stability window was not observed. A transient clean sample cannot override final lag, failed partitions or other real findings.
 
 Example output:
 
 ```text
 VERDICT: clean, 120 events checked, 3 observers checked (seed 42)
+VERDICT: clean, 120 events checked, 3 observers checked, 80 reactor duplicates (informational) (seed 42)
 VERDICT: 1 lost, 0 duplicated, 0 gaps, 0 observers behind, 0 projections behind, 0 reducers behind, 0 failed partitions, 0 reactor duplicates (seed 42)
 ```
 
@@ -82,14 +85,14 @@ Additional drain/content failures are printed as `VIOLATION:` and included in `v
 | Exit | Meaning |
 | --- | --- |
 | `0` | Complete, clean verdict |
-| `1` | Complete snapshot with a durability/drain violation |
-| `2` | Bad arguments, cancellation, infrastructure failure, or no complete snapshot |
+| `1` | Complete snapshot with an actual durability/liveness or content violation |
+| `2` | Inconclusive stability window, bad arguments, cancellation, infrastructure failure, or no complete snapshot |
 
 These codes follow the repository contract: 0 ran clean, 1 found defects, 2 could not run. The self-test must exit 1.
 
 ## Output and cleanup
 
-The output directory contains `options.json`, `schedule.json`, stdout/stderr logs per child generation and container, `snapshot.json`, and `verdict.json`. A self-test additionally writes its modified snapshot; the original remains unchanged. An incomplete run instead records `failure.json` with the seed, run ID, timeout/cancellation/infrastructure classification, diagnostic reason, and exit code 2. Settle exceptions are logged separately. Do not commit run outputs; inspect/redact logs before sharing.
+The output directory contains `options.json`, `schedule.json`, stdout/stderr logs per child generation and container, `snapshot.json`, and `verdict.json`. A self-test additionally writes its modified snapshot; the original remains unchanged. An incomplete run records `failure.json` with the seed, run ID, timeout/cancellation/infrastructure classification, diagnostic reason, and exit code 2. An inconclusive drain retains its complete `snapshot.json` and `verdict.json` (including `InconclusiveReason`) and additionally records `failure.json` with status `inconclusive` and exit code 2. Settle exceptions are logged separately. Do not commit run outputs; inspect/redact logs before sharing.
 
 Normal completion, exceptions and Ctrl-C terminate owned child processes and remove labeled containers, anonymous data volumes, and the network. `--keep-containers` retains Docker resources but still terminates child processes. If the driver itself is killed, clean up explicitly:
 
