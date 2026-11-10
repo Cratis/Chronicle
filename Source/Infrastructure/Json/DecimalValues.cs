@@ -75,8 +75,8 @@ public static class DecimalValues
             return TypeConversion.Convert(targetType, value);
         }
 
-        var unwrapped = value.IsConcept() ? value.GetConceptValue() : value;
-        return unwrapped is double or float ? ToDecimal(unwrapped) : TypeConversion.Convert(targetType, value);
+        var unwrapped = value?.IsConcept() == true ? value.GetConceptValue() : value;
+        return unwrapped is double or float ? ToDecimal(unwrapped) : TypeConversion.Convert(targetType, value!);
     }
 
     /// <summary>
