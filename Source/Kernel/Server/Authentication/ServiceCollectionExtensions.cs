@@ -177,7 +177,9 @@ public static class ServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IValidateOptions<Configuration.ChronicleOptions>, ExternalAdministratorClaimValidation>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IValidateOptions<Configuration.ChronicleOptions>, EventStoreAccessConfigurationValidation>());
         services.AddHostedService<AdministratorPolicyStartupWarning>();
-        services.AddHostedService<StoreEntitlementsStartupNotice>();
+
+        // A grain call: given once the silo is active, never from a hosted service that would hold the bind (#4040).
+        services.AddSingleton<ILifecycleParticipant<ISiloLifecycle>, StoreEntitlementsStartupNotice>();
     }
 
     static AuthorizationBuilder AddAdministratorPolicies(this AuthorizationBuilder builder, params string[] authenticationSchemes) => builder

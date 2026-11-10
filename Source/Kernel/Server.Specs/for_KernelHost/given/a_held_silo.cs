@@ -30,6 +30,7 @@ public class a_held_silo : Specification
     protected int _healthPort;
     internal held_active_stage _hold;
     protected virtual bool AuthenticationEnabled => false;
+    protected virtual bool EnforceStoreEntitlements => false;
     protected virtual bool ControllersBeforeSilo => false;
     protected virtual bool ConcurrentStartup => false;
     protected virtual bool DiscoverConventions => false;
@@ -66,7 +67,7 @@ public class a_held_silo : Specification
         {
             Health = new Health { Port = _healthPort, Exclusive = true },
             Storage = new Configuration.Storage { Type = StorageType.InMemory },
-            Authentication = new Configuration.Authentication { Enabled = AuthenticationEnabled, Authority = "https://identity.example" }
+            Authentication = new Configuration.Authentication { Enabled = AuthenticationEnabled, EnforceStoreEntitlements = EnforceStoreEntitlements, Authority = "https://identity.example" }
         };
         builder.Services.AddSingleton(Options.Create(chronicleOptions));
         builder.Services.AddSingleton<ISystemStorage>(systemStorage);

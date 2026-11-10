@@ -8,7 +8,7 @@ using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.Server.Authentication.for_StoreEntitlementsStartupNotice;
 
-public class when_starting : Specification
+public class when_notifying : Specification
 {
     [Theory]
     [InlineData(true, false, 0, LogLevel.Information)]
@@ -24,16 +24,7 @@ public class when_starting : Specification
         grains.GetGrain<IStoreEntitlements>(IStoreEntitlements.Key).Returns(entitlements);
         var logger = new RecordingLogger();
         var notice = new StoreEntitlementsStartupNotice(Options.Create(new ChronicleOptions { Authentication = new() { Enabled = enabled, EnforceStoreEntitlements = enforce } }), grains, logger);
-        await notice.StartAsync(CancellationToken.None);
+        await notice.Notify(CancellationToken.None);
         logger.Levels.ShouldEqual(expected == LogLevel.None ? [] : new[] { expected });
-    }
-
-    sealed class RecordingLogger : ILogger<StoreEntitlementsStartupNotice>
-    {
-        public List<LogLevel> Levels { get; } = [];
-        public IDisposable? BeginScope<TState>(TState state)
-            where TState : notnull => null;
-        public bool IsEnabled(LogLevel logLevel) => true;
-        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter) => Levels.Add(logLevel);
     }
 }
