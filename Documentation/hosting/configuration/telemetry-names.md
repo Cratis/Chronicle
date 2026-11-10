@@ -96,7 +96,7 @@ These instruments were added after the convention. They have no legacy name and 
 | `observer.job.total_steps` | `{step}` |
 | `event_sequence.append.duration` | `s` |
 
-`observer.successful_observations` also counts catch-up, replay and retry deliveries. Its convention series carry `cratis.replay`. Its legacy series keep their original tags.
+`observer.successful_observations` now also counts catch-up, replay and retry deliveries, in every mode. Its convention series carry `cratis.replay`. Its legacy series keep their original tags. [OpenTelemetry](open-telemetry.md#successful-observations-include-recovery-work) describes the change.
 
 ## Metric attributes
 
@@ -122,7 +122,7 @@ The convention series use only the shared keys below, not both sets of keys on e
 | `kind` | `cratis.chronicle.sql.live_query.failure_kind` |
 | `operation` | `cratis.chronicle.sql.upsert.operation` |
 
-The keys `cratis.replay`, `cratis.observer.type`, `cratis.chronicle.observer.running_state` and `cratis.chronicle.job.type` have no legacy key. Instruments with a legacy name never carry them on their legacy series.
+The keys `cratis.replay`, `cratis.observer.type`, `cratis.chronicle.observer.state` and `cratis.chronicle.job.type` have no legacy key. Instruments with a legacy name never carry them on their legacy series.
 
 ## Span names and attributes
 

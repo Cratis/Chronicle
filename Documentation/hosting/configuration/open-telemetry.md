@@ -148,7 +148,7 @@ The Prometheus names are what the OpenTelemetry Collector's Prometheus exporter 
 
 An observer has a series on these instruments from its first failure, not before: Chronicle records nothing when an observer starts, so healthy observers add no series and the number of series follows the number of observers that fail. The first value a backend receives for an observer is therefore already `1`, and alerts on these counters should not depend on seeing a `0` first. The [alerting guide](../alerting-on-observer-failures.md) shows how.
 
-The SDK limits each instrument to 500 series. Beyond that it folds the excess into one series without the tags, which can no longer be attributed to an observer. That takes more than 500 observer instances in one process, counted across observers, namespaces and event stores.
+The SDK limits each instrument to `Telemetry:MetricSeriesLimit` series, 500 by default. Beyond that it folds the excess into one series without the tags, which can no longer be attributed to an observer. That takes more than 500 failing observer instances since the process started, counted across observers, namespaces and event stores. [How many series to expect](#how-many-series-to-expect) explains how to raise the limit.
 
 ### Observer state, jobs and append latency
 
@@ -158,24 +158,48 @@ These instruments are new, so they have no legacy name. They are published under
 
 | Instrument | Kind | Tags | Meaning |
 | --- | --- | --- | --- |
-| `cratis.chronicle.observer.failed_partitions` | Gauge `{partition}` | event store, namespace, event sequence, observer | Failed partitions of the observer now, quarantined ones included. |
-| `cratis.chronicle.observer.quarantined_partitions` | Gauge `{partition}` | event store, namespace, event sequence, observer | Quarantined partitions of the observer now. |
-| `cratis.chronicle.observer.running_state` | Gauge `1` | event store, namespace, event sequence, observer | Running state code: 0 unknown, 1 active, 2 suspended, 3 replaying, 4 disconnected, 5 quarantined, 6 changing definition, 7 initializing. |
-| `cratis.chronicle.observer.resident` | Gauge `{observer}` | event store, namespace, `cratis.observer.type`, `cratis.chronicle.observer.running_state` | Observers resident in the process. |
+| `cratis.chronicle.observer.failed_partitions` | Gauge `{partition}` | event store, namespace, event sequence, observer | Failed partitions of the observer now, quarantined ones included. Reported only while above 0. |
+| `cratis.chronicle.observer.quarantined_partitions` | Gauge `{partition}` | event store, namespace, event sequence, observer | Quarantined partitions of the observer now. Reported only while above 0. |
+| `cratis.chronicle.observer.running_state` | Gauge `1` | event store, namespace, event sequence, observer, `cratis.chronicle.observer.state` | `1` while the observer is in the state named by `cratis.chronicle.observer.state`. Reported only for `quarantined` and `suspended`. |
+| `cratis.chronicle.observer.resident` | Gauge `{observer}` | event store, namespace, `cratis.observer.type`, `cratis.chronicle.observer.state` | Observers resident in the process, in every state. |
 | `cratis.chronicle.job.running` | Gauge `{job}` | event store, namespace, `cratis.chronicle.job.type` | Running catch-up and replay jobs. |
 | `cratis.chronicle.observer.job.handled_steps` | Gauge `{step}` | event store, namespace, event sequence, observer, `cratis.chronicle.job.type` | Completed steps, successful or failed, of the observer's running jobs of that type. |
 | `cratis.chronicle.observer.job.total_steps` | Gauge `{step}` | event store, namespace, event sequence, observer, `cratis.chronicle.job.type` | Steps of the observer's running jobs of that type. |
 | `cratis.chronicle.event_sequence.append.duration` | Histogram `s` | event store, namespace, event sequence | Duration of an append or append-many call, from validation to its outcome, rejected appends included. |
 
-The tags use the shared keys `cratis.event_store.name`, `cratis.event_store.namespace`, `cratis.event_sequence.id` and `cratis.observer.id`. No partition, event source or job id is ever a tag. `cratis.observer.type` is `reactor`, `reducer`, `projection`, `external` or `unknown`; `cratis.chronicle.observer.running_state` uses the lowercase state names, such as `active` and `changing_definition`; `cratis.chronicle.job.type` is `catch_up` or `replay`.
+The tags use the shared keys `cratis.event_store.name`, `cratis.event_store.namespace`, `cratis.event_sequence.id` and `cratis.observer.id`. No partition, event source or job id is ever a tag. `cratis.observer.type` is `reactor`, `reducer`, `projection`, `external` or `unknown`; `cratis.chronicle.observer.state` uses the lowercase state names, such as `active`, `quarantined` and `changing_definition`; `cratis.chronicle.job.type` is `catch_up` or `replay`.
 
-The per-observer gauges carry one series per resident observer, the same as the successful observations counter, so the 500-series limit per instrument applies to them. A process hosting more observers than that needs a higher limit; `cratis.chronicle.observer.resident` stays small whatever the number of observers and is the one to use for memory planning.
+#### When the per-observer gauges report
+
+The three per-observer gauges report an observer only while it needs attention, so healthy observers cost no series:
+
+- `failed_partitions` and `quarantined_partitions` report an observer while its count is above 0.
+- `running_state` reports `1` for an observer while it is quarantined or suspended, with the state in `cratis.chronicle.observer.state`. Disconnected and replaying observers are normal during deployments and replays, so they appear only in `cratis.chronicle.observer.resident`.
+- When an observer recovers, or the process releases it while it is abnormal, its series reports `0` for three minutes and then stops. A backend therefore sees the value fall to `0` instead of keeping the last abnormal value until the series goes stale. Alert on the value, not on whether the series exists.
+
+`cratis.chronicle.observer.resident` and `cratis.chronicle.job.running` report `0` for a combination of event store, namespace, type and state they have reported before, rather than leaving it out once it empties.
+
+#### How many series to expect
+
+With cumulative temporality, the OpenTelemetry SDK keeps a series' slot until the process stops, even after the series is no longer reported. The number of series an instrument holds is therefore the number of distinct series it has reported since the process started, not the number it reports now:
+
+| Instrument | Series held per process |
+| --- | --- |
+| `observer.failed_partitions`, `observer.quarantined_partitions` | Observers that had failed or quarantined partitions at some point since the process started. |
+| `observer.running_state` | Observers that were quarantined or suspended since the process started, once per state. |
+| `observer.job.handled_steps`, `observer.job.total_steps` | Observers that ran a catch-up or replay since the process started, once per job type. |
+| `observer.successful_observations` | Observers that delivered at least one event since the process started, twice in `Convention` mode when they also replayed (`cratis.replay` `true` and `false`). |
+| `observer.resident`, `job.running` | Event stores × namespaces × types × states. Small whatever the number of observers. |
+
+Each instrument is limited to `Telemetry:MetricSeriesLimit` series, 500 by default. Beyond the limit, the SDK folds the excess into one series without attributes, which can no longer be attributed to an observer. A process with thousands of observers that deliver events needs a higher limit for `observer.successful_observations` and the job-progress gauges. A process where hundreds of observers fail at once needs a higher limit for the failure instruments. Raise the limit with `Cratis:Chronicle:Telemetry:MetricSeriesLimit`, or the environment variable `Cratis__Chronicle__Telemetry__MetricSeriesLimit`. The SDK reserves memory for the full limit on every instrument, so raise it only as far as needed. `cratis.chronicle.observer.resident` stays small whatever the number of observers, and is the one to use for memory planning.
 
 A catch-up whose observer delivers pages across partitions, projections among them, runs as one step, so its progress moves from 0 to 1 of 1. Partitioned observers have one step per partition.
 
 The append-duration histogram uses the explicit buckets 1, 2.5, 5, 10, 25, 50, 100, 250 and 500 milliseconds, and 1, 2.5, 5 and 10 seconds.
 
-The successful observations counter counts catch-up, replay and retry deliveries too, not only live ones. The convention series (`cratis.chronicle.observer.successful_observations`) carry `cratis.replay`, `true` for replay deliveries. The legacy series (`chronicle-observer-successful-observations`) keep their four tags, so recovery work now raises them without a way to tell it apart.
+#### Successful observations include recovery work
+
+The successful observations counter now counts catch-up, replay and retry deliveries as well as live ones. Earlier Kernels counted live deliveries only. Expect dashboards built on this counter to show throughput spikes after a deployment, during a replay and while failed partitions are retried. The convention series (`cratis.chronicle.observer.successful_observations`) carry `cratis.replay`, `true` for replay deliveries, so `cratis.replay="false"` excludes replays but still includes catch-up and retries. The legacy series (`chronicle-observer-successful-observations`) keep their four tags, so recovery work raises them without a way to tell it apart.
 
 ### Suspected skipped events
 
@@ -238,7 +262,7 @@ Aggregate across instances with `max`, never `sum`. A silo that is partitioned o
 
 When the silo that owns the snapshot dies, another silo re-activates the owner within about 30 seconds. The new owner starts with no memory of the buckets that were retiring, so a series can disappear without ever reporting `0`, and a backend's lookback can keep returning the last value briefly. Do not depend on seeing a `0` before a series ends.
 
-Like the other instruments, this gauge is limited to 500 series per process. The series count is the number of observers with incidents, times the conditions and severities they hold.
+Like the other instruments, this gauge is limited to `Telemetry:MetricSeriesLimit` series per process, 500 by default. The series count is the number of observers with incidents, times the conditions and severities they hold.
 
 To be alerted when an observer's partitions keep failing or run out of retries, see [Get alerted when observers stop processing](../alerting-on-observer-failures.md).
 
