@@ -60,6 +60,8 @@ labels:
   - traefik.http.services.chronicle.loadbalancer.server.scheme=https
 ```
 
+Traefik verifies the kernel's certificate on this HTTPS hop. A self-signed or private-CA kernel certificate makes Traefik reject the backend, and the Workbench answers 500. Trust the CA that signed the kernel's certificate through a Traefik servers transport: set `rootCAs`, and `serverName` when the certificate does not name the address Traefik connects to. Skip verification with `--serversTransport.insecureSkipVerify=true` only for a private development certificate, as the [WorkbenchBehindProxy sample](https://github.com/Cratis/Chronicle/tree/main/Samples/WorkbenchBehindProxy) does.
+
 To strip the prefix before forwarding instead, add this `stripprefix` middleware to the router. Keep the same Workbench `basePath`:
 
 ```yaml
@@ -102,7 +104,9 @@ labels:
   - traefik.http.services.chronicle.loadbalancer.server.scheme=https
 ```
 
-With `Cratis__Chronicle__Tls__Enabled=false` the main port accepts cleartext HTTP/2 (h2c) only, not HTTP/1.1. The proxy has to speak h2c to it: in Traefik, set the service scheme to `h2c`. nginx's `proxy_pass` forwards over HTTP/1.x only, so it cannot reach a main port without TLS. Turning TLS off also requires an HTTPS `Authentication:Authority`; see [Authentication](authentication.md).
+The same certificate trust applies here: give Traefik the kernel's CA through a servers transport, or skip verification only for a private development certificate, as described under [Traefik](#traefik).
+
+With `Cratis__Chronicle__Tls__Enabled=false` the main port accepts cleartext HTTP/2 (h2c) only, not HTTP/1.1. The proxy has to speak h2c to it: in Traefik, set the service scheme to `h2c`. nginx's `proxy_pass` forwards over HTTP/1.x only, so it cannot reach a main port without TLS. With authentication enabled, turning TLS off also requires an explicit HTTPS `Authentication:Authority`; see [Authentication](authentication.md).
 
 ```yaml
   - traefik.http.services.chronicle.loadbalancer.server.scheme=h2c
