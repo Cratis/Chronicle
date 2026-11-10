@@ -189,6 +189,11 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
     internal Func<double> ReconnectJitter { get; init; } = Random.Shared.NextDouble;
 
     /// <summary>
+    /// Gets how the wait before a reactor re-registers is done. Specs replace this to observe the waits.
+    /// </summary>
+    internal Func<TimeSpan, CancellationToken, Task> WaitBeforeReconnect { get; init; } = Task.Delay;
+
+    /// <summary>
     /// Gets how the re-registration work is started. Specs replace this to run the work deterministically.
     /// </summary>
     internal Func<Func<Task>, Task> ScheduleReconnectWork { get; init; } = Observation.ObserverDeliveryScope.RunDetached;
@@ -754,7 +759,7 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
                 try
                 {
                     await scheduler.DrainAndDispose();
-                    await Task.Delay(backoff.NextDelay(), cancellationToken);
+                    await WaitBeforeReconnect(backoff.NextDelay(), cancellationToken);
                     ReconnectIfCurrent(registration, cancellationToken);
                 }
                 catch (OperationCanceledException ex)

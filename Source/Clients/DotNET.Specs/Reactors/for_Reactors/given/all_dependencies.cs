@@ -48,6 +48,10 @@ public class all_dependencies : Specification
 
     protected virtual TimeSpan ReconnectDelay => TimeSpan.FromSeconds(2);
 
+    protected virtual Func<double> ReconnectJitter => Random.Shared.NextDouble;
+
+    protected virtual Func<TimeSpan, CancellationToken, Task> WaitBeforeReconnect => Task.Delay;
+
     protected virtual Func<Func<Task>, Task> ScheduleReconnectWork => work => Task.Run(work);
 
     void Establish()
@@ -113,6 +117,8 @@ public class all_dependencies : Specification
             GenerationDelivery = GenerationDelivery,
             MaxConcurrentPartitions = MaxConcurrentPartitions,
             ReconnectDelay = ReconnectDelay,
+            ReconnectJitter = ReconnectJitter,
+            WaitBeforeReconnect = WaitBeforeReconnect,
             ScheduleReconnectWork = ScheduleReconnectWork
         };
     }

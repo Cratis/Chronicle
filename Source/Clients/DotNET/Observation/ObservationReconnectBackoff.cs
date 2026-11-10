@@ -38,7 +38,13 @@ internal sealed class ObservationReconnectBackoff(
     /// <summary>
     /// The default time a stream must stay open to count as having worked.
     /// </summary>
-    internal static readonly TimeSpan DefaultHealthyStreamDuration = TimeSpan.FromSeconds(30);
+    /// <remarks>
+    /// It must be longer than the kernel takes to give up establishing a stream: the kernel asks a busy observer again on
+    /// the same stream, up to four attempts of a thirty-second grain call each, before it fails the stream. A shorter
+    /// threshold would count every such stream as having worked and start the wait over at the base delay - exactly for the
+    /// herd of slow subscribes the backoff exists for. A stream that has delivered something counts as having worked at once.
+    /// </remarks>
+    internal static readonly TimeSpan DefaultHealthyStreamDuration = TimeSpan.FromMinutes(3);
 
     const int MaxExponent = 30;
 
