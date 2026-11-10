@@ -6,9 +6,10 @@ namespace Cratis.Chronicle.SingleWriter.for_SingleWriterLease.when_handing_over;
 /// <summary>
 /// A start-before-stop rollout: the replacement starts while the current kernel still holds the lease. The
 /// replacement's silo lifecycle stage does not complete, so nothing after it (gateway, rehydration, event
-/// processing) runs until the current kernel has stopped and released the lease.
+/// processing) runs until the current kernel has stopped and released the lease. The keeper behaves the same
+/// whether or not standby is enabled; standby only changes what readiness reports.
 /// </summary>
-public class and_standby_is_enabled : given.two_kernels_sharing_one_lease
+public class and_the_replacement_starts_before_the_current_kernel_stops : given.two_kernels_sharing_one_lease
 {
     bool _currentHeldWhileReplacementWaited;
     bool _replacementHeldWhileCurrentRan;
@@ -22,6 +23,9 @@ public class and_standby_is_enabled : given.two_kernels_sharing_one_lease
     {
         await CurrentLifecycle.OnStart(CancellationToken.None);
 
+        // The first timer created is the AcquireTimeout cancellation timer, not the retry delay. This relies on the
+        // shared store completing synchronously, so the first attempt has already been refused by then; an
+        // asynchronous store would race here.
         var waiting = Time.WhenNextTimer();
         _replacementStart = ReplacementLifecycle.OnStart(CancellationToken.None);
         await waiting;
@@ -42,7 +46,7 @@ public class and_standby_is_enabled : given.two_kernels_sharing_one_lease
 
     [Fact] void should_keep_the_current_kernel_as_the_only_writer() => _currentHeldWhileReplacementWaited.ShouldBeTrue();
     [Fact] void should_not_let_the_replacement_hold_while_the_current_kernel_runs() => _replacementHeldWhileCurrentRan.ShouldBeFalse();
-    [Fact] void should_report_the_replacement_as_waiting_for_standby() => _replacementWaitedWhileCurrentRan.ShouldBeTrue();
+    [Fact] void should_report_the_replacement_as_waiting() => _replacementWaitedWhileCurrentRan.ShouldBeTrue();
     [Fact] void should_not_start_the_replacement_lifecycle_while_the_current_kernel_runs() => _replacementStartedWhileCurrentRan.ShouldBeFalse();
     [Fact] void should_release_the_lease_when_the_current_kernel_stops() => _currentHeldAfterStopping.ShouldBeFalse();
     [Fact] void should_not_hold_before_the_replacement_acquires() => _replacementHeldBeforeAcquiring.ShouldBeFalse();

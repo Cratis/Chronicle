@@ -16,6 +16,8 @@ public class and_the_lease_is_held_then_released : given.a_keeper
 
     async Task Because()
     {
+        // The first timer created is the AcquireTimeout cancellation timer, not the retry delay. This relies on the
+        // storage substitute completing synchronously; an asynchronous one would race here.
         var waiting = Time.WhenNextTimer();
         var start = Observer.OnStart(CancellationToken.None);
         await waiting;

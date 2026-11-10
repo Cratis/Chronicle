@@ -25,7 +25,6 @@ public class two_kernels_sharing_one_lease : Specification
         Store = new();
         Time = new();
         Options = new();
-        Options.Clustering.SingleWriterLease.Standby = true;
         (Current, CurrentLifecycle) = CreateKernel();
         (Replacement, ReplacementLifecycle) = CreateKernel();
     }
