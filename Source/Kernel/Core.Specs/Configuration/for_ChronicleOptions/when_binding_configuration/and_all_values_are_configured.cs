@@ -33,6 +33,7 @@ public class and_all_values_are_configured : Specification
                 ["Cratis:Chronicle:Storage:PostgreSqlPooling:ConnectionPruningIntervalSeconds"] = "4",
                 ["Cratis:Chronicle:Observers:SubscriptionReadyTimeout"] = "8",
                 ["Cratis:Chronicle:Observers:MaxConcurrentRegistrations"] = "4",
+                ["Cratis:Chronicle:Observers:MaxConcurrentSubscriptions"] = "6",
                 ["Cratis:Chronicle:Events:QueueDepletionWaitTimeoutMilliseconds"] = "750",
                 ["Cratis:Chronicle:Events:CausationPropertyRetention"] = "Omit",
                 ["Cratis:Chronicle:Health:Port"] = "8080",
@@ -62,6 +63,7 @@ public class and_all_values_are_configured : Specification
     [Fact] void should_bind_the_live_query_poll_interval() => _options.Sql.LiveQueryPollIntervalSeconds.ShouldEqual(6);
     [Fact] void should_bind_the_subscription_ready_timeout() => _options.Observers.SubscriptionReadyTimeout.ShouldEqual(8);
     [Fact] void should_bind_the_max_concurrent_registrations() => _options.Observers.MaxConcurrentRegistrations.ShouldEqual(4);
+    [Fact] void should_bind_the_max_concurrent_subscriptions() => _options.Observers.MaxConcurrentSubscriptions.ShouldEqual(6);
     [Fact] void should_bind_the_queue_depletion_wait_timeout() => _options.Events.QueueDepletionWaitTimeoutMilliseconds.ShouldEqual(750);
     [Fact] void should_bind_the_causation_property_retention() => _options.Events.CausationPropertyRetention.ShouldEqual(CausationPropertyRetention.Omit);
     [Fact] void should_bind_the_health_port() => _options.Health.Port.ShouldEqual(8080);

@@ -151,7 +151,7 @@ internal sealed class Reducers(
                     namespaceName = registration.Namespace;
 
                     var reducerDefinition = registration.Reducer.ToChronicle() with { PageDelivery = registration.PageDelivery.ToChronicle() };
-                    using (await registrationGate.Enter(cancellation.Token))
+                    using (var gate = await ObserverRegistrationGateLease.Enter(registrationGate, cancellation.Token))
                     {
                         try
                         {
@@ -285,7 +285,12 @@ internal sealed class Reducers(
                             span?.Activity?.Tag(key, ObserverType.Reducer);
 
                             clientObserver = grainFactory.GetGrain<IReducer>(key);
-                            await clientObserver.SetDefinitionAndSubscribe(reducerDefinition);
+                            var reducer = clientObserver;
+                            await ObserverRegistrationEstablishment.Establish(
+                                () => reducer.SetDefinitionAndSubscribe(reducerDefinition),
+                                (attempt, _) => logger.SubscribingTimedOut(registration.Reducer.ReducerId, registration.ConnectionId, attempt),
+                                () => gate.Reenter(cancellation.Token),
+                                cancellation.Token);
                         }
                         catch (Exception exception)
                         {

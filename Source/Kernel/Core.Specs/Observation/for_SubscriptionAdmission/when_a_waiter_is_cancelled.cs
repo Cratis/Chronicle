@@ -1,14 +1,14 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Chronicle.Projections.for_ProjectionSubscriptionThrottle;
+namespace Cratis.Chronicle.Observation.for_SubscriptionAdmission;
 
 /// <summary>
 /// Cancellation and timeout confer no grant and do not change capacity.
 /// </summary>
 public class when_a_waiter_is_cancelled : Specification
 {
-    readonly ProjectionSubscriptionThrottle _throttle = new();
+    readonly SubscriptionAdmission _throttle = new(8, Environment.ProcessorCount);
     readonly CancellationTokenSource _cancellation = new();
     Exception? _error;
     bool _timedOut;

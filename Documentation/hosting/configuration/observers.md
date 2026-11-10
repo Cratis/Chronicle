@@ -25,6 +25,7 @@ Observer configuration controls retry behavior, timeouts, watchdog monitoring, a
     "watchdogInterval": 60,
     "maxConcurrentPartitions": 32,
     "maxConcurrentRegistrations": 0,
+    "maxConcurrentSubscriptions": 0,
     "fanOutStrategy": "round-robin",
     "subscriptionReadyTimeout": 5,
     "statePersistenceBatchInterval": 100,
@@ -58,6 +59,7 @@ The example shows the defaults of a production build. The `-development` image s
 | maxCatchupRecoveryAttempts | number | 5 | How many watchdog checks in a row may retry a stuck catch-up preparation, or a recovery that failed after quarantine was cleared, before the watchdog quarantines the observer. `0` or less quarantines on the first retry. See [Ending quarantine](#ending-quarantine) |
 | maxConcurrentPartitions | number | 32 | Upper bound on how many job steps (replay and catch-up work) run in parallel. The effective limit is the smaller of this value and `jobs.maxParallelSteps`. Despite the name it does not limit live event delivery. See [Job throttling](job-throttling.md) |
 | maxConcurrentRegistrations | number | 0 (unlimited) | Maximum gRPC reactor and reducer registrations running concurrently on each silo. When configured above 0, excess registrations wait before any registration grain or read-model lookup. Values below 1 disable the gate. Does not limit event append or observer delivery. See [Registration concurrency](#registration-concurrency) |
+| maxConcurrentSubscriptions | number | 0 (automatic) | Maximum projection subscriptions and failed-partition recovery batches running concurrently on each silo, shared by every event store. `0` or less selects two per processor, at least 4 and at most 16. See [Subscription concurrency](#subscription-concurrency) |
 | fanOutStrategy | string | round-robin | Strategy for distributing events across multiple connected instances of the same client. `round-robin` distributes deterministically by partition key, keeping every partition sticky to one instance and preserving per-partition ordering. `random` picks a random instance per delivery |
 | subscriptionReadyTimeout | number | 5 | Seconds the Kernel waits for an event store subscription to become ready before it returns to the client. The wait keeps events from being missed when the client starts appending right away. When it elapses the subscription can still activate afterwards and the client is not blocked further. Raise it only when clients report subscriptions that are not ready on a slow or busy cluster |
 | statePersistenceBatchInterval | number | 100 | Number of batches that contain nothing the observer subscribes to after which its position (`NextEventSequenceNumber`) is made durable. The watchdog tick and deactivation also flush it. After a crash, catch-up re-scans events the observer already skipped, so nothing is lost or handled twice. A larger value means fewer writes and a longer re-scan after a crash |
@@ -70,9 +72,19 @@ The example shows the defaults of a production build. The `-development` image s
 
 `maxConcurrentRegistrations` limits registration work from gRPC reactors and reducers together on each silo. It defaults to `0` (unlimited); values below `1` disable the gate. With the gate disabled, no semaphore is created and registration does not wait. Set a positive limit to opt in: excess registrations wait before their first grain or read-model lookup, and waiting ends if the client disconnects.
 
-A permit covers the registration lookups and subscription, not the lifetime of the connection. Once registration succeeds or fails, the permit is released. A disconnect cancels a queued registration; work already in flight retains its permit until it finishes. Reconnecting clients acquire a new permit. Event append, observer delivery and subscription maintenance do not acquire permits. This is a per-silo limit, not a cluster-wide limit, and is independent of `maxConcurrentPartitions`.
+A permit covers the registration lookups and subscription, not the lifetime of the connection. Once registration succeeds or fails, the permit is released. A disconnect cancels a queued registration; work already in flight retains its permit until it finishes. Reconnecting clients acquire a new permit. When subscribing times out because the observer is busy, the registration gives its permit back and queues for a new one before it asks again, so a busy observer does not keep other registrations out for every attempt it makes. Event append, observer delivery and subscription maintenance do not acquire permits. This is a per-silo limit, not a cluster-wide limit, and is independent of `maxConcurrentPartitions`.
 
 Set it through JSON as shown above, or with `Cratis__Chronicle__Observers__MaxConcurrentRegistrations` as an environment variable.
+
+## Subscription concurrency
+
+`maxConcurrentSubscriptions` limits how many projection subscriptions and failed-partition recovery batches run at once on each silo. The limit is shared by every event store on the silo, so a cold start with many event stores does not subscribe and recover more at once than a silo with one.
+
+It defaults to `0`, which selects the limit from the machine: two per processor, at least 4 and at most 16. A 2-core pod gets 4 and a 4-core pod gets 8. Values below `1` select this automatic limit. Raise it only when storage can serve more concurrent work, because extra work beyond what storage can serve waits in its connection pool instead.
+
+Projection subscriptions wait for a free slot. Recovery batches together use at most half of the slots, and always at least one, so the rest stay free for projection subscriptions however long a recovery takes. A recovery batch does not wait for a slot; it tries again after a randomized delay of 0.5 to 1.5 seconds, so recoveries yield to subscriptions while a silo starts and do not all retry at the same moment.
+
+Set it through JSON as shown above, or with `Cratis__Chronicle__Observers__MaxConcurrentSubscriptions` as an environment variable.
 
 ## Per-observer retry overrides
 

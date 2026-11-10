@@ -3,22 +3,22 @@
 
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Cratis.Chronicle.Projections.for_ProjectionSubscriptionThrottle;
+namespace Cratis.Chronicle.Observation.for_SubscriptionAdmission;
 
 /// <summary>
 /// Saturating and disposing one host does not consume or dispose another host's admission.
 /// </summary>
 public class when_resolving_in_two_independent_hosts : given.two_convention_bound_hosts
 {
-    IProjectionSubscriptionThrottle _firstThrottle;
-    IProjectionSubscriptionThrottle _secondThrottle;
+    ISubscriptionAdmission _firstThrottle;
+    ISubscriptionAdmission _secondThrottle;
     bool _independentCapacity = true;
 
     async Task Because()
     {
-        _firstThrottle = _first.Services.GetRequiredService<IProjectionSubscriptionThrottle>();
-        _secondThrottle = _second.Services.GetRequiredService<IProjectionSubscriptionThrottle>();
-        for (var index = 0; index < 8; index++)
+        _firstThrottle = _first.Services.GetRequiredService<ISubscriptionAdmission>();
+        _secondThrottle = _second.Services.GetRequiredService<ISubscriptionAdmission>();
+        for (var index = 0; index < _firstThrottle.Limit; index++)
         {
             _independentCapacity &= await _firstThrottle.WaitAsync(TimeSpan.Zero, CancellationToken.None);
             _independentCapacity &= await _secondThrottle.WaitAsync(TimeSpan.Zero, CancellationToken.None);
@@ -27,17 +27,17 @@ public class when_resolving_in_two_independent_hosts : given.two_convention_boun
         _independentCapacity &= !await _firstThrottle.WaitAsync(TimeSpan.Zero, CancellationToken.None);
         _independentCapacity &= !await _secondThrottle.WaitAsync(TimeSpan.Zero, CancellationToken.None);
         _first.Dispose();
-        for (var index = 0; index < 8; index++)
+        for (var index = 0; index < _firstThrottle.Limit; index++)
         {
             _firstThrottle.Release();
             _secondThrottle.Release();
         }
 
-        for (var index = 0; index < 8; index++) _independentCapacity &= await _secondThrottle.WaitAsync(TimeSpan.Zero, CancellationToken.None);
+        for (var index = 0; index < _firstThrottle.Limit; index++) _independentCapacity &= await _secondThrottle.WaitAsync(TimeSpan.Zero, CancellationToken.None);
         _independentCapacity &= !await _secondThrottle.WaitAsync(TimeSpan.Zero, CancellationToken.None);
-        for (var index = 0; index < 8; index++) _secondThrottle.Release();
+        for (var index = 0; index < _firstThrottle.Limit; index++) _secondThrottle.Release();
     }
 
     [Fact] void should_use_distinct_host_instances() => ReferenceEquals(_firstThrottle, _secondThrottle).ShouldBeFalse();
-    [Fact] void should_give_each_host_its_own_eight_permits() => _independentCapacity.ShouldBeTrue();
+    [Fact] void should_give_each_host_its_own_permits() => _independentCapacity.ShouldBeTrue();
 }

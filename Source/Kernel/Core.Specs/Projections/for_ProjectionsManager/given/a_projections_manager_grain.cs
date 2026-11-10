@@ -13,6 +13,7 @@ using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Namespaces;
+using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Projections.Engine;
 using Cratis.Chronicle.Projections.Engine.DeclarationLanguage;
 using Cratis.Chronicle.Properties;
@@ -38,7 +39,7 @@ public class a_projections_manager_grain : Specification
     protected IProjectionFactory _projectionFactory;
     protected Engine.IProjection _engineProjection;
     protected AdvancingClock _clock;
-    protected IProjectionSubscriptionThrottle _throttle;
+    protected ISubscriptionAdmission _throttle;
     protected IReadModelsManager _readModelsManager;
     protected Observation.IObserver _observerGrain;
     protected readonly Dictionary<string, Observation.IObserver> _observersByKey = [];
@@ -183,7 +184,7 @@ public class a_projections_manager_grain : Specification
     /// Creates admission for this independent fixture.
     /// </summary>
     /// <returns>The activation's host admission gate.</returns>
-    protected virtual IProjectionSubscriptionThrottle CreateThrottle() => new ProjectionSubscriptionThrottle();
+    protected virtual ISubscriptionAdmission CreateThrottle() => new SubscriptionAdmission(8, Environment.ProcessorCount);
 
     void AddClusterMembership()
     {
