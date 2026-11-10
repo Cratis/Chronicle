@@ -20,11 +20,15 @@ namespace Cratis.Chronicle.Observation.Jobs;
 /// The instruments are new and have no legacy name, so they are published under the convention names and attribute
 /// keys whatever Telemetry:MetricNames selects. No job id is ever an attribute: running jobs are counted per
 /// event store, namespace and job type, and progress is summed per observer and job type.
+/// The running count keeps reporting zero for a combination that had a job once it has none. Progress is reported only
+/// while a job runs, but under cumulative temporality the SDK keeps a series' slot until the process stops, so the
+/// progress series per instrument are bounded by the observers that ran a catch-up or replay while the process ran.
 /// </remarks>
 [Singleton]
 public sealed class ObserverJobGauges : IObserverJobGauges
 {
     readonly ConcurrentDictionary<JobId, ObserverJobGaugeEntry> _entries = new();
+    readonly ConcurrentDictionary<RunningGroup, byte> _runningGroups = new();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ObserverJobGauges"/> class.
@@ -59,6 +63,7 @@ public sealed class ObserverJobGauges : IObserverJobGauges
     public ObserverJobGaugeEntry Register(JobId jobId, ObserverKey observerKey, ObserverJobGaugeType jobType)
     {
         var entry = new ObserverJobGaugeEntry(jobId, observerKey, jobType, Release);
+        _runningGroups.TryAdd(new(observerKey.EventStore.Value, observerKey.Namespace.Value, jobType), 0);
         _entries[jobId] = entry;
         return entry;
     }
@@ -77,16 +82,21 @@ public sealed class ObserverJobGauges : IObserverJobGauges
     /// <summary>
     /// Observes how many observer jobs run per event store, namespace and job type.
     /// </summary>
-    /// <returns>One measurement per combination that has running jobs.</returns>
-    internal IEnumerable<Measurement<int>> ObserveRunning() =>
-        _entries.Values
-            .GroupBy(_ => (EventStore: _.ObserverKey.EventStore.Value, Namespace: _.ObserverKey.Namespace.Value, _.JobType))
-            .Select(_ => new Measurement<int>(
-                _.Count(),
-                new KeyValuePair<string, object?>(WellKnownTelemetryAttributes.EventStoreName, _.Key.EventStore),
-                new KeyValuePair<string, object?>(WellKnownTelemetryAttributes.EventStoreNamespace, _.Key.Namespace),
-                new KeyValuePair<string, object?>(WellKnownTelemetryAttributes.JobType, For(_.Key.JobType))))
+    /// <returns>One measurement per combination that had a running job in this process, zero when it has none now.</returns>
+    internal IEnumerable<Measurement<int>> ObserveRunning()
+    {
+        var counts = _entries.Values
+            .GroupBy(_ => new RunningGroup(_.ObserverKey.EventStore.Value, _.ObserverKey.Namespace.Value, _.JobType))
+            .ToDictionary(_ => _.Key, _ => _.Count());
+
+        return _runningGroups.Keys
+            .Select(group => new Measurement<int>(
+                counts.GetValueOrDefault(group),
+                new KeyValuePair<string, object?>(WellKnownTelemetryAttributes.EventStoreName, group.EventStore),
+                new KeyValuePair<string, object?>(WellKnownTelemetryAttributes.EventStoreNamespace, group.Namespace),
+                new KeyValuePair<string, object?>(WellKnownTelemetryAttributes.JobType, For(group.JobType))))
             .ToArray();
+    }
 
     /// <summary>
     /// Observes the completed steps of the running jobs, summed per observer and job type.
@@ -114,4 +124,6 @@ public sealed class ObserverJobGauges : IObserverJobGauges
 
     void Release(ObserverJobGaugeEntry entry) =>
         _entries.TryRemove(new KeyValuePair<JobId, ObserverJobGaugeEntry>(entry.JobId, entry));
+
+    sealed record RunningGroup(string EventStore, string Namespace, ObserverJobGaugeType JobType);
 }

@@ -23,6 +23,7 @@ public class and_the_job_was_released : given.the_observer_job_gauges
         _total = Collect("cratis.chronicle.observer.job.total_steps");
     }
 
-    [Fact] void should_not_count_the_job_as_running() => _running.ShouldBeEmpty();
+    [Fact] void should_report_zero_running_jobs_for_its_combination() => _running.Single().Value.ShouldEqual(0);
+    [Fact] void should_report_them_for_its_job_type() => _running.Single().TagMap["cratis.chronicle.job.type"].ShouldEqual("replay");
     [Fact] void should_not_report_its_progress() => _total.ShouldBeEmpty();
 }
