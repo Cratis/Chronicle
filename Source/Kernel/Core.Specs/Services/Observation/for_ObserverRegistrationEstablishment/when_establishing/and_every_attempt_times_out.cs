@@ -15,6 +15,7 @@ public class and_every_attempt_times_out : Specification
             throw new TimeoutException();
         },
         (_, _) => { },
+        () => Task.CompletedTask,
         CancellationToken.None));
 
     [Fact] void should_stop_after_the_bounded_number_of_attempts() => _calls.ShouldEqual(ObserverRegistrationEstablishment.MaxAttempts);

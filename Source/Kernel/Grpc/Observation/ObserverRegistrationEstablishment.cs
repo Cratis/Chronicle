@@ -20,6 +20,10 @@ namespace Cratis.Chronicle.Services.Observation;
 /// that one has run, without adding an unsubscribe and a re-registration to the queue. The number of attempts is bounded,
 /// so an observer that stays wedged still fails the stream and leaves the next attempt to the client's backoff.
 /// </para>
+/// <para>
+/// Between attempts the caller gets a turn to give back what it holds while it waits - the registration gate slot - so
+/// a wedged observer does not keep healthy registrations out for every attempt it makes.
+/// </para>
 /// </remarks>
 internal static class ObserverRegistrationEstablishment
 {
@@ -33,10 +37,15 @@ internal static class ObserverRegistrationEstablishment
     /// </summary>
     /// <param name="establish">The idempotent call establishing the subscription.</param>
     /// <param name="attemptTimedOut">Called with the attempt number and its timeout when an attempt is tried again.</param>
+    /// <param name="betweenAttempts">Called before an attempt that follows a timed-out one, such as to re-enter the registration gate.</param>
     /// <param name="cancellationToken">The stream's cancellation; once cancelled, a timeout is not tried again.</param>
     /// <returns>Awaitable task.</returns>
     /// <exception cref="TimeoutException">The last attempt timed out.</exception>
-    internal static async Task Establish(Func<Task> establish, Action<int, TimeoutException> attemptTimedOut, CancellationToken cancellationToken)
+    internal static async Task Establish(
+        Func<Task> establish,
+        Action<int, TimeoutException> attemptTimedOut,
+        Func<Task> betweenAttempts,
+        CancellationToken cancellationToken)
     {
         for (var attempt = 1; ; attempt++)
         {
@@ -48,6 +57,7 @@ internal static class ObserverRegistrationEstablishment
             catch (TimeoutException exception) when (attempt < MaxAttempts && !cancellationToken.IsCancellationRequested)
             {
                 attemptTimedOut(attempt, exception);
+                await betweenAttempts();
             }
         }
     }

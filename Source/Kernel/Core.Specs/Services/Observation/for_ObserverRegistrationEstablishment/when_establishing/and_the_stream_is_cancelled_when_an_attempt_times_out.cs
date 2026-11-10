@@ -17,6 +17,7 @@ public class and_the_stream_is_cancelled_when_an_attempt_times_out : Specificati
             throw new TimeoutException();
         },
         (_, _) => { },
+        () => Task.CompletedTask,
         _cancellation.Token));
 
     void Destroy() => _cancellation.Dispose();

@@ -202,7 +202,7 @@ internal sealed class Reactors(
                     replay);
 
                 var definition = registration.Reactor.ToChronicle() with { PageDelivery = registration.PageDelivery.ToChronicle() };
-                using (await registrationGate.Enter(cancellation.Token))
+                using (var gate = await ObserverRegistrationGateLease.Enter(registrationGate, cancellation.Token))
                 {
                     // The parent is the long-lived Observe request, which the server deliberately does not trace.
                     var requestActivity = Activity.Current;
@@ -215,7 +215,8 @@ internal sealed class Reactors(
                         var reactor = clientObserver;
                         await ObserverRegistrationEstablishment.Establish(
                             () => reactor.SetDefinitionAndSubscribe(definition),
-                            (attempt, exception) => logger.SubscribingTimedOut(registration.Reactor.ReactorId, registration.ConnectionId, attempt, exception),
+                            (attempt, _) => logger.SubscribingTimedOut(registration.Reactor.ReactorId, registration.ConnectionId, attempt),
+                            () => gate.Reenter(cancellation.Token),
                             cancellation.Token);
                     }
                     finally

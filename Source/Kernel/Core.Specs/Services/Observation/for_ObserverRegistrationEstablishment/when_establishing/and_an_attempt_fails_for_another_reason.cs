@@ -16,6 +16,7 @@ public class and_an_attempt_fails_for_another_reason : Specification
             throw _failure;
         },
         (_, _) => { },
+        () => Task.CompletedTask,
         CancellationToken.None));
 
     [Fact] void should_not_ask_again() => _calls.ShouldEqual(1);
