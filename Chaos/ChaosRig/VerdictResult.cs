@@ -21,4 +21,9 @@ internal sealed record VerdictResult(int Lost, int Duplicated, int Gaps, int Obs
     /// Gets whether every consistency check passed.
     /// </summary>
     public bool IsClean => Lost + Duplicated + Gaps + ObserversBehind + ProjectionsBehind + ReducersBehind + FailedPartitions + ReactorDuplicates == 0 && Violations.Count == 0;
+
+    /// <summary>
+    /// Gets zero for a complete clean run or one when defects were found.
+    /// </summary>
+    public int ExitCode => IsClean ? 0 : 1;
 }

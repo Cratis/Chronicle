@@ -164,8 +164,8 @@ internal static class ChaosRun
         var verdict = Verdict.Compare(snapshot);
         await Save(options.Output, "verdict.json", verdict, cancellation);
         foreach (var violation in verdict.Violations) Console.WriteLine($"VIOLATION: {violation}");
-        Console.WriteLine(VerdictFormatter.Format(verdict, options.Seed));
-        return verdict.IsClean ? 0 : 2;
+        Console.WriteLine(VerdictFormatter.Format(verdict, options.Seed, snapshot.Events.Count, snapshot.Observers.Count));
+        return verdict.ExitCode;
     }
 
     static Task Save<T>(string directory, string file, T value, CancellationToken cancellation) => File.WriteAllTextAsync(Path.Combine(directory, file), JsonSerializer.Serialize(value, _json), cancellation);

@@ -39,11 +39,11 @@ It prints the seed, run ID, output directory, and planned fault times before sta
 | `--faults <list>` | `all` | Comma-separated names below, or `none` |
 | `--output <path>` | `Chaos/runs/<UTC>-<seed>` | Logs and snapshots; ignored by Git |
 | `--keep-containers` | off | Retain containers/network and data for inspection |
-| `--self-test-violation` | off | Remove one acknowledged event from the collected in-memory snapshot; must produce a dirty verdict and exit 2 |
+| `--self-test-violation` | off | Remove one acknowledged event from the collected in-memory snapshot; must produce a dirty verdict and exit 1 |
 
 Durations must be positive. A window too short for a fault plus recovery has an empty fault schedule. `--faults none` is the baseline smoke run.
 
-Infrastructure and worker readiness share a three-minute startup budget. Once both workers are ready, an absolute `duration + settle` deadline includes faults, recovery, reader startup, and collection; individual operations cannot extend it. Deadline expiry records `failure.json` and exits **1**, not a clean or dirty durability verdict. Docker control commands have a thirty-second limit. Child exit and output drainage are bounded separately, and cleanup has its own sixty-second budget. A stopped child receives CONT in scheduler recovery and before termination, independent of run cancellation. If cleanup times out, use the explicit cleanup command below.
+Infrastructure and worker readiness share a three-minute startup budget. Once both workers are ready, an absolute `duration + settle` deadline includes faults, recovery, reader startup, and collection; individual operations cannot extend it. Deadline expiry records `failure.json` and exits **2**, not a clean or dirty durability verdict. Docker control commands have a thirty-second limit. Child exit and output drainage are bounded separately, and cleanup has its own sixty-second budget. A stopped child receives CONT in scheduler recovery and before termination, independent of run cancellation. If cleanup times out, use the explicit cleanup command below.
 
 ## Faults
 
@@ -73,7 +73,7 @@ A clean verdict requires three consecutive clean snapshots: every acknowledged I
 Example output:
 
 ```text
-VERDICT: clean (seed 42)
+VERDICT: clean, 120 events checked, 3 observers checked (seed 42)
 VERDICT: 1 lost, 0 duplicated, 0 gaps, 0 observers behind, 0 projections behind, 0 reducers behind, 0 failed partitions, 0 reactor duplicates (seed 42)
 ```
 
@@ -82,14 +82,14 @@ Additional drain/content failures are printed as `VIOLATION:` and included in `v
 | Exit | Meaning |
 | --- | --- |
 | `0` | Complete, clean verdict |
-| `2` | Complete snapshot with a durability/drain violation |
-| `1` | Bad arguments, cancellation, infrastructure failure, or no complete snapshot |
+| `1` | Complete snapshot with a durability/drain violation |
+| `2` | Bad arguments, cancellation, infrastructure failure, or no complete snapshot |
 
-These codes intentionally follow this rig's plan (not a general-purpose scanner's convention).
+These codes follow the repository contract: 0 ran clean, 1 found defects, 2 could not run. The self-test must exit 1.
 
 ## Output and cleanup
 
-The output directory contains `options.json`, `schedule.json`, stdout/stderr logs per child generation and container, `snapshot.json`, and `verdict.json`. A self-test additionally writes its modified snapshot; the original remains unchanged. An incomplete run instead records `failure.json` with the seed, run ID, timeout/cancellation/infrastructure classification, diagnostic reason, and exit code 1. Settle exceptions are logged separately. Do not commit run outputs; inspect/redact logs before sharing.
+The output directory contains `options.json`, `schedule.json`, stdout/stderr logs per child generation and container, `snapshot.json`, and `verdict.json`. A self-test additionally writes its modified snapshot; the original remains unchanged. An incomplete run instead records `failure.json` with the seed, run ID, timeout/cancellation/infrastructure classification, diagnostic reason, and exit code 2. Settle exceptions are logged separately. Do not commit run outputs; inspect/redact logs before sharing.
 
 Normal completion, exceptions and Ctrl-C terminate owned child processes and remove labeled containers, anonymous data volumes, and the network. `--keep-containers` retains Docker resources but still terminates child processes. If the driver itself is killed, clean up explicitly:
 

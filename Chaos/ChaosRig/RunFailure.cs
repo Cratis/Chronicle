@@ -15,7 +15,7 @@ internal sealed record RunFailure(int Seed, string RunId, string Status, string 
     /// <summary>
     /// Gets the README's could-not-run exit code, never a dirty durability verdict.
     /// </summary>
-    public int ExitCode => 1;
+    public int ExitCode => 2;
 
     /// <summary>
     /// Classifies an incomplete run without interpreting it as a product defect.

@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json;
 using Cratis.Specifications;
 using Xunit;
 
@@ -15,7 +16,8 @@ public class when_classifying_incomplete_runs : Specification
 
     void Because() => _failure = RunFailure.From(1, "run", new TimeoutException("control operation timed out"), userCanceled: false);
 
-    [Fact] void should_use_the_could_not_run_exit_code() => _failure.ExitCode.ShouldEqual(1);
+    [Fact] void should_use_the_could_not_run_exit_code() => _failure.ExitCode.ShouldEqual(2);
+    [Fact] void should_serialize_the_could_not_run_exit_code() => JsonSerializer.Serialize(_failure).ShouldContain("\"ExitCode\":2");
     [Fact] void should_record_timeout_status() => _failure.Status.ShouldEqual("timeout");
     [Fact] void should_preserve_the_seed() => _failure.Seed.ShouldEqual(1);
     [Fact] void should_preserve_diagnostics() => _failure.Reason.ShouldContain("control operation timed out");

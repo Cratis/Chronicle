@@ -36,7 +36,7 @@ internal static class Program
         catch (Exception exception)
         {
             await Console.Error.WriteLineAsync(exception.ToString());
-            return 1;
+            return 2;
         }
     }
 
