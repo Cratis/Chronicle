@@ -61,6 +61,8 @@ The setting has no effect unless `storage` is configured. Without a dedicated st
 | Property | Type | Required | Description |
 | --- | --- | --- | --- |
 | migrateFromDefaultStorage | bool | No | Keep the general storage backend serving encryption keys alongside `storage`, moving each key into `storage` as it is read. Defaults to `false` |
+| revocationGrace | time span | No | Grace allowed for a release that already holds key material before an erasure is confirmed. Defaults to `00:00:05`. Raise it if erasures are confirmed while a slow release still uses the key |
+| fenceTimeout | time span | No | Longest a single encryption key fence read or write may wait for the key store. Defaults to `00:00:03`. An erasure that cannot be served in this time fails with `EncryptionKeyFenceUnavailable` |
 
 As an environment variable:
 

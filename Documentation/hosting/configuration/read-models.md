@@ -10,7 +10,8 @@ Read model configuration controls how many revert containers Chronicle keeps aft
 {
   "readModels": {
     "replayedVersionsToKeep": 1,
-    "maxBatchSize": 500
+    "maxBatchSize": 500,
+    "guardSinkWritesOnWatermark": true
   }
 }
 ```
@@ -19,6 +20,7 @@ Read model configuration controls how many revert containers Chronicle keeps aft
 | --- | --- | --- | --- |
 | replayedVersionsToKeep | number | 1 | Number of replay occurrences to keep per read model. `snapshotsToKeep` is an alias that sets the same value. |
 | maxBatchSize | number | 500 | Maximum number of items per read-model batch. Must be greater than zero |
+| guardSinkWritesOnWatermark | boolean | true | Makes a read model write conditional on the incoming event advancing the read model's last handled event sequence number, so a re-delivered event after a crash is a no-op instead of being folded in twice. Chronicle requests the guard only for read models keyed by event source id. A projection whose key collapses several event sources onto one document (a join, a constant key or a parent hierarchy) is never guarded. Set it to `false` only to restore the behavior of earlier versions. See [Step checkpoints](job-throttling.md#step-checkpoints) |
 
 There is no age-based setting. Chronicle counts occurrences; it does not look at how old they are.
 
