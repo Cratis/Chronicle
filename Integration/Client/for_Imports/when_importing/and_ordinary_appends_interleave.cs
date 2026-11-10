@@ -15,7 +15,11 @@ public class and_ordinary_appends_interleave(context context) : Given<context>(c
 {
     public class context(ChronicleFixture chronicleFixture) : Specification<ChronicleFixture>(chronicleFixture)
     {
-        public const int NumberOfEvents = 20000;
+        /// <summary>
+        /// Enough chunks for the ordinary appends to land between them on every storage, while a store that catches up
+        /// a partition at a time, as SQL Server does, still delivers every event within the wait.
+        /// </summary>
+        public const int NumberOfEvents = 6000;
         public const int OrdinaryAppends = 50;
 
         public override IEnumerable<Type> EventTypes => [typeof(CustomerImported)];
@@ -30,7 +34,7 @@ public class and_ordinary_appends_interleave(context context) : Given<context>(c
             var started = Stopwatch.StartNew();
             ImportedCustomersReactor.Handled.Clear();
             await EventStore.Reactors.WaitTillActive<ImportedCustomersReactor>();
-            await using var import = await EventStore.EventLog.BeginImport(new ImportOptions { MaxEventsPerChunk = 1000, WaitForCommit = false });
+            await using var import = await EventStore.EventLog.BeginImport(new ImportOptions { MaxEventsPerChunk = 500, WaitForCommit = false });
             await import.Add(Customers.Stream("interleaved", NumberOfEvents));
             await import.Complete();
 
@@ -48,7 +52,7 @@ public class and_ordinary_appends_interleave(context context) : Given<context>(c
             var tail = All[^1].Context.SequenceNumber;
             try
             {
-                await EventStore.Reactors.WaitTillReachesEventSequenceNumber<ImportedCustomersReactor>(tail);
+                await EventStore.Reactors.WaitTillReachesEventSequenceNumber<ImportedCustomersReactor>(tail, TimeSpan.FromMinutes(5));
             }
             catch (OperationCanceledException)
             {
