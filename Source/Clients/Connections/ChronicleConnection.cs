@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Diagnostics;
+using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Captures;
@@ -27,6 +28,7 @@ using Cratis.Chronicle.Contracts.Security;
 using Cratis.Chronicle.Contracts.Seeding;
 using Cratis.Execution;
 using Cratis.Tasks;
+using DnsClient;
 using Grpc.Core;
 using Grpc.Core.Interceptors;
 using Grpc.Net.Client;
@@ -502,8 +504,8 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         _logger.Connecting(_connectionString.Redacted);
         DisposeCurrentAttempt();
 
-        var untried = (await _serverAddressResolver.Resolve(_connectionString)).ToList();
-        var connected = await TryConnectToAnyCandidate(untried);
+        var untried = await ResolveCandidates();
+        var connected = untried.Count > 0 && await TryConnectToAnyCandidate(untried);
 
         if (_skipKeepAlive)
         {
@@ -536,6 +538,30 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             // client starts is ordinary, and a host that cannot boot through it is worse than one that keeps
             // trying - so the first connect keeps waiting on the watchdog rather than failing its caller.
             HandleConnectTimedOut();
+        }
+    }
+
+    /// <summary>
+    /// Resolves the servers to try for this attempt.
+    /// </summary>
+    /// <returns>The servers, or none when they could not be resolved and the watchdog will try again.</returns>
+    /// <remarks>
+    /// Resolving is done afresh for every attempt, so a replaced server is found once its records are. While none are
+    /// published - every pod of a rollout not yet ready, for a <c language="text">chronicle+srv</c> connection string - the kernel is as
+    /// unreachable as one that does not answer, and is treated the same way: the attempt fails, and the watchdog keeps
+    /// resolving in the background instead of the failure taking the host down on its first connect. Without the
+    /// watchdog nothing would try again, so the failure is surfaced as it is.
+    /// </remarks>
+    async Task<List<ChronicleServerAddress>> ResolveCandidates()
+    {
+        try
+        {
+            return [.. await _serverAddressResolver.Resolve(_connectionString)];
+        }
+        catch (Exception ex) when (!_skipKeepAlive && ex is NoSrvRecordsFound or DnsResponseException or SocketException)
+        {
+            _logger.CouldNotResolveServers(_connectionString.Redacted, ex.Message);
+            return [];
         }
     }
 
