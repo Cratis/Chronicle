@@ -194,7 +194,7 @@ readinessProbe:
     scheme: HTTP
 ```
 
-You can instead use an HTTP startup probe on `/health/live` at port 8080. Do not use a TCP probe for readiness: an open listener does not mean the silo is ready. Raising `failureThreshold` is not the fix for backlog-dependent startup restarts; startup and liveness must probe the listener, not readiness.
+[Run Chronicle on Kubernetes](kubernetes.md) has a complete, tested manifest with these probes, the matching budgets, a PodDisruptionBudget and a NetworkPolicy. You can instead use an HTTP startup probe on `/health/live` at port 8080. Do not use a TCP probe for readiness: an open listener does not mean the silo is ready. Raising `failureThreshold` is not the fix for backlog-dependent startup restarts; startup and liveness must probe the listener, not readiness.
 
 With the health port exclusive, serve the Workbench from the main port, 35000. Route your ingress or reverse proxy there with HTTPS when the kernel keeps TLS, or with h2c when `Tls__Enabled=false`, because the main port then accepts cleartext HTTP/2 only. A route that targets the health port stops working as soon as exclusivity is on: the Workbench answers 404 there. [Workbench configuration](configuration/workbench.md#with-an-exclusive-health-port) shows the proxy setup.
 
@@ -241,8 +241,9 @@ Allow the silo port (11111) only between trusted nodes and the gateway (30000) o
 > enforces this by default, including on SQL storage. A replacement waits for the old holder to stop or
 > expire; it does not process concurrently. Disabling the lease removes that protection.
 
-For a single-active-node deployment, configure stop-before-start replacement. In Kubernetes use
-`strategy: Recreate`, or `RollingUpdate` with `maxSurge: 0` and `maxUnavailable: 1`. The default one-replica
+For a single-active-node deployment, configure stop-before-start replacement. In Kubernetes use a
+one-replica StatefulSet, which stops the old pod first (see [Run Chronicle on Kubernetes](kubernetes.md#recreate-or-rolling-update)),
+or a Deployment with `strategy: Recreate`, or `RollingUpdate` with `maxSurge: 0` and `maxUnavailable: 1`. A Deployment's default one-replica
 rolling update (`maxSurge: 1`, `maxUnavailable: 0`) cannot converge: the new node waits for the lease while
 the platform waits for it to become ready before stopping the old holder.
 
@@ -367,4 +368,5 @@ address works. When you instead run multiple nodes directly on one host, set
 ## See also
 
 - [Development and production images](development-and-production-images.md) for the behaviors and defaults that differ between the two images.
+- [Run Chronicle on Kubernetes](kubernetes.md) for a reference manifest with probes, a PodDisruptionBudget and a NetworkPolicy.
 - [Run Chronicle on Azure with Microsoft Entra ID](azure.md) for Azure SQL, Azure Database for PostgreSQL and managed identities.
