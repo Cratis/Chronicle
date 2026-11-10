@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Events;
 using Cratis.Specifications;
 using Xunit;
 
@@ -35,6 +36,9 @@ public class when_comparing_snapshots : given.a_snapshot
     [Fact] void should_report_a_sequence_gap() => Verdict.Compare(Input with { Events = [Input.Events[0] with { Sequence = 2 }] }).Gaps.ShouldEqual(1);
     [Fact] void should_report_an_observer_behind() => Verdict.Compare(Input with { Events = [Input.Events[0] with { Sequence = 1 }] }).ObserversBehind.ShouldEqual(1);
     [Fact] void should_report_a_missing_observer() => Verdict.Compare(Input with { Observers = [] }).ObserversBehind.ShouldEqual(1);
+    [Fact] void should_reject_an_unavailable_observer_position() => AssertObserverNotCaughtUp(EventSequenceNumber.Unavailable.Value);
+    [Fact] void should_reject_a_max_observer_position() => AssertObserverNotCaughtUp(EventSequenceNumber.Max.Value);
+    [Fact] void should_reject_a_before_first_observer_position() => AssertObserverNotCaughtUp(EventSequenceNumber.BeforeFirst.Value);
     [Fact] void should_report_failed_partitions() => Verdict.Compare(Input with { FailedPartitions = 1 }).FailedPartitions.ShouldEqual(1);
     [Fact] void should_report_an_incorrect_projection_count() => Verdict.Compare(Input with { Projections = [new("source", 2, 7)] }).ProjectionsBehind.ShouldEqual(1);
     [Fact] void should_report_an_incorrect_projection_sum() => Verdict.Compare(Input with { Projections = [new("source", 1, 9)] }).ProjectionsBehind.ShouldEqual(1);
@@ -46,4 +50,29 @@ public class when_comparing_snapshots : given.a_snapshot
     [Fact] void should_reject_missing_kernel_state() => Verdict.Compare(Input with { ExpectedStateDocuments = 0 }).IsClean.ShouldBeFalse();
     [Fact] void should_reject_a_missing_side_effect() => Verdict.Compare(Input with { SideLedger = [] }).IsClean.ShouldBeFalse();
     [Fact] void should_reject_a_payload_different_from_the_intention() => Verdict.Compare(Input with { Events = [Input.Events[0] with { Payload = 8 }] }).IsClean.ShouldBeFalse();
+
+    [Theory]
+    [InlineData("failed")]
+    [InlineData("rejected")]
+    void should_report_a_definitively_failed_append_present_in_the_log(string status)
+    {
+        var result = Verdict.Compare(Input with { Ledger = [Input.Ledger[0] with { Status = status }] });
+        Assert.Contains("Definitively failed append present in event log.", result.Violations);
+        result.IsClean.ShouldBeFalse();
+    }
+
+    [Theory]
+    [InlineData("failed")]
+    [InlineData("rejected")]
+    void should_allow_an_absent_definitively_failed_append(string status) => Verdict.Compare(Input with
+    {
+        Ledger = [Input.Ledger[0], new("refused", "source", 2, status)]
+    }).IsClean.ShouldBeTrue();
+
+    void AssertObserverNotCaughtUp(ulong position)
+    {
+        var result = Verdict.Compare(Input with { Observers = [new("observer", position, true)] });
+        result.ObserversBehind.ShouldEqual(1);
+        result.IsClean.ShouldBeFalse();
+    }
 }

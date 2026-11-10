@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Net;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
 using DotNet.Testcontainers.Networks;
@@ -29,6 +30,7 @@ internal sealed class DockerEnvironment : IAsyncDisposable
             .WithEnvironment("Cratis__Chronicle__Storage__ConnectionDetails", "mongodb://mongo:27017/?replicaSet=rs0")
             .WithEnvironment("Cratis__Chronicle__Clustering__Type", "Localhost")
             .WithEnvironment("Cratis__Chronicle__Clustering__SingleWriterLease__Ttl", "00:00:05")
+            .WithEnvironment("Cratis__Chronicle__Authentication__Enabled", "false")
             .WithEnvironment("Cratis__Chronicle__Tls__Enabled", "false")
             .WithEnvironment("Cratis__Chronicle__Health__Tls", "false")
             .Build();
@@ -57,12 +59,17 @@ internal sealed class DockerEnvironment : IAsyncDisposable
     {
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellation);
         deadline.CancelAfter(TimeSpan.FromSeconds(150));
-        using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(3) };
+        using var client = new HttpClient
+        {
+            Timeout = TimeSpan.FromSeconds(3),
+            DefaultRequestVersion = HttpVersion.Version20,
+            DefaultVersionPolicy = HttpVersionPolicy.RequestVersionExact
+        };
         while (true)
         {
             try
             {
-                using var response = await client.GetAsync($"http://{Kernel.Hostname}:35000/ready", deadline.Token);
+                using var response = await client.GetAsync($"http://{Kernel.Hostname}:35000/health/ready", deadline.Token);
                 if (response.IsSuccessStatusCode) return;
             }
             catch (HttpRequestException) { }

@@ -6,5 +6,11 @@
     <TargetFramework>net10.0</TargetFramework>
     <TargetFrameworks></TargetFrameworks>
     <IsPackable>false</IsPackable>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <MSBuildTreatWarningsAsErrors>true</MSBuildTreatWarningsAsErrors>
+    <CodeAnalysisTreatWarningsAsErrors>true</CodeAnalysisTreatWarningsAsErrors>
+    <StyleCopTreatErrorsAsWarnings>false</StyleCopTreatErrorsAsWarnings>
+    <!-- Analyzer and code-style checks are inherited from the repository root props. -->
   </PropertyGroup>
 </Project>

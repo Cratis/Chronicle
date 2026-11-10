@@ -13,7 +13,6 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Console" />
     <PackageReference Include="MongoDB.Driver" />
     <PackageReference Include="Testcontainers" />
-    <PackageReference Include="SSH.NET" />
     <ProjectReference Include="../../Source/Clients/DotNET/DotNET.csproj" AdditionalProperties="DisableDockerBuild=true;DisableProxyGenerator=true" />
     <InternalsVisibleTo Include="ChaosRig.Specs" />
   </ItemGroup>

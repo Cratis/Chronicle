@@ -33,8 +33,15 @@ internal static class Program
 
     static async Task<int> Clean(string[] args, CancellationToken cancellation)
     {
-        if (args.Length != 0 && (args.Length != 2 || args[0] != "--run-id")) throw new ArgumentException("Use cleanup [--run-id <id>].");
-        await Cleanup.Run(args.Length == 0 ? null : args[1], cancellation);
+        await Cleanup.Run(CleanupRunId(args), cancellation);
         return 0;
+    }
+
+    static string? CleanupRunId(string[] args)
+    {
+        if (args.Length == 0) return null;
+        if (args.Length != 2) throw new ArgumentException("Use cleanup [--run-id <id>].");
+        if (args[0] != "--run-id") throw new ArgumentException("Use cleanup [--run-id <id>].");
+        return args[1];
     }
 }

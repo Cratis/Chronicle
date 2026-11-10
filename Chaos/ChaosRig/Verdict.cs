@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Events;
+
 namespace Cratis.Chronicle.Chaos;
 
 internal static class Verdict
@@ -11,10 +13,17 @@ internal static class Verdict
         var lost = input.Ledger.Count(item => item.Status == "acked" && !byId.ContainsKey(item.Id));
         var duplicates = byId.Values.Sum(count => count - 1);
         var tail = input.Events.Count == 0 ? 0 : input.Events.Max(item => item.Sequence);
-        var behind = input.ExpectedObservers.Count(id => !input.Observers.Any(observer => observer.Id == id && observer.Active && observer.LastHandled >= tail));
+        var behind = input.ExpectedObservers.Count(id => !input.Observers.Any(observer => observer.Id == id && HasCaughtUp(observer, tail)));
         var violations = HealthViolations(input, byId);
         var reactorDuplicates = input.SideLedger.GroupBy(id => id).Sum(group => Math.Max(0, group.Count() - 1));
         return new(lost, duplicates, Gaps(input.Events), behind, ModelMismatches(input.Events, input.Projections), ModelMismatches(input.Events, input.Reductions), input.FailedPartitions, reactorDuplicates, violations);
+    }
+
+    static bool HasCaughtUp(ObserverValue observer, ulong tail)
+    {
+        var position = new EventSequenceNumber(observer.LastHandled);
+        if (!position.IsActualValue) return false;
+        return observer.Active && observer.LastHandled >= tail;
     }
 
     static IReadOnlyList<string> HealthViolations(VerdictInput input, Dictionary<string, int> byId)
@@ -31,17 +40,24 @@ internal static class Verdict
     static void DrainViolations(VerdictInput input, List<string> result)
     {
         if (!input.Settled) result.Add("Drain did not stabilize before the settle deadline.");
-        if (input.Events.Count == 0) result.Add("No events observed; refusing a vacuous clean verdict.");
-        if (!input.Ledger.Any(item => item.Status == "acked")) result.Add("No acknowledged appends.");
+        WorkloadViolations(input, result);
         if (input.InFlightPartitions != 0) result.Add($"In-flight partitions: {input.InFlightPartitions}");
         if (input.PendingJobs != 0) result.Add($"Pending jobs: {input.PendingJobs}");
         if (input.ExpectedStateDocuments != input.ExpectedObservers.Count) result.Add("Missing or repeated kernel observer state documents.");
+    }
+
+    static void WorkloadViolations(VerdictInput input, List<string> result)
+    {
+        if (input.Events.Count == 0) result.Add("No events observed; refusing a vacuous clean verdict.");
+        if (!input.Ledger.Any(item => item.Status == "acked")) result.Add("No acknowledged appends.");
     }
 
     static void LedgerViolations(VerdictInput input, Dictionary<string, int> byId, List<string> result)
     {
         var intentions = input.Ledger.ToDictionary(item => item.Id);
         if (byId.Keys.Except(intentions.Keys).Any()) result.Add("Events without ledger intentions.");
+        var failed = input.Ledger.Where(item => item.Status is "failed" or "rejected");
+        if (failed.Any(item => byId.ContainsKey(item.Id))) result.Add("Definitively failed append present in event log.");
         var known = input.Events.Where(item => intentions.ContainsKey(item.Id));
         if (known.Any(item => item.Source != intentions[item.Id].Source || item.Payload != intentions[item.Id].Payload)) result.Add("Event content differs from its durable intention.");
     }

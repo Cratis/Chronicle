@@ -11,7 +11,7 @@ An opt-in, single-node durability probe against the **real Chronicle kernel**. T
 
 - .NET 10, Bash, Docker with Linux containers, and the repository's normal package feeds.
 - macOS or Linux (`kill -STOP` / `kill -CONT` must be available).
-- Free host ports **35000**, **27017**, **27018**. Never point this rig at an existing stack or production database. It creates an isolated network and dedicated kernel, replica-set MongoDB, and independent side-ledger MongoDB containers.
+- Free host ports **35000**, **27017**, **27018**. Never point this rig at an existing stack or production database. It creates an isolated network and dedicated kernel, replica-set MongoDB, and independent side-ledger MongoDB containers. The rig explicitly disables kernel authentication and TLS; use only on an isolated development machine. Readiness probes use HTTP/2 cleartext on `/health/ready`.
 - Adequate disk space before publishing or starting Docker. On the shared development machine, stop below 25 GiB free; flag below 40 GiB.
 - A local slim kernel image. Through the required phase runner, run:
 
@@ -49,8 +49,8 @@ Durations must be positive. A window too short for a fault plus recovery has an 
 | --- | --- |
 | `KillKernel` | SIGKILL, then restart the same container: crash across append/observer persistence |
 | `KillMongo` | SIGKILL the kernel database, then restart: persistence and reconnect behavior |
-| `StopKernel` | SIGSTOP, then SIGCONT: stale ownership and a frozen silo |
-| `StopMongo` | SIGSTOP, then SIGCONT: blocked database writes without process exit |
+| `StopKernel` | Docker pause/unpause of the whole container (including Chronicle behind tini): stale ownership and a frozen silo |
+| `StopMongo` | Docker pause/unpause: blocked database writes without process exit |
 | `KillProducer` | Kill/restart the producer process: resume a durable pending intention with the identical idempotency key and payload |
 | `StopProducer` | SIGSTOP/SIGCONT: outstanding append/reconnect timing |
 | `KillConsumer` | Kill/restart the consumer: re-registration and delivery progress |
@@ -66,7 +66,7 @@ The consumer registers a reactor, active reducer, and projection. The reactor in
 
 After the chaos window, recover targets, fence the producer by terminating it, and leave consumers running. The reader pages the actual event log, reads native observers/failures/jobs and materialized models through the client, and reads both independent ledgers. A narrow **read-only** BSON inspection of the kernel `observers` collections supplies `inFlightPartitions`, which the client API does not expose. It discovers databases instead of duplicating Chronicle's physical naming rules, matches the three exact observer IDs, and rejects missing/repeated documents or an absent/non-array field. It never writes kernel storage.
 
-A clean verdict requires three consecutive clean snapshots: every acknowledged ID present, no duplicate event IDs, no sequence holes/repeated positions, matching source/payload intentions, all three observers active and at the observed tail, no failed/in-flight partitions or incomplete jobs, exact model counts/sums, and one side-ledger delivery per logged ID. Empty workloads cannot pass. Unknown IDs present once are allowed; twice are duplicates. Settle timeout cannot turn a transient clean sample into a pass.
+A clean verdict requires three consecutive clean snapshots: every acknowledged ID present, no definitively failed/rejected IDs present, no duplicate event IDs, no sequence holes/repeated positions, matching source/payload intentions, all three observers active and at the observed tail with actual (not sentinel) sequence positions, no failed/in-flight partitions or incomplete jobs, exact model counts/sums, and one side-ledger delivery per logged ID. Empty workloads cannot pass. Unknown IDs present once are allowed; twice are duplicates. Settle timeout cannot turn a transient clean sample into a pass.
 
 Example output:
 

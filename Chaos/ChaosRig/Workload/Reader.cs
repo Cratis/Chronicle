@@ -37,11 +37,18 @@ internal sealed class Reader(IEventStore store, Ledger ledger, SideLedger sideLe
                 if (item.Content is not ChaosEvent contribution) throw new InvalidDataException("Unexpected event type in isolated chaos event log.");
                 result.Add(new(contribution.LedgerId, item.Context.EventSourceId.Value, item.Context.SequenceNumber.Value, contribution.Payload));
             }
-            if (page.Next is not null && next is not null && page.Next.Value <= next.Value) throw new InvalidDataException("Event log pagination did not advance.");
+            EnsurePageAdvanced(next, page.Next);
             next = page.Next;
         }
         while (next is not null);
         return result;
+    }
+
+    static void EnsurePageAdvanced(EventSequenceNumber? current, EventSequenceNumber? next)
+    {
+        if (current is null) return;
+        if (next is null) return;
+        if (next.Value <= current.Value) throw new InvalidDataException("Event log pagination did not advance.");
     }
 
     async Task<(IReadOnlyList<ModelValue> Projections, IReadOnlyList<ModelValue> Reductions)> Models(IReadOnlyList<ObservedEvent> events, CancellationToken cancellation)
