@@ -6,6 +6,7 @@ using System.Collections.Frozen;
 using System.Reactive.Linq;
 using System.Reactive.Threading.Tasks;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Observation;
@@ -42,6 +43,7 @@ public partial class Reducers : IReducers
     readonly ReducerDispatcher _dispatcher;
     readonly ILogger<Reducers> _logger;
     readonly IReducerObservers _reducerObservers;
+    readonly ConditionalWeakTable<IReducerHandler, ObservationReconnectBackoff> _reconnectBackoffs = [];
     IReadOnlyDictionary<Type, IReducerHandler> _handlersByType = FrozenDictionary<Type, IReducerHandler>.Empty;
     IReadOnlyDictionary<Type, IReducerHandler> _handlersByModelType = FrozenDictionary<Type, IReducerHandler>.Empty;
 
@@ -159,9 +161,25 @@ public partial class Reducers : IReducers
     internal int MaxConcurrentPartitions { get; init; } = PartitionedDeliveryScheduler.DefaultMaxConcurrentPartitions;
 
     /// <summary>
-    /// Gets the delay before a reducer re-registers after its observation stream ended.
+    /// Gets the delay before a reducer re-registers after its observation stream ended, once the stream had worked.
     /// </summary>
+    /// <remarks>Streams that end without having worked back off from this, see <see cref="ObservationReconnectBackoff"/>.</remarks>
     internal TimeSpan ReconnectDelay { get; init; } = TimeSpan.FromSeconds(2);
+
+    /// <summary>
+    /// Gets the longest delay before a reducer re-registers, however often its streams end.
+    /// </summary>
+    internal TimeSpan MaxReconnectDelay { get; init; } = ObservationReconnectBackoff.DefaultMaxDelay;
+
+    /// <summary>
+    /// Gets how long an observation stream must stay open to count as having worked.
+    /// </summary>
+    internal TimeSpan HealthyStreamDuration { get; init; } = ObservationReconnectBackoff.DefaultHealthyStreamDuration;
+
+    /// <summary>
+    /// Gets the source of the jitter spreading out reconnecting reducers, a value in [0, 1).
+    /// </summary>
+    internal Func<double> ReconnectJitter { get; init; } = Random.Shared.NextDouble;
 
     /// <summary>
     /// Gets how the re-registration work is started. Specs replace this to run the work deterministically.
@@ -608,11 +626,14 @@ public partial class Reducers : IReducers
 #pragma warning disable CA2000 // Dispose objects before losing scope
         var scheduler = new PartitionedDeliveryScheduler(MaxConcurrentPartitions);
 #pragma warning restore CA2000 // Dispose objects before losing scope
+        var backoff = _reconnectBackoffs.GetValue(handler, _ => new(ReconnectDelay, MaxReconnectDelay, HealthyStreamDuration, TimeProvider.System, ReconnectJitter));
+        backoff.StreamOpened();
         var operationsToObserve = _servicesAccessor.Services.Reducers.Observe(messages.Messages, handler.CancellationToken);
 
         // Re-establish the observation after the stream ends or fails. The kernel can end a reducer's stream without
         // an error; without re-subscribing then, the reducer silently stops observing until the whole client
-        // reconnects. Only the reducer's own cancellation stops it, and the 2s delay avoids a hot loop.
+        // reconnects. Only the reducer's own cancellation stops it, and the delay avoids a hot loop, backing off while
+        // the stream keeps ending.
         void ScheduleReconnect()
         {
             if (handler.CancellationToken.IsCancellationRequested)
@@ -626,7 +647,7 @@ public partial class Reducers : IReducers
                 try
                 {
                     await scheduler.DrainAndDispose();
-                    await Task.Delay(ReconnectDelay, handler.CancellationToken);
+                    await Task.Delay(backoff.NextDelay(), handler.CancellationToken);
                     _logger.ReconnectingReducer(handler.Id);
                     RegisterReducerWhenHostable(handler);
                 }
@@ -642,6 +663,7 @@ public partial class Reducers : IReducers
         operationsToObserve
             .Select(events =>
             {
+                backoff.StreamDelivered();
                 async Task Deliver()
                 {
                     await ObserverMethod(messages, handler, events);
