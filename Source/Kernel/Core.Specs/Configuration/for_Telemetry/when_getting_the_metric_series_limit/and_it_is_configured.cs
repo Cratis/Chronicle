@@ -11,10 +11,13 @@ public class and_it_is_configured : Specification
 
     void Because()
     {
-        var configuration = new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?> { ["Telemetry:MetricSeriesLimit"] = "20000" })
-            .Build();
-        _limit = configuration.GetSection("Telemetry").Get<Telemetry>()!.EffectiveMetricSeriesLimit;
+        var options = new ChronicleOptions();
+        new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["Cratis:Chronicle:Telemetry:MetricSeriesLimit"] = "20000" })
+            .Build()
+            .GetSection(ChronicleOptions.SectionPath)
+            .Bind(options);
+        _limit = options.Telemetry.EffectiveMetricSeriesLimit;
     }
 
     [Fact] void should_use_the_configured_limit() => _limit.ShouldEqual(20000);

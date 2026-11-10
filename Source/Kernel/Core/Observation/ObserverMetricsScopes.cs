@@ -19,7 +19,9 @@ internal static class ObserverMetricsScopes
     internal static ObserverMetrics BeginObserverScope(this IMeter<Observer> meter, ObserverId observerId, ObserverKey observerKey, MetricNames names = MetricNames.Legacy) =>
         new(CreateMetricSet(meter, observerId, observerKey, names));
 
-    /// <summary>Creates only the successful observations instrument and tags in the selected naming mode.</summary>
+    /// <summary>
+    /// Creates only the successful observations instrument and tags in the selected naming mode.
+    /// </summary>
     /// <param name="meter">The meter.</param>
     /// <param name="observerKey">The observer key.</param>
     /// <param name="names">The naming mode.</param>
