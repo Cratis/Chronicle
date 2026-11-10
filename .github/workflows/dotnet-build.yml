@@ -357,7 +357,7 @@ jobs:
       - name: Pack Release build output
         run: |
           set -euo pipefail
-          for project in Source/Kernel/Core.Specs Source/Kernel/Server Integration/MongoDB Integration/Api; do
+          for project in Source/Kernel/Core.Specs Source/Kernel/Server Integration/MongoDB Integration/Neo4j Integration/Api; do
             test -d "$project/bin/Release/net10.0" || { echo "Missing build output for $project" >&2; exit 1; }
           done
           find . -type d -name bin -not -path '*/node_modules/*' -prune -print0 | tar --null -I 'zstd -T0' -cf build-output-release.tar.zst -T -
@@ -968,13 +968,92 @@ jobs:
             ./Integration/MongoDB/released-binding-results/
           retention-days: 1
 
+  neo4j:
+    # Waits for the ordinary specs on pull requests, like the integration matrix (#5050).
+    # Exercises the Neo4j storage directly against a Neo4j container, with no kernel. It starts the image and nothing else, so it needs no Docker image of the kernel.
+    name: neo4j (${{ matrix.lane }})
+    if: ${{ needs.already-ran.outputs.skip != 'true' && (!cancelled() && needs.dotnet-build.result == 'success' && (github.event_name != 'pull_request' || (inputs.integration_requested && needs.specs.result == 'success'))) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    needs: [already-ran, dotnet-build, specs]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # The Community edition has one database, so every namespace shares it.
+          - lane: community
+            image: neo4j:5-community
+            database-mode: Single
+          # A database per namespace needs multiple databases, which only the Enterprise edition has. It runs under the Neo4j Evaluation Agreement,
+          # which the fixture accepts for an Enterprise image, temporary, see Cratis/Chronicle#5739.
+          - lane: enterprise
+            image: neo4j:5-enterprise
+            database-mode: PerNamespace
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .Net
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            ${{ env.DOTNET8_VERSION }}
+            ${{ env.DOTNET9_VERSION }}
+            ${{ env.DOTNET_VERSION }}
+
+      - name: Download Release build output
+        uses: actions/download-artifact@v4
+        with:
+          name: build-output-release
+
+      - name: Extract Release build output
+        run: tar -I zstd -xf build-output-release.tar.zst
+
+      # Pre-pull once per job so the Testcontainers image check does not race anonymous Docker Hub rate limits.
+      - name: Pre-pull Neo4j image
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 5
+          max_attempts: 5
+          retry_wait_seconds: 15
+          command: docker pull "${{ matrix.image }}"
+
+      - name: Restore Neo4j runner evaluation inputs
+        run: dotnet restore Integration/Neo4j/Neo4j.csproj
+
+      - name: Restore pinned coverage tool
+        run: dotnet tool restore
+
+      - name: Run Neo4j integration tests with coverage (${{ matrix.lane }})
+        env:
+          CHRONICLE_NEO4J_IMAGE: ${{ matrix.image }}
+          CHRONICLE_NEO4J_DATABASE_MODE: ${{ matrix.database-mode }}
+          # The runner is destroyed after the job, so the Testcontainers reaper has nothing to clean up.
+          TESTCONTAINERS_RYUK_DISABLED: true
+        run: node .github/scripts/run-spec-project.mjs --project Integration/Neo4j/Neo4j.csproj --coverage --results-directory ./Integration/Neo4j/coverage-results
+
+      - name: Assert Neo4j integration tests ran
+        uses: ./.github/actions/assert-tests-ran
+        with:
+          path: ./Integration/Neo4j/coverage-results
+          name: The Neo4j integration job (${{ matrix.lane }})
+          prefixes: Cratis.Chronicle.Neo4j.Integration
+
+      - name: Upload coverage results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-results-neo4j-${{ matrix.lane }}
+          path: ./Integration/Neo4j/coverage-results/
+          retention-days: 1
+
   coverage-merge-and-cache:
     # Override implicit success() so the unused DEVELOPMENT ancestor does not suppress coverage.
     # Require every immediate prerequisite: never cache incomplete results (including ordinary PRs).
-    if: ${{ needs.already-ran.outputs.skip != 'true' && (!cancelled() && github.event_name != 'pull_request_target' && needs.specs.result == 'success' && needs.integration.result == 'success' && needs.integration-api.result == 'success' && needs.mongodb.result == 'success') }}
+    if: ${{ needs.already-ran.outputs.skip != 'true' && (!cancelled() && github.event_name != 'pull_request_target' && needs.specs.result == 'success' && needs.integration.result == 'success' && needs.integration-api.result == 'success' && needs.mongodb.result == 'success' && needs.neo4j.result == 'success') }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
-    needs: [already-ran, specs, integration, integration-api, mongodb]
+    needs: [already-ran, specs, integration, integration-api, mongodb, neo4j]
     permissions:
       contents: read
       actions: read

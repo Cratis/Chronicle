@@ -217,7 +217,7 @@ class SparseIntegrationWorkflows(unittest.TestCase):
                                 for job in self.build["jobs"].values()))
         self.assertEqual({"requested-integration", "requested-detect-hot-core"},
                          set(jobs["hot-core-gate-requested"]["needs"]))
-        for job in ("dotnet-build-development-requested", "integration", "integration-api", "mongodb"):
+        for job in ("dotnet-build-development-requested", "integration", "integration-api", "mongodb", "neo4j"):
             self.assertIn("inputs.integration_requested", self.build["jobs"][job]["if"])
         for name in ("Build development Docker image", "Push development Docker image"):
             step = next(step for step in self.build["jobs"]["dotnet-build"]["steps"] if step.get("name") == name)
@@ -353,7 +353,7 @@ class SparseIntegrationWorkflows(unittest.TestCase):
 
     def test_pull_request_integration_waits_for_passing_specs(self):
         jobs = self.build["jobs"]
-        for job_id in ("integration", "integration-api", "mongodb"):
+        for job_id in ("integration", "integration-api", "mongodb", "neo4j"):
             with self.subTest(job=job_id):
                 job = jobs[job_id]
                 self.assertIn("specs", job["needs"])
@@ -567,7 +567,7 @@ class SparseIntegrationWorkflows(unittest.TestCase):
 
     def test_coverage_cannot_be_cached_if_any_integration_dependency_failed_or_was_skipped(self):
         coverage = self.build["jobs"]["coverage-merge-and-cache"]
-        self.assertEqual({"specs", "integration", "integration-api", "mongodb"}, set(prerequisites_of(coverage)))
+        self.assertEqual({"specs", "integration", "integration-api", "mongodb", "neo4j"}, set(prerequisites_of(coverage)))
         self.assertIn("github.event_name != 'pull_request_target'", coverage["if"])
         self.assertIn("!cancelled()", coverage["if"])
         for dependency in prerequisites_of(coverage):

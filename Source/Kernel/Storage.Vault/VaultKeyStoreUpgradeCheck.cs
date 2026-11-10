@@ -1,10 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Net;
 using Cratis.Chronicle.Storage.Compliance;
 using VaultSharp;
-using VaultSharp.Core;
 
 namespace Cratis.Chronicle.Storage.Vault;
 
@@ -16,75 +14,97 @@ namespace Cratis.Chronicle.Storage.Vault;
 /// earlier version already sits there, and records that in the <see cref="VaultPathSegments.LayoutMarker"/> secret at
 /// the root of the mount. The marker is a single leaf at the root, which earlier versions never wrote, because their
 /// leaves are at least four segments deep. The check needs list on <c language="csharp">metadata/</c> and create on
-/// <c language="csharp">data/~layout</c>.
+/// <c language="csharp">data/~layout</c>. A full inspection also reads the secrets it finds, to tell those already
+/// copied to <see cref="VaultPathSegments.Root"/> from those that still need the key upgrade.
 /// </remarks>
-/// <param name="vaultClient">The <see cref="IVaultClient"/> to talk to Vault through.</param>
-/// <param name="mountPointName">KV v2 mount point. Defaults to <c language="csharp">secret</c> when <see langword="null"/> or empty.</param>
-internal class VaultKeyStoreUpgradeCheck(IVaultClient vaultClient, string? mountPointName = null) : IEncryptionKeyStoreUpgradeCheck
+/// <param name="store">The <see cref="IVaultSecretStore"/> to talk to Vault through.</param>
+internal class VaultKeyStoreUpgradeCheck(IVaultSecretStore store) : IEncryptionKeyStoreUpgradeCheck
 {
     const string FormatField = "format";
-    const string DefaultMountPoint = "secret";
 
-    readonly IVaultClient _vaultClient = vaultClient;
-    readonly string _mountPoint = string.IsNullOrEmpty(mountPointName) ? DefaultMountPoint : mountPointName;
+    /// <summary>
+    /// Initializes a new instance of the <see cref="VaultKeyStoreUpgradeCheck"/> class over a client.
+    /// </summary>
+    /// <param name="vaultClient">The <see cref="IVaultClient"/> to talk to Vault through.</param>
+    /// <param name="mountPointName">KV v2 mount point. Defaults to <c language="csharp">secret</c> when <see langword="null"/> or empty.</param>
+    public VaultKeyStoreUpgradeCheck(IVaultClient vaultClient, string? mountPointName = null)
+        : this(new VaultSecretStore(vaultClient, mountPointName))
+    {
+    }
 
     /// <inheritdoc/>
     public async Task<EncryptionKeyStoreUpgradeStatus> Inspect(bool full, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var layout = await EnsureLayout();
+        var layout = await EnsureLayout(requireKv2: false);
         if (layout.LayoutUnusable)
         {
             return layout;
         }
 
-        var earlierRoots = (await ListRootEntries()).Where(IsEarlierEntry).ToList();
+        var earlierRoots = (await store.List(string.Empty)).Where(VaultLegacyLayout.IsEarlierEntry).ToList();
         if (!full)
         {
-            // Each earlier root is an event store with at least one entry, so this is a lower bound.
-            return layout with { EarlierNameKeys = earlierRoots.Count };
+            return layout with { EarlierNameKeys = await CountEarlierRoots(store, earlierRoots, cancellationToken) };
         }
 
-        var counts = new Counts();
-        foreach (var root in earlierRoots)
+        long keys = 0, erasures = 0, unresolved = 0, retained = 0;
+        foreach (var entry in await VaultLegacyLayout.Walk(store, earlierRoots, cancellationToken))
         {
-            await Walk([root.TrimEnd('/')], counts, cancellationToken);
+            if (entry.IsAmbiguous)
+            {
+                unresolved++;
+            }
+            else if (await IsRetainedCopy(entry))
+            {
+                retained++;
+            }
+            else if (entry.IsErasure)
+            {
+                erasures++;
+            }
+            else
+            {
+                keys++;
+            }
         }
 
-        return layout with { EarlierNameKeys = counts.Keys, EarlierNameErasures = counts.Erasures, UnresolvedShapes = counts.Unresolved, Complete = true };
+        return layout with
+        {
+            EarlierNameKeys = keys,
+            EarlierNameErasures = erasures,
+            UnresolvedShapes = unresolved,
+            MigratedLegacyRetained = retained,
+            Complete = true
+        };
     }
 
     /// <summary>
     /// Makes sure the paths under <see cref="VaultPathSegments.Root"/> are free to use, and records that.
     /// </summary>
+    /// <param name="requireKv2">Whether mount metadata must prove KV v2 before writing. Startup inspection does not require access to mount metadata.</param>
     /// <returns>A status with the layout verified, in conflict, or unverifiable.</returns>
-    public async Task<EncryptionKeyStoreUpgradeStatus> EnsureLayout()
+    public async Task<EncryptionKeyStoreUpgradeStatus> EnsureLayout(bool requireKv2 = true)
     {
         try
         {
+            if (requireKv2 && !await store.IsKv2())
+            {
+                return Layout(verified: false, conflict: false);
+            }
+
             if (await HasMarker())
             {
                 return Layout(verified: true, conflict: false);
             }
 
-            if ((await ListRootEntries()).Contains($"{VaultPathSegments.Root}/"))
+            if (await RootIsTaken())
             {
                 return Layout(verified: false, conflict: true);
             }
 
-            try
-            {
-                await _vaultClient.V1.Secrets.KeyValue.V2.WriteSecretAsync(
-                    VaultPathSegments.LayoutMarker,
-                    new Dictionary<string, object> { [FormatField] = VaultPathSegments.Root },
-                    checkAndSet: 0,
-                    mountPoint: _mountPoint);
-            }
-            catch (VaultApiException ex) when (VaultEncryptionKeyStorage.IsCheckAndSetMismatch(ex))
-            {
-                // Another node wrote the marker first; read it again below.
-            }
-
+            // A write that loses to another node writes nothing; the marker is read again below.
+            await store.WriteIfAbsent(VaultPathSegments.LayoutMarker, new Dictionary<string, string> { [FormatField] = VaultPathSegments.Root });
             return Layout(verified: await HasMarker(), conflict: false);
         }
         catch (Exception)
@@ -95,89 +115,60 @@ internal class VaultKeyStoreUpgradeCheck(IVaultClient vaultClient, string? mount
         }
     }
 
+    /// <summary>
+    /// Tells whether the paths under <see cref="VaultPathSegments.Root"/> are free to use, without writing anything.
+    /// </summary>
+    /// <returns>A status with the layout verified or free to record, in conflict, or unverifiable.</returns>
+    public async Task<EncryptionKeyStoreUpgradeStatus> InspectLayout()
+    {
+        try
+        {
+            if (!await store.IsKv2())
+            {
+                return Layout(verified: false, conflict: false);
+            }
+
+            if (await HasMarker())
+            {
+                return Layout(verified: true, conflict: false);
+            }
+
+            var conflict = await RootIsTaken();
+            return Layout(verified: !conflict, conflict: conflict);
+        }
+        catch (Exception)
+        {
+            return Layout(verified: false, conflict: false);
+        }
+    }
+
     static EncryptionKeyStoreUpgradeStatus Layout(bool verified, bool conflict) =>
         new(verified, conflict, 0, 0, 0, false);
 
-    /// <summary>
-    /// Gets whether a root entry is an event store from an earlier version. Only the two names this version reserves are
-    /// skipped, and only when they are exactly those: the root directory and the marker leaf. Anything else, whatever
-    /// character it starts with, is an event store from an earlier version.
-    /// </summary>
-    /// <param name="entry">The entry listed at the root of the mount.</param>
-    /// <returns>True when the entry is from an earlier version, false otherwise.</returns>
-    static bool IsEarlierEntry(string entry) => entry != $"{VaultPathSegments.Root}/" && entry != VaultPathSegments.LayoutMarker;
-
-    static void Classify(List<string> segments, Counts counts)
+    static async Task<long> CountEarlierRoots(IVaultSecretStore store, IReadOnlyList<string> roots, CancellationToken cancellationToken)
     {
-        var eligible = segments.Count == 4 &&
-            VaultPathSegments.LegacyDirectory(segments[0], segments[1], segments[2]) is not null;
-        if (eligible && segments[3] == "erasure")
+        // LIST retains tombstones, so only count roots with entries not confirmed deleted.
+        long rootsWithMaterial = 0;
+        foreach (var root in roots)
         {
-            counts.Erasures++;
-        }
-        else if (eligible && uint.TryParse(segments[3], out _))
-        {
-            counts.Keys++;
-        }
-        else
-        {
-            counts.Unresolved++;
-        }
-    }
-
-    async Task Walk(List<string> path, Counts counts, CancellationToken cancellationToken)
-    {
-        cancellationToken.ThrowIfCancellationRequested();
-        var entries = await ListEntries(string.Join('/', path));
-        foreach (var entry in entries)
-        {
-            var segments = new List<string>(path) { entry.TrimEnd('/') };
-            if (entry.EndsWith('/'))
+            if ((await VaultLegacyLayout.Walk(store, [root], cancellationToken)).Count > 0)
             {
-                await Walk(segments, counts, cancellationToken);
-            }
-            else
-            {
-                Classify(segments, counts);
+                rootsWithMaterial++;
             }
         }
+
+        return rootsWithMaterial;
     }
 
-    async Task<bool> HasMarker()
-    {
-        try
-        {
-            var secret = await _vaultClient.V1.Secrets.KeyValue.V2.ReadSecretAsync(VaultPathSegments.LayoutMarker, mountPoint: _mountPoint);
-            return secret.Data.Data.TryGetValue(FormatField, out var format) &&
-                string.Equals(format?.ToString(), VaultPathSegments.Root, StringComparison.Ordinal);
-        }
-        catch (VaultApiException ex) when (ex.HttpStatusCode == HttpStatusCode.NotFound)
-        {
-            return false;
-        }
-    }
+    async Task<bool> IsRetainedCopy(VaultLegacyEntry entry) =>
+        await store.Read(entry.Destination!) is { } current &&
+        await store.Read(entry.Path) is { } legacy &&
+        VaultLegacyLayout.SameContent(legacy, current);
 
-    async Task<List<string>> ListRootEntries() => await ListEntries(string.Empty);
+    async Task<bool> RootIsTaken() => (await store.List(string.Empty)).Contains($"{VaultPathSegments.Root}/");
 
-    async Task<List<string>> ListEntries(string path)
-    {
-        try
-        {
-            var list = await _vaultClient.V1.Secrets.KeyValue.V2.ReadSecretPathsAsync(path, mountPoint: _mountPoint);
-            return [.. list.Data.Keys];
-        }
-        catch (VaultApiException ex) when (ex.HttpStatusCode == HttpStatusCode.NotFound)
-        {
-            return [];
-        }
-    }
-
-    sealed class Counts
-    {
-        public long Keys { get; set; }
-
-        public long Erasures { get; set; }
-
-        public long Unresolved { get; set; }
-    }
+    async Task<bool> HasMarker() =>
+        await store.Read(VaultPathSegments.LayoutMarker) is { } marker &&
+        marker.Data.TryGetValue(FormatField, out var format) &&
+        string.Equals(format, VaultPathSegments.Root, StringComparison.Ordinal);
 }
