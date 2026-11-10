@@ -166,7 +166,7 @@ internal static class EncryptionKeyCommandRunner
 
         if (report.MigrationLocked)
         {
-            await output.WriteLineAsync("The Vault mount is locked by another migration. If the lock is stale, stop all migrators and remove it manually as described in the compliance storage documentation.");
+            await output.WriteLineAsync("The key store is locked by another migration. If the lock is stale, stop all migrators and remove it manually as described in the compliance storage documentation.");
             return MigrationLocked;
         }
 
@@ -183,6 +183,12 @@ internal static class EncryptionKeyCommandRunner
             $"{(report.DryRun ? "erasure records that would be copied" : "erasure records copied")}: {report.ErasureRecordsCopied}; " +
             $"conflicts kept: {report.ConflictsKept}; entries that cannot be addressed unambiguously: {report.AmbiguousForReview}; " +
             $"failed: {report.Failed}; verified: {report.Verified}; removed under earlier names: {report.LegacyRemoved}; complete: {report.Complete}");
+        if (report.HeldForAttributeDecision + report.LegacyRemovedNotPurged + report.ScopesMissingFromList > 0)
+        {
+            await output.WriteLineAsync(
+                $"Entries held because they carry attributes: {report.HeldForAttributeDecision}; removed but still recoverable in the key store: {report.LegacyRemovedNotPurged}; " +
+                $"known scopes missing from Compliance:Encryption:LegacyKeyScopes: {report.ScopesMissingFromList}");
+        }
 
         return ExitCodeFor(report);
     }

@@ -317,7 +317,30 @@ Besides the policy above, the token needs read and list on the earlier paths, an
 
 Chronicle connects to Vault at the `connectionDetails` address as given. Use an `https://` address to protect keys in transit; there is no further TLS configuration for Vault in this version.
 
-Keys stored in Azure Key Vault under earlier names are not migrated by this command.
+### Migrating Azure Key Vault keys to their new names
+
+For Azure Key Vault, the same `--migrate-encryption-keys`, `--dry-run` and `--remove-migrated-legacy-keys` options copy keys stored under earlier names to their current names, with the same exit codes. Earlier names are lowercased and reduced to letters, digits and hyphens, so the event store and namespace cannot be read off them. List them under `compliance.encryption.legacyKeyScopes`, each with the exact `eventStore` and `namespace`:
+
+```json
+{
+  "compliance": {
+    "encryption": {
+      "legacyKeyScopes": [
+        { "eventStore": "MyStore", "namespace": "Default" }
+      ]
+    }
+  }
+}
+```
+
+- The list is required. Without it nothing is migrated and the command fails.
+- A listed scope with no entries under earlier names is an error. Chronicle compares the list with the event stores and namespaces it knows of and reports the ones that are missing; it never adds them.
+- A name is migrated only when exactly one address built from the listed scopes produces it. Other names are left alone and counted for review.
+- An entry with an expiry, a not-before time, a content type, tags, a disabled version or more than one version is not copied or removed. It is counted and left for review.
+- Nothing is written over an existing secret or over a name held by a deleted secret that can still be recovered.
+- Key Vault has no conditional write, so stop every node before migrating. Removed earlier secrets are purged when the vault allows it; the report counts the ones it still holds as recoverable.
+
+The identity needs get, list, set and delete on secrets, and purge when `--remove-migrated-legacy-keys` is used. `legacyKeyHandling` set to `refuse` stops a normal start while keys under earlier names remain, as for Vault.
 
 ### Proving the migration on a staging copy
 
