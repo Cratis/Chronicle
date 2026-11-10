@@ -44,7 +44,7 @@ public partial class ProjectionsManager(
     IStorage storage,
     ILocalSiloDetails localSiloDetails,
     IClusterMembershipService clusterMembership,
-    IProjectionSubscriptionThrottle subscriptionThrottle,
+    ISubscriptionAdmission subscriptionThrottle,
     ILogger<ProjectionsManager> logger,
     TimeProvider? timeProvider = null) : Grain<ProjectionsManagerState>, IProjectionsManager, IOnBroadcastChannelSubscribed, IDisposable
 {

@@ -1,14 +1,14 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Chronicle.Projections.for_ProjectionSubscriptionThrottle;
+namespace Cratis.Chronicle.Observation.for_SubscriptionAdmission;
 
 /// <summary>
 /// Eight grants exclude a ninth until a holder releases admission.
 /// </summary>
 public class when_capacity_is_exhausted : Specification
 {
-    readonly ProjectionSubscriptionThrottle _throttle = new();
+    readonly SubscriptionAdmission _throttle = new(8, Environment.ProcessorCount);
     bool _allGranted = true;
     bool _ninthWasQueued;
     bool _ninthGranted;

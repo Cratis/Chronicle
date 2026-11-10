@@ -8,7 +8,7 @@ using Cratis.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
-namespace Cratis.Chronicle.Projections.for_ProjectionSubscriptionThrottle.given;
+namespace Cratis.Chronicle.Observation.for_SubscriptionAdmission.given;
 
 /// <summary>
 /// Builds real convention-bound service providers without starting silos or connecting to MongoDB.

@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Observation;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Cratis.Chronicle.Observation;
 
@@ -20,6 +21,12 @@ namespace Cratis.Chronicle.Observation;
 /// So a request to recover is remembered rather than acted on immediately, however many times it is made, and the
 /// work is done a bounded batch per turn, letting whatever else is waiting for the observer in between.
 /// </para>
+/// <para>
+/// Each batch also takes the silo's <see cref="ISubscriptionAdmission"/>, the same bound every event store's projection
+/// subscriptions share, so a cold start does not run recoveries for thousands of observers at once on top of the
+/// subscriptions. A batch never waits for admission inside the turn - that would hold the observer while it queues for
+/// the silo - it tries, and when none is free comes back in a later turn.
+/// </para>
 /// </remarks>
 public partial class Observer
 {
@@ -27,6 +34,11 @@ public partial class Observer
     /// The most failed partitions the observer starts recovering in a single turn.
     /// </summary>
     internal const int MaxPartitionRecoveriesPerTurn = 10;
+
+    /// <summary>
+    /// How long a recovery batch waits before trying again when the silo's subscription admission is fully taken.
+    /// </summary>
+    internal static readonly TimeSpan RecoveryAdmissionRetryDelay = TimeSpan.FromSeconds(1);
 
     static readonly TimeSpan _recoveryStartFailureDelay = TimeSpan.FromSeconds(5);
 
@@ -67,6 +79,14 @@ public partial class Observer
             return;
         }
 
+        var admission = ServiceProvider.GetService<ISubscriptionAdmission>();
+        if (admission?.TryEnter() == false)
+        {
+            logger.DeferringRecoveryOfFailedPartitionsForAdmission();
+            SchedulePartitionRecoveryTurn(RecoveryAdmissionRetryDelay);
+            return;
+        }
+
         // The sweep and the partition recoveries of this turn share one budget of job drops.
         _retryJobDropBudget = MaxRetryJobDropsPerTurn;
         try
@@ -76,6 +96,7 @@ public partial class Observer
         finally
         {
             _retryJobDropBudget = null;
+            admission?.Release();
         }
     }
 

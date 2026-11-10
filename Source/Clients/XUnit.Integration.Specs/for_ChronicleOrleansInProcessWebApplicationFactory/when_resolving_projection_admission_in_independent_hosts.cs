@@ -5,8 +5,8 @@ extern alias KernelCore;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using IProjectionSubscriptionThrottle = KernelCore::Cratis.Chronicle.Projections.IProjectionSubscriptionThrottle;
-using ProjectionSubscriptionThrottle = KernelCore::Cratis.Chronicle.Projections.ProjectionSubscriptionThrottle;
+using ISubscriptionAdmission = KernelCore::Cratis.Chronicle.Observation.ISubscriptionAdmission;
+using SubscriptionAdmission = KernelCore::Cratis.Chronicle.Observation.SubscriptionAdmission;
 
 namespace Cratis.Chronicle.XUnit.Integration.for_ChronicleOrleansInProcessWebApplicationFactory;
 
@@ -19,8 +19,8 @@ public class when_resolving_projection_admission_in_independent_hosts : Specific
     given.a_build_only_factory _secondFactory;
     IHost _first;
     IHost _second;
-    IProjectionSubscriptionThrottle _firstThrottle;
-    IProjectionSubscriptionThrottle _secondThrottle;
+    ISubscriptionAdmission _firstThrottle;
+    ISubscriptionAdmission _secondThrottle;
     bool _sameScopeInstance;
     bool _independentCapacity = true;
 
@@ -34,14 +34,14 @@ public class when_resolving_projection_admission_in_independent_hosts : Specific
 
     async Task Because()
     {
-        _firstThrottle = _first.Services.GetRequiredService<IProjectionSubscriptionThrottle>();
-        _secondThrottle = _second.Services.GetRequiredService<IProjectionSubscriptionThrottle>();
+        _firstThrottle = _first.Services.GetRequiredService<ISubscriptionAdmission>();
+        _secondThrottle = _second.Services.GetRequiredService<ISubscriptionAdmission>();
         await using var firstScope = _first.Services.CreateAsyncScope();
         await using var secondScope = _first.Services.CreateAsyncScope();
-        _sameScopeInstance = ReferenceEquals(_firstThrottle, _first.Services.GetRequiredService<IProjectionSubscriptionThrottle>()) &&
-            ReferenceEquals(_firstThrottle, firstScope.ServiceProvider.GetRequiredService<IProjectionSubscriptionThrottle>()) &&
-            ReferenceEquals(_firstThrottle, secondScope.ServiceProvider.GetRequiredService<IProjectionSubscriptionThrottle>());
-        for (var index = 0; index < 8; index++)
+        _sameScopeInstance = ReferenceEquals(_firstThrottle, _first.Services.GetRequiredService<ISubscriptionAdmission>()) &&
+            ReferenceEquals(_firstThrottle, firstScope.ServiceProvider.GetRequiredService<ISubscriptionAdmission>()) &&
+            ReferenceEquals(_firstThrottle, secondScope.ServiceProvider.GetRequiredService<ISubscriptionAdmission>());
+        for (var index = 0; index < _firstThrottle.Limit; index++)
         {
             _independentCapacity &= await _firstThrottle.WaitAsync(TimeSpan.Zero, CancellationToken.None);
             _independentCapacity &= await _secondThrottle.WaitAsync(TimeSpan.Zero, CancellationToken.None);
@@ -50,15 +50,15 @@ public class when_resolving_projection_admission_in_independent_hosts : Specific
         _independentCapacity &= !await _firstThrottle.WaitAsync(TimeSpan.Zero, CancellationToken.None);
         _independentCapacity &= !await _secondThrottle.WaitAsync(TimeSpan.Zero, CancellationToken.None);
         _first.Dispose();
-        for (var index = 0; index < 8; index++)
+        for (var index = 0; index < _firstThrottle.Limit; index++)
         {
             _firstThrottle.Release();
             _secondThrottle.Release();
         }
 
-        for (var index = 0; index < 8; index++) _independentCapacity &= await _secondThrottle.WaitAsync(TimeSpan.Zero, CancellationToken.None);
+        for (var index = 0; index < _firstThrottle.Limit; index++) _independentCapacity &= await _secondThrottle.WaitAsync(TimeSpan.Zero, CancellationToken.None);
         _independentCapacity &= !await _secondThrottle.WaitAsync(TimeSpan.Zero, CancellationToken.None);
-        for (var index = 0; index < 8; index++) _secondThrottle.Release();
+        for (var index = 0; index < _firstThrottle.Limit; index++) _secondThrottle.Release();
     }
 
     void Destroy()
@@ -71,8 +71,8 @@ public class when_resolving_projection_admission_in_independent_hosts : Specific
 
     [Fact] void should_preserve_the_first_fallback_provider() => _first.Services.ShouldBeOfExactType<FallbackServiceProvider>();
     [Fact] void should_preserve_the_second_fallback_provider() => _second.Services.ShouldBeOfExactType<FallbackServiceProvider>();
-    [Fact] void should_resolve_real_admission() => _firstThrottle.ShouldBeOfExactType<ProjectionSubscriptionThrottle>();
+    [Fact] void should_resolve_real_admission() => _firstThrottle.ShouldBeOfExactType<SubscriptionAdmission>();
     [Fact] void should_share_admission_across_scopes() => _sameScopeInstance.ShouldBeTrue();
     [Fact] void should_not_share_between_hosts() => ReferenceEquals(_firstThrottle, _secondThrottle).ShouldBeFalse();
-    [Fact] void should_give_each_host_eight_permits() => _independentCapacity.ShouldBeTrue();
+    [Fact] void should_give_each_host_its_own_permits() => _independentCapacity.ShouldBeTrue();
 }
