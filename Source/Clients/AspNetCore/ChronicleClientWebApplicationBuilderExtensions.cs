@@ -119,6 +119,7 @@ public static class ChronicleClientWebApplicationBuilderExtensions
             return app;
         }
         app.Properties[middlewareKey] = true;
+        app.ApplicationServices.GetService<ChronicleUseMarker>()?.MarkCalled();
 
         if (!app.ApplicationServices.GetRequiredService<IOptions<ChronicleAspNetCoreOptions>>().Value.UseAutomaticMiddleware)
         {
