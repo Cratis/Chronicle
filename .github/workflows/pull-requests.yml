@@ -143,7 +143,7 @@ jobs:
       - name: Build development variant (DEVELOPMENT symbol)
         working-directory: ./Source/Kernel/Server
         run: |
-          dotnet publish -c Debug -p:DefineConstants=DEVELOPMENT -o out/development/x64
+          dotnet publish -c Debug -p:DefineConstants=DEVELOPMENT -p:DisableProxyGenerator=true -o out/development/x64
           cp -r out/development/x64 out/development/arm64
 
       - name: Upload development outputs
@@ -193,7 +193,7 @@ jobs:
           dotnet nuget add source --name github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text ${{ env.NUGET_SOURCE }}
 
       - name: Build root
-        run: dotnet build --configuration Debug
+        run: dotnet build --configuration Debug -p:DisableProxyGenerator=true
 
       - name: Create NuGet packages
         run: dotnet pack --no-build --configuration Debug -o ${{ env.NUGET_OUTPUT }} -p:PackageVersion=${{ needs.release.outputs.version }}
