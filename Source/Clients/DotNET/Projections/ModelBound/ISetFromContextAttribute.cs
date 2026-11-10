@@ -12,4 +12,9 @@ public interface ISetFromContextAttribute : IEventBoundAttribute
     /// Gets the name of the property on the event context.
     /// </summary>
     string? ContextPropertyName { get; }
+
+    /// <summary>
+    /// Gets a value indicating whether the property is only assigned when it has no value yet.
+    /// </summary>
+    bool SetOnce => false;
 }

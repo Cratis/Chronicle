@@ -54,7 +54,7 @@ public class when_a_reducer_registers_on_a_connection_another_caller_owns : Spec
         var error = await Catch.Exception(() => observed.WaitAsync(TimeSpan.FromSeconds(5)));
 
         (error is RpcException rpc && rpc.StatusCode == status).ShouldBeTrue();
-        grainFactory.ReceivedCalls().ShouldBeEmpty();
+        grainFactory.DidNotReceive().GetGrain<Chronicle.Observation.Reducers.Clients.IReducer>(Arg.Any<string>());
         definitionGrain.ReceivedCalls().ShouldBeEmpty();
         mediator.ReceivedCalls().ShouldBeEmpty();
     }

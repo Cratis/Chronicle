@@ -6,7 +6,8 @@ using Moq;
 namespace Cratis.Chronicle.Observation.for_Observer.when_receiving_reminder;
 
 /// <summary>
-/// An observer with nothing to report does not need to be woken every minute (#5677).
+/// An observer with nothing to report does not need to be woken every minute (#5677). A reminder left over from an earlier
+/// activation, or from a version that kept one for every observer, releases itself on its next tick.
 /// </summary>
 public class and_it_is_the_alert_reminder_of_a_settled_observer : given.an_observer
 {
@@ -16,11 +17,10 @@ public class and_it_is_the_alert_reminder_of_a_settled_observer : given.an_obser
     {
         await Crash();
         ApplyAlertReports();
-        _alertReminder = await _observer.GetReminder(Observer.AlertReminderName);
+        _alertReminder = await _observer.RegisterOrUpdateReminder(Observer.AlertReminderName, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
     }
 
     async Task Because() => await _observer.ReceiveReminder(Observer.AlertReminderName, default);
 
-    [Fact] void should_have_had_a_reminder_to_unregister() => _alertReminder.ShouldNotBeNull();
     [Fact] void should_unregister_the_alert_reminder() => _silo.ReminderRegistry.Mock.Verify(registry => registry.UnregisterReminder(It.IsAny<GrainId>(), _alertReminder), Times.Once);
 }

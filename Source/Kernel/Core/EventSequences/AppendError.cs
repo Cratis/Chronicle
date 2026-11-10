@@ -46,6 +46,11 @@ public record AppendError(string Value) : ConceptAs<string>(Value)
     public static readonly AppendError EffectReceiptUnsettled = nameof(EffectReceiptUnsettled);
 
     /// <summary>
+    /// A batch without idempotency keys that storage reported as not committed, twice. Nothing was written; it may be retried.
+    /// </summary>
+    public static readonly AppendError BatchNotCommittedAfterRetry = "The batch could not be committed after one retry. Nothing was written. Retry the append.";
+
+    /// <summary>
     /// The event being compensated for does not exist in the event sequence.
     /// </summary>
     public static readonly AppendError CompensatedEventNotFound = nameof(CompensatedEventNotFound);

@@ -217,7 +217,7 @@ class SparseIntegrationWorkflows(unittest.TestCase):
                                 for job in self.build["jobs"].values()))
         self.assertEqual({"requested-integration", "requested-detect-hot-core"},
                          set(jobs["hot-core-gate-requested"]["needs"]))
-        for job in ("dotnet-build-development-requested", "integration", "integration-api", "mongodb"):
+        for job in ("dotnet-build-development-requested", "integration", "integration-api", "mongodb", "neo4j"):
             self.assertIn("inputs.integration_requested", self.build["jobs"][job]["if"])
         for name in ("Build development Docker image", "Push development Docker image"):
             step = next(step for step in self.build["jobs"]["dotnet-build"]["steps"] if step.get("name") == name)
@@ -353,7 +353,7 @@ class SparseIntegrationWorkflows(unittest.TestCase):
 
     def test_pull_request_integration_waits_for_passing_specs(self):
         jobs = self.build["jobs"]
-        for job_id in ("integration", "integration-api", "mongodb"):
+        for job_id in ("integration", "integration-api", "mongodb", "neo4j"):
             with self.subTest(job=job_id):
                 job = jobs[job_id]
                 self.assertIn("specs", job["needs"])
@@ -446,7 +446,7 @@ class SparseIntegrationWorkflows(unittest.TestCase):
     def test_stable_specs_check_requires_every_shard_to_succeed(self):
         aggregate = self.build["jobs"]["specs"]
         self.assertEqual("${{ needs.already-ran.outputs.skip != 'true' && (always()) }}", aggregate["if"])
-        self.assertEqual(["wire-compatibility", "grain-compatibility", "workbench-proxies", "specs-other", "specs-sql", "specs-net10"],
+        self.assertEqual(["wire-compatibility", "grain-compatibility", "specs-other", "specs-sql", "specs-net10"],
                          prerequisites_of(aggregate))
         self.assertEqual({"contents": "read", "actions": "read"}, aggregate["permissions"])
         self.assertEqual("Checkout shard contract", aggregate["steps"][1]["name"])
@@ -469,16 +469,15 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         self.assertEqual("${{ needs.specs-sql.result }}", step["env"]["SQL_RESULT"])
         self.assertEqual("${{ needs.wire-compatibility.result }}", step["env"]["WIRE_RESULT"])
         self.assertEqual("${{ needs.grain-compatibility.result }}", step["env"]["GRAIN_RESULT"])
-        self.assertEqual("${{ needs.workbench-proxies.result }}", step["env"]["PROXIES_RESULT"])
         self.assertEqual("${{ needs.specs-net10.result }}", step["env"]["NET10_RESULT"])
         results = ("success", "failure", "cancelled", "skipped")
-        for wire, grain, proxies, ordinary, sql, net10 in product(results, repeat=6):
-            with self.subTest(wire=wire, grain=grain, proxies=proxies, ordinary=ordinary, sql=sql, net10=net10):
+        for wire, grain, ordinary, sql, net10 in product(results, repeat=5):
+            with self.subTest(wire=wire, grain=grain, ordinary=ordinary, sql=sql, net10=net10):
                 result = subprocess.run(["bash", "-c", step["run"]],
-                                        env={"WIRE_RESULT": wire, "GRAIN_RESULT": grain, "PROXIES_RESULT": proxies,
+                                        env={"WIRE_RESULT": wire, "GRAIN_RESULT": grain,
                                              "OTHER_RESULT": ordinary, "SQL_RESULT": sql,
                                              "NET10_RESULT": net10}, check=False)
-                self.assertEqual(wire == grain == proxies == ordinary == sql == net10 == "success",
+                self.assertEqual(wire == grain == ordinary == sql == net10 == "success",
                                  result.returncode == 0)
 
     def test_development_paths_preserve_steps_permissions_and_artifact(self):
@@ -495,7 +494,7 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         self.assertEqual([], prerequisites_of(parallel))
         # The requested PR build runs in parallel with the specs; the integration job keeps the specs gate.
         self.assertEqual([], prerequisites_of(requested))
-        self.assertEqual(["wire-compatibility", "grain-compatibility", "workbench-proxies", "specs-other", "specs-sql", "specs-net10"],
+        self.assertEqual(["wire-compatibility", "grain-compatibility", "specs-other", "specs-sql", "specs-net10"],
                          prerequisites_of(jobs["specs"]))
         for job_id in ("specs-other", "specs-sql"):
             self.assertEqual(["dotnet-build"], prerequisites_of(jobs[job_id]))
@@ -570,7 +569,7 @@ class SparseIntegrationWorkflows(unittest.TestCase):
 
     def test_coverage_cannot_be_cached_if_any_integration_dependency_failed_or_was_skipped(self):
         coverage = self.build["jobs"]["coverage-merge-and-cache"]
-        self.assertEqual({"specs", "integration", "integration-api", "mongodb"}, set(prerequisites_of(coverage)))
+        self.assertEqual({"specs", "integration", "integration-api", "mongodb", "neo4j"}, set(prerequisites_of(coverage)))
         self.assertIn("github.event_name != 'pull_request_target'", coverage["if"])
         self.assertIn("!cancelled()", coverage["if"])
         for dependency in prerequisites_of(coverage):
@@ -719,14 +718,26 @@ class IntegrationSingleBuildContracts(unittest.TestCase):
         stamp = next(step for step in steps if step["name"] == "Read the stamped build version")
         self.assertEqual(steps.index(extract) + 1, steps.index(stamp))
         self.assertEqual("matrix.provider == 'RollingUpgrade'", stamp.get("if"))
-        self.assertEqual(
-            'set -euo pipefail\n'
-            'line=$(python3 .github/scripts/derive-build-version.py)\n'
-            'echo "$line" >> "$GITHUB_ENV"\n'
-            'if ! grep -a -F -q -- "${line#*=}" Source/Clients/DotNET/bin/Release/net11.0/Cratis.Chronicle.dll; then\n'
-            '  echo "::error::Downloaded client does not contain the stamped build version ${line#*=}."\n'
-            '  exit 1\n'
-            'fi\n', stamp["run"])
+        # The version is read from the downloaded client, never derived again: a release tagged between
+        # the build and this job would otherwise change the derived base version.
+        self.assertNotIn("derive-build-version", stamp["run"])
+
+        def run_stamp(client_bytes):
+            with tempfile.TemporaryDirectory() as root:
+                dll = Path(root) / "Source/Clients/DotNET/bin/Release/net11.0/Cratis.Chronicle.dll"
+                dll.parent.mkdir(parents=True)
+                dll.write_bytes(client_bytes)
+                github_env = Path(root) / "github_env"
+                github_env.write_text("")
+                result = subprocess.run(["bash", "-c", stamp["run"]], cwd=root, capture_output=True, text=True,
+                                        env={**os.environ, "GITHUB_RUN_NUMBER": "1056", "GITHUB_ENV": str(github_env)})
+                return result.returncode, github_env.read_text()
+
+        code, env = run_stamp(b"\x00InformationalVersion\x0019.154.0-ci-1056+abc\x0019.153.0-ci-10567\x00")
+        self.assertEqual(0, code)
+        self.assertEqual("CRATIS_CHRONICLE_BUILD_VERSION=19.154.0-ci-1056\n", env)
+        self.assertNotEqual(0, run_stamp(b"\x00no stamped version here\x00")[0])
+        self.assertNotEqual(0, run_stamp(b"\x0019.154.0-ci-1056\x0019.155.0-ci-1056\x00")[0])
         for step in steps:
             self.assertNotIn("CRATIS_CHRONICLE_" + "CLIENT_VERSION", step.get("run", ""))
 

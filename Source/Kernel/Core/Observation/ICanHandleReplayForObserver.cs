@@ -31,6 +31,16 @@ public interface ICanHandleReplayForObserver
         /// Handler could not get replay context.
         /// </summary>
         CouldNotGetReplayContext = 2,
+
+        /// <summary>
+        /// The projection for the observer does not exist.
+        /// </summary>
+        ProjectionNotFound = 3,
+
+        /// <summary>
+        /// The handler failed with an exception; the exception is logged by the kernel.
+        /// </summary>
+        Failed = 4,
     }
 
     /// <summary>

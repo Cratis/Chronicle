@@ -105,6 +105,22 @@ keep-alive stream and a client-side watchdog:
   changed), re-run load-balancer selection (the server that dropped isn't guaranteed to be the one
   to reconnect to), and re-run the compatibility check.
 
+## Several silos behind a load balancer
+
+The session stream (`Connect`), observer streams (`Observe`), projection registrations and
+keep-alive RPCs may reach different silos, whether through per-RPC balancing or a dedicated
+session channel. The kernel verifies across the cluster that each request comes from the identity
+that opened the connection. Clients do not need sticky routing.
+
+`PermissionDenied` is a definitive refusal: the connection belongs to another identity or is no
+longer held. Reconnect rather than retrying that registration unchanged. `Unavailable` with
+"The connection could not be verified." is transient; retry with the capped
+exponential backoff described above. Projection declaration recording is best-effort: when ownership
+cannot be verified, the kernel logs a warning and still registers the projection definitions. If the
+silo holding the reservation grain fails, the grain starts empty until the session holder next renews
+its lease (normally within two seconds); a
+registration in that interval can be refused and must reconnect.
+
 ## What a new client needs to implement
 
 - Parse both connection-string forms (explicit host list, `+srv`) and re-resolve on every connect.

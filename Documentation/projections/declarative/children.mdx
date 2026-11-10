@@ -86,6 +86,30 @@ Configure the removal event with the same child-key strategy used by the add and
 
 When the removal event arrives, Chronicle finds the member by `e.UserId` and removes it. If no member has that key, the collection stays unchanged. Add separate `RemovedWith<>()` mappings for other event types that remove members.
 
+## Ordering new children
+
+By default a new child is appended to the end of the collection. A children definition can instead choose where new children go:
+
+| Placement | Where a new child goes |
+| --- | --- |
+| Append (default) | At the end of the collection. |
+| Prepend | At the start of the collection, so the most recent child comes first. |
+| Sorted | The collection is ordered by a child property after the new child is inserted, ascending or descending. |
+
+The order is stored, not computed when the read model is queried. Chronicle applies it at the moment a child is added, in the projection engine and in every sink, so a replay produces the same order.
+
+Ordering only places **new** children. Updating an existing child never moves it, even when the update changes the property the collection is sorted by. Removing a child leaves the others where they are.
+
+Children with equal sort values are ordered by the property that identifies them, ascending, in both directions, so the order is the same in every sink. Children with a missing or null sort value come first when sorting ascending and last when sorting descending.
+
+Values compare the same way regardless of the server's culture: numbers numerically across numeric types, strings by their character codes (so `B` comes before `a`), dates as UTC instants to the millisecond, `false` before `true`, and GUIDs by their stored bytes. When a collection mixes kinds of values, null comes first, then numbers, strings, GUIDs, booleans and dates. Because the whole collection is ordered on each insert, a child whose sort value changed since it was added takes its sorted place the next time a child is inserted.
+
+In the next example the newest comment comes first, and tasks stay sorted with the highest priority first:
+
+<ChronicleClientTabs snippet="projections/declarative/children/ordering" />
+
+A collection has one ordering. Declaring a second one for the same collection fails when the projection is built.
+
 ## Multiple child collections
 
 Call `Children` for each collection the read model needs. Each collection has its own identity and event mappings:

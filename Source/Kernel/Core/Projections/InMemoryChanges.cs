@@ -37,7 +37,7 @@ internal static class InMemoryChanges
 
                 case ChildAdded childAdded:
                     var items = state.EnsureCollection<object>(childAdded.ChildrenProperty, childAdded.ArrayIndexers);
-                    items.Add(childAdded.Child);
+                    items.InsertChild(childAdded.Child, childAdded.Ordering, childAdded.IdentifiedByProperty);
                     break;
 
                 case ChildRemoved childRemoved:

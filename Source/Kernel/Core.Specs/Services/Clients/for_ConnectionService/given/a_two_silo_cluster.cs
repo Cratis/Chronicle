@@ -29,6 +29,7 @@ public class a_two_silo_cluster : Specification
     protected SiloAddress _siloB;
     protected ConnectionOwnership _ownershipA;
     protected ConnectionOwnership _ownershipB;
+    protected readonly Dictionary<string, IConnectedClients> _registries = [];
     private protected KernelConnectionService _serviceA;
     private protected KernelConnectionService _serviceB;
     readonly TaskCompletionSource<Exception?> _terminated = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -57,6 +58,8 @@ public class a_two_silo_cluster : Specification
     /// <summary>
     /// Gets how long a silo waits for the reservation grain.
     /// </summary>
+    protected virtual bool RouteKeepAlivesAcrossSilos => false;
+
     protected virtual TimeSpan ResponseTimeout => TimeSpan.FromMilliseconds(300);
 
     /// <summary>
@@ -135,12 +138,15 @@ public class a_two_silo_cluster : Specification
     {
         var connectedClients = Substitute.For<IConnectedClients>();
         connectedClients.OnClientConnected(Arg.Any<ConnectionId>(), Arg.Any<string>(), Arg.Any<bool>(), Arg.Any<int>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>()).Returns(Task.CompletedTask);
-        connectedClients.OnClientPing(Arg.Any<ConnectionId>()).Returns(true);
-        connectedClients.IsConnected(Arg.Any<ConnectionId>()).Returns(false);
+        var connected = false;
+        connectedClients.When(clients => clients.OnClientConnected(Arg.Any<ConnectionId>(), Arg.Any<string>(), Arg.Any<bool>(), Arg.Any<int>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>())).Do(_ => connected = true);
+        connectedClients.OnClientPing(Arg.Any<ConnectionId>()).Returns(_ => !RouteKeepAlivesAcrossSilos || connected);
+        connectedClients.IsConnected(Arg.Any<ConnectionId>()).Returns(_ => RouteKeepAlivesAcrossSilos && connected);
+        _registries[silo.ToParsableString()] = connectedClients;
         connectedClients.GetAllConnectedClients().Returns(Task.FromResult<IEnumerable<KernelConnectedClient>>([]));
 
         var grainFactory = Substitute.For<IGrainFactory>();
-        grainFactory.GetGrain<IConnectedClients>(Arg.Any<string>(), Arg.Any<string>()).Returns(connectedClients);
+        grainFactory.GetGrain<IConnectedClients>(Arg.Any<string>(), Arg.Any<string>()).Returns(call => _registries[call.ArgAt<string>(0)]);
         grainFactory.GetGrain<IConnectionReservation>(Arg.Any<string>(), Arg.Any<string>()).Returns(_ => _reservation);
         var management = Substitute.For<IManagementGrain>();
         management.GetHosts(true).Returns(new Dictionary<SiloAddress, SiloStatus> { [_siloA] = SiloStatus.Active, [_siloB] = SiloStatus.Active });
@@ -177,6 +183,14 @@ public class a_two_silo_cluster : Specification
             }
         }
 
+        public Task<bool> IsHeldBy(ConnectionOwner owner)
+        {
+            lock (_turn)
+            {
+                return inner.IsHeldBy(owner);
+            }
+        }
+
         public Task Release(ConnectionOwner owner, Guid token)
         {
             lock (_turn)
@@ -190,6 +204,8 @@ public class a_two_silo_cluster : Specification
     {
         public Task<bool> Claim(ConnectionOwner owner, SiloAddress silo, Guid token, TimeSpan lease) => inner.Claim(owner, silo, token, lease);
 
+        public Task<bool> IsHeldBy(ConnectionOwner owner) => inner.IsHeldBy(owner);
+
         public async Task Release(ConnectionOwner owner, Guid token)
         {
             await inner.Release(owner, token);
@@ -200,6 +216,10 @@ public class a_two_silo_cluster : Specification
     protected sealed class SharedReservation(IClusterMembershipService membership) : ConnectionReservation(membership)
     {
         internal override void Keep(TimeSpan period)
+        {
+        }
+
+        internal override void DeactivateWhenIdle()
         {
         }
     }

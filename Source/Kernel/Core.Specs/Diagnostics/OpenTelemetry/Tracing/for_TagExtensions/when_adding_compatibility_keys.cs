@@ -18,7 +18,7 @@ public class when_adding_compatibility_keys : Specification
     void Because()
     {
         _activity.Tag((EventStoreName)"store").Tag((EventStoreNamespaceName)"namespace").Tag((EventSequenceId)"log")
-            .Tag((EventSourceType)"customer").Tag((EventSourceId)"customer-42", new IdentifierTelemetry(new()))
+            .Tag((EventSourceType)"customer").Tag((EventSourceId)"customer-42", new IdentifierTelemetry(new() { EventSourceIdTracing = EventSourceIdTracing.Raw }))
             .Tag(new EventType("type", EventTypeGeneration.First));
         _hashed.Tag((EventSourceId)"customer-42", new IdentifierTelemetry(new()
         {

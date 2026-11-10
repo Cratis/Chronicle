@@ -77,7 +77,7 @@ public partial class EncryptChangeset
                 changes[index] = propertiesChanged with
                 {
                     Differences = propertiesChanged.Differences
-                        .Select(difference => IsProtectedProperty(schema, difference.PropertyPath)
+                        .Select(difference => !difference.IsRemoval && IsProtectedProperty(schema, difference.PropertyPath)
                             ? ProtectedFutureDifference(context, snapshot, difference)
                             : difference)
                         .ToArray()

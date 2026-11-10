@@ -3,10 +3,12 @@
 
 using System.Collections;
 using System.Dynamic;
+using System.Globalization;
 using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Objects;
 using Cratis.Chronicle.Properties;
 using Cratis.Collections;
+using Cratis.Concepts;
 
 namespace Cratis.Chronicle.Changes;
 
@@ -78,6 +80,7 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
         }
 
         Add(new PropertiesChanged<TTarget>(workingState, differences));
+        SortChildrenAddedInThisChangeset(workingState);
         CurrentState = workingState;
     }
 
@@ -120,12 +123,12 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
     }
 
     /// <inheritdoc/>
-    public void AddChild(PropertyPath childrenProperty, object child)
+    public void AddChild(PropertyPath childrenProperty, object child, ChildrenOrdering? ordering = default)
     {
         var workingState = CurrentState.Clone()!;
         var items = workingState.EnsureCollection<TTarget, object>(childrenProperty, ArrayIndexers.NoIndexers);
-        items.Add(child);
-        Add(new ChildAdded(child, childrenProperty, PropertyPath.Root, null!, ArrayIndexers.NoIndexers));
+        items.InsertChild(child, ordering);
+        Add(new ChildAdded(child, childrenProperty, PropertyPath.Root, null!, ArrayIndexers.NoIndexers, ordering));
         CurrentState = workingState;
     }
 
@@ -136,7 +139,8 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
         object key,
         IEnumerable<PropertyMapper<TSource, TTarget>> propertyMappers,
         ArrayIndexers arrayIndexers,
-        TTarget? childInitialState = default)
+        TTarget? childInitialState = default,
+        ChildrenOrdering? ordering = default)
         where TChild : new()
     {
         var workingState = CurrentState.Clone();
@@ -161,6 +165,10 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
                 return;
             }
 
+            // The child was added within this changeset, so a sink sorting on insert sees its final values - order it
+            // again by them so the engine's state keeps the order the sinks store.
+            existingCollection.SortChildren(existingChildAdded.Ordering, existingChildAdded.IdentifiedByProperty);
+
             // Replace the existing ChildAdded with a new one containing the updated child
             var index = _changes.IndexOf(existingChildAdded);
             _changes[index] = new ChildAdded(
@@ -168,7 +176,8 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
                 existingChildAdded.ChildrenProperty,
                 existingChildAdded.IdentifiedByProperty,
                 existingChildAdded.Key,
-                existingChildAdded.ArrayIndexers);
+                existingChildAdded.ArrayIndexers,
+                existingChildAdded.Ordering);
 
             // Update the item in the current state's collection
             var collection = CurrentState.EnsureCollection<TTarget, object>(childrenProperty, arrayIndexers);
@@ -214,6 +223,8 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
 
         if (item is not null)
         {
+            // Appended first so an unidentified child is addressed by its appended index while it is populated, and
+            // placed afterwards so a sorted collection is ordered on the values the child was populated with.
             items.Add(item);
             foreach (var difference in SetProperties(workingState, propertyMappers, arrayIndexers))
             {
@@ -225,9 +236,17 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
                 var propertyPath = PropertyPath.CreateFrom(hasCollectionPrefix
                     ? differenceSegments.Skip(childSegments.Length).ToArray()
                     : differenceSegments);
-                propertyPath.SetValue(item, difference.Changed!, arrayIndexers);
+                if (difference.IsRemoval)
+                {
+                    propertyPath.RemoveValue(item, arrayIndexers);
+                }
+                else
+                {
+                    propertyPath.SetValue(item, difference.Changed!, arrayIndexers);
+                }
             }
-            Add(new ChildAdded(item, childrenProperty, identifiedByProperty, key!, arrayIndexers));
+            items.PlaceAppendedChild(ordering, identifiedByProperty);
+            Add(new ChildAdded(item, childrenProperty, identifiedByProperty, key!, arrayIndexers, ordering));
         }
 
         CurrentState = workingState;
@@ -372,24 +391,104 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
         }
 
         resolvesToRemove.ForEach(_ => changes.Remove(_));
+        if (resolvesToRemove.Count > 0)
+        {
+            parent.SortChildrenAddedInThisChangeset(parent.CurrentState);
+        }
     }
 
     static void ApplyDifferencesToChild(object child, IEnumerable<PropertyDifference> differences) =>
         differences.ForEach(difference =>
         {
             var propertyPath = PropertyPath.CreateFrom([difference.PropertyPath.LastSegment]);
+            if (difference.IsRemoval)
+            {
+                propertyPath.RemoveValue(child, difference.ArrayIndexers);
+                return;
+            }
+
             propertyPath.SetValue(child, difference.Changed!, difference.ArrayIndexers);
         });
+
+    static object? ValuesOfChild(object? item, IEnumerable<ChildAdded> childrenAdded)
+    {
+        if (item is null)
+        {
+            return null;
+        }
+
+        foreach (var childAdded in childrenAdded)
+        {
+            if (ReferenceEquals(item, childAdded.Child))
+            {
+                return item;
+            }
+
+            if (childAdded.IdentifiedByProperty.IsSet &&
+                IsSameKey(childAdded.IdentifiedByProperty.GetValue(item, ArrayIndexers.NoIndexers), childAdded.Key))
+            {
+                return childAdded.Child;
+            }
+        }
+
+        return item;
+    }
+
+    /// <summary>
+    /// Compare a child's identifying value with a key by value, looking through concepts.
+    /// </summary>
+    /// <remarks>
+    /// Values of the same type compare with their own equality and composite keys compare property by property. Values of
+    /// different types - such as a Guid against its string form - compare by their invariant text, the only common ground
+    /// they have.
+    /// </remarks>
+    /// <param name="value">The value identifying the child.</param>
+    /// <param name="key">The key to compare with.</param>
+    /// <returns>True if they identify the same child, false if not.</returns>
+    static bool IsSameKey(object? value, object? key)
+    {
+        value = UnwrapConcept(value);
+        key = UnwrapConcept(key);
+        if (value is null || key is null)
+        {
+            return value is null && key is null;
+        }
+
+        if (value is IDictionary<string, object?> valueProperties && key is IDictionary<string, object?> keyProperties)
+        {
+            return valueProperties.Count == keyProperties.Count &&
+                valueProperties.All(_ => keyProperties.TryGetValue(_.Key, out var keyValue) && IsSameKey(_.Value, keyValue));
+        }
+
+        if (value.GetType() == key.GetType())
+        {
+            return value.Equals(key);
+        }
+
+        return string.Equals(
+            Convert.ToString(value, CultureInfo.InvariantCulture),
+            Convert.ToString(key, CultureInfo.InvariantCulture),
+            StringComparison.Ordinal);
+    }
+
+    static object? UnwrapConcept(object? value) => value?.IsConcept() == true ? value.GetConceptValue() : value;
 
     static PropertyDifference CreateUpdatedDifferenceFor(PropertyDifference ancestor, PropertyDifference descendant, object state)
     {
         if (ancestor.PropertyPath == descendant.PropertyPath)
         {
-            return new PropertyDifference(ancestor.PropertyPath, ancestor.Original, descendant.Changed, ancestor.ArrayIndexers);
+            return descendant.IsRemoval
+                ? PropertyDifference.Removal(ancestor.PropertyPath, ancestor.Original, ancestor.ArrayIndexers)
+                : new PropertyDifference(ancestor.PropertyPath, ancestor.Original, descendant.Changed, ancestor.ArrayIndexers);
         }
 
         if (!TryGetValueAtPath(state, ancestor.PropertyPath, ancestor.ArrayIndexers, out var changed))
         {
+            if (ancestor.IsRemoval)
+            {
+                return ancestor;
+            }
+
             changed = ancestor.Changed;
         }
 
@@ -492,6 +591,28 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
         }
 
         _consolidatedIntoChildren.ForEach(childAdded => ApplyDifferencesToChild(childAdded.Child, propertiesChanged.Differences));
+        parent?.SortChildrenAddedInThisChangeset(parent.CurrentState);
+    }
+
+    /// <summary>
+    /// A child added within this changeset reaches a sink sorting on insert with its final values. When a later change in
+    /// the same changeset sets a value it is sorted by, its collection is ordered again so the state keeps the stored order.
+    /// </summary>
+    /// <param name="state">The state holding the collections to order.</param>
+    void SortChildrenAddedInThisChangeset(TTarget state)
+    {
+        if (!_hasChildCollectionOperations || state is null)
+        {
+            return;
+        }
+
+        var sorted = _changes.OfType<ChildAdded>().Where(_ => _.Ordering?.Placement == ChildrenPlacement.Sorted && !_.Ordering.IsAppend()).ToArray();
+        foreach (var childAdded in sorted)
+        {
+            // A sink stores the child the change carries, so its values decide where a child added here is placed.
+            state.EnsureCollection<TTarget, object>(childAdded.ChildrenProperty, childAdded.ArrayIndexers)
+                .SortChildren(childAdded.Ordering, childAdded.IdentifiedByProperty, item => ValuesOfChild(item, sorted.Where(_ => _.ChildrenProperty == childAdded.ChildrenProperty)));
+        }
     }
 
     void Consolidate()
@@ -541,7 +662,14 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
                     {
                         // Apply the property change to the child
                         var propertyPath = PropertyPath.CreateFrom([diff.PropertyPath.LastSegment]);
-                        propertyPath.SetValue(matchingChildAdded.Child, diff.Changed!, diff.ArrayIndexers);
+                        if (diff.IsRemoval)
+                        {
+                            propertyPath.RemoveValue(matchingChildAdded.Child, diff.ArrayIndexers);
+                        }
+                        else
+                        {
+                            propertyPath.SetValue(matchingChildAdded.Child, diff.Changed!, diff.ArrayIndexers);
+                        }
                     }
                     else
                     {
@@ -732,7 +860,7 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
             var difference = propertyMapper(Incoming, (TTarget)target, arrayIndexers);
             if (difference.HasChanges())
             {
-                difference.PropertyPath.SetValue(target, difference.Changed!, difference.ArrayIndexers);
+                difference.ApplyTo(target);
             }
         }
     }

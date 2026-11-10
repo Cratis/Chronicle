@@ -14,7 +14,7 @@ public class when_max_batch_size_is_not_configured : Specification
 
     void Establish()
     {
-        var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>()).Build();
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> { { "Cratis:Chronicle:Storage:Type", "inmemory" } }).Build();
         var services = new ServiceCollection();
         services.AddSingleton<IConfiguration>(configuration);
         ChronicleOptions.AddConfiguration(services, configuration);

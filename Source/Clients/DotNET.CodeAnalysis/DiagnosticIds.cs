@@ -49,6 +49,46 @@ public static class DiagnosticIds
     public const string SinkCannotBeCombinedWithPassive = "CHR0069";
 
     /// <summary>
+    /// An Observes attribute is on a method that does not take an EventBatch.
+    /// </summary>
+    public const string ObservesOnlyOnBatchMethods = "CHR0070";
+
+    /// <summary>
+    /// A batch method declares no Observes attribute.
+    /// </summary>
+    public const string BatchMethodMustObserveEventTypes = "CHR0071";
+
+    /// <summary>
+    /// An event type reaches more than one method of a reactor.
+    /// </summary>
+    public const string EventTypeMustReachOneMethod = "CHR0072";
+
+    /// <summary>
+    /// A per-event method takes a BatchContext.
+    /// </summary>
+    public const string BatchContextOnlyOnBatchMethods = "CHR0073";
+
+    /// <summary>
+    /// A reactor batch method returns something other than Task or void.
+    /// </summary>
+    public const string ReactorBatchMethodMustReturnTaskOrVoid = "CHR0074";
+
+    /// <summary>
+    /// A reducer has more than one batch method, or a batch method and per-event methods.
+    /// </summary>
+    public const string ReducerBatchMethodMustBeItsOnlyMethod = "CHR0075";
+
+    /// <summary>
+    /// A batch method has a signature Chronicle cannot call.
+    /// </summary>
+    public const string BatchMethodSignatureMustMatchAllowed = "CHR0076";
+
+    /// <summary>
+    /// A batch method matches on an event type it does not observe.
+    /// </summary>
+    public const string BatchMethodMatchesUnobservedEventType = "CHR0077";
+
+    /// <summary>
     /// Event type must have EventType attribute when appended to event sequence.
     /// </summary>
     public const string EventTypeMustHaveAttributeWhenAppended = "CHR0001";

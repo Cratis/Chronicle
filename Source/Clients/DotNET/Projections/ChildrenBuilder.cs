@@ -32,6 +32,7 @@ public class ChildrenBuilder<TParentReadModel, TChildReadModel>(
 {
     readonly INamingPolicy _namingPolicy = namingPolicy;
     PropertyPath _identifiedBy = PropertyPath.NotSet;
+    ChildrenOrderingDefinition? _ordering;
 
 #pragma warning disable IDE0052 // Remove unread private members
     // TODO: This is not used, but it should be - figure out what the purpose was. The FromEventProperty method is called from ReadModelPropertiesBuilder
@@ -78,6 +79,18 @@ public class ChildrenBuilder<TParentReadModel, TChildReadModel>(
         return this;
     }
 
+    /// <inheritdoc/>
+    public IChildrenBuilder<TParentReadModel, TChildReadModel> Prepend() =>
+        WithOrdering(new() { Placement = ChildrenPlacement.Prepend });
+
+    /// <inheritdoc/>
+    public IChildrenBuilder<TParentReadModel, TChildReadModel> OrderBy<TProperty>(Expression<Func<TChildReadModel, TProperty>> propertyExpression) =>
+        WithOrdering(Sorted(propertyExpression, SortDirection.Ascending));
+
+    /// <inheritdoc/>
+    public IChildrenBuilder<TParentReadModel, TChildReadModel> OrderByDescending<TProperty>(Expression<Func<TChildReadModel, TProperty>> propertyExpression) =>
+        WithOrdering(Sorted(propertyExpression, SortDirection.Descending));
+
     /// <summary>
     /// Build the <see cref="ChildrenDefinition"/>.
     /// </summary>
@@ -98,7 +111,26 @@ public class ChildrenBuilder<TParentReadModel, TChildReadModel>(
             RemovedWithJoin = _removedWithJoinDefinitions,
             AutoMap = (Contracts.Projections.AutoMap)_autoMap,
             NoAutoMapProperties = [.. _noAutoMapProperties],
-            Nested = _nestedDefinitions.ToDictionary(_ => (string)_.Key, _ => _.Value)
+            Nested = _nestedDefinitions.ToDictionary(_ => (string)_.Key, _ => _.Value),
+            Ordering = _ordering
         };
+    }
+
+    ChildrenOrderingDefinition Sorted<TProperty>(Expression<Func<TChildReadModel, TProperty>> propertyExpression, SortDirection direction) => new()
+    {
+        Placement = ChildrenPlacement.Sorted,
+        SortBy = ProjectionPropertyPaths.FromExpression(propertyExpression, _namingPolicy, ProjectionPathRole.Target, $"the property to order children of type '{typeof(TChildReadModel).FullName}' by"),
+        Direction = direction
+    };
+
+    ChildrenBuilder<TParentReadModel, TChildReadModel> WithOrdering(ChildrenOrderingDefinition ordering)
+    {
+        if (_ordering is not null)
+        {
+            throw new ChildrenOrderingAlreadyDefined(typeof(TChildReadModel));
+        }
+
+        _ordering = ordering;
+        return this;
     }
 }

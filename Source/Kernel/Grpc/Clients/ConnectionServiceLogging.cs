@@ -38,6 +38,9 @@ internal static partial class ConnectionServiceLogMessages
     [LoggerMessage(LogLevel.Warning, "A keep-alive for connection {ConnectionId} was refused because the connection is not available to the caller")]
     internal static partial void KeepAliveRefused(this ILogger<ConnectionService> logger, string connectionId);
 
+    [LoggerMessage(LogLevel.Warning, "A keep-alive for connection {ConnectionId} could not be verified across the cluster")]
+    internal static partial void KeepAliveOwnershipUnverifiable(this ILogger<ConnectionService> logger, string connectionId);
+
     [LoggerMessage(LogLevel.Warning, "Could not check that connection {ConnectionId} is still registered. Retrying at the next keep-alive")]
     internal static partial void FailedToKeepClientRegistered(this ILogger<ConnectionService> logger, string connectionId, Exception exception);
 

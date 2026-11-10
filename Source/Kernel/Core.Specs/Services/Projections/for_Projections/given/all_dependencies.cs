@@ -29,7 +29,7 @@ namespace Cratis.Chronicle.Services.Projections.for_Projections.given;
 /// <summary>
 /// Base context that wires up all dependencies of the Projections gRPC service.
 /// </summary>
-public class all_dependencies : Specification
+public class all_dependencies : Observation.given.a_connection_held_on_another_silo
 {
     protected static readonly EventStoreName EventStore = "test-store";
     protected static readonly EventStoreNamespaceName EventStoreNamespace = "test-namespace";
@@ -52,6 +52,8 @@ public class all_dependencies : Specification
     protected ReadModelDefinition _readModelDefinition;
     protected ProjectionDefinition _projectionDefinition;
     protected Contracts.Projections.IProjections _service;
+
+    protected virtual Cratis.Chronicle.Clients.IConnectionOwnership CreateOwnership() => _ownership;
 
     void Establish()
     {
@@ -152,8 +154,8 @@ public class all_dependencies : Specification
             services.BuildServiceProvider(),
             _readModelsCompliance,
             _localSiloDetails,
-            _ownership,
-            Microsoft.Extensions.Options.Options.Create(new Cratis.Chronicle.Configuration.ChronicleOptions()),
+            CreateOwnership(),
+            Microsoft.Extensions.Options.Options.Create(new Cratis.Chronicle.Configuration.ChronicleOptions { Clustering = new() { ResponseTimeout = TimeSpan.FromMilliseconds(100) } }),
             Microsoft.Extensions.Logging.Abstractions.NullLogger<Projections>.Instance,
             NamespaceCasingContext.Create());
     }

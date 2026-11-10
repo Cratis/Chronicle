@@ -56,11 +56,20 @@ In .NET, the function must be the final path segment, take no arguments, and sup
 
 An actual .NET property takes precedence over a bare function name. Naming policies apply to property segments, not function names: under camel casing, `Occurred.Week` becomes `$eventContext(occurred.Week())`.
 
+## Set A Value Only Once
+
+Set `SetOnce = true` on `SetFrom` or `SetFromContext` when a property should keep the first value it gets. The mapping assigns the value only while the property has no value - it is missing or null - and later events leave it unchanged. In the next example every revision updates `Title`, while `OriginalTitle` and `Created` keep what the first revision supplied:
+
+<ChronicleClientTabs snippet="projections/model-bound/basic-mapping/set-once" />
+
+Set once works on root properties, children and nested objects, and a replay assigns the same value. See [setting a value only once](../declarative/set-properties#setting-a-value-only-once) for the full behavior.
+
 ## Choosing The Mapping
 
 | Mapping | Use it when |
 | --- | --- |
 | Set | A read model property should take a value from a specific event. |
+| Set once | A property should keep the first value an event supplies, such as who created something or when. |
 | Add | A numeric property should increase when an event occurs. |
 | Subtract | A numeric property should decrease when an event occurs. |
 | Context | A read model property should come from event metadata. |

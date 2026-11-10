@@ -42,6 +42,20 @@ internal static class ProjectionPropertyPaths
     public static string NameOf(string name, INamingPolicy namingPolicy) => (string)Resolve(name, namingPolicy, ProjectionPathRole.Target);
 
     /// <summary>
+    /// Composes the target path of a dictionary entry whose key is resolved per event.
+    /// </summary>
+    /// <param name="dictionary">The already converted path of the dictionary on the read model.</param>
+    /// <param name="keySource">The well-known key source marker - <see cref="WellKnownExpressions.EventContent"/> or <see cref="WellKnownExpressions.EventContext"/>.</param>
+    /// <param name="key">The already converted path of the key on the key source.</param>
+    /// <returns>The dictionary entry path.</returns>
+    /// <remarks>
+    /// The suffix is a source expression resolved per event into the dictionary key, not a member on the read model,
+    /// so it is composed from converted paths rather than CLR member names.
+    /// </remarks>
+    public static PropertyPath DictionaryEntry(PropertyPath dictionary, string keySource, PropertyPath key) =>
+        new($"{dictionary}.{keySource}.{key}");
+
+    /// <summary>
     /// Applies the naming policy to a validated canonical context path without reparsing its function calls.
     /// </summary>
     /// <param name="path">The validated canonical context property path.</param>

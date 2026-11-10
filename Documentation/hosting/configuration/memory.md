@@ -21,14 +21,14 @@ Put these settings at the root of `chronicle.json`, not inside a `Cratis` or `Ch
 }
 ```
 
-| Setting | Meaning |
-| --- | --- |
-| `enabled` | Whether work waits for room in the budget. Set to `false` to turn the gate off. The memory metrics are still reported. |
-| `budgetPercentOfAvailableMemory` | Share, from 1 to 100, of the memory available to the process that the budget covers. Available memory is the GC heap hard limit or the container limit when there is one, otherwise the memory of the machine. The rest is left for the runtime, caches, connections and work too small to wait. |
-| `budgetPercentUnderPressure` | Share, from 1 to 100, of the budget that remains while the garbage collector reports a high memory load. The budget shrinks and grows with the memory pressure of the process. |
-| `maximumWaitSeconds` | Seconds a request waits for room before it is let through regardless. `0` or less waits indefinitely. This keeps one stuck holder, for example a client that does not answer, from stopping all other work. |
-| `minimumReservationBytes` | Estimated size below which work does not reserve memory at all. Defaults to 1 MB. |
-| `reducerCostMultiplier` | How many times the size of a reducer's state a reduce is expected to hold at its peak. A reduce holds the stored state, the state sent to the client, the state it returns and the changes written, in several representations at once. |
+| Setting | Default | Meaning |
+| --- | --- | --- |
+| `enabled` | `true` | Whether work waits for room in the budget. Set to `false` to turn the gate off. The memory metrics are still reported. |
+| `budgetPercentOfAvailableMemory` | `40` | Share, from 1 to 100, of the memory available to the process that the budget covers. Available memory is the GC heap hard limit or the container limit when there is one, otherwise the memory of the machine. The rest is left for the runtime, caches, connections and work too small to wait. |
+| `budgetPercentUnderPressure` | `50` | Share, from 1 to 100, of the budget that remains while the garbage collector reports a high memory load. The budget shrinks and grows with the memory pressure of the process. |
+| `maximumWaitSeconds` | `120` | Seconds a request waits for room before it is let through regardless. `0` or less waits indefinitely. This keeps one stuck holder, for example a client that does not answer, from stopping all other work. |
+| `minimumReservationBytes` | `1048576` (1 MiB) | Estimated size below which work does not reserve memory at all. |
+| `reducerCostMultiplier` | `4` | How many times the size of a reducer's state a reduce is expected to hold at its peak. A reduce holds the stored state, the state sent to the client, the state it returns and the changes written, in several representations at once. |
 
 Environment variables use the `Cratis__Chronicle__Memory__` prefix, for example `Cratis__Chronicle__Memory__Enabled` and `Cratis__Chronicle__Memory__BudgetPercentOfAvailableMemory`.
 

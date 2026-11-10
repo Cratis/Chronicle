@@ -9,6 +9,7 @@
 
     <ItemGroup>
         <ProjectReference Include="../Storage.Vault/Storage.Vault.csproj" />
+        <ProjectReference Include="../Server/Server.csproj" />
         <ProjectReference Include="../Storage/Storage.csproj" />
         <ProjectReference Include="../Concepts/Concepts.csproj" />
     </ItemGroup>

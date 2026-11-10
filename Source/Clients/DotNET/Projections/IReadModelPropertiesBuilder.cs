@@ -178,4 +178,205 @@ public interface IReadModelPropertiesBuilder<TReadModel, TEvent, TBuilder>
     /// </remarks>
     TBuilder Clear<TProperty>(Expression<Func<TReadModel, TProperty>> readModelPropertyAccessor) =>
         throw new ClearNotSupported(GetType());
+
+    /// <summary>
+    /// Start building a set operation that only assigns the property when it has no value yet.
+    /// </summary>
+    /// <typeparam name="TProperty">Type of the property.</typeparam>
+    /// <param name="readModelPropertyAccessor">Model property accessor for defining the target property.</param>
+    /// <returns>The <see cref="ISetBuilder{TReadModel, TEvent, TProperty, TBuilder}"/> to continue building on.</returns>
+    /// <remarks>
+    /// The first event that produces a value wins. Later events leave the property as it is, also on replay. A property
+    /// that has been cleared back to no value is assigned again by the next event.
+    /// </remarks>
+    /// <exception cref="ProjectionBuilderOperationNotSupported">Thrown when the builder implementation does not support the operation.</exception>
+    ISetBuilder<TReadModel, TEvent, TProperty, TBuilder> SetOnce<TProperty>(Expression<Func<TReadModel, TProperty>> readModelPropertyAccessor) =>
+        throw new ProjectionBuilderOperationNotSupported(GetType(), nameof(SetOnce));
+
+    /// <summary>
+    /// Start building a set operation for an entry in a dictionary, keyed by a value from the event.
+    /// </summary>
+    /// <typeparam name="TKey">Type of the key value on the event.</typeparam>
+    /// <typeparam name="TValue">Type of the dictionary values.</typeparam>
+    /// <param name="readModelPropertyAccessor">Model property accessor for the dictionary.</param>
+    /// <param name="keyAccessor">Event property accessor for the dictionary key.</param>
+    /// <returns>The <see cref="ISetBuilder{TReadModel, TEvent, TProperty, TBuilder}"/> to continue building on.</returns>
+    /// <remarks>An event without a value for the key leaves the dictionary as it is.</remarks>
+    /// <exception cref="ProjectionBuilderOperationNotSupported">Thrown when the builder implementation does not support the operation.</exception>
+    ISetBuilder<TReadModel, TEvent, TValue, TBuilder> Set<TKey, TValue>(Expression<Func<TReadModel, IDictionary<string, TValue>>> readModelPropertyAccessor, Expression<Func<TEvent, TKey>> keyAccessor) =>
+        throw new ProjectionBuilderOperationNotSupported(GetType(), nameof(Set));
+
+    /// <summary>
+    /// Start building a set operation for an entry in a dictionary, keyed by a value from the event context.
+    /// </summary>
+    /// <typeparam name="TValue">Type of the dictionary values.</typeparam>
+    /// <param name="readModelPropertyAccessor">Model property accessor for the dictionary.</param>
+    /// <param name="keyAccessor">Event context property accessor for the dictionary key.</param>
+    /// <returns>The <see cref="ISetBuilder{TReadModel, TEvent, TProperty, TBuilder}"/> to continue building on.</returns>
+    /// <exception cref="ProjectionBuilderOperationNotSupported">Thrown when the builder implementation does not support the operation.</exception>
+    ISetBuilder<TReadModel, TEvent, TValue, TBuilder> Set<TValue>(Expression<Func<TReadModel, IDictionary<string, TValue>>> readModelPropertyAccessor, Expression<Func<EventContext, object>> keyAccessor) =>
+        throw new ProjectionBuilderOperationNotSupported(GetType(), nameof(Set));
+
+    /// <summary>
+    /// Start building a set operation for a dictionary entry, keyed by a value from the event, that only assigns the entry when it has no value yet.
+    /// </summary>
+    /// <typeparam name="TKey">Type of the key value on the event.</typeparam>
+    /// <typeparam name="TValue">Type of the dictionary values.</typeparam>
+    /// <param name="readModelPropertyAccessor">Model property accessor for the dictionary.</param>
+    /// <param name="keyAccessor">Event property accessor for the dictionary key.</param>
+    /// <returns>The <see cref="ISetBuilder{TReadModel, TEvent, TProperty, TBuilder}"/> to continue building on.</returns>
+    /// <exception cref="ProjectionBuilderOperationNotSupported">Thrown when the builder implementation does not support the operation.</exception>
+    ISetBuilder<TReadModel, TEvent, TValue, TBuilder> SetOnce<TKey, TValue>(Expression<Func<TReadModel, IDictionary<string, TValue>>> readModelPropertyAccessor, Expression<Func<TEvent, TKey>> keyAccessor) =>
+        throw new ProjectionBuilderOperationNotSupported(GetType(), nameof(SetOnce));
+
+    /// <summary>
+    /// Start building a set operation for a dictionary entry, keyed by a value from the event context, that only assigns the entry when it has no value yet.
+    /// </summary>
+    /// <typeparam name="TValue">Type of the dictionary values.</typeparam>
+    /// <param name="readModelPropertyAccessor">Model property accessor for the dictionary.</param>
+    /// <param name="keyAccessor">Event context property accessor for the dictionary key.</param>
+    /// <returns>The <see cref="ISetBuilder{TReadModel, TEvent, TProperty, TBuilder}"/> to continue building on.</returns>
+    /// <exception cref="ProjectionBuilderOperationNotSupported">Thrown when the builder implementation does not support the operation.</exception>
+    ISetBuilder<TReadModel, TEvent, TValue, TBuilder> SetOnce<TValue>(Expression<Func<TReadModel, IDictionary<string, TValue>>> readModelPropertyAccessor, Expression<Func<EventContext, object>> keyAccessor) =>
+        throw new ProjectionBuilderOperationNotSupported(GetType(), nameof(SetOnce));
+
+    /// <summary>
+    /// Remove an entry from a dictionary, keyed by a value from the event.
+    /// </summary>
+    /// <typeparam name="TKey">Type of the key value on the event.</typeparam>
+    /// <typeparam name="TValue">Type of the dictionary values.</typeparam>
+    /// <param name="readModelPropertyAccessor">Model property accessor for the dictionary.</param>
+    /// <param name="keyAccessor">Event property accessor for the dictionary key.</param>
+    /// <returns>Builder continuation.</returns>
+    /// <remarks>Removing a key that is not in the dictionary changes nothing.</remarks>
+    /// <exception cref="ProjectionBuilderOperationNotSupported">Thrown when the builder implementation does not support the operation.</exception>
+    TBuilder RemoveKey<TKey, TValue>(Expression<Func<TReadModel, IDictionary<string, TValue>>> readModelPropertyAccessor, Expression<Func<TEvent, TKey>> keyAccessor) =>
+        throw new ProjectionBuilderOperationNotSupported(GetType(), nameof(RemoveKey));
+
+    /// <summary>
+    /// Remove an entry from a dictionary, keyed by a value from the event context.
+    /// </summary>
+    /// <typeparam name="TValue">Type of the dictionary values.</typeparam>
+    /// <param name="readModelPropertyAccessor">Model property accessor for the dictionary.</param>
+    /// <param name="keyAccessor">Event context property accessor for the dictionary key.</param>
+    /// <returns>Builder continuation.</returns>
+    /// <remarks>Removing a key that is not in the dictionary changes nothing.</remarks>
+    /// <exception cref="ProjectionBuilderOperationNotSupported">Thrown when the builder implementation does not support the operation.</exception>
+    TBuilder RemoveKey<TValue>(Expression<Func<TReadModel, IDictionary<string, TValue>>> readModelPropertyAccessor, Expression<Func<EventContext, object>> keyAccessor) =>
+        throw new ProjectionBuilderOperationNotSupported(GetType(), nameof(RemoveKey));
+
+    /// <summary>
+    /// Increment a dictionary entry, keyed by a value from the event.
+    /// </summary>
+    /// <typeparam name="TKey">Type of the key value on the event.</typeparam>
+    /// <typeparam name="TValue">Type of the dictionary values.</typeparam>
+    /// <param name="readModelPropertyAccessor">Model property accessor for the dictionary.</param>
+    /// <param name="keyAccessor">Event property accessor for the dictionary key.</param>
+    /// <returns>Builder continuation.</returns>
+    /// <exception cref="ProjectionBuilderOperationNotSupported">Thrown when the builder implementation does not support the operation.</exception>
+    TBuilder Increment<TKey, TValue>(Expression<Func<TReadModel, IDictionary<string, TValue>>> readModelPropertyAccessor, Expression<Func<TEvent, TKey>> keyAccessor) =>
+        throw new ProjectionBuilderOperationNotSupported(GetType(), nameof(Increment));
+
+    /// <summary>
+    /// Increment a dictionary entry, keyed by a value from the event context.
+    /// </summary>
+    /// <typeparam name="TValue">Type of the dictionary values.</typeparam>
+    /// <param name="readModelPropertyAccessor">Model property accessor for the dictionary.</param>
+    /// <param name="keyAccessor">Event context property accessor for the dictionary key.</param>
+    /// <returns>Builder continuation.</returns>
+    /// <exception cref="ProjectionBuilderOperationNotSupported">Thrown when the builder implementation does not support the operation.</exception>
+    TBuilder Increment<TValue>(Expression<Func<TReadModel, IDictionary<string, TValue>>> readModelPropertyAccessor, Expression<Func<EventContext, object>> keyAccessor) =>
+        throw new ProjectionBuilderOperationNotSupported(GetType(), nameof(Increment));
+
+    /// <summary>
+    /// Decrement a dictionary entry, keyed by a value from the event.
+    /// </summary>
+    /// <typeparam name="TKey">Type of the key value on the event.</typeparam>
+    /// <typeparam name="TValue">Type of the dictionary values.</typeparam>
+    /// <param name="readModelPropertyAccessor">Model property accessor for the dictionary.</param>
+    /// <param name="keyAccessor">Event property accessor for the dictionary key.</param>
+    /// <returns>Builder continuation.</returns>
+    /// <exception cref="ProjectionBuilderOperationNotSupported">Thrown when the builder implementation does not support the operation.</exception>
+    TBuilder Decrement<TKey, TValue>(Expression<Func<TReadModel, IDictionary<string, TValue>>> readModelPropertyAccessor, Expression<Func<TEvent, TKey>> keyAccessor) =>
+        throw new ProjectionBuilderOperationNotSupported(GetType(), nameof(Decrement));
+
+    /// <summary>
+    /// Decrement a dictionary entry, keyed by a value from the event context.
+    /// </summary>
+    /// <typeparam name="TValue">Type of the dictionary values.</typeparam>
+    /// <param name="readModelPropertyAccessor">Model property accessor for the dictionary.</param>
+    /// <param name="keyAccessor">Event context property accessor for the dictionary key.</param>
+    /// <returns>Builder continuation.</returns>
+    /// <exception cref="ProjectionBuilderOperationNotSupported">Thrown when the builder implementation does not support the operation.</exception>
+    TBuilder Decrement<TValue>(Expression<Func<TReadModel, IDictionary<string, TValue>>> readModelPropertyAccessor, Expression<Func<EventContext, object>> keyAccessor) =>
+        throw new ProjectionBuilderOperationNotSupported(GetType(), nameof(Decrement));
+
+    /// <summary>
+    /// Count events into a dictionary entry, keyed by a value from the event.
+    /// </summary>
+    /// <typeparam name="TKey">Type of the key value on the event.</typeparam>
+    /// <typeparam name="TValue">Type of the dictionary values.</typeparam>
+    /// <param name="readModelPropertyAccessor">Model property accessor for the dictionary.</param>
+    /// <param name="keyAccessor">Event property accessor for the dictionary key.</param>
+    /// <returns>Builder continuation.</returns>
+    /// <exception cref="ProjectionBuilderOperationNotSupported">Thrown when the builder implementation does not support the operation.</exception>
+    TBuilder Count<TKey, TValue>(Expression<Func<TReadModel, IDictionary<string, TValue>>> readModelPropertyAccessor, Expression<Func<TEvent, TKey>> keyAccessor) =>
+        throw new ProjectionBuilderOperationNotSupported(GetType(), nameof(Count));
+
+    /// <summary>
+    /// Count events into a dictionary entry, keyed by a value from the event context.
+    /// </summary>
+    /// <typeparam name="TValue">Type of the dictionary values.</typeparam>
+    /// <param name="readModelPropertyAccessor">Model property accessor for the dictionary.</param>
+    /// <param name="keyAccessor">Event context property accessor for the dictionary key.</param>
+    /// <returns>Builder continuation.</returns>
+    /// <exception cref="ProjectionBuilderOperationNotSupported">Thrown when the builder implementation does not support the operation.</exception>
+    TBuilder Count<TValue>(Expression<Func<TReadModel, IDictionary<string, TValue>>> readModelPropertyAccessor, Expression<Func<EventContext, object>> keyAccessor) =>
+        throw new ProjectionBuilderOperationNotSupported(GetType(), nameof(Count));
+
+    /// <summary>
+    /// Start building an add operation for a dictionary entry, keyed by a value from the event.
+    /// </summary>
+    /// <typeparam name="TKey">Type of the key value on the event.</typeparam>
+    /// <typeparam name="TValue">Type of the dictionary values.</typeparam>
+    /// <param name="readModelPropertyAccessor">Model property accessor for the dictionary.</param>
+    /// <param name="keyAccessor">Event property accessor for the dictionary key.</param>
+    /// <returns>Builder continuation.</returns>
+    /// <exception cref="ProjectionBuilderOperationNotSupported">Thrown when the builder implementation does not support the operation.</exception>
+    IAddBuilder<TReadModel, TEvent, TValue, TBuilder> Add<TKey, TValue>(Expression<Func<TReadModel, IDictionary<string, TValue>>> readModelPropertyAccessor, Expression<Func<TEvent, TKey>> keyAccessor) =>
+        throw new ProjectionBuilderOperationNotSupported(GetType(), nameof(Add));
+
+    /// <summary>
+    /// Start building an add operation for a dictionary entry, keyed by a value from the event context.
+    /// </summary>
+    /// <typeparam name="TValue">Type of the dictionary values.</typeparam>
+    /// <param name="readModelPropertyAccessor">Model property accessor for the dictionary.</param>
+    /// <param name="keyAccessor">Event context property accessor for the dictionary key.</param>
+    /// <returns>Builder continuation.</returns>
+    /// <exception cref="ProjectionBuilderOperationNotSupported">Thrown when the builder implementation does not support the operation.</exception>
+    IAddBuilder<TReadModel, TEvent, TValue, TBuilder> Add<TValue>(Expression<Func<TReadModel, IDictionary<string, TValue>>> readModelPropertyAccessor, Expression<Func<EventContext, object>> keyAccessor) =>
+        throw new ProjectionBuilderOperationNotSupported(GetType(), nameof(Add));
+
+    /// <summary>
+    /// Start building a subtract operation for a dictionary entry, keyed by a value from the event.
+    /// </summary>
+    /// <typeparam name="TKey">Type of the key value on the event.</typeparam>
+    /// <typeparam name="TValue">Type of the dictionary values.</typeparam>
+    /// <param name="readModelPropertyAccessor">Model property accessor for the dictionary.</param>
+    /// <param name="keyAccessor">Event property accessor for the dictionary key.</param>
+    /// <returns>Builder continuation.</returns>
+    /// <exception cref="ProjectionBuilderOperationNotSupported">Thrown when the builder implementation does not support the operation.</exception>
+    ISubtractBuilder<TReadModel, TEvent, TValue, TBuilder> Subtract<TKey, TValue>(Expression<Func<TReadModel, IDictionary<string, TValue>>> readModelPropertyAccessor, Expression<Func<TEvent, TKey>> keyAccessor) =>
+        throw new ProjectionBuilderOperationNotSupported(GetType(), nameof(Subtract));
+
+    /// <summary>
+    /// Start building a subtract operation for a dictionary entry, keyed by a value from the event context.
+    /// </summary>
+    /// <typeparam name="TValue">Type of the dictionary values.</typeparam>
+    /// <param name="readModelPropertyAccessor">Model property accessor for the dictionary.</param>
+    /// <param name="keyAccessor">Event context property accessor for the dictionary key.</param>
+    /// <returns>Builder continuation.</returns>
+    /// <exception cref="ProjectionBuilderOperationNotSupported">Thrown when the builder implementation does not support the operation.</exception>
+    ISubtractBuilder<TReadModel, TEvent, TValue, TBuilder> Subtract<TValue>(Expression<Func<TReadModel, IDictionary<string, TValue>>> readModelPropertyAccessor, Expression<Func<EventContext, object>> keyAccessor) =>
+        throw new ProjectionBuilderOperationNotSupported(GetType(), nameof(Subtract));
 }

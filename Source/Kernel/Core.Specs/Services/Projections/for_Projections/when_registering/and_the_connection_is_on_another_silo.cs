@@ -13,11 +13,14 @@ public class and_the_connection_is_on_another_silo : given.a_registration_with_a
     {
         _remoteClients.IsConnected(_connection).Returns(true);
         _ownership.IsOwnedBy(Arg.Any<string>(), Arg.Any<Cratis.Chronicle.Clients.ConnectionOwner>()).Returns(false);
+        var reservation = Substitute.For<Cratis.Chronicle.Clients.IConnectionReservation>();
+        reservation.IsHeldBy(AuthenticatedCalls.OwnerOf("alice")).Returns(true);
+        _grainFactory.GetGrain<Cratis.Chronicle.Clients.IConnectionReservation>(Arg.Any<string>(), Arg.Any<string>()).Returns(reservation);
     }
 
-    async Task Because() => await _service.Register(_request);
+    async Task Because() => await _service.Register(_request, AuthenticatedCalls.As("alice"));
 
-    [Fact] async Task should_not_record_on_the_connections_silo() => await _remoteClients.DidNotReceive().RecordDeclaredProjectionVersions(Arg.Any<ConnectionId>(), Arg.Any<EventStoreName>(), Arg.Any<IEnumerable<ProjectionId>>(), Arg.Any<string?>());
+    [Fact] async Task should_record_on_the_connections_silo() => await _remoteClients.Received(1).RecordDeclaredProjectionVersions(Arg.Any<ConnectionId>(), Arg.Any<EventStoreName>(), Arg.Any<IEnumerable<ProjectionId>>(), Arg.Any<string?>());
     [Fact] async Task should_not_record_on_the_local_silo() => await _localClients.DidNotReceive().RecordDeclaredProjectionVersions(Arg.Any<ConnectionId>(), Arg.Any<EventStoreName>(), Arg.Any<IEnumerable<ProjectionId>>(), Arg.Any<string?>());
     [Fact] async Task should_still_register_the_projections() => await _manager.Received(1).RegisterShared(Arg.Any<string>(), Arg.Any<IEnumerable<Concepts.Projections.Definitions.ProjectionDefinition>>(), null, null, RegisteredVersion);
 }

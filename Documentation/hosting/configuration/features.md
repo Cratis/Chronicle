@@ -23,6 +23,8 @@ Feature toggles enable or disable specific Chronicle Server capabilities.
 | workbench | boolean | true | Enable web-based management interface |
 | changesetStorage | boolean | false | Enable changeset storage functionality |
 | oAuthAuthority | boolean | true | Enable internal OpenIdDict-based OAuth authority |
+| projectionGenerations | boolean | false | Enable projection generations, which keep a replaced read model readable while a new generation catches up. See [Read models](read-models.md) |
+| isolatedPartitionReplay | boolean | false | Reserved for rebuilding a replayed partition in isolation. It has no effect yet; leave it off |
 
 If the API is disabled, the Workbench is also disabled because it depends on the API. The OAuth authority is automatically disabled when an external authority is configured via `authentication.authority`.
 

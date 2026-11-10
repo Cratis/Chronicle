@@ -31,4 +31,9 @@ public record ReducerDefinition(
     /// Gets the event generation delivery policy.
     /// </summary>
     public EventGenerationDelivery GenerationDelivery { get; init; } = EventGenerationDelivery.Compatibility;
+
+    /// <summary>
+    /// Gets the page delivery the client declared, or null when it receives one partition per delivery.
+    /// </summary>
+    public PageDeliveryDefinition? PageDelivery { get; init; }
 }

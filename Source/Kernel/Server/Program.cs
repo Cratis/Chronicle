@@ -52,6 +52,7 @@ AppDomain.CurrentDomain.UnhandledException += (_, args) =>
 };
 
 var unobservedFailures = new RepeatedFailureLog(RepeatedFailureLog.DefaultWindow, 1, TimeProvider.System);
+await using var unobservedFailuresReport = new Timer(_ => ReportUnobservedFailures(false), null, RepeatedFailureLog.DefaultWindow, RepeatedFailureLog.DefaultWindow);
 TaskScheduler.UnobservedTaskException += (_, args) =>
 {
     args.SetObserved();
@@ -88,6 +89,11 @@ try
     if (encryptionKeyCommand.Verify && schemaCommand.Action != SchemaAction.None)
     {
         throw new ArgumentException($"{EncryptionKeyCommand.VerifyFlag} cannot be combined with schema actions.");
+    }
+
+    if (encryptionKeyCommand.Migrate && schemaCommand.Action != SchemaAction.None)
+    {
+        throw new ArgumentException($"{EncryptionKeyCommand.MigrateFlag} cannot be combined with schema actions.");
     }
 }
 catch (ArgumentException exception)
@@ -138,9 +144,21 @@ try
     }
 
     chronicleOptions = builder.Configuration.GetSection(ChronicleOptions.SectionPath).Get<ChronicleOptions>() ?? new ChronicleOptions();
+    if (string.IsNullOrWhiteSpace(chronicleOptions.Storage.Type) && StorageTypeInference.Infer(chronicleOptions.Storage.ConnectionDetails) is { } inferredStorageType)
+    {
+        builder.Configuration[$"{ChronicleOptions.SectionPath}:Storage:Type"] = inferredStorageType;
+        chronicleOptions = builder.Configuration.GetSection(ChronicleOptions.SectionPath).Get<ChronicleOptions>() ?? new ChronicleOptions();
+        logger.StorageTypeInferred(inferredStorageType);
+    }
+
     if (!Enum.IsDefined(chronicleOptions.Storage.SchemaMode))
     {
         throw new ArgumentException("Storage.SchemaMode is invalid.");
+    }
+
+    if (!Enum.IsDefined(chronicleOptions.Compliance.Encryption.LegacyKeyHandling))
+    {
+        throw new ArgumentException("Compliance.Encryption.LegacyKeyHandling is invalid.");
     }
 }
 catch (Exception exception) when (exception is ArgumentException or InvalidOperationException)
@@ -193,6 +211,8 @@ const bool developmentBuild = true;
 #else
 const bool developmentBuild = false;
 #endif
+
+KernelStartupDiagnostics.ReportIgnoredDevelopmentOnlySettings(builder.Configuration, logger, developmentBuild);
 
 // Kestrel keeps the selected certificate alive for every TLS handshake until process shutdown.
 var certificate = KernelCertificateSelection.Select(chronicleOptions, logger, developmentBuild);
@@ -414,12 +434,15 @@ logger = app.Services.GetRequiredService<ILogger<Kernel>>();
 logger.ServerConfigured();
 
 // Look for encryption keys stored under earlier names before anything starts. A layout that cannot be used, or
-// --verify-encryption-keys, ends the process here; otherwise the counts are logged and startup continues.
+// --verify-encryption-keys, --migrate-encryption-keys, or keys still needing the upgrade while the configured handling
+// refuses them, ends the process here; otherwise the counts are logged and startup continues.
 var encryptionKeyExit = await EncryptionKeyCommandRunner.Run(
     app.Services.GetService<Cratis.Chronicle.Storage.Compliance.IEncryptionKeyStoreUpgradeCheck>(),
     logger,
     encryptionKeyCommand,
-    Console.Out);
+    Console.Out,
+    app.Services.GetService<Cratis.Chronicle.Storage.Compliance.IEncryptionKeyStoreMigrator>(),
+    chronicleOptions.Compliance.Encryption.LegacyKeyHandling);
 if (encryptionKeyExit is { } exitCode)
 {
     return exitCode;
@@ -626,6 +649,9 @@ Console.CancelKeyPress += (sender, eventArgs) =>
 // fixtures and orchestrators that gate on this line would then connect to a socket that did not exist yet.
 app.Lifetime.ApplicationStarted.Register(() => logger.ServerStarted(chronicleOptions.Port));
 
+// Report what is still being counted while the logging pipeline is still there, so the counts are not lost at shutdown.
+app.Lifetime.ApplicationStopped.Register(() => ReportUnobservedFailures(true));
+
 try
 {
     await app.RunAsync(cancellationToken.Token);
@@ -641,6 +667,28 @@ catch (OperationCanceledException)
 }
 
 return 0;
+
+void ReportUnobservedFailures(bool includeRunningWindows)
+{
+    var seconds = (int)unobservedFailures.Window.TotalSeconds;
+    foreach (var failures in unobservedFailures.TakeEnded(includeRunningWindows))
+    {
+        if (logger is not null)
+        {
+            try
+            {
+                logger.UnobservedTaskExceptionsSuppressed(failures.Level, failures.Suppressed, failures.Exception.Name, failures.Category, seconds);
+                continue;
+            }
+            catch (Exception loggingFailure)
+            {
+                Console.WriteLine(loggingFailure);
+            }
+        }
+
+        Console.WriteLine($"{failures.Suppressed} more unobserved {failures.Exception.Name} task exceptions were counted but not written; owner: {failures.Category}");
+    }
+}
 
 void LogCrash(Action<ILogger<Kernel>> log, Exception exception)
 {

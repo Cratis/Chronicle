@@ -21,6 +21,7 @@ public class ReactorMediator : IReactorMediator
     readonly ConcurrentDictionary<ReactorMediatorKey, ReactorEventsObserver> _observers = new();
     readonly ConcurrentDictionary<ReactorMediatorKey, ReactorReplayObserver> _replayObservers = new();
     readonly ConcurrentDictionary<ReactorMediatorKey, ReactorPageObserver> _pageObservers = new();
+    readonly ConcurrentDictionary<ReactorMediatorKey, PageDeliveryDefinition> _pageDeliveries = new();
 
     /// <inheritdoc/>
     public void Subscribe(
@@ -35,6 +36,7 @@ public class ReactorMediator : IReactorMediator
 
         // A stream that replaces an earlier one starts without that stream's page delegate; it subscribes to pages itself if it wants them.
         _pageObservers.TryRemove(key, out _);
+        _pageDeliveries.TryRemove(key, out _);
     }
 
     /// <inheritdoc/>
@@ -43,9 +45,23 @@ public class ReactorMediator : IReactorMediator
         ConnectionId connectionId,
         EventStoreName eventStore,
         EventStoreNamespaceName @namespace,
-        ReactorPageObserver target)
+        ReactorPageObserver target,
+        PageDeliveryDefinition? pageDelivery = null)
     {
-        _pageObservers[new(reactorId, connectionId, eventStore, @namespace)] = target;
+        var key = new ReactorMediatorKey(reactorId, connectionId, eventStore, @namespace);
+        _pageDeliveries[key] = pageDelivery ?? new();
+        _pageObservers[key] = target;
+    }
+
+    /// <inheritdoc/>
+    public PageDeliveryDefinition? GetPageDelivery(
+        ReactorId reactorId,
+        ConnectionId connectionId,
+        EventStoreName eventStore,
+        EventStoreNamespaceName @namespace)
+    {
+        var key = new ReactorMediatorKey(reactorId, connectionId, eventStore, @namespace);
+        return _pageObservers.ContainsKey(key) && _pageDeliveries.TryGetValue(key, out var pageDelivery) ? pageDelivery : null;
     }
 
     /// <inheritdoc/>
@@ -136,6 +152,7 @@ public class ReactorMediator : IReactorMediator
         if (ownsEvents)
         {
             _pageObservers.TryRemove(key, out _);
+            _pageDeliveries.TryRemove(key, out _);
         }
 
         RemoveIfOwned(_replayObservers, key, replayTarget);

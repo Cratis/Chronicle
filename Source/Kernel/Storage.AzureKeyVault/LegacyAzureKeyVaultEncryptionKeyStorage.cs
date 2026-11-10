@@ -146,6 +146,11 @@ internal class LegacyAzureKeyVaultEncryptionKeyStorage : IEncryptionKeyStorage
         EncryptionKeyRevision? revision = null)
     {
         var locations = await Resolve(eventStore, eventStoreNamespace, identifier);
+        if (await GetErasureFor(locations) is not null)
+        {
+            return await TryGetFor(eventStore, eventStoreNamespace, identifier, revision) is not null;
+        }
+
         if (IsLatest(revision))
         {
             return await GetHighestRevision(locations) is not null;
@@ -168,8 +173,7 @@ internal class LegacyAzureKeyVaultEncryptionKeyStorage : IEncryptionKeyStorage
             return (await TryGetLatest(locations))?.Key;
         }
 
-        return await ReadKey(locations.Name(revision!)) ??
-            (locations.LegacyName(revision!) is { } legacyName ? await ReadKey(legacyName) : null);
+        return await ReadAvailableKey(locations, revision!);
     }
 
     /// <inheritdoc/>
@@ -444,13 +448,32 @@ internal class LegacyAzureKeyVaultEncryptionKeyStorage : IEncryptionKeyStorage
         }
 
         var (revision, secret) = revisions.MaxBy(pair => pair.Key.Value);
+        var erasure = await GetErasureFor(locations);
+        if (revision.Value <= erasure?.ErasedThrough.Value)
+        {
+            return null;
+        }
+
         if (!secret.Enabled)
         {
             throw Unavailable();
         }
 
         var key = await ReadKey(secret.Name);
-        return key is null ? null : new(key, revision);
+        return key is null || erasure.Covers(new(key, revision)) ? null : new(key, revision);
+    }
+
+    async Task<EncryptionKey?> ReadAvailableKey(SecretLocations locations, EncryptionKeyRevision revision)
+    {
+        var erasure = await GetErasureFor(locations);
+        if (revision.Value <= erasure?.ErasedThrough.Value)
+        {
+            return null;
+        }
+
+        var key = await ReadKey(locations.Name(revision)) ??
+            (locations.LegacyName(revision) is { } legacyName ? await ReadKey(legacyName) : null);
+        return key is null || erasure.Covers(new(key, revision)) ? null : key;
     }
 
     async Task<EncryptionKeyErasure?> GetErasureFor(SecretLocations locations)

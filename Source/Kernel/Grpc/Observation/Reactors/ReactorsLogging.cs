@@ -42,6 +42,9 @@ internal static partial class ReactorsLogMessages
     [LoggerMessage(LogLevel.Error, "Error occurred for reactor {ReactorId} from connection {ConnectionId} - disengaging")]
     internal static partial void Disengage(this ILogger<Reactors> logger, ObserverId reactorId, ConnectionId connectionId, Exception exception);
 
+    [LoggerMessage(LogLevel.Warning, "A reactor registration could not verify connection {ConnectionId} across the cluster")]
+    internal static partial void ConnectionOwnershipUnverifiable(this ILogger<Reactors> logger, ConnectionId connectionId);
+
     [LoggerMessage(LogLevel.Warning, "A reactor registration for connection {ConnectionId} was refused because the connection is not available to the caller")]
     internal static partial void ConnectionNotAvailableToCaller(this ILogger<Reactors> logger, ConnectionId connectionId);
 }

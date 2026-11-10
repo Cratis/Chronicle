@@ -226,7 +226,7 @@ internal sealed class PreviewSink(PropertyPath identifierProperty) : ISink
             .Select(change => change is PropertiesChanged<ExpandoObject> propertiesChanged
                 ? new PropertiesChanged<ExpandoObject>(
                     propertiesChanged.State,
-                    [.. propertiesChanged.Differences.Select(difference => new PropertyDifference(difference.PropertyPath, difference.Original, difference.Changed, Rebind(difference.ArrayIndexers)))])
+                    [.. propertiesChanged.Differences.Select(difference => difference.WithArrayIndexers(Rebind(difference.ArrayIndexers)))])
                 : change)
             .ToArray();
 

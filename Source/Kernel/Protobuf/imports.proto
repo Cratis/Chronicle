@@ -1,0 +1,203 @@
+syntax = "proto3";
+package Cratis.Chronicle.Contracts.Imports;
+import "protobuf-net/bcl.proto"; // schema for protobuf-net's handling of core .NET types
+
+message AbandonImportRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+   .bcl.Guid ImportId = 3; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+}
+message AbandonImportResponse {
+   .bcl.Guid ImportId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   ImportState State = 2;
+   string Error = 3;
+}
+message AddImportChunkRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+   .bcl.Guid ImportId = 3; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   int32 ChunkIndex = 4;
+   int64 FirstEventIndex = 5;
+   repeated ImportEvent Events = 6;
+}
+message AddImportChunkResponse {
+   int32 ChunkIndex = 1;
+   bool AlreadyStaged = 2;
+   int32 EventsReceived = 3;
+   int32 EventsStaged = 4;
+   repeated ImportEventRejection Rejections = 5;
+   string Error = 6;
+}
+message BeginImportRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+   string EventSequenceId = 3;
+   OnInvalidEvent OnInvalid = 4;
+   .bcl.Guid ImportId = 5;
+}
+message BeginImportResponse {
+   .bcl.Guid ImportId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   ImportState State = 2;
+   int32 MaxChunkEvents = 3;
+   int32 MaxChunkBytes = 4;
+   string Error = 5;
+}
+message Causation {
+   SerializableDateTimeOffset Occurred = 1;
+   string Type = 2;
+   map<string,string> Properties = 3;
+}
+message CommandResult_AbandonImportResponse {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2;
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   string AuthorizationFailureReason = 6;
+   AbandonImportResponse Response = 7;
+}
+message CommandResult_AddImportChunkResponse {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2;
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   string AuthorizationFailureReason = 6;
+   AddImportChunkResponse Response = 7;
+}
+message CommandResult_BeginImportResponse {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2;
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   string AuthorizationFailureReason = 6;
+   BeginImportResponse Response = 7;
+}
+message CompleteImportRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+   .bcl.Guid ImportId = 3; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   int32 ExpectedChunks = 4;
+   int64 ExpectedEvents = 5;
+}
+message EventType {
+   string Id = 1;
+   uint32 Generation = 2;
+   bool Tombstone = 3;
+}
+message GetImportRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+   .bcl.Guid ImportId = 3; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+}
+message Identity {
+   string Subject = 1;
+   string Name = 2;
+   string UserName = 3;
+   Identity OnBehalfOf = 4;
+}
+message ImportEvent {
+   string EventSourceId = 1;
+   string EventSourceType = 2;
+   string EventStreamType = 3;
+   string EventStreamId = 4;
+   EventType EventType = 5;
+   string Content = 6;
+   repeated string Tags = 7;
+   repeated NamedTag NamedTags = 8;
+   SerializableDateTimeOffset Occurred = 9;
+   string Subject = 10;
+   .bcl.Guid CorrelationId = 11;
+   repeated Causation Causation = 12;
+   Identity CausedBy = 13;
+   string IdempotencyKey = 14;
+   string EventSource = 15;
+   uint64 SourceSequenceNumber = 16;
+}
+message ImportEventRejection {
+   int64 Index = 1;
+   string EventType = 2;
+   repeated string Reasons = 3;
+}
+message ImportProgressResponse {
+   .bcl.Guid ImportId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   string EventSequenceId = 2;
+   ImportState State = 3;
+   OnInvalidEvent OnInvalid = 4;
+   SerializableDateTimeOffset Created = 5;
+   SerializableDateTimeOffset LastActivity = 6;
+   repeated int32 StagedChunks = 7 [packed = false];
+   int64 EventsReceived = 8;
+   int64 EventsStaged = 9;
+   int64 EventsCommitted = 10;
+   int64 AlreadyAppended = 11;
+   int64 RejectedCount = 12;
+   repeated ImportEventRejection Rejections = 13;
+   repeated ImportSequenceRange CommittedRanges = 14;
+   uint64 FirstSequenceNumber = 15;
+   uint64 LastSequenceNumber = 16;
+   string FailureReason = 17;
+   int32 MaxChunkEvents = 18;
+   int32 MaxChunkBytes = 19;
+   int32 AcknowledgedChunks = 20;
+   int64 AcknowledgedEvents = 21;
+}
+message ImportSequenceRange {
+   int32 ChunkIndex = 1;
+   uint64 First = 2;
+   uint64 Last = 3;
+}
+enum ImportState {
+   Open = 0;
+   Staging = 1;
+   Validating = 2;
+   Committing = 3;
+   Completed = 4;
+   Failed = 5;
+   Abandoned = 6;
+}
+message NamedTag {
+   string Name = 1;
+   string Value = 2;
+}
+message ObserveImportRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+   .bcl.Guid ImportId = 3; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+}
+enum OnInvalidEvent {
+   Reject = 0;
+   Skip = 1;
+}
+message QueryResult_ImportProgressResponse {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2;
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   ImportProgressResponse Data = 6;
+}
+// Represents a DateTimeOffset value as an ISO 8601 string (e.g., "2024-01-15T12:30:00.0000000+02:00").
+message SerializableDateTimeOffset {
+   string Value = 1;
+}
+message ValidationResult {
+   ValidationResultSeverity Severity = 1; // default value could not be applied: Error
+   string Message = 2;
+   repeated string Members = 3;
+}
+enum ValidationResultSeverity {
+   Unknown = 0;
+   Information = 1;
+   Warning = 2;
+   Error = 3;
+}
+service Imports {
+   rpc AbandonImport (AbandonImportRequest) returns (CommandResult_AbandonImportResponse);
+   rpc AddImportChunk (AddImportChunkRequest) returns (CommandResult_AddImportChunkResponse);
+   rpc BeginImport (BeginImportRequest) returns (CommandResult_BeginImportResponse);
+   rpc CompleteImport (CompleteImportRequest) returns (CommandResult_AbandonImportResponse);
+   rpc GetImport (GetImportRequest) returns (QueryResult_ImportProgressResponse);
+   rpc ObserveImport (ObserveImportRequest) returns (stream QueryResult_ImportProgressResponse);
+}

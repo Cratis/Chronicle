@@ -79,7 +79,10 @@ public static class OpenTelemetryConfigurationExtensions
         var otelBuilder = services.AddOpenTelemetry();
 
         otelBuilder.ConfigureResource(resources => resources.AddService(serviceName))
-            .WithLogging(logger => logger.AddOtlpExporter())
+            .WithLogging(logger =>
+            {
+                if (HasOtlpEndpoint(configuration, "LOGS")) logger.AddOtlpExporter();
+            })
             .WithTracing(tracing =>
             {
                 var tracingBuilder = tracing
@@ -94,7 +97,7 @@ public static class OpenTelemetryConfigurationExtensions
                     tracingBuilder.AddGrpcClientInstrumentation();
                 }
 
-                tracingBuilder.AddOtlpExporter();
+                if (HasOtlpEndpoint(configuration, "TRACES")) tracingBuilder.AddOtlpExporter();
             })
                 .WithMetrics(metrics =>
             {
@@ -114,10 +117,25 @@ public static class OpenTelemetryConfigurationExtensions
                     .AddChronicleInstrumentation()
                     .AddHttpClientInstrumentation()
                     .AddAspNetCoreInstrumentation()
-                    .AddRuntimeInstrumentation()
-                    .AddOtlpExporter();
+                    .AddRuntimeInstrumentation();
+
+                if (HasOtlpEndpoint(configuration, "METRICS")) metrics.AddOtlpExporter();
             });
         return services;
+    }
+
+    /// <summary>
+    /// Gets whether an OTLP endpoint is configured for a signal, in which case the OTLP exporter for it is added.
+    /// </summary>
+    /// <param name="configuration">The <see cref="IConfiguration"/> to read the OTLP settings from.</param>
+    /// <param name="signal">The signal, one of TRACES, METRICS or LOGS.</param>
+    /// <param name="environment">Reads an environment variable. Defaults to the process environment.</param>
+    /// <returns>True when the general or the signal specific OTLP endpoint is set to a non-blank value.</returns>
+    internal static bool HasOtlpEndpoint(IConfiguration configuration, string signal, Func<string, string?>? environment = default)
+    {
+        environment ??= Environment.GetEnvironmentVariable;
+        string[] keys = ["OTEL_EXPORTER_OTLP_ENDPOINT", $"OTEL_EXPORTER_OTLP_{signal}_ENDPOINT", "OTEL_EXPORTER_OTLP:Endpoint"];
+        return keys.Any(_ => !string.IsNullOrWhiteSpace(configuration[_]) || !string.IsNullOrWhiteSpace(environment(_.Replace(":", "__"))));
     }
 
     static void MaybeSetHttp2Unencrypted(OtlpExporterOptions? options)

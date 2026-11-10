@@ -22,6 +22,15 @@ public class Neo4jOptions
     public string Server { get; init; } = string.Empty;
 
     /// <summary>
+    /// Gets the path of a file holding the <see cref="Server"/>, for instance a mounted Kubernetes Secret.
+    /// </summary>
+    /// <remarks>
+    /// The file is read once at startup and trimmed of a trailing newline. Setting both this and <see cref="Server"/>
+    /// stops startup. See <see cref="ConnectionFiles"/>.
+    /// </remarks>
+    public string ServerFile { get; init; } = string.Empty;
+
+    /// <summary>
     /// Gets the optional user name to authenticate with.
     /// </summary>
     public string? UserName { get; init; }
@@ -35,6 +44,15 @@ public class Neo4jOptions
     /// provider and is never written in the options.
     /// </remarks>
     public string? PasswordSecret { get; init; }
+
+    /// <summary>
+    /// Gets the path of a file holding the password, for instance a mounted Kubernetes Secret.
+    /// </summary>
+    /// <remarks>
+    /// The file is read once at startup and trimmed of a trailing newline, and <see cref="PasswordSecret"/> is pointed at the value.
+    /// Setting both this and <see cref="PasswordSecret"/> stops startup. See <see cref="ConnectionFiles"/>.
+    /// </remarks>
+    public string? PasswordFile { get; init; }
 
     /// <summary>
     /// Gets the optional prefix of the database names, for sharing one Neo4j server between applications.

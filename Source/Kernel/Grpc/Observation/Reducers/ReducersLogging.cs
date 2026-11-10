@@ -45,6 +45,9 @@ internal static partial class ReducersLogMessages
     [LoggerMessage(LogLevel.Error, "Error occurred for reducer {ReducerId} from connection {ConnectionId} - disengaging")]
     internal static partial void Disengage(this ILogger<Reducers> logger, ObserverId reducerId, ConnectionId connectionId, Exception exception);
 
+    [LoggerMessage(LogLevel.Warning, "A reducer registration could not verify connection {ConnectionId} across the cluster")]
+    internal static partial void ConnectionOwnershipUnverifiable(this ILogger<Reducers> logger, ConnectionId connectionId);
+
     [LoggerMessage(LogLevel.Warning, "A reducer registration for connection {ConnectionId} was refused because the connection is not available to the caller")]
     internal static partial void ConnectionNotAvailableToCaller(this ILogger<Reducers> logger, ConnectionId connectionId);
 

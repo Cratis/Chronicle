@@ -185,7 +185,7 @@ static class NestedDefinitionExtensions
                     var eventPropertyNameProperty = setFromAttr.GetType().GetProperty(nameof(SetFromAttribute<object>.EventPropertyName));
                     var eventPropertyName = eventPropertyNameProperty?.GetValue(setFromAttr) as string;
                     var propertyToUse = eventPropertyName ?? parameter.Name!;
-                    nestedDef.From.AddSetMapping(getOrCreateEventType, namingPolicy, setFromEventType, paramPropertyName, propertyToUse);
+                    nestedDef.From.AddSetMapping(getOrCreateEventType, namingPolicy, setFromEventType, paramPropertyName, propertyToUse, setFromAttr is ISetFromAttribute { SetOnce: true });
                 }
 
                 foreach (var (addFromAttr, addFromEventType) in parameter.GetAttributesOfGenericType<AddFromAttribute<object>>())

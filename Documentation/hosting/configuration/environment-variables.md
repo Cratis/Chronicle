@@ -49,7 +49,10 @@ the same way (`compliance.encryption.migrateFromDefaultStorage` becomes
 | Cratis__Chronicle__Storage__ConnectionDetails | Storage connection string |
 | Cratis__Chronicle__Storage__ConnectionDetailsFile | Path of a file holding the storage connection string, such as a mounted Kubernetes Secret; set either this or `ConnectionDetails` |
 | Cratis__Chronicle__Sinks__Configurations__\<name\>__ConnectionDetailsFile | Path of a file holding the connection string of a named sink; set either this or its `ConnectionDetails` |
+| Cratis__Chronicle__Sinks__Configurations__\<name\>__ServerFile | Path of a file holding the bolt address of a named Neo4j sink; set either this or its `Server` |
 | Cratis__Chronicle__Sinks__Configurations__\<name\>__PasswordFile | Path of a file holding the password of a named Neo4j sink; set either this or its `PasswordSecret` |
+| Cratis__Chronicle__Neo4j__ServerFile | Path of a file holding the bolt address of the default graph connection; set either this or `Neo4j__Server` |
+| Cratis__Chronicle__Neo4j__PasswordFile | Path of a file holding the password of the default graph connection; set either this or `Neo4j__PasswordSecret` |
 | Cratis__Chronicle__Storage__Schema | SQL schema for Chronicle's tables |
 | Cratis__Chronicle__Storage__CreateIfMissing | Whether Chronicle creates missing databases and schemas |
 | Cratis__Chronicle__Storage__PostgreSqlPooling__MaxPoolSize | Maximum PostgreSQL connections per database pool (default 20; connection string values take precedence) |

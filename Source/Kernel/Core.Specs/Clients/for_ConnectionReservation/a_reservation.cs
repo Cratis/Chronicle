@@ -42,6 +42,10 @@ public class a_reservation : Specification
         internal override void Keep(TimeSpan period)
         {
         }
+
+        internal override void DeactivateWhenIdle()
+        {
+        }
     }
 
     protected sealed class ManualClock : TimeProvider

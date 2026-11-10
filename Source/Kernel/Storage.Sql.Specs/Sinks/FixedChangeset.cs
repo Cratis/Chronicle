@@ -61,10 +61,10 @@ internal sealed class FixedChangeset(Change[] _changes) : IChangeset<AppendedEve
     public IChangeset<AppendedEvent, ExpandoObject> ResolvedJoin(PropertyPath onProperty, object key, AppendedEvent incoming, ArrayIndexers arrayIndexers) => throw new NotSupportedException();
 
     /// <inheritdoc/>
-    public void AddChild(PropertyPath childrenProperty, object child) => throw new NotSupportedException();
+    public void AddChild(PropertyPath childrenProperty, object child, ChildrenOrdering? ordering = default) => throw new NotSupportedException();
 
     /// <inheritdoc/>
-    public void AddChild<TChild>(PropertyPath childrenProperty, PropertyPath identifiedByProperty, object key, IEnumerable<PropertyMapper<AppendedEvent, ExpandoObject>> propertyMappers, ArrayIndexers arrayIndexers, ExpandoObject? childInitialState = default)
+    public void AddChild<TChild>(PropertyPath childrenProperty, PropertyPath identifiedByProperty, object key, IEnumerable<PropertyMapper<AppendedEvent, ExpandoObject>> propertyMappers, ArrayIndexers arrayIndexers, ExpandoObject? childInitialState = default, ChildrenOrdering? ordering = default)
         where TChild : new() => throw new NotSupportedException();
 
     /// <inheritdoc/>

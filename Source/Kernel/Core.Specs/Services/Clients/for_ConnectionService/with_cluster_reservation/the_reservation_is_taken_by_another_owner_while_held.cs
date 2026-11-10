@@ -28,6 +28,8 @@ public class the_reservation_is_taken_by_another_owner_while_held : given.a_two_
             return granted && _seen.Add(token);
         }
 
+        public Task<bool> IsHeldBy(ConnectionOwner owner) => inner.IsHeldBy(owner);
+
         public Task Release(ConnectionOwner owner, Guid token) => inner.Release(owner, token);
     }
 }

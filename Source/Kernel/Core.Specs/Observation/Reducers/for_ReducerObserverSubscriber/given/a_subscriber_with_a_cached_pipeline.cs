@@ -5,6 +5,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Reducers;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Observation.given;
 using Cratis.Chronicle.Projections;
 using Microsoft.Extensions.Logging;
@@ -70,6 +71,10 @@ public class a_subscriber_with_a_cached_pipeline : Specification
             await callInfo.Arg<ReducerDelegate>()([], null);
             return null;
         });
+
+        var configuration = Substitute.For<IConfigurationForObserverProvider>();
+        configuration.GetFor(Arg.Any<string>()).Returns(new Observers());
+        silo.AddService(configuration);
 
         _clock = new DeliveryClock();
         silo.AddService<TimeProvider>(_clock);

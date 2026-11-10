@@ -580,7 +580,7 @@ public partial class Reducers : IReducers
             ConnectionId = _eventStore.Connection.Lifecycle.ConnectionId,
             EventStore = _eventStore.Name,
             Namespace = _eventStore.Namespace,
-            PageDelivery = new() { Enabled = true },
+            PageDelivery = ObserverBatchSize.For(handler.ReducerType, handler.Invoker is IBatchReducerInvoker { HasBatchMethod: true }).ToContract(),
             StateCaching = new() { Enabled = true },
             Reducer = new ReducerDefinition
             {

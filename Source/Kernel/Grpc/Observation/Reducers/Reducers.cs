@@ -110,22 +110,7 @@ internal sealed class Reducers(
                         break;
                     }
 
-                    if (!connectionOwnership.IsOwnedBy(register.ConnectionId, caller.Owner))
-                    {
-                        logger.ConnectionNotAvailableToCaller(register.ConnectionId);
-                        registrationTcs.TrySetException(new RpcException(new Status(StatusCode.PermissionDenied, "The connection is not available to the caller.")));
-                        break;
-                    }
-
-                    logger.Registering(
-                        register.Reducer.ReducerId,
-                        register.EventStore,
-                        register.Namespace,
-                        register.Reducer.EventSequenceId,
-                        register.ConnectionId);
-
-                    stateFingerprints.Enabled = register.StateCaching?.Enabled == true;
-                    _ = SystemStoreGuard.CompleteRegistration(context, register.EventStore, register.Namespace, StoreAccess.Read | StoreAccess.Manage, registrationTcs, register);
+                    _ = VerifyRegistration(register);
                     break;
 
                 case ReducerResult result:
@@ -149,6 +134,7 @@ internal sealed class Reducers(
         IObserver<ReduceOperationMessage>? observableObserver = null;
         var revoked = false;
         (ReducerEventsObserver? deliver, ReducerReplayObserver? replay) = (null, null);
+        ReducerPageObserver? deliverPage = null;
 
         var observable = Observable.Create<ReduceOperationMessage>(
             async (observer, cancellationToken) =>
@@ -164,7 +150,7 @@ internal sealed class Reducers(
                     eventStoreName = registration.EventStore;
                     namespaceName = registration.Namespace;
 
-                    var reducerDefinition = registration.Reducer.ToChronicle();
+                    var reducerDefinition = registration.Reducer.ToChronicle() with { PageDelivery = registration.PageDelivery.ToChronicle() };
                     using (await registrationGate.Enter(cancellation.Token))
                     {
                         try
@@ -195,10 +181,8 @@ internal sealed class Reducers(
 
                         // The state of the next reduce is about as large as that of the last, which sizes its buffer in one go.
                         var lastInitialStateSize = 0;
-                        deliver = (reduceOperation, tcs) =>
+                        ReducerPartition ToPartition(ReduceOperation reduceOperation)
                         {
-                            var deliveryId = pendingDeliveries.Add(reduceOperation.Partition, tcs);
-
                             var partition = reduceOperation.Partition.Value.ToString()!;
 
                             // A state the client already holds is not serialized at all: the client returned it on its previous reduce.
@@ -209,9 +193,22 @@ internal sealed class Reducers(
                             lastInitialStateSize = initialState?.Length ?? lastInitialStateSize;
                             if (initialState?.Length > LargeStateWarningThreshold)
                             {
-                                logger.LargeInitialState(observerId, reduceOperation.Partition.ToString()!, initialState.Length);
+                                logger.LargeInitialState(observerId, partition, initialState.Length);
                             }
-                            var events = reduceOperation.Events.Select(_ => _.ToContract(jsonSerializerOptions)).ToArray();
+
+                            return new ReducerPartition
+                            {
+                                Partition = partition,
+                                InitialState = initialState,
+                                InitialStateUnchanged = initialStateUnchanged,
+                                Events = reduceOperation.Events.Select(_ => _.ToContract(jsonSerializerOptions)).ToArray()
+                            };
+                        }
+
+                        deliver = (reduceOperation, tcs) =>
+                        {
+                            var deliveryId = pendingDeliveries.Add(reduceOperation.Partition, tcs);
+                            var reducerPartition = ToPartition(reduceOperation);
                             var message = new ReduceOperationMessage()
                             {
                                 DeliveryId = deliveryId,
@@ -221,18 +218,33 @@ internal sealed class Reducers(
 
                             if (deliversPages)
                             {
-                                message.Partitions = [new ReducerPartition { Partition = partition, InitialState = initialState, InitialStateUnchanged = initialStateUnchanged, Events = events }];
+                                message.Partitions = [reducerPartition];
                             }
                             else
                             {
-                                message.Partition = partition;
-                                message.InitialState = initialState;
-                                message.InitialStateUnchanged = initialStateUnchanged;
-                                message.Events = events;
+                                message.Partition = reducerPartition.Partition;
+                                message.InitialState = reducerPartition.InitialState;
+                                message.InitialStateUnchanged = reducerPartition.InitialStateUnchanged;
+                                message.Events = reducerPartition.Events;
                             }
 
                             observer.OnNext(message);
                         };
+                        if (deliversPages)
+                        {
+                            deliverPage = (operations, completions) =>
+                            {
+                                var deliveryId = pendingDeliveries.AddPage(completions.ToDictionary(_ => (Concepts.Events.EventSourceId)_.Key, _ => _.Value));
+                                observer.OnNext(new ReduceOperationMessage
+                                {
+                                    DeliveryId = deliveryId,
+                                    DeliverWithinMilliseconds = DeliveryDeadlines.ToMilliseconds(operations[0].DeliverWithin),
+                                    Origin = operations[0].Origin.ToContract(),
+                                    Partitions = [.. operations.Select(ToPartition)]
+                                });
+                            };
+                        }
+
                         replay = (replayState, partition) =>
                         {
                             ForgetState(stateFingerprints, partition);
@@ -245,6 +257,17 @@ internal sealed class Reducers(
                             registration.EventStore,
                             registration.Namespace,
                             deliver);
+
+                        if (deliverPage is not null)
+                        {
+                            reducerMediator.SubscribePages(
+                                registration.Reducer.ReducerId,
+                                registration.ConnectionId,
+                                registration.EventStore,
+                                registration.Namespace,
+                                deliverPage,
+                                registration.PageDelivery.ToChronicle());
+                        }
 
                         reducerMediator.SubscribeReplayNotifications(
                             registration.Reducer.ReducerId,
@@ -324,6 +347,41 @@ internal sealed class Reducers(
         });
 
         return MonitorRegistration(observable, registrationTcs.Task, context, (messagesSubscription, register, () => revoked = true));
+
+        async Task VerifyRegistration(RegisterReducer registration)
+        {
+            try
+            {
+                var verification = connectionOwnership.Verify(grainFactory, registration.ConnectionId, caller.Owner, options.Value.Clustering.ResponseTimeout, cancellationToken: context.CancellationToken);
+#pragma warning disable MA0042 // Result is read only after successful synchronous completion; the hot path must not block or allocate.
+                var access = verification.IsCompletedSuccessfully ? verification.Result : await verification;
+#pragma warning restore MA0042
+                if (access == ConnectionAccessOutcome.Unverifiable)
+                {
+                    logger.ConnectionOwnershipUnverifiable(registration.ConnectionId);
+                    registrationTcs.TrySetException(new RpcException(new Status(StatusCode.Unavailable, "The connection could not be verified.")));
+                    return;
+                }
+                if (access == ConnectionAccessOutcome.Denied)
+                {
+                    logger.ConnectionNotAvailableToCaller(registration.ConnectionId);
+                    registrationTcs.TrySetException(new RpcException(new Status(StatusCode.PermissionDenied, "The connection is not available to the caller.")));
+                    return;
+                }
+
+                logger.Registering(registration.Reducer.ReducerId, registration.EventStore, registration.Namespace, registration.Reducer.EventSequenceId, registration.ConnectionId);
+                stateFingerprints.Enabled = registration.StateCaching?.Enabled == true;
+                await SystemStoreGuard.CompleteRegistration(context, registration.EventStore, registration.Namespace, StoreAccess.Read | StoreAccess.Manage, registrationTcs, registration);
+            }
+            catch (OperationCanceledException) when (context.CancellationToken.IsCancellationRequested)
+            {
+                registrationTcs.TrySetCanceled(context.CancellationToken);
+            }
+            catch (Exception exception)
+            {
+                registrationTcs.TrySetException(exception);
+            }
+        }
     }
 
     static bool IsInitialStateUnchanged(ReducerStateFingerprints stateFingerprints, string partition, ExpandoObject? initialState)

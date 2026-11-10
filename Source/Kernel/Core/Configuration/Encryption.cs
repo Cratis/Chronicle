@@ -44,4 +44,10 @@ public class Encryption
     /// </para>
     /// </remarks>
     public bool MigrateFromDefaultStorage { get; init; }
+
+    /// <summary>
+    /// Gets what the server does at startup when encryption keys stored under earlier names still need the key upgrade.
+    /// Defaults to <see cref="LegacyKeyHandling.Warn"/>.
+    /// </summary>
+    public LegacyKeyHandling LegacyKeyHandling { get; init; } = LegacyKeyHandling.Warn;
 }

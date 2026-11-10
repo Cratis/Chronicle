@@ -65,6 +65,15 @@ public class ConnectionReservation(IClusterMembershipService clusterMembership) 
     }
 
     /// <inheritdoc/>
+    public Task<bool> IsHeldBy(ConnectionOwner owner)
+    {
+        if (owner.IsUnidentified) return Task.FromResult(false);
+        DropEndedLeases(Clock.GetUtcNow(), null);
+        if (_owner is null) DeactivateWhenIdle();
+        return Task.FromResult(_owner is { } current && current.Equals(owner) && _leases.Count > 0);
+    }
+
+    /// <inheritdoc/>
     public Task Release(ConnectionOwner owner, Guid token)
     {
         var now = Clock.GetUtcNow();
@@ -84,6 +93,11 @@ public class ConnectionReservation(IClusterMembershipService clusterMembership) 
     /// </summary>
     /// <param name="period">How long to keep it active. <see cref="TimeSpan.MaxValue"/> keeps it active until changed.</param>
     internal virtual void Keep(TimeSpan period) => DelayDeactivation(period);
+
+    /// <summary>
+    /// Lets an empty reservation deactivate when its turn ends.
+    /// </summary>
+    internal virtual void DeactivateWhenIdle() => DeactivateOnIdle();
 
     Task Prune(CancellationToken cancellationToken)
     {

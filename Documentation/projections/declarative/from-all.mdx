@@ -48,7 +48,7 @@ For mappings limited to one projection level, use `FromEvery` with `ExcludeChild
 
 ## Counting into a dictionary with a dynamic key
 
-Use `Count`, `Increment`, or `Decrement` on a dictionary property when you need a separate counter for each context value. The key is resolved for each event from `EventContext`; this example uses the event type identifier. Dictionary keys are strings, and the kernel uses `int64` values for these operations.
+Use `Count`, `Increment`, or `Decrement` on a dictionary property when you need a separate counter for each context value. The key is resolved for each event from `EventContext`; this example uses the event type identifier. Dictionary keys are strings. The kernel stores counts using the dictionary's declared value type, or `int64` when the dictionary declares none. See [dictionary keys](./dictionaries) for every key source and for removing keys.
 
 <ChronicleClientTabs snippet="projections/declarative/from-all/dictionary" />
 

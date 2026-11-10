@@ -15,7 +15,7 @@ public class when_a_reducer_registers_on_a_connection_an_administrator_does_not_
     async Task Because() => await Register(AuthenticatedCalls.As("admin", administrator: true));
 
     [Fact] void should_refuse_the_registration() => (_error is RpcException { StatusCode: StatusCode.PermissionDenied }).ShouldBeTrue();
-    [Fact] void should_not_reach_a_grain() => _grainFactory.ReceivedCalls().ShouldBeEmpty();
+    [Fact] void should_not_reach_the_observer_grain() => _grainFactory.DidNotReceive().GetGrain<Chronicle.Observation.Reducers.Clients.IReducer>(Arg.Any<string>());
     [Fact] void should_not_resolve_the_definition() => _definitionGrain.ReceivedCalls().ShouldBeEmpty();
     [Fact] void should_not_use_the_mediator() => _mediator.ReceivedCalls().ShouldBeEmpty();
 }

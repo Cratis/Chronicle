@@ -6,6 +6,7 @@ using System.Dynamic;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Reducers;
 using Cratis.DependencyInjection;
 
@@ -19,6 +20,8 @@ public class ReducerMediator : IReducerMediator
 {
     readonly ConcurrentDictionary<ReducerMediatorKey, ReducerEventsObserver> _observers = new();
     readonly ConcurrentDictionary<ReducerMediatorKey, ReducerReplayObserver> _replayObservers = new();
+    readonly ConcurrentDictionary<ReducerMediatorKey, ReducerPageObserver> _pageObservers = new();
+    readonly ConcurrentDictionary<ReducerMediatorKey, PageDeliveryDefinition> _pageDeliveries = new();
 
     /// <inheritdoc/>
     public void Subscribe(
@@ -28,7 +31,59 @@ public class ReducerMediator : IReducerMediator
         EventStoreNamespaceName @namespace,
         ReducerEventsObserver target)
     {
-        _observers[new(reducerId, connectionId, eventStore, @namespace)] = target;
+        var key = new ReducerMediatorKey(reducerId, connectionId, eventStore, @namespace);
+        _observers[key] = target;
+
+        // A stream that replaces an earlier one starts without that stream's page delegate; it subscribes to pages itself if it wants them.
+        _pageObservers.TryRemove(key, out _);
+        _pageDeliveries.TryRemove(key, out _);
+    }
+
+    /// <inheritdoc/>
+    public void SubscribePages(
+        ReducerId reducerId,
+        ConnectionId connectionId,
+        EventStoreName eventStore,
+        EventStoreNamespaceName @namespace,
+        ReducerPageObserver target,
+        PageDeliveryDefinition? pageDelivery = null)
+    {
+        var key = new ReducerMediatorKey(reducerId, connectionId, eventStore, @namespace);
+        _pageDeliveries[key] = pageDelivery ?? new();
+        _pageObservers[key] = target;
+    }
+
+    /// <inheritdoc/>
+    public PageDeliveryDefinition? GetPageDelivery(
+        ReducerId reducerId,
+        ConnectionId connectionId,
+        EventStoreName eventStore,
+        EventStoreNamespaceName @namespace)
+    {
+        var key = new ReducerMediatorKey(reducerId, connectionId, eventStore, @namespace);
+        return _pageObservers.ContainsKey(key) && _pageDeliveries.TryGetValue(key, out var pageDelivery) ? pageDelivery : null;
+    }
+
+    /// <inheritdoc/>
+    public void OnNextPage(
+        ReducerId reducerId,
+        ConnectionId connectionId,
+        EventStoreName eventStore,
+        EventStoreNamespaceName @namespace,
+        IReadOnlyList<ReduceOperation> operations,
+        IReadOnlyDictionary<Key, TaskCompletionSource<ReducerSubscriberResult>> completions)
+    {
+        if (_pageObservers.TryGetValue(new(reducerId, connectionId, eventStore, @namespace), out var pageObserver))
+        {
+            pageObserver(operations, completions);
+            return;
+        }
+
+        // The client did not declare pages, so it reduces one partition at a time.
+        foreach (var operation in operations)
+        {
+            OnNext(reducerId, connectionId, eventStore, @namespace, operation, completions[operation.Partition]);
+        }
     }
 
     /// <inheritdoc/>
@@ -88,6 +143,12 @@ public class ReducerMediator : IReducerMediator
     {
         var key = new ReducerMediatorKey(reducerId, connectionId, eventStore, @namespace);
         var ownsEvents = RemoveIfOwned(_observers, key, target);
+        if (ownsEvents)
+        {
+            _pageObservers.TryRemove(key, out _);
+            _pageDeliveries.TryRemove(key, out _);
+        }
+
         RemoveIfOwned(_replayObservers, key, replayTarget);
         return ownsEvents;
     }

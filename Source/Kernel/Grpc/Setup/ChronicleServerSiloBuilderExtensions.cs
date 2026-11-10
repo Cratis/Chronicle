@@ -258,7 +258,10 @@ public static class ChronicleServerSiloBuilderExtensions
                     sp.GetRequiredService<IConnectedClientsVisibility>(),
                     sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Clients.ConnectionService>>(),
                     sp.GetRequiredService<IOptions<ChronicleOptions>>()),
-                ActivatorUtilities.CreateInstance<Cratis.Chronicle.Services.EventSources.EventSources>(sp));
+                ActivatorUtilities.CreateInstance<Cratis.Chronicle.Services.EventSources.EventSources>(sp))
+            {
+                Imports = ActivatorUtilities.CreateInstance<Cratis.Chronicle.Services.Imports.Imports>(sp)
+            };
         });
 
         return builder;

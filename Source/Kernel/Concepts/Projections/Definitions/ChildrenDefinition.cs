@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Nodes;
+using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Properties;
@@ -22,6 +23,7 @@ namespace Cratis.Chronicle.Concepts.Projections.Definitions;
 /// <param name="AutoMap">Whether properties should be auto-mapped from events at the projection level.</param>
 /// <param name="Nested">All the <see cref="ChildrenDefinition"/> for nested single-object properties on the model.</param>
 /// <param name="NoAutoMapProperties">The properties on the child excluded from auto-mapping.</param>
+/// <param name="Ordering">Optional <see cref="ChildrenOrdering"/> for where new children are inserted. Appended when null.</param>
 public record ChildrenDefinition(
     PropertyPath IdentifiedBy,
     IDictionary<EventType, FromDefinition> From,
@@ -33,7 +35,8 @@ public record ChildrenDefinition(
     FromEventPropertyDefinition? FromEventProperty = default,
     AutoMap AutoMap = AutoMap.Inherit,
     IDictionary<PropertyPath, ChildrenDefinition>? Nested = default,
-    IEnumerable<PropertyPath>? NoAutoMapProperties = default) :
+    IEnumerable<PropertyPath>? NoAutoMapProperties = default,
+    ChildrenOrdering? Ordering = default) :
     ProjectionDefinition(
         ProjectionOwner.Parent,
         EventSequences.EventSequenceId.Unspecified,

@@ -41,6 +41,8 @@ public class the_reservation_hangs_during_renewal : given.a_two_silo_cluster
             return spec._never.Task;
         }
 
+        public Task<bool> IsHeldBy(ConnectionOwner owner) => inner.IsHeldBy(owner);
+
         public Task Release(ConnectionOwner owner, Guid token) => inner.Release(owner, token);
     }
 }

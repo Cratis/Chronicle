@@ -46,6 +46,21 @@ Set `Cratis__Chronicle__Shutdown__DrainTimeout=00:00:05` to use a five-second bu
 
 Shutdown refuses new observer service calls, joins admitted catch-up and replay work, and flushes local bulk windows without promoting an unfinished replay. If the deadline expires, Chronicle cancels MongoDB bulk writes and logs the affected observer, partitions, and event sequence numbers when available. Cancellation means the write outcome is unknown, not that MongoDB rolled it back. Unconfirmed writes do not advance handled positions; failed partitions are recorded best-effort only while time remains.
 
+## Connected clients and server diagnostics
+
+The kernel tracks which clients are connected. These settings live under `connectedClients` and `servers` and rarely need changing.
+
+| Property | Type | Default | Description |
+| --- | --- | --- | --- |
+| connectedClients.reviseIntervalSeconds | number | 2 | Seconds between passes that prune stale clients and expire connection reservations |
+| connectedClients.reservationTtlSeconds | number | 30 | Seconds a connection reservation is kept. A reservation holds a slot for a client that is still connecting |
+| connectedClients.staleThresholdSeconds | number | 5 | Seconds a client can go unseen before it is considered disconnected. Raise it only if healthy clients are dropped on a slow network |
+| connectedClients.observeIntervalSeconds | number | 1 | Seconds between observations of the connected clients for observers |
+| connectedClients.keepAliveIntervalSeconds | number | 1 | Seconds between keep-alive messages the kernel sends to a connected client |
+| servers.observeIntervalSeconds | number | 5 | Seconds between observations of server instances for the live Workbench view |
+
+Environment variables use the `Cratis__Chronicle__ConnectedClients__` and `Cratis__Chronicle__Servers__` prefixes. See [Azure container hosting](../azure-container-hosting.md) for why keep-alive and stale threshold matter for scale-to-zero platforms.
+
 ## Message sizes
 
 `maxReceiveMessageSize` defaults to the 100 MB the Chronicle clients allow themselves to send, so a large event, or a client-side reducer whose read model has grown, is not refused by the kernel. Raise it together with the client's `MaxSendMessageSize` if you need more. See [gRPC Message Size](../../configuration/grpc-message-size.mdx).

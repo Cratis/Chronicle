@@ -140,6 +140,11 @@ public static class WellKnownServices
     public const string EventSources = "EventSources";
 
     /// <summary>
+    /// The name of the Imports service, holding bulk event import sessions.
+    /// </summary>
+    public const string Imports = "Imports";
+
+    /// <summary>
     /// The administrative federation service: peer bindings, producer grants and link state.
     /// </summary>
     public const string Federation = "Federation";

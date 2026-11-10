@@ -132,6 +132,14 @@ Materialized projections are the right choice when:
 - The application can tolerate a brief lag between an event being appended and the read model reflecting it
 - High read throughput is needed independently of write throughput
 
+## Reading state to decide who may do something
+
+An authorization check, such as "does this asset's plan include the feature", reads a small piece of recorded state per key and must fail closed. The consistency models above give these answers:
+
+- **Freshness at admission.** A materialized read returns whatever its observer has written, so a plan granted or withdrawn a moment ago may not be visible yet. For a key that is the read model's event source id, mark the model `[Passive]`: `GetInstanceById` then computes it from that source's events, so it reflects an append you have just made without waiting for materialization. The cost grows with that source's event history, so keep such a model short; [Cheaper strongly consistent per-key reads](https://github.com/Cratis/Chronicle/issues/4745) tracks a cheaper path. A read, fresh or not, is not a guard against a writer changing the state afterwards; admission that must hold under concurrent writers belongs to a [decision read](./decision-reads.mdx), and its broader shapes are tracked in [Decision reads: admit broader projection shapes](https://github.com/Cratis/Chronicle/issues/5055).
+- **Change signal for revocation.** To re-evaluate live subscriptions when the state changes, [watch the read model](./watching-read-models.mdx) or use a [read model reactor](./reacting-to-changes.mdx). A changeset carries the changed key, the resulting state and a removal flag, so the receiver can tell a withdrawn entitlement from an updated one. This rides the watch stream and is not transactional delivery: keep the last state per key, and treat a re-evaluation that cannot complete as a denial.
+- **Failure behaviour.** A materialized read cannot tell "no such entitlement" from "the observer has not written it yet", because both return no instance. During a [replay](../concepts/observers.mdx#replay-and-definition-changes) the observer is inactive, and a quarantined observer does not catch up until someone clears it. Authorization that must fail closed therefore treats a missing instance as a denial, and uses a passive read when it needs to be certain the absence is real: with a passive model an absent instance means no events produced one. Do not read the stored instance of a model whose observer is replaying, rebuilding or quarantined as authoritative.
+
 ## Choosing the Right Model
 
 | Scenario | Recommended Model |

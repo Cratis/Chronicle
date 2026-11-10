@@ -10,6 +10,8 @@
   href: set-properties.mdx
 - name: Children
   href: children.mdx
+- name: Dictionary keys
+  href: dictionaries.mdx
 - name: Nested Objects
   href: nested.mdx
 - name: Joins

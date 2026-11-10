@@ -61,4 +61,46 @@ public interface IChildrenBuilder<TParentReadModel, TChildReadModel> : IProjecti
     /// <typeparam name="TEvent">Type of event.</typeparam>
     /// <returns>Builder continuation.</returns>
     IChildrenBuilder<TParentReadModel, TChildReadModel> FromEventProperty<TEvent>(Expression<Func<TEvent, TChildReadModel>> propertyExpression);
+
+    /// <summary>
+    /// Insert new children first in the collection instead of appending them.
+    /// </summary>
+    /// <returns>Builder continuation.</returns>
+    /// <exception cref="ChildrenOrderingAlreadyDefined">Thrown when an ordering is already defined for the children.</exception>
+    /// <remarks>
+    /// Ordering is stored order, applied when a child is added. Updating an existing child never moves it.
+    /// </remarks>
+    /// <exception cref="ProjectionBuilderOperationNotSupported">Thrown when the builder implementation does not support the operation.</exception>
+    IChildrenBuilder<TParentReadModel, TChildReadModel> Prepend() =>
+        throw new ProjectionBuilderOperationNotSupported(GetType(), nameof(Prepend));
+
+    /// <summary>
+    /// Keep the collection sorted ascending by a property on the child when new children are added.
+    /// </summary>
+    /// <typeparam name="TProperty">Type of the property to sort by.</typeparam>
+    /// <param name="propertyExpression">The child property to sort by.</param>
+    /// <returns>Builder continuation.</returns>
+    /// <exception cref="ChildrenOrderingAlreadyDefined">Thrown when an ordering is already defined for the children.</exception>
+    /// <remarks>
+    /// Ordering is stored order, applied when a child is added. Children without a value sort first. Updating an
+    /// existing child never moves it, even when the property it is sorted by changes.
+    /// </remarks>
+    /// <exception cref="ProjectionBuilderOperationNotSupported">Thrown when the builder implementation does not support the operation.</exception>
+    IChildrenBuilder<TParentReadModel, TChildReadModel> OrderBy<TProperty>(Expression<Func<TChildReadModel, TProperty>> propertyExpression) =>
+        throw new ProjectionBuilderOperationNotSupported(GetType(), nameof(OrderBy));
+
+    /// <summary>
+    /// Keep the collection sorted descending by a property on the child when new children are added.
+    /// </summary>
+    /// <typeparam name="TProperty">Type of the property to sort by.</typeparam>
+    /// <param name="propertyExpression">The child property to sort by.</param>
+    /// <returns>Builder continuation.</returns>
+    /// <exception cref="ChildrenOrderingAlreadyDefined">Thrown when an ordering is already defined for the children.</exception>
+    /// <remarks>
+    /// Ordering is stored order, applied when a child is added. Children without a value sort last. Updating an
+    /// existing child never moves it, even when the property it is sorted by changes.
+    /// </remarks>
+    /// <exception cref="ProjectionBuilderOperationNotSupported">Thrown when the builder implementation does not support the operation.</exception>
+    IChildrenBuilder<TParentReadModel, TChildReadModel> OrderByDescending<TProperty>(Expression<Func<TChildReadModel, TProperty>> propertyExpression) =>
+        throw new ProjectionBuilderOperationNotSupported(GetType(), nameof(OrderByDescending));
 }

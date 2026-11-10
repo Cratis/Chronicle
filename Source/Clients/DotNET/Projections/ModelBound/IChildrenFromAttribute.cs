@@ -22,4 +22,19 @@ public interface IChildrenFromAttribute : IKeyedAttribute
     /// Gets the optional name of the property to identify children by.
     /// </summary>
     string? IdentifiedBy { get; }
+
+    /// <summary>
+    /// Gets a value indicating whether new children are inserted first in the collection instead of appended.
+    /// </summary>
+    bool Prepend => false;
+
+    /// <summary>
+    /// Gets the optional name of the child property to keep the collection sorted ascending by when children are added.
+    /// </summary>
+    string? OrderBy => null;
+
+    /// <summary>
+    /// Gets the optional name of the child property to keep the collection sorted descending by when children are added.
+    /// </summary>
+    string? OrderByDescending => null;
 }

@@ -187,13 +187,26 @@ public class Reducer(
             logger.RestoringLostClientSubscription(_observerKey.ObserverId, _observerKey.ConnectionId);
             try
             {
-                await _observer.RestoreClientSubscription<IReducerObserverSubscriber>(
-                    ObserverType.Reducer,
-                    definition.EventTypes.Select(_ => _.EventType).ToArray(),
-                    localSiloDetails.SiloAddress,
-                    connectedClient,
-                    filters: definition.Filters,
-                    generationDelivery: definition.GenerationDelivery);
+                if (definition.PageDelivery is not null)
+                {
+                    await _observer.RestoreClientSubscription<IReducerPageObserverSubscriber>(
+                        ObserverType.Reducer,
+                        definition.EventTypes.Select(_ => _.EventType).ToArray(),
+                        localSiloDetails.SiloAddress,
+                        connectedClient,
+                        filters: definition.Filters,
+                        generationDelivery: definition.GenerationDelivery);
+                }
+                else
+                {
+                    await _observer.RestoreClientSubscription<IReducerObserverSubscriber>(
+                        ObserverType.Reducer,
+                        definition.EventTypes.Select(_ => _.EventType).ToArray(),
+                        localSiloDetails.SiloAddress,
+                        connectedClient,
+                        filters: definition.Filters,
+                        generationDelivery: definition.GenerationDelivery);
+                }
                 await RecordObserver();
             }
             catch (ObserverServedByAnotherTransport)
@@ -275,13 +288,33 @@ public class Reducer(
 
         try
         {
-            if (definition.GenerationDelivery == Concepts.Observation.EventGenerationDelivery.Pinned)
+            var deliversPages = definition.PageDelivery is not null;
+            if (definition.GenerationDelivery == Concepts.Observation.EventGenerationDelivery.Pinned && deliversPages)
+            {
+                await _observer.SubscribeWithGenerationDelivery<IReducerPageObserverSubscriber>(
+                    ObserverType.Reducer,
+                    definition.EventTypes.Select(_ => _.EventType).ToArray(),
+                    localSiloDetails.SiloAddress,
+                    definition.GenerationDelivery,
+                    connectedClient,
+                    filters: definition.Filters);
+            }
+            else if (definition.GenerationDelivery == Concepts.Observation.EventGenerationDelivery.Pinned)
             {
                 await _observer.SubscribeWithGenerationDelivery<IReducerObserverSubscriber>(
                     ObserverType.Reducer,
                     definition.EventTypes.Select(_ => _.EventType).ToArray(),
                     localSiloDetails.SiloAddress,
                     definition.GenerationDelivery,
+                    connectedClient,
+                    filters: definition.Filters);
+            }
+            else if (deliversPages)
+            {
+                await _observer.Subscribe<IReducerPageObserverSubscriber>(
+                    ObserverType.Reducer,
+                    definition.EventTypes.Select(_ => _.EventType).ToArray(),
+                    localSiloDetails.SiloAddress,
                     connectedClient,
                     filters: definition.Filters);
             }
