@@ -23,5 +23,5 @@ public class and_removal_cleanup_is_incomplete : given.an_observer
 
     [Fact] void should_remain_retired() => _stateStorage.State.AlertDisposition.ShouldEqual(AlertDisposition.Retired);
     [Fact] async Task should_not_restore_the_subscription() => (await _observer.IsSubscribed()).ShouldBeFalse();
-    [Fact] void should_not_keep_a_wakeup_for_an_alert_level_removal_already_reconciled() => _silo.ReminderRegistry.Mock.Verify(registry => registry.RegisterOrUpdateReminder(It.IsAny<GrainId>(), Observer.AlertReminderName, It.IsAny<TimeSpan>(), It.IsAny<TimeSpan>()), Times.Never);
+    [Fact] void should_never_register_the_alert_reminder() => _silo.ReminderRegistry.Mock.Verify(registry => registry.RegisterOrUpdateReminder(It.IsAny<GrainId>(), Observer.AlertReminderName, It.IsAny<TimeSpan>(), It.IsAny<TimeSpan>()), Times.Never);
 }
