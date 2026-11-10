@@ -32,11 +32,17 @@ cat > "$TEMP_DIR/Directory.Build.props" << 'EOF'
 <Project />
 EOF
 
+# Target the framework of the SDK that global.json selects for this tree. The baseline checkout
+# pins its own SDK, which may be older than the one the current branch uses.
+SDK_MAJOR=$(cd "$TEMP_DIR" && dotnet --version | cut -d. -f1)
+TARGET_FRAMEWORK="net${SDK_MAJOR}.0"
+echo "Schema generator target framework: $TARGET_FRAMEWORK"
+
 cat > "$TEMP_DIR/SchemaGenerator.csproj" << EOF
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net11.0</TargetFramework>
+    <TargetFramework>$TARGET_FRAMEWORK</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
