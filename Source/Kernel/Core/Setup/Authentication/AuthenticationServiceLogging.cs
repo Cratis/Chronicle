@@ -70,4 +70,10 @@ internal static partial class AuthenticationServiceLogging
 
     [LoggerMessage(LogLevel.Information, "Successfully created default client credentials with ClientId: {ClientId}")]
     internal static partial void DefaultClientCredentialsCreated(this ILogger<AuthenticationService> logger, string clientId);
+
+    [LoggerMessage(LogLevel.Information, "Default client credentials for ClientId: {ClientId} were created concurrently by another node; using the stored application")]
+    internal static partial void DefaultClientCredentialsCreatedConcurrently(this ILogger<AuthenticationService> logger, string clientId, Exception exception);
+
+    [LoggerMessage(LogLevel.Warning, "Found {Count} applications for ClientId: {ClientId}; using application {ApplicationId}")]
+    internal static partial void DuplicateApplicationsForClient(this ILogger<AuthenticationService> logger, string clientId, int count, string applicationId);
 }
