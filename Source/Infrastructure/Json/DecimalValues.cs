@@ -3,6 +3,7 @@
 
 using System.Globalization;
 using System.Text.Json.Nodes;
+using Cratis.Concepts;
 using Cratis.Types;
 
 namespace Cratis.Chronicle.Json;
@@ -67,10 +68,16 @@ public static class DecimalValues
     /// <param name="targetType">The type to convert to.</param>
     /// <param name="value">The value to convert.</param>
     /// <returns>The converted value.</returns>
-    public static object ConvertTo(Type targetType, object value) =>
-        (Nullable.GetUnderlyingType(targetType) ?? targetType) == typeof(decimal) && value is double or float
-            ? ToDecimal(value)
-            : TypeConversion.Convert(targetType, value);
+    public static object ConvertTo(Type targetType, object value)
+    {
+        if ((Nullable.GetUnderlyingType(targetType) ?? targetType) != typeof(decimal))
+        {
+            return TypeConversion.Convert(targetType, value);
+        }
+
+        var unwrapped = value.IsConcept() ? value.GetConceptValue() : value;
+        return unwrapped is double or float ? ToDecimal(unwrapped) : TypeConversion.Convert(targetType, value);
+    }
 
     /// <summary>
     /// Reads a decimal from a JSON number or its string representation.
