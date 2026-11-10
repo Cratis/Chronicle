@@ -14,8 +14,8 @@ namespace Cratis.Chronicle.Server.Authentication;
 /// <remarks>
 /// The sign-in controllers are backed by ASP.NET Core Identity, which is not registered when authentication is
 /// disabled. Left in place they are still routed, and activating them fails with an unresolvable
-/// <see cref="Microsoft.AspNetCore.Identity.UserManager{TUser}"/> - an HTTP 500 for every client that asks for a token. Removing them from the
-/// controller feature means their routes are never mapped, so those requests get a plain 404, the same answer
+/// <see cref="Microsoft.AspNetCore.Identity.UserManager{TUser}"/> - an HTTP 500 for every client that asks
+/// for a token. Removing them from the controller feature means their routes are never mapped, so those requests get a plain 404, the same answer
 /// the Identity API endpoints already give in this mode because they are not mapped either. A client that holds
 /// credentials then logs the rejected token request and continues without a token, which the kernel accepts
 /// because nothing is authenticated.
