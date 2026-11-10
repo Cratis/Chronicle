@@ -333,8 +333,9 @@ public class PIIManager(
     {
         var outcomes = await Across(eventStores, eventStore => keyStore.GetFenceFor(eventStore, key.Namespace, identifier));
 
-        // Read in event store order, stopping at the first pending request, so the request resumed is the same one a
-        // lookup one store at a time would have found.
+        // Every store's fence is read concurrently, including stores after the one holding the pending request; that
+        // extra reading is the accepted cost of not reaching the stores one at a time. Read in event store order,
+        // stopping at the first pending request, so the request resumed is the same one a sequential lookup would find.
         foreach (var (eventStore, fence, error) in outcomes)
         {
             if (error is null)

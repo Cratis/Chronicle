@@ -9,8 +9,13 @@ namespace Cratis.Chronicle.Compliance.GDPR.for_PIIManager.given;
 
 /// <summary>
 /// A manager whose namespace spans more event stores than an erasure can reach one at a time within a grain call,
-/// where every step against a store takes a moment to answer and is recorded as it starts and as it ends.
+/// where every step against a store answers asynchronously and is recorded as it starts and as it ends.
 /// </summary>
+/// <remarks>
+/// The first steps are held until as many are in flight as the manager allows at once, so reaching the stores
+/// together is observed deterministically rather than by timing. Every phase reaches all stores, so the gate is always
+/// filled; once it opens it stays open and the remaining steps only yield.
+/// </remarks>
 public class many_event_stores : a_pii_manager
 {
     protected const int NumberOfEventStores = 40;
@@ -25,6 +30,7 @@ public class many_event_stores : a_pii_manager
 
     protected ConcurrentQueue<(string Phase, EventStoreName EventStore, bool Started)> _steps = new();
     protected int _maximumInFlight;
+    readonly TaskCompletionSource _gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
     int _inFlight;
 
     void Establish()
@@ -79,7 +85,9 @@ public class many_event_stores : a_pii_manager
         }
         while (inFlight > maximum && Interlocked.CompareExchange(ref _maximumInFlight, inFlight, maximum) != maximum);
 
-        await Task.Delay(TimeSpan.FromMilliseconds(20), TimeProvider.System);
+        if (inFlight >= Math.Min(PIIManager.MaxConcurrentEventStores, NumberOfEventStores)) _gate.TrySetResult();
+        await _gate.Task;
+        await Task.Yield();
 
         Interlocked.Decrement(ref _inFlight);
         _steps.Enqueue((phase, eventStore, false));

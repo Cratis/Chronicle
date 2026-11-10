@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Diagnostics;
 using Cratis.Chronicle.Storage.Compliance;
 
 namespace Cratis.Chronicle.Compliance.GDPR.for_PIIManager.when_deleting_an_encryption_key;
@@ -12,14 +11,7 @@ namespace Cratis.Chronicle.Compliance.GDPR.for_PIIManager.when_deleting_an_encry
 /// </summary>
 public class and_there_are_many_event_stores : given.many_event_stores
 {
-    readonly Stopwatch _elapsed = new();
-
-    async Task Because()
-    {
-        _elapsed.Start();
-        await _manager.DeleteEncryptionKeyFor(Identifier);
-        _elapsed.Stop();
-    }
+    Task Because() => _manager.DeleteEncryptionKeyFor(Identifier);
 
     [Fact] void should_fence_every_event_store() => Reached(Fence).ShouldContainOnly(EventStores);
     [Fact] void should_sweep_every_event_store() => Reached(Sweep).ShouldContainOnly(EventStores);
@@ -33,7 +25,4 @@ public class and_there_are_many_event_stores : given.many_event_stores
     [Fact] void should_wait_the_revocation_grace_once() => _delays.ShouldContainOnly(new EncryptionKeyErasureOptions().RevocationGrace);
     [Fact] void should_reach_event_stores_concurrently() => _maximumInFlight.ShouldBeGreaterThan(1);
     [Fact] void should_not_reach_more_event_stores_at_once_than_allowed() => _maximumInFlight.ShouldBeLessThanOrEqual(PIIManager.MaxConcurrentEventStores);
-
-    /// <summary>One store at a time this takes five phases of forty 20 ms steps - four seconds - before the grace.</summary>
-    [Fact] void should_not_grow_with_the_number_of_event_stores() => _elapsed.Elapsed.ShouldBeLessThan(TimeSpan.FromSeconds(3));
 }
