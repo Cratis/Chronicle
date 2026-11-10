@@ -14,17 +14,26 @@ namespace Cratis.Chronicle.Diagnostics;
 /// than the failures and left the operator the least useful sample of the incident (#5678). A failure is the same one when it comes
 /// from the same logger category, with the same message template and the same kind of exception at its root. The first ones in
 /// each window are written in full, the rest are counted and reported in one line when the window ends. A failure that differs
-/// in any of those is a different one, and its first occurrence is always written.
+/// in any of those is a different one, and while fewer than the bound of kinds are tracked its first occurrence is always written.
 /// <para>
-/// The number of kinds tracked at once is bounded. Kinds that stop failing are forgotten once their window has ended and been
-/// reported; when the bound is still reached, any further kind is counted under one shared overflow kind.
+/// The number of kinds tracked at once is bounded, and never exceeds the bound even when new kinds fail concurrently. Kinds that
+/// stop failing are forgotten once their window has ended and been reported. While the bound is reached, failures of kinds that
+/// are not tracked share one budget instead: the first ones of them in each window are written in full whatever their kind, and
+/// the rest are counted by the type of the exception at their root and reported under <see cref="OverflowCategory"/>. The first
+/// occurrence of an untracked kind is therefore only written when that shared budget is not spent.
 /// </para>
 /// </remarks>
 /// <param name="window">How long counting lasts before the suppressed failures are reported.</param>
 /// <param name="allowedPerWindow">How many failures of a kind are written in full in each window.</param>
 /// <param name="timeProvider">The <see cref="TimeProvider"/> deciding what time it is.</param>
 /// <param name="maxKinds">The most kinds of failures tracked at once.</param>
-public sealed class RepeatedFailureLog(TimeSpan window, int allowedPerWindow, TimeProvider timeProvider, int maxKinds = RepeatedFailureLog.DefaultMaxKinds)
+/// <param name="untrackedAllowedPerWindow">How many failures of kinds that are not tracked are written in full in each window, together.</param>
+public sealed class RepeatedFailureLog(
+    TimeSpan window,
+    int allowedPerWindow,
+    TimeProvider timeProvider,
+    int maxKinds = RepeatedFailureLog.DefaultMaxKinds,
+    int untrackedAllowedPerWindow = RepeatedFailureLog.DefaultUntrackedAllowedPerWindow)
 {
     /// <summary>
     /// The default number of failures written in full for each kind in each window.
@@ -37,6 +46,16 @@ public sealed class RepeatedFailureLog(TimeSpan window, int allowedPerWindow, Ti
     public const int DefaultMaxKinds = 1024;
 
     /// <summary>
+    /// The default number of failures of kinds that are not tracked written in full in each window, together.
+    /// </summary>
+    public const int DefaultUntrackedAllowedPerWindow = 10;
+
+    /// <summary>
+    /// The most exception types failures of untracked kinds are counted by; any further type is counted as <see cref="Exception"/>.
+    /// </summary>
+    public const int MaxUntrackedExceptionTypes = 64;
+
+    /// <summary>
     /// The category the failures are counted under when more kinds fail than are tracked.
     /// </summary>
     public const string OverflowCategory = "(other failures)";
@@ -46,9 +65,8 @@ public sealed class RepeatedFailureLog(TimeSpan window, int allowedPerWindow, Ti
     /// </summary>
     public static readonly TimeSpan DefaultWindow = TimeSpan.FromSeconds(10);
 
-    static readonly Kind _overflow = new(OverflowCategory, string.Empty, typeof(Exception));
-
     readonly ConcurrentDictionary<Kind, Counter> _counters = new();
+    readonly Untracked _untracked = new();
     int _kinds;
 
     /// <summary>
@@ -80,10 +98,16 @@ public sealed class RepeatedFailureLog(TimeSpan window, int allowedPerWindow, Ti
             return true;
         }
 
-        var kind = new Kind(category, message, Root(exception));
+        var root = Root(exception);
+        var kind = new Kind(category, message, root);
         while (true)
         {
             var counter = CounterFor(kind);
+            if (counter is null)
+            {
+                return ShouldWriteUntracked(root, level);
+            }
+
             lock (counter)
             {
                 if (counter.Removed)
@@ -96,8 +120,7 @@ public sealed class RepeatedFailureLog(TimeSpan window, int allowedPerWindow, Ti
                 {
                     counter.Started = now;
                     counter.Written = 0;
-                    counter.Ended += counter.Suppressed;
-                    counter.Suppressed = 0;
+                    counter.EndWindow();
                 }
 
                 if (counter.Written < allowedPerWindow)
@@ -106,7 +129,7 @@ public sealed class RepeatedFailureLog(TimeSpan window, int allowedPerWindow, Ti
                     return true;
                 }
 
-                counter.Suppressed++;
+                counter.Count(level);
                 return false;
             }
         }
@@ -115,8 +138,9 @@ public sealed class RepeatedFailureLog(TimeSpan window, int allowedPerWindow, Ti
     /// <summary>
     /// Takes the counts of failures that were suppressed in windows that have ended, and forgets kinds that stopped failing.
     /// </summary>
+    /// <param name="includeRunningWindows">Whether to also take the counts of windows that are still running, for when nothing will report them later, such as at shutdown.</param>
     /// <returns>One entry for each kind of failure with its count.</returns>
-    public IReadOnlyList<SuppressedFailures> TakeEnded()
+    public IReadOnlyList<SuppressedFailures> TakeEnded(bool includeRunningWindows = false)
     {
         var ended = new List<SuppressedFailures>();
         var now = timeProvider.GetUtcNow();
@@ -125,20 +149,30 @@ public sealed class RepeatedFailureLog(TimeSpan window, int allowedPerWindow, Ti
             lock (counter)
             {
                 var windowEnded = now - counter.Started >= window;
-                var suppressed = counter.Ended + (windowEnded ? counter.Suppressed : 0);
-                if (suppressed > 0)
+                if (counter.Take(windowEnded || includeRunningWindows) is { } taken)
                 {
-                    ended.Add(new(kind.Category, kind.Message, kind.Exception, suppressed));
-                    counter.Ended = 0;
-                    if (windowEnded)
-                    {
-                        counter.Suppressed = 0;
-                    }
+                    ended.Add(new(kind.Category, kind.Message, kind.Exception, taken.Suppressed, taken.Level));
                 }
                 else if (windowEnded && _counters.TryRemove(new KeyValuePair<Kind, Counter>(kind, counter)))
                 {
                     counter.Removed = true;
                     Interlocked.Decrement(ref _kinds);
+                }
+            }
+        }
+
+        lock (_untracked)
+        {
+            var windowEnded = now - _untracked.Started >= window;
+            foreach (var (exception, counter) in _untracked.ByException.ToArray())
+            {
+                if (counter.Take(windowEnded || includeRunningWindows) is { } taken)
+                {
+                    ended.Add(new(OverflowCategory, string.Empty, exception, taken.Suppressed, taken.Level));
+                }
+                else if (windowEnded)
+                {
+                    _untracked.ByException.Remove(exception);
                 }
             }
         }
@@ -156,7 +190,46 @@ public sealed class RepeatedFailureLog(TimeSpan window, int allowedPerWindow, Ti
         return exception.GetType();
     }
 
-    Counter CounterFor(Kind kind)
+    static LogLevel Max(LogLevel left, LogLevel right) => left > right ? left : right;
+
+    bool ShouldWriteUntracked(Type exception, LogLevel level)
+    {
+        lock (_untracked)
+        {
+            var now = timeProvider.GetUtcNow();
+            if (_untracked.Started == default || now - _untracked.Started >= window)
+            {
+                _untracked.Started = now;
+                _untracked.Written = 0;
+                foreach (var counter in _untracked.ByException.Values)
+                {
+                    counter.EndWindow();
+                }
+            }
+
+            if (_untracked.Written < untrackedAllowedPerWindow)
+            {
+                _untracked.Written++;
+                return true;
+            }
+
+            if (!_untracked.ByException.ContainsKey(exception) && _untracked.ByException.Count >= MaxUntrackedExceptionTypes)
+            {
+                exception = typeof(Exception);
+            }
+
+            if (!_untracked.ByException.TryGetValue(exception, out var byException))
+            {
+                byException = new();
+                _untracked.ByException[exception] = byException;
+            }
+
+            byException.Count(level);
+            return false;
+        }
+    }
+
+    Counter? CounterFor(Kind kind)
     {
         while (true)
         {
@@ -165,21 +238,20 @@ public sealed class RepeatedFailureLog(TimeSpan window, int allowedPerWindow, Ti
                 return counter;
             }
 
-            if (Volatile.Read(ref _kinds) >= maxKinds)
+            // Reserve the place before adding, so concurrent new kinds can never take the count beyond the bound.
+            if (Interlocked.Increment(ref _kinds) > maxKinds)
             {
-                kind = _overflow;
-                if (_counters.TryGetValue(kind, out counter))
-                {
-                    return counter;
-                }
+                Interlocked.Decrement(ref _kinds);
+                return null;
             }
 
             counter = new();
             if (_counters.TryAdd(kind, counter))
             {
-                Interlocked.Increment(ref _kinds);
                 return counter;
             }
+
+            Interlocked.Decrement(ref _kinds);
         }
     }
 
@@ -191,10 +263,57 @@ public sealed class RepeatedFailureLog(TimeSpan window, int allowedPerWindow, Ti
 
         public int Written { get; set; }
 
-        public int Suppressed { get; set; }
-
-        public int Ended { get; set; }
-
         public bool Removed { get; set; }
+
+        int Suppressed { get; set; }
+
+        LogLevel Level { get; set; }
+
+        int Ended { get; set; }
+
+        LogLevel EndedLevel { get; set; }
+
+        public void Count(LogLevel level)
+        {
+            Suppressed++;
+            Level = Max(Level, level);
+        }
+
+        public void EndWindow()
+        {
+            Ended += Suppressed;
+            EndedLevel = Max(EndedLevel, Level);
+            Suppressed = 0;
+            Level = LogLevel.Trace;
+        }
+
+        public (int Suppressed, LogLevel Level)? Take(bool includeRunning)
+        {
+            var suppressed = Ended + (includeRunning ? Suppressed : 0);
+            if (suppressed == 0)
+            {
+                return null;
+            }
+
+            var level = includeRunning ? Max(EndedLevel, Level) : EndedLevel;
+            Ended = 0;
+            EndedLevel = LogLevel.Trace;
+            if (includeRunning)
+            {
+                Suppressed = 0;
+                Level = LogLevel.Trace;
+            }
+
+            return (suppressed, level);
+        }
+    }
+
+    sealed class Untracked
+    {
+        public DateTimeOffset Started { get; set; }
+
+        public int Written { get; set; }
+
+        public Dictionary<Type, Counter> ByException { get; } = [];
     }
 }

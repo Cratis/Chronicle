@@ -45,6 +45,6 @@ public class when_a_failure_storms : Specification
     [Fact] void should_write_another_failure_in_the_same_category() => _entries[1].Message.ShouldEqual("Writing 1 failed");
     [Fact] void should_write_entries_that_are_not_failures() => _entries[2].Message.ShouldEqual("Still going");
     [Fact] void should_summarize_the_repeats_without_an_exception() => _entries[3].Exception.ShouldBeNull();
-    [Fact] void should_summarize_the_repeats_as_a_warning() => _entries[3].Level.ShouldEqual(LogLevel.Warning);
+    [Fact] void should_summarize_the_repeats_at_their_level() => _entries[3].Level.ShouldEqual(LogLevel.Error);
     [Fact] void should_count_the_repeats_in_the_summary() => _entries[3].Message.ShouldContain($"999 more TimeoutException failures from Storage ('{StorageLogging.ReadingFailedTemplate}')");
 }

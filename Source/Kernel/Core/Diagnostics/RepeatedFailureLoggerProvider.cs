@@ -11,6 +11,12 @@ namespace Cratis.Chronicle.Diagnostics;
 /// </summary>
 /// <remarks>
 /// Every wrapped provider decides on its own, so each of them writes the first occurrence of a failure and reports its own count.
+/// <para>
+/// The counts are reported at the level of the highest failure counted, under the category of <see cref="RepeatedFailureLog"/>.
+/// They are written straight to the wrapped provider, so the filter rules of the logger factory (such as the Logging:LogLevel
+/// configuration) do not apply to that category; only the wrapped provider's own filtering does. The counts still running when
+/// the provider is disposed, or when the process exits, are reported then rather than lost.
+/// </para>
 /// </remarks>
 public sealed partial class RepeatedFailureLoggerProvider : ILoggerProvider, ISupportExternalScope
 {
@@ -30,6 +36,7 @@ public sealed partial class RepeatedFailureLoggerProvider : ILoggerProvider, ISu
         _log = log;
         _summary = inner.CreateLogger(typeof(RepeatedFailureLog).FullName!);
         _flush = new(_ => Flush(), null, log.Window, log.Window);
+        AppDomain.CurrentDomain.ProcessExit += FlushAtExit;
     }
 
     /// <summary>
@@ -64,19 +71,53 @@ public sealed partial class RepeatedFailureLoggerProvider : ILoggerProvider, ISu
     /// <inheritdoc/>
     public void Dispose()
     {
+        AppDomain.CurrentDomain.ProcessExit -= FlushAtExit;
         _flush.Dispose();
-        Flush();
+        Flush(includeRunningWindows: true);
         _inner.Dispose();
+    }
+
+    /// <summary>
+    /// Gets the message template of a log entry, telling different failures in the same category apart.
+    /// </summary>
+    /// <remarks>
+    /// The template is what the summary shows, so it is preferred over the event name. A state that is a struct is boxed when the
+    /// template is read through the interface; that only happens for entries at warning or above that carry an exception, which have
+    /// already paid for the exception and its stack trace.
+    /// </remarks>
+    /// <typeparam name="TState">The type of the state of the entry.</typeparam>
+    /// <param name="state">The state of the entry.</param>
+    /// <param name="eventId">The <see cref="EventId"/> of the entry, whose name is used when the state has no template.</param>
+    /// <returns>The message template.</returns>
+    internal static string MessageTemplateOf<TState>(TState state, EventId eventId)
+    {
+        if (state is IReadOnlyList<KeyValuePair<string, object?>> { Count: > 0 } values &&
+            string.Equals(values[^1].Key, "{OriginalFormat}", StringComparison.Ordinal) &&
+            values[^1].Value is string template)
+        {
+            return template;
+        }
+
+        return eventId.Name ?? string.Empty;
     }
 
     /// <summary>
     /// Writes the counts of the failures that were not written in windows that have ended.
     /// </summary>
-    internal void Flush()
+    /// <param name="includeRunningWindows">Whether to also write the counts of windows that are still running, for when nothing will write them later.</param>
+    internal void Flush(bool includeRunningWindows = false)
     {
-        foreach (var (category, message, exception, suppressed) in _log.TakeEnded())
+        var seconds = (int)_log.Window.TotalSeconds;
+        foreach (var failures in _log.TakeEnded(includeRunningWindows))
         {
-            Suppressed(_summary, suppressed, exception.Name, category, message, (int)_log.Window.TotalSeconds);
+            if (failures.IsUntracked)
+            {
+                UntrackedSuppressed(_summary, failures.Level, failures.Suppressed, failures.Exception.Name, seconds);
+            }
+            else
+            {
+                Suppressed(_summary, failures.Level, failures.Suppressed, failures.Exception.Name, failures.Category, failures.Message, seconds);
+            }
         }
     }
 
@@ -89,20 +130,24 @@ public sealed partial class RepeatedFailureLoggerProvider : ILoggerProvider, ISu
             _ => throw new InvalidOperationException("Unsupported logger provider registration")
         };
 
-    static string MessageTemplateOf<TState>(TState state, EventId eventId)
+    [LoggerMessage("{Suppressed} more {Exception} failures from {Category} ('{Message}') were counted but not written; the first in each {Seconds} second window is written in full")]
+    static partial void Suppressed(ILogger logger, LogLevel level, int suppressed, string exception, string category, string message, int seconds);
+
+    [LoggerMessage("{Suppressed} more {Exception} failures were counted but not written; too many kinds of failures were failing at once to track them separately, so only the first few of them in each {Seconds} second window were written in full")]
+    static partial void UntrackedSuppressed(ILogger logger, LogLevel level, int suppressed, string exception, int seconds);
+
+    void FlushAtExit(object? sender, EventArgs args)
     {
-        if (state is IReadOnlyList<KeyValuePair<string, object?>> { Count: > 0 } values &&
-            string.Equals(values[^1].Key, "{OriginalFormat}", StringComparison.Ordinal) &&
-            values[^1].Value is string template)
+        try
         {
-            return template;
+            Flush(includeRunningWindows: true);
         }
-
-        return eventId.Name ?? string.Empty;
+        catch (Exception failure)
+        {
+            // The process is exiting and the wrapped provider may already be gone; the console is all that is left.
+            Console.Error.WriteLine(failure);
+        }
     }
-
-    [LoggerMessage(LogLevel.Warning, "{Suppressed} more {Exception} failures from {Category} ('{Message}') were counted but not written; the first in each {Seconds} second window is written in full")]
-    static partial void Suppressed(ILogger logger, int suppressed, string exception, string category, string message, int seconds);
 
     sealed class Logger(ILogger inner, string category, RepeatedFailureLog log) : ILogger
     {
