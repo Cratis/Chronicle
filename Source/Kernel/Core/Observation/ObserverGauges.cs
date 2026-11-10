@@ -24,7 +24,7 @@ namespace Cratis.Chronicle.Observation;
 /// The per-observer gauges carry event store, namespace, event sequence and observer id, never a partition, and
 /// report an observer only while it needs attention: failed or quarantined partitions above zero, or a running state in
 /// <see cref="AttentionStates"/>. After it recovers, or is released while abnormal, its series reports zero for
-/// <see cref="ZeroTail"/> and then stops. A healthy observer costs no series. Under cumulative temporality the SDK keeps
+/// <see cref="ZeroTail"/>, and at least once whatever the collection interval, and then stops. A healthy observer costs no series. Under cumulative temporality the SDK keeps
 /// a series' slot until the process stops, so the series count per instrument is bounded by the observers that were
 /// ever abnormal while the process ran, not by the resident observers.
 /// </para>
@@ -127,8 +127,9 @@ public sealed class ObserverGauges : IObserverGauges
     /// <returns>A 1 per observer and attention state it is in, and zeros for states it recently left.</returns>
     internal IEnumerable<Measurement<int>> ObserveRunningState() =>
         _runningState.Observe(_entries.Values
-            .Where(_ => AttentionStates.Contains(_.Snapshot.RunningState))
-            .Select(_ => ((_.ObserverKey, _.Snapshot.RunningState), 1, _.TagsWithState(_.Snapshot.RunningState))));
+            .Select(_ => (Entry: _, _.Snapshot.RunningState))
+            .Where(_ => AttentionStates.Contains(_.RunningState))
+            .Select(_ => ((_.Entry.ObserverKey, _.RunningState), 1, _.Entry.TagsWithState(_.RunningState))));
 
     /// <summary>
     /// Observes how many observers are resident per event store, namespace, observer type and running state.

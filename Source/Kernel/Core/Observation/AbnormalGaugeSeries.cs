@@ -17,7 +17,10 @@ namespace Cratis.Chronicle.Observation;
 /// A healthy observer therefore costs no series at all. The zero tail lets a backend see the recovery rather than
 /// holding the last abnormal value, which it would do because the OpenTelemetry SDK stops exporting a series that a
 /// callback no longer reports. It also covers an observer that was released while abnormal. The tail is measured from
-/// the last collection that saw the series above zero, so it does not depend on how often any reader collects.
+/// the last collection that saw the series above zero, and a series is dropped only once the tail has passed and at
+/// least one collection has reported its zero, so a collection interval as long as the tail still sees one zero. With
+/// several readers, for example an OTLP exporter and a Prometheus endpoint, that zero is guaranteed only to the first
+/// reader collecting after the recovery; a reader collecting less often than the tail can miss it.
 /// </remarks>
 internal sealed class AbnormalGaugeSeries<TKey>(TimeProvider clock, TimeSpan zeroTail)
     where TKey : notnull
@@ -37,7 +40,7 @@ internal sealed class AbnormalGaugeSeries<TKey>(TimeProvider clock, TimeSpan zer
         foreach (var (key, value, tags) in current)
         {
             if (value <= 0) continue;
-            _seen[key] = new(tags, now);
+            _seen[key] = new(tags, now, ZeroReported: false);
             reported.Add(key);
             measurements.Add(new(value, tags));
         }
@@ -45,17 +48,22 @@ internal sealed class AbnormalGaugeSeries<TKey>(TimeProvider clock, TimeSpan zer
         foreach (var seen in _seen)
         {
             if (reported.Contains(seen.Key)) continue;
-            if (now - seen.Value.At < zeroTail)
+            if (seen.Value.ZeroReported && now - seen.Value.At >= zeroTail)
             {
-                measurements.Add(new(0, seen.Value.Tags));
+                _seen.TryRemove(seen);
                 continue;
             }
 
-            _seen.TryRemove(seen);
+            if (!seen.Value.ZeroReported)
+            {
+                _seen.TryUpdate(seen.Key, seen.Value with { ZeroReported = true }, seen.Value);
+            }
+
+            measurements.Add(new(0, seen.Value.Tags));
         }
 
         return [.. measurements];
     }
 
-    sealed record SeenAbnormal(KeyValuePair<string, object?>[] Tags, DateTimeOffset At);
+    sealed record SeenAbnormal(KeyValuePair<string, object?>[] Tags, DateTimeOffset At, bool ZeroReported);
 }

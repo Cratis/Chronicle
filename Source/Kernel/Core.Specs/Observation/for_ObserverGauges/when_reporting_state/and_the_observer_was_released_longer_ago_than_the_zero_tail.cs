@@ -15,6 +15,8 @@ public class and_the_observer_was_released_longer_ago_than_the_zero_tail : given
         entry.Publish(new(ObserverRunningState.Quarantined, 1, 1));
         Collect();
         entry.Release();
+        _clock.Advance(TimeSpan.FromMinutes(1));
+        Collect();
         _clock.Advance(ObserverGauges.ZeroTail);
     }
 
