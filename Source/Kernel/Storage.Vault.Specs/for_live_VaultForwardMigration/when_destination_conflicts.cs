@@ -12,6 +12,7 @@ public class when_destination_conflicts(LiveVaultFixture fixture) : given.a_live
 
     async Task Establish()
     {
+        await Marker();
         await Put(Legacy);
         await Put(Current, WithLayout(Key(2)));
     }

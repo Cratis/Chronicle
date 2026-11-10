@@ -36,7 +36,7 @@ internal class VaultKeyStoreUpgradeCheck(IVaultSecretStore store) : IEncryptionK
     public async Task<EncryptionKeyStoreUpgradeStatus> Inspect(bool full, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var layout = await EnsureLayout();
+        var layout = await EnsureLayout(requireKv2: false);
         if (layout.LayoutUnusable)
         {
             return layout;
@@ -82,12 +82,13 @@ internal class VaultKeyStoreUpgradeCheck(IVaultSecretStore store) : IEncryptionK
     /// <summary>
     /// Makes sure the paths under <see cref="VaultPathSegments.Root"/> are free to use, and records that.
     /// </summary>
+    /// <param name="requireKv2">Whether mount metadata must prove KV v2 before writing. Startup inspection does not require access to mount metadata.</param>
     /// <returns>A status with the layout verified, in conflict, or unverifiable.</returns>
-    public async Task<EncryptionKeyStoreUpgradeStatus> EnsureLayout()
+    public async Task<EncryptionKeyStoreUpgradeStatus> EnsureLayout(bool requireKv2 = true)
     {
         try
         {
-            if (!await store.IsKv2())
+            if (requireKv2 && !await store.IsKv2())
             {
                 return Layout(verified: false, conflict: false);
             }

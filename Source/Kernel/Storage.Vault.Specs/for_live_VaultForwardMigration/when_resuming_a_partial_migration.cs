@@ -14,6 +14,7 @@ public class when_resuming_a_partial_migration(LiveVaultFixture fixture) : given
 
     async Task Establish()
     {
+        await Marker();
         await Put(Legacy);
         await Put("store/default/customer-43/1", Key(2));
         await Put(Current, WithLayout(Key()));

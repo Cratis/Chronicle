@@ -19,7 +19,7 @@ internal class VaultSecretStore(IVaultClient vaultClient, string? mountPointName
 {
     const string DefaultMountPoint = "secret";
 
-    readonly string _mountPoint = string.IsNullOrEmpty(mountPointName) ? DefaultMountPoint : mountPointName;
+    readonly string _mountPoint = TransportPath(string.IsNullOrEmpty(mountPointName) ? DefaultMountPoint : mountPointName);
 
     /// <inheritdoc/>
     public async Task<bool> IsKv2()
@@ -46,7 +46,7 @@ internal class VaultSecretStore(IVaultClient vaultClient, string? mountPointName
         }
 
         // Never destroy metadata here: a writer may have added a newer version since the read.
-        await vaultClient.V1.Secrets.KeyValue.V2.DeleteSecretVersionsAsync(path, [expected.Version], mountPoint: _mountPoint);
+        await vaultClient.V1.Secrets.KeyValue.V2.DeleteSecretVersionsAsync(TransportPath(path), [expected.Version], mountPoint: _mountPoint);
         return true;
     }
 
@@ -55,7 +55,7 @@ internal class VaultSecretStore(IVaultClient vaultClient, string? mountPointName
     {
         try
         {
-            var list = await vaultClient.V1.Secrets.KeyValue.V2.ReadSecretPathsAsync(path, mountPoint: _mountPoint);
+            var list = await vaultClient.V1.Secrets.KeyValue.V2.ReadSecretPathsAsync(TransportPath(path), mountPoint: _mountPoint);
             return [.. list.Data.Keys];
         }
         catch (VaultApiException ex) when (ex.HttpStatusCode == HttpStatusCode.NotFound)
@@ -69,7 +69,7 @@ internal class VaultSecretStore(IVaultClient vaultClient, string? mountPointName
     {
         try
         {
-            var metadata = (await vaultClient.V1.Secrets.KeyValue.V2.ReadSecretMetadataAsync(path, mountPoint: _mountPoint)).Data;
+            var metadata = (await vaultClient.V1.Secrets.KeyValue.V2.ReadSecretMetadataAsync(TransportPath(path), mountPoint: _mountPoint)).Data;
             return await AllVersionsDeleted(path, metadata);
         }
         catch (Exception)
@@ -84,7 +84,7 @@ internal class VaultSecretStore(IVaultClient vaultClient, string? mountPointName
     {
         try
         {
-            var secret = await vaultClient.V1.Secrets.KeyValue.V2.ReadSecretAsync(path, mountPoint: _mountPoint);
+            var secret = await vaultClient.V1.Secrets.KeyValue.V2.ReadSecretAsync(TransportPath(path), mountPoint: _mountPoint);
             var data = new Dictionary<string, string>(StringComparer.Ordinal);
             var onlyText = true;
             foreach (var (field, value) in secret.Data.Data ?? new Dictionary<string, object>())
@@ -113,7 +113,7 @@ internal class VaultSecretStore(IVaultClient vaultClient, string? mountPointName
         try
         {
             var written = await vaultClient.V1.Secrets.KeyValue.V2.WriteSecretAsync(
-                path,
+                TransportPath(path),
                 data.ToDictionary(field => field.Key, field => (object)field.Value, StringComparer.Ordinal),
                 checkAndSet: 0,
                 mountPoint: _mountPoint);
@@ -126,7 +126,9 @@ internal class VaultSecretStore(IVaultClient vaultClient, string? mountPointName
     }
 
     /// <inheritdoc/>
-    public Task Remove(string path) => vaultClient.V1.Secrets.KeyValue.V2.DeleteMetadataAsync(path, mountPoint: _mountPoint);
+    public Task Remove(string path) => vaultClient.V1.Secrets.KeyValue.V2.DeleteMetadataAsync(TransportPath(path), mountPoint: _mountPoint);
+
+    static string TransportPath(string path) => string.Join('/', path.Split('/').Select(Uri.EscapeDataString));
 
     static string? AsText(object? value) => value switch
     {
@@ -166,7 +168,7 @@ internal class VaultSecretStore(IVaultClient vaultClient, string? mountPointName
         try
         {
             // deletion_time can be scheduled: only Vault's version-specific response can confirm deletion.
-            var secret = await vaultClient.V1.Secrets.KeyValue.V2.ReadSecretAsync(path, version: version, mountPoint: _mountPoint);
+            var secret = await vaultClient.V1.Secrets.KeyValue.V2.ReadSecretAsync(TransportPath(path), version: version, mountPoint: _mountPoint);
             return secret?.Data is { Data: null, Metadata: { } metadata } &&
                 metadata.Version == version &&
                 (metadata.Destroyed || DateTimeOffset.TryParse(metadata.DeletionTime, CultureInfo.InvariantCulture, DateTimeStyles.None, out _));
