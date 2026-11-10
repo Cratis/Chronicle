@@ -178,7 +178,7 @@ public static class ServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IValidateOptions<Configuration.ChronicleOptions>, EventStoreAccessConfigurationValidation>());
         services.AddHostedService<AdministratorPolicyStartupWarning>();
 
-        // A grain call: given once the silo is active, never from a hosted service that would hold the bind (#4040).
+        // Reads the grants the startup task loaded: given once the silo is active, never from a hosted service (#4040).
         services.AddSingleton<ILifecycleParticipant<ISiloLifecycle>, StoreEntitlementsStartupNotice>();
     }
 

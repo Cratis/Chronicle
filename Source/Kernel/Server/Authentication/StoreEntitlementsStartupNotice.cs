@@ -9,14 +9,15 @@ namespace Cratis.Chronicle.Server.Authentication;
 
 /// <summary>Describes the configured ordinary-store entitlement mode once the silo is up.</summary>
 /// <param name="options">The configuration.</param>
-/// <param name="grains">The authoritative grant grain factory.</param>
+/// <param name="entitlements">The local silo's <see cref="IStoreEntitlementsCache"/>, loaded by the startup task.</param>
 /// <param name="logger">The logger.</param>
 /// <remarks>
-/// Reading the grants is a grain call, so it belongs to the silo's lifecycle rather than to a hosted service. A hosted
-/// service starts before the listeners bind and before the deferred silo starts, so a grain call there holds the bind
-/// behind a silo that cannot start until it returns (#4040).
+/// The grants are read from the entitlement cache the startup task has already loaded, not through a grain call. A
+/// hosted service starts before the listeners bind and before the deferred silo starts, so a grain call there holds
+/// the bind behind a silo that cannot start until it returns (#4040); and a grain call from the silo lifecycle would
+/// hold readiness behind a busy silo for up to a response timeout.
 /// </remarks>
-public partial class StoreEntitlementsStartupNotice(IOptions<ChronicleOptions> options, IGrainFactory grains, ILogger<StoreEntitlementsStartupNotice> logger) : ILifecycleParticipant<ISiloLifecycle>
+public class StoreEntitlementsStartupNotice(IOptions<ChronicleOptions> options, IStoreEntitlementsCache entitlements, ILogger<StoreEntitlementsStartupNotice> logger) : ILifecycleParticipant<ISiloLifecycle>
 {
     /// <summary>
     /// The silo lifecycle stage the notice is given at: after the startup task has made the silo active.
@@ -33,35 +34,27 @@ public partial class StoreEntitlementsStartupNotice(IOptions<ChronicleOptions> o
     /// <param name="cancellationToken">The <see cref="CancellationToken"/> for the silo start.</param>
     /// <returns>Awaitable task.</returns>
     /// <remarks>
-    /// The notice is advice for an operator; failing to read the grants is logged and does not fail the silo start.
+    /// The notice is advice for an operator; grants that could not be loaded are logged and do not fail the silo start.
     /// </remarks>
-    public async Task Notify(CancellationToken cancellationToken)
+    public Task Notify(CancellationToken cancellationToken)
     {
         var authentication = options.Value.Authentication;
-        if (!authentication.Enabled) return;
+        if (!authentication.Enabled) return Task.CompletedTask;
         if (!authentication.EnforceStoreEntitlements)
         {
-            AuditMode(logger);
-            return;
+            logger.AuditMode();
+            return Task.CompletedTask;
         }
 
-        try
+        if (!entitlements.IsFresh)
         {
-            var snapshot = await grains.GetGrain<IStoreEntitlements>(IStoreEntitlements.Key).GetSnapshot().WaitAsync(cancellationToken);
-            if (snapshot.Grants.Count == 0) EmptyEnforcement(logger);
+            logger.GrantsUnavailable();
         }
-        catch (Exception exception) when (!cancellationToken.IsCancellationRequested)
+        else if (entitlements.Snapshot.GrantCount == 0)
         {
-            GrantsUnavailable(logger, exception);
+            logger.EmptyEnforcement();
         }
+
+        return Task.CompletedTask;
     }
-
-    [LoggerMessage(LogLevel.Information, "Event store entitlement audit mode is active. Review EventStoreAccessPreflight and configure explicit grants before enabling EnforceStoreEntitlements. Observations are bounded, best-effort evidence since activation, not policy.")]
-    static partial void AuditMode(ILogger logger);
-
-    [LoggerMessage(LogLevel.Warning, "Event store entitlement enforcement is active with no explicit grants. Ordinary application access will be denied until grants are configured.")]
-    static partial void EmptyEnforcement(ILogger logger);
-
-    [LoggerMessage(LogLevel.Warning, "Event store entitlement enforcement is active, but the configured grants could not be read to check that any exist.")]
-    static partial void GrantsUnavailable(ILogger logger, Exception exception);
 }

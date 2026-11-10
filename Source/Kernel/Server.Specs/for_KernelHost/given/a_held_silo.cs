@@ -80,6 +80,7 @@ public class a_held_silo : Specification
         }
         builder.Services.AddSingleton<IInitialAdminSetupTokens, InitialAdminSetupTokens>();
         builder.Services.AddSingleton(Substitute.For<IAdministratorPrivileges>());
+        builder.Services.AddSingleton(Substitute.For<IStoreEntitlementsCache>());
         var kernelProjectionRetries = Substitute.For<IKernelProjectionRegistrationRetries>();
         kernelProjectionRetries.Pending.Returns([]);
         builder.Services.AddSingleton(kernelProjectionRetries);

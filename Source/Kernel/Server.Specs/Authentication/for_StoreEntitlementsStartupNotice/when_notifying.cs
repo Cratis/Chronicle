@@ -18,12 +18,11 @@ public class when_notifying : Specification
     [InlineData(false, false, 0, LogLevel.None)]
     async Task should_emit_only_the_relevant_notice(bool enabled, bool enforce, int grants, LogLevel expected)
     {
-        var entitlements = Substitute.For<IStoreEntitlements>();
-        entitlements.GetSnapshot().Returns(new StoreEntitlementsState(1, Enumerable.Range(0, grants).Select(_ => new EventStoreAccessGrant(new("issuer", "subject"), null, null, StoreAccess.Read, EventStoreAccessGrantSource.Configuration)).ToArray()));
-        var grains = Substitute.For<IGrainFactory>();
-        grains.GetGrain<IStoreEntitlements>(IStoreEntitlements.Key).Returns(entitlements);
+        var entitlements = Substitute.For<IStoreEntitlementsCache>();
+        entitlements.IsFresh.Returns(true);
+        entitlements.Snapshot.Returns(new StoreEntitlementsSnapshot(new StoreEntitlementsState(1, Enumerable.Range(0, grants).Select(_ => new EventStoreAccessGrant(new("issuer", "subject"), null, null, StoreAccess.Read, EventStoreAccessGrantSource.Configuration)).ToArray())));
         var logger = new RecordingLogger();
-        var notice = new StoreEntitlementsStartupNotice(Options.Create(new ChronicleOptions { Authentication = new() { Enabled = enabled, EnforceStoreEntitlements = enforce } }), grains, logger);
+        var notice = new StoreEntitlementsStartupNotice(Options.Create(new ChronicleOptions { Authentication = new() { Enabled = enabled, EnforceStoreEntitlements = enforce } }), entitlements, logger);
         await notice.Notify(CancellationToken.None);
         logger.Levels.ShouldEqual(expected == LogLevel.None ? [] : new[] { expected });
     }

@@ -2,13 +2,14 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Configuration;
+using Cratis.Chronicle.Security;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.Server.Authentication.for_StoreEntitlementsStartupNotice;
 
 /// <summary>
-/// The notice reads grants through a grain, so it runs as part of the silo start, after the silo is active, and never
+/// The notice reads the grants the startup task loaded, so it runs as part of the silo start, after the silo is active, and never
 /// as a hosted service that runs before the listeners bind (#4040).
 /// </summary>
 public class when_participating : Specification
@@ -19,7 +20,7 @@ public class when_participating : Specification
     void Establish()
     {
         _lifecycle = Substitute.For<ISiloLifecycle>();
-        _notice = new(Options.Create(new ChronicleOptions()), Substitute.For<IGrainFactory>(), new RecordingLogger());
+        _notice = new(Options.Create(new ChronicleOptions()), Substitute.For<IStoreEntitlementsCache>(), new RecordingLogger());
     }
 
     void Because() => _notice.Participate(_lifecycle);
