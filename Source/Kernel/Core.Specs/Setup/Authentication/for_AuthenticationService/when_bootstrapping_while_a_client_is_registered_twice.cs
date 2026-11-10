@@ -20,11 +20,14 @@ public class when_bootstrapping_while_a_client_is_registered_twice : Specificati
     void Establish()
     {
         var applications = Substitute.For<IApplicationStorage>();
-        var first = Guid.NewGuid();
+        var lowest = Guid.Parse("00000000-0000-0000-0000-000000000001");
+        var highest = Guid.Parse("ffffffff-0000-0000-0000-000000000002");
+
+        // Storage returns the records in no particular order, so the higher id comes first here.
         applications.GetAll().Returns(
         [
-            new Application { Id = first, ClientId = (Cratis.Chronicle.Concepts.Security.ClientId)"client" },
-            new Application { Id = Guid.NewGuid(), ClientId = (Cratis.Chronicle.Concepts.Security.ClientId)"client" }
+            new Application { Id = highest, ClientId = (Cratis.Chronicle.Concepts.Security.ClientId)"client" },
+            new Application { Id = lowest, ClientId = (Cratis.Chronicle.Concepts.Security.ClientId)"client" }
         ]);
         var grains = Substitute.For<IGrainFactory>();
         var entitlements = Substitute.For<IStoreEntitlements>();
@@ -34,14 +37,14 @@ public class when_bootstrapping_while_a_client_is_registered_twice : Specificati
         {
             Clients = [new() { ClientId = "client", ClientSecret = "configured", EventStores = [new() { EventStore = "orders", Access = StoreAccess.Read }] }]
         };
-        _first = first.ToString();
+        _lowest = lowest.ToString();
         _service = new(Substitute.For<IUserStorage>(), applications, grains, Options.Create(options), Substitute.For<IEventSerializer>(), Substitute.For<IInitialAdminSetupTokens>(), NullLogger<AuthenticationService>.Instance);
     }
 
-    string _first;
+    string _lowest;
 
     async Task Because() => _exception = await Catch.Exception(_service.EnsureBootstrapClients);
 
     [Fact] void should_not_fail() => _exception.ShouldBeNull();
-    [Fact] void should_grant_the_first_registration() => _grants.ShouldContain(new ConfiguredGrant(new(PrincipalKey.LocalIssuer, _first), "orders", null, StoreAccess.Read));
+    [Fact] void should_grant_the_registration_with_the_lowest_id() => _grants.ShouldContain(new ConfiguredGrant(new(PrincipalKey.LocalIssuer, _lowest), "orders", null, StoreAccess.Read));
 }

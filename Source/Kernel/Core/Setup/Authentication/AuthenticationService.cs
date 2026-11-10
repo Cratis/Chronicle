@@ -157,9 +157,9 @@ internal sealed class AuthenticationService(
         var clients = _options.Clients;
         logger.BootstrappingClients(clients.Count());
 
-        var existingApplications = (await applicationStorage.GetAll()).ToArray();
+        var existingApplications = (await applicationStorage.GetAll()).OrderBy(_ => _.Id.ToString(), StringComparer.Ordinal).ToArray();
 
-        // Concurrent nodes may have registered the same client twice; the first record wins and duplicates must never fail startup.
+        // Concurrent nodes may have registered the same client twice; the record with the lowest id wins on every node, and duplicates must never fail startup.
         var resolved = new Dictionary<string, string>();
         foreach (var application in existingApplications)
         {
@@ -251,7 +251,7 @@ internal sealed class AuthenticationService(
 
         // Applications registered through events are only visible in storage once the reactor has run, so they are carried over from the bootstrap step.
         var resolved = new Dictionary<string, string>(_resolvedApplications);
-        foreach (var application in existingApplications) resolved.TryAdd(application.ClientId.ToString(), application.Id.ToString());
+        foreach (var application in existingApplications.OrderBy(_ => _.Id.ToString(), StringComparer.Ordinal)) resolved.TryAdd(application.ClientId.ToString(), application.Id.ToString());
         resolved[defaultClientId] = applicationId.ToString();
         _resolvedApplications = resolved;
         await ReconcileConfiguredGrants(resolved);
