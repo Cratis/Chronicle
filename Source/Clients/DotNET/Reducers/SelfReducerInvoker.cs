@@ -45,6 +45,9 @@ internal sealed class SelfReducerInvoker : IReducerInvoker, IBatchReducerInvoker
     public SelfReducerReplayHooks ReplayHooks { get; }
 
     /// <inheritdoc/>
+    bool IBatchReducerInvoker.HasBatchMethod => _batchMethod is not null;
+
+    /// <inheritdoc/>
     public IImmutableList<EventType> EventTypes { get; }
 
     /// <inheritdoc/>

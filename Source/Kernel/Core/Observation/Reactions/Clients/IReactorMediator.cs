@@ -34,7 +34,18 @@ public interface IReactorMediator
     /// <param name="eventStore"><see cref="EventStoreName"/> to subscribe for.</param>
     /// <param name="namespace"><see cref="EventStoreNamespaceName"/> to subscribe for.</param>
     /// <param name="target"><see cref="ReactorPageObserver"/> delegate that will be called with pages.</param>
-    void SubscribePages(ReactorId reactorId, ConnectionId connectionId, EventStoreName eventStore, EventStoreNamespaceName @namespace, ReactorPageObserver target);
+    /// <param name="pageDelivery">The <see cref="PageDeliveryDefinition"/> bounds the client declared, if any.</param>
+    void SubscribePages(ReactorId reactorId, ConnectionId connectionId, EventStoreName eventStore, EventStoreNamespaceName @namespace, ReactorPageObserver target, PageDeliveryDefinition? pageDelivery = null);
+
+    /// <summary>
+    /// Gets the page bounds a connection declared when it subscribed to pages.
+    /// </summary>
+    /// <param name="reactorId"><see cref="ReactorId"/> to get for.</param>
+    /// <param name="connectionId"><see cref="ConnectionId"/> to get for.</param>
+    /// <param name="eventStore"><see cref="EventStoreName"/> to get for.</param>
+    /// <param name="namespace"><see cref="EventStoreNamespaceName"/> to get for.</param>
+    /// <returns>The <see cref="PageDeliveryDefinition"/>, or null when the connection does not receive pages.</returns>
+    PageDeliveryDefinition? GetPageDelivery(ReactorId reactorId, ConnectionId connectionId, EventStoreName eventStore, EventStoreNamespaceName @namespace);
 
     /// <summary>
     /// Notify that a page of events spanning partitions should be observed.

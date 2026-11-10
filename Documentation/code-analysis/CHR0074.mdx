@@ -1,0 +1,24 @@
+---
+title: "CHR0074: Reactor batch method must return Task or void"
+description: "CHR0074 reports a Cratis Chronicle reactor batch method that returns something other than Task or void."
+---
+
+## Rule description
+
+A per-event reactor method can return events and other side effects, because each is tied to the one event it came from. A batch method has no such single event, so returning side effects from it is not supported. Chronicle refuses to register a reactor whose batch method returns anything but `Task` or `void`.
+
+## Severity
+
+Error
+
+## How to fix
+
+Return `Task` or `void`. When the batch must append events, inject an event log into the reactor and append through it.
+
+## Related rules
+
+- [CHR0054](CHR0054.mdx): Reactor method has an unsupported return type.
+
+## Related topics
+
+- [Reactor batch methods](../reactors/batches.mdx)

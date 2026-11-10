@@ -239,6 +239,15 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     }
 
     /// <inheritdoc/>
+    public Task SpillMatchingToCatchup(IEnumerable<AppendedEvent> appendedEvents)
+    {
+        if (_isDisposed || _isDraining) return Task.CompletedTask;
+        var batch = appendedEvents as AppendedEvent[] ?? appendedEvents.ToArray();
+        if (batch.Length > 0) SpillSubscribersMatchingToCatchup(batch, AppendedEventsQueueSpillReasons.CommittedOutsideLiveDelivery);
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
     public Task Subscribe(ObserverKey observerKey, IEnumerable<EventType> eventTypes, ObserverFilters? filters = null)
     {
         lock (_subscriptionsLock)
@@ -372,7 +381,8 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     /// cost an observer that was keeping up its place.
     /// </remarks>
     /// <param name="batch">The batch that could not be queued.</param>
-    internal void SpillSubscribersMatchingToCatchup(AppendedEvent[] batch)
+    /// <param name="reason">Why the observers are spilled, one of <see cref="AppendedEventsQueueSpillReasons"/>.</param>
+    internal void SpillSubscribersMatchingToCatchup(AppendedEvent[] batch, string reason = AppendedEventsQueueSpillReasons.QueueFull)
     {
         var batchEventTypes = DistinctEventTypes(batch, out var hasRedaction);
         List<ObserverKey> observerKeys;
@@ -401,7 +411,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         foreach (var observerKey in observerKeys)
         {
             StartCatchupTrigger(observerKey);
-            ReportSpill(observerKey, AppendedEventsQueueSpillReasons.QueueFull);
+            ReportSpill(observerKey, reason);
         }
     }
 

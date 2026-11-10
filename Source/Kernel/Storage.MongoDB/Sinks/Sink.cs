@@ -191,6 +191,9 @@ public partial class Sink(
     public SinkTypeId TypeId => WellKnownSinkTypes.MongoDB;
 
     /// <inheritdoc/>
+    public bool IsInBulkMode => _isBulkMode;
+
+    /// <inheritdoc/>
     public void Dispose() => _bulkCancellation.Dispose();
 
     /// <summary>
@@ -601,6 +604,12 @@ public partial class Sink(
 
     async Task<IEnumerable<FailedPartition>> ApplyRemoval(Key key, EventSequenceNumber eventSequenceNumber, FilterDefinition<BsonDocument> filter, SinkWriteOptions options)
     {
+        if (options.Page is { } page)
+        {
+            page.Add(new DeleteOneModel<BsonDocument>(filter), key, options.PartitionOr(key), eventSequenceNumber);
+            return [];
+        }
+
         if (CanBuffer(options))
         {
             var cacheKey = SinkCacheKey.For(converter.ToBsonValue(key));
@@ -699,6 +708,12 @@ public partial class Sink(
 
     async Task<bool> TryBufferOperation(WriteModel<BsonDocument> operation, UpdateWrite write, SinkWriteOptions options)
     {
+        if (options.Page is { } page)
+        {
+            page.Add(operation, write.Key, options.PartitionOr(write.Key), write.EventSequenceNumber);
+            return true;
+        }
+
         if (!CanBuffer(options))
         {
             return false;
@@ -730,7 +745,7 @@ public partial class Sink(
 
     async Task<IEnumerable<FailedPartition>?> TryBufferUpdate(UpdateWrite write, IChangeset<AppendedEvent, ExpandoObject> changeset, SinkWriteOptions options)
     {
-        if (!CanBuffer(options))
+        if (options.Page is null && !CanBuffer(options))
         {
             return null;
         }
@@ -740,6 +755,13 @@ public partial class Sink(
             IsUpsert = write.IsUpsert,
             ArrayFilters = write.Converted.ArrayFilters
         };
+
+        if (options.Page is { } page)
+        {
+            page.Add(updateModel, write.Key, options.PartitionOr(write.Key), write.EventSequenceNumber);
+            return [];
+        }
+
         var hasJoined = changeset.HasJoined();
         var cacheState = hasJoined || options.Mode == SinkWriteMode.GuardedUpsert ? null : CreateCacheState(write.Key, changeset, write.EventSequenceNumber);
 
@@ -2053,13 +2075,13 @@ public partial class Sink(
         public string For(int operationIndex) => ByOperation.TryGetValue(operationIndex, out var reason) ? reason : First;
     }
 
-    sealed record SinkWriteOptions(SinkWriteMode Mode, HashSet<BulkBatch>? DrainedBatches = null, Key? Partition = null)
+    sealed record SinkWriteOptions(SinkWriteMode Mode, HashSet<BulkBatch>? DrainedBatches = null, Key? Partition = null, PageOperations? Page = null)
     {
         public bool IsImmediate => DrainedBatches is not null;
 
         public Key PartitionOr(Key key) => Partition ?? key;
 
-        public bool CanBuffer(bool isBulkMode) => isBulkMode && !IsImmediate;
+        public bool CanBuffer(bool isBulkMode) => isBulkMode && !IsImmediate && Page is null;
     }
 
     sealed record WritePlan(

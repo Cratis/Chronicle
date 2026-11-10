@@ -4,6 +4,8 @@
 using System.Text.Json;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Reducers;
 using Cratis.Execution;
 
 namespace Cratis.Chronicle.Testing.ReadModels;
@@ -35,6 +37,7 @@ internal static class ReducerReadModelProcessor
     /// <param name="eventPositions">Optional collection-wide positions for bare events grouped by key.</param>
     /// <returns>The reduced read model and the distinct event sources that passed the reducer's filters.</returns>
     /// <exception cref="ReducerFailed">Thrown when the reducer raises an error while processing the events.</exception>
+    /// <exception cref="ReducerDeferred">Thrown when a batch reducer defers the event source.</exception>
     public static async Task<(TReadModel? State, IReadOnlyList<EventSourceId> EventSourceIds)> Process<TReadModel>(
         Type reducerType,
         IEnumerable<EventForEventSourceId> events,
@@ -47,7 +50,8 @@ internal static class ReducerReadModelProcessor
         var eventStore = context.EventStore;
         var eventTypes = context.EventTypes;
         var eventContexts = context.EventContexts;
-        var invoker = eventStore.Reducers.GetHandlerForReadModelType(readModelType).Invoker;
+        var handler = eventStore.Reducers.GetHandlerForReadModelType(readModelType);
+        var invoker = handler.Invoker;
 
         var eventsList = events.ToList();
         var contexts = eventContexts ?? eventsList.Select((@event, index) =>
@@ -83,7 +87,15 @@ internal static class ReducerReadModelProcessor
             eventsAndContexts.Add(new(content, contexts[index] with { EventType = type }));
         }
 
-        var result = await invoker.Invoke(context.ServiceProvider, eventsAndContexts, initialState);
+        var result = invoker is IBatchReducerInvoker batchInvoker
+            ? await batchInvoker.Invoke(context.ServiceProvider, eventsAndContexts, initialState, PageContextFor(handler, eventStore.Name, eventStore.Namespace, eventsAndContexts))
+            : await invoker.Invoke(context.ServiceProvider, eventsAndContexts, initialState);
+
+        // A batch reducer that deferred the event source writes no state; the kernel would deliver the events again later.
+        if (result.RetryAfter is { } retryAfter)
+        {
+            throw new ReducerDeferred(readModelType, retryAfter);
+        }
 
         // A reducer that raised an error must not surface its partial state as a successful projection —
         // the real reducer pipeline discards the result and pauses the partition. Fail loud instead so the
@@ -95,4 +107,17 @@ internal static class ReducerReadModelProcessor
 
         return (result.ReadModelState as TReadModel, eventsAndContexts.Select(e => e.Context.EventSourceId).Distinct().ToArray());
     }
+
+    static BatchContext PageContextFor(IReducerHandler handler, EventStoreName eventStore, EventStoreNamespaceName @namespace, List<EventAndContext> events) => new(
+        new ObserverId(handler.Id.Value),
+        eventStore,
+        @namespace,
+        handler.EventSequenceId,
+        ObservationOrigin.Live,
+        [.. events.Select(_ => _.Context.EventSourceId).Distinct()],
+        events.Count,
+        events.Count > 0 ? events[0].Context.SequenceNumber : EventSequenceNumber.Unavailable,
+        events.Count > 0 ? events[^1].Context.SequenceNumber : EventSequenceNumber.Unavailable,
+        null,
+        CancellationToken.None);
 }

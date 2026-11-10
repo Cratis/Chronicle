@@ -1,0 +1,91 @@
+---
+title: Importing events into Chronicle in bulk
+description: Bring existing history into a Chronicle event sequence through a resumable import session that validates every event before committing any and commits without locking the sequence.
+---
+An import brings existing history into an event sequence: a migration from another event store or a CRUD system, a copy of an event store between environments, or fixtures for a load test. It is built for hundreds of thousands of events, far more than one [batch append](./appending-many.mdx) can carry.
+
+The client reads your events lazily from a stream, so the whole source is never held in memory at once. Where the events come from is up to you: a file in any format, another database or an HTTP feed. You turn the source into a stream of events, and the client uploads it.
+
+## Import from a stream
+
+Give `Import` an asynchronous stream of events. Each event keeps what its source says about it: when it occurred, its correlation, causation and caused-by identity, its subject, tags, event source and stream, and the generation of its event type.
+
+<ChronicleClientTabs snippet="events/importing/from-a-stream" />
+
+`Import` returns once the import is committed. The `ImportResult` reports how many events were staged, committed and already appended, the range of sequence numbers they were given, and every rejected event with its index in the import, its event type and the reasons.
+
+## How an import works
+
+An import is a session with an identifier. It goes through these states: `Open`, `Staging`, `Validating`, `Committing`, and then `Completed`, `Failed` or `Abandoned`.
+
+1. **Staging.** The client cuts the stream into chunks within the kernel's limits and keeps a few chunks in flight at a time. The kernel checks each event's type, schema and event source as its chunk arrives, and holds the chunk in staging, not in the event log. A chunk sent twice is staged once, so the client can resend after a dropped connection.
+2. **Validation.** When the import is complete, the kernel checks that it holds the number of chunks and events the client sent. It then validates the constraints of the whole import, in the order the events were added, against the existing constraint indexes and against the import's own earlier events.
+3. **Commit.** A job appends the staged events in order, a chunk at a time. Each event gets a new sequence number in the target sequence.
+
+With the default `OnInvalid = OnInvalidEvent.Reject`, an import with any invalid event fails and **nothing is committed**. Use `OnInvalidEvent.Skip` to commit the valid events and report the others.
+
+## What the commit guarantees
+
+- **Nothing is locked.** Ordinary appends to the same sequence carry on during the commit and interleave with the imported events.
+- **A lost race is reported, not hidden.** Because nothing is locked, another writer can claim a unique value after the import was validated. That event is not committed and is reported as a rejection; the rest of the import continues. So "nothing is committed when anything is invalid" holds at validation time.
+- **Committed events stay committed.** The commit never rolls back. Events become visible chunk by chunk; a reader that must not see a partial import waits for the import to be `Completed`.
+- **A restart resumes.** The commit records each chunk as it settles. After a kernel restart it continues from there and recognizes any events of an interrupted chunk that are already in the log, so nothing is appended twice.
+
+## Where imported events come from
+
+The kernel records the import at the root of every imported event's causation, as a causation of type `Import` with the `importId`. When the event carries `SourceSequenceNumber`, the causation keeps it as `sourceSequenceNumber`, so lineage to the source stays queryable without a second numbering scheme.
+
+## Importing again
+
+Give each event an `IdempotencyKey`, typically the source system's event identifier. Running the same import against the same sequence again then reports those events as `AlreadyAppended` instead of appending them twice. Events without a key are appended every time. See [Appending](./appending.mdx#appending-once) for how keys are compared.
+
+## Observers see imported events once
+
+Reactors, reducers and projections handle imported events like any other appended event, and each sees each event exactly once. The commit never delivers imported events live and never pauses live delivery. After each chunk is committed, every observer of the chunk's event types is handed to its catch-up, the same way an observer that falls behind live delivery is. Catch-up reads from the observer's own position in the sequence, so it receives the imported events and any ordinary appends that came in between them, in order, and nothing twice. An observer that is already catching up is left to finish and is not given a second catch-up.
+
+Observers therefore keep up while the commit runs, behind it only by how fast they catch up. A long import can send an observer through several catch-ups in a row. Because the events arrive as catch-up and not as a replay, `[OnceOnly]` does not skip them.
+
+## Add events from several producers
+
+When your events do not come from one stream, for example several threads or a resumable extract job, begin a session yourself and add events to it:
+
+<ChronicleClientTabs snippet="events/importing/session" />
+
+`Complete` waits for every chunk to be acknowledged, closes staging and, unless `WaitForCommit` is `false`, waits for the commit. `Progress` reports the state and counts as the kernel sees them, and ends when the import ends. `Abandon` stops any `Add` in progress, without waiting for its stream to yield, waits for the chunks already sent, and then discards everything staged. Adding to or completing an abandoned import throws `ImportWasAbandoned`. Give `Abandon` a cancellation token to bound the wait for chunks in flight; when it is cancelled first, the import stays open until its staging retention runs out.
+
+A chunk sent again under the same index must carry the same events. One that covers other events is refused as a conflict, and the chunk staged first is kept.
+
+## Resume after a crash
+
+A process that stopped while staging can reattach to its import by identifier and continue after the events the kernel already holds:
+
+<ChronicleClientTabs snippet="events/importing/reattach" />
+
+Feed the same events in the same order from `EventsAcknowledged` on.
+
+## Retention and cleanup
+
+Staging holds the events as they were sent, personal data included and not yet encrypted, so the kernel keeps it no longer than needed:
+
+- When an import completes, fails or is abandoned, its staging is discarded at once.
+- An import left open without activity for `Imports.StagingRetention`, 24 hours by default, is abandoned.
+- An import whose validation or commit made no progress for `Imports.StagingRetention` fails when its commit job is gone or has ended; the events it committed stay committed. While the commit job is still there, running or stopped, the import is left to it: a kernel that was down for longer than the retention resumes the commit from its checkpoint.
+- An import that ended longer ago than `Imports.StagingRetention` is removed, and its identifier can be used for a new import.
+
+A commit job that is stopped leaves its import `Committing`, and resuming the job continues the commit from where it stopped. A commit job that fails or is removed fails its import. A chunk the commit was already appending when the import failed is still counted in `EventsCommitted` and its sequence numbers, since its events are in the log. To give up an import that is committing, stop and remove its commit job, named `Import` followed by the import identifier in the jobs list; `AbandonImport` only abandons an import that is still staging.
+
+## Limits and configuration
+
+`BeginImport` returns the kernel's limits on one chunk, and the client keeps every chunk within them. The kernel reads these settings from the `Imports` section of its configuration:
+
+| Setting | Default | Meaning |
+| --- | --- | --- |
+| `StagingRetention` | 24 hours | How long an open import may go without activity before it is abandoned, how long a commit may go without progress before it fails, and how long an ended import is kept |
+| `RetentionSweepInterval` | 15 minutes | How often the kernel looks for imports that outlived their retention |
+| `CommitChunkSize` | 1000 | How many events the commit appends in one call |
+| `MaxChunkEvents` | 1000 | The most events one staged chunk may carry |
+| `MaxChunkBytes` | 4 MiB | The most bytes one staged chunk may carry, counting event content, tags, named tags, causation and idempotency keys |
+
+An event sequence validates up to four imports at a time. The constraint claims of an import being validated are held in memory, so a fifth import waits, and starts validating once one of the others finishes; it never pushes an import out in the middle of its validation. Claims left behind by a validation that stopped are released after five minutes without use. A validation call that fails, for example when the kernel is busy, starts the validation over, up to ten times before the import fails.
+
+An import targets one event sequence. Events cannot be imported into the outbox.
