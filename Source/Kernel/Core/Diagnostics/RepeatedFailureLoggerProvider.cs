@@ -7,8 +7,11 @@ using Microsoft.Extensions.Logging;
 namespace Cratis.Chronicle.Diagnostics;
 
 /// <summary>
-/// Wraps a <see cref="ILoggerProvider"/> so that a repeated failure is written a few times and then counted (see <see cref="RepeatedFailureLog"/>).
+/// Wraps a <see cref="ILoggerProvider"/> so that a repeated failure is written once in each window and then counted (see <see cref="RepeatedFailureLog"/>).
 /// </summary>
+/// <remarks>
+/// Every wrapped provider decides on its own, so each of them writes the first occurrence of a failure and reports its own count.
+/// </remarks>
 public sealed partial class RepeatedFailureLoggerProvider : ILoggerProvider, ISupportExternalScope
 {
     readonly ILoggerProvider _inner;
@@ -26,7 +29,7 @@ public sealed partial class RepeatedFailureLoggerProvider : ILoggerProvider, ISu
         _inner = inner;
         _log = log;
         _summary = inner.CreateLogger(typeof(RepeatedFailureLog).FullName!);
-        _flush = new(_ => Flush(), null, RepeatedFailureLog.DefaultWindow, RepeatedFailureLog.DefaultWindow);
+        _flush = new(_ => Flush(), null, log.Window, log.Window);
     }
 
     /// <summary>
@@ -36,10 +39,11 @@ public sealed partial class RepeatedFailureLoggerProvider : ILoggerProvider, ISu
     /// <returns><see cref="IServiceCollection"/> for continuation.</returns>
     public static IServiceCollection ThrottleRepeatedFailures(IServiceCollection services)
     {
-        var log = new RepeatedFailureLog(RepeatedFailureLog.DefaultWindow, RepeatedFailureLog.DefaultAllowedPerWindow, TimeProvider.System);
         foreach (var descriptor in services.Where(_ => _.ServiceType == typeof(ILoggerProvider) && _.ServiceKey is null).ToArray())
         {
-            services[services.IndexOf(descriptor)] = ServiceDescriptor.Singleton<ILoggerProvider>(serviceProvider => new RepeatedFailureLoggerProvider(Create(serviceProvider, descriptor), log));
+            services[services.IndexOf(descriptor)] = ServiceDescriptor.Singleton<ILoggerProvider>(serviceProvider => new RepeatedFailureLoggerProvider(
+                Create(serviceProvider, descriptor),
+                new RepeatedFailureLog(RepeatedFailureLog.DefaultWindow, RepeatedFailureLog.DefaultAllowedPerWindow, TimeProvider.System)));
         }
 
         return services;
@@ -65,6 +69,17 @@ public sealed partial class RepeatedFailureLoggerProvider : ILoggerProvider, ISu
         _inner.Dispose();
     }
 
+    /// <summary>
+    /// Writes the counts of the failures that were not written in windows that have ended.
+    /// </summary>
+    internal void Flush()
+    {
+        foreach (var (category, message, exception, suppressed) in _log.TakeEnded())
+        {
+            Suppressed(_summary, suppressed, exception.Name, category, message, (int)_log.Window.TotalSeconds);
+        }
+    }
+
     static ILoggerProvider Create(IServiceProvider serviceProvider, ServiceDescriptor descriptor) =>
         descriptor switch
         {
@@ -74,16 +89,20 @@ public sealed partial class RepeatedFailureLoggerProvider : ILoggerProvider, ISu
             _ => throw new InvalidOperationException("Unsupported logger provider registration")
         };
 
-    [LoggerMessage(LogLevel.Warning, "{Suppressed} more {Exception} failures from {Category} were not written in the last {Seconds} seconds")]
-    static partial void Suppressed(ILogger logger, int suppressed, string exception, string category, int seconds);
-
-    void Flush()
+    static string MessageTemplateOf<TState>(TState state, EventId eventId)
     {
-        foreach (var (category, exception, suppressed) in _log.TakeEnded())
+        if (state is IReadOnlyList<KeyValuePair<string, object?>> { Count: > 0 } values &&
+            string.Equals(values[^1].Key, "{OriginalFormat}", StringComparison.Ordinal) &&
+            values[^1].Value is string template)
         {
-            Suppressed(_summary, suppressed, exception.Name, category, (int)RepeatedFailureLog.DefaultWindow.TotalSeconds);
+            return template;
         }
+
+        return eventId.Name ?? string.Empty;
     }
+
+    [LoggerMessage(LogLevel.Warning, "{Suppressed} more {Exception} failures from {Category} ('{Message}') were counted but not written; the first in each {Seconds} second window is written in full")]
+    static partial void Suppressed(ILogger logger, int suppressed, string exception, string category, string message, int seconds);
 
     sealed class Logger(ILogger inner, string category, RepeatedFailureLog log) : ILogger
     {
@@ -94,7 +113,7 @@ public sealed partial class RepeatedFailureLoggerProvider : ILoggerProvider, ISu
 
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
         {
-            if (log.ShouldWrite(category, logLevel, exception))
+            if (exception is null || logLevel < LogLevel.Warning || log.ShouldWrite(category, MessageTemplateOf(state, eventId), logLevel, exception))
             {
                 inner.Log(logLevel, eventId, state, exception, formatter);
             }
