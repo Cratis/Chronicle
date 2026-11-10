@@ -5,7 +5,7 @@ namespace Cratis.Chronicle.Setup.for_BusySilos.when_finding_a_busy_silo;
 
 public class and_the_call_timed_out_against_an_earlier_incarnation_of_this_silo : given.a_cluster
 {
-    void Because() => _result = _busySilos.FindBusySilo(TimeoutTo(SiloAddress.New(_thisSilo.Endpoint, 41).ToString()));
+    void Because() => _result = _busySilos.FindBusySilo(TimeoutTo(SiloAddress.New(_thisSilo.Endpoint, 41)));
 
     [Fact] void should_not_find_a_busy_silo() => _result.ShouldBeNull();
 }

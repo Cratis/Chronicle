@@ -36,10 +36,37 @@ public class a_cluster : Specification
     }
 
     /// <summary>
-    /// Creates the timeout Orleans reports for a request that got no answer, in the shape it writes it.
+    /// Creates the timeout Orleans reports for a request that got no answer, describing the request with Orleans' own
+    /// message formatting.
     /// </summary>
-    /// <param name="target">The target silo as written in the request.</param>
+    /// <param name="target">The target silo of the request; <see langword="null"/> when it was not resolved yet.</param>
     /// <returns>The <see cref="TimeoutException"/>.</returns>
-    protected TimeoutException TimeoutTo(string target) =>
-        new($"Response did not arrive on time in 00:00:30 for message: Request [{_thisSilo} sys.svc.user/startup]->[{target} eventstoresubscriptionsmanager/Studio] Cratis.Chronicle.Observation.EventStoreSubscriptions.IEventStoreSubscriptionsManager.Ensure() #1234. ");
+    /// <remarks>
+    /// The text around the message is how Orleans 10.4.2's CallbackData words the timeout. The message itself is a real
+    /// Orleans Message - an internal type, reached by reflection - so a change to how Orleans describes a request
+    /// fails these specs rather than silently turning off the busy-silo wait.
+    /// </remarks>
+    protected TimeoutException TimeoutTo(SiloAddress? target) =>
+        new($"Response did not arrive on time in {TimeSpan.FromSeconds(30)} for message: {Request(target)}. ");
+
+    /// <summary>
+    /// Creates a timeout whose request names its target as given, for target shapes Orleans itself does not write.
+    /// </summary>
+    /// <param name="target">The target as written in the request.</param>
+    /// <returns>The <see cref="TimeoutException"/>.</returns>
+    protected TimeoutException TimeoutNaming(string target) =>
+        new($"Response did not arrive on time in 00:00:30 for message: Request [{_thisSilo} sys.svc.user/startup]->[{target} eventstoresubscriptionsmanager/Studio] #1234. ");
+
+    string Request(SiloAddress? target)
+    {
+        var messageType = typeof(IClusterClient).Assembly.GetType("Orleans.Runtime.Message", throwOnError: true)!;
+        var message = Activator.CreateInstance(messageType, nonPublic: true)!;
+        var directions = messageType.GetProperty("Direction")!.PropertyType;
+        messageType.GetProperty("Direction")!.SetValue(message, Enum.Parse(directions, "Request"));
+        messageType.GetProperty("SendingSilo")!.SetValue(message, _thisSilo);
+        messageType.GetProperty("SendingGrain")!.SetValue(message, GrainId.Create("sys.svc.user", "startup"));
+        messageType.GetProperty("TargetSilo")!.SetValue(message, target);
+        messageType.GetProperty("TargetGrain")!.SetValue(message, GrainId.Create("eventstoresubscriptionsmanager", "Studio"));
+        return $"{message}";
+    }
 }

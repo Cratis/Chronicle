@@ -5,7 +5,7 @@ namespace Cratis.Chronicle.Setup.for_BusySilos.when_finding_a_busy_silo;
 
 public class and_the_call_timed_out_against_an_unknown_silo : given.a_cluster
 {
-    void Because() => _result = _busySilos.FindBusySilo(TimeoutTo("S10.0.0.9:11111:1"));
+    void Because() => _result = _busySilos.FindBusySilo(TimeoutTo(SiloAddress.New(new System.Net.IPEndPoint(System.Net.IPAddress.Parse("10.0.0.9"), 11111), 1)));
 
     [Fact] void should_not_find_a_busy_silo() => _result.ShouldBeNull();
 }

@@ -16,10 +16,18 @@ namespace Cratis.Chronicle.Setup;
 /// Orleans reports a call that got no answer as a <see cref="TimeoutException"/> whose message describes the request,
 /// naming the sending silo and grain followed by the target silo and grain. That target is the only record of where
 /// the call went. A call made before its target was resolved has no target silo in it, and is left unjudged.
+/// <para>
+/// An <see cref="AggregateException"/> is judged by the first of its inner exceptions that is a timeout with a target.
+/// </para>
 /// </remarks>
 [Singleton]
 public partial class BusySilos(ILocalSiloDetails localSilo, IClusterMembershipService membership) : IBusySilos
 {
+    // Format assumption (Orleans 10.4.2): CallbackData writes "Response did not arrive on time in {timeout} for message:
+    // {msg}", and Message formats the request as "{Direction} [{SendingSilo} {SendingGrain}]->[{TargetSilo} {TargetGrain}]",
+    // where a silo is "S{endpoint}:{generation}" and a missing target silo is empty. for_BusySilos formats a real
+    // Orleans Message, so an upgrade that changes this shape fails those specs; parsing nothing falls back to the
+    // bounded retries.
     [GeneratedRegex(@"->\s*\[S(?<target>\S+)\s", RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 1000)]
     private static partial Regex TimeoutTarget { get; }
 
@@ -61,16 +69,15 @@ public partial class BusySilos(ILocalSiloDetails localSilo, IClusterMembershipSe
     }
 
     /// <summary>
-    /// Matches a silo against a target as Orleans wrote it, with or without the silo's generation.
+    /// Matches a silo against a target as Orleans wrote it, including the silo's generation.
     /// </summary>
     /// <remarks>
-    /// With a generation, only the same incarnation matches: an earlier incarnation of the same endpoint is a silo
-    /// that is gone, not a busy one.
+    /// Only the same incarnation matches: an earlier incarnation of the same endpoint is a silo that is gone, not a
+    /// busy one, and a newer incarnation of a sibling's endpoint is not the member the call went to.
     /// </remarks>
     /// <param name="silo">The <see cref="SiloAddress"/> to match.</param>
     /// <param name="target">The target as written in the request, without its leading silo marker.</param>
     /// <returns><see langword="true"/> when the target is the silo.</returns>
     static bool Matches(SiloAddress silo, string target) =>
-        string.Equals($"S{target}", silo.ToString(), StringComparison.Ordinal) ||
-        string.Equals(target, silo.Endpoint.ToString(), StringComparison.Ordinal);
+        string.Equals($"S{target}", silo.ToString(), StringComparison.Ordinal);
 }
