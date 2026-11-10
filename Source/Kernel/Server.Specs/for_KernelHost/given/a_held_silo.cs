@@ -3,11 +3,14 @@
 
 using System.Net;
 using System.Net.Sockets;
+using Cratis.Chronicle.Concepts.Clustering;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Server.Authentication;
 using Cratis.Chronicle.Setup;
+using Cratis.Chronicle.SingleWriter;
 using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.SingleWriter;
 using Cratis.DependencyInjection;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -34,6 +37,9 @@ public class a_held_silo : Specification
     protected virtual bool ControllersBeforeSilo => false;
     protected virtual bool ConcurrentStartup => false;
     protected virtual bool DiscoverConventions => false;
+    protected virtual bool Standby => false;
+    protected ISingleWriterLeaseStorage _leaseStorage;
+    protected volatile bool _leaseFree;
 
     void Establish()
     {
@@ -59,14 +65,20 @@ public class a_held_silo : Specification
         var systemStorage = new Storage.InMemory.SystemStorage();
         var storage = Substitute.For<IStorage>();
         storage.System.Returns(systemStorage);
-        builder.Host.UseOrleans(silo => silo
-            .UseLocalhostClustering(FreePort(), FreePort(), serviceId: Guid.NewGuid().ToString(), clusterId: Guid.NewGuid().ToString())
-            .Services.AddKeyedSingleton<IGrainStorage>(WellKnownGrainStorageProviders.DataProtectionKeys, (_, _) => new DataProtectionKeysStorageProvider(storage)));
+        builder.Host.UseOrleans(silo =>
+        {
+            silo
+                .UseLocalhostClustering(FreePort(), FreePort(), serviceId: Guid.NewGuid().ToString(), clusterId: Guid.NewGuid().ToString())
+                .Services.AddKeyedSingleton<IGrainStorage>(WellKnownGrainStorageProviders.DataProtectionKeys, (_, _) => new DataProtectionKeysStorageProvider(storage));
+            if (Standby) silo.AddSingleWriterLease();
+        });
+        if (Standby) RegisterContendedLease(builder.Services);
         builder.Services.AddSingleton<ILifecycleParticipant<ISiloLifecycle>>(_hold);
         var chronicleOptions = new ChronicleOptions
         {
             Health = new Health { Port = _healthPort, Exclusive = true },
             Storage = new Configuration.Storage { Type = StorageType.InMemory },
+            Clustering = new Clustering { SingleWriterLease = new SingleWriterLease { Standby = Standby, Ttl = TimeSpan.FromSeconds(5) } },
             Authentication = new Configuration.Authentication { Enabled = AuthenticationEnabled, EnforceStoreEntitlements = EnforceStoreEntitlements, Authority = "https://identity.example" }
         };
         builder.Services.AddSingleton(Options.Create(chronicleOptions));
@@ -128,6 +140,19 @@ public class a_held_silo : Specification
             _client.Dispose();
             _startup.Dispose();
         }
+    }
+
+    void RegisterContendedLease(IServiceCollection services)
+    {
+        // Another kernel holds the lease until the specification frees it.
+        _leaseStorage = Substitute.For<ISingleWriterLeaseStorage>();
+        var holder = new SingleWriterLeaseHolder(new("current-kernel"), "current", "1", DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddSeconds(5));
+        _leaseStorage.TryAcquire(Arg.Any<SingleWriterLeaseClaim>(), Arg.Any<CancellationToken>())
+            .Returns(_ => Task.FromResult(_leaseFree ? new SingleWriterLeaseAttempt(true, null) : new SingleWriterLeaseAttempt(false, holder)));
+        _leaseStorage.Renew(Arg.Any<SingleWriterLeaseOwner>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>()).Returns(true);
+        services.AddSingleton(_leaseStorage);
+        services.AddSingleton(Substitute.For<IShutdownDrainBudget>());
+        services.AddSingleton(Substitute.For<ISingleWriterLeaseFailFast>());
     }
 
     static int FreePort()

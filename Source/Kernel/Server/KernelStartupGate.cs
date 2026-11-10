@@ -2,12 +2,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Configuration;
+using Cratis.Chronicle.SingleWriter;
 using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.Server;
 
 /// <summary>
-/// Refuses non-health requests with retryable responses until the kernel is ready.
+/// Refuses non-health requests with retryable responses until the kernel is ready, including in standby.
 /// </summary>
 /// <param name="next">The next request handler.</param>
 /// <param name="state">The kernel startup state.</param>
@@ -32,7 +33,7 @@ internal sealed class KernelStartupGate(RequestDelegate next, KernelStartupState
             context.Response.StatusCode = StatusCodes.Status200OK;
             context.Response.ContentType = "application/grpc";
             context.Response.Headers.GrpcStatus = "14";
-            context.Response.Headers.GrpcMessage = "Chronicle is not ready.";
+            context.Response.Headers.GrpcMessage = state.IsStandby ? SingleWriterLeaseStandby.RefusalMessage : "Chronicle is not ready.";
         }
         else
         {

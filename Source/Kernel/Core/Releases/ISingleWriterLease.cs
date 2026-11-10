@@ -16,6 +16,11 @@ public interface ISingleWriterLease
     bool IsHeld { get; }
 
     /// <summary>
+    /// Gets whether this process is waiting to acquire its lease.
+    /// </summary>
+    bool IsWaiting { get; }
+
+    /// <summary>
     /// Gets the unique identity of this process lifetime.
     /// </summary>
     SingleWriterLeaseOwner Owner { get; }

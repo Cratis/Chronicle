@@ -34,6 +34,7 @@ public class SingleWriterLeaseKeeper : ISingleWriterLease, ILifecycleParticipant
     bool _acquired;
     volatile bool _stopped;
     volatile bool _held;
+    volatile bool _waiting;
     int _disposed;
 
     /// <summary>
@@ -80,6 +81,9 @@ public class SingleWriterLeaseKeeper : ISingleWriterLease, ILifecycleParticipant
     public bool IsHeld => _held;
 
     /// <inheritdoc/>
+    public bool IsWaiting => _waiting;
+
+    /// <inheritdoc/>
     public SingleWriterLeaseOwner Owner { get; } = SingleWriterLeaseOwner.New();
 
     /// <inheritdoc/>
@@ -98,6 +102,20 @@ public class SingleWriterLeaseKeeper : ISingleWriterLease, ILifecycleParticipant
     }
 
     async Task OnStart(CancellationToken cancellationToken)
+    {
+        _waiting = true;
+        try
+        {
+            await Acquire(cancellationToken);
+        }
+        finally
+        {
+            // Holding is recorded before waiting ends, so a standby kernel never looks as if it gave up in between.
+            _waiting = false;
+        }
+    }
+
+    async Task Acquire(CancellationToken cancellationToken)
     {
         _logger.Acquiring(Owner.Value);
         var started = _time.GetTimestamp();
