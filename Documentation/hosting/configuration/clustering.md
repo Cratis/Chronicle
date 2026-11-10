@@ -99,6 +99,7 @@ After a node is lost, observers can lag behind the event log until the observer 
 | singleWriterLease.enabled | boolean or null | null (automatic) | Enables the lease for `Localhost` on persistent storage. Set `false` only when another mechanism guarantees one writer. Does not enable a lease for `MongoDB` or `Sql` clustering, or `InMemory` storage. |
 | singleWriterLease.ttl | timespan | 00:00:30 | Database lease lifetime; minimum five seconds. |
 | singleWriterLease.acquireTimeout | timespan | 00:02:00 | Maximum startup wait. Zero makes one acquisition attempt; negative values are invalid. |
+| singleWriterLease.standby | boolean | false | Reports ready in standby while waiting for the lease, so start-before-stop rollouts converge. See [Standby](#standby-for-start-before-stop-rollouts). |
 | roles.eventSequences | boolean | true | When `true`, event sequence grains can be activated on this node. When `false`, event sequence grains will not be placed on this node. |
 | roles.observers | boolean | true | When `true`, observer grains (reactors, reducers, projections) can be activated on this node. When `false`, observer grains will not be placed on this node. |
 
@@ -111,7 +112,7 @@ membership options at startup; these settings do not change localhost clustering
 
 The node acquires the fixed `kernel` lease in the system/cluster database **before** Orleans runtime
 initialization. No grains, observer rehydration or processing start until acquisition succeeds. Waiting
-nodes are not ready. Acquisition waits at most `acquireTimeout`; the timeout error identifies the last
+nodes are not ready unless [standby](#standby-for-start-before-stop-rollouts) is enabled. Acquisition waits at most `acquireTimeout`; the timeout error identifies the last
 known holder, host and expiry. Temporary storage failures are retried within that budget.
 
 The holder renews every TTL/3. If it cannot confirm a renewal for TTL/2 (15 seconds by default), it marks
@@ -133,6 +134,55 @@ as are network shares without reliable file locking.
 Disabling `singleWriterLease.enabled` preserves unguarded single-node behavior. If storage is remote,
 the server warns about the risk, including for PostgreSQL and SQL Server. This is an escape hatch, not a
 way to scale out. See [Production scaling](../production.md#scaling) for safe replacement deployments.
+
+### Standby for start-before-stop rollouts
+
+Some platforms start the replacement and wait for it to be ready before they stop the old instance:
+Azure Container Apps in single-revision mode, Cloud Run, and a one-replica Kubernetes `RollingUpdate`
+with `maxSurge: 1` and `maxUnavailable: 0`. Without standby the replacement waits for the lease, never
+becomes ready, and the rollout times out while the old instance keeps running.
+
+Set `singleWriterLease.standby` to `true` on those platforms:
+
+```json
+{
+  "clustering": {
+    "singleWriterLease": {
+      "standby": true
+    }
+  }
+}
+```
+
+Or with an environment variable:
+
+```bash
+Cratis__Chronicle__Clustering__SingleWriterLease__Standby=true
+```
+
+With standby enabled, a kernel reports ready with the body `Standby` from the moment it starts waiting
+for the lease until its startup has completed. The rollout then proceeds:
+
+1. The replacement binds its ports and reports ready in standby while the old instance still holds the lease.
+2. The platform shifts traffic and stops the old instance, which releases the lease on a graceful stop.
+3. The replacement acquires the lease, starts the silo, rehydrates and becomes `Healthy`.
+
+Standby changes only what readiness reports. The lease is still acquired before Orleans runtime
+initialization, so the gateway, observer rehydration and event processing start only once it is held;
+two kernels never process events at the same time. Until the replacement has started, every non-health
+request is refused at once with HTTP 503 and `Retry-After`, or gRPC `Unavailable`; both are
+retryable, and clients should retry them. Expect a short window of refused requests during the handover: the old instance's
+shutdown, the lease acquisition (at most two seconds after release) and the replacement's startup.
+
+`acquireTimeout` still bounds the wait. A standby kernel that never gets the lease, for example because
+a second replica was configured by mistake, exits when it expires instead of reporting ready forever, so
+set it to cover the platform's time to stop the old instance plus the TTL. A lost lease, an abandoned
+acquisition and shutdown all end standby and make readiness fail. Standby has no effect without the lease
+(`MongoDB` or `Sql` clustering, `InMemory` storage, or `enabled: false`); the kernel logs a warning
+when it is set there.
+
+Platforms that stop the old instance first (Kubernetes `Recreate`, or `RollingUpdate` with
+`maxSurge: 0`) do not need standby.
 
 ## Configuration examples
 
@@ -183,7 +233,7 @@ A node that only processes observers (reactors, reducers, projections):
 
 ## Startup and probes
 
-The kernel binds port 35000 and any dedicated health port before starting the Orleans silo. Use `tcpSocket` on port 35000 or `/health/live` for a startup probe, `/health/live` for liveness, and `/health` or `/health/ready` for readiness. Readiness waits for silo startup (including Chronicle's startup task) and host startup, and fails once shutdown begins. Background catch-up can continue after readiness succeeds.
+The kernel binds port 35000 and any dedicated health port before starting the Orleans silo. Use `tcpSocket` on port 35000 or `/health/live` for a startup probe, `/health/live` for liveness, and `/health` or `/health/ready` for readiness. Readiness waits for silo startup (including Chronicle's startup task) and host startup, and fails once shutdown begins. With [standby](#standby-for-start-before-stop-rollouts) enabled it instead reports `Standby` while the kernel waits for the single-writer lease and finishes starting. Background catch-up can continue after readiness succeeds.
 
 An open TCP port is not readiness. Non-health requests receive HTTP 503 with `Retry-After` or gRPC `Unavailable` until ready. Raising `failureThreshold` is not the fix for backlog-dependent startup restarts: separate listener liveness from silo readiness. See [Health Endpoint](health-endpoint.md) for dedicated-port probe examples.
 
@@ -201,7 +251,7 @@ Role-based placement is applied by custom Orleans placement directors - one for 
 
 ## Deploying a single node
 
-With localhost clustering, including SQL deployments that have not opted into `Sql` clustering, the deployment must run one instance at a time. Stop the old instance before starting the new one. In Azure Container Apps, use single revision mode with no overlap between revisions. In Kubernetes, use the `Recreate` deployment strategy, or a rolling update with `maxSurge: 0`.
+With localhost clustering, including SQL deployments that have not opted into `Sql` clustering, the deployment must run one instance at a time. Stop the old instance before starting the new one. In Azure Container Apps, use single revision mode with no overlap between revisions. In Kubernetes, use the `Recreate` deployment strategy, or a rolling update with `maxSurge: 0`. Where the platform must start the replacement first, enable [standby](#standby-for-start-before-stop-rollouts).
 
 ## Listener and network boundaries
 
