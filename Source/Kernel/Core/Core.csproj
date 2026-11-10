@@ -42,7 +42,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../../Tools/GrpcCodeGenerator/GrpcCodeGenerator.csproj" ReferenceOutputAssembly="false" PrivateAssets="all" OutputItemType="GrpcCodeGeneratorAssembly" SkipGetTargetFrameworkProperties="true" GlobalPropertiesToRemove="TargetFramework;TargetFrameworks;RuntimeIdentifier;IsPackaging" />
+        <ProjectReference Include="../../Tools/GrpcCodeGenerator/GrpcCodeGenerator.csproj" ReferenceOutputAssembly="false" PrivateAssets="all" OutputItemType="GrpcCodeGeneratorAssembly" SkipGetTargetFrameworkProperties="true" GlobalPropertiesToRemove="TargetFramework;TargetFrameworks;RuntimeIdentifier;SelfContained;PublishReadyToRun;IsPackaging" />
         <ProjectReference Include="../../Infrastructure/Infrastructure.csproj" />
         <ProjectReference Include="../Compatibility/Compatibility.csproj" />
         <ProjectReference Include="../Contracts/Contracts.csproj" />

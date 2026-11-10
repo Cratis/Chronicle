@@ -21,8 +21,10 @@ RUN rm appsettings.Development.json && rm ./chronicle.json
 ####################################
 # Cratis Chronicle Server - Runtime stage
 ####################################
-# The -extra variant carries ICU and tzdata: the server runs with full globalization, which SQL Server storage needs.
-FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled-extra
+# The kernel is published self-contained, so it carries its own .NET and ASP.NET Core runtime and only needs
+# the native dependencies. The -extra variant carries ICU and tzdata: the server runs with full globalization,
+# which SQL Server storage needs.
+FROM mcr.microsoft.com/dotnet/runtime-deps:10.0-noble-chiseled-extra
 
 WORKDIR /app
 
