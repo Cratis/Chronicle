@@ -34,6 +34,7 @@ public class SingleWriterLeaseKeeper : ISingleWriterLease, ILifecycleParticipant
     bool _acquired;
     volatile bool _stopped;
     volatile bool _held;
+    int _disposed;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SingleWriterLeaseKeeper"/> class.
@@ -88,6 +89,8 @@ public class SingleWriterLeaseKeeper : ISingleWriterLease, ILifecycleParticipant
     /// <inheritdoc/>
     public void Dispose()
     {
+        // The container disposes this instance once per registration that exposes it.
+        if (Interlocked.Exchange(ref _disposed, 1) == 1) return;
         _renewalStop.Cancel();
         _stopDeadline.Dispose();
         _watchdog.Dispose();
