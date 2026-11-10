@@ -23,6 +23,7 @@ Observer configuration controls retry behavior, timeouts, watchdog monitoring, a
     "quarantineOnFailedPartitionPercentage": 0.0,
     "definitionEvolution": "Automatic",
     "watchdogInterval": 60,
+    "idleDeactivationAfter": 900,
     "maxConcurrentPartitions": 32,
     "maxConcurrentRegistrations": 0,
     "maxConcurrentSubscriptions": 0,
@@ -56,6 +57,7 @@ The example shows the defaults of a production build. The `-development` image s
 | definitionEvolution | string | Automatic | Controls whether projection and reducer definition changes apply `Automatic`, `PartialOnly`, or `Manual` evolution. See [Definition evolution](#definition-evolution) |
 | replayOnDefinitionChange | boolean | false | Controls automatic replay for reactors and webhooks. Projection and reducer changes use `definitionEvolution` |
 | watchdogInterval | number | 60 | Interval in seconds between watchdog checks; the watchdog verifies connected clients are still active, running jobs (replay and catch-up) are still progressing, and `NextEventSequenceNumber` is up-to-date |
+| idleDeactivationAfter | number | 900 | Seconds an observer with no subscription and no pending work stays in memory before it is released. A subscribed observer always stays in memory. `0` keeps every observer in memory. See [Releasing idle observers](#releasing-idle-observers) |
 | maxCatchupRecoveryAttempts | number | 5 | How many watchdog checks in a row may retry a stuck catch-up preparation, or a recovery that failed after quarantine was cleared, before the watchdog quarantines the observer. `0` or less quarantines on the first retry. See [Ending quarantine](#ending-quarantine) |
 | maxConcurrentPartitions | number | 32 | Upper bound on how many job steps (replay and catch-up work) run in parallel. The effective limit is the smaller of this value and `jobs.maxParallelSteps`. Despite the name it does not limit live event delivery. See [Job throttling](job-throttling.md) |
 | maxConcurrentRegistrations | number | 0 (unlimited) | Maximum gRPC reactor and reducer registrations running concurrently on each silo. When configured above 0, excess registrations wait before any registration grain or read-model lookup. Values below 1 disable the gate. Does not limit event append or observer delivery. See [Registration concurrency](#registration-concurrency) |
@@ -67,6 +69,24 @@ The example shows the defaults of a production build. The `-development` image s
 | generationPromotion | string | OnCatchUp | How a new projection generation is promoted. `OnCatchUp` promotes automatically once catch-up and readiness are proven, `Operator` waits for an explicit operator request, `Deployment` waits until the connected declaring clients meet the required version, and `Gated` holds promotion until the gate is released. Applies only when `features.projectionGenerations` is enabled. See [Read models](read-models.md) |
 | deploymentConditionGracePeriod | timespan | `00:01:00` | How long the `Deployment` condition must hold before the generation is promoted. Applies only when `features.projectionGenerations` is enabled |
 | pendingGenerationAlertAfter | timespan | `1.00:00:00` | How long a generation can stay pending before Chronicle raises an alert. Applies only when `features.projectionGenerations` is enabled |
+
+## Releasing idle observers
+
+Every observer, reactor and reducer is an activation in the Kernel's memory, and each one costs roughly 40 KB of heap. A subscribed observer has to stay in memory, because its live subscription to new events exists only there. An observer whose client has disconnected, or one that was only loaded to answer a question, has nothing in memory that is not also in storage.
+
+The watchdog releases such an observer once it has found it idle for `idleDeactivationAfter` seconds. Idle means all of the following:
+
+- It has not been removed, has no subscription and is disconnected.
+- It has no failed partitions and is not quarantined.
+- It is not replaying or catching up, and has no catch-up starting.
+- It has no alert, webhook probe, state write or retry reminder waiting.
+- It holds no request for later, such as a start-at-tail request waiting for its subscription or a partition recovery that an operator asked for.
+
+An observer is not idle while an alert reminder is registered for it. An observer with nothing to report gives the reminder up on its first tick, one to two minutes after it was activated, so an observer that has a reminder when a call activates it is released after about two minutes plus `idleDeactivationAfter`. A call for an observer that does not exist in the namespace has no alerts to report, so that activation only waits for the idle period.
+
+When anything calls a released observer again, for example a client that reconnects, it is activated from storage.
+
+Set `idleDeactivationAfter` to `0` to keep every observer in memory. The release is checked on every watchdog tick, so an idle observer is released between `idleDeactivationAfter` and `idleDeactivationAfter` + `watchdogInterval` seconds after it became idle.
 
 ## Registration concurrency
 

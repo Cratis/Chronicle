@@ -69,6 +69,7 @@ public class ObserverRetryOverride
         PendingGenerationAlertAfter = observers.PendingGenerationAlertAfter,
         ReplayOnDefinitionChange = observers.ReplayOnDefinitionChange,
         WatchdogInterval = observers.WatchdogInterval,
+        IdleDeactivationAfter = observers.IdleDeactivationAfter,
         StatePersistenceBatchInterval = observers.StatePersistenceBatchInterval,
         WriteCoalescingInterval = observers.WriteCoalescingInterval,
         FanOutStrategy = observers.FanOutStrategy,

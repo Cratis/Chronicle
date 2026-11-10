@@ -62,6 +62,8 @@ Memory use depends on your workload. It grows with the number of event stores, n
 3. Set the container memory limit above the observed peak.
 4. Set a hard heap limit only when you have a reason to, and keep it above the peak heap size you observed.
 
+A subscribed observer, reactor or reducer keeps roughly 40 KB of heap for as long as it is subscribed. One without a subscription, for example because its client has gone, is released once it has been idle for a while; see [Releasing idle observers](configuration/observers.md#releasing-idle-observers).
+
 A limit below what the kernel needs is not safe. Docker warns that a process can be killed when a container runs out of memory; see [Resource constraints](https://docs.docker.com/engine/containers/resource_constraints/).
 
 ## Measured example

@@ -224,6 +224,7 @@ public partial class Observer(
         _statePersistenceBatchInterval = config.StatePersistenceBatchInterval < 1 ? 1 : config.StatePersistenceBatchInterval;
         _writeCoalescingInterval = TimeSpan.FromSeconds(Math.Max(config.WriteCoalescingInterval, 0));
         RegisterWatchdog(config.WatchdogInterval);
+        ConfigureIdleDeactivation(config.IdleDeactivationAfter);
         _webhookProbe = State.WebhookProbe;
         RestoreShadowClaims();
         await InitializeAlertState();
@@ -259,7 +260,8 @@ public partial class Observer(
                 return;
             }
 
-            if (reason.ReasonCode != DeactivationReasonCode.ShuttingDown)
+            // An observer released as idle is disconnected already and has nothing left to write, the same as at shutdown.
+            if (reason.ReasonCode != DeactivationReasonCode.ShuttingDown && !IsReleasedAsIdle)
             {
                 await TransitionTo<Disconnected>();
                 await base.OnDeactivateAsync(reason, cancellationToken);

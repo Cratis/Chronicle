@@ -264,6 +264,7 @@ public partial class Observer
         if (source.Identifier != _observerId || !KeyOwnsDefinition)
         {
             await UnregisterReminderNamed(AlertReminderName);
+            _alertReminderRegistered = false;
             return;
         }
 

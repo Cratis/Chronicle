@@ -42,6 +42,7 @@ public class a_provider_with_retry_overrides : Specification
             PendingGenerationAlertAfter = TimeSpan.FromHours(48),
             ReplayOnDefinitionChange = true,
             WatchdogInterval = 31,
+            IdleDeactivationAfter = 1801,
             StatePersistenceBatchInterval = 37,
             WriteCoalescingInterval = 41,
             FanOutStrategy = "random",
