@@ -83,6 +83,11 @@ public static class ServiceCollectionExtensions
             services.AddArcAnonymousAspNetAuthorizationPolicy(WellKnownAuthorizationPolicies.Administrator);
             services.AddArcAnonymousAspNetAuthorizationPolicy(WellKnownAuthorizationPolicies.AdministratorOperations);
 
+            // The sign-in controllers need the Identity stack skipped above, so they are left out of MVC rather
+            // than mapped and failing with a 500 when activated. Their routes answer 404, like the Identity API.
+            services.AddMvcCore().ConfigureApplicationPartManager(manager =>
+                manager.FeatureProviders.Add(new AuthenticationDisabledControllerFeatureProvider()));
+
             return services;
         }
 
