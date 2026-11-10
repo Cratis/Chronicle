@@ -66,7 +66,7 @@ A limit below what the kernel needs is not safe. Docker warns that a process can
 
 ## Measured example
 
-These figures come from the Cratis production cluster running Chronicle 19.135.0 over a 7-day window. Use them to sanity-check your own sizing, not as a replacement for measuring your workload.
+These figures come from the Cratis production cluster running Chronicle 19.135.0 over a 7-day window. The version is stated because memory per activation and startup behavior change between kernel versions; measure again after upgrading. Use them to sanity-check your own sizing, not as a replacement for measuring your workload.
 
 | Measure | Value |
 | --- | --- |
@@ -83,13 +83,18 @@ Traffic did not drive memory here: at a quarter of an event per second, the heap
 
 ### How the numbers were taken
 
-The kernel exports the .NET runtime meter and the `Microsoft.Orleans` meter through OpenTelemetry; see [OpenTelemetry](configuration/open-telemetry.md). With the Prometheus names the OpenTelemetry Collector's Prometheus exporter or Prometheus's OTLP receiver produce, these queries reproduce the memory rows:
+The kernel exports the .NET runtime meter and the `Microsoft.Orleans` meter through OpenTelemetry; see [OpenTelemetry](configuration/open-telemetry.md). With the Prometheus names the OpenTelemetry Collector's Prometheus exporter or Prometheus's OTLP receiver produce, these queries reproduce the table:
 
 | Metric | Source instrument | What it shows |
 | --- | --- | --- |
 | `dotnet_process_memory_working_set_bytes` | `dotnet.process.memory.working_set` | Resident memory of the process, which the container limit is measured against |
 | `dotnet_gc_last_collection_heap_size_bytes` | `dotnet.gc.last_collection.heap.size` | Live heap after the last collection, one series per GC generation |
 | `orleans_catalog_activations` | `orleans-catalog-activations` | Grain activations on each silo |
+| `chronicle_event_sequences_appended_events_total` | `chronicle-event-sequences-appended-events` | Events appended, by namespace and event type |
+| `dotnet_process_cpu_time_seconds_total` | `dotnet.process.cpu.time` | CPU time the process used, by `cpu_mode` |
+| `dotnet_thread_pool_queue_length` | `dotnet.thread_pool.queue.length` | Work items waiting in the .NET thread pool queue |
+
+The appended-events name is the default legacy name. With `Telemetry:MetricNames=Convention` it is `cratis_chronicle_event_sequence_appended_events_total`; see [telemetry names](configuration/telemetry-names.md).
 
 ```promql
 # Working set per silo: average, p95 and maximum over the window
@@ -102,15 +107,31 @@ sum by (instance) (dotnet_gc_last_collection_heap_size_bytes)
 
 # Activations per silo
 sum by (instance) (orleans_catalog_activations)
+
+# Silos: the number of silos reporting
+count(count by (instance) (dotnet_process_memory_working_set_bytes))
+
+# Event rate across the cluster, averaged over the window, in events per second
+sum(increase(chronicle_event_sequences_appended_events_total[7d])) / (7 * 24 * 3600)
+
+# CPU per silo in cores: average, p95 and maximum over the window
+avg_over_time((sum by (instance) (rate(dotnet_process_cpu_time_seconds_total[5m])))[7d:5m])
+quantile_over_time(0.95, (sum by (instance) (rate(dotnet_process_cpu_time_seconds_total[5m])))[7d:5m])
+max_over_time((sum by (instance) (rate(dotnet_process_cpu_time_seconds_total[5m])))[7d:5m])
+
+# Peak thread pool queue length per silo
+max_over_time(dotnet_thread_pool_queue_length[7d])
 ```
 
-Adjust the `instance` label to the one your scrape configuration uses for a silo. Divide the live heap, less its baseline, by the activation count to get the per-activation figure for your own workload.
+Two rows do not come from a metric. The namespace count is the number of namespaces listed for the event stores in the Workbench. The container memory limit is the value set in the deployment.
+
+Adjust the `instance` label to the one your scrape configuration uses for a silo. To find your own baseline, read the live heap right after a silo starts, before observers activate, while the activation count is still close to zero. Divide the live heap, less that baseline, by the activation count to get the per-activation figure for your own workload.
 
 ### Rule of thumb
 
 Estimate the live heap of one silo as about 0.2 GiB plus about 50 KB for each grain activation it holds. For the example above, about 21,000 activations per silo, if spread evenly, come to about 1 GiB on top of the baseline. The working set runs well above the live heap, so set the container limit from the observed working-set peak and leave headroom for cold start.
 
-Activations grow with the number of event stores, namespaces and observers, not with event throughput. Adding namespaces adds activations even when they receive few events.
+Activations grow with the number of event stores, namespaces and observers, not with event throughput in this workload. Adding namespaces adds activations even when they receive few events.
 
 ### CPU is a cold-start concern
 
