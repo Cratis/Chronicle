@@ -72,7 +72,7 @@ The example shows the defaults of a production build. The `-development` image s
 
 `maxConcurrentRegistrations` limits registration work from gRPC reactors and reducers together on each silo. It defaults to `0` (unlimited); values below `1` disable the gate. With the gate disabled, no semaphore is created and registration does not wait. Set a positive limit to opt in: excess registrations wait before their first grain or read-model lookup, and waiting ends if the client disconnects.
 
-A permit covers the registration lookups and subscription, not the lifetime of the connection. Once registration succeeds or fails, the permit is released. A disconnect cancels a queued registration; work already in flight retains its permit until it finishes. Reconnecting clients acquire a new permit. Event append, observer delivery and subscription maintenance do not acquire permits. This is a per-silo limit, not a cluster-wide limit, and is independent of `maxConcurrentPartitions`.
+A permit covers the registration lookups and subscription, not the lifetime of the connection. Once registration succeeds or fails, the permit is released. A disconnect cancels a queued registration; work already in flight retains its permit until it finishes. Reconnecting clients acquire a new permit. When subscribing times out because the observer is busy, the registration gives its permit back and queues for a new one before it asks again, so a busy observer does not keep other registrations out for every attempt it makes. Event append, observer delivery and subscription maintenance do not acquire permits. This is a per-silo limit, not a cluster-wide limit, and is independent of `maxConcurrentPartitions`.
 
 Set it through JSON as shown above, or with `Cratis__Chronicle__Observers__MaxConcurrentRegistrations` as an environment variable.
 
@@ -82,7 +82,7 @@ Set it through JSON as shown above, or with `Cratis__Chronicle__Observers__MaxCo
 
 It defaults to `0`, which selects the limit from the machine: two per processor, at least 4 and at most 16. A 2-core pod gets 4 and a 4-core pod gets 8. Values below `1` select this automatic limit. Raise it only when storage can serve more concurrent work, because extra work beyond what storage can serve waits in its connection pool instead.
 
-Projection subscriptions wait for a free slot. A recovery batch does not wait; it tries again a second later, so recoveries yield to subscriptions while a silo starts.
+Projection subscriptions wait for a free slot. Recovery batches together use at most half of the slots, and always at least one, so the rest stay free for projection subscriptions however long a recovery takes. A recovery batch does not wait for a slot; it tries again after a randomized delay of 0.5 to 1.5 seconds, so recoveries yield to subscriptions while a silo starts and do not all retry at the same moment.
 
 Set it through JSON as shown above, or with `Cratis__Chronicle__Observers__MaxConcurrentSubscriptions` as an environment variable.
 
