@@ -17,7 +17,7 @@ public partial class Observer
         // Detach delivery before fallible job cleanup. Probing an absent namespace must not create state
         // or alert work, even when the shared projection definition exists elsewhere.
         await Unsubscribe();
-        _isPreparingCatchup = false;
+        LowerCatchUpPreparation();
         NotePreparationEnded();
         if (!_observerExists) return;
 

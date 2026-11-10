@@ -102,7 +102,7 @@ public partial class Observer
             // regardless, so it settles into Disconnected (or wherever routing decides) instead of being left
             // stuck in whatever state it happened to be in when the flag came down.
             logger.WatchdogRescuingStrandedCatchupPreparation();
-            _isPreparingCatchup = false;
+            LowerCatchUpPreparation();
             NotePreparationEnded();
             await TransitionTo<Routing>();
             return true;
@@ -115,7 +115,7 @@ public partial class Observer
         }
 
         logger.WatchdogRescuingStrandedCatchupPreparation();
-        _isPreparingCatchup = false;
+        LowerCatchUpPreparation();
         NotePreparationEnded();
         _catchupRecoveryAttempts++;
         if (_catchupRecoveryAttempts > config.MaxCatchupRecoveryAttempts)
@@ -161,7 +161,7 @@ public partial class Observer
         }
 
         _recoverSubscriptionAfterQuarantine = false;
-        _isPreparingCatchup = false;
+        LowerCatchUpPreparation();
         NotePreparationEnded();
         _catchupRecoveryAttempts = 0;
         await TransitionTo<Routing>();
@@ -187,7 +187,7 @@ public partial class Observer
             return;
         }
 
-        _isPreparingCatchup = false;
+        LowerCatchUpPreparation();
         NotePreparationEnded();
         _catchupRecoveryAttempts = 0;
 

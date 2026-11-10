@@ -48,7 +48,7 @@ public partial class Observer
         }
 
         State.CatchingUpPartitions.Clear();
-        _isPreparingCatchup = false;
+        LowerCatchUpPreparation();
         State = State with
         {
             NextEventSequenceNumber = next,

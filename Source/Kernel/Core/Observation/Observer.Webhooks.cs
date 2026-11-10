@@ -63,7 +63,7 @@ public partial class Observer
 
         logger.StoredWebhookTargetRejected(validation.Reason);
         _subscriptionSetupFailed = false;
-        _isPreparingCatchup = false;
+        LowerCatchUpPreparation();
         NotePreparationEnded();
         if (await GetCurrentState() is Disconnected disconnected)
         {

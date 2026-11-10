@@ -27,8 +27,7 @@ public partial class Observer
     public async Task CatchUp()
     {
         if (IsRetired || _removed) return;
-        _isPreparingCatchup = true;
-        StartKeepingEventsHeldBackForSweep();
+        RaiseCatchUpPreparation();
         using var scope = logger.BeginObserverScope(State.Identifier, _observerKey);
 
         if (await AdoptedPendingCatchUpJob()) return;
@@ -37,7 +36,7 @@ public partial class Observer
         if (State.RunningState == ObserverRunningState.Replaying)
         {
             logger.SkippingCatchUpBecauseObserverIsReplaying();
-            _isPreparingCatchup = false;
+            LowerCatchUpPreparation();
             NotePreparationEnded();
             return;
         }
@@ -86,7 +85,7 @@ public partial class Observer
         // registered here, so the rest go live.
         if (!CatchesUpInOneSweepNow())
         {
-            _isPreparingCatchup = false;
+            LowerCatchUpPreparation();
         }
 
         // Reached when a brand-new job's steps prepared. Only a job that has partitions to catch up is forward
@@ -231,11 +230,42 @@ public partial class Observer
         // preparation and routing all belong to the newer job, which reports back on its own.
         if (!await ShadowHandOverCaughtUpObserverWide(jobId)) return;
 
+        // CaughtUp interleaves, so a report arriving while another hands held-back events over must not conclude
+        // alongside it: lowering the hold or routing mid-handover changes what the handover relies on.
+        if (DeferredBySweepHandover(jobId, releasable, lastHandledEventSequenceNumber, lastScannedEventSequenceNumber)) return;
+
+        await ConcludeCaughtUpJob(jobId, releasable, lastHandledEventSequenceNumber, lastScannedEventSequenceNumber);
+    }
+
+    async Task ConcludeCaughtUpJob(JobId jobId, ISet<Key> releasable, EventSequenceNumber lastHandledEventSequenceNumber, EventSequenceNumber lastScannedEventSequenceNumber)
+    {
         // What live delivery held back while a sweep was in flight is only this round's to hand over while the hold
-        // is still raised; anything that lowered it has routed or rescued on its own.
+        // is still raised; anything that lowered it has routed or rescued on its own. Taken, and the handover marked
+        // in progress, before anything is awaited, so a report interleaving with this one defers to it.
         var heldBack = _isPreparingCatchup ? _sweepHeldBack : null;
         _sweepHeldBack = null;
+        var preparationEpoch = _catchUpPreparationEpoch;
+        var handover = heldBack is null ? null : BeginSweepHandover(jobId, lastHandledEventSequenceNumber, lastScannedEventSequenceNumber);
+        try
+        {
+            await ConcludeCaughtUpJob(heldBack, preparationEpoch, releasable, lastHandledEventSequenceNumber, lastScannedEventSequenceNumber);
+        }
+        finally
+        {
+            if (handover is not null)
+            {
+                await EndSweepHandover(handover);
+            }
+        }
+    }
 
+    async Task ConcludeCaughtUpJob(
+        SweepHeldBackEvents? heldBack,
+        ulong preparationEpoch,
+        ISet<Key> releasable,
+        EventSequenceNumber lastHandledEventSequenceNumber,
+        EventSequenceNumber lastScannedEventSequenceNumber)
+    {
         var madeProgress = CatchUpMadeProgress(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber);
         HandleNewLastHandledEvent(lastHandledEventSequenceNumber);
         State.CatchingUpPartitions.ExceptWith(releasable);
@@ -255,10 +285,15 @@ public partial class Observer
         // held back. Routing would start another sweep for them, ending the same way, so the observer would never
         // return to live delivery. Handing them over here, before the hold comes down, closes that gap within this
         // turn: live delivery cannot run until it ends, and what it delivers afterwards follows what was handed over.
-        var handedOver = heldBack is not null && await HandHeldBackEventsToLiveDelivery(heldBack);
+        var handover = heldBack is null ? SweepHandoverOutcome.NotCovered : await HandHeldBackEventsToLiveDelivery(heldBack, preparationEpoch);
+        if (handover == SweepHandoverOutcome.Interrupted)
+        {
+            await ConcludeInterruptedSweepHandover(preparationEpoch);
+            return;
+        }
 
-        _isPreparingCatchup = false;
-        var settleInObserving = NoteCatchUpLap(madeProgress) || handedOver;
+        LowerCatchUpPreparation();
+        var settleInObserving = NoteCatchUpLap(madeProgress) || handover == SweepHandoverOutcome.HandedOver;
 
         if (IsRetired || _removed) return;
         if (!IsQuarantined)
@@ -405,7 +440,7 @@ public partial class Observer
             () =>
             {
                 logger.NoCatchUpJobTookOwnership();
-                _isPreparingCatchup = false;
+                LowerCatchUpPreparation();
                 NotePreparationEnded();
                 return Task.CompletedTask;
             },

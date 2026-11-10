@@ -1083,7 +1083,7 @@ public partial class Observer(
         _webhookProbe = null;
         _armWebhookProbe = false;
         _recoverSubscriptionAfterQuarantine = false;
-        _isPreparingCatchup = false;
+        LowerCatchUpPreparation();
         NotePreparationEnded();
         _catchupRecoveryAttempts = 0;
         _subscription = ObserverSubscription.Unsubscribed;

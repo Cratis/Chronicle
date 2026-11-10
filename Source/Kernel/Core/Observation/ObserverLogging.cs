@@ -331,6 +331,15 @@ internal static partial class ObserverLogMessages
 
     [LoggerMessage(LogLevel.Warning, "Handing events held back during the catch-up sweep to live delivery failed; catching up again from {From}")]
     internal static partial void HandingHeldBackEventsFailed(this ILogger<Observer> logger, EventSequenceNumber from, Exception exception);
+
+    [LoggerMessage(LogLevel.Debug, "The observer changed while handing over events held back during the catch-up sweep; stopped with the position at {From}")]
+    internal static partial void SweepHandoverInterrupted(this ILogger<Observer> logger, EventSequenceNumber from);
+
+    [LoggerMessage(LogLevel.Debug, "Catch-up job {JobId} reported the same round again while its held-back events are handed over; ignoring it")]
+    internal static partial void IgnoringCaughtUpReportedAgainDuringHandover(this ILogger<Observer> logger, JobId jobId);
+
+    [LoggerMessage(LogLevel.Debug, "Catch-up job {JobId} reported back while held-back events are handed over; concluding it once the handover ends")]
+    internal static partial void DeferringCaughtUpUntilHandoverEnds(this ILogger<Observer> logger, JobId jobId);
 }
 
 internal static class ObserverScopes
