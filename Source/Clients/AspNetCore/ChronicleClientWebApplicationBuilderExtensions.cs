@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using Cratis.Chronicle;
 using Cratis.Chronicle.AspNetCore;
 using Cratis.Chronicle.AspNetCore.Auditing;
@@ -38,6 +39,26 @@ public static class ChronicleClientWebApplicationBuilderExtensions
         string? configSection = default,
         Action<IChronicleBuilder>? configure = default)
         => builder.AddCratisChronicle(configureOptions, configSection, configure, "chronicle");
+
+    /// <summary>
+    /// Configures the Chronicle client using a named connection string as the fallback endpoint.
+    /// </summary>
+    /// <param name="builder"><see cref="WebApplicationBuilder"/> to configure Chronicle on.</param>
+    /// <param name="connectionStringName">Name under <c language="csharp">ConnectionStrings</c>, typically the Aspire resource name.</param>
+    /// <param name="configureOptions">Optional callback whose connection string overrides configuration.</param>
+    /// <param name="configSection">Optional configuration section path override. Defaults to <c language="csharp">Cratis:Chronicle</c>.</param>
+    /// <param name="configure">Optional delegate for configuring the <see cref="IChronicleBuilder"/>.</param>
+    /// <returns>The same <see cref="WebApplicationBuilder"/> for configuration continuation.</returns>
+#if NET9_0_OR_GREATER
+    [OverloadResolutionPriority(1)]
+#endif
+    public static WebApplicationBuilder AddCratisChronicle(
+        this WebApplicationBuilder builder,
+        string connectionStringName,
+        Action<ChronicleAspNetCoreOptions>? configureOptions = default,
+        string? configSection = default,
+        Action<IChronicleBuilder>? configure = default)
+        => builder.AddCratisChronicle(configureOptions, configSection, configure, connectionStringName);
 
     /// <summary>
     /// Configures the Chronicle client using a named connection string as the fallback endpoint.
@@ -159,6 +180,7 @@ public static class ChronicleClientWebApplicationBuilderExtensions
                     options.EventStore = clientOptions.Value.EventStore;
                 }
             })
+            .WithDefaultEventStore()
             .ValidateDataAnnotations()
             .ValidateOnStart();
 
