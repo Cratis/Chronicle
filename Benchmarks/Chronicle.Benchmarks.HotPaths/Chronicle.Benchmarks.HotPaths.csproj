@@ -22,6 +22,7 @@
       <Aliases>Client</Aliases>
     </ProjectReference>
     <ProjectReference Include="../../Source/Kernel/Core/Core.csproj" />
+    <ProjectReference Include="../../Source/Kernel/Storage.MongoDB/Storage.MongoDB.csproj" />
     <ProjectReference Include="../../Source/Kernel/Concepts/Concepts.csproj" />
     <ProjectReference Include="../../Source/Kernel/Contracts/Contracts.csproj" />
   </ItemGroup>
