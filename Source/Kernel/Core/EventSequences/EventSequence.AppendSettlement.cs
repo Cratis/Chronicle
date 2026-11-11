@@ -32,7 +32,8 @@ public partial class EventSequence
         if (tail != EventSequenceNumber.Unavailable && tail >= State.SequenceNumber)
         {
             var first = State.SequenceNumber;
-            var adoptedTails = await ReadAdoptedTails(first, tail);
+            using var cursor = await EventSequenceStorage.GetRange(first, tail);
+            var adoptedTails = await ReadAdoptedTails(cursor);
             MarkConstraintIndexGap(first);
             AdoptTails(adoptedTails);
             State.SequenceNumber = tail.Next();
@@ -41,10 +42,9 @@ public partial class EventSequence
         _appendTailUncertain = false;
     }
 
-    async Task<Dictionary<EventTypeId, EventSequenceNumber>> ReadAdoptedTails(EventSequenceNumber first, EventSequenceNumber tail)
+    async Task<Dictionary<EventTypeId, EventSequenceNumber>> ReadAdoptedTails(IEventCursor cursor)
     {
         var adoptedTails = new Dictionary<EventTypeId, EventSequenceNumber>();
-        using var cursor = await EventSequenceStorage.GetRange(first, tail);
         while (await cursor.MoveNext())
         {
             foreach (var @event in cursor.Current)
