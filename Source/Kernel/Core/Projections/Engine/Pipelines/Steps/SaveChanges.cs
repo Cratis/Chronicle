@@ -67,9 +67,7 @@ public class SaveChanges : ICanPerformProjectionPipelineStep
             return context;
         }
 
-        var hasPendingFutureSaves = context.PendingFutureSaves.Any();
-
-        if (!context.Changeset.HasChanges && !hasPendingFutureSaves)
+        if (!context.Changeset.HasChanges && !context.HasPendingFutureSaves)
         {
             _logger.NotSaving(context.Event.Context.SequenceNumber);
             return context;
@@ -93,10 +91,7 @@ public class SaveChanges : ICanPerformProjectionPipelineStep
             // being pushed in the same update (see the comment in ResolveFutures), and the
             // per-call write also keeps SQL correct because the separate call reads the just-
             // written document state via the same key.
-            var pendingSavesToFold = context.PendingFutureSaves
-                .Where(p => Equals(p.Key.Value, context.Key.Value)
-                    && p.Changeset.Changes.All(c => c is PropertiesChanged<ExpandoObject>))
-                .ToArray();
+            var pendingSavesToFold = GetFoldedFutureSaves(context);
             foreach (var pendingSave in pendingSavesToFold)
             {
                 foreach (var change in pendingSave.Changeset.Changes)
@@ -139,7 +134,35 @@ public class SaveChanges : ICanPerformProjectionPipelineStep
     static bool HasFailedOwnPartition(IEnumerable<FailedPartition> failedPartitions, IChangeset<AppendedEvent, ExpandoObject> changeset, Key key)
     {
         var ownPartition = changeset.Incoming is { } incoming ? incoming.Context.EventSourceId.Value : key.Value;
-        return failedPartitions.Any(failure => Equals(failure.EventSourceId.Value, ownPartition) || Equals(failure.EventSourceId.Value, key.Value));
+        foreach (var failure in failedPartitions)
+        {
+            if (Equals(failure.EventSourceId.Value, ownPartition) || Equals(failure.EventSourceId.Value, key.Value)) return true;
+        }
+        return false;
+    }
+
+    static PendingFutureSave[] GetFoldedFutureSaves(ProjectionEventContext context)
+    {
+        if (!context.HasPendingFutureSaves) return [];
+
+        List<PendingFutureSave>? folded = null;
+        foreach (var pendingSave in context.PendingFutureSaves)
+        {
+            if (!CanFold(context, pendingSave)) continue;
+            folded ??= [];
+            folded.Add(pendingSave);
+        }
+        return folded is null ? [] : folded.ToArray();
+    }
+
+    static bool CanFold(ProjectionEventContext context, PendingFutureSave pendingSave)
+    {
+        if (!Equals(pendingSave.Key.Value, context.Key.Value)) return false;
+        foreach (var change in pendingSave.Changeset.Changes)
+        {
+            if (change is not PropertiesChanged<ExpandoObject>) return false;
+        }
+        return true;
     }
 
     Task<IEnumerable<FailedPartition>> ApplyMainChanges(IProjection projection, ProjectionEventContext context, PendingFutureSave[] foldedFutureSaves)
@@ -152,13 +175,20 @@ public class SaveChanges : ICanPerformProjectionPipelineStep
 
     async Task ApplyPendingFutureSaves(ProjectionEventContext context)
     {
-        var foldedSet = context.Changeset.HasChanges
-            ? new HashSet<PendingFutureSave>(context.PendingFutureSaves
-                .Where(p => Equals(p.Key.Value, context.Key.Value)
-                    && p.Changeset.Changes.All(c => c is PropertiesChanged<ExpandoObject>)))
-            : [];
-        foreach (var pendingSave in context.PendingFutureSaves.Where(p => !foldedSet.Contains(p)))
+        if (!context.HasPendingFutureSaves) return;
+
+        HashSet<PendingFutureSave>? foldedSet = null;
+        if (context.Changeset.HasChanges)
         {
+            foldedSet = [];
+            foreach (var pendingSave in context.PendingFutureSaves)
+            {
+                if (CanFold(context, pendingSave)) foldedSet.Add(pendingSave);
+            }
+        }
+        foreach (var pendingSave in context.PendingFutureSaves)
+        {
+            if (foldedSet?.Contains(pendingSave) == true) continue;
             await ApplyPendingFutureSave(context, pendingSave);
         }
     }
