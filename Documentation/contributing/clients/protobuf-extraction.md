@@ -34,7 +34,7 @@ dotnet run --project Source/Tools/ProtoGenerator/ProtoGenerator.csproj -- \
 
 ```bash
 dotnet run --project Source/Tools/ProtoGenerator/ProtoGenerator.csproj -- \
-  Source/Kernel/Contracts/bin/Release/net10.0/Cratis.Chronicle.Contracts.dll \
+  Source/Kernel/Contracts/bin/Release/net11.0/Cratis.Chronicle.Contracts.dll \
   Source/Kernel/Protobuf
 ```
 
@@ -48,7 +48,7 @@ dotnet build -c Release
 # Generate proto files
 cd ../../..
 dotnet run --project Source/Tools/ProtoGenerator/ProtoGenerator.csproj -- \
-  Source/Kernel/Contracts/bin/Release/net10.0/Cratis.Chronicle.Contracts.dll \
+  Source/Kernel/Contracts/bin/Release/net11.0/Cratis.Chronicle.Contracts.dll \
   Source/Kernel/Protobuf
 ```
 
@@ -117,7 +117,7 @@ When adding new gRPC services to the C# Contracts:
 The ProtoGenerator tool uses:
 
 - `protobuf-net.Grpc.Reflection` - For extracting proto definitions from C# attributes
-- `.NET 10` - Runtime for the tool
+- `.NET 11` - Runtime for the tool
 
 ## Proto File Format
 

@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>net11.0</TargetFramework>
     <!-- BenchmarkDotNet locates the project file by assembly name, so the two must match. -->
     <RootNamespace>Cratis.Chronicle.Benchmarks.Clustering</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>

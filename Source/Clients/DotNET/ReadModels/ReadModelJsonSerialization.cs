@@ -26,11 +26,7 @@ namespace Cratis.Chronicle.ReadModels;
 public static class ReadModelJsonSerialization
 {
     static readonly Dictionary<Type, Func<object>?> _emptyFactories = [];
-#if NET8_0
-    static readonly object _emptyFactoriesLock = new();
-#else
     static readonly Lock _emptyFactoriesLock = new();
-#endif
 
     /// <summary>
     /// Add the read-model collection semantics to a set of <see cref="JsonSerializerOptions"/>.

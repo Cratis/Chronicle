@@ -220,11 +220,7 @@ public static class CertificateLoader
 
     static X509Certificate2 LoadDerCertificate(byte[] content)
     {
-#if NET8_0
-        return new X509Certificate2(content);
-#else
         return X509CertificateLoader.LoadCertificate(content);
-#endif
     }
 
     static void ImportPkcs7(X509Certificate2Collection certificateAuthorities, byte[] content)
@@ -243,10 +239,6 @@ public static class CertificateLoader
     static X509Certificate2 LoadCertificateFromPath(string path, string? password)
     {
         // A client certificate needs the private key; read PKCS#12 whether or not a password is configured.
-#if NET8_0
-        return new X509Certificate2(path, password);
-#else
         return X509CertificateLoader.LoadPkcs12FromFile(path, password);
-#endif
     }
 }

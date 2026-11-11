@@ -4,5 +4,10 @@
 using BenchmarkDotNet.Running;
 using Cratis.Chronicle.Benchmarks.Kernel;
 
+if (args.Contains("--observer-footprint"))
+{
+    return await ObserverFootprint.Run(args);
+}
+
 var summaries = BenchmarkSwitcher.FromAssembly(typeof(AppendGenerationProtectionBenchmark).Assembly).Run(args).ToArray();
 return summaries.Length > 0 && summaries.All(summary => !summary.HasCriticalValidationErrors && summary.Reports.All(report => report.Success)) ? 0 : 1;

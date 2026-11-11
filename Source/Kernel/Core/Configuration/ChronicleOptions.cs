@@ -86,6 +86,11 @@ public class ChronicleOptions : IValidatableObject
     public Shutdown Shutdown { get; init; } = new();
 
     /// <summary>
+    /// Gets the startup configuration.
+    /// </summary>
+    public Startup Startup { get; init; } = new();
+
+    /// <summary>
     /// Feature toggles for Chronicle.
     /// </summary>
     public Features Features { get; init; } = new Features();
@@ -307,6 +312,10 @@ public class ChronicleOptions : IValidatableObject
         foreach (var error in ObserverRetryOverrides.SelectMany(_ => _.Value.Validate(_.Key))) yield return error;
         foreach (var error in ConstraintIndexRepair.Validate()) yield return error;
         if (ValidateSinks() is { } sinksError) yield return sinksError;
+        if (Startup.BusySiloWaitLimit < TimeSpan.Zero)
+        {
+            yield return new ValidationResult("Startup.BusySiloWaitLimit must be non-negative.", [$"{nameof(Startup)}.{nameof(Configuration.Startup.BusySiloWaitLimit)}"]);
+        }
         if (!Webhooks.Probe.HasValidTiming)
         {
             yield return new ValidationResult("Invalid webhook probe timing settings.", [$"{nameof(Webhooks)}.{nameof(Configuration.Webhooks.Probe)}"]);
@@ -336,6 +345,11 @@ public class ChronicleOptions : IValidatableObject
         if (Clustering.SingleWriterLease.AcquireTimeout < TimeSpan.Zero)
         {
             yield return new ValidationResult("Clustering.SingleWriterLease.AcquireTimeout must be non-negative.", ["Clustering.SingleWriterLease.AcquireTimeout"]);
+        }
+
+        if (Clustering.SingleWriterLease.StandbyStartupTimeout < TimeSpan.Zero)
+        {
+            yield return new ValidationResult("Clustering.SingleWriterLease.StandbyStartupTimeout must be non-negative.", ["Clustering.SingleWriterLease.StandbyStartupTimeout"]);
         }
     }
 }

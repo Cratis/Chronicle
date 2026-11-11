@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Security.Cryptography.X509Certificates;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
 using Cratis.Execution;
@@ -47,9 +48,7 @@ public static class ServiceCollectionExtensions
             skipTlsValidation ??= connectionString.SkipTlsValidation;
             skipCompatibilityCheck ??= connectionString.SkipCompatibilityCheck;
             var logger = sp.GetService<ILogger<ChronicleConnection>>();
-#pragma warning disable CA1848 // Use the LoggerMessage delegates
-            logger?.LogInformation("Configuring Chronicle connection with connection string: {RedactedConnectionString}", connectionString.Redacted);
-#pragma warning restore CA1848 // Use the LoggerMessage delegates
+            logger?.Configuring(connectionString.Redacted);
             var lifetime = sp.GetRequiredService<IHostApplicationLifetime>();
             var connectionLifecycle = new ConnectionLifecycle(sp.GetRequiredService<ILogger<ConnectionLifecycle>>());
             var correlationIdAccessor = sp.GetRequiredService<ICorrelationIdAccessor>();
@@ -57,29 +56,7 @@ public static class ServiceCollectionExtensions
                 ? null
                 : CertificateLoader.LoadCertificateAuthorities(connectionString.CaCertificatePath);
 
-            // Authenticate with the server using the connection string's client credentials - the
-            // keep-alive and service calls are rejected without a bearer token.
-            ITokenProvider tokenProvider = new NoOpTokenProvider();
-            if (connectionString.AuthenticationMode == AuthenticationMode.ClientCredentials)
-            {
-                var username = connectionString.Username;
-                var password = connectionString.Password;
-                if (string.IsNullOrEmpty(username) && string.IsNullOrEmpty(password))
-                {
-                    username = ChronicleConnectionString.DevelopmentClient;
-                    password = ChronicleConnectionString.DevelopmentClientSecret;
-                }
-
-                tokenProvider = new OAuthTokenProvider(
-                    () => sp.GetService<IChronicleConnection>() is ChronicleConnection currentConnection
-                        ? currentConnection.CurrentServerAddress
-                        : connectionString.ServerAddress,
-                    username!,
-                    password!,
-                    skipTlsValidation.Value,
-                    sp.GetRequiredService<ILogger<OAuthTokenProvider>>(),
-                    certificateAuthorities);
-            }
+            var tokenProvider = CreateTokenProvider(sp, connectionString, skipTlsValidation.Value, certificateAuthorities);
 
             return new ChronicleConnection(
                 connectionString,
@@ -141,5 +118,44 @@ public static class ServiceCollectionExtensions
         services.AddTransient(sp => sp.GetRequiredService<IServices>().Administrators);
 
         return services;
+    }
+
+    /// <summary>
+    /// Creates the token provider that authenticates with the server using the connection string's client credentials - the
+    /// keep-alive and service calls are rejected without a bearer token.
+    /// </summary>
+    /// <param name="sp">The <see cref="IServiceProvider"/> to resolve services from.</param>
+    /// <param name="connectionString">The connection string holding the authentication mode and credentials.</param>
+    /// <param name="skipTlsValidation">Whether to skip TLS certificate validation.</param>
+    /// <param name="certificateAuthorities">Optional certificate authorities the server certificate must chain to.</param>
+    /// <returns>The <see cref="ITokenProvider"/> to use.</returns>
+    static ITokenProvider CreateTokenProvider(
+        IServiceProvider sp,
+        ChronicleConnectionString connectionString,
+        bool skipTlsValidation,
+        X509Certificate2Collection? certificateAuthorities)
+    {
+        if (connectionString.AuthenticationMode != AuthenticationMode.ClientCredentials)
+        {
+            return new NoOpTokenProvider();
+        }
+
+        var username = connectionString.Username;
+        var password = connectionString.Password;
+        if (string.IsNullOrEmpty(username) && string.IsNullOrEmpty(password))
+        {
+            username = ChronicleConnectionString.DevelopmentClient;
+            password = ChronicleConnectionString.DevelopmentClientSecret;
+        }
+
+        return new OAuthTokenProvider(
+            () => sp.GetService<IChronicleConnection>() is ChronicleConnection currentConnection
+                ? currentConnection.CurrentServerAddress
+                : connectionString.ServerAddress,
+            username!,
+            password!,
+            skipTlsValidation,
+            sp.GetRequiredService<ILogger<OAuthTokenProvider>>(),
+            certificateAuthorities);
     }
 }

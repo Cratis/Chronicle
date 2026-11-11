@@ -4,9 +4,8 @@
         <RootNamespace>Cratis.Chronicle</RootNamespace>
         <Description>The .NET client SDK for Cratis Chronicle - the open-source (MIT) event-sourcing database and runtime. Typed events, projections, reducers, reactors, constraints, and read models over a gRPC boundary.</Description>
         <ContractsImplementationAssembly>Cratis.Chronicle.Contracts.Implementations</ContractsImplementationAssembly>
-        <!-- The net8.0/net9.0 analyzers raise IDE0301 on `FrozenDictionary<K,V>.Empty` and suggest `[]`,
-             which does not compile for FrozenDictionary (CS0144). Only surfaces when `dotnet pack`
-             builds the down-level targets (regular builds are net10.0), so suppress it here. -->
+        <!-- The published package still targets net10.0. On net11.0, IDE0301 suggests collection expressions
+             such as [] for FrozenDictionary<K,V>.Empty, which fail with CS0144 on the net10.0 target. -->
         <NoWarn>$(NoWarn);IDE0301</NoWarn>
         <!-- The serverless surface is public and [Experimental("CHRX0001")]; the library itself uses it. -->
         <NoWarn>$(NoWarn);CHRX0001</NoWarn>
@@ -85,7 +84,7 @@
         <ProjectReference Include="../DotNET.CodeAnalysis.Package/DotNET.CodeAnalysis.Package.csproj"
                           PrivateAssets="compile;runtime" />
         <!-- Build the generator once through the MSBuild project graph. Nested dotnet run invocations raced
-             while net8/net9/net10 packaging copied runtime dependencies into the same tool directory. -->
+             while multi-target packaging copied runtime dependencies into the same tool directory. -->
         <ProjectReference Include="../../Tools/GrpcClients/GrpcClients.csproj"
                           ReferenceOutputAssembly="false"
                           PrivateAssets="all"
@@ -100,12 +99,6 @@
         <PackageReference Include="protobuf-net.Grpc" />
         <PackageReference Include="Grpc.Net.Client" />
         <PackageReference Include="System.Reactive" />
-    </ItemGroup>
-
-    <ItemGroup Condition=" '$(TargetFramework)' == 'net8.0' ">
-        <!-- On net8.0 the package otherwise ships without declaring System.Collections.Immutable, while the
-             assembly is compiled against version 10.0.0. Declare it explicitly so consumers get the types. -->
-        <PackageReference Include="System.Collections.Immutable" />
     </ItemGroup>
 
     <ItemGroup>

@@ -96,6 +96,9 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Debug, "Deferring recovery of {Count} failed partition(s) to a later turn so other calls can reach the observer")]
     internal static partial void DeferringRecoveryOfFailedPartitions(this ILogger<Observer> logger, int count);
 
+    [LoggerMessage(LogLevel.Debug, "Deferring recovery of failed partitions while the silo's subscription admission is fully taken")]
+    internal static partial void DeferringRecoveryOfFailedPartitionsForAdmission(this ILogger<Observer> logger);
+
     [LoggerMessage(LogLevel.Warning, "Could not start recovery of failed partition {Partition}; it is tried again in a later turn")]
     internal static partial void CouldNotStartRecoveryOfFailedPartition(this ILogger<Observer> logger, Exception exception, Key partition);
 

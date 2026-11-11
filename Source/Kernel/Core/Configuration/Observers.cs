@@ -28,6 +28,16 @@ public class Observers
     public int MaxConcurrentRegistrations { get; init; }
 
     /// <summary>
+    /// Gets the maximum number of projection subscriptions and failed-partition recoveries running concurrently on a silo.
+    /// </summary>
+    /// <remarks>
+    /// One bound for the whole silo, shared by every event store on it, so a cold start does not run more of this work at
+    /// once as the number of event stores grows. Defaults to 0 (automatic): two per processor, at least 4 and at most 16.
+    /// Values below 1 select the automatic limit.
+    /// </remarks>
+    public int MaxConcurrentSubscriptions { get; init; }
+
+    /// <summary>
     /// Gets how many seconds an observer waits for its subscriber to answer before giving up on the batch. Zero waits
     /// indefinitely.
     /// </summary>
@@ -191,6 +201,17 @@ public class Observers
     /// are progressing, and that the <c language="csharp">NextEventSequenceNumber</c> is up-to-date.
     /// </summary>
     public int WatchdogInterval { get; init; } = 60;
+
+    /// <summary>
+    /// Gets how many seconds an observer that has no subscription and no pending work stays resident before it is released.
+    /// </summary>
+    /// <remarks>
+    /// Observers are kept resident for as long as they are subscribed, because their live subscription exists only in
+    /// memory. An observer whose client is gone keeps nothing that is not in storage, so it is deactivated once the
+    /// watchdog has seen it idle for this long, and the next call activates it again from storage. Checked on every
+    /// <see cref="WatchdogInterval"/>. Defaults to 900 seconds (15 minutes); 0 keeps every observer resident.
+    /// </remarks>
+    public int IdleDeactivationAfter { get; init; } = 900;
 
     /// <summary>
     /// Gets the number of consecutive progress-only batches after which the observer's

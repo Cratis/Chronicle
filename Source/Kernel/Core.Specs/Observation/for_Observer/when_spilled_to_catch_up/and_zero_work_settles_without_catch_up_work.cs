@@ -7,6 +7,7 @@ using Cratis.Chronicle.Observation.Jobs;
 
 namespace Cratis.Chronicle.Observation.for_Observer.when_spilled_to_catch_up;
 
+[PerFactSpecificationLifecycle]
 public class and_zero_work_settles_without_catch_up_work : given.an_observer_settling_after_zero_work
 {
     void Establish()
