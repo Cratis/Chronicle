@@ -7,7 +7,7 @@ namespace Cratis.Chronicle.Schemas.for_JsonSchemaCompatibilityExtensions;
 
 public class when_removing_properties_named_after_annotations : Specification
 {
-    static readonly string[] _names = ["title", "description", "deprecated", "examples", "$comment"];
+    static readonly string[] _names = ["title", "description", "deprecated", "contentEncoding", "examples", "$comment"];
     JsonSchema _stored;
     JsonSchema[] _incoming;
     bool[] _compatible;
@@ -16,7 +16,7 @@ public class when_removing_properties_named_after_annotations : Specification
     void Establish()
     {
         _stored = JsonSchema.FromJson("""
-            {"type":"object","properties":{"nested":{"type":"object","properties":{"title":{"type":"string"},"description":{"type":"string"},"deprecated":{"type":"boolean"},"examples":{"type":"array"},"$comment":{"type":"string"}}}}}
+            {"type":"object","properties":{"nested":{"type":"object","properties":{"title":{"type":"string"},"description":{"type":"string"},"deprecated":{"type":"boolean"},"contentEncoding":{"type":"string"},"examples":{"type":"array"},"$comment":{"type":"string"}}}}}
             """);
         _incoming = _names.Select(RemoveProperty).ToArray();
     }

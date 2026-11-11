@@ -16,7 +16,7 @@ public static class JsonSchemaCompatibilityExtensions
     const string FormatKey = "format";
     const string DetailsKey = "details";
     static readonly string[] _protectionKeys = ["compliance", "security"];
-    static readonly string[] _annotationKeywords = ["title", "description", "deprecated", "examples", "$comment"];
+    static readonly string[] _annotationKeywords = ["title", "description", "deprecated", "contentEncoding", "examples", "$comment"];
 
     /// <summary>
     /// Determines whether a generated schema still describes the stored data.
@@ -25,7 +25,7 @@ public static class JsonSchemaCompatibilityExtensions
     /// <param name="generated">The incoming schema.</param>
     /// <returns>Whether the schemas are compatible.</returns>
     /// <remarks>
-    /// Annotation-only keywords (title, description, deprecated, examples, $comment), the free-text details of protection metadata,
+    /// Annotation-only keywords (title, description, deprecated, contentEncoding, examples, $comment), the free-text details of protection metadata,
     /// nullable format markers, growing or renamed enumerations and default-only property refinements are tolerated.
     /// Annotations are ignored only at schema declarations, never in payload data or property names.
     /// Protection metadata may be added, but existing metadata may not be removed or changed.
@@ -52,7 +52,7 @@ public static class JsonSchemaCompatibilityExtensions
     /// <param name="stored">The stored schema JSON.</param>
     /// <param name="incoming">The incoming schema JSON.</param>
     /// <returns>Whether the schemas differ only by annotations.</returns>
-    /// <remarks>Ignores title, description, deprecated, examples, and $comment at schema declarations, never in payload data or property names.</remarks>
+    /// <remarks>Ignores title, description, deprecated, contentEncoding, examples, and $comment at schema declarations, never in payload data or property names.</remarks>
     public static bool EqualsIgnoringAnnotations(string stored, string incoming)
     {
         var storedNode = JsonNode.Parse(stored);

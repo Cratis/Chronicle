@@ -19,14 +19,14 @@ public class when_comparing_annotation_only_changes : Specification
             """);
         _annotated = JsonSchema.FromJson("""
             {
-              "type":"object","title":"Event","description":"An event","deprecated":true,"examples":[{}],"$comment":"Generated",
+              "type":"object","title":"Event","description":"An event","deprecated":true,"contentEncoding":"base64","examples":[{}],"$comment":"Generated",
               "properties":{
-                "value":{"type":"string","title":"Value","description":"A value","deprecated":true,"examples":["value"],"$comment":"Generated"},
-                "untyped":{"default":null,"description":"Legacy","deprecated":true,"examples":[null],"$comment":"Generated"},
-                "entries":{"type":"array","items":{"type":"string","description":"Entry","deprecated":true,"examples":["entry"],"$comment":"Generated"}}
+                "value":{"type":"string","title":"Value","description":"A value","deprecated":true,"contentEncoding":"base64","examples":["value"],"$comment":"Generated"},
+                "untyped":{"default":null,"description":"Legacy","deprecated":true,"contentEncoding":"base64","examples":[null],"$comment":"Generated"},
+                "entries":{"type":"array","items":{"type":"string","description":"Entry","deprecated":true,"contentEncoding":"base64","examples":["entry"],"$comment":"Generated"}}
               },
-              "$defs":{"Entry":{"type":"string","description":"Entry","deprecated":true,"examples":["entry"],"$comment":"Generated"}},
-              "allOf":[{"type":"object","description":"Composition","deprecated":true,"examples":[{}],"$comment":"Generated"}]
+              "$defs":{"Entry":{"type":"string","description":"Entry","deprecated":true,"contentEncoding":"base64","examples":["entry"],"$comment":"Generated"}},
+              "allOf":[{"type":"object","description":"Composition","deprecated":true,"contentEncoding":"base64","examples":[{}],"$comment":"Generated"}]
             }
             """);
     }

@@ -7,7 +7,7 @@ namespace Cratis.Chronicle.Schemas.for_JsonSchemaCompatibilityExtensions;
 
 public class when_annotation_names_occur_in_default_payloads : Specification
 {
-    static readonly string[] _names = ["title", "description", "deprecated", "examples", "$comment"];
+    static readonly string[] _names = ["title", "description", "deprecated", "contentEncoding", "examples", "$comment"];
     JsonSchema _stored;
     JsonSchema[] _incoming;
     bool[] _compatible;
@@ -16,7 +16,7 @@ public class when_annotation_names_occur_in_default_payloads : Specification
     void Establish()
     {
         _stored = JsonSchema.FromJson("""
-            {"type":"object","properties":{"value":{"type":"object","default":{"title":"old","description":"old","deprecated":false,"examples":["old"],"$comment":"old"}}}}
+            {"type":"object","properties":{"value":{"type":"object","default":{"title":"old","description":"old","deprecated":false,"contentEncoding":"old","examples":["old"],"$comment":"old"}}}}
             """);
         _incoming = _names.Select(ChangeDefault).ToArray();
     }

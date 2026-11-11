@@ -12,6 +12,7 @@ public class when_refining_annotated_properties : Specification
         ("title", "\"Amount\""),
         ("description", "\"An amount\""),
         ("deprecated", "true"),
+        ("contentEncoding", "\"base64\""),
         ("examples", "[1]"),
         ("$comment", "\"Generated\"")
     ];
