@@ -64,12 +64,26 @@ The kernel tracks which clients are connected. These settings live under `connec
 
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
-| connectedClients.reviseIntervalSeconds | number | 2 | Seconds between passes that prune stale clients and expire connection reservations |
+| connectedClients.reviseIntervalSeconds | number | 2 | Seconds between passes that prune stale clients and expire connection reservations. Also how often a reactor or reducer subscription that is not yet confirmed intact is checked, see [Keeping client subscriptions](#keeping-client-subscriptions) |
+| connectedClients.subscriptionCheckIntervalSeconds | number | 60 | Seconds between checks of a reactor or reducer subscription that is known to be intact. The safety net for a subscription lost without a silo leaving. Values below `reviseIntervalSeconds` are raised to it |
+| connectedClients.subscriptionSettleSeconds | number | 30 | Seconds after a silo leaves the cluster during which every reactor and reducer subscription is checked every `reviseIntervalSeconds` |
 | connectedClients.reservationTtlSeconds | number | 30 | Seconds a connection reservation is kept. A reservation holds a slot for a client that is still connecting |
 | connectedClients.staleThresholdSeconds | number | 5 | Seconds a client can go unseen before it is considered disconnected. Raise it only if healthy clients are dropped on a slow network |
 | connectedClients.observeIntervalSeconds | number | 1 | Seconds between observations of the connected clients for observers |
 | connectedClients.keepAliveIntervalSeconds | number | 1 | Seconds between keep-alive messages the kernel sends to a connected client |
 | servers.observeIntervalSeconds | number | 5 | Seconds between observations of server instances for the live Workbench view |
+
+### Keeping client subscriptions
+
+The subscription of a connected reactor or reducer exists only in the memory of the kernel's grain activations. A silo that leaves the cluster takes the activations it hosted with it, and the remaining silos deactivate the activations whose directory entries it owned. The client stays connected and never registers again, so the kernel restores the subscription from the open observation stream.
+
+Each stream checks its subscription with two grain calls. How often depends on what the kernel knows:
+
+- A new subscription, one that was just restored, and one whose check failed are checked every `reviseIntervalSeconds`, until a check finds the subscription intact.
+- When a silo is declared dead, every stream on the remaining silos checks within one `reviseIntervalSeconds`, spread over that interval, and then every `reviseIntervalSeconds` for `subscriptionSettleSeconds`.
+- Otherwise an intact subscription is checked every `subscriptionCheckIntervalSeconds`.
+
+A subscription lost with a silo is therefore restored within about two `reviseIntervalSeconds` of the silo being declared dead, or of its activations being deactivated if that happens within `subscriptionSettleSeconds`. A subscription lost any other way is restored within `subscriptionCheckIntervalSeconds` plus `reviseIntervalSeconds`. With the defaults that is about 4 seconds and 62 seconds. Setting `subscriptionCheckIntervalSeconds` to the value of `reviseIntervalSeconds` restores the earlier behavior of checking every subscription every `reviseIntervalSeconds`, at the cost of one call per subscription every interval.
 
 Environment variables use the `Cratis__Chronicle__ConnectedClients__` and `Cratis__Chronicle__Servers__` prefixes. See [Azure container hosting](../azure-container-hosting.md) for why keep-alive and stale threshold matter for scale-to-zero platforms.
 
