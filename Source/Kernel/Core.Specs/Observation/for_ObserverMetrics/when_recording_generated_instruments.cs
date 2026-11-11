@@ -26,7 +26,7 @@ public class when_recording_generated_instruments : Specification
 
     void Because()
     {
-        new Meter<Observer>(_meter).BeginObserverScope("observer", new("observer", "store", "namespace", "sequence"), MetricNames.Convention).SuccessfulObservation();
+        new Meter<Observer>(_meter).BeginObserverScope("observer", new("observer", "store", "namespace", "sequence"), MetricNames.Convention).SuccessfulObservation(replay: false);
         new Meter<EventSequence>(_meter).BeginEventSequenceScope("store", "namespace", MetricNames.Convention).AppendedEvent("Event");
         new AppendedEventsQueueMetrics(new MetricSet(_meter, MetricNames.Convention)).EventsEnqueued(1);
         new ConnectedClientsMetrics(new Meter<ConnectedClients>(_meter), MetricNames.Convention).ConnectedClients(1);

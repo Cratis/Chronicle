@@ -20,6 +20,7 @@ public class a_provider_with_retry_overrides : Specification
         {
             MaxConcurrentPartitions = 7,
             MaxConcurrentRegistrations = 5,
+            MaxConcurrentSubscriptions = 9,
             SubscriberTimeout = 11,
             LiveDeliveryBudget = 47,
             AbandonedDeliveryHold = 13,
@@ -41,6 +42,7 @@ public class a_provider_with_retry_overrides : Specification
             PendingGenerationAlertAfter = TimeSpan.FromHours(48),
             ReplayOnDefinitionChange = true,
             WatchdogInterval = 31,
+            IdleDeactivationAfter = 1801,
             StatePersistenceBatchInterval = 37,
             WriteCoalescingInterval = 41,
             FanOutStrategy = "random",

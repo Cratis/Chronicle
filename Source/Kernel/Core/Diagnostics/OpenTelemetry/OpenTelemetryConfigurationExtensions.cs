@@ -101,19 +101,20 @@ public static class OpenTelemetryConfigurationExtensions
             })
                 .WithMetrics(metrics =>
             {
-                // Reduce pre-allocated MetricPoint arrays from the default 2000 to 500.
-                // The default causes ~25 MB of committed memory at startup for all metric instruments.
+                // Reduce pre-allocated MetricPoint arrays from the SDK default of 2000 to Telemetry:MetricSeriesLimit,
+                // 500 unless configured. The SDK default causes ~25 MB of committed memory at startup for all instruments.
                 // The limit applies per instrument. Chronicle's observer instruments carry one series per observer
                 // in each event store, namespace and event sequence, and never one per partition or event source.
-                // The failure instruments only get a series once an observer fails, so the series they hold follow
-                // the failing observers, while the successful observations instrument holds one per active observer.
-                // Exceeding 500 therefore takes more than 500 active observer instances (observers x namespaces x
-                // event stores). Raise the limit before that is reached: the SDK folds the excess into an overflow
-                // series that has none of the tags, and those measurements can no longer be attributed to an observer.
+                // Under cumulative temporality a series keeps its slot until the process stops, so an instrument's series
+                // count is the number of observers it ever reported while the process ran: the failure counters and the
+                // abnormal-only gauges hold the observers that were ever failing, the successful observations counter
+                // holds every observer that delivered anything. Raise the limit before that number is reached: the SDK
+                // folds the excess into an overflow series that has none of the tags, only otel.metric.overflow=true,
+                // so it cannot be attributed.
                 // Do not add a second view for a single instrument: every view that matches an instrument produces
                 // its own stream for it, so the instrument would be exported twice. Change this one view instead.
                 metrics
-                    .AddView("*", new MetricStreamConfiguration { CardinalityLimit = 500 })
+                    .AddView("*", new MetricStreamConfiguration { CardinalityLimit = chronicle.Telemetry.EffectiveMetricSeriesLimit })
                     .AddChronicleInstrumentation()
                     .AddHttpClientInstrumentation()
                     .AddAspNetCoreInstrumentation()

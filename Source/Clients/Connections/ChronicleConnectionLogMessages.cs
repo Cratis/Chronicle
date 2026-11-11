@@ -36,6 +36,12 @@ internal static partial class ChronicleConnectionLogMessages
     [LoggerMessage(LogLevel.Warning, "Chronicle at {Server} did not accept the connection within {TimeoutSeconds} seconds - it may still be starting; retrying in the background")]
     internal static partial void NotAcceptingConnectionsYet(this ILogger<ChronicleConnection> logger, string server, int timeoutSeconds);
 
+    [LoggerMessage(LogLevel.Warning, "Could not resolve the Chronicle servers for {ConnectionString}: {Reason} - retrying in the background. The servers may not be published yet, or the name may be misspelled")]
+    internal static partial void CouldNotResolveServers(this ILogger<ChronicleConnection> logger, string connectionString, string reason);
+
+    [LoggerMessage(LogLevel.Error, "Still could not resolve the Chronicle servers for {ConnectionString} after {Attempts} attempts in a row: {Reason} - check that the name in the connection string is spelled correctly; retrying in the background")]
+    internal static partial void StillCouldNotResolveServers(this ILogger<ChronicleConnection> logger, string connectionString, int attempts, string reason);
+
     [LoggerMessage(LogLevel.Warning, "Server certificate validation is disabled for {Servers}; any certificate is accepted. Set skipTlsValidation=false once the server certificate is trusted.")]
     internal static partial void ServerCertificateValidationDisabled(this ILogger<ChronicleConnection> logger, string servers);
 

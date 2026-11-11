@@ -54,6 +54,7 @@ internal static class KernelHostComposition
 
     /// <summary>
     /// Maps readiness checks at the configured endpoint and its ready subpath, and liveness without checks.
+    /// Readiness reports "Standby" while a standby kernel waits for the single-writer lease.
     /// </summary>
     /// <param name="app">The kernel web application.</param>
     /// <param name="endpoint">The configured health endpoint.</param>
@@ -62,8 +63,9 @@ internal static class KernelHostComposition
         var path = endpoint.Trim().TrimEnd('/');
         if (path.StartsWith('/')) path = path[1..];
         var prefix = path.Length == 0 ? string.Empty : $"/{path}";
-        app.MapHealthChecks(prefix.Length == 0 ? "/" : prefix).AllowAnonymous();
-        app.MapHealthChecks($"{prefix}/ready").AllowAnonymous();
+        var readiness = new HealthCheckOptions { ResponseWriter = KernelHealthResponseWriter.Write };
+        app.MapHealthChecks(prefix.Length == 0 ? "/" : prefix, readiness).AllowAnonymous();
+        app.MapHealthChecks($"{prefix}/ready", readiness).AllowAnonymous();
         app.MapHealthChecks($"{prefix}/live", new HealthCheckOptions { Predicate = _ => false }).AllowAnonymous();
     }
 }
