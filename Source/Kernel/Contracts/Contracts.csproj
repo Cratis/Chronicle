@@ -37,7 +37,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../../Tools/ProtoGenerator/ProtoGenerator.csproj" ReferenceOutputAssembly="false" PrivateAssets="all" OutputItemType="ProtoGeneratorAssembly" SkipGetTargetFrameworkProperties="true" GlobalPropertiesToRemove="TargetFramework;TargetFrameworks;RuntimeIdentifier;IsPackaging" />
+        <ProjectReference Include="../../Tools/ProtoGenerator/ProtoGenerator.csproj" ReferenceOutputAssembly="false" PrivateAssets="all" OutputItemType="ProtoGeneratorAssembly" SkipGetTargetFrameworkProperties="true" GlobalPropertiesToRemove="TargetFramework;TargetFrameworks;RuntimeIdentifier;SelfContained;PublishReadyToRun;IsPackaging" />
     </ItemGroup>
 
     <!--
