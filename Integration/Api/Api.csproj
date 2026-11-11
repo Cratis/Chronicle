@@ -14,9 +14,6 @@
              The test SDK also generates an entry point that conflicts with top-level statements (CS7022). -->
         <NoWarn>$(NoWarn);CS0436;CS7022</NoWarn>
         <GenerateProgramFile>false</GenerateProgramFile>
-        <!-- The .NET 11 SDK adds a Debug-only hot-reload JavaScript initializer without a matching static web asset
-             endpoint, which fails the Debug build. This test host never runs under hot reload. -->
-        <EnableHotReloadInRuntimeConfigDevFile>false</EnableHotReloadInRuntimeConfigDevFile>
     </PropertyGroup>
 
     <ItemGroup>
