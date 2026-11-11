@@ -34,7 +34,7 @@ public class when_annotation_changes_accompany_meaningful_changes : Specificatio
 
     void Because()
     {
-        _compatible = _incoming.Select(schema => _stored.IsCompatibleWith(schema)).ToArray();
+        _compatible = _incoming.Select(_stored.IsCompatibleWith).ToArray();
         _equal = _incoming.Select(schema => JsonSchemaCompatibilityExtensions.EqualsIgnoringAnnotations(_stored.ToJson(), schema.ToJson())).ToArray();
     }
 

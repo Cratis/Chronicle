@@ -23,7 +23,7 @@ public class when_annotation_names_occur_in_default_payloads : Specification
 
     void Because()
     {
-        _compatible = _incoming.Select(schema => _stored.IsCompatibleWith(schema)).ToArray();
+        _compatible = _incoming.Select(_stored.IsCompatibleWith).ToArray();
         _equal = _incoming.Select(schema => JsonSchemaCompatibilityExtensions.EqualsIgnoringAnnotations(_stored.ToJson(), schema.ToJson())).ToArray();
     }
 
