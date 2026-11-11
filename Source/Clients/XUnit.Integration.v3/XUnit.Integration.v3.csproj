@@ -1,7 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <TargetFramework>net10.0</TargetFramework>
-        <TargetFrameworks></TargetFrameworks>
         <AssemblyName>Cratis.Chronicle.XUnit.Integration.v3</AssemblyName>
         <RootNamespace>Cratis.Chronicle.XUnit.Integration</RootNamespace>
         <Description>xUnit v3 integration-testing support for Cratis Chronicle - the open-source (MIT) event-sourcing database and runtime. Fixtures and helpers for integration tests against an in-process kernel. Must not be referenced together with Cratis.Chronicle.XUnit.Integration.</Description>
@@ -10,6 +8,11 @@
         <!-- CRSPECEXP01: the type-discovery generator emits typeof() for Specifications 5's experimental resource types. -->
         <NoWarn>$(NoWarn);CRSPECEXP01</NoWarn>
     </PropertyGroup>
+
+    <!-- .NET 11 makes the System.Net.Http.Json extensions reachable without this namespace; the net10.0 package build still needs it. -->
+    <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
+        <Using Include="System.Net.Http.Json" />
+    </ItemGroup>
 
     <ItemGroup>
         <Compile Include="../XUnit.Integration/**/*.cs" Exclude="../XUnit.Integration/bin/**;../XUnit.Integration/obj/**;../XUnit.Integration/ChronicleClientFixture.Lifetime.cs" LinkBase="Shared" />

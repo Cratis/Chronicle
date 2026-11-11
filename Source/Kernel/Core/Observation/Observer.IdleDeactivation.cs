@@ -37,8 +37,8 @@ public partial class Observer
         (!_observerExists || State.RunningState == ObserverRunningState.Disconnected) &&
         !IsQuarantined &&
         !State.IsReplaying &&
-        !State.ReplayingPartitions.Any() &&
-        !State.CatchingUpPartitions.Any() &&
+        State.ReplayingPartitions.Count == 0 &&
+        State.CatchingUpPartitions.Count == 0 &&
         _pendingCatchUpAcquisition is null &&
         !Failures.HasFailedPartitions &&
         (!_observerExists || (IsAlertWorkSettled && !_runningStateChangedAtPending)) &&

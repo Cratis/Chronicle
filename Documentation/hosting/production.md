@@ -162,7 +162,7 @@ While unready, non-health requests receive HTTP 503 with `Retry-After`, or gRPC 
 
 > [!IMPORTANT]
 > Probe Chronicle from outside the container. The production image uses
-> `mcr.microsoft.com/dotnet/runtime-deps:10.0-noble-chiseled-extra`, without a shell, `curl`, or `wget`.
+> `mcr.microsoft.com/dotnet/runtime-deps:11.0-resolute-chiseled-extra`, without a shell, `curl`, or `wget`.
 > Docker `HEALTHCHECK` and Compose `healthcheck:` commands run inside the container, so probes that
 > invoke those tools fail even when Chronicle is healthy.
 

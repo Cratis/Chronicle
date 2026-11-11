@@ -55,7 +55,7 @@
         or -p:ForceCodeGeneration=true to regenerate even when the inputs are unchanged.
     -->
     <Target Name="_PrepareProtoGeneration"
-            Condition=" '$(TargetFramework)' == 'net10.0' AND '$(IsPackaging)' != 'true' AND '$(DisableProtoGeneration)' != 'true' AND '$(DesignTimeBuild)' != 'true' ">
+            Condition=" '$(TargetFramework)' == 'net11.0' AND '$(IsPackaging)' != 'true' AND '$(DisableProtoGeneration)' != 'true' AND '$(DesignTimeBuild)' != 'true' ">
         <PropertyGroup>
             <_ProtoGenerationStamp>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(IntermediateOutputPath)', 'GenerateProtoFiles.stamp'))</_ProtoGenerationStamp>
         </PropertyGroup>
@@ -70,7 +70,7 @@
             DependsOnTargets="_PrepareProtoGeneration"
             Inputs="@(_ProtoGenerationInput)"
             Outputs="$(_ProtoGenerationStamp)"
-            Condition=" '$(TargetFramework)' == 'net10.0' AND '$(IsPackaging)' != 'true' AND '$(DisableProtoGeneration)' != 'true' AND '$(DesignTimeBuild)' != 'true' ">
+            Condition=" '$(TargetFramework)' == 'net11.0' AND '$(IsPackaging)' != 'true' AND '$(DisableProtoGeneration)' != 'true' AND '$(DesignTimeBuild)' != 'true' ">
         <Message Text="Generating proto files and descriptor set from the contracts" Importance="high" />
         <Exec Command="dotnet &quot;@(ProtoGeneratorAssembly)&quot; &quot;$(TargetPath)&quot; &quot;$(MSBuildThisFileDirectory)../Protobuf&quot;" />
         <Touch Files="$(_ProtoGenerationStamp)" AlwaysCreate="true" />
