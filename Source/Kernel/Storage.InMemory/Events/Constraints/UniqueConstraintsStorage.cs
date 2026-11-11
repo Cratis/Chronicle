@@ -99,24 +99,13 @@ public class UniqueConstraintsStorage : IUniqueConstraintsStorage
             var key = (definition.Name.Value, scopeKey, value.Value);
             if (_values.TryGetValue(key, out var owner))
             {
-                if (owner.EventSourceId != eventSourceId.Value)
-                {
-                    throw new DuplicateUniqueConstraintValue(definition.Name, eventSourceId);
-                }
-
-                _values[key] = owner with { Subject = subject?.Value };
+                RefreshExistingOwner(key, owner, eventSourceId, definition, subject);
                 return Task.CompletedTask;
             }
 
             if (definition.Mode != UniqueConstraintMode.PerValue)
             {
-                var sourceKey = (eventSourceId.Value, definition.Name.Value, scopeKey);
-                if (_index.TryGetValue(sourceKey, out var previous))
-                {
-                    _values.Remove((definition.Name.Value, scopeKey, previous.Value));
-                }
-
-                _index[sourceKey] = (value.Value, sequenceNumber);
+                ReplaceSourceClaim(eventSourceId, definition, value, scopeKey, sequenceNumber);
             }
 
             _values[key] = (eventSourceId.Value, sequenceNumber, subject?.Value);
@@ -140,17 +129,11 @@ public class UniqueConstraintsStorage : IUniqueConstraintsStorage
         {
             if (definition.Mode != UniqueConstraintMode.PerValue)
             {
-                if (_index.Remove((eventSourceId.Value, definition.Name.Value, scopeKey), out var previous))
-                {
-                    _values.Remove((definition.Name.Value, scopeKey, previous.Value));
-                }
+                ReleaseSourceClaim(eventSourceId, definition, scopeKey);
             }
             else
             {
-                foreach (var key in _values.Where(_ => _.Key.ConstraintName == definition.Name.Value && _.Key.ScopeKey == scopeKey && _.Value.EventSourceId == eventSourceId.Value).Select(_ => _.Key).ToArray())
-                {
-                    _values.Remove(key);
-                }
+                ReleaseOwnedValues(eventSourceId, definition, scopeKey);
             }
         }
 
@@ -172,7 +155,8 @@ public class UniqueConstraintsStorage : IUniqueConstraintsStorage
         lock (_lock)
         {
             var key = (definition.Name.Value, scopeKey, value.Value);
-            if (definition.Mode == UniqueConstraintMode.PerValue && _values.TryGetValue(key, out var entry) && entry.EventSourceId == eventSourceId.Value)
+            var isPerValue = definition.Mode == UniqueConstraintMode.PerValue;
+            if (isPerValue && _values.TryGetValue(key, out var entry) && entry.EventSourceId == eventSourceId.Value)
             {
                 _values.Remove(key);
             }
@@ -199,6 +183,43 @@ public class UniqueConstraintsStorage : IUniqueConstraintsStorage
         }
 
         return Task.CompletedTask;
+    }
+
+    void RefreshExistingOwner((string ConstraintName, string ScopeKey, string Value) key, (string EventSourceId, EventSequenceNumber SequenceNumber, string? Subject) owner, EventSourceId eventSourceId, UniqueConstraintDefinition definition, Subject? subject)
+    {
+        if (owner.EventSourceId != eventSourceId.Value)
+        {
+            throw new DuplicateUniqueConstraintValue(definition.Name, eventSourceId);
+        }
+
+        _values[key] = owner with { Subject = subject?.Value };
+    }
+
+    void ReplaceSourceClaim(EventSourceId eventSourceId, UniqueConstraintDefinition definition, UniqueConstraintValue value, string scopeKey, EventSequenceNumber sequenceNumber)
+    {
+        var sourceKey = (eventSourceId.Value, definition.Name.Value, scopeKey);
+        if (_index.TryGetValue(sourceKey, out var previous))
+        {
+            _values.Remove((definition.Name.Value, scopeKey, previous.Value));
+        }
+
+        _index[sourceKey] = (value.Value, sequenceNumber);
+    }
+
+    void ReleaseSourceClaim(EventSourceId eventSourceId, UniqueConstraintDefinition definition, string scopeKey)
+    {
+        if (_index.Remove((eventSourceId.Value, definition.Name.Value, scopeKey), out var previous))
+        {
+            _values.Remove((definition.Name.Value, scopeKey, previous.Value));
+        }
+    }
+
+    void ReleaseOwnedValues(EventSourceId eventSourceId, UniqueConstraintDefinition definition, string scopeKey)
+    {
+        foreach (var key in _values.Where(_ => _.Key.ConstraintName == definition.Name.Value && _.Key.ScopeKey == scopeKey && _.Value.EventSourceId == eventSourceId.Value).Select(_ => _.Key).ToArray())
+        {
+            _values.Remove(key);
+        }
     }
 
     UniqueConstraintValue[] ValuesOwnedBy(EventSourceId eventSourceId, UniqueConstraintDefinition definition, string scopeKey) =>
