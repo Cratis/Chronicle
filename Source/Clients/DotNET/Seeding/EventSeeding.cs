@@ -374,12 +374,14 @@ public class EventSeeding(
         };
     }
 
+    static bool RequiresRouting(SeedingEntry entry) =>
+        (!string.IsNullOrEmpty(entry.EventSourceType?.Value) && entry.EventSourceType != EventSourceType.Default) ||
+        (!string.IsNullOrEmpty(entry.EventStreamType?.Value) && entry.EventStreamType != EventStreamType.All) ||
+        (!string.IsNullOrEmpty(entry.EventStreamId?.Value) && entry.EventStreamId.Value != EventStreamId.Default);
+
     async Task ConfirmRoutingSupport(List<SeedingEntry> entries)
     {
-        if (!entries.Exists(entry =>
-            (!string.IsNullOrEmpty(entry.EventSourceType?.Value) && entry.EventSourceType != EventSourceType.Default) ||
-            (!string.IsNullOrEmpty(entry.EventStreamType?.Value) && entry.EventStreamType != EventStreamType.All) ||
-            (!string.IsNullOrEmpty(entry.EventStreamId?.Value) && entry.EventStreamId.Value != EventStreamId.Default)))
+        if (!entries.Exists(RequiresRouting))
         {
             return;
         }
