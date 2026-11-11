@@ -115,8 +115,9 @@ internal static class EventContentBson
         }
         if (node is JsonObject document)
         {
-            var properties = actual is null ? null : _properties.GetValue(
-                actual,
+            var propertySchema = GetPropertySchema(schema, actual);
+            var properties = propertySchema is null ? null : _properties.GetValue(
+                propertySchema,
                 static value => value.GetFlattenedProperties().ToDictionary(property => property.Name, StringComparer.OrdinalIgnoreCase));
             return new JsonObject(document.Select(property => new KeyValuePair<string, JsonNode?>(
                 property.Key,
@@ -127,6 +128,13 @@ internal static class EventContentBson
             return new JsonArray(array.Select(item => PrepareForBson(item, actual?.Item)).ToArray());
         }
         return node is JsonValue value ? PrepareValue(value, schema, actual) : node?.DeepClone();
+    }
+
+    static JsonSchema? GetPropertySchema(JsonSchema? schema, JsonSchema? actual)
+    {
+        var source = schema?.Reference ?? schema;
+        // Flatten the complete object schema, not just the allOf branch selected as its actual type.
+        return source?.AllOf.Count > 0 ? source : actual;
     }
 
     static JsonNode PrepareValue(JsonValue value, JsonSchema? schema, JsonSchema? actual)
