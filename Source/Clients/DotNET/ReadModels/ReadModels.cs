@@ -77,28 +77,15 @@ public partial class ReadModels(
     /// <inheritdoc/>
     public async Task Register<TReadModel>()
     {
-        var observerType = ReadModelObserverType.Projection;
-        var observerIdentifier = string.Empty;
-
         if (eventTypes.IsEventTarget(typeof(TReadModel)))
         {
-            var targetHandler = (IHaveReadModel?)projections.GetAllHandlers().FirstOrDefault(h => h.ReadModelType == typeof(TReadModel))
-                ?? reducers.GetAllHandlers().FirstOrDefault(h => h.ReadModelType == typeof(TReadModel));
-            if (targetHandler is IReducerHandler targetReducer)
-            {
-                observerType = ReadModelObserverType.Reducer;
-                observerIdentifier = targetReducer.Id.Value;
-            }
-            else if (targetHandler is IProjectionHandler targetProjection)
-            {
-                observerIdentifier = targetProjection.Id.Value;
-            }
+            var (targetObserverType, targetObserverIdentifier) = ResolveEventTargetObserver(typeof(TReadModel));
 
             await _chronicleServicesAccessor.Services.ReadModels.RegisterMany(new RegisterManyRequest
             {
                 EventStore = eventStore.Name,
                 Owner = ReadModelOwner.Client,
-                ReadModels = [CreateEventTargetDefinition(typeof(TReadModel), observerType, observerIdentifier)]
+                ReadModels = [CreateEventTargetDefinition(typeof(TReadModel), targetObserverType, targetObserverIdentifier)]
             });
             return;
         }
@@ -113,24 +100,7 @@ public partial class ReadModels(
             return;
         }
 
-        if (projections.HasFor<TReadModel>())
-        {
-            var handler = projections.GetAllHandlers().FirstOrDefault(h => h.ReadModelType == typeof(TReadModel));
-            if (handler is IProjectionHandler projectionHandler)
-            {
-                observerType = ReadModelObserverType.Projection;
-                observerIdentifier = projectionHandler.Id.Value;
-            }
-        }
-        else if (reducers.HasFor<TReadModel>())
-        {
-            var handler = reducers.GetAllHandlers().FirstOrDefault(h => h.ReadModelType == typeof(TReadModel));
-            if (handler is IReducerHandler reducerHandler)
-            {
-                observerType = ReadModelObserverType.Reducer;
-                observerIdentifier = reducerHandler.Id.Value;
-            }
-        }
+        var (observerType, observerIdentifier) = ResolveObserver<TReadModel>();
 
         var readModelDefinitions = new List<ReadModelDefinition>()
         {
@@ -452,6 +422,40 @@ public partial class ReadModels(
     /// therefore no sink to read from, so its state only exists once this client has folded the events for it.
     /// </remarks>
     bool IsReducedInProcess(Type readModelType) => reducers.HasFor(readModelType) && readModelType.IsPassive();
+
+    (ReadModelObserverType ObserverType, string ObserverIdentifier) ResolveEventTargetObserver(Type eventTargetType)
+    {
+        var targetHandler = (IHaveReadModel?)projections.GetAllHandlers().FirstOrDefault(h => h.ReadModelType == eventTargetType)
+            ?? reducers.GetAllHandlers().FirstOrDefault(h => h.ReadModelType == eventTargetType);
+        return targetHandler switch
+        {
+            IReducerHandler reducer => (ReadModelObserverType.Reducer, reducer.Id.Value),
+            IProjectionHandler projection => (ReadModelObserverType.Projection, projection.Id.Value),
+            _ => (ReadModelObserverType.Projection, string.Empty)
+        };
+    }
+
+    (ReadModelObserverType ObserverType, string ObserverIdentifier) ResolveObserver<TReadModel>()
+    {
+        if (projections.HasFor<TReadModel>())
+        {
+            var handler = projections.GetAllHandlers().FirstOrDefault(h => h.ReadModelType == typeof(TReadModel));
+            if (handler is IProjectionHandler projectionHandler)
+            {
+                return (ReadModelObserverType.Projection, projectionHandler.Id.Value);
+            }
+        }
+        else if (reducers.HasFor<TReadModel>())
+        {
+            var handler = reducers.GetAllHandlers().FirstOrDefault(h => h.ReadModelType == typeof(TReadModel));
+            if (handler is IReducerHandler reducerHandler)
+            {
+                return (ReadModelObserverType.Reducer, reducerHandler.Id.Value);
+            }
+        }
+
+        return (ReadModelObserverType.Projection, string.Empty);
+    }
 
     /// <summary>
     /// Resolve the <see cref="EventSequenceId"/> a read model is built from.
