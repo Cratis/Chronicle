@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
+using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Storage.Observation;
 
 namespace Cratis.Chronicle.Projections.for_ProjectionsManager;
@@ -26,7 +27,7 @@ public class when_registration_admission_expires_before_a_permit_is_available : 
     int _releasesBeforeRepair;
 
     /// <inheritdoc/>
-    protected override IProjectionSubscriptionThrottle CreateThrottle() => Substitute.For<IProjectionSubscriptionThrottle>();
+    protected override ISubscriptionAdmission CreateThrottle() => Substitute.For<ISubscriptionAdmission>();
 
     void Establish()
     {
@@ -59,7 +60,7 @@ public class when_registration_admission_expires_before_a_permit_is_available : 
         await registering;
         _installedBeforeRepair = _installed;
         _builtBeforeRepair = _projectionFactory.ReceivedCalls().Any();
-        _releasesBeforeRepair = _throttle.ReceivedCalls().Count(call => call.GetMethodInfo().Name == nameof(IProjectionSubscriptionThrottle.Release));
+        _releasesBeforeRepair = _throttle.ReceivedCalls().Count(call => call.GetMethodInfo().Name == nameof(ISubscriptionAdmission.Release));
         _throttle.WaitAsync(Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>()).Returns(call =>
         {
             _repairUsedInfiniteWait = call.ArgAt<TimeSpan>(0) == Timeout.InfiniteTimeSpan;

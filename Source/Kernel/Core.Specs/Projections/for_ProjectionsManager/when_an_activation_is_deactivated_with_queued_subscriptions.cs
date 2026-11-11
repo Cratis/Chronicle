@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Observation;
+
 namespace Cratis.Chronicle.Projections.for_ProjectionsManager;
 
 /// <summary>
@@ -16,7 +18,7 @@ public class when_an_activation_is_deactivated_with_queued_subscriptions : given
     int _count;
 
     /// <inheritdoc/>
-    protected override IProjectionSubscriptionThrottle CreateThrottle() => Substitute.For<IProjectionSubscriptionThrottle>();
+    protected override ISubscriptionAdmission CreateThrottle() => Substitute.For<ISubscriptionAdmission>();
 
     void Establish()
     {

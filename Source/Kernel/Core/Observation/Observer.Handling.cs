@@ -618,7 +618,7 @@ public partial class Observer
             {
                 if (!failed)
                 {
-                    _metrics?.SuccessfulObservation();
+                    _metrics?.SuccessfulObservation(replay: false);
                     return Task.CompletedTask;
                 }
 

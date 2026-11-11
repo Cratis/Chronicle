@@ -19,6 +19,9 @@ public sealed class StoreEntitlementsSnapshot(StoreEntitlementsState state)
     /// <summary>Gets the version of the indexed grants.</summary>
     public long Version { get; } = state.Version;
 
+    /// <summary>Gets how many explicit grants the snapshot holds.</summary>
+    public int GrantCount { get; } = state.Grants.Count;
+
     /// <summary>Gets reusable immutable inputs for this snapshot.</summary>
     internal StoreDecisionInputs Inputs { get; } = new();
 
