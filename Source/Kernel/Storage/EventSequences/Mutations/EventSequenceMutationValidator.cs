@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.EventSequences.Mutations;
@@ -62,7 +63,7 @@ public static class EventSequenceMutationValidator
             return Invalid(EventSequenceMutationValidationError.MissingValue, nameof(request));
         }
 
-        if (request.Id is null || request.Id == EventSequenceMutationId.NotSet)
+        if (IsUnsetId(request.Id))
         {
             return Invalid(EventSequenceMutationValidationError.InvalidId, nameof(request.Id));
         }
@@ -84,7 +85,7 @@ public static class EventSequenceMutationValidator
             return Invalid(EventSequenceMutationValidationError.InvalidEnum, nameof(request.Kind));
         }
 
-        if (request.Command is null || request.Command.Payload is null || !IsStrictText(request.Command.Payload) || request.Command.Hash is null || string.IsNullOrEmpty(request.Command.Hash.Value) || !IsStrictText(request.Command.Hash.Value))
+        if (!IsValidCommand(request.Command))
         {
             return Invalid(EventSequenceMutationValidationError.InvalidCommand, nameof(request.Command));
         }
@@ -169,17 +170,17 @@ public static class EventSequenceMutationValidator
             return validation;
         }
 
-        if (mutation.Ordinal is null || mutation.Ordinal.Value <= 0)
+        if (mutation.Ordinal is not { Value: > 0 })
         {
             return Invalid(EventSequenceMutationValidationError.InvalidOrdinal, nameof(mutation.Ordinal));
         }
 
-        if (mutation.StateVersion is null || mutation.StateVersion.Value <= 0)
+        if (mutation.StateVersion is not { Value: > 0 })
         {
             return Invalid(EventSequenceMutationValidationError.InvalidStateVersion, nameof(mutation.StateVersion));
         }
 
-        if (!Enum.IsDefined(mutation.Phase) || !Enum.IsDefined(mutation.BlockedFrom) || !Enum.IsDefined(mutation.RepairState))
+        if (!AreDefined(mutation.Phase, mutation.BlockedFrom, mutation.RepairState))
         {
             return Invalid(EventSequenceMutationValidationError.InvalidEnum, nameof(mutation.Phase));
         }
@@ -213,16 +214,7 @@ public static class EventSequenceMutationValidator
             return Invalid(EventSequenceMutationValidationError.InvalidEnum, nameof(registration.Lifecycle));
         }
 
-        var positiveOrdinal = registration.Ordinal is { Value: > 0 };
-        var valid = registration.Lifecycle switch
-        {
-            EventSequenceMutationRegistryLifecycle.Claimed => registration.Ordinal is null && registration.TerminalWitness is null,
-            EventSequenceMutationRegistryLifecycle.Bound => positiveOrdinal && registration.TerminalWitness is null,
-            EventSequenceMutationRegistryLifecycle.Archived => positiveOrdinal && IsValidWitness(registration.TerminalWitness, registration.Definition.DefinitionDigestV1),
-            _ => false
-        };
-
-        return valid
+        return IsLifecycleConsistent(registration)
             ? EventSequenceMutationValidationResult.Valid
             : Invalid(EventSequenceMutationValidationError.InvalidRegistration, nameof(registration.Lifecycle));
     }
@@ -241,12 +233,12 @@ public static class EventSequenceMutationValidator
             return validation;
         }
 
-        if (history is null || history.Id is null || history.Id == EventSequenceMutationId.NotSet)
+        if (history is null || IsUnsetId(history.Id))
         {
             return Invalid(EventSequenceMutationValidationError.InvalidTerminal, nameof(history));
         }
 
-        if (history.Ordinal is null || history.Ordinal.Value <= 0 || !Enum.IsDefined(history.Kind) || history.Kind == EventSequenceMutationKind.Unknown)
+        if (history.Ordinal is not { Value: > 0 } || !IsKnownKind(history.Kind))
         {
             return Invalid(EventSequenceMutationValidationError.InvalidTerminal, nameof(history.Ordinal));
         }
@@ -257,25 +249,12 @@ public static class EventSequenceMutationValidator
             return validation;
         }
 
-        if (history.TerminalPhase != EventSequenceMutationPhase.SourceCommitted ||
-            !EventSequenceMutationArchiveTime.IsNormalized(history.ArchivedAt) ||
-            history.RepairState is not (EventSequenceMutationRepairState.NotRequired or EventSequenceMutationRepairState.Accepted or EventSequenceMutationRepairState.Unknown) ||
-            history.TerminalWitness is not { } witness ||
-            !IsValidWitness(witness, witness.DefinitionDigestV1))
+        if (!TryGetTerminalWitness(history, out var witness))
         {
             return Invalid(EventSequenceMutationValidationError.InvalidTerminal, nameof(history.TerminalWitness));
         }
 
-        var expected = EventSequenceMutationDigestCalculator.CalculateReceiptDigest(
-            scope!,
-            history,
-            witness.FinalStateVersion,
-            witness.DefinitionDigestV1,
-            witness.DigestVersion);
-
-        return expected == witness.ReceiptDigestV1
-            ? EventSequenceMutationValidationResult.Valid
-            : Invalid(EventSequenceMutationValidationError.InvalidDigest, nameof(history.TerminalWitness.ReceiptDigestV1));
+        return ValidateReceiptDigest(scope!, history, witness);
     }
 
     /// <summary>
@@ -307,18 +286,7 @@ public static class EventSequenceMutationValidator
             return validation;
         }
 
-        var definition = registration.Definition;
-        var request = definition.Request;
-        var exactLineage = ValidateDeterministicId(request).IsValid &&
-                           registration.Ordinal == history!.Ordinal &&
-                           registration.TerminalWitness == history.TerminalWitness &&
-                           request.Id == history.Id &&
-                           request.Kind == history.Kind &&
-                           definition.Target == history.Target &&
-                           definition.DefinitionDigestV1 == history.TerminalWitness.DefinitionDigestV1 &&
-                           definition.DefinitionDigestVersion == history.TerminalWitness.DigestVersion;
-
-        return exactLineage
+        return IsExactLineage(registration, history!)
             ? EventSequenceMutationValidationResult.Valid
             : Invalid(EventSequenceMutationValidationError.InvalidTerminal, nameof(history));
     }
@@ -336,12 +304,12 @@ public static class EventSequenceMutationValidator
         }
 
         var scopeValidation = ValidateScope(token.Scope);
-        if (!scopeValidation.IsValid || !token.TargetKey.IsInitialized || token.Id is null || token.Id == EventSequenceMutationId.NotSet || token.Ordinal is null || token.Ordinal.Value <= 0 || token.DefinitionDigestV1 is null || token.StateVersion is null || token.StateVersion.Value <= 0)
+        if (!scopeValidation.IsValid || !HasValidTokenState(token))
         {
             return Invalid(EventSequenceMutationValidationError.InvalidId, nameof(token));
         }
 
-        if (!Enum.IsDefined(token.Phase) || !Enum.IsDefined(token.BlockedFrom) || !Enum.IsDefined(token.RepairState) || !IsValidComposite(token.Phase, token.BlockedFrom, token.RepairState))
+        if (!AreDefined(token.Phase, token.BlockedFrom, token.RepairState) || !IsValidComposite(token.Phase, token.BlockedFrom, token.RepairState))
         {
             return Invalid(EventSequenceMutationValidationError.InvalidComposite, nameof(token.Phase));
         }
@@ -377,10 +345,7 @@ public static class EventSequenceMutationValidator
     /// <returns>The validation result.</returns>
     public static EventSequenceMutationValidationResult ValidateTarget(EventSequenceMutationTarget? target)
     {
-        if (target is not { Start: { } start, EndExclusive: { } endExclusive, ExpectedCount: { } expectedCount } ||
-            !start.IsActualValue || !endExclusive.IsActualValue || expectedCount == Concepts.Events.EventCount.NotSet ||
-            endExclusive.Value < start.Value || expectedCount.Value > ulong.MaxValue - start.Value ||
-            start.Value + expectedCount.Value != endExclusive.Value)
+        if (!IsConsistentTarget(target))
         {
             return Invalid(EventSequenceMutationValidationError.InvalidTarget, nameof(target));
         }
@@ -411,15 +376,12 @@ public static class EventSequenceMutationValidator
     /// <returns>The validation result.</returns>
     public static EventSequenceMutationValidationResult ValidateScope(EventSequenceKey? scope)
     {
-        if (scope is null || scope.EventSequenceId is null || scope.EventStore is null || scope.Namespace is null ||
-            scope.EventSequenceId == EventSequenceId.Unspecified || scope.EventStore.Value is null || scope.EventStore == Concepts.EventStoreName.NotSet ||
-            scope.Namespace.Value is null || scope.Namespace == Concepts.EventStoreNamespaceName.NotSet ||
-            !IsStrictText(scope.EventStore.Value) || !IsStrictText(scope.Namespace.Value))
+        if (!HasScopeParts(scope) || !HasValidScopeValues(scope!))
         {
             return Invalid(EventSequenceMutationValidationError.InvalidScope, nameof(scope));
         }
 
-        var identity = EventSequenceMutationIdentity.TryCreate(scope.EventSequenceId.Value);
+        var identity = EventSequenceMutationIdentity.TryCreate(scope!.EventSequenceId.Value);
         return identity.IsSuccess
             ? EventSequenceMutationValidationResult.Valid
             : Invalid(EventSequenceMutationValidationError.InvalidScope, nameof(scope.EventSequenceId));
@@ -447,6 +409,105 @@ public static class EventSequenceMutationValidator
             ? EventSequenceMutationValidationResult.Valid
             : Invalid(EventSequenceMutationValidationError.InvalidIdentity, field);
     }
+
+    static EventSequenceMutationValidationResult ValidateReceiptDigest(EventSequenceKey scope, EventSequenceMutationHistoryEntry history, EventSequenceMutationTerminalWitness witness)
+    {
+        var expected = EventSequenceMutationDigestCalculator.CalculateReceiptDigest(
+            scope,
+            history,
+            witness.FinalStateVersion,
+            witness.DefinitionDigestV1,
+            witness.DigestVersion);
+
+        return expected == witness.ReceiptDigestV1
+            ? EventSequenceMutationValidationResult.Valid
+            : Invalid(EventSequenceMutationValidationError.InvalidDigest, nameof(history.TerminalWitness.ReceiptDigestV1));
+    }
+
+    static bool IsUnsetId(EventSequenceMutationId? id) => id is null || id == EventSequenceMutationId.NotSet;
+
+    static bool IsKnownKind(EventSequenceMutationKind kind) => Enum.IsDefined(kind) && kind != EventSequenceMutationKind.Unknown;
+
+    static bool AreDefined(EventSequenceMutationPhase phase, EventSequenceMutationPhase blockedFrom, EventSequenceMutationRepairState repairState) =>
+        Enum.IsDefined(phase) && Enum.IsDefined(blockedFrom) && Enum.IsDefined(repairState);
+
+    static bool IsValidCommand(EventSequenceMutationCommandEnvelope? command) =>
+        command is { Payload: not null } &&
+        IsStrictText(command.Payload) &&
+        command.Hash is { } hash &&
+        !string.IsNullOrEmpty(hash.Value) &&
+        IsStrictText(hash.Value);
+
+    static bool HasValidTokenState(EventSequenceMutationStateToken token) =>
+        token.TargetKey.IsInitialized &&
+        !IsUnsetId(token.Id) &&
+        token.Ordinal is { Value: > 0 } &&
+        token.DefinitionDigestV1 is not null &&
+        token.StateVersion is { Value: > 0 };
+
+    static bool IsLifecycleConsistent(EventSequenceMutationRegistration registration)
+    {
+        var positiveOrdinal = registration.Ordinal is { Value: > 0 };
+        return registration.Lifecycle switch
+        {
+            EventSequenceMutationRegistryLifecycle.Claimed => registration.Ordinal is null && registration.TerminalWitness is null,
+            EventSequenceMutationRegistryLifecycle.Bound => positiveOrdinal && registration.TerminalWitness is null,
+            EventSequenceMutationRegistryLifecycle.Archived => positiveOrdinal && IsValidWitness(registration.TerminalWitness, registration.Definition.DefinitionDigestV1),
+            _ => false
+        };
+    }
+
+    static bool TryGetTerminalWitness(EventSequenceMutationHistoryEntry history, [NotNullWhen(true)] out EventSequenceMutationTerminalWitness? witness)
+    {
+        witness = history.TerminalWitness;
+        return history.TerminalPhase == EventSequenceMutationPhase.SourceCommitted &&
+               EventSequenceMutationArchiveTime.IsNormalized(history.ArchivedAt) &&
+               history.RepairState is EventSequenceMutationRepairState.NotRequired or EventSequenceMutationRepairState.Accepted or EventSequenceMutationRepairState.Unknown &&
+               witness is not null &&
+               IsValidWitness(witness, witness.DefinitionDigestV1);
+    }
+
+    static bool IsExactLineage(EventSequenceMutationRegistration registration, EventSequenceMutationHistoryEntry history)
+    {
+        var definition = registration.Definition;
+        var request = definition.Request;
+        return ValidateDeterministicId(request).IsValid &&
+               registration.Ordinal == history.Ordinal &&
+               registration.TerminalWitness == history.TerminalWitness &&
+               request.Id == history.Id &&
+               request.Kind == history.Kind &&
+               definition.Target == history.Target &&
+               definition.DefinitionDigestV1 == history.TerminalWitness.DefinitionDigestV1 &&
+               definition.DefinitionDigestVersion == history.TerminalWitness.DigestVersion;
+    }
+
+    static bool IsConsistentTarget(EventSequenceMutationTarget? target) =>
+        target is { Start: { } start, EndExclusive: { } endExclusive, ExpectedCount: { } expectedCount } &&
+        start.IsActualValue &&
+        endExclusive.IsActualValue &&
+        expectedCount != Concepts.Events.EventCount.NotSet &&
+        IsConsistentRange(start.Value, endExclusive.Value, expectedCount.Value);
+
+    static bool IsConsistentRange(ulong start, ulong endExclusive, ulong expectedCount) =>
+        endExclusive >= start &&
+        expectedCount <= ulong.MaxValue - start &&
+        start + expectedCount == endExclusive;
+
+    static bool HasScopeParts(EventSequenceKey? scope) =>
+        scope is { EventSequenceId: not null, EventStore: not null, Namespace: not null };
+
+    static bool HasValidScopeValues(EventSequenceKey scope) =>
+        !HasUnsetScopeValues(scope) && HasStrictScopeText(scope);
+
+    static bool HasUnsetScopeValues(EventSequenceKey scope) =>
+        scope.EventSequenceId == EventSequenceId.Unspecified ||
+        scope.EventStore.Value is null ||
+        scope.EventStore == Concepts.EventStoreName.NotSet ||
+        scope.Namespace.Value is null ||
+        scope.Namespace == Concepts.EventStoreNamespaceName.NotSet;
+
+    static bool HasStrictScopeText(EventSequenceKey scope) =>
+        IsStrictText(scope.EventStore.Value) && IsStrictText(scope.Namespace.Value);
 
     static bool IsValidWitness(EventSequenceMutationTerminalWitness? witness, EventSequenceMutationDefinitionDigestV1? expectedDefinitionDigest) =>
         witness is

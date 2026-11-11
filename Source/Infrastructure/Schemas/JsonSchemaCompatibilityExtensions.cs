@@ -14,9 +14,9 @@ public static class JsonSchemaCompatibilityExtensions
     const string EnumerationKey = "enum";
     const string EnumerationNamesKey = "x-enumNames";
     const string FormatKey = "format";
-    const string TitleKey = "title";
     const string DetailsKey = "details";
     static readonly string[] _protectionKeys = ["compliance", "security"];
+    static readonly string[] _annotationKeywords = ["title", "description", "deprecated", "examples", "$comment"];
 
     /// <summary>
     /// Determines whether a generated schema still describes the stored data.
@@ -25,8 +25,10 @@ public static class JsonSchemaCompatibilityExtensions
     /// <param name="generated">The incoming schema.</param>
     /// <returns>Whether the schemas are compatible.</returns>
     /// <remarks>
-    /// Titles, the free-text details of protection metadata, nullable format markers, growing or renamed enumerations and default-only property refinements
-    /// are tolerated. Protection metadata may be added, but existing metadata may not be removed or changed.
+    /// Annotation-only keywords (title, description, deprecated, examples, $comment), the free-text details of protection metadata,
+    /// nullable format markers, growing or renamed enumerations and default-only property refinements are tolerated.
+    /// Annotations are ignored only at schema declarations, never in payload data or property names.
+    /// Protection metadata may be added, but existing metadata may not be removed or changed.
     /// Other changes require a new generation. Default-only refinements work in both directions for rolling upgrades.
     /// </remarks>
     public static bool IsCompatibleWith(this JsonSchema stored, JsonSchema generated)
@@ -35,8 +37,8 @@ public static class JsonSchemaCompatibilityExtensions
         var generatedNode = JsonNode.Parse(stored.MorePrecise(generated).ToJson());
         StripNullableFormatMarkers(storedNode);
         StripNullableFormatMarkers(generatedNode);
-        StripTitles(storedNode);
-        StripTitles(generatedNode);
+        StripAnnotations(storedNode);
+        StripAnnotations(generatedNode);
         StripProtectionDetails(storedNode);
         StripProtectionDetails(generatedNode);
         return DefaultOnlyPropertyRefinement.EraseCompatibleDifferences(storedNode, generatedNode) &&
@@ -45,19 +47,29 @@ public static class JsonSchemaCompatibilityExtensions
     }
 
     /// <summary>
-    /// Compares schemas without treating CLR titles as a stored schema change.
+    /// Compares schemas without treating annotation-only keywords as a stored schema change.
     /// </summary>
     /// <param name="stored">The stored schema JSON.</param>
     /// <param name="incoming">The incoming schema JSON.</param>
-    /// <returns>Whether the schemas differ only by titles.</returns>
-    public static bool EqualsIgnoringTitles(string stored, string incoming)
+    /// <returns>Whether the schemas differ only by annotations.</returns>
+    /// <remarks>Ignores title, description, deprecated, examples, and $comment at schema declarations, never in payload data or property names.</remarks>
+    public static bool EqualsIgnoringAnnotations(string stored, string incoming)
     {
         var storedNode = JsonNode.Parse(stored);
         var incomingNode = JsonNode.Parse(incoming);
-        StripTitles(storedNode);
-        StripTitles(incomingNode);
+        StripAnnotations(storedNode);
+        StripAnnotations(incomingNode);
         return JsonNode.DeepEquals(storedNode, incomingNode);
     }
+
+    /// <summary>
+    /// Compares schemas without treating annotation-only keywords as a stored schema change.
+    /// </summary>
+    /// <param name="stored">The stored schema JSON.</param>
+    /// <param name="incoming">The incoming schema JSON.</param>
+    /// <returns>Whether the schemas differ only by annotations.</returns>
+    [Obsolete("Use EqualsIgnoringAnnotations instead.")]
+    public static bool EqualsIgnoringTitles(string stored, string incoming) => EqualsIgnoringAnnotations(stored, incoming);
 
     /// <summary>
     /// Retains typed defaulted properties when a legacy client submits their default-only representation.
@@ -109,10 +121,23 @@ public static class JsonSchemaCompatibilityExtensions
         DefaultOnlyPropertyRefinement.AddedMetadataPaths(JsonNode.Parse(stored.ToJson()), JsonNode.Parse(generated.ToJson()));
 
     /// <summary>
-    /// Strips titles from schema declarations, without visiting arbitrary default payloads or property maps.
+    /// Determines whether a keyword is an annotation rather than a structural declaration.
+    /// </summary>
+    /// <param name="keyword">The schema keyword.</param>
+    /// <returns>Whether the keyword is annotation-only.</returns>
+    internal static bool IsAnnotationKeyword(string keyword) => _annotationKeywords.Contains(keyword);
+
+    /// <summary>
+    /// Strips annotation-only keywords from schema declarations, without visiting arbitrary default payloads or property maps.
     /// </summary>
     /// <param name="node">The schema node.</param>
-    internal static void StripTitles(JsonNode? node) => DefaultOnlyPropertyRefinement.Normalize(node, schema => schema.Remove(TitleKey));
+    internal static void StripAnnotations(JsonNode? node) => DefaultOnlyPropertyRefinement.Normalize(node, schema =>
+    {
+        foreach (var keyword in _annotationKeywords)
+        {
+            schema.Remove(keyword);
+        }
+    });
 
     /// <summary>
     /// Strips the free-text details from compliance and security metadata; the metadata type and scope remain.

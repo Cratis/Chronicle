@@ -360,7 +360,7 @@ public sealed class EventSequenceMutationRegistry(
         {
             EventSequenceMutationTransitionOutcome.Conflict => EventSequenceMutationRegistryTransitionResult.StateConflict(),
             EventSequenceMutationTransitionOutcome.AlreadyApplied => EventSequenceMutationRegistryTransitionResult.AlreadyApplied(result.Mutation!, result.Token!),
-            EventSequenceMutationTransitionOutcome.Applied => await WriteTransition(db, key, current, result, cancellationToken),
+            EventSequenceMutationTransitionOutcome.Applied => await WriteTransition(db, key, new ActiveTransition(current, result), cancellationToken),
             _ => EventSequenceMutationRegistryTransitionResult.Corrupt()
         };
     }
@@ -368,10 +368,11 @@ public sealed class EventSequenceMutationRegistry(
     async Task<EventSequenceMutationRegistryTransitionResult> WriteTransition(
         NamespaceDbContext db,
         EventSequenceId key,
-        EventSequenceMutation current,
-        EventSequenceMutationTransitionResult result,
+        ActiveTransition transition,
         CancellationToken cancellationToken)
     {
+        var current = transition.Current;
+        var result = transition.Result;
         var successor = result.Mutation!;
         var affected = await db.EventSequenceMutationHeads
             .Where(h => h.EventSequenceId == key && h.ActiveMutationId == current.Id &&
@@ -421,7 +422,7 @@ public sealed class EventSequenceMutationRegistry(
             .FirstOrDefaultAsync(h => h.MutationId == token.Id, cancellationToken);
         if (archived is not null)
         {
-            return await RecoverArchive(db, mutationScope, token, archived, cancellationToken);
+            return await RecoverArchive(new ArchiveContext(db, mutationScope, key, token), archived, cancellationToken);
         }
 
         if (row is null || row.ActiveMutationId != token.Id)
@@ -450,20 +451,18 @@ public sealed class EventSequenceMutationRegistry(
         {
             EventSequenceMutationArchiveOutcome.Conflict => EventSequenceMutationRegistryArchiveResult.StateConflict(),
             EventSequenceMutationArchiveOutcome.Prepared when prepared.History is not null =>
-                await CommitArchive(db, mutationScope, key, token, current, prepared.History, cancellationToken),
+                await CommitArchive(new ArchiveContext(db, mutationScope, key, token), current, prepared.History, cancellationToken),
             _ => EventSequenceMutationRegistryArchiveResult.Corrupt()
         };
     }
 
     async Task<EventSequenceMutationRegistryArchiveResult> CommitArchive(
-        NamespaceDbContext db,
-        EventSequenceKey scope,
-        EventSequenceId key,
-        EventSequenceMutationStateToken token,
+        ArchiveContext context,
         EventSequenceMutation preArchive,
         Chronicle.Storage.EventSequences.Mutations.EventSequenceMutationHistoryEntry history,
         CancellationToken cancellationToken)
     {
+        var (db, scope, key, _) = context;
         var registration = new EventSequenceMutationRegistration(
             preArchive.Definition,
             EventSequenceMutationRegistryLifecycle.Archived,
@@ -497,7 +496,7 @@ public sealed class EventSequenceMutationRegistry(
                 }
 
                 // The stored receipt is authoritative (its archive time differs from ours); verify it against the token.
-                return await RecoverArchive(db, scope, token, existing, cancellationToken);
+                return await RecoverArchive(context, existing, cancellationToken);
             }
 
             if (await ReleaseArchivedHead(db, key, history, cancellationToken) != 1)
@@ -513,12 +512,11 @@ public sealed class EventSequenceMutationRegistry(
     }
 
     async Task<EventSequenceMutationRegistryArchiveResult> RecoverArchive(
-        NamespaceDbContext db,
-        EventSequenceKey scope,
-        EventSequenceMutationStateToken token,
+        ArchiveContext context,
         EventSequenceMutationHistoryEntry row,
         CancellationToken cancellationToken)
     {
+        var (db, scope, _, token) = context;
         var history = EventSequenceMutationRowConversion.ToStorageHistory(row);
         var result = EventSequenceMutationRegistryArchiveResult.FromReceipt(scope, token, history);
         if (result.IsSuccess)
@@ -650,4 +648,8 @@ public sealed class EventSequenceMutationRegistry(
     }
 
     EventSequenceKey Scope(EventSequenceMutationIdentity target) => new(target.Display, eventStore, @namespace);
+
+    sealed record ActiveTransition(EventSequenceMutation Current, EventSequenceMutationTransitionResult Result);
+
+    sealed record ArchiveContext(NamespaceDbContext Db, EventSequenceKey Scope, EventSequenceId Key, EventSequenceMutationStateToken Token);
 }
