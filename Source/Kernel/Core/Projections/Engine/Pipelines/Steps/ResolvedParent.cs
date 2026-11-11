@@ -11,4 +11,4 @@ namespace Cratis.Chronicle.Projections.Engine.Pipelines.Steps;
 /// <param name="ParentIndexers">The <see cref="ArrayIndexer"/> chain from the root to the parent.</param>
 /// <param name="RetriedKey">The <see cref="ResolvedKey"/> from retrying a deferred key, if the parent was found that way.</param>
 /// <param name="ChildKey">The converted key of the child.</param>
-internal sealed record ResolvedParent(List<ArrayIndexer> ParentIndexers, ResolvedKey? RetriedKey, object? ChildKey);
+internal readonly record struct ResolvedParent(List<ArrayIndexer> ParentIndexers, ResolvedKey? RetriedKey, object? ChildKey);

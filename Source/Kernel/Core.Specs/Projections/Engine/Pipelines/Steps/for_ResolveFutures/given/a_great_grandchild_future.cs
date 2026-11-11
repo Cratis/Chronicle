@@ -20,18 +20,18 @@ public class a_great_grandchild_future : a_resolve_futures_step
     {
         var child = Substitute.For<IProjection>();
         child.Parent.Returns(_projection);
-        child.ChildrenPropertyPath.Returns(new PropertyPath("children"));
+        child.ChildrenPropertyPath.Returns(new PropertyPath("[children]"));
         child.IdentifiedByProperty.Returns(new PropertyPath("childId"));
 
         var grandchild = Substitute.For<IProjection>();
         grandchild.Parent.Returns(child);
-        grandchild.ChildrenPropertyPath.Returns(new PropertyPath("children.grandchildren"));
+        grandchild.ChildrenPropertyPath.Returns(new PropertyPath("[children].[grandchildren]"));
         grandchild.IdentifiedByProperty.Returns(new PropertyPath("grandchildId"));
 
         var greatGrandchild = Substitute.For<IProjection>();
         greatGrandchild.Parent.Returns(grandchild);
         greatGrandchild.Path.Returns(new ProjectionPath("children.grandchildren.items"));
-        greatGrandchild.ChildrenPropertyPath.Returns(new PropertyPath("children.grandchildren.items"));
+        greatGrandchild.ChildrenPropertyPath.Returns(new PropertyPath("[children].[grandchildren].[items]"));
         greatGrandchild.ChildProjections.Returns([]);
         greatGrandchild.OnNext(Arg.Do<ProjectionEventContext>(context => _resolvedContext = context));
 
@@ -43,8 +43,8 @@ public class a_great_grandchild_future : a_resolve_futures_step
             ProjectionFutureId.New(),
             _projection.Identifier,
             _event,
-            new PropertyPath("children.grandchildren"),
-            new PropertyPath("children.grandchildren.items"),
+            new PropertyPath("[children].[grandchildren]"),
+            new PropertyPath("[children].[grandchildren].[items]"),
             new PropertyPath("itemId"),
             new PropertyPath("grandchildId"),
             new Key("grandchild-2", ArrayIndexers.NoIndexers),

@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Properties;
-using Cratis.Reflection;
 
 namespace Cratis.Chronicle.Storage.Sql.Sinks;
 
