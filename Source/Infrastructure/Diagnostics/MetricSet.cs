@@ -13,6 +13,8 @@ namespace Cratis.Chronicle.Diagnostics;
 /// <remarks>
 /// The legacy and convention scope tags are built the first time an instrument needs them and are then shared by
 /// every instrument of the set, so a set that never creates an instrument holds only the tags it was given.
+/// Building them is not synchronized: two threads creating the set's first instruments at once may each build the
+/// tags, and one of the equal, never-changed copies wins. Recording through the created instruments is thread-safe.
 /// </remarks>
 internal sealed class MetricSet
 {
@@ -21,6 +23,7 @@ internal sealed class MetricSet
     readonly IEnumerable<KeyValuePair<string, object?>> _tags;
     MetricScopeTags? _legacyTags;
     MetricScopeTags? _conventionTags;
+    int _metricsCreated;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MetricSet"/> class.
@@ -34,6 +37,12 @@ internal sealed class MetricSet
         _names = names;
         _tags = tags ?? [];
     }
+
+    /// <summary>
+    /// Gets the number of metrics this set has created. A metric published under both names counts once.
+    /// </summary>
+    /// <remarks>Lets a scope that creates its metrics on first use show it creates each of them only once.</remarks>
+    internal int MetricsCreated => Volatile.Read(ref _metricsCreated);
 
     MetricScopeTags LegacyTags => _legacyTags ??= CreateTags(LegacyTelemetryNames.ToLegacyMetricKey);
 
@@ -91,8 +100,8 @@ internal sealed class MetricSet
         _ = bucketBoundaries;
         var histogram = _meter?.CreateHistogram<T>(name, unit, description);
 #endif
-        return new MetricInstrument<T, HistogramMetricRecorder<T>>(
-            new SingleMetricInstrument<T, HistogramMetricRecorder<T>>(new HistogramMetricRecorder<T>(histogram), ConventionTags, firstKey, string.Empty));
+        return Created(new MetricInstrument<T, HistogramMetricRecorder<T>>(
+            new SingleMetricInstrument<T, HistogramMetricRecorder<T>>(new HistogramMetricRecorder<T>(histogram), ConventionTags, firstKey, string.Empty)));
     }
 
     /// <summary>Creates the legacy-only retry counter at its original recording point.</summary>
@@ -101,8 +110,8 @@ internal sealed class MetricSet
     {
         var counter = _names is MetricNames.Convention ? null : _meter?.CreateCounter<int>(
             LegacyTelemetryNames.PartitionRetryAttempts, description: LegacyTelemetryNames.PartitionRetryAttemptsDescription);
-        return new MetricInstrument<int, CounterMetricRecorder<int>>(new SingleMetricInstrument<int, CounterMetricRecorder<int>>(
-            new CounterMetricRecorder<int>(counter), LegacyTags, string.Empty, string.Empty));
+        return Created(new MetricInstrument<int, CounterMetricRecorder<int>>(new SingleMetricInstrument<int, CounterMetricRecorder<int>>(
+            new CounterMetricRecorder<int>(counter), LegacyTags, string.Empty, string.Empty)));
     }
 
     MetricInstrument<T, TRecorder> Create<T, TRecorder>(string name, string? unit, string? description, string firstKey, string secondKey, Func<LegacyMetric, TRecorder> create)
@@ -111,13 +120,13 @@ internal sealed class MetricSet
     {
         var convention = new LegacyMetric(name, unit, description);
         var legacy = LegacyTelemetryNames.Metrics[name][0];
-        return _names switch
+        return Created(_names switch
         {
             MetricNames.Legacy => new MetricInstrument<T, TRecorder>(CreateLegacy(legacy)),
             MetricNames.Convention => new MetricInstrument<T, TRecorder>(CreateConvention(convention)),
             MetricNames.Both => new MetricInstrument<T, TRecorder>(CreateLegacy(legacy), CreateConvention(convention)),
             _ => throw new InvalidOperationException($"Unsupported metric naming mode: {_names}")
-        };
+        });
 
         SingleMetricInstrument<T, TRecorder> CreateLegacy(LegacyMetric metadata) => new(
             create(metadata),
@@ -126,6 +135,12 @@ internal sealed class MetricSet
             LegacyTelemetryNames.ToLegacyMetricKey(secondKey));
 
         SingleMetricInstrument<T, TRecorder> CreateConvention(LegacyMetric metadata) => new(create(metadata), ConventionTags, firstKey, secondKey);
+    }
+
+    TMetric Created<TMetric>(TMetric metric)
+    {
+        Interlocked.Increment(ref _metricsCreated);
+        return metric;
     }
 
     MetricScopeTags CreateTags(Func<string, string> toKey)

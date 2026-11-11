@@ -19,7 +19,6 @@ public class when_recording_a_metric_for_the_first_time : Specification
     readonly MeterListener _listener = new();
     readonly List<string> _instruments = [];
     readonly List<(string Name, int Value, string[] Tags)> _measurements = [];
-    int _instrumentsAfterFirstRecord;
 
     void Establish()
     {
@@ -38,7 +37,6 @@ public class when_recording_a_metric_for_the_first_time : Specification
     {
         var metrics = new Meter<Observer>(_meter).BeginObserverScope("observer", new("observer", "store", "namespace", "sequence"), MetricNames.Both);
         metrics.PartitionFailed();
-        _instrumentsAfterFirstRecord = _instruments.Count;
         metrics.PartitionFailed();
     }
 
@@ -49,7 +47,6 @@ public class when_recording_a_metric_for_the_first_time : Specification
     }
 
     [Fact] void should_create_only_the_recorded_instrument_under_each_name() => _instruments.Order(StringComparer.Ordinal).ShouldEqual([LegacyName, ConventionName]);
-    [Fact] void should_create_the_instruments_once() => _instruments.Count.ShouldEqual(_instrumentsAfterFirstRecord);
     [Fact] void should_record_each_measurement_under_each_name() => _measurements.Select(_ => _.Name).Order(StringComparer.Ordinal).ShouldEqual([LegacyName, LegacyName, ConventionName, ConventionName]);
     [Fact] void should_record_the_value() => _measurements.TrueForAll(_ => _.Value == 1).ShouldBeTrue();
     [Fact] void should_tag_the_legacy_measurements_with_the_legacy_scope_tags() => _measurements.Where(_ => _.Name == LegacyName).All(_ => _.Tags.SequenceEqual(_legacyTags)).ShouldBeTrue();
