@@ -40,9 +40,9 @@ public class EventContentBsonBenchmark
     [GlobalSetup]
     public void Setup()
     {
-        var type = typeof(ClusterStorage).Assembly.GetType("Cratis.Chronicle.Storage.MongoDB.EventSequences.EventContentBson")!;
-        _fromJson = type.GetMethod("FromJson", BindingFlags.Static | BindingFlags.Public)!.CreateDelegate<Func<string, JsonSchema?, BsonDocument>>();
-        _toJson = type.GetMethod("ToJson", BindingFlags.Static | BindingFlags.Public)!.CreateDelegate<Func<BsonDocument, string>>();
+        var type = typeof(ClusterStorage).Assembly.GetType("Cratis.Chronicle.Storage.MongoDB.EventContentBson", throwOnError: true)!;
+        _fromJson = type.GetMethod("FromJson", BindingFlags.Static | BindingFlags.NonPublic)!.CreateDelegate<Func<string, JsonSchema?, BsonDocument>>();
+        _toJson = type.GetMethod("ToJson", BindingFlags.Static | BindingFlags.NonPublic)!.CreateDelegate<Func<BsonDocument, string>>();
         _schema = Schema switch
         {
             "NoSchema" => null,
