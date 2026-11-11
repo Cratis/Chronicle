@@ -25,7 +25,7 @@ on:
         value: ${{ jobs.grain-compatibility.outputs.skipped }}
 
 env:
-  DOTNET_VERSION: "10.0.x"
+  DOTNET_VERSION: "11.0.x"
   CONTRACTS_PATH: Source/Kernel/Core/OrleansContracts.txt
   PAYLOAD_CONTRACTS_PATH: Source/Kernel/Core/GrainPayloadContracts.txt
 

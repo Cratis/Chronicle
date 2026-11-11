@@ -15,6 +15,9 @@ internal static partial class ChronicleConnectionLogMessages
     [LoggerMessage(LogLevel.Information, "Connecting to Chronicle ({RedactedConnectionString})")]
     internal static partial void Connecting(this ILogger<ChronicleConnection> logger, string redactedConnectionString);
 
+    [LoggerMessage(LogLevel.Information, "Configuring Chronicle connection with connection string: {RedactedConnectionString}")]
+    internal static partial void Configuring(this ILogger<ChronicleConnection> logger, string redactedConnectionString);
+
     [LoggerMessage(LogLevel.Information, "Connected to Chronicle")]
     internal static partial void Connected(this ILogger<ChronicleConnection> logger);
 

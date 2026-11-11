@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
-using Cratis.Types;
+using Cratis.Chronicle.Json;
 
 namespace Cratis.Chronicle.Dynamic;
 
@@ -26,7 +26,7 @@ public static class KeyValueEquality
         {
             try
             {
-                if (storedKey.Equals(TypeConversion.Convert(storedKey.GetType(), key))) return true;
+                if (storedKey.Equals(DecimalValues.ConvertTo(storedKey.GetType(), key))) return true;
             }
             catch (Exception exception) when (exception is InvalidCastException or FormatException or OverflowException or ArgumentException)
             {

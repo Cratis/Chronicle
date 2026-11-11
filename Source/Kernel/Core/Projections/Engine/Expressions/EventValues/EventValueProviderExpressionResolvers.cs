@@ -5,6 +5,7 @@ using System.Collections;
 using System.Dynamic;
 using System.Globalization;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
 using Cratis.Reflection;
@@ -173,7 +174,7 @@ public partial class EventValueProviderExpressionResolvers(ITypeFormats typeForm
         var targetType = schemaProperty.GetTargetTypeForJsonSchemaProperty(typeFormats);
         if (targetType is not null)
         {
-            return TypeConversion.Convert(targetType, input);
+            return DecimalValues.ConvertTo(targetType, input);
         }
 
         // Dictionaries are values to preserve, not sequences of key/value pairs to project as arrays.

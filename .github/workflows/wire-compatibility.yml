@@ -27,7 +27,7 @@ on:
         value: ${{ jobs.wire-compatibility.outputs.skipped }}
 
 env:
-  DOTNET_VERSION: "10.0.x"
+  DOTNET_VERSION: "11.0.x"
   PROTOBUF_DIRECTORY: Source/Kernel/Protobuf
 
   # The oldest release this gate measures from, and the major it applies to. Empty means no floor: every released

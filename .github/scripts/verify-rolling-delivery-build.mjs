@@ -13,9 +13,11 @@ const clientProject = 'Source/Clients/DotNET/DotNET.csproj';
 const root = path.join(os.tmpdir(), 'chronicle-guard-check', 'rolling-delivery-diagnostics');
 const enabled = ['-p:EnableRollingDeliveryDiagnostics=true', `-p:ArtifactsPath=${root}`];
 const validate = 'ValidateRollingDeliveryDiagnostics';
+// The default build framework: project references resolve to it, so a parent probe must use it too.
+const framework = 'net11.0';
 
 function check(name, properties, expectedError = '', { target = validate, project = clientProject } = {}) {
-    const result = spawnSync('dotnet', ['msbuild', project, '-nologo', '-m:4', '-nodeReuse:false', '-p:TargetFramework=net10.0', '-p:TargetFrameworks=net10.0', `-t:${target}`, ...properties], {
+    const result = spawnSync('dotnet', ['msbuild', project, '-nologo', '-m:4', '-nodeReuse:false', `-p:TargetFramework=${framework}`, `-p:TargetFrameworks=${framework}`, `-t:${target}`, ...properties], {
         encoding: 'utf8', timeout: 60000, maxBuffer: 1024 * 1024
     });
     assert.ifError(result.error);
@@ -33,7 +35,7 @@ function check(name, properties, expectedError = '', { target = validate, projec
 check('normal defaults', []);
 // Packaging props must not expand this single-TFM probe back to the shipping framework list.
 const targeting = check('single-TFM packaging evaluation', ['-p:IsPackaging=true', '-getProperty:TargetFramework,TargetFrameworks']);
-assert.deepEqual(JSON.parse(targeting).Properties, { TargetFramework: 'net10.0', TargetFrameworks: 'net10.0' });
+assert.deepEqual(JSON.parse(targeting).Properties, { TargetFramework: framework, TargetFrameworks: framework });
 check('isolated candidate accepted', enabled);
 check('raw symbol denied', ['-p:DefineConstants=CHRONICLE_ROLLING_DIAGNOSTICS'], 'require EnableRollingDeliveryDiagnostics');
 check('missing isolation denied', ['-p:EnableRollingDeliveryDiagnostics=true'], 'require an absolute ArtifactsPath');

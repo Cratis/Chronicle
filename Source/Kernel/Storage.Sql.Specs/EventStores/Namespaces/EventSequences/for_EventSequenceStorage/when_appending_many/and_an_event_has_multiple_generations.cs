@@ -30,8 +30,8 @@ public class and_an_event_has_multiple_generations : given.an_event_sequence_sto
         _stored = context.Events.Single();
     }
 
-    [Fact] void should_store_the_upcast_content() => JsonDocument.Parse(_stored.Content).RootElement.GetProperty("2").GetProperty("value").GetString().ShouldEqual("migrated");
-    [Fact] void should_store_the_upcast_hash() => JsonDocument.Parse(_stored.ContentHashes).RootElement.GetProperty("2").GetString().ShouldEqual("migrated-hash");
+    [Fact] void should_store_the_upcast_content() => JsonSerializer.Deserialize<JsonElement>(_stored.Content).GetProperty("2").GetProperty("value").GetString().ShouldEqual("migrated");
+    [Fact] void should_store_the_upcast_hash() => JsonSerializer.Deserialize<JsonElement>(_stored.ContentHashes).GetProperty("2").GetString().ShouldEqual("migrated-hash");
     [Fact] void should_acknowledge_both_generations() => _acknowledged.GenerationalContent.Keys.ShouldContainOnly([1, 2]);
     [Fact] void should_acknowledge_the_appended_generations_content() => _acknowledged.Content.ShouldEqual(_original);
     [Fact] void should_acknowledge_the_appended_generations_hash() => _acknowledged.Context.Hash.ShouldEqual((EventHash)"original-hash");

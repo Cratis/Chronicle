@@ -8,6 +8,7 @@ using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.Security.for_AuthorizationDecisions.when_deciding_store_access;
 
+[PerFactSpecificationLifecycle]
 public class with_an_ordinary_store : Specification
 {
     IAdministratorPrivileges _privileges;

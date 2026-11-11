@@ -7,6 +7,7 @@ using Grpc.Core;
 
 namespace Cratis.Chronicle.Services.Compliance.for_ComplianceService;
 
+[PerFactSpecificationLifecycle]
 public class when_deciding_release : given.a_compliance_boundary
 {
     [Theory]

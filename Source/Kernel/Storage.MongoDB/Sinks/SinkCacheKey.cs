@@ -4,6 +4,7 @@
 using System.Globalization;
 using System.Numerics;
 using MongoDB.Bson;
+using Decimal128 = MongoDB.Bson.Decimal128;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 

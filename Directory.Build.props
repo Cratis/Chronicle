@@ -25,8 +25,10 @@
 
     <PropertyGroup>
         <IsPackaging Condition="'$(IsPackaging)' == ''">false</IsPackaging>
-        <TargetFramework Condition="'$(IsPackaging)' != 'true'">net10.0</TargetFramework>
-        <TargetFrameworks Condition="'$(IsPackaging)' == 'true'">net8.0;net9.0;net10.0</TargetFrameworks>
+        <!-- ChronicleTfm can be overridden through an environment variable (for example the net10 spec lane). -->
+        <ChronicleTfm Condition="'$(ChronicleTfm)' == ''">net11.0</ChronicleTfm>
+        <TargetFramework Condition="'$(IsPackaging)' != 'true'">$(ChronicleTfm)</TargetFramework>
+        <TargetFrameworks Condition="'$(IsPackaging)' == 'true'">net10.0;net11.0</TargetFrameworks>
     </PropertyGroup>
 
     <ItemGroup>
