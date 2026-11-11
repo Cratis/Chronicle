@@ -102,12 +102,12 @@ public static class CertificateLoader
 
         return (sender, certificate, chain, sslPolicyErrors) =>
         {
-            if ((sslPolicyErrors & ~SslPolicyErrors.RemoteCertificateChainErrors) != SslPolicyErrors.None || certificate is null)
+            if (HasNonChainErrors(sslPolicyErrors) || certificate is null)
             {
                 return false;
             }
 
-            if (pinnedCertificateHash is not null && certificate.GetCertHashString() == pinnedCertificateHash)
+            if (MatchesPin(certificate, pinnedCertificateHash))
             {
                 return true;
             }
@@ -129,14 +129,19 @@ public static class CertificateLoader
                 return true;
             }
 
-            if (sslPolicyErrors == SslPolicyErrors.RemoteCertificateChainErrors &&
-                pinnedCertificateHash is not null && certificate is not null)
+            if (sslPolicyErrors == SslPolicyErrors.RemoteCertificateChainErrors)
             {
-                return certificate.GetCertHashString() == pinnedCertificateHash;
+                return MatchesPin(certificate, pinnedCertificateHash);
             }
 
             return false;
         };
+
+    static bool HasNonChainErrors(SslPolicyErrors errors) =>
+        (errors & ~SslPolicyErrors.RemoteCertificateChainErrors) != SslPolicyErrors.None;
+
+    static bool MatchesPin(X509Certificate? certificate, string? pinnedCertificateHash) =>
+        pinnedCertificateHash is not null && certificate is not null && certificate.GetCertHashString() == pinnedCertificateHash;
 
     static bool ChainsToCertificateAuthority(X509Certificate certificate, X509Chain? presentedChain, X509Certificate2Collection certificateAuthorities)
     {

@@ -585,7 +585,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
 
     static List<(EventSourceId Partition, AppendedEvent[] Events)> SplitIntoPartitionRuns(IReadOnlyList<AppendedEvent> sorted)
     {
-        var runs = new List<(EventSourceId Partition, AppendedEvent[] Events)>();
+        List<(EventSourceId Partition, AppendedEvent[] Events)> runs = [];
         var index = 0;
         while (index < sorted.Count)
         {
@@ -668,7 +668,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
 
                 // Coalesce the queued backlog: drain up to MaxCoalescedBatchesPerDispatch batches and dispatch them as
                 // one unit, turning a burst of single-event appends into one Handle call per partition instead of many.
-                var coalesced = new List<AppendedEvent>();
+                List<AppendedEvent> coalesced = [];
                 var batchesDrained = 0;
                 while (batchesDrained < MaxCoalescedBatchesPerDispatch && _channel.Reader.TryRead(out var events))
                 {
