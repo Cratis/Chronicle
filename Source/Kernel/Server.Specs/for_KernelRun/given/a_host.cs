@@ -7,11 +7,16 @@ using Microsoft.Extensions.Hosting;
 namespace Cratis.Chronicle.Server.for_KernelRun.given;
 
 /// <summary>
-/// A real generic host with a short shutdown timeout, whose stop is requested as soon as it has started.
+/// A real generic host whose stop is requested as soon as it has started.
 /// </summary>
+/// <remarks>
+/// The host gets a generous shutdown timeout, so a slow build agent cannot turn a clean or failing stop into a
+/// timeout. Only a spec about overrunning the timeout passes the short <see cref="_shutdownTimeout"/>.
+/// </remarks>
 public class a_host : Specification
 {
     protected internal static readonly TimeSpan _shutdownTimeout = TimeSpan.FromMilliseconds(300);
+    protected static readonly TimeSpan _generousShutdownTimeout = TimeSpan.FromSeconds(30);
     protected CancellationTokenSource _stopRequest;
     protected IHost _host;
 
@@ -19,10 +24,10 @@ public class a_host : Specification
 
     void Destroy() => _stopRequest.Dispose();
 
-    protected void BuildHost(Action<IServiceCollection> configure)
+    protected void BuildHost(Action<IServiceCollection> configure, TimeSpan? shutdownTimeout = null)
     {
         var builder = Host.CreateEmptyApplicationBuilder(new());
-        builder.Services.Configure<HostOptions>(_ => _.ShutdownTimeout = _shutdownTimeout);
+        builder.Services.Configure<HostOptions>(_ => _.ShutdownTimeout = shutdownTimeout ?? _generousShutdownTimeout);
         configure(builder.Services);
         _host = builder.Build();
         _host.Services.GetRequiredService<IHostApplicationLifetime>().ApplicationStarted.Register(_stopRequest.Cancel);

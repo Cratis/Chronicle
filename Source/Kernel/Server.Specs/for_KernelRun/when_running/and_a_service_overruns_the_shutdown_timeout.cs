@@ -10,7 +10,7 @@ public class and_a_service_overruns_the_shutdown_timeout : given.a_host
 {
     KernelRunResult _result;
 
-    void Establish() => BuildHost(_ => _.AddSingleton<IHostedService, given.StopOverrunningService>());
+    void Establish() => BuildHost(_ => _.AddSingleton<IHostedService, given.StopOverrunningService>(), _shutdownTimeout);
 
     async Task Because() => _result = await Run();
 
