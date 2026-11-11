@@ -49,7 +49,7 @@ public partial class EventTypesStorage(EventStoreName eventStore, IDatabase data
             existingEventType.Owner == owner && existingEventType.Source == source && existingEventType.Tombstone == type.Tombstone &&
             existingEventType.Visibility == visibility && existingEventType.Origin == origin &&
             existingEventType.Schemas.TryGetValue(type.Generation, out var storedSchema) &&
-            JsonSchemaCompatibilityExtensions.EqualsIgnoringTitles(storedSchema, schema.ToJson()))
+            JsonSchemaCompatibilityExtensions.EqualsIgnoringAnnotations(storedSchema, schema.ToJson()))
         {
             return false;
         }
@@ -269,9 +269,9 @@ public partial class EventTypesStorage(EventStoreName eventStore, IDatabase data
     {
         var schemas = new Dictionary<uint, string>(stored);
 
-        // Omitted schemas and stored CLR titles survive when the structural schema is unchanged.
+        // Omitted schemas and stored annotations survive when the structural schema is unchanged.
         foreach (var (generation, schema) in incoming.Where(_ => !stored.TryGetValue(_.Key, out var previous) ||
-            !JsonSchemaCompatibilityExtensions.EqualsIgnoringTitles(previous, _.Value)))
+            !JsonSchemaCompatibilityExtensions.EqualsIgnoringAnnotations(previous, _.Value)))
         {
             schemas[generation] = schema;
         }

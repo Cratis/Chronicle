@@ -172,10 +172,12 @@ internal static class DefaultOnlyPropertyRefinement
     static string Escape(string value) => value.Replace("~", "~0", StringComparison.Ordinal).Replace("/", "~1", StringComparison.Ordinal);
 
     static bool IsDefaultOnly(JsonObject node) => node.ContainsKey("default") &&
-        node.All(entry => entry.Key == "default" || entry.Key == "title" || _metadataKeys.Contains(entry.Key));
+        node.Where(entry => !JsonSchemaCompatibilityExtensions.IsAnnotationKeyword(entry.Key))
+            .All(entry => entry.Key == "default" || _metadataKeys.Contains(entry.Key));
 
     static bool IsRefinement(JsonObject untyped, JsonObject typed) => IsDefaultOnly(untyped) &&
         typed.ContainsKey("default") && typed.ContainsKey("type") &&
         JsonNode.DeepEquals(untyped["default"], typed["default"]) &&
-        typed.All(entry => _refinementKeys.Contains(entry.Key));
+        typed.Where(entry => !JsonSchemaCompatibilityExtensions.IsAnnotationKeyword(entry.Key))
+            .All(entry => _refinementKeys.Contains(entry.Key));
 }
