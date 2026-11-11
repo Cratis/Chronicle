@@ -562,108 +562,6 @@ public partial class Observer(
         await TransitionTo<Disconnected>();
     }
 
-    /// <inheritdoc/>
-    public async Task UnsubscribeIfMatchesClient(ConnectionId connectionId)
-    {
-        // Single-threaded grain — the check and the subscription change form an atomic action.
-        // If a new client has already replaced the subscription, the old client's
-        // disconnect cleanup must not tear down the new client's subscription.
-        if (_subscription.IsSubscribed && _subscription.Targets.Count > 0)
-        {
-            var remaining = _subscription.Targets
-                .Where(target => target.ConnectedClient!.ConnectionId != connectionId)
-                .ToArray();
-            if (remaining.Length == _subscription.Targets.Count)
-            {
-                LogClientDisconnected(connectionId, "not a current target, dropping any superseded registration");
-                DropSupersededRegistration(connectionId);
-                return;
-            }
-
-            if (remaining.Length > 0)
-            {
-                LogClientDisconnected(connectionId, "removing it from the fan-out targets");
-                _subscription = _subscription with
-                {
-                    SiloAddress = remaining[0].SiloAddress,
-                    Arguments = remaining[0].ConnectedClient,
-                    Targets = remaining
-                };
-                return;
-            }
-
-            LogClientDisconnected(connectionId, "last target, promoting a superseded registration or unsubscribing");
-            await PromoteSupersededRegistrationOrUnsubscribe();
-            return;
-        }
-
-        if (_subscription.IsSubscribed &&
-            _subscription.Arguments is ConnectedClient connectedClient &&
-            connectedClient.ConnectionId != connectionId)
-        {
-            LogClientDisconnected(connectionId, "not the subscribed client, dropping any superseded registration");
-            DropSupersededRegistration(connectionId);
-            return;
-        }
-
-        if (_subscription.IsSubscribed && _subscription.Arguments is not ConnectedClient)
-        {
-            // Served by something that is not a connected client instance (a webhook, for example), so a connection
-            // identifier says nothing about it. Only the registration that connection superseded can go.
-            LogClientDisconnected(connectionId, "not served by a connected client, dropping any superseded registration");
-            DropSupersededRegistration(connectionId);
-            return;
-        }
-
-        LogClientDisconnected(connectionId, "unsubscribing");
-        await Unsubscribe();
-    }
-
-    /// <inheritdoc/>
-    public async Task ReceiveReminder(string reminderName, TickStatus status)
-    {
-        if (!KeyOwnsDefinition || !_observerExists)
-        {
-            await UnregisterReminderNamed(reminderName);
-            return;
-        }
-
-        if (reminderName == WebhookProbeReminderName)
-        {
-            await ReceiveWebhookProbeReminder();
-            return;
-        }
-        if (reminderName == AlertReminderName)
-        {
-            await ReconcileAlertsIfNeeded();
-            await ReleaseAlertReminderWhenSettled();
-            return;
-        }
-
-        if (!Failures.Partitions.Any(_ => IsRetryReminderFor(_, reminderName) && _.Deferral is not null))
-        {
-            await UnregisterReminderNamed(reminderName);
-        }
-
-        if (CannotRecoverFromReminder())
-        {
-            return;
-        }
-
-        // Accept raw names registered by main as well as bounded episode-specific retry names.
-        foreach (var partition in Failures.Partitions.Where(partition => IsRetryReminderFor(partition, reminderName)))
-        {
-            await StartRecoverJobForFailedPartition(partition);
-        }
-    }
-
-    /// <summary>
-    /// Gets a retry reminder name in a namespace disjoint from the alert reminder, regardless of the partition key.
-    /// </summary>
-    /// <param name="failureId">The failure episode to retry.</param>
-    /// <returns>The bounded retry reminder name.</returns>
-    internal static string PartitionReminderName(FailedPartitionId failureId) => $"cp:{failureId.Value:N}";
-
     /// <summary>
     /// Set subscription explicitly, without subscribing. This method is internal and visible to the test suite and only meant to be used with testing.
     /// </summary>
@@ -864,10 +762,6 @@ public partial class Observer(
             _stateWriteLock.Release();
         }
     }
-
-    static bool IsRetryReminderFor(FailedPartition partition, string reminderName) =>
-        !partition.IsQuarantined &&
-        (PartitionReminderName(partition.Id) == reminderName || partition.Partition.ToString() == reminderName);
 
     static void ThrowIfPinsMultipleGenerations(IEnumerable<EventType> eventTypes)
     {
