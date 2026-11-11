@@ -454,7 +454,7 @@ public partial class HandleEventsForPartition(
         {
             logger.FailedPerforming(e, nameof(HandleEventsForPartition));
             var failedAt = lastSuccessfullyHandledEventSequenceNumber.IsActualValue ? lastSuccessfullyHandledEventSequenceNumber.Next() : currentState.StartEventSequenceNumber;
-            if (!await TryReportPartitionFailed(failedAt, e))
+            if (!await TryReportPartitionFailed(currentState, failedAt, e))
             {
                 return UnreportedFailure(currentState.Partition, failedAt, lastSuccessfullyHandledEventSequenceNumber, e);
             }
@@ -513,11 +513,11 @@ public partial class HandleEventsForPartition(
             ? _observer.PartitionFailed(_eventSourceId, failedAt, messages, stackTrace, kind, state.EpisodeId, state.DeferralId, new PartitionFailureContext(policy, null, replayEpoch))
             : _observer.PartitionFailed(_eventSourceId, failedAt, messages, stackTrace, kind, state.EpisodeId, state.DeferralId, policy);
 
-    async Task<bool> TryReportPartitionFailed(EventSequenceNumber failedAt, Exception error)
+    async Task<bool> TryReportPartitionFailed(HandleEventsForPartitionState state, EventSequenceNumber failedAt, Exception error)
     {
         try
         {
-            await ReportPartitionFailed(State, failedAt, error.GetAllMessages(), error.StackTrace ?? string.Empty, error.ToFailureKind(), WebhookDeliveryFailurePolicy.Retry);
+            await ReportPartitionFailed(state, failedAt, error.GetAllMessages(), error.StackTrace ?? string.Empty, error.ToFailureKind(), WebhookDeliveryFailurePolicy.Retry);
             return true;
         }
         catch (Exception reportError)
