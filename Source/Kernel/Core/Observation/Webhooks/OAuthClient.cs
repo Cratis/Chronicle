@@ -46,16 +46,7 @@ public class OAuthClient(IHttpClientFactory httpClientFactory, IWebhookTargetPol
         var authority = authorization.Authority.Value.TrimEnd('/');
         await Validate($"{authority}/.well-known/openid-configuration", eventStore, cancellationToken);
         var discovery = _endpoints.GetOrAdd(authority, static (key, state) => new(() => state.Client.Discover(key, state.EventStore)), (Client: this, EventStore: eventStore));
-        string? endpoint;
-        try
-        {
-            endpoint = await discovery.Value.WaitAsync(cancellationToken);
-        }
-        catch when (discovery.IsValueCreated && (discovery.Value.IsFaulted || discovery.Value.IsCanceled))
-        {
-            _endpoints.TryRemove(new(authority, discovery));
-            throw;
-        }
+        var endpoint = await AwaitDiscovery(_endpoints, authority, discovery, cancellationToken);
 
         if (string.IsNullOrWhiteSpace(endpoint))
         {
@@ -68,7 +59,7 @@ public class OAuthClient(IHttpClientFactory httpClientFactory, IWebhookTargetPol
         while (true)
         {
             var request = _tokens.GetOrAdd(key, static (_, state) => new(() => state.Client.Fetch(state.Endpoint, state.Authorization, state.EventStore)), (Client: this, Endpoint: endpoint, Authorization: authorization, EventStore: eventStore));
-            if (request.IsValueCreated && request.Value.IsCompletedSuccessfully && _clock.GetUtcNow() >= (await request.Value).ExpiresAt)
+            if (HasCompleted(request) && _clock.GetUtcNow() >= (await request.Value).ExpiresAt)
             {
                 _tokens.TryRemove(new(key, request));
                 continue;
@@ -84,7 +75,7 @@ public class OAuthClient(IHttpClientFactory httpClientFactory, IWebhookTargetPol
                 }
                 return token;
             }
-            catch when (task.IsFaulted || task.IsCanceled)
+            catch when (HasFailed(task))
             {
                 _tokens.TryRemove(new(key, request));
                 throw;
@@ -96,13 +87,41 @@ public class OAuthClient(IHttpClientFactory httpClientFactory, IWebhookTargetPol
     public void Invalidate(OAuthAuthorization authorization, AccessTokenInfo token)
     {
         var authority = authorization.Authority.Value.TrimEnd('/');
-        if (_endpoints.TryGetValue(authority, out var discovery) && discovery.IsValueCreated && discovery.Value.IsCompletedSuccessfully && discovery.Value.Result is { } endpoint)
+        if (_endpoints.TryGetValue(authority, out var discovery) && HasCompleted(discovery) && discovery.Value.Result is { } endpoint)
         {
             var key = Key(endpoint, authorization);
-            if (_tokens.TryGetValue(key, out var request) && request.IsValueCreated && request.Value.IsCompletedSuccessfully && ReferenceEquals(request.Value.Result, token))
+            if (_tokens.TryGetValue(key, out var request) && IsCurrentToken(request, token))
             {
                 _tokens.TryRemove(new(key, request));
             }
+        }
+    }
+
+    static bool HasCompleted<T>(Lazy<Task<T>> request) =>
+        request.IsValueCreated && request.Value.IsCompletedSuccessfully;
+
+    static bool HasFailed(Task task) => task.IsFaulted || task.IsCanceled;
+
+    static bool HasFailed<T>(Lazy<Task<T>> request) =>
+        request.IsValueCreated && HasFailed(request.Value);
+
+    static bool IsCurrentToken(Lazy<Task<AccessTokenInfo>> request, AccessTokenInfo token) =>
+        HasCompleted(request) && ReferenceEquals(request.Value.Result, token);
+
+    static async Task<string?> AwaitDiscovery(
+        ConcurrentDictionary<string, Lazy<Task<string?>>> endpoints,
+        string authority,
+        Lazy<Task<string?>> discovery,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await discovery.Value.WaitAsync(cancellationToken);
+        }
+        catch when (HasFailed(discovery))
+        {
+            endpoints.TryRemove(new(authority, discovery));
+            throw;
         }
     }
 
