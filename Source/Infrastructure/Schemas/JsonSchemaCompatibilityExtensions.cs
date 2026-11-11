@@ -63,6 +63,15 @@ public static class JsonSchemaCompatibilityExtensions
     }
 
     /// <summary>
+    /// Compares schemas without treating annotation-only keywords as a stored schema change.
+    /// </summary>
+    /// <param name="stored">The stored schema JSON.</param>
+    /// <param name="incoming">The incoming schema JSON.</param>
+    /// <returns>Whether the schemas differ only by annotations.</returns>
+    [Obsolete("Use EqualsIgnoringAnnotations instead.")]
+    public static bool EqualsIgnoringTitles(string stored, string incoming) => EqualsIgnoringAnnotations(stored, incoming);
+
+    /// <summary>
     /// Retains typed defaulted properties when a legacy client submits their default-only representation.
     /// </summary>
     /// <param name="stored">The stored schema.</param>
@@ -110,6 +119,13 @@ public static class JsonSchemaCompatibilityExtensions
     /// <returns>The paths with added protection metadata.</returns>
     public static IEnumerable<string> AddedProtectionMetadataPaths(this JsonSchema stored, JsonSchema generated) =>
         DefaultOnlyPropertyRefinement.AddedMetadataPaths(JsonNode.Parse(stored.ToJson()), JsonNode.Parse(generated.ToJson()));
+
+    /// <summary>
+    /// Determines whether a keyword is an annotation rather than a structural declaration.
+    /// </summary>
+    /// <param name="keyword">The schema keyword.</param>
+    /// <returns>Whether the keyword is annotation-only.</returns>
+    internal static bool IsAnnotationKeyword(string keyword) => _annotationKeywords.Contains(keyword);
 
     /// <summary>
     /// Strips annotation-only keywords from schema declarations, without visiting arbitrary default payloads or property maps.

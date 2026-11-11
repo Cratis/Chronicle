@@ -27,5 +27,5 @@ public class when_generating_schemas_for_an_obsolete_event : given.a_json_schema
     [Fact] void should_keep_the_precise_event_shape_from_net10() => _precise.ContainsKey("deprecated").ShouldBeFalse();
     [Fact] void should_keep_the_legacy_event_shape_from_net10() => _legacy.ContainsKey("deprecated").ShouldBeFalse();
     [Fact] void should_keep_the_read_model_shape_from_net10() => _readModel.ContainsKey("deprecated").ShouldBeFalse();
-    [Fact] void should_preserve_the_event_payload() => _precise["properties"]!.AsObject().ContainsKey("name").ShouldBeTrue();
+    [Fact] void should_preserve_the_event_payload() => _precise["properties"]!.AsObject().ContainsKey("Name").ShouldBeTrue();
 }
