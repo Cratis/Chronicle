@@ -11,10 +11,15 @@ public partial class EventSequence
     bool _appendTailUncertain;
 
     static bool MatchesAppend(AppendedEvent stored, EventToAppendToStorage attempted) =>
+        MatchesIdentity(stored, attempted) && MatchesContentHash(stored, attempted);
+
+    static bool MatchesIdentity(AppendedEvent stored, EventToAppendToStorage attempted) =>
         stored.Context.SequenceNumber == attempted.SequenceNumber &&
         stored.Context.CorrelationId == attempted.CorrelationId &&
         stored.Context.EventType.Id == attempted.EventType.Id &&
-        stored.Context.EventSourceId == attempted.EventSourceId &&
+        stored.Context.EventSourceId == attempted.EventSourceId;
+
+    static bool MatchesContentHash(AppendedEvent stored, EventToAppendToStorage attempted) =>
         stored.GenerationalHashes.TryGetValue((int)attempted.EventType.Generation.Value, out var hash) &&
         hash is not null && hash != EventHash.NotSet &&
         attempted.ContentHashes.TryGetValue(attempted.EventType.Generation, out var submitted) &&
@@ -27,27 +32,38 @@ public partial class EventSequence
         if (tail != EventSequenceNumber.Unavailable && tail >= State.SequenceNumber)
         {
             var first = State.SequenceNumber;
-            var adoptedTails = new Dictionary<EventTypeId, EventSequenceNumber>();
-            using var cursor = await EventSequenceStorage.GetRange(first, tail);
-            while (await cursor.MoveNext())
-            {
-                foreach (var @event in cursor.Current)
-                {
-                    var context = @event.Context;
-                    if (!adoptedTails.TryGetValue(context.EventType.Id, out var previous) || previous < context.SequenceNumber)
-                        adoptedTails[context.EventType.Id] = context.SequenceNumber;
-                }
-            }
+            var adoptedTails = await ReadAdoptedTails(first, tail);
             MarkConstraintIndexGap(first);
-            foreach (var (type, number) in adoptedTails)
-            {
-                if (!State.TailSequenceNumberPerEventType.TryGetValue(type, out var previous) || previous < number)
-                    State.TailSequenceNumberPerEventType[type] = number;
-            }
+            AdoptTails(adoptedTails);
             State.SequenceNumber = tail.Next();
             await SpillAppendedEventsQueuesToCatchup();
         }
         _appendTailUncertain = false;
+    }
+
+    async Task<Dictionary<EventTypeId, EventSequenceNumber>> ReadAdoptedTails(EventSequenceNumber first, EventSequenceNumber tail)
+    {
+        var adoptedTails = new Dictionary<EventTypeId, EventSequenceNumber>();
+        using var cursor = await EventSequenceStorage.GetRange(first, tail);
+        while (await cursor.MoveNext())
+        {
+            foreach (var @event in cursor.Current)
+            {
+                var context = @event.Context;
+                if (!adoptedTails.TryGetValue(context.EventType.Id, out var previous) || previous < context.SequenceNumber)
+                    adoptedTails[context.EventType.Id] = context.SequenceNumber;
+            }
+        }
+        return adoptedTails;
+    }
+
+    void AdoptTails(Dictionary<EventTypeId, EventSequenceNumber> adoptedTails)
+    {
+        foreach (var (type, number) in adoptedTails)
+        {
+            if (!State.TailSequenceNumberPerEventType.TryGetValue(type, out var previous) || previous < number)
+                State.TailSequenceNumberPerEventType[type] = number;
+        }
     }
 
     async Task MarkAppendOutcomeUnknown(EventSequenceNumber first)
