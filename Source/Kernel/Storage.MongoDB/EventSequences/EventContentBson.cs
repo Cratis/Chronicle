@@ -133,6 +133,7 @@ internal static class EventContentBson
     static JsonSchema? GetPropertySchema(JsonSchema? schema, JsonSchema? actual)
     {
         var source = schema?.Reference ?? schema;
+
         // Flatten the complete object schema, not just the allOf branch selected as its actual type.
         return source?.AllOf.Count > 0 ? source : actual;
     }
