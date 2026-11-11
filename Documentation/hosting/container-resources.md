@@ -67,8 +67,8 @@ The image defaults suit a kernel that serves real traffic. When you run Chronicl
 
 Two settings are trades rather than profiles:
 
-- **Workstation GC** (`DOTNET_gcServer=0`) lowered peak memory by about a quarter with two or more CPUs, and cost 30 to 43 % of the append throughput. Use it only when memory, not CPU, limits a container with several CPUs.
-- **Classic Server GC** (`DOTNET_GCDynamicAdaptationMode=0`, DATAS off) raised peak memory by 27 to 41 % and did not raise throughput. There is no reason to turn DATAS off for the kernel.
+- In the measurements, **Workstation GC** (`DOTNET_gcServer=0`) lowered peak memory by about a quarter with two or more CPUs, and cost 30 to 43 % of the append throughput. Use it only when memory, not CPU, limits a container with several CPUs.
+- **Classic Server GC** (`DOTNET_GCDynamicAdaptationMode=0`, DATAS off) raised peak memory by 27 to 41 % and did not raise throughput, so keep DATAS on. Pause times were not measured.
 
 ### Small container
 
@@ -96,7 +96,7 @@ Avoid Workstation GC on a kernel that has several cores and a busy workload: its
 
 ### Measured profiles
 
-Each figure is the median of three runs, with the range in parentheses. Memory is the container's cgroup usage as `docker stats` reports it, which is what the container limit is measured against. The kernel process's resident set was 210 to 300 MiB higher in every cell, because it also counts file-backed pages, such as the mapped assemblies, that `docker stats` leaves out.
+Each figure is the median of three runs, with the range in parentheses. Memory is the container's cgroup usage as `docker stats` reports it, which is what the container limit is measured against. The kernel process's resident set was about 210 to 235 MiB higher in every cell, because it also counts file-backed pages, such as the mapped assemblies, that `docker stats` leaves out.
 
 | CPU and memory limit | GC | Ready (s) | Idle memory (MiB) | Peak memory (MiB) | Appends (events/s) | Observer catch-up (s) |
 | --- | --- | --- | --- | --- | --- | --- |
