@@ -50,4 +50,4 @@ jobs:
         run: dotnet build Chaos/ChaosRig.Specs/ChaosRig.Specs.csproj -c Release -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
 
       - name: Test chaos rig specs
-        run: dotnet test Chaos/ChaosRig.Specs/ChaosRig.Specs.csproj -c Release --no-build
+        run: ./Chaos/ChaosRig.Specs/bin/Release/net11.0/ChaosRig.Specs
