@@ -7,7 +7,7 @@ public class and_a_stop_was_requested_during_startup : Specification
 {
     KernelRunOutcome _outcome;
 
-    void Because() => _outcome = KernelExit.Classify(new OperationCanceledException(), started: false, stopped: false);
+    void Because() => _outcome = KernelExit.Classify(KernelRunPhase.Starting, new OperationCanceledException(), stopRequested: true, stopTimedOut: false);
 
-    [Fact] void should_be_stopped_during_startup() => _outcome.ShouldEqual(KernelRunOutcome.StoppedDuringStartup);
+    [Fact] void should_be_a_stop_during_startup() => _outcome.ShouldEqual(KernelRunOutcome.StoppedDuringStartup);
 }

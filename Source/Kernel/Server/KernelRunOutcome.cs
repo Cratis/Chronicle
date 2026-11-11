@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Server;
 internal enum KernelRunOutcome
 {
     /// <summary>
-    /// The host started, stopped and released its services without a failure.
+    /// The host started, stopped within the host shutdown timeout and released its services without a failure.
     /// </summary>
     Completed = 0,
 
@@ -24,7 +24,7 @@ internal enum KernelRunOutcome
     StartFailed = 2,
 
     /// <summary>
-    /// The stop was cancelled because it did not complete within the host shutdown timeout.
+    /// The stop took the whole host shutdown timeout, whether or not a service reported a failure.
     /// </summary>
     StopTimedOut = 3,
 

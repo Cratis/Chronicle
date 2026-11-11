@@ -7,7 +7,7 @@ public class and_a_service_failed_while_stopping : Specification
 {
     KernelRunOutcome _outcome;
 
-    void Because() => _outcome = KernelExit.Classify(new InvalidOperationException(), started: true, stopped: false);
+    void Because() => _outcome = KernelExit.Classify(KernelRunPhase.Stopping, new InvalidOperationException(), stopRequested: true, stopTimedOut: false);
 
     [Fact] void should_be_a_failed_stop() => _outcome.ShouldEqual(KernelRunOutcome.StopFailed);
 }

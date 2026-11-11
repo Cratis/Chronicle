@@ -58,14 +58,17 @@ internal static partial class KernelLogMessages
     [LoggerMessage(LogLevel.Information, "Chronicle Server stopped. Exiting with code {ExitCode}")]
     internal static partial void ServerStopped(this ILogger<Kernel> logger, int exitCode);
 
-    [LoggerMessage(LogLevel.Critical, "Chronicle Server did not stop within the host shutdown timeout of {ShutdownTimeout}. Exiting with code {ExitCode}")]
-    internal static partial void ServerStopTimedOut(this ILogger<Kernel> logger, Exception exception, TimeSpan shutdownTimeout, int exitCode);
+    [LoggerMessage(LogLevel.Warning, "Chronicle Server stopped. Exiting with code {ExitCode}, which the server requested")]
+    internal static partial void ServerStoppedWithRequestedExitCode(this ILogger<Kernel> logger, int exitCode);
+
+    [LoggerMessage(LogLevel.Critical, "Chronicle Server did not stop within the host shutdown timeout of {ShutdownTimeout}; the stop took {StopDuration}. Exiting with code {ExitCode}")]
+    internal static partial void ServerStopTimedOut(this ILogger<Kernel> logger, Exception? exception, TimeSpan shutdownTimeout, TimeSpan stopDuration, int exitCode);
 
     [LoggerMessage(LogLevel.Critical, "Chronicle Server failed while stopping. Exiting with code {ExitCode}")]
-    internal static partial void ServerStopFailed(this ILogger<Kernel> logger, Exception exception, int exitCode);
+    internal static partial void ServerStopFailed(this ILogger<Kernel> logger, Exception? exception, int exitCode);
 
     [LoggerMessage(LogLevel.Critical, "Chronicle Server stopped, but releasing its services afterwards failed. Exiting with code {ExitCode}")]
-    internal static partial void ServerDisposeFailed(this ILogger<Kernel> logger, Exception exception, int exitCode);
+    internal static partial void ServerDisposeFailed(this ILogger<Kernel> logger, Exception? exception, int exitCode);
 
     [LoggerMessage(LogLevel.Warning, "The Workbench feature is enabled but the Workbench UI was not found - it is neither embedded in this build nor present in the web root '{WebRoot}' - the server runs without serving the Workbench UI")]
     internal static partial void WorkbenchUINotAvailable(this ILogger<Kernel> logger, string webRoot);
