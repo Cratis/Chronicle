@@ -11,7 +11,7 @@ using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
 using Cratis.Chronicle.Storage.Sql.EventStores.Occurrences;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Query;
-using static Cratis.Chronicle.Storage.Sql.Sinks.JsonColumnDocuments;
+using static Cratis.Chronicle.Storage.Sql.Sinks.JsonColumnCoercion;
 
 namespace Cratis.Chronicle.Storage.Sql.Sinks;
 

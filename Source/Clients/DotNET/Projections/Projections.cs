@@ -417,29 +417,7 @@ public class Projections(
         // addressable only if it has a type of its own - and a model-bound one does not. Both are still registered and
         // both still write to the read model, which is the part worth knowing about; say so rather than resolving it
         // silently by declaration order.
-        var discoveredHandlersByModelType = new Dictionary<Type, IProjectionHandler>();
-        var claimedBy = new Dictionary<Type, string>();
-
-        foreach (var kvp in handlersByType)
-        {
-            var readModelType = kvp.Key.GetReadModelType();
-            if (discoveredHandlersByModelType.TryAdd(readModelType, kvp.Value))
-            {
-                claimedBy[readModelType] = kvp.Key.FullName ?? kvp.Key.Name;
-            }
-            else
-            {
-                logger.MoreThanOneProjectionForReadModel(readModelType, kvp.Key.FullName ?? kvp.Key.Name, claimedBy[readModelType]);
-            }
-        }
-
-        foreach (var kvp in modelBoundHandlers)
-        {
-            if (!discoveredHandlersByModelType.TryAdd(kvp.Key, kvp.Value))
-            {
-                logger.MoreThanOneProjectionForReadModel(kvp.Key, $"the model-bound projection on {kvp.Key.Name}", claimedBy[kvp.Key]);
-            }
-        }
+        var discoveredHandlersByModelType = ClaimReadModels(handlersByType, modelBoundHandlers);
 
         lock (_explicitLock)
         {
@@ -476,6 +454,37 @@ public class Projections(
 
         _discovered = true;
         return Task.CompletedTask;
+    }
+
+    Dictionary<Type, IProjectionHandler> ClaimReadModels(
+        Dictionary<Type, IProjectionHandler> handlersByType,
+        Dictionary<Type, IProjectionHandler> modelBoundHandlers)
+    {
+        var discoveredHandlersByModelType = new Dictionary<Type, IProjectionHandler>();
+        var claimedBy = new Dictionary<Type, string>();
+
+        foreach (var kvp in handlersByType)
+        {
+            var readModelType = kvp.Key.GetReadModelType();
+            if (discoveredHandlersByModelType.TryAdd(readModelType, kvp.Value))
+            {
+                claimedBy[readModelType] = kvp.Key.FullName ?? kvp.Key.Name;
+            }
+            else
+            {
+                logger.MoreThanOneProjectionForReadModel(readModelType, kvp.Key.FullName ?? kvp.Key.Name, claimedBy[readModelType]);
+            }
+        }
+
+        foreach (var kvp in modelBoundHandlers)
+        {
+            if (!discoveredHandlersByModelType.TryAdd(kvp.Key, kvp.Value))
+            {
+                logger.MoreThanOneProjectionForReadModel(kvp.Key, $"the model-bound projection on {kvp.Key.Name}", claimedBy[kvp.Key]);
+            }
+        }
+
+        return discoveredHandlersByModelType;
     }
 
     async Task<IProjectionHandler> RegisterExplicit<TReadModel>(IExplicitProjection projection)
@@ -574,14 +583,14 @@ public class Projections(
         var failures = onlyPending ? new Dictionary<Type, Exception>(_explicitFailures) : new Dictionary<Type, Exception>();
         foreach (var (readModelType, projection) in _explicitProjections)
         {
-            if (onlyPending && (registrations.ContainsKey(readModelType) || failures.ContainsKey(readModelType)))
+            if (onlyPending && IsAlreadyStaged(readModelType, registrations, failures))
             {
                 continue;
             }
 
             if (discoveredHandlers.TryGetValue(readModelType, out var discovered))
             {
-                if (!(projection.IsModelBound && discovered.Id == projection.Id))
+                if (!IsSameModelBoundProjection(projection, discovered))
                 {
                     failures[readModelType] = new ReadModelAlreadyHasProjection(readModelType, discovered.Id, projection.Id);
                     logger.FailedToCreateExplicitProjectionDefinition(readModelType, failures[readModelType]);
@@ -605,6 +614,12 @@ public class Projections(
 
         return (registrations, failures);
     }
+
+    bool IsAlreadyStaged(Type readModelType, Dictionary<Type, ExplicitProjectionRegistration> registrations, Dictionary<Type, Exception> failures) =>
+        registrations.ContainsKey(readModelType) || failures.ContainsKey(readModelType);
+
+    bool IsSameModelBoundProjection(IExplicitProjection projection, IProjectionHandler discovered) =>
+        projection.IsModelBound && discovered.Id == projection.Id;
 
     void WarnAboutRootRemovalViaJoin(Type readModelType, ProjectionDefinition definition)
     {

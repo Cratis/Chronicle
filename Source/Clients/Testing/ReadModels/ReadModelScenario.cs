@@ -377,8 +377,8 @@ public partial class ReadModelScenario<TReadModel>(TReadModel? initialState, Def
     public void Dispose()
     {
         _eventStore?.Dispose();
-        if (_borrowedStore is not null && _syntheticInputSequenceId is not null) _borrowedStore.TestingStore.RemoveSequence(_syntheticInputSequenceId);
-        if (serviceProvider is null && Services.Count > 0 && _resolvedServiceProvider is IDisposable disposable) disposable.Dispose();
+        RemoveSyntheticInputSequence();
+        DisposeOwnedServiceProvider();
         GC.SuppressFinalize(this);
     }
 
@@ -459,6 +459,30 @@ public partial class ReadModelScenario<TReadModel>(TReadModel? initialState, Def
         return _projectionDefinition;
     }
 
+    void RemoveSyntheticInputSequence()
+    {
+        if (_borrowedStore is not null && _syntheticInputSequenceId is not null)
+        {
+            _borrowedStore.TestingStore.RemoveSequence(_syntheticInputSequenceId);
+        }
+    }
+
+    void DisposeOwnedServiceProvider()
+    {
+        if (serviceProvider is not null || Services.Count == 0)
+        {
+            return;
+        }
+
+        if (_resolvedServiceProvider is IDisposable disposable) disposable.Dispose();
+    }
+
+    bool HasNothingToProcessWithSeeds() =>
+        HasSeeds && FindReducerType(typeof(TReadModel)) is null && ProjectionDefinition() is null;
+
+    bool HasUnprocessedInput() =>
+        !_processed && (_collectedEvents.Count > 0 || HasSeeds);
+
     void EnsureProcessed()
     {
         if (_strictFidelity && Substitutions.Count > 0)
@@ -466,12 +490,12 @@ public partial class ReadModelScenario<TReadModel>(TReadModel? initialState, Def
             throw new ReadModelDependsOnSubstitutedLayer(typeof(TReadModel), Substitutions);
         }
 
-        if (HasSeeds && FindReducerType(typeof(TReadModel)) is null && ProjectionDefinition() is null)
+        if (HasNothingToProcessWithSeeds())
         {
             return;
         }
 
-        if (!_processed && (_collectedEvents.Count > 0 || HasSeeds))
+        if (HasUnprocessedInput())
         {
             (_instance, _instances) = ProcessEvents(_collectedEvents).GetAwaiter().GetResult();
             if (HasSeeds) SeededReadModels().ReplaceInstances(_instances);

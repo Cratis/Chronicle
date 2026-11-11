@@ -11,6 +11,9 @@ namespace Cratis.Chronicle.Events.Constraints;
 
 public partial class ConstraintIndexReplay
 {
+    static bool IsRemovalTargetKey(UniqueKey key, RemovalTarget target) =>
+        key.Name == target.Definition.Name && key.Source == target.Source && key.Scope == target.Scope;
+
     async Task<(bool Finished, int Count)> ReadSegment(int limit, CancellationToken cancellationToken)
     {
         _position ??= _scopes.Min(scope => scope.From);
@@ -46,11 +49,16 @@ public partial class ConstraintIndexReplay
         catch (Exception error) when (!cancellationToken.IsCancellationRequested && _operationPosition is null && StorageErrorClassifier?.IsTransient(error) is false)
         {
             // A page fault has no event identity. Locate individual relevant slots on the next turn.
-            _readIndividually = true;
-            _individualReadsRemaining = IndividualReadWindowSize;
-            _individualReadFailureEnd = null;
+            SwitchToIndividualReads();
             throw;
         }
+    }
+
+    void SwitchToIndividualReads()
+    {
+        _readIndividually = true;
+        _individualReadsRemaining = IndividualReadWindowSize;
+        _individualReadFailureEnd = null;
     }
 
     async Task<bool> IncludeEvent(AppendedEvent @event, CancellationToken cancellationToken)
@@ -120,7 +128,7 @@ public partial class ConstraintIndexReplay
         var scope = definition.Scope.BuildScopeKey(context.EventSourceType, context.EventStreamType, context.EventStreamId);
         if (definition.RemovedWith.Contains(context.EventTypeId))
         {
-            await IncludeUniqueRemoval(definition, context, scope, position, cancellationToken);
+            await IncludeUniqueRemoval(new(definition, context.EventSourceId, scope, position), context, cancellationToken);
             return;
         }
 
@@ -128,7 +136,7 @@ public partial class ConstraintIndexReplay
         var values = definition.GetPropertiesAndValues(context).ToArray();
         if (values.Length == 0)
         {
-            if (definition.Mode == UniqueConstraintMode.PerEventSource) SetUniqueRemoved(definition, context.EventSourceId, scope, null, position);
+            if (definition.Mode == UniqueConstraintMode.PerEventSource) SetUniqueRemoved(new(definition, context.EventSourceId, scope, position), null);
             return;
         }
         var claim = new UniqueConstraintValue(values.GetValue(definition.IgnoreCasing));
@@ -136,39 +144,40 @@ public partial class ConstraintIndexReplay
         SetUnique(new(definition.Name, context.EventSourceId, scope, retained), new(definition, claim, position, definition.SubjectFor(context)));
     }
 
-    void SetUniqueRemoved(UniqueConstraintDefinition definition, EventSourceId source, string scope, UniqueConstraintValue? retained, EventSequenceNumber position) =>
-        SetUnique(new(definition.Name, source, scope, retained), new(definition, null, position));
+    void SetUniqueRemoved(RemovalTarget target, UniqueConstraintValue? retained) =>
+        SetUnique(new(target.Definition.Name, target.Source, target.Scope, retained), new(target.Definition, null, target.Position));
 
-    async Task IncludeUniqueRemoval(UniqueConstraintDefinition definition, ConstraintValidationContext context, string scope, EventSequenceNumber position, CancellationToken cancellationToken)
+    async Task IncludeUniqueRemoval(RemovalTarget target, ConstraintValidationContext context, CancellationToken cancellationToken)
     {
+        var definition = target.Definition;
         var removal = definition.RemovalEventDefinitions.SingleOrDefault(item => item.EventTypeId == context.EventTypeId);
         if (definition.Mode != UniqueConstraintMode.PerValue)
         {
-            SetUniqueRemoved(definition, context.EventSourceId, scope, null, position);
+            SetUniqueRemoved(target, null);
         }
         else if (removal?.Properties.Any() == true)
         {
             var properties = removal.GetPropertiesAndValues(context).ToArray();
             if (properties.Length > 0)
             {
-                SetUniqueRemoved(definition, context.EventSourceId, scope, new UniqueConstraintValue(properties.GetValue(definition.IgnoreCasing)), position);
+                SetUniqueRemoved(target, new UniqueConstraintValue(properties.GetValue(definition.IgnoreCasing)));
             }
         }
         else
         {
-            await IncludeRetainedValueRemoval(definition, context, scope, position, cancellationToken);
+            await IncludeRetainedValueRemoval(target, cancellationToken);
         }
     }
 
-    async Task IncludeRetainedValueRemoval(UniqueConstraintDefinition definition, ConstraintValidationContext context, string scope, EventSequenceNumber position, CancellationToken cancellationToken)
+    async Task IncludeRetainedValueRemoval(RemovalTarget target, CancellationToken cancellationToken)
     {
-        var retainedValues = unique.GetForStream(context.EventSourceId, definition, scope, cancellationToken).GetAsyncEnumerator(cancellationToken);
+        var retainedValues = unique.GetForStream(target.Source, target.Definition, target.Scope, cancellationToken).GetAsyncEnumerator(cancellationToken);
         try
         {
             while (await retainedValues.MoveNextAsync().AsTask().WaitAsync(cancellationToken))
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                SetUniqueRemoved(definition, context.EventSourceId, scope, retainedValues.Current, position);
+                SetUniqueRemoved(target, retainedValues.Current);
                 if (!Fits()) return;
             }
         }
@@ -176,9 +185,9 @@ public partial class ConstraintIndexReplay
         {
             await retainedValues.DisposeAsync().AsTask().WaitAsync(cancellationToken);
         }
-        foreach (var key in _unique.Keys.Where(key => key.Name == definition.Name && key.Source == context.EventSourceId && key.Scope == scope).ToArray())
+        foreach (var key in _unique.Keys.Where(key => IsRemovalTargetKey(key, target)).ToArray())
         {
-            _unique[key] = new(definition, null, position);
+            _unique[key] = new(target.Definition, null, target.Position);
         }
     }
 
@@ -221,6 +230,7 @@ public partial class ConstraintIndexReplay
         TrackKeys();
     }
 
+    readonly record struct RemovalTarget(UniqueConstraintDefinition Definition, EventSourceId Source, string Scope, EventSequenceNumber Position);
     sealed record UniqueKey(ConstraintName Name, EventSourceId Source, string Scope, UniqueConstraintValue? Retained);
     sealed record UniqueState(UniqueConstraintDefinition Definition, UniqueConstraintValue? Value, EventSequenceNumber Position, Subject? Subject = null);
     sealed record ClosingKey(ConstraintName Name, ClosedStreamScope Scope);

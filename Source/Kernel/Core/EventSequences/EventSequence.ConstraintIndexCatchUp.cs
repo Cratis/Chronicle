@@ -34,12 +34,21 @@ public partial class EventSequence
     internal bool ConstraintCatchUpDue(DateTimeOffset now)
     {
         if (State.ConstraintIndexCatchUpBelow is null || now < _nextConstraintCatchUpAttempt || _rebuildOwnsBoundary) return false;
-        return _catchUpReplay is not null || CatchUpScopeDefinitions(out _).Any() || !CatchUpDefinitions().Any();
+        return HasEligibleCatchUpWork();
     }
+
+    bool HasEligibleCatchUpWork() =>
+        _catchUpReplay is not null || CatchUpScopeDefinitions(out _).Any() || !CatchUpDefinitions().Any();
+
+    bool ShouldExcludeLiveKeys(EventSequenceNumber number) =>
+        _catchUpTracking && State.ConstraintIndexCatchUpBelow is { } boundary && number >= boundary;
+
+    bool CatchUpExclusionsIncomplete(int count) =>
+        _catchUpBoundaryDirty || _catchUpExcludedThrough! < State.SequenceNumber || count >= 1000;
 
     void ExcludeLiveConstraintKeys(ConstraintValidationContext context, EventSequenceNumber number)
     {
-        if (!_catchUpTracking || State.ConstraintIndexCatchUpBelow is not { } boundary || number < boundary) return;
+        if (!ShouldExcludeLiveKeys(number)) return;
         foreach (var definition in CatchUpDefinitions())
         {
             _catchUpExcluded.Include(definition, context);
@@ -78,30 +87,8 @@ public partial class EventSequence
                 _catchUpBoundaryDirty = false;
             }
             var count = await RebuildCatchUpExclusions(budget.Token);
-            if (_catchUpBoundaryDirty || _catchUpExcludedThrough! < State.SequenceNumber || count >= 1000) return;
-            _catchUpReplay ??= CreateCatchUpReplay();
-            var result = await _catchUpReplay.Continue(1000 - count, budget.Token);
-            if (CatchUpTurnFailed(result))
-            {
-                yield = _constraintCatchUpFailures >= CatchUpFailuresBeforeYield;
-                return;
-            }
-            if (_catchUpReplay.BlockedByPendingRepair)
-            {
-                yield = true;
-                return;
-            }
-            ResetConstraintCatchUpBackOff();
-            if (!result.IsCompleted) return;
-            if (_catchUpDeferred.Length > 0)
-            {
-                await CompleteCatchUpMembers(budget.Token);
-                yield = true;
-            }
-            else
-            {
-                await CompleteConstraintCatchUp(budget.Token);
-            }
+            if (CatchUpExclusionsIncomplete(count)) return;
+            yield = await ContinueCatchUpReplay(count, budget.Token);
         }
         catch (OperationCanceledException) when (budget.IsCancellationRequested)
         {
@@ -119,6 +106,23 @@ public partial class EventSequence
             if (yield) YieldConstraintCatchUp(slots);
             slots.LeaveTurn(this, State.ConstraintIndexCatchUpRefusing?.Any() == true);
         }
+    }
+
+    async Task<bool> ContinueCatchUpReplay(int count, CancellationToken cancellationToken)
+    {
+        _catchUpReplay ??= CreateCatchUpReplay();
+        var result = await _catchUpReplay.Continue(1000 - count, cancellationToken);
+        if (CatchUpTurnFailed(result)) return _constraintCatchUpFailures >= CatchUpFailuresBeforeYield;
+        if (_catchUpReplay.BlockedByPendingRepair) return true;
+        ResetConstraintCatchUpBackOff();
+        if (!result.IsCompleted) return false;
+        if (_catchUpDeferred.Length == 0)
+        {
+            await CompleteConstraintCatchUp(cancellationToken);
+            return false;
+        }
+        await CompleteCatchUpMembers(cancellationToken);
+        return true;
     }
 
     void YieldConstraintCatchUp(ConstraintIndexCatchUpSlots slots)

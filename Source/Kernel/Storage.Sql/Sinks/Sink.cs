@@ -29,7 +29,10 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using static Cratis.Chronicle.Storage.Sql.Sinks.ChildCollectionRemovals;
+using static Cratis.Chronicle.Storage.Sql.Sinks.JsonColumnCoercion;
 using static Cratis.Chronicle.Storage.Sql.Sinks.JsonColumnDocuments;
+using static Cratis.Chronicle.Storage.Sql.Sinks.JsonColumnSearch;
 
 #pragma warning disable SA1202 // Private helpers grouped next to the public methods they back.
 #pragma warning disable SA1204 // Static helpers grouped at the bottom for readability.

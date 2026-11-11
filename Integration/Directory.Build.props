@@ -14,6 +14,9 @@
         <NuGetAuditMode>all</NuGetAuditMode>
 
         <TargetFramework>net11.0</TargetFramework>
+        <!-- The .NET 11 SDK adds a Debug-only hot-reload JavaScript initializer without a matching static web asset
+             endpoint to web SDK projects, which fails their Debug build. Integration test hosts never run under hot reload. -->
+        <EnableHotReloadInRuntimeConfigDevFile>false</EnableHotReloadInRuntimeConfigDevFile>
     </PropertyGroup>
 
     <ItemGroup>
