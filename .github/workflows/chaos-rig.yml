@@ -22,11 +22,11 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
-# Match dotnet-build.yml; dotnet resolves the repository's global.json from the checkout.
+# Match dotnet-build.yml; dotnet resolves the repository's global.json (.NET 11) from the checkout.
 env:
-  DOTNET8_VERSION: "8.0.410"
-  DOTNET9_VERSION: "9.0.x"
-  DOTNET_VERSION: "10.0.x"
+  DOTNET_VERSION: |
+    10.0.x
+    11.0.x
 
 jobs:
   chaos-rig:
@@ -44,10 +44,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
         with:
-          dotnet-version: |
-            ${{ env.DOTNET8_VERSION }}
-            ${{ env.DOTNET9_VERSION }}
-            ${{ env.DOTNET_VERSION }}
+          dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Build chaos rig specs
         run: dotnet build Chaos/ChaosRig.Specs/ChaosRig.Specs.csproj -c Release -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
