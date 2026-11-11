@@ -58,6 +58,8 @@ Set `Cratis__Chronicle__Shutdown__DrainTimeout=00:00:05` to use a five-second bu
 
 Shutdown refuses new observer service calls, joins admitted catch-up and replay work, and flushes local bulk windows without promoting an unfinished replay. If the deadline expires, Chronicle cancels MongoDB bulk writes and logs the affected observer, partitions, and event sequence numbers when available. Cancellation means the write outcome is unknown, not that MongoDB rolled it back. Unconfirmed writes do not advance handled positions; failed partitions are recorded best-effort only while time remains.
 
+A stop that completes within the host shutdown timeout exits with code `0` and logs `Chronicle Server stopped. Exiting with code 0`. A stop that times out, or fails while stopping or releasing services, exits with code `70` and logs a Critical entry naming the reason. After a lost single-writer lease, an otherwise orderly stop exits with code `1`.
+
 ## Connected clients and server diagnostics
 
 The kernel tracks which clients are connected. These settings live under `connectedClients` and `servers` and rarely need changing.
