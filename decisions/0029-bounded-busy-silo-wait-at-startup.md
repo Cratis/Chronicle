@@ -1,12 +1,12 @@
 ---
 id: 0029-bounded-busy-silo-wait-at-startup
 title: Wait out a busy silo during startup without counting attempts, up to a configurable limit measured in hours
-status: proposed
+status: accepted
 stage: none
 class: product
 reversibility: reversible
-decided: —
-decider: —
+decided: 2026-11-11
+decider: einari
 applies-to:
   - Source/Kernel/Core/Setup/ChronicleServerStartupTask*.cs
   - Source/Kernel/Core/Setup/BusySilo*.cs

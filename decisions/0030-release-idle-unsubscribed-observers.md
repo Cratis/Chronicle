@@ -1,13 +1,13 @@
 ---
 id: 0030-release-idle-unsubscribed-observers
 title: Keep subscribed observers resident and release observers that have no subscription and no pending work after an idle period
-status: proposed
+status: accepted
 stage: none
 class: contract
 reversibility: reversible
 proposed: 2026-11-10
-decided: —
-decider: einari (to accept)
+decided: 2026-11-11
+decider: einari
 applies-to:
   - Source/Kernel/Core/Observation/Observer*.cs
   - Source/Kernel/Core/Configuration/Observers.cs
