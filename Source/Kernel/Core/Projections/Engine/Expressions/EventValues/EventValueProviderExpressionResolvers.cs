@@ -55,7 +55,12 @@ public partial class EventValueProviderExpressionResolvers(ITypeFormats typeForm
             schemaProperty.GetTargetTypeForJsonSchemaProperty(typeFormats) is not null;
     }
 
-    // Dictionaries are values to preserve, not sequences of key/value pairs to project as arrays.
+    /// <summary>
+    /// Dictionaries are values to preserve, not sequences of key/value pairs to project as arrays.
+    /// </summary>
+    /// <param name="input">The input value.</param>
+    /// <param name="inputType">The type of the input value.</param>
+    /// <returns><see langword="true"/> if the input is a dictionary; otherwise <see langword="false"/>.</returns>
     static bool IsDictionary(object input, Type inputType) =>
         input is IDictionary ||
         inputType.IsDictionary() ||

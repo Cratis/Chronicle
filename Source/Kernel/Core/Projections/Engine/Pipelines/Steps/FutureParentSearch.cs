@@ -137,6 +137,10 @@ internal static class FutureParentSearch
     /// every element of the current array for a descendant that ultimately contains the target parent
     /// key. When found, the full indexer chain (one entry per level, root-to-leaf) is written to the result.
     /// </summary>
+    /// <param name="search">The <see cref="ParentSearch"/> describing the parent to find.</param>
+    /// <param name="state">The current state to navigate.</param>
+    /// <param name="chain">The projection chain from root to parent.</param>
+    /// <param name="result">The indexer chain written when the parent is found.</param>
     sealed class LevelWalk(ParentSearch search, ExpandoObject state, List<IProjection> chain, List<ArrayIndexer> result)
     {
         /// <summary>
