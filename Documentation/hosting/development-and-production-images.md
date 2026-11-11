@@ -1,6 +1,6 @@
 ---
 title: Development and production images
-description: What differs between the Cratis Chronicle development and production images - the DEVELOPMENT build symbol, generated certificates, admin password handling, webhook validation and changed default values.
+description: What differs between the Cratis Chronicle development and production images: the DEVELOPMENT build symbol, certificates, admin password and defaults.
 ---
 
 Chronicle ships a development image and a production image. They are not the same binary with a different environment name. The development image is built with the compile-time `DEVELOPMENT` symbol and carries its own `chronicle.json` and `appsettings.json`; the production image is built without the symbol and ships neither file's development values. Read this page before you move from `latest-development` to `latest`, or when behavior verified on the development image differs in production.
