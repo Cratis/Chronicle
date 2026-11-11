@@ -36,6 +36,20 @@ dotnet Benchmarks/Chronicle.Benchmarks.Kernel/bin/Release/net10.0/Chronicle.Benc
 
 Compare runs with different `--count` values, or `dotnet-gcdump report` output from two runs, to attribute the growth to types. Results from November 2026 are in [decision 0030](../../decisions/0030-release-idle-unsubscribed-observers.md).
 
+## Client subscription keeper calls
+
+The `--keeper-calls` mode measures the grain calls the client subscription keeper makes on an idle kernel. It starts the same in-process silo as `--observer-footprint`, subscribes a number of reactor observers to one client connection, and runs the keeper of every observation stream the way the gRPC reactors service does, with nothing appended. An incoming grain call filter counts the calls to `IsSubscriptionIntact`, `KeepSubscription` and `KnowsClient`, and the output reports them per second and per observer per minute, together with the process CPU over the run.
+
+```sh
+dotnet Benchmarks/Chronicle.Benchmarks.Kernel/bin/Release/net11.0/Chronicle.Benchmarks.Kernel.dll --keeper-calls --count 2000 --seconds 125
+```
+
+| Option | Default | Meaning |
+| --- | --- | --- |
+| `--count` | 1000 | Subscribed reactor observers, each with its own keeper. |
+| `--seconds` | 30 | How long to keep them idle. Use more than `connectedClients.subscriptionCheckIntervalSeconds` to see the safety net. |
+| `--without-keeper` | off | Runs no keepers, for the CPU baseline of the same observers. |
+
 ## Comparing a change with a baseline
 
 1. Build the project on the baseline (for example `origin/main`) and copy `bin/Release/net11.0/` somewhere outside the repository.
