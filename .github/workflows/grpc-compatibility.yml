@@ -31,7 +31,7 @@ on:
         value: ${{ jobs.check-compatibility.outputs.breaking-changes }}
 
 env:
-  DOTNET_VERSION: "10.0.x"
+  DOTNET_VERSION: "11.0.x"
 
 jobs:
   check-compatibility:

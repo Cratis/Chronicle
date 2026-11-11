@@ -25,6 +25,7 @@ using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Setup.Authentication;
 using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Orleans.Hosting;
 
@@ -43,6 +44,8 @@ namespace Orleans.Hosting;
 /// <param name="patchRunner">The <see cref="IPatchRunner"/> that applies pending patches.</param>
 /// <param name="clusterReleases">The published releases for startup diagnostics.</param>
 /// <param name="kernelProjectionRetries">The background retries for deferred kernel projection registrations.</param>
+/// <param name="busySilos"><see cref="IBusySilos"/> for telling a busy silo apart from one that cannot be reached.</param>
+/// <param name="options">The <see cref="Cratis.Chronicle.Configuration.ChronicleOptions"/>, for how long a busy silo is waited for.</param>
 /// <param name="logger">The logger.</param>
 /// <param name="timeProvider">Optional <see cref="TimeProvider"/> the retry backoff waits on; defaults to <see cref="TimeProvider.System"/>.</param>
 /// <param name="generationFloorAdmission">Optional read-only generation admission; defaults to the real storage-backed admission.</param>
@@ -79,6 +82,8 @@ internal sealed class ChronicleServerStartupTask(
     IPatchRunner patchRunner,
     IClusterReleases clusterReleases,
     IKernelProjectionRegistrationRetries kernelProjectionRetries,
+    IBusySilos busySilos,
+    IOptions<Cratis.Chronicle.Configuration.ChronicleOptions> options,
     ILogger<ChronicleServerStartupTask> logger,
     TimeProvider? timeProvider = null,
     IGenerationFloorAdmission? generationFloorAdmission = null,
@@ -100,9 +105,11 @@ internal sealed class ChronicleServerStartupTask(
     /// How many rounds of <see cref="MaxAttempts"/> a required step is tried before the host is failed.
     /// </summary>
     /// <remarks>
-    /// A silo restarted into a backlog - thousands of overdue reminders activating grains at once - answers its own
-    /// calls late. Stopping the process then only restarts the same backlog, so a required step waits for the silo to catch up,
-    /// unready, for a long while before it is believed to be broken (#5676, #4068).
+    /// A sibling that is gone, a cluster that has not formed, or storage that does not answer can take a while to
+    /// recover, so a required step tries for a long while, unready, before it is believed to be broken (#5676, #4068).
+    /// A timeout against a silo that is up - this one, or a sibling the cluster reports as active - is not counted at
+    /// all: that silo is busy catching up, and stopping the process then only restarts the same backlog. That wait has its
+    /// own, much longer limit instead (<see cref="Cratis.Chronicle.Configuration.Startup.BusySiloWaitLimit"/>).
     /// </remarks>
     const int MaxRounds = 10;
 
@@ -111,10 +118,22 @@ internal sealed class ChronicleServerStartupTask(
     /// </summary>
     const int MaxConcurrentObserverActivations = 32;
 
+    /// <summary>
+    /// How many times a required step waits for a busy silo before the wait is reported as an error rather than a warning.
+    /// </summary>
+    /// <remarks>
+    /// Each wait already includes Orleans' 30 second response timeout, so this is several minutes of waiting. The silo
+    /// keeps waiting after that - restarting it only restarts the backlog - but an operator should see it, until
+    /// <see cref="Cratis.Chronicle.Configuration.Startup.BusySiloWaitLimit"/> is spent.
+    /// </remarks>
+    const int BusyWaitsBeforeEscalating = 10;
+
     static readonly TimeSpan _initialRetryDelay = TimeSpan.FromSeconds(2);
-    static readonly TimeSpan _busyRetryDelay = TimeSpan.FromMinutes(1);
+    static readonly TimeSpan _roundDelay = TimeSpan.FromMinutes(1);
+    static readonly TimeSpan _maxBusySiloDelay = TimeSpan.FromMinutes(1);
 
     readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
+    readonly TimeSpan _busySiloWaitLimit = options.Value.Startup.BusySiloWaitLimit;
 
     /// <inheritdoc/>
     public void Participate(ISiloLifecycle lifecycle)
@@ -213,6 +232,11 @@ internal sealed class ChronicleServerStartupTask(
             // Bound the namespace fan-out so starting a store with many tenants does not flood the cluster.
             await Parallel.ForEachAsync(await namespaces.GetAll().WaitAsync(cancellationToken), new ParallelOptions { MaxDegreeOfParallelism = 8, CancellationToken = cancellationToken }, async (namespaceName, token) =>
             {
+                // The steps here run on the per-namespace token. Parallel.ForEachAsync cancels it when another
+                // namespace fails and then waits for every body to finish, so a body still waiting on a busy silo
+                // with the outer token would keep the failure from ever reaching the host.
+                Task NamespaceStep(string step, Func<Task> action) => RunStep(step, action, token);
+
                 var namespaceStorage = storage.GetEventStore(eventStore).GetNamespace(namespaceName);
                 var hasData = await namespaceStorage.HasData().WaitAsync(token);
 
@@ -220,9 +244,9 @@ internal sealed class ChronicleServerStartupTask(
                 // There will be no new NamespaceAdded broadcast for an already registered namespace.
                 try
                 {
-                    await RunStep("SubscribePatternCapture", () => patternCapture.Subscribe(eventStore, namespaceName), cancellationToken, maxRounds: 1);
+                    await RunStep("SubscribePatternCapture", () => patternCapture.Subscribe(eventStore, namespaceName), token, maxRounds: 1, waitForBusySilos: false);
                 }
-                catch (Exception exception) when (!cancellationToken.IsCancellationRequested)
+                catch (Exception exception) when (!token.IsCancellationRequested)
                 {
                     // Analytics must not fail the Active lifecycle stage. The event log reconciles a missed
                     // subscription on its timer, including namespaces whose first append happens after startup.
@@ -237,13 +261,13 @@ internal sealed class ChronicleServerStartupTask(
                     return;
                 }
 
-                await Step("DiscoverAndRegisterReactors", () => reactors.DiscoverAndRegister(eventStore, namespaceName, cancellationToken));
+                await NamespaceStep("DiscoverAndRegisterReactors", () => reactors.DiscoverAndRegister(eventStore, namespaceName, token));
 
                 var jobsManager = grainFactory.GetJobsManager(eventStore, namespaceName);
-                await Step("RehydrateJobs", jobsManager.Rehydrate);
-                await Step("RehydrateEventSequences", grainFactory.GetEventSequences(eventStore, namespaceName).Rehydrate);
-                await Step("RehydrateObservers", () => RehydrateReducerAndReactorObservers(eventStore, namespaceName));
-                await Step("BootstrapObserverAlerts", () => BootstrapObserverAlerts(eventStore, namespaceName));
+                await NamespaceStep("RehydrateJobs", jobsManager.Rehydrate);
+                await NamespaceStep("RehydrateEventSequences", grainFactory.GetEventSequences(eventStore, namespaceName).Rehydrate);
+                await NamespaceStep("RehydrateObservers", () => RehydrateReducerAndReactorObservers(eventStore, namespaceName));
+                await NamespaceStep("BootstrapObserverAlerts", () => BootstrapObserverAlerts(eventStore, namespaceName));
             });
         }
 
@@ -359,19 +383,34 @@ internal sealed class ChronicleServerStartupTask(
     /// <param name="action">The work to perform.</param>
     /// <param name="cancellationToken">Token for cancelling startup and retry backoff.</param>
     /// <param name="maxRounds">How many rounds of attempts are made before the host is failed.</param>
+    /// <param name="waitForBusySilos">Whether a timeout against a silo that is up is waited out instead of counted as an attempt.</param>
     /// <returns>Awaitable task.</returns>
     /// <remarks>
     /// Only the failures <see cref="SiblingSiloInstability.IsTransient"/> or the registered
     /// <see cref="IStorageErrorClassifier"/> recognize are retried. Anything else - and anything
     /// still failing once the budget is spent - propagates, so a genuine defect still fails the
     /// host on startup rather than being started around.
+    /// <para>
+    /// A timeout against this silo itself, or against a sibling the cluster reports as active, is not
+    /// part of that budget: the target is there and busy catching up, and terminating the process only
+    /// restarts the same backlog (#5676). The step waits for it with a capped backoff, keeping the silo
+    /// running and not ready, and says so in the log every time.
+    /// </para>
+    /// <para>
+    /// A grain that never answers - a deadlock, or storage that hangs - times out the same way, so the wait is
+    /// bounded by <see cref="Cratis.Chronicle.Configuration.Startup.BusySiloWaitLimit"/>, measured from the step's
+    /// first such timeout. Once it is spent the step fails as any exhausted step does: a Critical log and a failed host.
+    /// </para>
     /// </remarks>
-    async Task RunStep(string step, Func<Task> action, CancellationToken cancellationToken, int maxRounds = MaxRounds) =>
-        await TryRunStep(step, action, cancellationToken, failOnExhaustion: true, maxRounds);
+    async Task RunStep(string step, Func<Task> action, CancellationToken cancellationToken, int maxRounds = MaxRounds, bool waitForBusySilos = true) =>
+        await TryRunStep(step, action, cancellationToken, failOnExhaustion: true, maxRounds, waitForBusySilos);
 
-    async Task<bool> TryRunStep(string step, Func<Task> action, CancellationToken cancellationToken, bool failOnExhaustion = false, int maxRounds = MaxRounds)
+    async Task<bool> TryRunStep(string step, Func<Task> action, CancellationToken cancellationToken, bool failOnExhaustion = false, int maxRounds = MaxRounds, bool waitForBusySilos = false)
     {
         var delay = _initialRetryDelay;
+        var busyDelay = _initialRetryDelay;
+        var busyWaits = 0;
+        var busySince = 0L;
         var round = 1;
         for (var attempt = 1; ; attempt++)
         {
@@ -380,6 +419,28 @@ internal sealed class ChronicleServerStartupTask(
             {
                 await action().WaitAsync(cancellationToken);
                 return true;
+            }
+            catch (Exception exception) when (waitForBusySilos && busySilos.FindBusySilo(exception) is { } busySilo)
+            {
+                if (busyWaits == 0)
+                {
+                    busySince = _timeProvider.GetTimestamp();
+                }
+
+                busyWaits++;
+                var waited = _timeProvider.GetElapsedTime(busySince);
+                if (waited >= _busySiloWaitLimit)
+                {
+                    logger.StartupStepGaveUpWaitingForBusySilo(exception, step, busySilo.Address, busyWaits, waited, _busySiloWaitLimit);
+                    throw;
+                }
+
+                LogWaitingForBusySilo(exception, step, busySilo, busyDelay, busyWaits, waited);
+                await Task.Delay(busyDelay, _timeProvider, cancellationToken);
+                busyDelay = busyDelay * 2 < _maxBusySiloDelay ? busyDelay * 2 : _maxBusySiloDelay;
+
+                // Waiting for a busy silo is not an attempt at the step.
+                attempt--;
             }
             catch (Exception exception) when (IsTransient(exception) && attempt < MaxAttempts)
             {
@@ -392,8 +453,8 @@ internal sealed class ChronicleServerStartupTask(
                 if (!failOnExhaustion) return false;
                 if (round < maxRounds)
                 {
-                    logger.StartupStepStillBusy(exception, step, MaxAttempts, _busyRetryDelay, round, maxRounds);
-                    await Task.Delay(_busyRetryDelay, _timeProvider, cancellationToken);
+                    logger.StartupStepStillFailing(exception, step, MaxAttempts, _roundDelay, round, maxRounds);
+                    await Task.Delay(_roundDelay, _timeProvider, cancellationToken);
                     round++;
                     attempt = 0;
                     delay = _initialRetryDelay;
@@ -412,6 +473,29 @@ internal sealed class ChronicleServerStartupTask(
     }
 
     bool IsTransient(Exception exception) => SiblingSiloInstability.IsTransient(exception) || storageErrorClassifier.IsTransient(exception);
+
+    void LogWaitingForBusySilo(Exception exception, string step, BusySilo busySilo, TimeSpan delay, int waits, TimeSpan waited)
+    {
+        var escalate = waits > BusyWaitsBeforeEscalating;
+
+        // The same timeout and stack repeat on every wait; carrying them on the first wait and on escalation is enough.
+        var detail = waits == 1 || waits == BusyWaitsBeforeEscalating + 1 ? exception : null;
+        switch ((busySilo.IsThisSilo, escalate))
+        {
+            case (true, false):
+                logger.StartupStepWaitingForThisSilo(detail, step, busySilo.Address, delay, waits, waited);
+                break;
+            case (true, true):
+                logger.StartupStepStillWaitingForThisSilo(detail, step, busySilo.Address, delay, waits, waited);
+                break;
+            case (false, false):
+                logger.StartupStepWaitingForBusySibling(detail, step, busySilo.Address, delay, waits, waited);
+                break;
+            default:
+                logger.StartupStepStillWaitingForBusySibling(detail, step, busySilo.Address, delay, waits, waited);
+                break;
+        }
+    }
 
     /// <summary>
     /// Registers the persisted projection definitions for an event store with the local silo.

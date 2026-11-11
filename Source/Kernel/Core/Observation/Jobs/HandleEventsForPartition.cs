@@ -15,8 +15,11 @@ using Cratis.Chronicle.Observation.Webhooks;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventTypes;
+using Cratis.Metrics;
 using Cratis.Monads;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using OneOf.Types;
 
 namespace Cratis.Chronicle.Observation.Jobs;
@@ -37,6 +40,8 @@ namespace Cratis.Chronicle.Observation.Jobs;
 /// <param name="logger">The logger.</param>
 /// <param name="eventGenerationRelease">The pinned generation release boundary.</param>
 /// <param name="timeProvider">The delivery fence clock.</param>
+/// <param name="observerMeter">The <see cref="IMeter{T}"/> the observer metrics are recorded with.</param>
+/// <param name="options">The kernel configuration, selecting the metric names.</param>
 public partial class HandleEventsForPartition(
     [PersistentState(nameof(JobStepState), Cratis.Choreography.WellKnownGrainStorageProviders.JobSteps)]
     IPersistentState<HandleEventsForPartitionState> state,
@@ -48,7 +53,9 @@ public partial class HandleEventsForPartition(
     IObserverServiceClient observerServiceClient,
     ILogger<HandleEventsForPartition> logger,
     IEventGenerationRelease? eventGenerationRelease = null,
-    TimeProvider? timeProvider = null) : JobStep<HandleEventsForPartitionArguments, HandleEventsForPartitionResult, HandleEventsForPartitionState>(state, throttle, logger), IHandleEventsForPartition
+    TimeProvider? timeProvider = null,
+    [FromKeyedServices(WellKnown.MeterName)] IMeter<Observer>? observerMeter = null,
+    IOptions<ChronicleOptions>? options = null) : JobStep<HandleEventsForPartitionArguments, HandleEventsForPartitionResult, HandleEventsForPartitionState>(state, throttle, logger), IHandleEventsForPartition
 {
     const string SubscriberDisconnected = "Subscriber is disconnected";
 
@@ -311,6 +318,7 @@ public partial class HandleEventsForPartition(
                     switch (eventObserverResult.State)
                     {
                         case ObserverSubscriberState.Ok:
+                            RecordSuccessfulObservation(currentState);
                             lastEventSequenceNumberAttempted = EventSequenceNumber.Unavailable;
                             if (!await ReportFromWork(eventObserverResult.LastSuccessfulObservation))
                             {

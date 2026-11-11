@@ -13,11 +13,7 @@ namespace Cratis.Chronicle.XUnit.Integration;
 internal sealed class IntegrationTimingOutput(Action<string> write) : Stream
 {
     const int MaximumLineBytes = 16384;
-#if NET8_0
-    readonly object _lineLock = new();
-#else
     readonly Lock _lineLock = new();
-#endif
     readonly byte[] _line = new byte[MaximumLineBytes];
     int _length;
     bool _overflow;

@@ -16,9 +16,10 @@ concurrency:
 
 env:
   NUGET_OUTPUT: ./Artifacts/NuGet
-  DOTNET8_VERSION: "8.0.410"
-  DOTNET9_VERSION: "9.0.x"
-  DOTNET_VERSION: "10.0.x"
+  # .NET 11 builds everything; .NET 10 is installed for the net10 client-library lane and asset.
+  DOTNET_VERSION: |
+    10.0.x
+    11.0.x
 
 on:
   workflow_dispatch:
@@ -201,15 +202,12 @@ jobs:
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: |
-            ${{ env.DOTNET8_VERSION }}
-            ${{ env.DOTNET9_VERSION }}
-            ${{ env.DOTNET_VERSION }}
+          dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Build x64 Kernel - self contained, ready to run
         working-directory: ./Source/Kernel/Server
         run: |
-          dotnet publish -c Release -f net10.0 -r linux-x64 -p:PublishReadyToRun=true -p:DisableProxyGenerator=true -p:Version=${{ needs.release.outputs.version }} -p:SourceRevisionId=${{ github.sha }} --self-contained -o out/x64
+          dotnet publish -c Release -f net11.0 -r linux-x64 -p:PublishReadyToRun=true -p:DisableProxyGenerator=true -p:Version=${{ needs.release.outputs.version }} -p:SourceRevisionId=${{ github.sha }} --self-contained -o out/x64
 
       - name: Upload x64 kernel output
         uses: actions/upload-artifact@v4
@@ -231,15 +229,12 @@ jobs:
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: |
-            ${{ env.DOTNET8_VERSION }}
-            ${{ env.DOTNET9_VERSION }}
-            ${{ env.DOTNET_VERSION }}
+          dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Build arm64 Kernel - self contained, ready to run
         working-directory: ./Source/Kernel/Server
         run: |
-          dotnet publish -c Release -f net10.0 -r linux-arm64 -p:PublishReadyToRun=true -p:DisableProxyGenerator=true -p:Version=${{ needs.release.outputs.version }} -p:SourceRevisionId=${{ github.sha }} --self-contained -o out/arm64
+          dotnet publish -c Release -f net11.0 -r linux-arm64 -p:PublishReadyToRun=true -p:DisableProxyGenerator=true -p:Version=${{ needs.release.outputs.version }} -p:SourceRevisionId=${{ github.sha }} --self-contained -o out/arm64
 
       - name: Upload arm64 kernel output
         uses: actions/upload-artifact@v4
@@ -313,10 +308,7 @@ jobs:
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: |
-            ${{ env.DOTNET8_VERSION }}
-            ${{ env.DOTNET9_VERSION }}
-            ${{ env.DOTNET_VERSION }}
+          dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Cache NuGet packages
         uses: Cratis/Workflows/.github/actions/dotnet-cache@main
@@ -374,10 +366,7 @@ jobs:
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: |
-            ${{ env.DOTNET8_VERSION }}
-            ${{ env.DOTNET9_VERSION }}
-            ${{ env.DOTNET_VERSION }}
+          dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Cache NuGet packages
         uses: Cratis/Workflows/.github/actions/dotnet-cache@main
@@ -483,15 +472,12 @@ jobs:
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: |
-            ${{ env.DOTNET8_VERSION }}
-            ${{ env.DOTNET9_VERSION }}
-            ${{ env.DOTNET_VERSION }}
+          dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Build development x64 Kernel (DEVELOPMENT symbol)
         working-directory: ./Source/Kernel/Server
         run: |
-          dotnet publish -c Release -f net10.0 -r linux-x64 -p:PublishReadyToRun=true -p:DisableProxyGenerator=true -p:DefineConstants=DEVELOPMENT -p:Version=${{ needs.release.outputs.version }} -p:SourceRevisionId=${{ github.sha }} -o out/x64
+          dotnet publish -c Release -f net11.0 -r linux-x64 -p:PublishReadyToRun=true -p:DisableProxyGenerator=true -p:DefineConstants=DEVELOPMENT -p:Version=${{ needs.release.outputs.version }} -p:SourceRevisionId=${{ github.sha }} -o out/x64
 
       - name: Upload x64 development kernel output
         uses: actions/upload-artifact@v4
@@ -513,15 +499,12 @@ jobs:
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: |
-            ${{ env.DOTNET8_VERSION }}
-            ${{ env.DOTNET9_VERSION }}
-            ${{ env.DOTNET_VERSION }}
+          dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Build development arm64 Kernel (DEVELOPMENT symbol)
         working-directory: ./Source/Kernel/Server
         run: |
-          dotnet publish -c Release -f net10.0 -r linux-arm64 -p:PublishReadyToRun=true -p:DisableProxyGenerator=true -p:DefineConstants=DEVELOPMENT -p:Version=${{ needs.release.outputs.version }} -p:SourceRevisionId=${{ github.sha }} -o out/arm64
+          dotnet publish -c Release -f net11.0 -r linux-arm64 -p:PublishReadyToRun=true -p:DisableProxyGenerator=true -p:DefineConstants=DEVELOPMENT -p:Version=${{ needs.release.outputs.version }} -p:SourceRevisionId=${{ github.sha }} -o out/arm64
 
       - name: Upload arm64 development kernel output
         uses: actions/upload-artifact@v4

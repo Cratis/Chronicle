@@ -3,6 +3,7 @@
 
 namespace Cratis.Chronicle.ReadModels.for_DecisionReads;
 
+[PerFactSpecificationLifecycle]
 public class when_admitting_a_projection : given.a_decision_reader
 {
     [Theory]

@@ -9,11 +9,16 @@ namespace Cratis.Chronicle.Reducers.for_ReducerDispatcher.when_dispatching_a_pag
 public class and_a_partition_is_unchanged : given.a_reducer_dispatcher
 {
     readonly List<object?> _initialStates = [];
+    readonly Lock _initialStatesLock = new();
 
     void Establish() => _handler.OnNext(Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<object?>(), Arg.Any<IServiceProvider>()).Returns(call =>
     {
-        _initialStates.Add(call.Arg<object?>());
-        return new ReduceResult(new State("state-" + _initialStates.Count), 7, [], string.Empty);
+        // The dispatcher reduces the partitions of a page in parallel, so the handler records under a lock.
+        lock (_initialStatesLock)
+        {
+            _initialStates.Add(call.Arg<object?>());
+            return new ReduceResult(new State("state-" + _initialStates.Count), 7, [], string.Empty);
+        }
     });
 
     async Task Because()

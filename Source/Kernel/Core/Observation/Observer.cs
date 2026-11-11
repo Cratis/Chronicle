@@ -49,6 +49,7 @@ namespace Cratis.Chronicle.Observation;
 /// <param name="optionsMonitor">The webhook retry configuration.</param>
 /// <param name="eventGenerationRelease">The pinned generation release boundary.</param>
 /// <param name="timeProvider">The delivery fence clock.</param>
+/// <param name="observerGauges">The <see cref="IObserverGauges"/> the observer reports its current state to.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.ObserverState)]
 [KeepAlive]
 [ObserverPlacement]
@@ -68,7 +69,8 @@ public partial class Observer(
     ILoggerFactory loggerFactory,
     IOptionsMonitor<ChronicleOptions> optionsMonitor,
     IEventGenerationRelease? eventGenerationRelease = null,
-    TimeProvider? timeProvider = null) : StateMachine<ObserverState>, IObserver, IObserverDevelopmentReset, IRemindable, IDisposable
+    TimeProvider? timeProvider = null,
+    IObserverGauges? observerGauges = null) : StateMachine<ObserverState>, IObserver, IObserverDevelopmentReset, IRemindable, IDisposable
 {
     readonly TimeProvider _clock = timeProvider ?? TimeProvider.System;
     readonly HashSet<JobId> _concludedCatchUpJobs = [];
@@ -222,6 +224,7 @@ public partial class Observer(
         _statePersistenceBatchInterval = config.StatePersistenceBatchInterval < 1 ? 1 : config.StatePersistenceBatchInterval;
         _writeCoalescingInterval = TimeSpan.FromSeconds(Math.Max(config.WriteCoalescingInterval, 0));
         RegisterWatchdog(config.WatchdogInterval);
+        ConfigureIdleDeactivation(config.IdleDeactivationAfter);
         _webhookProbe = State.WebhookProbe;
         RestoreShadowClaims();
         await InitializeAlertState();
@@ -229,6 +232,8 @@ public partial class Observer(
         {
             logger.ActivatedOnAnotherEventSequence(_observerId, _observerKey.EventSequenceId, Definition.EventSequenceId);
         }
+
+        PublishFailedPartitionsGauge();
     }
 
     /// <inheritdoc/>
@@ -255,7 +260,8 @@ public partial class Observer(
                 return;
             }
 
-            if (reason.ReasonCode != DeactivationReasonCode.ShuttingDown)
+            // An observer released as idle is disconnected already and has nothing left to write, the same as at shutdown.
+            if (reason.ReasonCode != DeactivationReasonCode.ShuttingDown && !IsReleasedAsIdle)
             {
                 await TransitionTo<Disconnected>();
                 await base.OnDeactivateAsync(reason, cancellationToken);
@@ -263,6 +269,7 @@ public partial class Observer(
         }
         finally
         {
+            ReleaseGauge();
             Dispose();
         }
     }
@@ -284,6 +291,7 @@ public partial class Observer(
         // re-persist the old cursor after the resetter wipes storage. This uses the same seal as observer removal,
         // without deleting any persisted definition here.
         _removed = true;
+        ReleaseGauge();
         DeactivateOnIdle();
     }
 
@@ -393,6 +401,7 @@ public partial class Observer(
             // callbacks nor deactivation can recreate the record. Reactivation consults authoritative storage.
             _removed = true;
             _stateWritingSuspended = true;
+            ReleaseGauge();
             try
             {
                 await namespaceStorage.Observers.Delete(_observerId);
@@ -474,6 +483,9 @@ public partial class Observer(
         await failures.ReadStateAsync();
         if (!reactivateRetired && State.AlertDisposition == AlertDisposition.Retired) return;
         await ClaimDefinitionForKey();
+
+        // The failures were re-read from storage; publish them so the gauges never keep counts from before the read.
+        PublishFailedPartitionsGauge();
         await ApplyPendingStartAtTail(storageWasReset);
         await BeginAlertLifecycle();
         await LeaveQuarantineForSubscription();
@@ -755,6 +767,7 @@ public partial class Observer(
     {
         _stateTransitionInProgress = false;
         KeepWhatWasRecordedDuringTransitionHook();
+        PublishRunningStateGauge();
         if (state is States.Replay { StartRefusal: { } refusal })
         {
             // Nothing drives this replay forward, so it settles no owed recovery; routing decides that afresh.
@@ -838,6 +851,7 @@ public partial class Observer(
             }
 
             _persistedStateWrites++;
+            PublishRunningStateGauge();
             if (revision == _alertRevision)
             {
                 _alertStateNeedsPersistence = false;
@@ -1035,6 +1049,9 @@ public partial class Observer(
 
             // Only an accepted subscription may move the definition; persist ownership before any cleanup writes.
             await ClaimDefinitionForKey();
+
+            // The failures may have been re-read from storage; publish them so the gauges never keep counts from before.
+            PublishFailedPartitionsGauge();
             await ApplyPendingStartAtTail(storageWasReset);
             await BeginAlertLifecycle();
             var webhookSubscription = typeof(IWebhookObserverSubscriber).IsAssignableFrom(typeof(TObserverSubscriber));

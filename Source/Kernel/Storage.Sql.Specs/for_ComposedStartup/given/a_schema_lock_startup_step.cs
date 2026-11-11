@@ -2,8 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
-using Cratis.Chronicle.EventTypes;
+using Cratis.Chronicle.Setup;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.Storage.Sql.for_ComposedStartup.given;
 
@@ -15,17 +16,38 @@ public class a_schema_lock_startup_step : for_DatabaseSchemaLock.given.a_command
     protected int _attempts;
     protected bool _cancelDuringAcquire;
     protected bool _wrapFailure;
-    object _startup;
-    MethodInfo _runStep;
+    Func<string, Func<Task>, CancellationToken, int, bool, Task> _runStep;
 
     void Establish()
     {
         // Exercise the existing private startup step, as the Core startup specs do for Execute.
-        // No other startup collaborators are used by this step's retry path.
-        var type = typeof(IEventTypes).Assembly.GetType("Orleans.Hosting.ChronicleServerStartupTask", throwOnError: true)!;
-        var logger = typeof(NullLogger<>).MakeGenericType(type).GetField("Instance")!.GetValue(null);
-        _startup = Activator.CreateInstance(type, [null, null, null, null, null, null, null, null, new SqlStorageErrorClassifier(), null, null, null, logger, _time, null, null, null])!;
-        _runStep = type.GetMethod("RunStep", BindingFlags.Instance | BindingFlags.NonPublic)!;
+        // No other startup collaborators are used by this step's retry path. The task is constructed
+        // with named arguments so a change to its constructor breaks this spec at compile time.
+        var busySilos = Substitute.For<IBusySilos>();
+        busySilos.FindBusySilo(Arg.Any<Exception>()).Returns((BusySilo?)null);
+        var startup = new ChronicleServerStartupTask(
+            storage: null!,
+            eventTypes: null!,
+            reactors: null!,
+            patternCapture: null!,
+            projectionsServiceClient: null!,
+            kernelProjections: null!,
+            grainFactory: null!,
+            authenticationService: null!,
+            storageErrorClassifier: new SqlStorageErrorClassifier(),
+            patchRunner: null!,
+            clusterReleases: null!,
+            kernelProjectionRetries: null!,
+            busySilos: busySilos,
+            options: Options.Create(new Configuration.ChronicleOptions()),
+            logger: NullLogger<ChronicleServerStartupTask>.Instance,
+            timeProvider: _time);
+
+        // Bound as a typed delegate, so a changed RunStep signature fails here with a clear message
+        // rather than as a parameter-count mismatch inside the specification.
+        var runStep = typeof(ChronicleServerStartupTask).GetMethod("RunStep", BindingFlags.Instance | BindingFlags.NonPublic)
+            ?? throw new MissingMethodException(nameof(ChronicleServerStartupTask), "RunStep");
+        _runStep = runStep.CreateDelegate<Func<string, Func<Task>, CancellationToken, int, bool, Task>>(startup);
         _command.ExecuteScalarAsync(Arg.Any<CancellationToken>()).Returns(async _ =>
         {
             _attempts++;
@@ -39,7 +61,7 @@ public class a_schema_lock_startup_step : for_DatabaseSchemaLock.given.a_command
         });
     }
 
-    protected Task Execute() => (Task)_runStep.Invoke(_startup, ["schema change", (Func<Task>)Acquire, _cancellation.Token, 1])!;
+    protected Task Execute() => _runStep("schema change", Acquire, _cancellation.Token, 1, true);
 
     async Task Acquire()
     {

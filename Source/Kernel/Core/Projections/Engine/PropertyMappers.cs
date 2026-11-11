@@ -8,6 +8,7 @@ using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Dynamic;
+using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
 using Cratis.Types;
@@ -200,7 +201,7 @@ public static class PropertyMappers
             _ when targetType == typeof(TimeSpan) => (TimeSpan)currentValue + (TimeSpan)valueToAdd,
             _ when targetType == typeof(double) => Add((double)Convert.ChangeType(currentValue, typeof(double)), (double)Convert.ChangeType(valueToAdd, typeof(double))),
             _ when targetType == typeof(float) => Add((float)Convert.ChangeType(currentValue, typeof(float)), (float)Convert.ChangeType(valueToAdd, typeof(float))),
-            _ when targetType == typeof(decimal) => Add((decimal)Convert.ChangeType(currentValue, typeof(decimal)), (decimal)Convert.ChangeType(valueToAdd, typeof(decimal))),
+            _ when targetType == typeof(decimal) => Add(ToDecimal(currentValue), ToDecimal(valueToAdd)),
             _ when targetType == typeof(long) => Add((long)Convert.ChangeType(currentValue, typeof(long)), (long)Convert.ChangeType(valueToAdd, typeof(long))),
             _ when targetType == typeof(int) => Add((int)Convert.ChangeType(currentValue, typeof(int)), (int)Convert.ChangeType(valueToAdd, typeof(int))),
             _ when targetType == typeof(short) => Add((short)Convert.ChangeType(currentValue, typeof(short)), (short)Convert.ChangeType(valueToAdd, typeof(short))),
@@ -216,7 +217,7 @@ public static class PropertyMappers
             _ when targetType == typeof(TimeSpan) => (TimeSpan)currentValue - (TimeSpan)valueToSubtract,
             _ when targetType == typeof(double) => Subtract((double)Convert.ChangeType(currentValue, typeof(double)), (double)Convert.ChangeType(valueToSubtract, typeof(double))),
             _ when targetType == typeof(float) => Subtract((float)Convert.ChangeType(currentValue, typeof(float)), (float)Convert.ChangeType(valueToSubtract, typeof(float))),
-            _ when targetType == typeof(decimal) => Subtract((decimal)Convert.ChangeType(currentValue, typeof(decimal)), (decimal)Convert.ChangeType(valueToSubtract, typeof(decimal))),
+            _ when targetType == typeof(decimal) => Subtract(ToDecimal(currentValue), ToDecimal(valueToSubtract)),
             _ when targetType == typeof(long) => Subtract((long)Convert.ChangeType(currentValue, typeof(long)), (long)Convert.ChangeType(valueToSubtract, typeof(long))),
             _ when targetType == typeof(int) => Subtract((int)Convert.ChangeType(currentValue, typeof(int)), (int)Convert.ChangeType(valueToSubtract, typeof(int))),
             _ when targetType == typeof(short) => Subtract((short)Convert.ChangeType(currentValue, typeof(short)), (short)Convert.ChangeType(valueToSubtract, typeof(short))),
@@ -224,6 +225,10 @@ public static class PropertyMappers
             _ => TypeConversion.Convert(targetType, Subtract((double)Convert.ChangeType(currentValue, typeof(double)), (double)Convert.ChangeType(valueToSubtract, typeof(double))))
         };
     }
+
+    static decimal ToDecimal(object value) => value is double or float
+        ? DecimalValues.ToDecimal(value)
+        : (decimal)Convert.ChangeType(value, typeof(decimal));
 
     static T Add<T>(T left, T right)
         where T : INumber<T> => left + right;
