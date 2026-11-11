@@ -71,4 +71,19 @@ public partial class Observer
         connectedClient.ConnectionId != connectionId;
 
     bool IsSubscriptionWithoutClient() => _subscription.IsSubscribed && _subscription.Arguments is not ConnectedClient;
+
+    void RemoveSubscriberTarget(ObserverSubscriberTarget target)
+    {
+        var remaining = _subscription.Targets
+            .Where(existing => existing.ConnectedClient?.ConnectionId != target.ConnectedClient?.ConnectionId)
+            .ToArray();
+        _subscription = remaining.Length > 0
+            ? _subscription with
+            {
+                SiloAddress = remaining[0].SiloAddress,
+                Arguments = remaining[0].ConnectedClient,
+                Targets = remaining
+            }
+            : _subscription with { Targets = [] };
+    }
 }

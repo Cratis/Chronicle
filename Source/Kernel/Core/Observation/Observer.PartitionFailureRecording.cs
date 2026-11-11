@@ -13,6 +13,14 @@ public partial class Observer
     /// <summary>
     /// Identifies a failed delivery, its recovery attempt and its delivery context.
     /// </summary>
+    /// <param name="Partition">The failed partition.</param>
+    /// <param name="SequenceNumber">The failed event.</param>
+    /// <param name="ExceptionMessages">The failure messages.</param>
+    /// <param name="ExceptionStackTrace">The failure stack trace.</param>
+    /// <param name="Kind">The failure kind.</param>
+    /// <param name="EpisodeId">The recovery episode.</param>
+    /// <param name="DeferralId">The recovery deferral.</param>
+    /// <param name="Context">The delivery context.</param>
     readonly record struct PartitionFailure(
         Key Partition,
         EventSequenceNumber SequenceNumber,
@@ -26,6 +34,8 @@ public partial class Observer
     /// <summary>
     /// The quarantine and retry decisions for a recorded failure.
     /// </summary>
+    /// <param name="QuarantineObserver">Whether the observer must be quarantined.</param>
+    /// <param name="RetryDelay">The retry delay, if any.</param>
     readonly record struct PartitionFailureOutcome(bool QuarantineObserver, TimeSpan? RetryDelay);
 
     /// <summary>
@@ -68,7 +78,6 @@ public partial class Observer
         TimeSpan? retryDelayToRegister = null;
         var partition = request.Partition;
         var context = request.Context;
-        var sequenceNumber = request.SequenceNumber;
         if (!IsQuarantined)
         {
             quarantineObserver = webhook ? context.Policy == WebhookDeliveryFailurePolicy.PauseObserver : ShouldQuarantineObserver(config);
@@ -78,7 +87,7 @@ public partial class Observer
             }
             else if (!quarantineObserver)
             {
-                retryDelayToRegister = DecidePartitionRetry(failure, config, webhook, sequenceNumber);
+                retryDelayToRegister = DecidePartitionRetry(failure, config, webhook, request);
             }
         }
 
@@ -95,17 +104,17 @@ public partial class Observer
     /// <param name="failure">The failure being retried.</param>
     /// <param name="config">The retry configuration.</param>
     /// <param name="webhook">Whether the subscription is a webhook.</param>
-    /// <param name="sequenceNumber">The failed event.</param>
+    /// <param name="request">The failed delivery.</param>
     /// <returns>The retry delay, if any.</returns>
-    TimeSpan? DecidePartitionRetry(FailedPartition failure, Observers config, bool webhook, EventSequenceNumber sequenceNumber)
+    TimeSpan? DecidePartitionRetry(FailedPartition failure, Observers config, bool webhook, PartitionFailure request)
     {
         if (RetriesRemain(failure, config, webhook))
         {
-            return webhook ? SetWebhookRetryBackoff(failure, config, sequenceNumber) : GetNextRetryDelay(failure, config);
+            return webhook ? SetWebhookRetryBackoff(failure, config, request.SequenceNumber) : GetNextRetryDelay(failure, config);
         }
         else
         {
-            QuarantinePartition(failure.Partition);
+            QuarantinePartition(request.Partition);
         }
         return null;
     }

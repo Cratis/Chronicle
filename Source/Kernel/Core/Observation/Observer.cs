@@ -5,7 +5,6 @@ using System.Collections.Immutable;
 using Cratis.Choreography.Jobs;
 using Cratis.Choreography.StateMachines;
 using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.EventTypes;
@@ -19,7 +18,6 @@ using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Observation.Placement;
 using Cratis.Chronicle.Observation.States;
-using Cratis.Chronicle.Observation.Webhooks;
 using Cratis.Chronicle.Observation.Webhooks.Validation;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Observation;
@@ -436,75 +434,6 @@ public partial class Observer(
     }
 
     /// <inheritdoc/>
-    public Task Subscribe<TObserverSubscriber>(
-        ObserverType type,
-        IEnumerable<EventType> eventTypes,
-        SiloAddress siloAddress,
-        object? subscriberArgs = null,
-        bool isReplayable = true,
-        ObserverFilters? filters = null,
-        bool reactivateRetired = true,
-        bool automatic = false)
-        where TObserverSubscriber : IObserverSubscriber
-        => SubscribeWithGenerationDelivery<TObserverSubscriber>(type, eventTypes, siloAddress, EventGenerationDelivery.Compatibility, subscriberArgs, isReplayable, filters, reactivateRetired, automatic);
-
-    /// <inheritdoc/>
-    public Task SubscribeWithGenerationDelivery<TObserverSubscriber>(
-        ObserverType type,
-        IEnumerable<EventType> eventTypes,
-        SiloAddress siloAddress,
-        EventGenerationDelivery generationDelivery,
-        object? subscriberArgs = null,
-        bool isReplayable = true,
-        ObserverFilters? filters = null,
-        bool reactivateRetired = true,
-        bool automatic = false)
-        where TObserverSubscriber : IObserverSubscriber =>
-        SubscribeToEventTypes<TObserverSubscriber>(type, eventTypes, siloAddress, subscriberArgs, isReplayable, filters, reactivateRetired: reactivateRetired, automatic: automatic, generationDelivery: generationDelivery);
-
-    /// <inheritdoc/>
-    public async Task SubscribeToAllEvents<TObserverSubscriber>(
-        ObserverType type,
-        SiloAddress siloAddress,
-        object? subscriberArgs = null,
-        bool isReplayable = true,
-        bool reactivateRetired = true)
-        where TObserverSubscriber : IObserverSubscriber
-    {
-        ThrowIfSealed();
-        SupersedeRecoveryAfterQuarantine();
-        using var scope = logger.BeginObserverScope(_observerId, _observerKey);
-
-        logger.Subscribing();
-        logger.SubscribingToAllEvents();
-
-        var storageWasReset = await ReloadObserverState();
-        await observerDefinition.ReadStateAsync();
-        await failures.ReadStateAsync();
-        if (!reactivateRetired && State.AlertDisposition == AlertDisposition.Retired) return;
-        await ClaimDefinitionForKey();
-
-        // The failures were re-read from storage; publish them so the gauges never keep counts from before the read.
-        PublishFailedPartitionsGauge();
-        await ApplyPendingStartAtTail(storageWasReset);
-        await BeginAlertLifecycle();
-        await LeaveQuarantineForSubscription();
-
-        _subscriptionSetupFailed = true;
-        try
-        {
-            await SetUpAllEventsSubscription<TObserverSubscriber>(type, siloAddress, subscriberArgs, isReplayable);
-            await RecoverAfterSubscribing(leavesQuarantine: true);
-            _subscriptionSetupFailed = await GetCurrentState() is CatchingUpInFlight;
-        }
-        catch
-        {
-            _subscriptionSetupFailed = true;
-            throw;
-        }
-    }
-
-    /// <inheritdoc/>
     public override IImmutableList<IState<ObserverState>> CreateStates() => new IState<ObserverState>[]
     {
         new Disconnected(),
@@ -621,78 +550,6 @@ public partial class Observer(
         await Task.WhenAll(stopTasks);
     }
 
-    /// <summary>
-    /// Resolves the state to enter on activation, retaining quarantine and keeping retired observers
-    /// disconnected. Their replay metadata is retained for a fresh subscription, not a reason to start work.
-    /// </summary>
-    /// <returns>The type of the state to enter.</returns>
-    protected override Type ResolveActivationState()
-    {
-        if (State.RunningState != ObserverRunningState.Quarantined)
-        {
-            return !_observerExists || IsRetired ? typeof(Disconnected) : base.ResolveActivationState();
-        }
-
-        _resumingQuarantine = true;
-        return typeof(QuarantinedObserver);
-    }
-
-    /// <inheritdoc/>
-    protected override async Task OnBeforeEnteringState(IState<ObserverState> state)
-    {
-        ResetRecoveryFlagsForEntering(state);
-        _isQuarantined = state is QuarantinedObserver;
-        await _alertMutationLock.WaitAsync();
-        try
-        {
-            if (state is BaseObserverState observerState)
-            {
-                TrackQuarantineAlertFor(observerState);
-                State = State with { RunningState = observerState.RunningState };
-                ApplyRunningState(observerState.RunningState);
-            }
-        }
-        finally
-        {
-            _alertMutationLock.Release();
-        }
-
-        BeginTransitionHook();
-    }
-
-    /// <inheritdoc/>
-    protected override async Task OnAfterEnteringState(IState<ObserverState> state)
-    {
-        _stateTransitionInProgress = false;
-        KeepWhatWasRecordedDuringTransitionHook();
-        PublishRunningStateGauge();
-        if (state is States.Replay { StartRefusal: { } refusal })
-        {
-            // Nothing drives this replay forward, so it settles no owed recovery; routing decides that afresh.
-            await SettleRefusedReplayStart(refusal);
-            return;
-        }
-
-        if (state is QuarantinedObserver) await ReconcileWebhookProbe();
-        if (SettlesOwedRecovery(state))
-        {
-            // Settled: the observer is driven forward again, or routing legitimately disconnected an empty
-            // explicitly-typed subscription. The initial Disconnected entry still owes its recovery.
-            _retryRecoveryAfterQuarantine = false;
-            _owedRecoveryAttempts = 0;
-            return;
-        }
-
-        if (state is Disconnected && _recoverSubscriptionAfterQuarantine)
-        {
-            _recoverSubscriptionAfterQuarantine = false;
-            if (_subscription.IsSubscribed)
-            {
-                await RecoverAfterQuarantine();
-            }
-        }
-    }
-
     /// <inheritdoc/>
     protected override async Task WriteStateAsync()
     {
@@ -713,81 +570,7 @@ public partial class Observer(
         }
     }
 
-    static void ThrowIfPinsMultipleGenerations(IEnumerable<EventType> eventTypes)
-    {
-        var duplicate = eventTypes.GroupBy(_ => _.Id).FirstOrDefault(_ => _.Select(type => type.Generation).Distinct().Count() > 1);
-        if (duplicate is not null)
-        {
-            throw new ObserverPinsMultipleGenerationsOfEventType(duplicate.Key);
-        }
-    }
-
-    static bool FiltersAreEqual(ObserverFilters? left, ObserverFilters? right)
-    {
-        if (left is null || right is null)
-        {
-            return ReferenceEquals(left, right);
-        }
-
-        // ObserverFilters is a record, but its Tags collection makes the generated equality a
-        // reference comparison - two identical registrations from different client instances
-        // would never be considered equal. Compare structurally instead.
-        return left.Tags.ToHashSet().SetEquals(right.Tags) &&
-               Equals(left.EventSourceType, right.EventSourceType) &&
-               Equals(left.EventStreamType, right.EventStreamType);
-    }
-
-    bool SettlesOwedRecovery(IState<ObserverState> state) =>
-        state is Observing or States.Replay || IsEmptySubscriptionDisconnect(state);
-
-    bool IsEmptySubscriptionDisconnect(IState<ObserverState> state) =>
-        state is Disconnected &&
-        !_recoverSubscriptionAfterQuarantine &&
-        _subscription.IsSubscribed &&
-        !_subscription.EventTypes.Any() &&
-        !State.SubscribesToAllEvents;
-
     bool CannotRecoverFromReminder() => IsRetired || _removed || IsQuarantined || !_subscription.IsSubscribed;
-
-    void ResetRecoveryFlagsForEntering(IState<ObserverState> state)
-    {
-        // Any transition supersedes a recovery scheduled for when a requested leave enters Disconnected. Entering
-        // Disconnected is how that leave completes, so only that keeps it.
-        if (state is not Disconnected)
-        {
-            _recoverSubscriptionAfterQuarantine = false;
-        }
-
-        // A recovery owed after quarantine stays retryable until it settles. Entering a transient state does not
-        // settle it: the transition carrying it onward is dropped if persisting that entry fails. A new quarantine
-        // supersedes it, since clearing that one owes a recovery of its own.
-        if (state is QuarantinedObserver)
-        {
-            _retryRecoveryAfterQuarantine = false;
-            _owedRecoveryAttempts = 0;
-        }
-    }
-
-    void TrackQuarantineAlertFor(BaseObserverState observerState)
-    {
-        var wasQuarantined = State.RunningState == ObserverRunningState.Quarantined;
-        var isQuarantined = observerState.RunningState == ObserverRunningState.Quarantined;
-        if (isQuarantined && !wasQuarantined)
-        {
-            _quarantineEpisodeId = Guid.NewGuid();
-            ChangeAlertState();
-        }
-        else if (!isQuarantined && wasQuarantined)
-        {
-            if (_quarantineEpisodeId is { } episode && !_alertEndings.ContainsKey(new(episode)))
-            {
-                RememberQuarantineEnding(Concepts.Alerts.AlertClearedReason.Cleared);
-            }
-
-            _quarantineEpisodeId = null;
-            ChangeAlertState();
-        }
-    }
 
     /// <summary>
     /// Reloads stored progress without replacing this activation's identity or quarantine.
@@ -809,70 +592,6 @@ public partial class Observer(
         RecordedHandlingState();
         return storageWasReset;
     }
-
-    bool IsRetiredAndNotReactivating(bool reactivateRetired) => !reactivateRetired && State.AlertDisposition == AlertDisposition.Retired;
-
-    bool IsAdditiveSubscriptionBlocked(bool additive) => additive && (_removed || IsRetired);
-
-    void DiscardQuarantineFromWipedWorld()
-    {
-        // The entry time belongs to the discarded episode, not to a future quarantine.
-        _quarantineRunningStateChangedAt = null;
-        _webhookProbe = null;
-        _armWebhookProbe = false;
-        _recoverSubscriptionAfterQuarantine = false;
-        _isPreparingCatchup = false;
-        NotePreparationEnded();
-        _catchupRecoveryAttempts = 0;
-        _subscription = ObserverSubscription.Unsubscribed;
-        ForgetSupersededRegistrations();
-    }
-
-    async Task ValidateGenerationDelivery(IEnumerable<EventType> eventTypes, EventGenerationDelivery generationDelivery)
-    {
-        if (generationDelivery != EventGenerationDelivery.Pinned) return;
-        ThrowIfPinsMultipleGenerations(eventTypes);
-        var eventTypesStorage = storage.GetEventStore(_observerKey.EventStore).EventTypes;
-        foreach (var eventType in eventTypes)
-        {
-            if (!await eventTypesStorage.HasFor(eventType.Id, eventType.Generation))
-            {
-                throw new EventTypeGenerationNotRegisteredForObserver(eventType);
-            }
-        }
-    }
-
-    bool CanFanOutInto<TObserverSubscriber>(IEnumerable<EventType> eventTypes, ObserverFilters? filters, EventGenerationDelivery generationDelivery)
-        where TObserverSubscriber : IObserverSubscriber =>
-        _subscription.IsSubscribed &&
-        _subscription.Targets.Count > 0 &&
-        _subscription.SubscriberType == typeof(TObserverSubscriber) &&
-        _subscription.GenerationDelivery == generationDelivery &&
-        _subscription.EventTypes.ToHashSet().SetEquals(eventTypes) &&
-        FiltersAreEqual(_subscription.Filters, filters);
-
-    void RemoveSubscriberTarget(ObserverSubscriberTarget target)
-    {
-        var remaining = _subscription.Targets
-            .Where(existing => existing.ConnectedClient?.ConnectionId != target.ConnectedClient?.ConnectionId)
-            .ToArray();
-        _subscription = remaining.Length > 0
-            ? _subscription with
-            {
-                SiloAddress = remaining[0].SiloAddress,
-                Arguments = remaining[0].ConnectedClient,
-                Targets = remaining
-            }
-            : _subscription with { Targets = [] };
-    }
-
-    ObserverOwner GetOwner<TObserverSubscriber>()
-        where TObserverSubscriber : IObserverSubscriber => typeof(TObserverSubscriber) switch
-        {
-            Type t when t.IsAssignableTo(typeof(IAmOwnedByClient)) => ObserverOwner.Client,
-            Type t when t.IsAssignableTo(typeof(IAmOwnedByKernel)) => ObserverOwner.Kernel,
-            _ => ObserverOwner.None
-        };
 
     /// <summary>
     /// Stops all non-replay observer jobs that are currently preparing or running so they can be resumed when the observer reconnects.
