@@ -69,9 +69,10 @@ internal static class SqlServerReadCommittedSnapshot
 
         ReadCommittedSnapshotDiagnostics? snapshot = null;
         var altering = alter.ExecuteNonQueryAsync();
+        using var diagnosticsDelay = new CancellationTokenSource();
+        var delay = Task.Delay(diagnosticsAfter ?? _defaultDiagnosticsAfter, diagnosticsDelay.Token);
         try
         {
-            var delay = Task.Delay(diagnosticsAfter ?? _defaultDiagnosticsAfter);
             if (await Task.WhenAny(altering, delay) == delay)
             {
                 snapshot = await Snapshot(connectionString, prepareConnection, database, spid);
@@ -84,6 +85,11 @@ internal static class SqlServerReadCommittedSnapshot
         {
             snapshot ??= await Snapshot(connectionString, prepareConnection, database, spid);
             throw new ReadCommittedSnapshotNotEnabled(database, snapshot, ex);
+        }
+        finally
+        {
+            await diagnosticsDelay.CancelAsync();
+            await delay.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
         }
     }
 
