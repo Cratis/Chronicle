@@ -44,6 +44,7 @@ namespace Cratis.Chronicle.Services.Observation.Reactors;
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 /// <param name="registrationGate">The silo-wide gate for observer registrations.</param>
 /// <param name="namespaceCasing">The namespace casing resolver.</param>
+/// <param name="siloDepartures">The <see cref="ISiloDepartures"/> telling when to check client subscriptions early.</param>
 internal sealed class Reactors(
     IGrainFactory grainFactory,
     IReactorMediator reactorMediator,
@@ -54,7 +55,8 @@ internal sealed class Reactors(
     IConnectionOwnership connectionOwnership,
     ILogger<Reactors> logger,
     IObserverRegistrationGate registrationGate,
-    INamespaceCasing namespaceCasing) : IReactors
+    INamespaceCasing namespaceCasing,
+    ISiloDepartures siloDepartures) : IReactors
 {
     /// <inheritdoc/>
     public IObservable<EventsToObserve> Observe(IObservable<ReactorMessage> messages, CallContext context = default)
@@ -227,7 +229,9 @@ internal sealed class Reactors(
 
                 await ClientSubscriptionKeeper.KeepWhileConnected(
                     () => ClientSubscriptionKeeper.KeepSubscription(clientObserver.IsSubscriptionIntact, () => clientObserver.KeepSubscription(definition)),
-                    TimeSpan.FromSeconds(options.Value.ConnectedClients.ReviseIntervalSeconds),
+                    SubscriptionCheckSchedule.From(options.Value),
+                    siloDepartures,
+                    TimeProvider.System,
                     registration.ConnectionId,
                     logger,
                     cancellation.Token);

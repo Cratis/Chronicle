@@ -20,4 +20,6 @@ public class and_failed_partitions_reach_the_threshold_with_metrics : given.an_o
     [Fact] void should_count_the_observer_as_quarantined_once() => _metrics.SumOf(ObserverQuarantined).ShouldEqual(1);
     [Fact] void should_not_tag_the_quarantine_with_a_partition() => IsNotTaggedWithPartition(ObserverQuarantined).ShouldBeTrue();
     [Fact] void should_tag_the_quarantine_with_the_observer_scope_only() => IsTaggedWithObserverScopeOnly(ObserverQuarantined).ShouldBeTrue();
+    [Fact] void should_create_the_quarantine_instrument_without_a_unit() => (_metrics.InstrumentNamed(ObserverQuarantined) is { Unit: null }).ShouldBeTrue();
+    [Fact] void should_create_the_quarantine_instrument_with_a_description() => string.IsNullOrWhiteSpace(_metrics.InstrumentNamed(ObserverQuarantined)?.Description).ShouldBeFalse();
 }

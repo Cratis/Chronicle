@@ -276,7 +276,7 @@ The production image runs as the non-root user `1654` from `/app`, on a chiseled
 
 - `runAsNonRoot`, `runAsUser: 1654` and `runAsGroup: 1654` match the image's user. `fsGroup: 1654` lets that group read the Secret files, which are mounted with mode `0440`.
 - `readOnlyRootFilesystem: true`. The kernel writes nothing under `/app`; the Data Protection key ring is stored in the storage backend, not on disk, so it needs no volume.
-- An `emptyDir` on `/tmp`. The .NET runtime creates its diagnostics socket and debugger pipes there; `dotnet-counters`, `dotnet-trace` and `dotnet-dump` need them to attach to the kernel. Its 256Mi `sizeLimit` covers the socket and the pipes, not dumps. A full dump is about as large as the kernel's memory, up to the 2Gi limit, and the kubelet evicts a pod whose `emptyDir` grows past its `sizeLimit`, so a dump written to `/tmp` would kill the kernel you are diagnosing. If you expect to take dumps, add a separate volume larger than the memory limit in advance, for example a second `emptyDir` mounted at `/dumps`, and pass a path on it to `dotnet-dump collect --output`.
+- An `emptyDir` on `/tmp`. The .NET runtime creates its diagnostics socket and debugger pipes there; `dotnet-counters`, `dotnet-trace` and `dotnet-dump` need them to attach to the kernel. Its 256Mi `sizeLimit` covers the socket and the pipes, not dumps. A full dump is about as large as the kernel's memory, up to the 2Gi limit, and the kubelet evicts a pod whose `emptyDir` grows past its `sizeLimit`, so a dump written to `/tmp` would kill the kernel you are diagnosing. If you expect to take dumps, add a separate volume larger than the memory limit in advance, for example a second `emptyDir` mounted at `/dumps`, and pass a path on it to `dotnet-dump collect --output`. [Collect crash dumps](#collect-crash-dumps) sets one up.
 - No privilege escalation, every capability dropped, the runtime's default seccomp profile, and no service-account token, because the kernel does not call the Kubernetes API.
 
 ### Resources
@@ -517,6 +517,74 @@ After deploying:
 3. Check `kubectl -n chronicle get pdb chronicle`: with every kernel ready it allows one disruption.
 4. From a pod in a client namespace, request `https://chronicle.chronicle.svc.cluster.local:35000/health`. From any other namespace the request should time out.
 5. Optionally, in a maintenance window, drain a node that runs a kernel with `kubectl drain <node> --ignore-daemonsets --delete-emptydir-data`. A drain is a real disruption: it evicts every pod on the node, not only the kernel. `--delete-emptydir-data` is required because of the `/tmp` volume; without it the drain refuses to evict the kernel. The other kernels keep serving, the evicted one becomes ready again where it is scheduled, and a second drain is refused while it is not ready.
+
+## Collect crash dumps
+
+The production image carries `createdump`, which the .NET runtime runs to write a dump when the kernel crashes. Dumps are off by default. To turn them on, give the kernel a volume for dumps and the runtime's dump settings. In the StatefulSet's container, add:
+
+```yaml
+          env:
+            # ...the existing entries...
+            - name: DOTNET_DbgEnableMiniDump
+              value: "1"
+            - name: DOTNET_DbgMiniDumpType
+              value: "2" # A minidump with the managed heap, which dotnet-dump's heap commands need
+            - name: DOTNET_DbgMiniDumpName
+              value: /dumps/core.%h.%t # Pod name and time, so a later crash does not overwrite an earlier dump
+          volumeMounts:
+            # ...the existing mounts...
+            - name: dumps
+              mountPath: /dumps
+      volumes:
+        # ...the existing volumes...
+        - name: dumps
+          emptyDir:
+            sizeLimit: 5Gi
+```
+
+Always set `DOTNET_DbgMiniDumpName`, and never point it at `/tmp`. Without it the runtime writes `/tmp/coredump.<pid>`. With `readOnlyRootFilesystem: true` only the mounted volumes are writable, and the `/tmp` volume's 256Mi `sizeLimit` is far below the size of a dump: a heap dump is about as large as the kernel's memory, up to the 2Gi limit, and a kernel that had only just started wrote 770 MiB. The kubelet evicts a pod whose `emptyDir` grows past its `sizeLimit`, so size the dumps volume for more than one dump of the memory limit and check that the nodes have that much ephemeral storage free. Setting `resources.requests.ephemeral-storage` on the container makes the scheduler account for it.
+
+After a crash the kubelet restarts the kernel's container in the same pod, and the `emptyDir` with the dump survives that restart. It does not survive the pod being deleted, evicted or rescheduled, so copy the dump out before you delete the pod, drain its node or roll out a change.
+
+A kernel in a crash loop writes a dump on every crash, because `%t` gives each one its own name. With heap dumps of up to 2Gi, the third one pushes the volume past its 5Gi `sizeLimit`. The kubelet then evicts the pod, and eviction deletes the `emptyDir` together with every dump on it. To keep the dumps you need:
+
+- copy each dump out promptly and delete it from the volume once it is copied;
+- use a PersistentVolumeClaim, for example from the StatefulSet's `volumeClaimTemplates`, instead of an `emptyDir` when dumps must survive the pod being evicted or rescheduled. A generic ephemeral volume keeps dumps off the node's ephemeral storage, so they no longer cause the eviction, but it is deleted with the pod;
+- turn dumps off again once you have captured one.
+
+### Copy a dump out
+
+`kubectl cp` needs `tar` in the container it copies from, and the chiseled production image has none. Copy through an ephemeral debug container that mounts the dumps volume instead. It reads the volume directly, so it works while the kernel is down or in `CrashLoopBackOff`. This needs kubectl 1.31 or later for `--custom`. Save the partial container spec that adds the mount:
+
+```json
+{
+  "volumeMounts": [
+    { "name": "dumps", "mountPath": "/dumps" }
+  ]
+}
+```
+
+Then start the debug container with it and copy the dump:
+
+```bash
+kubectl -n chronicle debug chronicle-0 --image=busybox:1.37 --container=dumps --profile=restricted --custom=dumps-mount.json -- sleep 3600
+kubectl -n chronicle exec chronicle-0 -c dumps -- ls -l /dumps
+kubectl -n chronicle cp -c dumps --retries=5 chronicle-0:/dumps/core.chronicle-0.1794374298 ./core.chronicle-0.1794374298
+kubectl -n chronicle exec chronicle-0 -c dumps -- rm /dumps/core.chronicle-0.1794374298
+```
+
+Replace the file name with the one `ls` lists. The pod's `runAsUser: 1654` and `runAsGroup: 1654` apply to the debug container, so it reads and deletes the kernel's dumps as the same user. The debug container stops when `sleep` ends; Kubernetes keeps its record in the pod until the pod is replaced, so give a later debug container another `--container` name. Open the dump with `dotnet-dump analyze`.
+
+With an older kubectl, share the kernel's process namespace and read the volume through `/proc/1/root`, where PID 1 is the kernel. This needs kubectl 1.27 or later for `--profile=restricted`, and it works only while the kernel container is running: if the kernel has crashed or restarts mid-copy, `/proc/1` is gone and the copy fails or is cut short. The debug container must run as the kernel's user, which the pod-level `runAsUser` provides; with a different user it gets `Permission denied`.
+
+```bash
+kubectl -n chronicle debug chronicle-0 --image=busybox:1.37 --target=chronicle --container=dumps --profile=restricted -- sleep 3600
+kubectl -n chronicle cp -c dumps --retries=5 chronicle-0:/proc/1/root/dumps/core.chronicle-0.1794374298 ./core.chronicle-0.1794374298
+```
+
+### Handle dumps as sensitive data
+
+A dump is a copy of the kernel's memory. It contains the storage connection strings, certificate and signing keys, and event data, including personal data that compliance encryption protects at rest. Treat every dump as a secret that holds personal data: restrict who can run `kubectl debug`, `exec` and `cp` in the namespace, keep dumps encrypted and access-controlled while they are stored and moved, never attach one to a public issue, and delete every copy, locally and on the dumps volume, when the analysis is done. Erasing a person's data does not remove it from a dump that was taken earlier, so dumps fall under your data-handling and retention process.
 
 ## See also
 

@@ -38,10 +38,25 @@ namespace Cratis.Chronicle.Benchmarks.Kernel;
 /// </remarks>
 public static class ObserverFootprint
 {
-    const string EventStore = "footprint";
-    const string Namespace = "Default";
-    const string StartupTaskTypeName = "Orleans.Hosting.ChronicleServerStartupTask";
-    static readonly ConnectionId _connectionId = new("footprint-connection");
+    /// <summary>
+    /// The event store the measured observers belong to.
+    /// </summary>
+    internal const string EventStore = "footprint";
+
+    /// <summary>
+    /// The namespace the measured observers belong to.
+    /// </summary>
+    internal const string Namespace = "Default";
+
+    /// <summary>
+    /// The kernel startup task the harness keeps out of the silo.
+    /// </summary>
+    internal const string StartupTaskTypeName = "Orleans.Hosting.ChronicleServerStartupTask";
+
+    /// <summary>
+    /// The client connection the measured observers are subscribed for.
+    /// </summary>
+    internal static readonly ConnectionId Connection = new("footprint-connection");
 
     /// <summary>
     /// Runs the measurement.
@@ -55,62 +70,11 @@ public static class ObserverFootprint
         var collectionAgeSeconds = IntArgument(args, "--collection-age", 0);
         var warmup = Math.Min(200, Math.Max(count / 10, 10));
 
-        var builder = Host.CreateApplicationBuilder();
-        builder.Logging.ClearProviders();
-        builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
-        {
-            [$"{ChronicleOptions.SectionPath}:Storage:Type"] = StorageType.InMemory,
-            [$"{ChronicleOptions.SectionPath}:Observers:WatchdogInterval"] = "1",
-            [$"{ChronicleOptions.SectionPath}:Observers:IdleDeactivationAfter"] = idleSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture),
-
-            // The footprint client never pings, so the connected clients registry must not expire it during the run.
-            [$"{ChronicleOptions.SectionPath}:ConnectedClients:StaleThresholdSeconds"] = "86400",
-        });
-        builder.UseOrleans(silo =>
-        {
-            silo.UseLocalhostClustering(serviceId: "footprint", clusterId: "footprint");
-            if (collectionAgeSeconds > 0)
-            {
-                // Lets Orleans collect idle grains without [KeepAlive], such as the observer alert companions, within the run.
-                silo.Configure<GrainCollectionOptions>(options =>
-                {
-                    options.CollectionAge = TimeSpan.FromSeconds(collectionAgeSeconds);
-                    options.CollectionQuantum = TimeSpan.FromSeconds(1);
-                });
-            }
-
-            silo.Services.AddTypeDiscovery();
-            silo.Services.AddBindingsByConvention();
-            silo.Services.AddSelfBindings();
-            silo.AddChronicleToSilo(chronicle => chronicle.WithInMemory());
-            silo.ConfigureServices(services =>
-            {
-                services.AddOptions<ChronicleOptions>().BindConfiguration(ChronicleOptions.SectionPath);
-
-                // The startup task provisions system event stores and registers kernel artifacts; none of it is part
-                // of what an observer activation retains, and it would add its own resident grains to the measurement.
-                var startupTaskType = typeof(ChronicleOptions).Assembly.GetType(StartupTaskTypeName)
-                    ?? throw new InvalidOperationException($"The startup task '{StartupTaskTypeName}' was not found; it was renamed or moved, so the measurement would include kernel artifacts");
-                var startupTasks = services.Where(_ => _.ImplementationType == startupTaskType).ToList();
-                if (startupTasks.Count == 0)
-                {
-                    throw new InvalidOperationException($"The startup task '{StartupTaskTypeName}' is not registered; the harness no longer knows how to keep it out of the measurement");
-                }
-
-                foreach (var descriptor in startupTasks)
-                {
-                    services.Remove(descriptor);
-                }
-            });
-        });
-
-        using var host = builder.Build();
+        using var host = BuildHost(idleSeconds, collectionAgeSeconds);
         await host.StartAsync();
         var grainFactory = host.Services.GetRequiredService<IGrainFactory>();
         var siloAddress = host.Services.GetRequiredService<ILocalSiloDetails>().SiloAddress;
-        var storage = host.Services.GetRequiredService<IStorage>();
-        await storage.GetEventStore(EventStore).Namespaces.Ensure(Namespace);
-        await grainFactory.GetConnectedClients(siloAddress).OnClientConnected(_connectionId, "footprint", false, Environment.ProcessId, "footprint", Environment.MachineName, "footprint");
+        await ConnectClient(host);
 
         Console.WriteLine($"Observer activation footprint: {count} observers, idle deactivation after {idleSeconds} s (0 = disabled), Orleans collection age {(collectionAgeSeconds > 0 ? $"{collectionAgeSeconds} s" : "default")}");
 
@@ -160,7 +124,91 @@ public static class ObserverFootprint
         return 0;
     }
 
-    static async Task Activate(IGrainFactory grainFactory, SiloAddress siloAddress, string prefix, int count)
+    /// <summary>
+    /// Builds the in-process silo the measurements run against: in-memory storage, no kernel startup task.
+    /// </summary>
+    /// <param name="idleSeconds">Seconds before an idle unsubscribed observer is released; 0 disables it.</param>
+    /// <param name="collectionAgeSeconds">Orleans collection age in seconds; 0 keeps the Orleans default.</param>
+    /// <param name="configure">Optional extra configuration of the silo.</param>
+    /// <returns>The host, not started.</returns>
+    internal static IHost BuildHost(int idleSeconds, int collectionAgeSeconds, Action<ISiloBuilder>? configure = null)
+    {
+        var builder = Host.CreateApplicationBuilder();
+        builder.Logging.ClearProviders();
+        builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            [$"{ChronicleOptions.SectionPath}:Storage:Type"] = StorageType.InMemory,
+            [$"{ChronicleOptions.SectionPath}:Observers:WatchdogInterval"] = "1",
+            [$"{ChronicleOptions.SectionPath}:Observers:IdleDeactivationAfter"] = idleSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture),
+
+            // The footprint client never pings, so the connected clients registry must not expire it during the run.
+            [$"{ChronicleOptions.SectionPath}:ConnectedClients:StaleThresholdSeconds"] = "86400",
+        });
+        builder.UseOrleans(silo =>
+        {
+            silo.UseLocalhostClustering(serviceId: "footprint", clusterId: "footprint");
+            if (collectionAgeSeconds > 0)
+            {
+                // Lets Orleans collect idle grains without [KeepAlive], such as the observer alert companions, within the run.
+                silo.Configure<GrainCollectionOptions>(options =>
+                {
+                    options.CollectionAge = TimeSpan.FromSeconds(collectionAgeSeconds);
+                    options.CollectionQuantum = TimeSpan.FromSeconds(1);
+                });
+            }
+
+            configure?.Invoke(silo);
+            silo.Services.AddTypeDiscovery();
+            silo.Services.AddBindingsByConvention();
+            silo.Services.AddSelfBindings();
+            silo.AddChronicleToSilo(chronicle => chronicle.WithInMemory());
+            silo.ConfigureServices(services =>
+            {
+                services.AddOptions<ChronicleOptions>().BindConfiguration(ChronicleOptions.SectionPath);
+
+                // The startup task provisions system event stores and registers kernel artifacts; none of it is part
+                // of what an observer activation retains, and it would add its own resident grains to the measurement.
+                var startupTaskType = typeof(ChronicleOptions).Assembly.GetType(StartupTaskTypeName)
+                    ?? throw new InvalidOperationException($"The startup task '{StartupTaskTypeName}' was not found; it was renamed or moved, so the measurement would include kernel artifacts");
+                var startupTasks = services.Where(_ => _.ImplementationType == startupTaskType).ToList();
+                if (startupTasks.Count == 0)
+                {
+                    throw new InvalidOperationException($"The startup task '{StartupTaskTypeName}' is not registered; the harness no longer knows how to keep it out of the measurement");
+                }
+
+                foreach (var descriptor in startupTasks)
+                {
+                    services.Remove(descriptor);
+                }
+            });
+        });
+
+        return builder.Build();
+    }
+
+    /// <summary>
+    /// Ensures the event store namespace and registers the measurement's client connection with the silo.
+    /// </summary>
+    /// <param name="host">The started host.</param>
+    /// <returns>Awaitable task.</returns>
+    internal static async Task ConnectClient(IHost host)
+    {
+        var grainFactory = host.Services.GetRequiredService<IGrainFactory>();
+        var siloAddress = host.Services.GetRequiredService<ILocalSiloDetails>().SiloAddress;
+        var storage = host.Services.GetRequiredService<IStorage>();
+        await storage.GetEventStore(EventStore).Namespaces.Ensure(Namespace);
+        await grainFactory.GetConnectedClients(siloAddress).OnClientConnected(Connection, "footprint", false, Environment.ProcessId, "footprint", Environment.MachineName, "footprint");
+    }
+
+    /// <summary>
+    /// Subscribes observers for the measurement's client connection.
+    /// </summary>
+    /// <param name="grainFactory">The <see cref="IGrainFactory"/>.</param>
+    /// <param name="siloAddress">The silo the client is connected to.</param>
+    /// <param name="prefix">The prefix of the observer identifiers.</param>
+    /// <param name="count">The number of observers.</param>
+    /// <returns>Awaitable task.</returns>
+    internal static async Task Activate(IGrainFactory grainFactory, SiloAddress siloAddress, string prefix, int count)
     {
         var eventTypes = new[] { new EventType("footprint-event", EventTypeGeneration.First) };
         for (var batch = 0; batch < count; batch += 100)
@@ -169,7 +217,7 @@ public static class ObserverFootprint
             {
                 var client = new ConnectedClient
                 {
-                    ConnectionId = _connectionId,
+                    ConnectionId = Connection,
                     Version = "footprint",
                     ClientType = "footprint",
                     LastSeen = DateTimeOffset.UtcNow
@@ -182,6 +230,30 @@ public static class ObserverFootprint
             });
             await Task.WhenAll(tasks);
         }
+    }
+
+    /// <summary>
+    /// Reads a whole-number command line argument.
+    /// </summary>
+    /// <param name="args">Command line arguments.</param>
+    /// <param name="name">The name of the argument.</param>
+    /// <param name="defaultValue">The value when the argument is not given.</param>
+    /// <returns>The value.</returns>
+    /// <exception cref="ArgumentException">The argument is not a whole number of zero or more.</exception>
+    internal static int IntArgument(string[] args, string name, int defaultValue)
+    {
+        var index = Array.IndexOf(args, name);
+        if (index < 0)
+        {
+            return defaultValue;
+        }
+
+        if (index + 1 >= args.Length || !int.TryParse(args[index + 1], System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var value) || value < 0)
+        {
+            throw new ArgumentException($"{name} needs a whole number of zero or more, got '{(index + 1 < args.Length ? args[index + 1] : string.Empty)}'", nameof(args));
+        }
+
+        return value;
     }
 
     static async Task Unsubscribe(IGrainFactory grainFactory, string prefix, int count)
@@ -247,21 +319,5 @@ public static class ObserverFootprint
         // Time to take a heap snapshot, for example: dotnet-gcdump collect -p <pid>.
         Console.WriteLine($"  holding {seconds} s for a heap snapshot of process {Environment.ProcessId}");
         await Task.Delay(TimeSpan.FromSeconds(seconds));
-    }
-
-    static int IntArgument(string[] args, string name, int defaultValue)
-    {
-        var index = Array.IndexOf(args, name);
-        if (index < 0)
-        {
-            return defaultValue;
-        }
-
-        if (index + 1 >= args.Length || !int.TryParse(args[index + 1], System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var value) || value < 0)
-        {
-            throw new ArgumentException($"{name} needs a whole number of zero or more, got '{(index + 1 < args.Length ? args[index + 1] : string.Empty)}'", nameof(args));
-        }
-
-        return value;
     }
 }

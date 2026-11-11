@@ -15,6 +15,6 @@ public class with_metrics : given.an_observer_with_metrics
     [Fact] void should_not_tag_the_retry_attempt_with_the_partition() => IsNotTaggedWithPartition(PartitionRetryAttempts).ShouldBeTrue();
     [Fact] void should_tag_the_failed_attempt_with_the_observer_scope_only() => IsTaggedWithObserverScopeOnly(PartitionsFailed).ShouldBeTrue();
     [Fact] void should_tag_the_retry_attempt_with_the_observer_scope_only() => IsTaggedWithObserverScopeOnly(PartitionRetryAttempts).ShouldBeTrue();
-    [Fact] void should_create_every_failure_instrument_without_a_unit() => _failureInstruments.All(instrument => _metrics.InstrumentNamed(instrument) is { Unit: null }).ShouldBeTrue();
-    [Fact] void should_create_every_failure_instrument_with_a_description() => _failureInstruments.All(instrument => !string.IsNullOrWhiteSpace(_metrics.InstrumentNamed(instrument)?.Description)).ShouldBeTrue();
+    [Fact] void should_create_the_failure_instruments_without_a_unit() => new[] { PartitionsFailed, PartitionRetryAttempts }.All(instrument => _metrics.InstrumentNamed(instrument) is { Unit: null }).ShouldBeTrue();
+    [Fact] void should_create_the_failure_instruments_with_a_description() => new[] { PartitionsFailed, PartitionRetryAttempts }.All(instrument => !string.IsNullOrWhiteSpace(_metrics.InstrumentNamed(instrument)?.Description)).ShouldBeTrue();
 }
