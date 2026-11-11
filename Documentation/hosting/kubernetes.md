@@ -17,7 +17,7 @@ Use a StatefulSet, even though the kernel keeps all of its state in the storage 
 - **One node at a time.** A rolling update replaces one pod and waits for it to become ready before it moves to the next, which is how [Rolling deploy](rolling-deploy.md) asks you to replace nodes.
 - **Stable names.** Pod names such as `chronicle-0` appear as the host name in the cluster membership table and in logs, so a restarted kernel is easy to recognize.
 
-A Deployment also works. With more than one kernel, use `MongoDB` or `Sql` clustering and the default rolling update. With a single `Localhost` kernel, set `strategy: Recreate`, or `RollingUpdate` with `maxSurge: 0` and `maxUnavailable: 1`. The default one-replica Deployment rollout (`maxSurge: 1`) never converges: the new pod waits for the lease while Kubernetes waits for it to become ready.
+A Deployment also works. With more than one kernel, use `MongoDB` or `Sql` clustering and the default rolling update. With a single `Localhost` kernel, set `strategy: Recreate`, or `RollingUpdate` with `maxSurge: 0` and `maxUnavailable: 1`. The default one-replica Deployment rollout (`maxSurge: 1`) never converges on its own: the new pod waits for the lease while Kubernetes waits for it to become ready. It does converge with `Cratis__Chronicle__Clustering__SingleWriterLease__Standby=true`, because the new pod then reports ready in standby while it waits; see [Standby for start-before-stop rollouts](configuration/clustering.md#standby-for-start-before-stop-rollouts). Standby gives up readiness as a rollout gate, so validate images before rolling them out and keep the previous image ready to roll back to.
 
 ## Reference manifest
 
@@ -281,7 +281,7 @@ The production image runs as the non-root user `1654` from `/app`, on a chiseled
 
 ### Resources
 
-Requests and limits depend on your workload. Memory follows the number of resident observers, reactors and reducers, and CPU peaks during a cold start. Set them from your own measurements as described in [Container resources](container-resources.md). The manifest sets no CPU limit, so a kernel that is starting can use idle CPU on its node. If your cluster enforces one anyway, for example through a LimitRange that adds a default limit, set it from the cold-start peak as [Container resources](container-resources.md#cpu-is-a-cold-start-concern) describes.
+Requests and limits depend on your workload. Memory follows the number of resident observers, reactors and reducers, which the [`cratis.chronicle.observer.resident`](configuration/open-telemetry.md#observer-state-jobs-and-append-latency) gauge reports per kernel, and CPU peaks during a cold start. Set them from your own measurements as described in [Container resources](container-resources.md). The manifest sets no CPU limit, so a kernel that is starting can use idle CPU on its node. If your cluster enforces one anyway, for example through a LimitRange that adds a default limit, set it from the cold-start peak as [Container resources](container-resources.md#cpu-is-a-cold-start-concern) describes.
 
 ## Budgets for a cold start
 
@@ -293,6 +293,8 @@ Two things a probe budget cannot fix:
 
 - **Starved CPU.** A CPU limit below the cold-start peak starves the thread pool, and a kernel that cannot complete a startup step stops itself and is restarted. Size CPU from the peak, as [Container resources](container-resources.md#cpu-is-a-cold-start-concern) describes.
 - **Startup failures.** A startup step that exhausts its retries stops the kernel. Raising `failureThreshold` does not change that. [Know what a starting node does](rolling-deploy.md#know-what-a-starting-node-does) explains the startup steps and their retries, and [Handle a node that does not come up](rolling-deploy.md#6-handle-a-node-that-does-not-come-up) how to read their failures.
+
+Two settings shape a saturated cold start. [`startup.busySiloWaitLimit`](configuration/root-properties.md#busy-silos-at-startup) (`Cratis__Chronicle__Startup__BusySiloWaitLimit`, two hours by default) bounds how long a startup step waits for a kernel that is up but too busy to answer before the kernel stops. [`observers.maxConcurrentSubscriptions`](configuration/observers.md#subscription-concurrency) (`Cratis__Chronicle__Observers__MaxConcurrentSubscriptions`) limits how many projection subscriptions and recovery batches a kernel runs at once, by default from its processor count.
 
 ## NetworkPolicy
 
@@ -445,7 +447,7 @@ What remains after you accept that:
 
 | Situation | How to replace the kernels |
 | --- | --- |
-| One kernel, `Localhost` clustering | StatefulSet with one replica and `RollingUpdate`: it stops the old pod first. For a Deployment, use `Recreate`. Never use a Deployment's default rolling update |
+| One kernel, `Localhost` clustering | StatefulSet with one replica and `RollingUpdate`: it stops the old pod first. For a Deployment, use `Recreate`. Never use a Deployment's default rolling update without [standby](configuration/clustering.md#standby-for-start-before-stop-rollouts) |
 | Several kernels, `MongoDB` or `Sql` clustering, both releases can share a cluster | Rolling update, one kernel at a time, waiting for readiness |
 | An upgrade the [compatibility table](rolling-deploy.md#check-that-the-two-versions-can-share-a-cluster) or the [supported source releases](rolling-deploy.md#supported-source-releases) mark as stop-all, such as a new major or a release with a compatibility exception | Stop every kernel, change the image, then start the new release: `kubectl -n chronicle scale statefulset chronicle --replicas=0`, wait until the pods are gone, update the image with `kubectl -n chronicle set image statefulset/chronicle chronicle=<new image>`, then scale back up. Applying the manifest with the new image both updates it and restores the replica count. Changing the image while kernels still run starts the rolling update this row avoids. For a Deployment, use `Recreate` for that upgrade |
 | A configuration change on the same release | The same strategy as for an upgrade between compatible releases |
