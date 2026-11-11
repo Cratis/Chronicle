@@ -21,15 +21,15 @@ public class when_coercing_values_for_columns : Specification
 
     void Because()
     {
-        _null = JsonColumnDocuments.CoerceForColumn(Column(typeof(int)), null);
-        _guidResult = JsonColumnDocuments.CoerceForColumn(Column(typeof(Guid)), _guid.ToString());
-        _timestamp = JsonColumnDocuments.CoerceForColumn(Column(typeof(DateTimeOffset)), "2026-03-04T05:06:07.0000000+02:00");
-        _date = JsonColumnDocuments.CoerceForColumn(Column(typeof(DateOnly)), "2026-03-04");
-        _time = JsonColumnDocuments.CoerceForColumn(Column(typeof(TimeOnly)), "05:06:07");
-        _decimalResult = JsonColumnDocuments.CoerceForColumn(Column(typeof(decimal)), 1.5d);
-        _concept = JsonColumnDocuments.CoerceForColumn(Column(typeof(string)), new given.a_value("text"));
-        _unconvertible = JsonColumnDocuments.CoerceForColumn(Column(typeof(int)), "not-a-number");
-        _nullableInt = JsonColumnDocuments.CoerceForColumn(Column(typeof(int?)), 42L);
+        _null = JsonColumnCoercion.CoerceForColumn(Column(typeof(int)), null);
+        _guidResult = JsonColumnCoercion.CoerceForColumn(Column(typeof(Guid)), _guid.ToString());
+        _timestamp = JsonColumnCoercion.CoerceForColumn(Column(typeof(DateTimeOffset)), "2026-03-04T05:06:07.0000000+02:00");
+        _date = JsonColumnCoercion.CoerceForColumn(Column(typeof(DateOnly)), "2026-03-04");
+        _time = JsonColumnCoercion.CoerceForColumn(Column(typeof(TimeOnly)), "05:06:07");
+        _decimalResult = JsonColumnCoercion.CoerceForColumn(Column(typeof(decimal)), 1.5d);
+        _concept = JsonColumnCoercion.CoerceForColumn(Column(typeof(string)), new given.a_value("text"));
+        _unconvertible = JsonColumnCoercion.CoerceForColumn(Column(typeof(int)), "not-a-number");
+        _nullableInt = JsonColumnCoercion.CoerceForColumn(Column(typeof(int?)), 42L);
     }
 
     [Fact] void should_keep_null() => _null.ShouldBeNull();

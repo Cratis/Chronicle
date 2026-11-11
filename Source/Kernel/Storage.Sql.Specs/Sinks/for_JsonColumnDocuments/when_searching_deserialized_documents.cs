@@ -28,14 +28,14 @@ public class when_searching_deserialized_documents : Specification
 
     void Because()
     {
-        _foundInList = JsonColumnDocuments.TryFindValueInDeserialized(_document, _segments, 1, "b2");
-        _foundAsString = JsonColumnDocuments.TryFindValueInDeserialized(_document, new PropertyPath("column.details.number").Segments.ToArray(), 1, 7);
-        _missing = JsonColumnDocuments.TryFindValueInDeserialized(_document, _segments, 1, "c3");
-        _nullNode = JsonColumnDocuments.TryFindValueInDeserialized(null, _segments, 1, "a1");
-        _looseMatch = JsonColumnDocuments.CompareLoose(5L, 5);
-        _conceptMatch = JsonColumnDocuments.CompareLoose(new given.a_value("x"), "x");
-        _bothNull = JsonColumnDocuments.CompareLoose(null, null);
-        _oneNull = JsonColumnDocuments.CompareLoose("x", null);
+        _foundInList = JsonColumnSearch.TryFindValueInDeserialized(_document, _segments, 1, "b2");
+        _foundAsString = JsonColumnSearch.TryFindValueInDeserialized(_document, new PropertyPath("column.details.number").Segments.ToArray(), 1, 7);
+        _missing = JsonColumnSearch.TryFindValueInDeserialized(_document, _segments, 1, "c3");
+        _nullNode = JsonColumnSearch.TryFindValueInDeserialized(null, _segments, 1, "a1");
+        _looseMatch = JsonColumnSearch.CompareLoose(5L, 5);
+        _conceptMatch = JsonColumnSearch.CompareLoose(new given.a_value("x"), "x");
+        _bothNull = JsonColumnSearch.CompareLoose(null, null);
+        _oneNull = JsonColumnSearch.CompareLoose("x", null);
         _subPath = JsonColumnDocuments.BuildSubPath(new PropertyPath("column.details.code")).Path;
         _emptySubPath = JsonColumnDocuments.BuildSubPath(new PropertyPath("column")).Path;
     }

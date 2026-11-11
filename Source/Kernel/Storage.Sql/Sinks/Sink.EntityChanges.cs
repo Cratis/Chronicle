@@ -10,6 +10,9 @@ using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
+using static Cratis.Chronicle.Storage.Sql.Sinks.ChildCollectionRemovals;
+using static Cratis.Chronicle.Storage.Sql.Sinks.ChildCollectionUpserts;
+using static Cratis.Chronicle.Storage.Sql.Sinks.JsonColumnCoercion;
 using static Cratis.Chronicle.Storage.Sql.Sinks.JsonColumnDocuments;
 
 #pragma warning disable SA1202 // Private helpers grouped next to the methods they back.
@@ -203,14 +206,14 @@ public partial class Sink
             // ChildAdded events for the same identifier (e.g. during replay) update in place
             // instead of duplicating. Mirrors how MongoDB's projection engine treats a child
             // re-introduced via ChildAdded as a replacement when the identifier already exists.
-            UpsertChildInList(list, identifierName, identifierValue, unwrappedState, childAdded.Ordering, childSchema);
+            UpsertChildInList(list, new ChildValue(identifierName, identifierValue, unwrappedState, childAdded.Ordering, childSchema));
         }
         else
         {
             // Nested children — e.g. Configurations.Hubs — locate the matching parent inside the
             // column's JSON tree using ArrayIndexers, then upsert into its child collection.
             var indexers = childAdded.ArrayIndexers ?? ArrayIndexers.NoIndexers;
-            UpsertNestedChild(list, 1, new ChildUpsert(pathSegments, indexers, identifierName, identifierValue, unwrappedState, childAdded.Ordering, childSchema));
+            UpsertNestedChild(list, 1, new ChildUpsert(pathSegments, indexers, new ChildValue(identifierName, identifierValue, unwrappedState, childAdded.Ordering, childSchema)));
         }
 
         entry.Entity[column.Name] = SerializeJsonColumn(list, column);
