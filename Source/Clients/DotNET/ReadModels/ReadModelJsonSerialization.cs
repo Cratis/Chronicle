@@ -5,6 +5,7 @@ using System.Collections;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
+using CollectionProperty = (System.Func<object, object?> Get, System.Action<object, object?> Set, System.Func<object> CreateEmpty);
 
 namespace Cratis.Chronicle.ReadModels;
 
@@ -62,21 +63,8 @@ public static class ReadModelJsonSerialization
             return;
         }
 
-        var nullabilityContext = new NullabilityInfoContext();
-        List<(Func<object, object?> Get, Action<object, object?> Set, Func<object> CreateEmpty)>? properties = null;
-
-        foreach (var property in typeInfo.Properties)
-        {
-            if (property is { Get: not null, Set: not null } &&
-                IsNonNullableDeclaration(property, nullabilityContext) &&
-                GetEmptyFactory(property.PropertyType) is { } createEmpty)
-            {
-                properties ??= [];
-                properties.Add((property.Get, property.Set, createEmpty));
-            }
-        }
-
-        if (properties is null)
+        var properties = FindNeverNullCollectionProperties(typeInfo);
+        if (properties.Count == 0)
         {
             return;
         }
@@ -85,15 +73,44 @@ public static class ReadModelJsonSerialization
         typeInfo.OnDeserialized = instance =>
         {
             previous?.Invoke(instance);
-            foreach (var (get, set, createEmpty) in properties)
-            {
-                if (get(instance) is null)
-                {
-                    set(instance, createEmpty());
-                }
-            }
+            MaterializeEmptyCollections(instance, properties);
         };
     }
+
+    static List<CollectionProperty> FindNeverNullCollectionProperties(JsonTypeInfo typeInfo)
+    {
+        var nullabilityContext = new NullabilityInfoContext();
+        List<CollectionProperty> properties = [];
+
+        foreach (var property in typeInfo.Properties)
+        {
+            if (property is not { Get: { } get, Set: { } set })
+            {
+                continue;
+            }
+
+            if (GetEmptyFactoryForNonNullable(property, nullabilityContext) is { } createEmpty)
+            {
+                properties.Add((get, set, createEmpty));
+            }
+        }
+
+        return properties;
+    }
+
+    static void MaterializeEmptyCollections(object instance, List<CollectionProperty> properties)
+    {
+        foreach (var (get, set, createEmpty) in properties)
+        {
+            if (get(instance) is null)
+            {
+                set(instance, createEmpty());
+            }
+        }
+    }
+
+    static Func<object>? GetEmptyFactoryForNonNullable(JsonPropertyInfo property, NullabilityInfoContext nullabilityContext) =>
+        IsNonNullableDeclaration(property, nullabilityContext) ? GetEmptyFactory(property.PropertyType) : null;
 
     static bool IsNonNullableDeclaration(JsonPropertyInfo property, NullabilityInfoContext nullabilityContext) =>
         property.AttributeProvider switch
@@ -120,9 +137,7 @@ public static class ReadModelJsonSerialization
 
     static Func<object>? CreateEmptyFactory(Type type)
     {
-        // A string is an IEnumerable and a dictionary's absence is a different question with a different answer,
-        // so neither is in scope here.
-        if (type == typeof(string) || !typeof(IEnumerable).IsAssignableFrom(type) || IsDictionary(type))
+        if (!IsEmptyFactoryCandidate(type))
         {
             return null;
         }
@@ -133,17 +148,23 @@ public static class ReadModelJsonSerialization
             return () => Array.CreateInstance(elementType, 0);
         }
 
-        var enumerableInterface = type.IsGenericType && type.GetGenericTypeDefinition() == typeof(IEnumerable<>)
+        var enumerableInterface = FindEnumerableInterface(type);
+        return enumerableInterface is null ? null : CreateCollectionFactory(type, enumerableInterface.GetGenericArguments()[0]);
+    }
+
+    static bool IsEmptyFactoryCandidate(Type type) =>
+
+        // A string is an IEnumerable and a dictionary's absence is a different question with a different answer,
+        // so neither is in scope here.
+        type != typeof(string) && typeof(IEnumerable).IsAssignableFrom(type) && !IsDictionary(type);
+
+    static Type? FindEnumerableInterface(Type type) =>
+        type.IsGenericType && type.GetGenericTypeDefinition() == typeof(IEnumerable<>)
             ? type
             : Array.Find(type.GetInterfaces(), _ => _.IsGenericType && _.GetGenericTypeDefinition() == typeof(IEnumerable<>));
 
-        if (enumerableInterface is null)
-        {
-            return null;
-        }
-
-        var itemType = enumerableInterface.GetGenericArguments()[0];
-
+    static Func<object>? CreateCollectionFactory(Type type, Type itemType)
+    {
         foreach (var candidate in new[] { typeof(List<>), typeof(HashSet<>) })
         {
             var concrete = candidate.MakeGenericType(itemType);
