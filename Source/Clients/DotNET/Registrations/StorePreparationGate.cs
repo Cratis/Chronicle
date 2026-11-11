@@ -106,7 +106,7 @@ internal sealed class StorePreparationGate(Action<Exception>? preparationFailed 
             var revision = GetOrStart(prepare, forceNew: false);
             await revision.Verdict;
             await _lease.WaitAsync();
-            var isCurrent = false;
+            bool isCurrent;
             lock (_lock)
             {
                 isCurrent = ReferenceEquals(_current, revision) && revision.PayloadVerdict is null;
