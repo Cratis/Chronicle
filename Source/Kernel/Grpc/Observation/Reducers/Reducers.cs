@@ -393,6 +393,32 @@ internal sealed class Reducers(
         }
     }
 
+    /// <summary>
+    /// Keeps an inactive reducer: there is no subscription to lose, only a registration a webhook may still hold back.
+    /// </summary>
+    /// <param name="reducer">The client <see cref="IReducer"/>.</param>
+    /// <param name="definition">The definition the client registered.</param>
+    /// <returns>
+    /// False while the registration is still deferred, so the keeper tries to complete it every revise interval; true once
+    /// it is complete, so the keeper checks it at the safety-net interval.
+    /// </returns>
+    /// <remarks>
+    /// A silo of an older version does not know <see cref="IReducer.IsRegistrationDeferred"/>; the failing call counts as
+    /// deferred, which is how it was kept before.
+    /// </remarks>
+    internal static async Task<bool> KeepInactive(IReducer reducer, Concepts.Observation.Reducers.ReducerDefinition definition)
+    {
+        await reducer.KeepSubscription(definition);
+        try
+        {
+            return !await reducer.IsRegistrationDeferred();
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            return false;
+        }
+    }
+
     static bool IsInitialStateUnchanged(ReducerStateFingerprints stateFingerprints, string partition, ExpandoObject? initialState)
     {
         if (!stateFingerprints.Enabled || initialState is null || !stateFingerprints.Has(partition))
@@ -489,18 +515,6 @@ internal sealed class Reducers(
                 registration,
                 new InvalidReadModelDefinitionForReducer(readModel.Identifier, "No key property could be inferred from the read model schema."));
         }
-    }
-
-    /// <summary>
-    /// Keeps an inactive reducer: there is no subscription to lose, only a registration a webhook may still hold back.
-    /// </summary>
-    /// <param name="reducer">The client <see cref="IReducer"/>.</param>
-    /// <param name="definition">The definition the client registered.</param>
-    /// <returns>True, so the keeper checks it at the safety-net interval.</returns>
-    static async Task<bool> KeepInactive(IReducer reducer, Concepts.Observation.Reducers.ReducerDefinition definition)
-    {
-        await reducer.KeepSubscription(definition);
-        return true;
     }
 
     IReducer? ObserverAfterCancellation(IReducer? observer, bool revoked, (ObserverId Observer, ConnectionId Connection) stream)
