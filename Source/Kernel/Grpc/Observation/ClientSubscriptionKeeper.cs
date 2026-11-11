@@ -18,9 +18,9 @@ namespace Cratis.Chronicle.Services.Observation;
 /// </para>
 /// <para>
 /// Checking costs grain calls per subscription, so how often is decided by <see cref="SubscriptionCheckSchedule"/>: often
-/// while a subscription is not confirmed intact and for a while after a silo leaves the cluster, which is what loses
-/// subscriptions, and only at a slow safety-net interval otherwise. The checks after a departure are spread over one
-/// revise interval, so the keepers of every stream on a silo do not all call their observers at once.
+/// while a subscription is not confirmed intact and for a while after a silo starts leaving the cluster, which is what
+/// loses subscriptions, and only at a slow, jittered safety-net interval otherwise. The checks after a departure are
+/// spread over one revise interval, so the keepers of every stream on a silo do not all call their observers at once.
 /// </para>
 /// <para>
 /// A failed check is logged and retried at the next one; a silo that is still leaving the cluster can fail a call or two.
@@ -50,13 +50,16 @@ internal static class ClientSubscriptionKeeper
     {
         try
         {
+            // The departure is taken once and replaced only after it has been acted on: a silo that leaves while a check
+            // or the spread runs completes this task, and the next pass sees it instead of a fresh one that never will.
+            var departure = siloDepartures.Next;
             while (true)
             {
-                var departure = siloDepartures.Next;
-                if (await WaitForCheck(schedule.NextCheckAfter(timeProvider.GetUtcNow()), departure, timeProvider, cancellationToken))
+                if (departure.IsCompleted || await WaitForCheck(schedule.NextCheckAfter(timeProvider.GetUtcNow()), departure, timeProvider, cancellationToken))
                 {
+                    departure = siloDepartures.Next;
                     schedule.SiloLeft(timeProvider.GetUtcNow());
-                    await Task.Delay(schedule.Revise * Random.Shared.NextDouble(), timeProvider, cancellationToken);
+                    await Task.Delay(schedule.SpreadAfterDeparture(), timeProvider, cancellationToken);
                 }
 
                 schedule.Checked(await Keep(keep, connectionId, logger, cancellationToken));

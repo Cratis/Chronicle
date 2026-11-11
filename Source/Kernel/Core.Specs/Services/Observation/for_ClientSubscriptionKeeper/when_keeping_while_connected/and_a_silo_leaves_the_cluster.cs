@@ -5,34 +5,32 @@ namespace Cratis.Chronicle.Services.Observation.for_ClientSubscriptionKeeper.whe
 
 /// <summary>
 /// A silo leaving the cluster is what loses subscriptions, so an intact subscription is checked again without waiting
-/// for the safety net, and every revise interval while the cluster settles.
+/// for the safety net - spread over one revise interval - and every revise interval while the cluster settles.
 /// </summary>
 public class and_a_silo_leaves_the_cluster : given.a_client_subscription_keeper
 {
-    const int ChecksWhileSettling = 3;
+    /// <summary>
+    /// The checks between the first after the departure and the last revise interval of the settle window.
+    /// </summary>
+    static readonly int _checksWhileSettling = (int)Math.Ceiling((Settle - Spread - Revise) / Revise);
+
+    TimeSpan _waitAfterTheDeparture;
+    List<TimeSpan> _waitsWhileSettling;
 
     protected override Task<bool> Check(int check) => Task.FromResult(true);
 
-    protected override bool CloseTheStreamAt(int check) => check == 1 + ChecksWhileSettling;
-
     async Task Because()
     {
-        var keeping = Keep();
-        await WaitForChecks(1);
-        var left = _siloLeft;
-        _siloLeft = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        left.SetResult();
-        try
-        {
-            await keeping.WaitAsync(Patience);
-            _completed = true;
-        }
-        catch (TimeoutException)
-        {
-            _completed = false;
-        }
+        StartKeeping();
+        await _clock.Elapse();
+        await _clock.NextWait();
+        SiloLeaves();
+        _waitAfterTheDeparture = await _clock.Elapse();
+        _waitsWhileSettling = await ElapseAtLeast(Settle - Spread - Revise);
+        await _clock.NextWait();
     }
 
-    [Fact] void should_check_every_revise_interval_while_settling() => _completed.ShouldBeTrue();
-    [Fact] void should_check_after_the_departure() => _checks.ShouldEqual(1 + ChecksWhileSettling);
+    [Fact] void should_spread_the_first_check() => _waitAfterTheDeparture.ShouldEqual(Spread);
+    [Fact] void should_check_every_revise_interval_while_settling() => _waitsWhileSettling.SequenceEqual(Enumerable.Repeat(Revise, _checksWhileSettling)).ShouldBeTrue();
+    [Fact] void should_check_after_every_wait() => _checks.ShouldEqual(2 + _checksWhileSettling);
 }

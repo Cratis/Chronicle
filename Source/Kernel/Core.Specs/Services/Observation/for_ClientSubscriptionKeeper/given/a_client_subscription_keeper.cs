@@ -5,26 +5,47 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cratis.Chronicle.Services.Observation.for_ClientSubscriptionKeeper.given;
 
+/// <summary>
+/// Keeps a subscription on a <see cref="Observation.given.ManualClock"/>: nothing waits on real time, every wait the keeper
+/// starts is reported, and the specification moves the clock past it.
+/// </summary>
 public class a_client_subscription_keeper : Specification
 {
-    protected const int ChecksBeforeTheStreamCloses = 3;
-    protected static readonly TimeSpan Revise = TimeSpan.FromMilliseconds(10);
-    protected static readonly TimeSpan SafetyNet = TimeSpan.FromHours(1);
-    protected static readonly TimeSpan Patience = TimeSpan.FromSeconds(10);
+    protected const double Draw = 0.5;
+    protected static readonly TimeSpan Revise = TimeSpan.FromSeconds(2);
+    protected static readonly TimeSpan SafetyNet = TimeSpan.FromSeconds(60);
+    protected static readonly TimeSpan Settle = TimeSpan.FromSeconds(30);
 
+    /// <summary>
+    /// The safety-net wait with the draw the schedule is given: between three quarters of the interval and all of it.
+    /// </summary>
+    protected static readonly TimeSpan SafetyNetWait = SafetyNet * (SubscriptionCheckSchedule.SafetyNetFloor + ((1 - SubscriptionCheckSchedule.SafetyNetFloor) * Draw));
+
+    /// <summary>
+    /// The spread before the first check after a departure, with the draw the schedule is given.
+    /// </summary>
+    protected static readonly TimeSpan Spread = Revise * Draw;
+
+    protected Observation.given.ManualClock _clock;
     protected int _checks;
-    protected bool _completed;
     protected TaskCompletionSource _siloLeft = new(TaskCreationOptions.RunContinuationsAsynchronously);
     protected ISiloDepartures _siloDepartures;
     protected readonly CancellationTokenSource _streamClosed = new();
+    protected Task _keeping = Task.CompletedTask;
 
     void Establish()
     {
+        _clock = new();
         _siloDepartures = Substitute.For<ISiloDepartures>();
         _siloDepartures.Next.Returns(_ => _siloLeft.Task);
     }
 
-    void Destroy() => _streamClosed.Dispose();
+    async Task Destroy()
+    {
+        await _streamClosed.CancelAsync();
+        await Observation.given.ManualClock.Within(_keeping);
+        _streamClosed.Dispose();
+    }
 
     /// <summary>
     /// Performs one check.
@@ -33,47 +54,42 @@ public class a_client_subscription_keeper : Specification
     /// <returns>Whether the subscription was found intact.</returns>
     protected virtual Task<bool> Check(int check) => Task.FromResult(false);
 
-    protected virtual TimeSpan Settle => TimeSpan.FromHours(1);
-
-    protected virtual bool CloseTheStreamAt(int check) => check == ChecksBeforeTheStreamCloses;
-
-    protected Task Keep() => ClientSubscriptionKeeper.KeepWhileConnected(
-        async () =>
-        {
-            var check = Interlocked.Increment(ref _checks);
-            if (CloseTheStreamAt(check))
-            {
-                await _streamClosed.CancelAsync();
-            }
-
-            return await Check(check);
-        },
-        new SubscriptionCheckSchedule(Revise, SafetyNet, Settle),
+    protected void StartKeeping() => _keeping = ClientSubscriptionKeeper.KeepWhileConnected(
+        () => Check(Interlocked.Increment(ref _checks)),
+        new SubscriptionCheckSchedule(Revise, SafetyNet, Settle, () => Draw),
         _siloDepartures,
-        TimeProvider.System,
+        _clock,
         "the-client",
         NullLogger.Instance,
         _streamClosed.Token);
 
-    protected async Task KeepUntilTheStreamCloses()
+    /// <summary>
+    /// Signals that a silo left, the way <see cref="SiloDepartures"/> does: the task handed out completes and a new one
+    /// takes its place.
+    /// </summary>
+    protected void SiloLeaves()
     {
-        try
-        {
-            await Keep().WaitAsync(Patience);
-            _completed = true;
-        }
-        catch (TimeoutException)
-        {
-            _completed = false;
-        }
+        var left = _siloLeft;
+        _siloLeft = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        left.SetResult();
     }
 
-    protected async Task WaitForChecks(int checks)
+    /// <summary>
+    /// Lets waits elapse until the clock has moved at least as far as asked.
+    /// </summary>
+    /// <param name="duration">How far.</param>
+    /// <returns>The waits that elapsed.</returns>
+    protected async Task<List<TimeSpan>> ElapseAtLeast(TimeSpan duration)
     {
-        var waiting = System.Diagnostics.Stopwatch.StartNew();
-        while (Volatile.Read(ref _checks) < checks && waiting.Elapsed < Patience)
+        var waits = new List<TimeSpan>();
+        var elapsed = TimeSpan.Zero;
+        while (elapsed < duration)
         {
-            await Task.Delay(Revise);
+            var wait = await _clock.Elapse();
+            waits.Add(wait);
+            elapsed += wait;
         }
+
+        return waits;
     }
 }

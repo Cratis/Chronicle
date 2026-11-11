@@ -10,9 +10,9 @@ namespace Cratis.Chronicle.Services.Observation;
 /// </summary>
 internal static partial class SiloDeparturesLogMessages
 {
-    [LoggerMessage(LogLevel.Information, "Silos {Silos} left the cluster. Checking the subscriptions of connected clients")]
-    internal static partial void SilosLeftCheckingClientSubscriptions(this ILogger logger, IEnumerable<string> silos);
+    [LoggerMessage(LogLevel.Information, "Silos {Silos} are leaving or left the cluster. Checking the subscriptions of connected clients")]
+    internal static partial void SilosLeavingCheckingClientSubscriptions(this ILogger logger, IEnumerable<string> silos);
 
-    [LoggerMessage(LogLevel.Warning, "Following the cluster membership failed. Client subscriptions are only checked at the safety-net interval until the silo restarts")]
-    internal static partial void FollowingClusterMembershipFailed(this ILogger logger, Exception exception);
+    [LoggerMessage(LogLevel.Warning, "Following the cluster membership failed. Following it again in {Retry}; until then client subscriptions are only checked at the safety-net interval")]
+    internal static partial void FollowingClusterMembershipFailed(this ILogger logger, TimeSpan retry, Exception exception);
 }

@@ -8,15 +8,14 @@ namespace Cratis.Chronicle.Services.Observation.for_SiloDepartures;
 public class when_a_silo_joins : given.two_silos
 {
     Task _departure;
-    bool _departed;
 
-    async Task Because()
+    void Because()
     {
         _departure = _departures.Next;
         var third = SiloAddress.New(new IPEndPoint(IPAddress.Loopback, 11113), 1);
+        Publish((_first, SiloStatus.Active), (_second, SiloStatus.Active), (third, SiloStatus.Joining));
         Publish((_first, SiloStatus.Active), (_second, SiloStatus.Active), (third, SiloStatus.Active));
-        _departed = await CompletesWithin(_departure, TimeSpan.FromMilliseconds(200));
     }
 
-    [Fact] void should_not_tell_that_a_silo_left() => _departed.ShouldBeFalse();
+    [Fact] void should_not_tell_that_a_silo_left() => _departure.IsCompleted.ShouldBeFalse();
 }

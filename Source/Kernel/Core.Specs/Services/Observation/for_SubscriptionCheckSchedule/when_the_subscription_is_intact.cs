@@ -9,5 +9,5 @@ public class when_the_subscription_is_intact : given.a_schedule
 
     void Because() => _next = _schedule.NextCheckAfter(Now);
 
-    [Fact] void should_check_after_the_safety_net_interval() => _next.ShouldEqual(SafetyNet);
+    [Fact] void should_check_no_later_than_the_safety_net_interval() => _next.ShouldEqual(SafetyNet);
 }

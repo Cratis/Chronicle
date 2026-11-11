@@ -10,8 +10,13 @@ public class a_schedule : Specification
     protected static readonly TimeSpan Settle = TimeSpan.FromSeconds(30);
     protected static readonly DateTimeOffset Now = new(2026, 11, 10, 12, 0, 0, TimeSpan.Zero);
 
-    protected SubscriptionCheckSchedule _schedule;
+    private protected SubscriptionCheckSchedule _schedule;
     protected TimeSpan _next;
 
-    void Establish() => _schedule = new(Revise, SafetyNet, Settle);
+    /// <summary>
+    /// Gets the number between 0 and 1 the schedule draws for spreading checks.
+    /// </summary>
+    protected virtual double Draw => 1;
+
+    void Establish() => _schedule = new(Revise, SafetyNet, Settle, () => Draw);
 }

@@ -4,19 +4,17 @@
 namespace Cratis.Chronicle.Services.Observation.for_SiloDepartures;
 
 /// <summary>
-/// A silo that is shutting down still hosts activations it has not deactivated yet, so it has not left.
+/// A silo that shuts down gracefully deactivates its activations while it does, so it counts as leaving from the start.
 /// </summary>
 public class when_a_silo_is_shutting_down : given.two_silos
 {
     Task _departure;
-    bool _departed;
 
-    async Task Because()
+    void Because()
     {
         _departure = _departures.Next;
         Publish((_first, SiloStatus.Active), (_second, SiloStatus.ShuttingDown));
-        _departed = await CompletesWithin(_departure, TimeSpan.FromMilliseconds(200));
     }
 
-    [Fact] void should_not_tell_that_a_silo_left() => _departed.ShouldBeFalse();
+    [Fact] void should_tell_that_a_silo_is_leaving() => _departure.IsCompleted.ShouldBeTrue();
 }

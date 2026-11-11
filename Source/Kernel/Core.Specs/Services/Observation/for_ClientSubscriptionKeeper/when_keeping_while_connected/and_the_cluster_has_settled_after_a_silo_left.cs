@@ -8,29 +8,19 @@ namespace Cratis.Chronicle.Services.Observation.for_ClientSubscriptionKeeper.whe
 /// </summary>
 public class and_the_cluster_has_settled_after_a_silo_left : given.a_client_subscription_keeper
 {
-    int _checksWhenSettled;
+    TimeSpan _waitOnceSettled;
 
     protected override Task<bool> Check(int check) => Task.FromResult(true);
 
-    protected override TimeSpan Settle => Revise * 5;
-
-    protected override bool CloseTheStreamAt(int check) => false;
-
     async Task Because()
     {
-        var keeping = Keep();
-        await WaitForChecks(1);
-        var left = _siloLeft;
-        _siloLeft = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        left.SetResult();
-        await WaitForChecks(2);
-        await Task.Delay(Settle + (Revise * 10));
-        _checksWhenSettled = Volatile.Read(ref _checks);
-        await Task.Delay(Revise * 20);
-        await _streamClosed.CancelAsync();
-        await keeping.WaitAsync(Patience);
+        StartKeeping();
+        await _clock.Elapse();
+        await _clock.NextWait();
+        SiloLeaves();
+        await ElapseAtLeast(Settle);
+        _waitOnceSettled = await _clock.NextWait();
     }
 
-    [Fact] void should_check_after_the_departure() => _checksWhenSettled.ShouldBeGreaterThan(1);
-    [Fact] void should_stop_checking_every_revise_interval() => _checks.ShouldEqual(_checksWhenSettled);
+    [Fact] void should_leave_it_to_the_safety_net() => _waitOnceSettled.ShouldEqual(SafetyNetWait);
 }
