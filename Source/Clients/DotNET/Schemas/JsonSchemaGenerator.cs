@@ -434,9 +434,11 @@ public partial class JsonSchemaGenerator : IJsonSchemaGenerator
 
         if (schema is not JsonObject schemaObj) return schema;
 
-        // .NET 11 adds this annotation for obsolete types and properties. Keep the .NET 10
-        // shape for precise and legacy events (including older kernels) and read models.
+        // .NET 11 adds these annotations: deprecated for obsolete types and properties, and
+        // contentEncoding for byte arrays. Keep the .NET 10 shape for precise and legacy events
+        // (including older kernels) and read models.
         schemaObj.Remove("deprecated");
+        schemaObj.Remove("contentEncoding");
 
         // Polymorphic base types (those that have registered derived types via [DerivedType]) are
         // stored verbatim. System.Text.Json's schema exporter only describes the abstract base's
