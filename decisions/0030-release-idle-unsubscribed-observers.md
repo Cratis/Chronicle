@@ -52,6 +52,15 @@ Something must call `Subscribe` again:
 | Projection | `ProjectionsManager` on registration or kernel start only | Live delivery stops until the client registers its projections again |
 | Kernel reactor, webhook, event store subscription | Their managers on start or registration only | The same |
 
+> **Correction (2026-11-11):** the subscription keeper no longer calls every connected observer every
+> `reviseIntervalSeconds` (#5816). It checks a subscription confirmed intact once per jittered safety-net wait of at
+> most `connectedClients.subscriptionCheckIntervalSeconds` (default 60 s), and every `reviseIntervalSeconds` only while
+> a subscription is not confirmed intact and for `connectedClients.subscriptionSettleSeconds` (default 30 s) after a
+> silo starts leaving or is declared dead. Where this record says the keeper calls every `reviseIntervalSeconds` -
+> the row above, Decision point 1, Options considered and Consequences - it describes the keeper before that change.
+> Releasing a subscribed client observer would now stop its live delivery for up to the safety-net interval instead of
+> about 2 s. The decision itself is unchanged.
+
 ### What an activation retains
 
 Measured with `Benchmarks/Chronicle.Benchmarks.Kernel --observer-footprint` (in-process silo with in-memory
