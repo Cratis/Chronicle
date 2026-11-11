@@ -7,7 +7,9 @@ namespace Cratis.Chronicle.Diagnostics;
 /// Records directly with a concrete value-type recorder and cached scope tags.
 /// </summary>
 /// <remarks>
-/// The scope tags are shared with every other instrument of the scope rather than copied into each instrument.
+/// The scope tags are shared with every other instrument of the scope rather than copied into each instrument, and are
+/// never changed. Recording with additional tags appends them to <see cref="MetricScopeTags.ForAppending"/>, a local copy
+/// that shares nothing with the scope, so concurrent and nested recordings cannot see each other's tags.
 /// </remarks>
 /// <typeparam name="T">The measurement type.</typeparam>
 /// <typeparam name="TRecorder">The concrete instrument recorder.</typeparam>
@@ -28,7 +30,7 @@ internal sealed class SingleMetricInstrument<T, TRecorder>(TRecorder recorder, M
     /// <param name="tag">The additional tag value.</param>
     internal void Record(T value, object? tag)
     {
-        var measurementTags = tags.Tags;
+        var measurementTags = tags.ForAppending();
         if (firstKey.Length > 0) measurementTags.Add(firstKey, tag);
         recorder.Record(value, in measurementTags);
     }
@@ -39,7 +41,7 @@ internal sealed class SingleMetricInstrument<T, TRecorder>(TRecorder recorder, M
     /// <param name="secondTag">The second additional tag value.</param>
     internal void Record(T value, object? firstTag, object? secondTag)
     {
-        var measurementTags = tags.Tags;
+        var measurementTags = tags.ForAppending();
         if (firstKey.Length > 0) measurementTags.Add(firstKey, firstTag);
         if (secondKey.Length > 0) measurementTags.Add(secondKey, secondTag);
         recorder.Record(value, in measurementTags);
