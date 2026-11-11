@@ -161,13 +161,17 @@ public partial class EventValueProviderExpressionResolvers(ITypeFormats typeForm
         // deleted lookups), and a read-side key resolver must survive them. Conversions that
         // already succeed keep working; only the hard TypeConversion.Convert failure - a
         // FormatException, InvalidCast or NotSupported shape - degrades to the raw value.
+        // The value itself is never logged: event content can carry personal or otherwise protected
+        // data, and exception messages from conversions can echo the input, so only the property
+        // name, the target type and the kind of failure are recorded.
+        var targetType = schemaProperty.GetTargetTypeForJsonSchemaProperty(typeFormats) ?? typeof(string);
         try
         {
-            return TypeConversion.Convert(schemaProperty.GetTargetTypeForJsonSchemaProperty(typeFormats) ?? typeof(string), text);
+            return TypeConversion.Convert(targetType, text);
         }
         catch (Exception ex) when (ex is FormatException or InvalidCastException or NotSupportedException)
         {
-            logger.EventValueLeftUnconverted(text, schemaProperty.Name, ex.Message);
+            logger.EventValueLeftUnconverted(schemaProperty.Name, targetType.Name, ex.GetType().Name);
             return text;
         }
     }
