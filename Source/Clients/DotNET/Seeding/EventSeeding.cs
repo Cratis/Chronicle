@@ -251,6 +251,17 @@ public class EventSeeding(
         return seeding;
     }
 
+    static void AddToGroup<TKey>(Dictionary<TKey, List<Contracts.Seeding.SeedingEntry>> groups, TKey key, Contracts.Seeding.SeedingEntry entry)
+        where TKey : notnull
+    {
+        if (!groups.TryGetValue(key, out var list))
+        {
+            list = [];
+            groups[key] = list;
+        }
+        list.Add(entry);
+    }
+
     async Task<bool> DiscoverSeeder(Type seederType)
     {
         try
@@ -297,108 +308,17 @@ public class EventSeeding(
         var globalEntries = entries.Where(e => e.IsGlobal).ToList();
         var namespacedEntries = entries.Where(e => !e.IsGlobal).GroupBy(e => e.TargetNamespace);
 
-        var globalByEventTypeEntries = new List<Contracts.Seeding.EventTypeSeedEntries>();
-        var globalByEventSourceEntries = new List<Contracts.Seeding.EventSourceSeedEntries>();
+        var (globalByEventTypeEntries, globalByEventSourceEntries) = await GroupEntries(globalEntries);
         var namespaced = new List<Contracts.Seeding.NamespacedSeedEntries>();
 
-        // Process global entries
-        if (globalEntries.Count > 0)
-        {
-            var globalByEventType = new Dictionary<EventTypeId, List<Contracts.Seeding.SeedingEntry>>();
-            var globalByEventSource = new Dictionary<EventSourceId, List<Contracts.Seeding.SeedingEntry>>();
-
-            foreach (var entry in globalEntries)
-            {
-                var content = await _eventSerializer.Serialize(entry.Event);
-                var tags = entry.Tags?.Select(t => t.Value).ToList() ?? [];
-                var contractEntry = new Contracts.Seeding.SeedingEntry
-                {
-                    EventSourceId = entry.EventSourceId.Value,
-                    EventTypeId = entry.EventTypeId.Value,
-                    Content = JsonSerializer.Serialize(content),
-                    Tags = tags,
-                    EventSourceType = entry.EventSourceType?.Value ?? EventSourceType.Default.Value,
-                    EventStreamType = entry.EventStreamType?.Value ?? EventStreamType.All.Value,
-                    EventStreamId = entry.EventStreamId?.Value ?? EventStreamId.Default
-                };
-
-                if (!globalByEventType.TryGetValue(entry.EventTypeId, out var eventTypeList))
-                {
-                    eventTypeList = [];
-                    globalByEventType[entry.EventTypeId] = eventTypeList;
-                }
-                eventTypeList.Add(contractEntry);
-
-                if (!globalByEventSource.TryGetValue(entry.EventSourceId, out var eventSourceList))
-                {
-                    eventSourceList = [];
-                    globalByEventSource[entry.EventSourceId] = eventSourceList;
-                }
-                eventSourceList.Add(contractEntry);
-            }
-
-            globalByEventTypeEntries.AddRange(globalByEventType.Select(kvp => new Contracts.Seeding.EventTypeSeedEntries
-            {
-                EventTypeId = kvp.Key.Value,
-                Entries = kvp.Value
-            }));
-
-            globalByEventSourceEntries.AddRange(globalByEventSource.Select(kvp => new Contracts.Seeding.EventSourceSeedEntries
-            {
-                EventSourceId = kvp.Key.Value,
-                Entries = kvp.Value
-            }));
-        }
-
-        // Process namespaced entries
         foreach (var namespaceGroup in namespacedEntries)
         {
-            var namespacedByEventType = new Dictionary<EventTypeId, List<Contracts.Seeding.SeedingEntry>>();
-            var namespacedByEventSource = new Dictionary<EventSourceId, List<Contracts.Seeding.SeedingEntry>>();
-
-            foreach (var entry in namespaceGroup)
-            {
-                var content = await _eventSerializer.Serialize(entry.Event);
-                var tags = entry.Tags?.Select(t => t.Value).ToList() ?? [];
-                var contractEntry = new Contracts.Seeding.SeedingEntry
-                {
-                    EventSourceId = entry.EventSourceId.Value,
-                    EventTypeId = entry.EventTypeId.Value,
-                    Content = JsonSerializer.Serialize(content),
-                    Tags = tags,
-                    EventSourceType = entry.EventSourceType?.Value ?? EventSourceType.Default.Value,
-                    EventStreamType = entry.EventStreamType?.Value ?? EventStreamType.All.Value,
-                    EventStreamId = entry.EventStreamId?.Value ?? EventStreamId.Default
-                };
-
-                if (!namespacedByEventType.TryGetValue(entry.EventTypeId, out var eventTypeList))
-                {
-                    eventTypeList = [];
-                    namespacedByEventType[entry.EventTypeId] = eventTypeList;
-                }
-                eventTypeList.Add(contractEntry);
-
-                if (!namespacedByEventSource.TryGetValue(entry.EventSourceId, out var eventSourceList))
-                {
-                    eventSourceList = [];
-                    namespacedByEventSource[entry.EventSourceId] = eventSourceList;
-                }
-                eventSourceList.Add(contractEntry);
-            }
-
+            var (byEventType, byEventSource) = await GroupEntries(namespaceGroup);
             namespaced.Add(new Contracts.Seeding.NamespacedSeedEntries
             {
                 Namespace = namespaceGroup.Key.Value,
-                ByEventType = namespacedByEventType.Select(kvp => new Contracts.Seeding.EventTypeSeedEntries
-                {
-                    EventTypeId = kvp.Key.Value,
-                    Entries = kvp.Value
-                }).ToList(),
-                ByEventSource = namespacedByEventSource.Select(kvp => new Contracts.Seeding.EventSourceSeedEntries
-                {
-                    EventSourceId = kvp.Key.Value,
-                    Entries = kvp.Value
-                }).ToList()
+                ByEventType = byEventType,
+                ByEventSource = byEventSource
             });
         }
 
@@ -411,6 +331,47 @@ public class EventSeeding(
             GlobalSetIsAuthoritative = authoritative,
             GlobalSetOwner = _globalSetOwner
         }).EnsureSuccess();
+    }
+
+    async Task<(List<Contracts.Seeding.EventTypeSeedEntries> ByEventType, List<Contracts.Seeding.EventSourceSeedEntries> ByEventSource)> GroupEntries(IEnumerable<SeedingEntry> entries)
+    {
+        var byEventType = new Dictionary<EventTypeId, List<Contracts.Seeding.SeedingEntry>>();
+        var byEventSource = new Dictionary<EventSourceId, List<Contracts.Seeding.SeedingEntry>>();
+
+        foreach (var entry in entries)
+        {
+            var contractEntry = await ToContractEntry(entry);
+            AddToGroup(byEventType, entry.EventTypeId, contractEntry);
+            AddToGroup(byEventSource, entry.EventSourceId, contractEntry);
+        }
+
+        return (
+            byEventType.Select(kvp => new Contracts.Seeding.EventTypeSeedEntries
+            {
+                EventTypeId = kvp.Key.Value,
+                Entries = kvp.Value
+            }).ToList(),
+            byEventSource.Select(kvp => new Contracts.Seeding.EventSourceSeedEntries
+            {
+                EventSourceId = kvp.Key.Value,
+                Entries = kvp.Value
+            }).ToList());
+    }
+
+    async Task<Contracts.Seeding.SeedingEntry> ToContractEntry(SeedingEntry entry)
+    {
+        var content = await _eventSerializer.Serialize(entry.Event);
+        var tags = entry.Tags?.Select(t => t.Value).ToList() ?? [];
+        return new Contracts.Seeding.SeedingEntry
+        {
+            EventSourceId = entry.EventSourceId.Value,
+            EventTypeId = entry.EventTypeId.Value,
+            Content = JsonSerializer.Serialize(content),
+            Tags = tags,
+            EventSourceType = entry.EventSourceType?.Value ?? EventSourceType.Default.Value,
+            EventStreamType = entry.EventStreamType?.Value ?? EventStreamType.All.Value,
+            EventStreamId = entry.EventStreamId?.Value ?? EventStreamId.Default
+        };
     }
 
     async Task ConfirmRoutingSupport(List<SeedingEntry> entries)
