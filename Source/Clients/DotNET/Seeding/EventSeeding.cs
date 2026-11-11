@@ -262,6 +262,11 @@ public class EventSeeding(
         list.Add(entry);
     }
 
+    static bool RequiresRouting(SeedingEntry entry) =>
+        (!string.IsNullOrEmpty(entry.EventSourceType?.Value) && entry.EventSourceType != EventSourceType.Default) ||
+        (!string.IsNullOrEmpty(entry.EventStreamType?.Value) && entry.EventStreamType != EventStreamType.All) ||
+        (!string.IsNullOrEmpty(entry.EventStreamId?.Value) && entry.EventStreamId.Value != EventStreamId.Default);
+
     async Task<bool> DiscoverSeeder(Type seederType)
     {
         try
@@ -373,11 +378,6 @@ public class EventSeeding(
             EventStreamId = entry.EventStreamId?.Value ?? EventStreamId.Default
         };
     }
-
-    static bool RequiresRouting(SeedingEntry entry) =>
-        (!string.IsNullOrEmpty(entry.EventSourceType?.Value) && entry.EventSourceType != EventSourceType.Default) ||
-        (!string.IsNullOrEmpty(entry.EventStreamType?.Value) && entry.EventStreamType != EventStreamType.All) ||
-        (!string.IsNullOrEmpty(entry.EventStreamId?.Value) && entry.EventStreamId.Value != EventStreamId.Default);
 
     async Task ConfirmRoutingSupport(List<SeedingEntry> entries)
     {
