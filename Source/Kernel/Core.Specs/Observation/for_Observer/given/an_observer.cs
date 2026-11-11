@@ -102,6 +102,7 @@ public class an_observer : Specification
         silo.AddService(_webhookTargetPolicy);
         silo.AddService(_eventCompliance);
         silo.AddService(_eventGenerationRelease);
+        silo.AddService<ISubscriptionAdmission>(new SubscriptionAdmission(1000, Environment.ProcessorCount));
         silo.AddService<IObserverSubscriberSelector>(new RoundRobinObserverSubscriberSelector());
         silo.AddService(_observerServiceClient);
         silo.AddKeyedService(WellKnown.MeterName, CreateActivitySource());
@@ -111,6 +112,11 @@ public class an_observer : Specification
         if (_meter is not null)
         {
             silo.AddKeyedService(WellKnown.MeterName, _meter);
+        }
+
+        if (CreateObserverGauges() is { } observerGauges)
+        {
+            silo.AddService(observerGauges);
         }
 
         var management = Substitute.For<IManagementGrain>();
@@ -128,6 +134,12 @@ public class an_observer : Specification
     /// </summary>
     /// <returns>The <see cref="IMeter{T}"/> to register, or null for none.</returns>
     protected virtual IMeter<Observer>? CreateMeter() => null;
+
+    /// <summary>
+    /// Creates the gauges the observer reports its current state to. By default there are none.
+    /// </summary>
+    /// <returns>The <see cref="IObserverGauges"/> to register, or null for none.</returns>
+    protected virtual IObserverGauges? CreateObserverGauges() => null;
 
     /// <summary>
     /// Creates the logger the observer logs to. By default it is a logger that discards everything.

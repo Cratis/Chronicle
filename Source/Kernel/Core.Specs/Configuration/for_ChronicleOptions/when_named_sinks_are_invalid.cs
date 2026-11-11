@@ -24,7 +24,9 @@ public class when_named_sinks_are_invalid : Specification
         _services = services.BuildServiceProvider();
     }
 
+#pragma warning disable SYSLIB0066 // The synchronous IStartupValidator is what ValidateOnStart registers and the spec exercises.
     void Because() => _error = Catch.Exception(() => _services.GetRequiredService<IStartupValidator>().Validate());
+#pragma warning restore SYSLIB0066
 
     [Fact] void should_refuse_startup() => _error.ShouldBeOfExactType<OptionsValidationException>();
     [Fact] void should_name_the_configuration() => _error.Message.ShouldContain("'reporting'");

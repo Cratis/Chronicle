@@ -3,6 +3,7 @@
 
 namespace Cratis.Chronicle.EventStores.for_RegisterDeployment.when_validating;
 
+[PerFactSpecificationLifecycle]
 public class and_the_event_store_is_the_system_event_store : given.a_registration
 {
     public static TheoryData<string> ReservedStores() => ["System", "system", "SYSTEM"];

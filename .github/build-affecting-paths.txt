@@ -40,11 +40,6 @@ Docker/**
 # bump here reaches further than any single project file.
 Directory.Packages.props
 
-# Imported by Directory.Packages.props for the net8.0 and net9.0 target frameworks. The build workflow
-# builds the client packages for every shipped framework, so these decide what those builds resolve.
-Directory.Packages.NET8.props
-Directory.Packages.NET9.props
-
 # Sets the properties the whole build runs under, including EnforceCodeStyleInBuild.
 Directory.Build.props
 

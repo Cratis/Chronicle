@@ -53,6 +53,7 @@ public class a_startup_task : Specification
     protected IGrainFactory _grainFactory = null!;
     IAuthenticationService _authenticationService = null!;
     protected IStorageErrorClassifier _storageErrorClassifier = null!;
+    protected IBusySilos _busySilos = null!;
     protected bool _bootstrapClientsEnsured;
     protected IEventStoreStorage _eventStoreStorage = null!;
     protected IEventStoreNamespaceStorage _namespaceStorage = null!;
@@ -63,6 +64,7 @@ public class a_startup_task : Specification
     readonly an_immediate_time_provider _timeProvider = new();
     protected IClusterReleases _clusterReleases = null!;
     readonly List<string> _logMessages = [];
+    readonly List<StartupLogEntry> _logEntries = [];
     protected INamespaces _systemNamespaces = null!;
     protected INamespaces _namespaces = null!;
     protected IEventStoreSubscriptionsManager _eventStoreSubscriptionsManager = null!;
@@ -81,6 +83,10 @@ public class a_startup_task : Specification
 
     protected IEnumerable<string> LogMessages => _logMessages;
 
+    protected IEnumerable<StartupLogEntry> LogEntries => _logEntries;
+
+    protected virtual Cratis.Chronicle.Configuration.ChronicleOptions ServerOptions => new();
+
     protected IReadOnlyList<TimeSpan> RequestedDelays => _timeProvider.Delays;
 
     void EstablishStartupTask()
@@ -98,7 +104,9 @@ public class a_startup_task : Specification
             _patchRunner,
             _clusterReleases,
             _kernelProjectionRetries,
-            new StartupLogger(_logMessages),
+            _busySilos,
+            Microsoft.Extensions.Options.Options.Create(ServerOptions),
+            new StartupLogger(_logMessages, _logEntries),
             _timeProvider);
     }
 
@@ -116,6 +124,8 @@ public class a_startup_task : Specification
         _grainFactory = Substitute.For<IGrainFactory>();
         _authenticationService = new TestAuthenticationService(() => _bootstrapClientsEnsured = true);
         _storageErrorClassifier = Substitute.For<IStorageErrorClassifier>();
+        _busySilos = Substitute.For<IBusySilos>();
+        _busySilos.FindBusySilo(Arg.Any<Exception>()).Returns((BusySilo?)null);
         _eventStoreStorage = Substitute.For<IEventStoreStorage>();
         _namespaceStorage = Substitute.For<IEventStoreNamespaceStorage>();
         _observerStateStorage = Substitute.For<IObserverStateStorage>();

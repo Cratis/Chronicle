@@ -8,6 +8,7 @@ namespace Cratis.Chronicle.SingleWriter.for_SingleWriterLease.when_starting;
 public class and_the_lease_is_held_then_released : given.a_keeper
 {
     bool _wasHeld;
+    bool _wasWaiting;
     void Establish()
     {
         Storage.TryAcquire(Arg.Any<SingleWriterLeaseClaim>(), Arg.Any<CancellationToken>()).Returns(new SingleWriterLeaseAttempt(false, new(new("other"), "host", "1", DateTimeOffset.UnixEpoch, DateTimeOffset.UnixEpoch.AddSeconds(30))), new SingleWriterLeaseAttempt(true, null));
@@ -15,10 +16,13 @@ public class and_the_lease_is_held_then_released : given.a_keeper
 
     async Task Because()
     {
+        // The first timer created is the AcquireTimeout cancellation timer, not the retry delay. This relies on the
+        // storage substitute completing synchronously; an asynchronous one would race here.
         var waiting = Time.WhenNextTimer();
         var start = Observer.OnStart(CancellationToken.None);
         await waiting;
         _wasHeld = Keeper.IsHeld;
+        _wasWaiting = Keeper.IsWaiting;
         var acquired = Time.WhenNextTimer();
         Time.Advance(TimeSpan.FromSeconds(2));
         await acquired;
@@ -26,5 +30,7 @@ public class and_the_lease_is_held_then_released : given.a_keeper
     }
 
     [Fact] void should_wait_before_becoming_active() => _wasHeld.ShouldBeFalse();
+    [Fact] void should_report_waiting_while_another_holds_it() => _wasWaiting.ShouldBeTrue();
     [Fact] void should_acquire_after_the_holder_releases() => Keeper.IsHeld.ShouldBeTrue();
+    [Fact] void should_no_longer_be_waiting() => Keeper.IsWaiting.ShouldBeFalse();
 }

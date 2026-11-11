@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cratis.Chronicle.Security.for_StoreEntitlementsCache;
 
+[PerFactSpecificationLifecycle]
 public class when_refreshing_a_snapshot : Specification
 {
     IStoreEntitlements _grain;

@@ -67,6 +67,29 @@ internal sealed class MetricSet
     internal MetricInstrument<T, HistogramMetricRecorder<T>> Histogram<T>(string name, string? unit, string? description = null, string firstKey = "", string secondKey = "")
         where T : struct => Create<T, HistogramMetricRecorder<T>>(name, unit, description, firstKey, secondKey, metadata => new HistogramMetricRecorder<T>(_meter?.CreateHistogram<T>(metadata.Name, metadata.Unit, metadata.Description)));
 
+    /// <summary>
+    /// Creates a histogram that has no legacy name, published under its convention name and keys in every naming mode.
+    /// </summary>
+    /// <typeparam name="T">The measurement type.</typeparam>
+    /// <param name="name">The convention name.</param>
+    /// <param name="unit">The convention unit.</param>
+    /// <param name="description">The convention description.</param>
+    /// <param name="bucketBoundaries">The explicit bucket boundaries.</param>
+    /// <param name="firstKey">The first additional convention tag key.</param>
+    /// <returns>The precreated histogram.</returns>
+    internal MetricInstrument<T, HistogramMetricRecorder<T>> ConventionOnlyHistogram<T>(string name, string unit, string description, IReadOnlyList<T> bucketBoundaries, string firstKey = "")
+        where T : struct
+    {
+#if NET9_0_OR_GREATER
+        var histogram = _meter?.CreateHistogram(name, unit, description, tags: null, advice: new InstrumentAdvice<T> { HistogramBucketBoundaries = bucketBoundaries });
+#else
+        _ = bucketBoundaries;
+        var histogram = _meter?.CreateHistogram<T>(name, unit, description);
+#endif
+        return new MetricInstrument<T, HistogramMetricRecorder<T>>(
+            new SingleMetricInstrument<T, HistogramMetricRecorder<T>>(new HistogramMetricRecorder<T>(histogram), _conventionTags, firstKey, string.Empty));
+    }
+
     /// <summary>Creates the legacy-only retry counter at its original recording point.</summary>
     /// <returns>The legacy counter, or a no-op in convention mode.</returns>
     internal MetricInstrument<int, CounterMetricRecorder<int>> PartitionRetryAttempts()

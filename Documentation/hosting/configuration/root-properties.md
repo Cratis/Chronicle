@@ -1,6 +1,6 @@
 ---
 title: Root configuration properties in Cratis Chronicle
-description: Root properties of chronicle.json for Chronicle Server, including the bind timeout, health check endpoint and graceful shutdown.
+description: Root properties of chronicle.json for Chronicle Server, including the bind timeout, health check endpoint, busy silos at startup and graceful shutdown.
 ---
 These properties live at the root of `chronicle.json`.
 
@@ -12,6 +12,9 @@ These properties live at the root of `chronicle.json`.
   "bindTimeout": "00:00:30",
   "healthCheckEndpoint": "/health",
   "maxReceiveMessageSize": 104857600,
+  "startup": {
+    "busySiloWaitLimit": "02:00:00"
+  },
   "shutdown": {
     "drainTimeout": "00:00:08"
   }
@@ -25,6 +28,7 @@ These properties live at the root of `chronicle.json`.
 | healthCheckEndpoint | string | /health | Health check endpoint path |
 | maxReceiveMessageSize | number | 104857600 | The largest gRPC message in bytes the kernel accepts from a client, 100 MB by default. Remove the limit with `null` |
 | maxSendMessageSize | number | unlimited | The largest gRPC message in bytes the kernel sends to a client |
+| startup.busySiloWaitLimit | time span | 02:00:00 | How long a startup step waits for a silo that is up but not answering before the server stops |
 | shutdown.drainTimeout | time span | 00:00:08 | Shared budget for joining local observer work and draining appended-event queues at shutdown |
 
 ## Bind timeout
@@ -37,6 +41,14 @@ Chronicle exposes the health check endpoint on the main port (35000). You can cu
 
 To expose the health endpoint on a dedicated port — with TLS optionally disabled for orchestrator and load-balancer probes — see [Health Endpoint](health-endpoint.md).
 
+
+## Busy silos at startup
+
+Every startup step calls a grain. When a call times out against this silo itself, or against a sibling the cluster reports as active, that silo is up and most likely busy catching up on a backlog. Restarting would only restart the same backlog, so the step does not count the timeout as a failed attempt. It waits instead, with a backoff capped at one minute. The silo stays running and not ready while it waits, and every wait is logged. The log is a warning at first and an error after ten waits.
+
+A grain that never answers, such as a deadlock or storage that hangs, times out the same way, so the wait is bounded. `startup.busySiloWaitLimit` sets how long one step waits from its first such timeout, two hours by default. When it has passed, the server logs a critical message and stops, as it does for any step that keeps failing. Raise the limit if your server needs longer to drain its backlog. `"00:00:00"` turns the wait off, so the first busy timeout stops the server. The environment-variable form is `Cratis__Chronicle__Startup__BusySiloWaitLimit=02:00:00`.
+
+Timeouts against a silo the cluster does not report as active still count as attempts. A step stops the server once its attempts are exhausted.
 
 ## Graceful shutdown
 

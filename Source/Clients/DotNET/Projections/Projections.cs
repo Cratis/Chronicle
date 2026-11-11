@@ -44,11 +44,7 @@ public class Projections(
     ILogger<Projections> logger) : IProjections, IKnowPassiveProjections, IKnowReadModelContainerNames
 {
     readonly IChronicleServicesAccessor _servicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
-#if NET8_0
-    readonly object _explicitLock = new();
-#else
     readonly Lock _explicitLock = new();
-#endif
     readonly Dictionary<Type, IExplicitProjection> _explicitProjections = [];
     readonly HashSet<Type> _registeredAtRuntime = [];
     readonly HashSet<Type> _warnedAboutRootRemovalViaJoin = [];

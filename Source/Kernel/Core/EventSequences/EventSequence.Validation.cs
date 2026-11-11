@@ -45,6 +45,7 @@ public partial class EventSequence
         EventPublication? publication = null,
         EventSequenceNumber? compensationFor = null)
     {
+        var started = System.Diagnostics.Stopwatch.GetTimestamp();
         using var span = activitySource.Append();
         span?.Activity?.Tag(_eventSequenceKey.EventStore);
         span?.Activity?.Tag(_eventSequenceKey.Namespace);
@@ -62,6 +63,10 @@ public partial class EventSequence
         {
             span?.Activity?.RecordFailure(ex);
             throw;
+        }
+        finally
+        {
+            _metrics?.AppendDuration(System.Diagnostics.Stopwatch.GetElapsedTime(started), _eventSequenceKey.EventSequenceId);
         }
     }
 

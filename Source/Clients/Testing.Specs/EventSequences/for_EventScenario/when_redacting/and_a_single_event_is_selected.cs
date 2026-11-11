@@ -16,7 +16,7 @@ public class and_a_single_event_is_selected : given.a_scenario_with_notes
     {
         await _scenario.EventSequence.Redact(_firstNote, "Subject asked for erasure");
         _events = await _scenario.EventLog.GetFromSequenceNumber(EventSequenceNumber.First);
-        _redactedPayload = JsonDocument.Parse(await _scenario.ReadContentAtRest(_firstNote)).RootElement;
+        _redactedPayload = JsonSerializer.Deserialize<JsonElement>(await _scenario.ReadContentAtRest(_firstNote));
     }
 
     AppendedEvent At(EventSequenceNumber number) => _events.Single(_ => _.Context.SequenceNumber == number);

@@ -22,12 +22,16 @@ namespace Cratis.Chronicle.Observation.Jobs;
 /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
 /// <param name="jsonSerializerOptions">The serializer options used for JSON serialization.</param>
 /// <param name="logger">The logger.</param>
+/// <param name="jobGauges">The <see cref="IObserverJobGauges"/> the job reports its progress to.</param>
 public class CatchUpObserver(
     IObserverServiceClient catchupServiceClient,
     IStorage storage,
     JsonSerializerOptions jsonSerializerOptions,
-    ILogger<CatchUpObserver> logger) : Job<CatchUpObserverRequest, JobStateWithLastHandledEvent>, ICatchUpObserver
+    ILogger<CatchUpObserver> logger,
+    IObserverJobGauges? jobGauges = null) : Job<CatchUpObserverRequest, JobStateWithLastHandledEvent>, ICatchUpObserver
 {
+    readonly ObserverJobGaugeReporter _gauge = new(jobGauges, ObserverJobGaugeType.CatchUp);
+
     /// <inheritdoc/>
     /// <remarks>
     /// Catching up is reached through Subscribe, and behind Subscribe sits the client's registration call with a
@@ -37,20 +41,30 @@ public class CatchUpObserver(
     protected override bool StartStepsInBackground => true;
 
     /// <inheritdoc/>
+    public override Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
+    {
+        _gauge.Release();
+        return base.OnDeactivateAsync(reason, cancellationToken);
+    }
+
+    /// <inheritdoc/>
     protected override async Task OnBeforeStartingJobSteps()
     {
         await catchupServiceClient.BeginCatchupFor(State.ObserverDetails);
+        _gauge.Report(JobId, Request.ObserverKey, State.Progress);
     }
 
     /// <inheritdoc/>
     protected override async Task OnBeforeResumingJobSteps()
     {
         await catchupServiceClient.ResumeCatchupFor(State.ObserverDetails);
+        _gauge.Report(JobId, Request.ObserverKey, State.Progress);
     }
 
     /// <inheritdoc/>
     protected override async Task OnAllStepsCompleted()
     {
+        _gauge.Release();
         using var scope = logger.BeginJobScope(JobId, JobKey);
 
         // A finalization that fails — a final flush whose outcome is unknown — throws and fails the job, so the
@@ -97,6 +111,14 @@ public class CatchUpObserver(
     {
         await TransientTimeouts.ReportPartitionFailedWhenAttemptsAreExhausted(GrainFactory.GetGrain<IObserver>(Request.ObserverKey), result, jsonSerializerOptions);
         State.HandleResult(result, jsonSerializerOptions);
+        _gauge.Update(State.Progress);
+    }
+
+    /// <inheritdoc/>
+    protected override Task OnStopped()
+    {
+        _gauge.Release();
+        return base.OnStopped();
     }
 
     /// <inheritdoc/>

@@ -29,10 +29,24 @@ internal sealed class EventSequenceMetrics(MetricSet metrics) : IDisposable
     readonly MetricInstrument<int, CounterMetricRecorder<int>> _unknown = metrics.Counter<int>(WellKnownMetricNames.EventSequenceUnknownAppendOutcomes, WellKnownMetricNames.EventSequenceUnknownAppendOutcomesUnit, "Number of appends whose storage outcome could not be settled");
     readonly MetricInstrument<long, GaugeMetricRecorder<long>> _lag = metrics.Gauge<long>(WellKnownMetricNames.ConstraintIndexLag, WellKnownMetricNames.ConstraintIndexLagUnit, "Events not yet covered by confirmed constraint updates");
 
+    readonly MetricInstrument<double, HistogramMetricRecorder<double>> _appendDuration = metrics.ConventionOnlyHistogram(
+        WellKnownMetricNames.EventSequenceAppendDuration,
+        WellKnownMetricNames.EventSequenceAppendDurationUnit,
+        "Duration of an append or append many call on an event sequence, from validation to the settled outcome",
+        AppendDurationBuckets,
+        WellKnownTelemetryAttributes.EventSequenceId);
+
+    /// <summary>
+    /// Gets the explicit bucket boundaries of the append duration histogram, in seconds.
+    /// </summary>
+    internal static IReadOnlyList<double> AppendDurationBuckets { get; } = [0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10];
+
     public void Dispose()
     {
         // Instruments belong to the injected meter, not to an activation.
     }
+
+    internal void AppendDuration(TimeSpan duration, string eventSequenceId) => _appendDuration.Record(duration.TotalSeconds, eventSequenceId);
 
     internal void ConstraintIndexesRebuilding(long count) => _rebuilding.Record(count);
     internal void ConstraintIndexRebuildEnded(string reason) => _rebuildEnds.Record(1, reason);

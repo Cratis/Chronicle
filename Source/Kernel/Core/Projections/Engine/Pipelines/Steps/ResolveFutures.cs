@@ -8,12 +8,12 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Dynamic;
+using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.Sinks;
-using Cratis.Types;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Projections.Engine.Pipelines.Steps;
@@ -142,7 +142,7 @@ public class ResolveFutures : ICanPerformProjectionPipelineStep
                     {
                         try
                         {
-                            parentKey = TypeConversion.Convert(type, parentKey);
+                            parentKey = DecimalValues.ConvertTo(type, parentKey);
                         }
                         catch (Exception exception) when (exception is InvalidCastException or FormatException or OverflowException or ArgumentException)
                         {
@@ -185,7 +185,7 @@ public class ResolveFutures : ICanPerformProjectionPipelineStep
                     {
                         try
                         {
-                            childKey = TypeConversion.Convert(childType, childKey);
+                            childKey = DecimalValues.ConvertTo(childType, childKey);
                         }
                         catch
                         {
