@@ -47,42 +47,30 @@ internal static class StateValues
     static bool TryCopyList(object value, [NotNullWhen(true)] out object? copy)
     {
         copy = null;
-        if (value is List<object> list)
+        return value switch
         {
-            var result = new List<object>(list.Count);
-            foreach (var item in list)
-            {
-                if (!TryCopyItem(item, out var itemCopy))
-                {
-                    return false;
-                }
+            List<object> list => TryCopyItems(list, out copy),
+            object[] array when array.GetType() == typeof(object[]) => TryCopyItems(array, out copy),
+            _ => false
+        };
+    }
 
-                result.Add(itemCopy!);
+    static bool TryCopyItems(IReadOnlyList<object> items, out object? copy)
+    {
+        copy = null;
+        var result = new List<object>(items.Count);
+        for (var i = 0; i < items.Count; i++)
+        {
+            if (!TryCopyItem(items[i], out var itemCopy))
+            {
+                return false;
             }
 
-            copy = result;
-            return true;
+            result.Add(itemCopy!);
         }
 
-        if (value.GetType() == typeof(object[]))
-        {
-            var array = (object[])value;
-            var result = new List<object>(array.Length);
-            foreach (var item in array)
-            {
-                if (!TryCopyItem(item, out var itemCopy))
-                {
-                    return false;
-                }
-
-                result.Add(itemCopy!);
-            }
-
-            copy = result;
-            return true;
-        }
-
-        return false;
+        copy = result;
+        return true;
     }
 
     /// <summary>
