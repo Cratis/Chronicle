@@ -1,6 +1,6 @@
 ---
 title: Size the kernel for a container
-description: Memory, CPU and garbage collection settings for the Chronicle kernel image, small-container and throughput profiles measured under Docker limits, how to size a container from your own peak with a measured example, and how to choose between a shared kernel and a kernel per tenant.
+description: Memory, CPU and garbage collection settings for the Chronicle kernel image, with measured container profiles and how to size a container.
 ---
 
 This page describes how the Chronicle kernel image runs today, which .NET garbage collection (GC) settings you can change, and how to size a container limit from your own workload. For the general production checklist, see [Production deployment](production.md). For single-instance platforms, see [Container Apps, App Service and Cloud Run](azure-container-hosting.md).

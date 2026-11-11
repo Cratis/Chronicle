@@ -24,7 +24,7 @@ public partial class ConstraintIndexReplay
             cancellationToken.ThrowIfCancellationRequested();
             await ClaimDifference(difference, cancellationToken);
         }
-        foreach (var difference in _differences.Where(difference => difference.Retry && !difference.Claimed && CanWrite(difference)))
+        foreach (var difference in _differences.Where(CanRetryWrite))
         {
             cancellationToken.ThrowIfCancellationRequested();
             difference.Claimed = await Write(difference, difference.Claim!, cancellationToken);
@@ -67,6 +67,8 @@ public partial class ConstraintIndexReplay
         _needsRetryPass = true;
         difference.Claimed = true;
     }
+
+    bool CanRetryWrite(ConstraintIndexReplayDifference difference) => difference.Retry && !difference.Claimed && CanWrite(difference);
 
     bool CanWrite(ConstraintIndexReplayDifference difference) => !IsPoison(difference.Name, difference.Position) && !_failed.ContainsKey(difference.Name) && !_abandoned.Contains(difference.Name) &&
         (CatchUp is null || (!CatchUp.IsExcluded(difference) && !CatchUp.IsPending(difference.Name)));

@@ -53,6 +53,7 @@ public class and_access_is_withdrawn : given.a_registration
         var error = await _error.Task.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
         ((RpcException)error).StatusCode.ShouldEqual(StatusCode.PermissionDenied);
         await _unsubscribed.Task.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
+        await _messagesReleased.Task.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
         _messages.HasObservers.ShouldBeFalse();
         _lease.Received(1).Dispose();
     }
@@ -68,6 +69,7 @@ public class and_access_is_withdrawn : given.a_registration
         var error = await _error.Task.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
         ((RpcException)error).StatusCode.ShouldEqual(StatusCode.PermissionDenied);
         await _client.DidNotReceive().SetDefinitionAndSubscribe(Arg.Any<ReactorDefinition>());
+        await _messagesReleased.Task.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
         _messages.HasObservers.ShouldBeFalse();
     }
 
