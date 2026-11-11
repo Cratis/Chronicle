@@ -702,60 +702,10 @@ public partial class Observer(
         {
             if (_removed || CannotWriteState()) return;
 
-            // A quarantine owned by this activation outranks whatever running state a reloaded snapshot carried,
-            // so any write while quarantined persists the quarantine rather than a stale active snapshot.
-            if (IsQuarantined)
-            {
-                State = State with { RunningState = ObserverRunningState.Quarantined };
-                _runningStateChangedAt = _quarantineRunningStateChangedAt;
-            }
-
-            // A state-machine OnEnter can return an earlier record after awaiting a job callback. Preserve the
-            // source-owned metadata advanced by that callback, and serialize writes from AlwaysInterleave methods.
-            var shadowClaims = ShadowClaimsSnapshot();
-            State = State with
-            {
-                AlertLifecycleId = _alertLifecycleId,
-                AlertRevision = _alertRevision,
-                AlertDisposition = _alertDisposition,
-                QuarantineEpisodeId = _quarantineEpisodeId,
-                WebhookProbe = _webhookProbe,
-                DeliveryFences = DeliveryFenceSnapshot(),
-                PartitionClaims = shadowClaims.Claims,
-                ObserverWideClaim = shadowClaims.Wide,
-                OwnershipRevision = shadowClaims.Revision
-            };
+            PrepareObserverStateForWrite();
             var revision = _alertRevision;
-            try
-            {
-                await base.WriteStateAsync();
-                if (_runningStateChangedAtPending) await PersistRunningStateChangedAt();
-            }
-            catch (ObserverKeyDoesNotMatchDefinition)
-            {
-                if (await RelinquishOwnershipIfMoved()) return;
-                await storage.GetEventStore(_observerKey.EventStore).GetNamespace(_observerKey.Namespace)
-                    .Observers.ClaimOwnership(_observerId, _observerKey.EventSequenceId);
-                try
-                {
-                    await base.WriteStateAsync();
-                    if (_runningStateChangedAtPending) await PersistRunningStateChangedAt();
-                }
-                catch (ObserverKeyDoesNotMatchDefinition)
-                {
-                    if (await RelinquishOwnershipIfMoved()) return;
-                    throw;
-                }
-            }
-
-            _persistedStateWrites++;
-            PublishRunningStateGauge();
-            if (revision == _alertRevision)
-            {
-                _alertStateNeedsPersistence = false;
-            }
-
-            _debouncedProgressWrites = 0;
+            if (!await WriteWithOwnershipRetry()) return;
+            CompleteObserverStateWrite(revision);
         }
         finally
         {
@@ -796,8 +746,6 @@ public partial class Observer(
         _subscription.IsSubscribed &&
         !_subscription.EventTypes.Any() &&
         !State.SubscribesToAllEvents;
-
-    bool CannotWriteState() => _stateWritingSuspended || !_observerExists || !KeyOwnsDefinition;
 
     bool CannotRecoverFromReminder() => IsRetired || _removed || IsQuarantined || !_subscription.IsSubscribed;
 
@@ -1102,18 +1050,5 @@ public partial class Observer(
         {
             await this.UnregisterReminder(reminder);
         }
-    }
-
-    class WriteSuspension : IDisposable
-    {
-        readonly Observer _observer;
-
-        public WriteSuspension(Observer observer)
-        {
-            _observer = observer;
-            _observer._stateWritingSuspended = true;
-        }
-
-        public void Dispose() => _observer._stateWritingSuspended = false;
     }
 }
