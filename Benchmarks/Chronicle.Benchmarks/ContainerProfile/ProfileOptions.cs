@@ -25,6 +25,8 @@ internal sealed record ProfileOptions
         ["--image"] = (options, argument) => options with { Image = argument.Value },
         ["--session"] = (options, argument) => options with { Session = argument.Value },
         ["--variants"] = WithVariants,
+        ["--cpus"] = WithCpus,
+        ["--memory"] = WithMemory,
         ["--max-host-load"] = WithLoad
     };
 
@@ -36,6 +38,12 @@ internal sealed record ProfileOptions
 
     /// <summary>Gets optional substring filters.</summary>
     public string[] Cells { get; init; } = [];
+
+    /// <summary>Gets the CPU quotas the matrix covers.</summary>
+    public int[] Cpus { get; init; } = [1, 2];
+
+    /// <summary>Gets the memory limits the matrix covers, in Docker notation.</summary>
+    public string[] Memory { get; init; } = ["512m", "1g", "2g"];
 
     /// <summary>Gets untraced repetitions per cell.</summary>
     public int Repetitions { get; init; } = 3;
@@ -131,6 +139,27 @@ internal sealed record ProfileOptions
             ? options with { Variants = variants.Distinct().ToArray() }
             : null;
     }
+
+    static ProfileOptions? WithCpus(ProfileOptions options, ProfileArgument argument)
+    {
+        var values = argument.Value.Split(',', StringSplitOptions.RemoveEmptyEntries);
+        var cpus = values
+            .Select(value => int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out var cpu) ? cpu : 0)
+            .ToArray();
+        return cpus.Length > 0 && cpus.All(cpu => cpu > 0) ? options with { Cpus = cpus.Distinct().ToArray() } : null;
+    }
+
+    static ProfileOptions? WithMemory(ProfileOptions options, ProfileArgument argument)
+    {
+        var memory = argument.Value.Split(',', StringSplitOptions.RemoveEmptyEntries);
+        return memory.Length > 0 && memory.All(IsMemoryLimit) ? options with { Memory = memory.Distinct().ToArray() } : null;
+    }
+
+    static bool IsMemoryLimit(string value) =>
+        value.Length > 1 &&
+        (value[^1] == 'm' || value[^1] == 'g') &&
+        int.TryParse(value[..^1], NumberStyles.None, CultureInfo.InvariantCulture, out var amount) &&
+        amount > 0;
 
     static ProfileOptions? WithLoad(ProfileOptions options, ProfileArgument argument)
     {
