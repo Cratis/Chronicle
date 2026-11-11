@@ -21,7 +21,7 @@ internal sealed class SingleFlightRegistration(Func<Task> action, RegistrationBa
 {
     readonly RegistrationBackoff _backoff = backoff ?? new();
     readonly Func<TimeSpan, Task> _delay = delay ?? (toWait => Task.Delay(toWait));
-    readonly object _gate = new();
+    readonly Lock _gate = new();
     Task? _inFlight;
     int _consecutiveFailures;
 

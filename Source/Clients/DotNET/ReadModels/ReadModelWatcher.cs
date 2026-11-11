@@ -19,7 +19,7 @@ public class ReadModelWatcher<TReadModel> : IReadModelWatcher<TReadModel>, IDisp
     readonly IEventStore _eventStore;
     readonly IChronicleServicesAccessor _servicesAccessor;
     readonly JsonSerializerOptions _jsonSerializerOptions;
-    readonly object _sync = new();
+    readonly Lock _sync = new();
     TaskCompletionSource _subscribedTcs;
     Action? _stopped;
     IObservable<ContractReadModels.ReadModelChangeset>? _serverObservable;

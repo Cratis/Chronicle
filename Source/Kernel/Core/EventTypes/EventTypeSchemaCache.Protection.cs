@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.EventTypes;
 internal sealed partial class EventTypeSchemaCache
 {
     readonly ConcurrentDictionary<EventTypeSchemaKey, JsonSchema> _protectionSchemas = new();
-    readonly object _protectionInvalidation = new();
+    readonly Lock _protectionInvalidation = new();
     long _protectionRevision;
 
     /// <inheritdoc/>

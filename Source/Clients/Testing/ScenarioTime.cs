@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Testing;
 /// <param name="now">The initial instant.</param>
 public sealed class ScenarioTime(DateTimeOffset now) : TimeProvider
 {
-    readonly object _sync = new();
+    readonly Lock _sync = new();
     DateTimeOffset _now = now.ToUniversalTime();
 
     /// <summary>

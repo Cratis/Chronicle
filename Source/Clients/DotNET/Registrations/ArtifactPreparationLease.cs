@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Registrations;
 /// </summary>
 internal sealed class ArtifactPreparationLease
 {
-    readonly object _lock = new();
+    readonly Lock _lock = new();
     readonly Queue<TaskCompletionSource> _waiting = new();
     bool _held;
 
