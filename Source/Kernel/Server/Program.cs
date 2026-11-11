@@ -110,7 +110,8 @@ logger = builder.Logging.Services
     .GetRequiredService<ILoggerFactory>()
     .CreateLogger<Kernel>();
 #pragma warning restore ASP0000 // Do not call 'IServiceCollection.BuildServiceProvider' in 'ConfigureServices'
-builder.Services.Configure<HostOptions>(options => options.ShutdownTimeout = TimeSpan.FromSeconds(10));
+var shutdownTimeout = TimeSpan.FromSeconds(10);
+builder.Services.Configure<HostOptions>(options => options.ShutdownTimeout = shutdownTimeout);
 var assembly = Assembly.GetExecutingAssembly();
 logger.ServerStarting(assembly.GetName().Version?.ToString() ?? "unknown");
 
@@ -657,21 +658,46 @@ app.Lifetime.ApplicationStarted.Register(() => logger.ServerStarted(chronicleOpt
 // Report what is still being counted while the logging pipeline is still there, so the counts are not lost at shutdown.
 app.Lifetime.ApplicationStopped.Register(() => ReportUnobservedFailures(true));
 
+// Captured before running: RunAsync disposes the host, and with it the services these come from.
+var started = app.Lifetime.ApplicationStarted;
+var stopped = app.Lifetime.ApplicationStopped;
+Exception? runFailure = null;
 try
 {
     await app.RunAsync(cancellationToken.Token);
 }
-catch (OperationCanceledException)
+catch (Exception exception) when (KernelExit.Classify(exception, started.IsCancellationRequested, stopped.IsCancellationRequested) != KernelRunOutcome.StartFailed)
 {
-    // A shutdown signal (SIGTERM, Ctrl+C) that arrives while the host is still starting - e.g. Kestrel is
-    // still binding, or an ILifecycleParticipant is still running - cancels the host's own lifetime token
-    // and surfaces as an OperationCanceledException out of RunAsync instead of RunAsync completing
-    // normally. Left uncaught, that reaches AppDomain.CurrentDomain.UnhandledException and the process
-    // exits as an unhandled crash for what is actually an orderly, requested stop. (#3936)
-    logger.ServerShutdownDuringStartup();
+    // A failure to start keeps going to the unhandled exception handler above. Anything else is how the stop
+    // ended, and is decided and logged below instead of being reported as a crash (#5813). A shutdown signal
+    // (SIGTERM, Ctrl+C) that arrives while the host is still starting - e.g. Kestrel is still binding, or an
+    // ILifecycleParticipant is still running - surfaces here as an OperationCanceledException, and is an
+    // orderly, requested stop (#3936).
+    runFailure = exception;
 }
 
-return 0;
+var outcome = KernelExit.Classify(runFailure, started.IsCancellationRequested, stopped.IsCancellationRequested);
+var processExitCode = KernelExit.CodeFor(outcome, Environment.ExitCode);
+switch (outcome)
+{
+    case KernelRunOutcome.StoppedDuringStartup:
+        logger.ServerShutdownDuringStartup();
+        break;
+    case KernelRunOutcome.StopTimedOut:
+        logger.ServerStopTimedOut(runFailure!, shutdownTimeout, processExitCode);
+        break;
+    case KernelRunOutcome.StopFailed:
+        logger.ServerStopFailed(runFailure!, processExitCode);
+        break;
+    case KernelRunOutcome.DisposeFailed:
+        logger.ServerDisposeFailed(runFailure!, processExitCode);
+        break;
+    default:
+        logger.ServerStopped(processExitCode);
+        break;
+}
+
+return processExitCode;
 
 void ReportUnobservedFailures(bool includeRunningWindows)
 {
