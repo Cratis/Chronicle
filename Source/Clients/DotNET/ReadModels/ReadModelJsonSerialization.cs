@@ -153,6 +153,7 @@ public static class ReadModelJsonSerialization
     }
 
     static bool IsEmptyFactoryCandidate(Type type) =>
+
         // A string is an IEnumerable and a dictionary's absence is a different question with a different answer,
         // so neither is in scope here.
         type != typeof(string) && typeof(IEnumerable).IsAssignableFrom(type) && !IsDictionary(type);
