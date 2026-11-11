@@ -1,0 +1,108 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import { spawnSync } from 'node:child_process';
+import { sourcePlan } from './spec-shards.mjs';
+
+const workflow = await readFile(new URL('../workflows/dotnet-build.yml', import.meta.url), 'utf8');
+const jobs = new Map([...workflow.matchAll(/^  ([\w-]+):\n([\s\S]*?)(?=^  [\w-]+:|$(?![\s\S]))/gm)].map(match => [match[1], match[2]]));
+const build = jobs.get('dotnet-build');
+const packages = jobs.get('package-verification');
+const moved = [
+    'Build client packages for every shipped framework',
+    'Validate rolling diagnostic guards and shipped-client absence',
+    'Verify packed client packages restore for consumers',
+    'Verify local Docker image without push',
+    'Verify NuGet packages can be created'
+];
+
+function step(job, name) {
+    const found = [...job.matchAll(/^      - name: (.+)\n([\s\S]*?)(?=^      - name:|$(?![\s\S]))/gm)].find(match => match[1] === name);
+    assert.ok(found, `Missing step: ${name}`);
+    return found[2];
+}
+
+function dependencies(job) {
+    const found = jobs.get(job)?.match(/^    needs: \[([^\]]+)\]/m);
+    assert.ok(found, `Missing dependencies: ${job}`);
+    return found[1].split(',').map(value => value.trim());
+}
+
+test('only independent verifications leave the build; every moved check remains blocking', () => {
+    assert.ok(build && packages);
+    for (const name of moved) {
+        assert.ok(!build.includes(`- name: ${name}\n`), `${name} is still serial`);
+        step(packages, name);
+        assert.equal(workflow.split(`- name: ${name}\n`).length - 1, 1);
+    }
+    assert.doesNotMatch(packages, /continue-on-error:/);
+    assert.match(packages, /if: needs\.already-ran\.outputs\.skip != 'true'/);
+    assert.deepEqual(dependencies('package-verification'), ['already-ran', 'dotnet-build']);
+    for (const shard of ['specs-other', 'specs-sql']) {
+        assert.deepEqual(dependencies(shard), ['already-ran', 'dotnet-build']);
+    }
+});
+
+test('Release artifact is uploaded immediately after the build integrity checks', () => {
+    const names = [...build.matchAll(/^      - name: (.+)$/gm)].map(match => match[1]);
+    const index = names.indexOf('Assert the build carries the stamped version');
+    assert.ok(index > 0);
+    assert.deepEqual(names.slice(index + 1, index + 3), ['Pack Release build output', 'Upload Release build output']);
+    assert.match(step(build, 'Pack Release build output'), /find \. -type d -name bin/);
+    assert.match(step(build, 'Upload Release build output'), /if-no-files-found: error/);
+    assert.match(step(packages, 'Download Release build output'), /name: build-output-release/);
+    assert.match(step(packages, 'Extract Release build output'), /tar -I zstd -xf build-output-release\.tar\.zst/);
+    assert.match(step(packages, 'Restore obj cache'), /uses: actions\/cache\/restore@v4/);
+    assert.equal(step(packages, 'Stamp the build version').trim(), step(build, 'Stamp the build version').trim());
+});
+
+test('all shipped frameworks, diagnostic guards, consumer restore, Docker and stable pack stay covered', () => {
+    const clients = step(packages, moved[0]);
+    assert.match(clients, /find \.\/Source\/Clients -name "\*\.csproj" ! -name "\*\.Specs\.csproj"/);
+    assert.match(clients, /dotnet build \.\/Source\/Kernel\/Contracts\/Contracts\.csproj/);
+    assert.equal(clients.match(/-p:IsPackaging=true -p:SkipAnalyzersForTargetFramework=net11\.0/g)?.length, 2);
+    const guards = step(packages, moved[1]);
+    assert.match(guards, /node \.github\/scripts\/verify-rolling-delivery-build\.mjs/);
+    assert.match(guards, /for framework in net10\.0 net11\.0/);
+    assert.match(step(packages, moved[2]), /verify-packed-consumer-restore\.sh "\$PACKED_VERSION" "\$feed"/);
+    const docker = step(packages, moved[3]);
+    assert.match(docker, /if: github\.event_name == 'pull_request' && !inputs\.integration_requested/);
+    assert.match(docker, /cp -r Source\/Kernel\/Server\/bin\/Release\/net11\.0\/\./);
+    assert.match(docker, /docker build -t "chronicle-dockerfile-check:/);
+    assert.match(step(packages, moved[4]), /-p:IsPackaging=true -p:Version=99\.0\.0 -p:PackageVersion=99\.0\.0/);
+    assert.ok(packages.indexOf(moved[1]) < packages.indexOf(moved[2]));
+    for (const name of ['Build development Docker image', 'Push development Docker image', 'Export image']) step(build, name);
+});
+
+test('failed, cancelled and skipped package verification cannot turn the aggregate green', () => {
+    assert.ok(dependencies('specs').includes('package-verification'));
+    const aggregate = step(jobs.get('specs'), 'Require every spec job to pass');
+    assert.match(aggregate, /PACKAGE_RESULT: \$\{\{ needs\.package-verification\.result \}\}/);
+    const command = aggregate.match(/^        run: (.+)$/m)?.[1];
+    assert.ok(command);
+    for (const result of ['success', 'failure', 'cancelled', 'skipped', '']) {
+        const child = spawnSync('bash', ['-c', command], { env: {
+            WIRE_RESULT: 'success', GRAIN_RESULT: 'success', OTHER_RESULT: 'success',
+            SQL_RESULT: 'success', NET10_RESULT: 'success', PACKAGE_RESULT: result
+        } });
+        assert.equal(child.status, result === 'success' ? 0 : 1, `Package result: ${result}`);
+    }
+    for (const job of ['integration', 'integration-api', 'mongodb', 'neo4j', 'coverage-merge-and-cache']) {
+        assert.ok(dependencies(job).includes('specs'), `${job} no longer waits for the aggregate`);
+    }
+});
+
+test('refreshed timings cover every ordinary project without defaults and balance within nine minutes', async () => {
+    const plan = await sourcePlan(process.cwd());
+    assert.equal(plan.length, 2);
+    assert.ok(plan.every(shard => shard.defaulted.length === 0));
+    assert.ok(plan.every(shard => shard.seconds <= 540));
+    assert.ok(Math.abs(plan[0].seconds - plan[1].seconds) < 5);
+    const timings = JSON.parse(await readFile(new URL('./spec-shard-timings.json', import.meta.url), 'utf8'));
+    const runs = new Set(timings.samples.map(sample => sample.run));
+    assert.ok(runs.size >= 5 && runs.size <= 8);
+    for (const run of runs) assert.deepEqual(timings.samples.filter(sample => sample.run === run).map(sample => sample.shard).sort(), [1, 2]);
+});

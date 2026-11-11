@@ -246,15 +246,15 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         self.assertEqual("${{ github.workflow }}-${{ github.ref }}", self.build["concurrency"]["group"])
 
     def test_ordinary_pr_checks_the_dockerfile_without_pushing(self):
-        steps = self.build["jobs"]["dotnet-build"]["steps"]
+        steps = self.build["jobs"]["package-verification"]["steps"]
         smoke = next(step for step in steps if step.get("name") == "Verify local Docker image without push")
         self.assertEqual("github.event_name == 'pull_request' && !inputs.integration_requested", smoke["if"])
         self.assertIn("Source/Kernel/Server/bin/Release/net11.0/.", smoke["run"])
         self.assertIn("docker build", smoke["run"])
         self.assertIn("Docker/Local/Dockerfile", smoke["run"])
         self.assertNotIn("docker push", smoke["run"])
-        self.assertLess(steps.index(smoke), next(index for index, step in enumerate(steps)
-                                                if step.get("name") == "Pack Release build output"))
+        self.assertGreater(steps.index(smoke), next(index for index, step in enumerate(steps)
+                                                   if step.get("name") == "Extract Release build output"))
 
     def test_fork_request_is_skipped_with_a_notice_not_a_build_failure(self):
         jobs = self.requested["jobs"]
@@ -446,7 +446,7 @@ class SparseIntegrationWorkflows(unittest.TestCase):
     def test_stable_specs_check_requires_every_shard_to_succeed(self):
         aggregate = self.build["jobs"]["specs"]
         self.assertEqual("${{ needs.already-ran.outputs.skip != 'true' && (always()) }}", aggregate["if"])
-        self.assertEqual(["wire-compatibility", "grain-compatibility", "specs-other", "specs-sql", "specs-net10"],
+        self.assertEqual(["wire-compatibility", "grain-compatibility", "package-verification", "specs-other", "specs-sql", "specs-net10"],
                          prerequisites_of(aggregate))
         self.assertEqual({"contents": "read", "actions": "read"}, aggregate["permissions"])
         self.assertEqual("Checkout shard contract", aggregate["steps"][1]["name"])
@@ -476,7 +476,7 @@ class SparseIntegrationWorkflows(unittest.TestCase):
                 result = subprocess.run(["bash", "-c", step["run"]],
                                         env={"WIRE_RESULT": wire, "GRAIN_RESULT": grain,
                                              "OTHER_RESULT": ordinary, "SQL_RESULT": sql,
-                                             "NET10_RESULT": net10}, check=False)
+                                             "NET10_RESULT": net10, "PACKAGE_RESULT": "success"}, check=False)
                 self.assertEqual(wire == grain == ordinary == sql == net10 == "success",
                                  result.returncode == 0)
 
@@ -494,7 +494,7 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         self.assertEqual([], prerequisites_of(parallel))
         # The requested PR build runs in parallel with the specs; the integration job keeps the specs gate.
         self.assertEqual([], prerequisites_of(requested))
-        self.assertEqual(["wire-compatibility", "grain-compatibility", "specs-other", "specs-sql", "specs-net10"],
+        self.assertEqual(["wire-compatibility", "grain-compatibility", "package-verification", "specs-other", "specs-sql", "specs-net10"],
                          prerequisites_of(jobs["specs"]))
         for job_id in ("specs-other", "specs-sql"):
             self.assertEqual(["dotnet-build"], prerequisites_of(jobs[job_id]))
