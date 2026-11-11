@@ -16,7 +16,7 @@ public static class JsonSchemaCompatibilityExtensions
     const string FormatKey = "format";
     const string DetailsKey = "details";
     static readonly string[] _protectionKeys = ["compliance", "security"];
-    static readonly string[] _annotationKeywords = ["title", "description", "deprecated", "examples", "$comment"];
+    static readonly string[] _annotationKeywords = ["title", "description", "deprecated", "examples", "$comment", "contentEncoding"];
 
     /// <summary>
     /// Determines whether a generated schema still describes the stored data.
@@ -25,7 +25,7 @@ public static class JsonSchemaCompatibilityExtensions
     /// <param name="generated">The incoming schema.</param>
     /// <returns>Whether the schemas are compatible.</returns>
     /// <remarks>
-    /// Annotation-only keywords (title, description, deprecated, examples, $comment), the free-text details of protection metadata,
+    /// Annotation-only keywords (title, description, deprecated, examples, $comment, contentEncoding), the free-text details of protection metadata,
     /// nullable format markers, growing or renamed enumerations and default-only property refinements are tolerated.
     /// Annotations are ignored only at schema declarations, never in payload data or property names.
     /// Protection metadata may be added, but existing metadata may not be removed or changed.
