@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Storage.InMemory.Occurrences;
 public partial class OccurrencesStorage
 {
     readonly Dictionary<OccurrenceId, Occurrence> _occurrences = [];
-    readonly object _lock = new();
+    readonly Lock _lock = new();
 
     /// <summary>
     /// Inserts an ingress occurrence.

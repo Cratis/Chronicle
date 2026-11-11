@@ -28,7 +28,7 @@ internal sealed class EventTypeRegistryCache<TValue>
 
     sealed class RegistryCache
     {
-        readonly object _lock = new();
+        readonly Lock _lock = new();
         FrozenSet<Type> _types = FrozenSet<Type>.Empty;
         Dictionary<Type, TValue> _defaults = [];
         ConditionalWeakTable<object, Dictionary<Type, TValue>> _contexts = new();

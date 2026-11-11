@@ -16,7 +16,7 @@ namespace Cratis.Chronicle.Storage.InMemory.Generations.Bindings;
 public sealed class InMemoryMaterializationBindingStorage(TimeProvider? timeProvider = null) : IMaterializationBindingStorage
 {
     readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
-    readonly object _lock = new();
+    readonly Lock _lock = new();
     readonly Dictionary<(EventStoreName Store, string Key), MaterializationBinding> _bindings = [];
     readonly Dictionary<(EventStoreName Store, EventStoreNamespaceName Namespace, PublicationReceiptId Receipt), (MaterializationPublicationRequest Request, MaterializationPublication Outcome)> _receipts = [];
     readonly Dictionary<(EventStoreName Store, string Gate), long> _gates = [];

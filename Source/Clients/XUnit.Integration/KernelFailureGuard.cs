@@ -18,7 +18,7 @@ internal sealed class KernelFailureGuard(
     Func<CancellationToken, Task<string>> logs,
     Func<CancellationToken, Task> delay)
 {
-    readonly object _gate = new();
+    readonly Lock _gate = new();
     Task<ExceptionDispatchInfo>? _failure;
 
     /// <summary>
