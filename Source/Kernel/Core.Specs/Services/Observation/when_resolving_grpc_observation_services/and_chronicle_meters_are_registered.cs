@@ -34,6 +34,7 @@ public class and_chronicle_meters_are_registered : Specification
         services.AddSingleton(Substitute.For<IExpandoObjectConverter>());
         services.AddSingleton(new JsonSerializerOptions());
         services.AddSingleton<IObserverRegistrationGate, ObserverRegistrationGate>();
+        services.AddSingleton<ISiloDepartures>(NoSiloDepartures.Instance);
         services.AddSingleton<ReactorsService>();
         services.AddSingleton<ReducersService>();
 

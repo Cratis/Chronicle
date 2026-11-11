@@ -8,8 +8,8 @@ namespace Cratis.Chronicle.Services.Observation.for_ClientSubscriptionKeeper.whe
 /// </summary>
 public class and_a_check_fails : given.a_client_subscription_keeper
 {
-    protected override Task Check(int check) =>
-        check == 1 ? Task.FromException(new InvalidOperationException("The silo is leaving")) : Task.CompletedTask;
+    protected override Task<bool> Check(int check) =>
+        check == 1 ? Task.FromException<bool>(new InvalidOperationException("The silo is leaving")) : Task.FromResult(false);
 
     Task Because() => KeepUntilTheStreamCloses();
 

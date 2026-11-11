@@ -17,6 +17,26 @@ public class Clients
     public int ReviseIntervalSeconds { get; init; } = 2;
 
     /// <summary>
+    /// Gets the interval in seconds between checks of a connected client's subscription that is known to be intact.
+    /// </summary>
+    /// <remarks>
+    /// This is the safety net for a subscription lost without a silo leaving the cluster. A subscription that is not
+    /// confirmed intact - a new one, one that was just restored, or one checked while a silo left - is checked every
+    /// <see cref="ReviseIntervalSeconds"/> instead. Values below <see cref="ReviseIntervalSeconds"/> are raised to it.
+    /// </remarks>
+    public int SubscriptionCheckIntervalSeconds { get; init; } = 60;
+
+    /// <summary>
+    /// Gets the number of seconds after a silo leaves the cluster during which every connected client's subscription
+    /// on the remaining silos is checked every <see cref="ReviseIntervalSeconds"/>.
+    /// </summary>
+    /// <remarks>
+    /// A silo that leaves takes the observer activations it hosted with it, and the surviving silos deactivate the
+    /// activations whose directory entries it owned shortly afterwards. The window covers both.
+    /// </remarks>
+    public int SubscriptionSettleSeconds { get; init; } = 30;
+
+    /// <summary>
     /// Gets the number of seconds a connection reservation is kept before it expires.
     /// </summary>
     /// <remarks>
