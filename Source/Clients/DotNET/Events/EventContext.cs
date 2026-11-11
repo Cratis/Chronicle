@@ -86,7 +86,7 @@ public record EventContext(
     public IReadOnlyList<string> ErasedProperties
     {
         get;
-        init => field = value is null || value.Count == 0 ? Array.Empty<string>() : Array.AsReadOnly(value.ToArray());
+        init => field = value is null || value.Count == 0 ? [] : Array.AsReadOnly(value.ToArray());
     } = [];
 
     /// <summary>
@@ -115,7 +115,7 @@ public record EventContext(
                 throw new InvalidNamedTag();
             }
 
-            field = snapshot.Length == 0 ? Array.Empty<NamedTag>() : Array.AsReadOnly(snapshot);
+            field = snapshot.Length == 0 ? [] : Array.AsReadOnly(snapshot);
         }
     } = [];
 

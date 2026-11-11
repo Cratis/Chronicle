@@ -114,7 +114,7 @@ public record EventForEventSourceId(EventSourceId EventSourceId, object Event, C
                 throw new InvalidNamedTag();
             }
 
-            field = snapshot.Length == 0 ? Array.Empty<NamedTag>() : Array.AsReadOnly(snapshot);
+            field = snapshot.Length == 0 ? [] : Array.AsReadOnly(snapshot);
         }
     } = [];
 }
