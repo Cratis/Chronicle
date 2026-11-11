@@ -21,66 +21,11 @@ public partial class Observer
     static readonly TimeSpan _minimumRetryReminderPeriod = TimeSpan.FromMinutes(1);
 
     /// <inheritdoc/>
-    public Task PartitionFailed(
-        Key partition,
-        EventSequenceNumber sequenceNumber,
-        IEnumerable<string> exceptionMessages,
-        string exceptionStackTrace,
-        FailureKind kind = FailureKind.Unknown,
-        FailedPartitionId? episodeId = null,
-        Guid? deferralId = null,
-        WebhookDeliveryFailurePolicy failurePolicy = WebhookDeliveryFailurePolicy.Retry) =>
-        RecordPartitionFailure(new(partition, sequenceNumber, exceptionMessages, exceptionStackTrace, kind, episodeId, deferralId, new(failurePolicy)));
-
-    /// <inheritdoc/>
-    public Task PartitionFailed(
-        Key partition,
-        EventSequenceNumber sequenceNumber,
-        IEnumerable<string> exceptionMessages,
-        string exceptionStackTrace,
-        FailureKind kind,
-        FailedPartitionId? episodeId,
-        Guid? deferralId,
-        PartitionFailureContext context) =>
-        RecordPartitionFailure(new(partition, sequenceNumber, exceptionMessages, exceptionStackTrace, kind, episodeId, deferralId, context));
-
-    /// <inheritdoc/>
-    public Task PartitionFailedWithDeliveryFence(
-        Key partition,
-        EventSequenceNumber sequenceNumber,
-        IEnumerable<string> exceptionMessages,
-        string exceptionStackTrace,
-        FailureKind kind,
-        PartitionFailureContext context) =>
-        RecordPartitionFailure(new(partition, sequenceNumber, exceptionMessages, exceptionStackTrace, kind, null, null, context));
-
-    /// <inheritdoc/>
-    public Task FailedPartitionRecovered(Key partition, EventSequenceNumber lastHandledEventSequenceNumber) =>
-        FailedPartitionRecovered(partition, lastHandledEventSequenceNumber, EventSequenceNumber.Unavailable);
-
-    /// <inheritdoc/>
-    /// <remarks>
-    /// Live delivery skips a failed partition, so an event appended after the recovery read the partition but before
-    /// the failure is cleared reaches the observer only through catch-up. The check for it therefore runs here, after
-    /// the failure is cleared, from the furthest event the recovery read - including events the observer's filters
-    /// exclude, which are never counted as handled.
-    /// </remarks>
-    public async Task FailedPartitionRecovered(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, EventSequenceNumber lastScannedEventSequenceNumber, FailedPartitionId? episodeId = null, Guid? deferralId = null)
-    {
-        if (IsRetired || _removed) return;
-        using var scope = logger.BeginObserverScope(_observerId, _observerKey);
-        if (!await ResolveFailedPartition(partition, lastHandledEventSequenceNumber, episodeId, deferralId)) return;
-        Skips.Completing(partition, FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber));
-        logger.FailingPartitionRecovered(partition);
-        await StartCatchupJobIfNeeded(partition, FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber));
-        EvaluateSuspectedSkips();
-    }
-
-    /// <inheritdoc/>
     public async Task FailedPartitionNotRecovered(Key partition, FailedPartitionId? episodeId = null, Guid? deferralId = null)
     {
-        if (IsRetired || _removed || State.RunningState == ObserverRunningState.Quarantined) return;
-        if (!IsCurrentRecovery(partition, episodeId, deferralId) || !Failures.TryGet(partition, out var failure) || failure.IsQuarantined) return;
+        if (CannotAcceptUnrecoveredReport()) return;
+        if (!IsCurrentRecovery(partition, episodeId, deferralId)) return;
+        if (!Failures.TryGet(partition, out var failure) || failure.IsQuarantined) return;
         ForgetRecoveryStart(partition);
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         logger.FailingPartitionNotRecovered(partition);
@@ -94,7 +39,7 @@ public partial class Observer
         await _alertMutationLock.WaitAsync();
         try
         {
-            if (IsRetired || _removed || !IsCurrentRecovery(partition, episodeId, deferralId)) return;
+            if (CannotApplyRecoveryReport(partition, episodeId, deferralId)) return;
             ForgetRecoveryStart(partition);
             using var scope = logger.BeginObserverScope(_observerId, _observerKey);
             logger.FailingPartitionPartiallyRecovered(partition, lastHandledEventSequenceNumber);
@@ -130,7 +75,7 @@ public partial class Observer
         await _alertMutationLock.WaitAsync();
         try
         {
-            if (IsRetired || _removed || !Failures.TryGet(partition, out failure))
+            if (RecoveryReportsAreIgnored() || !Failures.TryGet(partition, out failure))
             {
                 logger.SkippingClearPartitionQuarantineBecausePartitionNotFound(partition);
                 return new(ClearPartitionQuarantineOutcome.NotFound, PartitionRecoveryOutcome.Started);
@@ -279,7 +224,7 @@ public partial class Observer
 
         bool ReportJobNotStarted()
         {
-            if (IsRetired || _removed || !KeyOwnsDefinition)
+            if (CannotRecordPartitionFailure())
             {
                 logger.FailedPartitionRetryDidNotStart(partition, "ObserverNotActive");
                 return false;
@@ -295,29 +240,6 @@ public partial class Observer
     }
 
     /// <summary>
-    /// Adapts an internal failed delivery to its recording request.
-    /// </summary>
-    /// <param name="partition">The failed partition.</param>
-    /// <param name="sequenceNumber">The failed event.</param>
-    /// <param name="exceptionMessages">The failure messages.</param>
-    /// <param name="exceptionStackTrace">The failure stack trace.</param>
-    /// <param name="kind">The failure kind.</param>
-    /// <param name="episodeId">The recovery episode.</param>
-    /// <param name="deferralId">The recovery deferral.</param>
-    /// <param name="context">The delivery context.</param>
-    /// <returns>The failure recording task.</returns>
-    Task RecordPartitionFailure(
-        Key partition,
-        EventSequenceNumber sequenceNumber,
-        IEnumerable<string> exceptionMessages,
-        string exceptionStackTrace,
-        FailureKind kind,
-        FailedPartitionId? episodeId,
-        Guid? deferralId,
-        PartitionFailureContext context) =>
-        RecordPartitionFailure(new(partition, sequenceNumber, exceptionMessages, exceptionStackTrace, kind, episodeId, deferralId, context));
-
-    /// <summary>
     /// Records a failure while serializing source mutations, then transitions outside the lock.
     /// </summary>
     /// <param name="request">The failed delivery and its recovery identity.</param>
@@ -326,7 +248,7 @@ public partial class Observer
     {
         var (partition, sequenceNumber, _, _, kind, episodeId, deferralId, context) = request;
         // An activation that does not own the definition is not the observer that failed; it records nothing.
-        if (IsRetired || _removed || !KeyOwnsDefinition)
+        if (CannotRecordPartitionFailure())
         {
             return;
         }
@@ -390,8 +312,7 @@ public partial class Observer
 
     async Task<bool> ParkExpiredWebhookRetry(FailedPartition failure, Observers config)
     {
-        if (!typeof(IWebhookObserverSubscriber).IsAssignableFrom(_subscription.SubscriberType) ||
-            failure.AttemptsInCurrentBudget == 0 || GetRemainingRetryBudget(failure, config) > TimeSpan.Zero)
+        if (!ShouldParkExpiredWebhookRetry(failure, config))
         {
             return false;
         }
@@ -526,7 +447,7 @@ public partial class Observer
         await _alertMutationLock.WaitAsync();
         try
         {
-            if (IsRetired || _removed || !IsCurrentRecovery(partition, episodeId, deferralId)) return false;
+            if (CannotApplyRecoveryReport(partition, episodeId, deferralId)) return false;
             if (lastHandled is not null)
             {
                 HandleNewLastHandledEventForPartition(partition, lastHandled);
@@ -634,6 +555,44 @@ public partial class Observer
             return Task.CompletedTask;
         }
     }
+
+    /// <summary>
+    /// Checks whether this activation can accept recovery reports.
+    /// </summary>
+    /// <returns>Whether recovery reports must be ignored.</returns>
+    bool RecoveryReportsAreIgnored() => IsRetired || _removed;
+
+    /// <summary>
+    /// Checks activation and episode identity before mutating recovery state.
+    /// </summary>
+    /// <param name="partition">The failed partition.</param>
+    /// <param name="episodeId">The reported episode.</param>
+    /// <param name="deferralId">The reported deferral.</param>
+    /// <returns>Whether the report cannot be applied.</returns>
+    bool CannotApplyRecoveryReport(Key partition, FailedPartitionId? episodeId, Guid? deferralId) =>
+        RecoveryReportsAreIgnored() || !IsCurrentRecovery(partition, episodeId, deferralId);
+
+    /// <summary>
+    /// Checks whether this activation owns the active failure source.
+    /// </summary>
+    /// <returns>Whether failure recording is prohibited.</returns>
+    bool CannotRecordPartitionFailure() => RecoveryReportsAreIgnored() || !KeyOwnsDefinition;
+
+    /// <summary>
+    /// Checks the existing running-state fence for an unsuccessful recovery report.
+    /// </summary>
+    /// <returns>Whether the report must be ignored.</returns>
+    bool CannotAcceptUnrecoveredReport() => RecoveryReportsAreIgnored() || State.RunningState == ObserverRunningState.Quarantined;
+
+    /// <summary>
+    /// Checks webhook retry-budget expiry without changing its short-circuit order.
+    /// </summary>
+    /// <param name="failure">The failed partition.</param>
+    /// <param name="config">The retry configuration.</param>
+    /// <returns>Whether the webhook retry must be parked.</returns>
+    bool ShouldParkExpiredWebhookRetry(FailedPartition failure, Observers config) =>
+        !(!typeof(IWebhookObserverSubscriber).IsAssignableFrom(_subscription.SubscriberType) ||
+          failure.AttemptsInCurrentBudget == 0 || GetRemainingRetryBudget(failure, config) > TimeSpan.Zero);
 
     void ArmWebhookProbeAfterFailure() =>
         _armWebhookProbe = IsWebhookSubscription && Failures.Partitions.Any(WebhookProbeEligibility.IsEligible);
