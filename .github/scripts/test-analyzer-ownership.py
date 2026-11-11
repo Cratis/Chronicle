@@ -40,7 +40,7 @@ class AnalyzerOwnership(unittest.TestCase):
     def test_owners_keep_analyzers(self):
         owners = [
             ("dotnet-build", "Build"),
-            ("dotnet-build", "Build client packages for every shipped framework"),
+            ("package-verification", "Build client packages for every shipped framework"),
             ("dotnet-build-development", "Build with DEVELOPMENT symbol"),
             ("dotnet-build-development-requested", "Build with DEVELOPMENT symbol"),
         ]
@@ -84,7 +84,7 @@ class AnalyzerOwnership(unittest.TestCase):
         self.assertIn(f"-p:{SKIP}", run)
 
     def test_packaging_build_skips_analyzers_only_for_the_owned_framework(self):
-        run = without_comments(step_run(self.build, "dotnet-build", "Build client packages for every shipped framework"))
+        run = without_comments(step_run(self.build, "package-verification", "Build client packages for every shipped framework"))
         self.assertEqual(2, run.count("dotnet build"))
         self.assertEqual(2, run.count("-p:SkipAnalyzersForTargetFramework=net11.0"))
 
