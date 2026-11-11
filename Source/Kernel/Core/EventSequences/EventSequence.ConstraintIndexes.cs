@@ -48,7 +48,7 @@ public partial class EventSequence
 
         var upgrading = State.ConstraintIndexWatermark is null;
         _constraintIndexInitializationPending = upgrading;
-        State.ConstraintIndexWatermark = State.ConstraintIndexWatermark is { } watermark && watermark < State.SequenceNumber ? watermark : State.SequenceNumber;
+        State.ConstraintIndexWatermark = ClampedWatermark();
         _constraintIndexPosition = State.SequenceNumber;
         SynchronizeIndexedDefinitions(State.ConstraintIndexWatermark);
         if (NeedsHistoricalCatchUp(upgrading))
@@ -56,13 +56,7 @@ public partial class EventSequence
             State.ConstraintIndexCatchUpBelow ??= State.SequenceNumber;
         }
 
-        // Catch-up membership is fixed at activation, not persisted. Registrations later in this
-        // activation retain ordinary coverage from registration, even when a refresh replaces the replay.
-        _catchUpDefinitionNames.Clear();
-        _catchUpDefinitionNames.UnionWith(_indexedDefinitions.Values.OfType<UniqueConstraintDefinition>().Select(definition => definition.Name));
-        var staleMarker = State.ConstraintIndexCatchUpBelow is null && State.ConstraintIndexCatchUpRefusing is not null;
-        if (staleMarker) State.ConstraintIndexCatchUpRefusing = null;
-        _catchUpExcludedThrough = State.ConstraintIndexCatchUpBelow;
+        var staleMarker = FixCatchUpMembership();
 
         // Empty, unconstrained sequences may defer initialization until a best-effort append snapshot.
         // Keep initialization pending until a snapshot succeeds; later indexed constraints must persist
@@ -74,6 +68,21 @@ public partial class EventSequence
         {
             MarkConstraintIndexGap(State.ConstraintIndexWatermark);
         }
+    }
+
+    EventSequenceNumber ClampedWatermark() =>
+        State.ConstraintIndexWatermark is { } watermark && watermark < State.SequenceNumber ? watermark : State.SequenceNumber;
+
+    bool FixCatchUpMembership()
+    {
+        // Catch-up membership is fixed at activation, not persisted. Registrations later in this
+        // activation retain ordinary coverage from registration, even when a refresh replaces the replay.
+        _catchUpDefinitionNames.Clear();
+        _catchUpDefinitionNames.UnionWith(_indexedDefinitions.Values.OfType<UniqueConstraintDefinition>().Select(definition => definition.Name));
+        var staleMarker = State.ConstraintIndexCatchUpBelow is null && State.ConstraintIndexCatchUpRefusing is not null;
+        if (staleMarker) State.ConstraintIndexCatchUpRefusing = null;
+        _catchUpExcludedThrough = State.ConstraintIndexCatchUpBelow;
+        return staleMarker;
     }
 
     void ResetConstraintIndexTracking()
@@ -95,26 +104,8 @@ public partial class EventSequence
     void SynchronizeIndexedDefinitions(EventSequenceNumber? coverageStart = null)
     {
         var definitions = _constraints!.IndexedDefinitions.ToDictionary(definition => definition.Name);
-        if (_indexedDefinitions.Count != definitions.Count || definitions.Any(pair => !_indexedDefinitions.TryGetValue(pair.Key, out var previous) || !pair.Value.Equals(previous)))
-        {
-            foreach (var name in definitions.Where(pair => _indexedDefinitions.TryGetValue(pair.Key, out var previous) && !pair.Value.Equals(previous)).Select(pair => pair.Key))
-            {
-                ForgetSettledPoison(name);
-            }
-            _constraintIndexReplay = null;
-            _catchUpReplay = null;
-            _catchUpExcluded.Clear();
-            _catchUpExcludedThrough = State.ConstraintIndexCatchUpBelow;
-        }
-        foreach (var name in _indexedDefinitions.Keys.Concat(_pendingConstraintIndexes.Keys).Except(definitions.Keys).ToArray())
-        {
-            ForgetSettledPoison(name);
-            _indexedDefinitions.Remove(name);
-            _pendingConstraintIndexes.Remove(name);
-            _closingCoverageStarts.Remove(name);
-            _abandonedConstraintIndexes.Remove(name);
-            _constraintIndexesAwaitingConfirmation.Remove(name);
-        }
+        if (DefinitionsChanged(definitions)) ResetReplaysForChangedDefinitions(definitions);
+        RemoveVanishedDefinitions(definitions);
         foreach (var (name, definition) in definitions)
         {
             _indexedDefinitions[name] = definition;
@@ -124,6 +115,34 @@ public partial class EventSequence
             }
         }
         UpdateConstraintIndexRepairTimer();
+    }
+
+    bool DefinitionsChanged(Dictionary<ConstraintName, IConstraintDefinition> definitions) =>
+        _indexedDefinitions.Count != definitions.Count || definitions.Any(pair => !_indexedDefinitions.TryGetValue(pair.Key, out var previous) || !pair.Value.Equals(previous));
+
+    void ResetReplaysForChangedDefinitions(Dictionary<ConstraintName, IConstraintDefinition> definitions)
+    {
+        foreach (var name in definitions.Where(pair => _indexedDefinitions.TryGetValue(pair.Key, out var previous) && !pair.Value.Equals(previous)).Select(pair => pair.Key))
+        {
+            ForgetSettledPoison(name);
+        }
+        _constraintIndexReplay = null;
+        _catchUpReplay = null;
+        _catchUpExcluded.Clear();
+        _catchUpExcludedThrough = State.ConstraintIndexCatchUpBelow;
+    }
+
+    void RemoveVanishedDefinitions(Dictionary<ConstraintName, IConstraintDefinition> definitions)
+    {
+        foreach (var name in _indexedDefinitions.Keys.Concat(_pendingConstraintIndexes.Keys).Except(definitions.Keys).ToArray())
+        {
+            ForgetSettledPoison(name);
+            _indexedDefinitions.Remove(name);
+            _pendingConstraintIndexes.Remove(name);
+            _closingCoverageStarts.Remove(name);
+            _abandonedConstraintIndexes.Remove(name);
+            _constraintIndexesAwaitingConfirmation.Remove(name);
+        }
     }
 
     void ForgetSettledPoison(ConstraintName name)
@@ -172,11 +191,13 @@ public partial class EventSequence
             _ => false
         });
 
+    bool HasPendingOrLaggingIndexes() => _pendingConstraintIndexes.Count > 0 || _constraintIndexPosition < State.SequenceNumber;
+
     async Task PrepareConstraintIndexes(IEnumerable<EventTypeId> types)
     {
         await RefreshUncertainAppendTail();
         SynchronizeIndexedDefinitions();
         if (_constraintIndexInitializationPending && _indexedDefinitions.Count > 0) await WriteStateAsync();
-        if ((_pendingConstraintIndexes.Count > 0 || _constraintIndexPosition < State.SequenceNumber) && types.Any(IsGovernedByPendingIndex)) await RepairConstraintIndexesBeforeAppend();
+        if (HasPendingOrLaggingIndexes() && types.Any(IsGovernedByPendingIndex)) await RepairConstraintIndexesBeforeAppend();
     }
 }
