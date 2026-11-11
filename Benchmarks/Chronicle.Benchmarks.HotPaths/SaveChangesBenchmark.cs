@@ -9,7 +9,6 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
-using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Projections.Engine;
 using Cratis.Chronicle.Projections.Engine.Pipelines.Steps;
 using Cratis.Chronicle.Properties;
@@ -57,9 +56,17 @@ public class SaveChangesBenchmark
         });
         var storage = BenchmarkNoOpProxy.Bind<IChangesetStorage>(name => name == "Save" ? Task.CompletedTask : throw new InvalidOperationException(name));
         _step = new SaveChanges(sink, storage, false, NullLogger<SaveChanges>.Instance);
-        var readModel = new ReadModelDefinition("model", "Model", "Model", ReadModelOwner.Client, ReadModelSource.Code,
-            ReadModelObserverType.Projection, ReadModelObserverIdentifier.Unspecified, SinkDefinition.None,
-            new Dictionary<ReadModelGeneration, JsonSchema> { [ReadModelGeneration.First] = new() }, []);
+        var readModel = new ReadModelDefinition(
+            "model",
+            "Model",
+            "Model",
+            ReadModelOwner.Client,
+            ReadModelSource.Code,
+            ReadModelObserverType.Projection,
+            ReadModelObserverIdentifier.Unspecified,
+            SinkDefinition.None,
+            new Dictionary<ReadModelGeneration, JsonSchema> { [ReadModelGeneration.First] = new() },
+            []);
         _projection = BenchmarkNoOpProxy.Bind<IProjection>(name => name switch
         {
             "get_Identifier" => new ProjectionId("projection"),

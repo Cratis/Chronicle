@@ -4,7 +4,8 @@
        Mongo, and no kernel image is built, so they can be run and compared across commits in a few minutes. -->
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net11.0</TargetFramework>
+    <!-- Honor the repository's opt-in net10/net11 multi-target mode for cross-runtime jobs. -->
+    <TargetFramework Condition="'$(IsPackaging)' != 'true'">$(ChronicleTfm)</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>

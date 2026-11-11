@@ -13,6 +13,12 @@ public class BenchmarkNoOpProxy : DispatchProxy
 {
     Func<string, object?> _answer = null!;
 
+    /// <summary>
+    /// Creates a dependency that answers calls without recording their history.
+    /// </summary>
+    /// <typeparam name="T">The dependency interface.</typeparam>
+    /// <param name="answer">The result to return for each member name.</param>
+    /// <returns>The no-op dependency.</returns>
     internal static T Bind<T>(Func<string, object?> answer)
         where T : class
     {
