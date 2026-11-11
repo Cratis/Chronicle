@@ -17,4 +17,13 @@ cp ./out/$ARCH_FOLDER/Cratis.Chronicle.Server .
 # invokes ./Cratis.Chronicle.Server directly — without +x the container exits 126.
 chmod +x Cratis.Chronicle.Server
 
+# A self-contained publish carries createdump, which the runtime runs from the directory holding
+# libcoreclr.so to write a crash dump (DOTNET_DbgEnableMiniDump). Without it no dump is written.
+# It loses its executable bit in transit like the apphost. Framework-dependent publishes (the
+# development images) do not carry it; their shared runtime has its own.
+if [ -f ./out/$ARCH_FOLDER/createdump ]; then
+    cp ./out/$ARCH_FOLDER/createdump .
+    chmod +x createdump
+fi
+
 rm -rf ./out
