@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Schemas.for_JsonSchemaGenerator;
 
 public class when_generating_schemas_for_an_obsolete_event : given.a_json_schema_generator
 {
-    [Obsolete]
+    [Obsolete("Used to verify obsolete event schema generation.")]
     record ObsoleteEvent(string Name);
 
     JsonObject _precise;

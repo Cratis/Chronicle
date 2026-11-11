@@ -9,7 +9,7 @@ public class when_generating_schemas_for_an_obsolete_property : given.a_json_sch
 {
     class EventWithObsoleteProperty
     {
-        [Obsolete]
+        [Obsolete("Used to verify obsolete property schema generation.")]
         public string Name { get; set; } = string.Empty;
 
         public string Deprecated { get; set; } = string.Empty;
