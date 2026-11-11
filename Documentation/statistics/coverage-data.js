@@ -2479,13 +2479,13 @@ window.COVERAGE_DATA = {
   "schemaVersion": 2,
   "latestAttempt": {
     "state": "missing",
-    "attemptedAt": 1794360500172,
+    "attemptedAt": 1794368790643,
     "observer": {
       "releaseContext": "unverified",
-      "runId": 42939107449,
+      "runId": 42954854005,
       "runAttempt": 1,
-      "executionSha": "48fdbc9c5a358d06a89932d3dec748fa4b1ef3bf",
-      "requestedVersion": "19.154.1"
+      "executionSha": "a82290563f8d7eddf03288debf569e4c2dd1b897",
+      "requestedVersion": "19.155.0"
     },
     "reason": "no scheduled main coverage producer within 30 runs/30 days"
   }
