@@ -28,6 +28,6 @@ public class when_accumulating_with_unsigned_integer_type : Specification
         PropertyMappers.SubtractWithEventValueProvider(new TypeFormats(), "property", schema, _ => 10u)(@event, _subtracted, ArrayIndexers.NoIndexers);
     }
 
-    [Fact] void should_result_in_expected_sum() => Convert.ToUInt32(((dynamic)_added).property).ShouldEqual(52u);
-    [Fact] void should_result_in_expected_difference() => Convert.ToUInt32(((dynamic)_subtracted).property).ShouldEqual(32u);
+    [Fact] void should_result_in_expected_sum() => Convert.ToUInt32((object)((dynamic)_added).property).ShouldEqual(52u);
+    [Fact] void should_result_in_expected_difference() => Convert.ToUInt32((object)((dynamic)_subtracted).property).ShouldEqual(32u);
 }

@@ -28,6 +28,6 @@ public class when_resolving_an_object_with_a_missing_property : given.an_appende
         _result = (IDictionary<string, object>)_resolvers.Resolve(schema, "Payload")(@event);
     }
 
-    [Fact] void should_convert_the_present_property() => _result["first"].ShouldEqual(42);
+    [Fact] void should_keep_the_present_property() => _result["first"].ShouldEqual("42");
     [Fact] void should_not_add_the_missing_property() => _result.ContainsKey("second").ShouldBeFalse();
 }
