@@ -561,9 +561,7 @@ public partial class Observer
         }
 
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
-        if (failedPartition.IsQuarantined ||
-            await ParkExpiredWebhookRetry(failedPartition, await GetRetryConfiguration()) ||
-            !await IsDeferralDue(failedPartition))
+        if (!await IsRecoveryEligible(failedPartition))
         {
             return Cratis.Choreography.Jobs.JobId.NotSet;
         }
@@ -584,6 +582,16 @@ public partial class Observer
 
         return await StartRecoveryJob(failedPartition, request, onStartAttempted);
     }
+
+    /// <summary>
+    /// Checks quarantine, budget and deadline eligibility in their original short-circuit order.
+    /// </summary>
+    /// <param name="failedPartition">The recovery episode.</param>
+    /// <returns>Whether recovery may start.</returns>
+    async Task<bool> IsRecoveryEligible(FailedPartition failedPartition) =>
+        !(failedPartition.IsQuarantined ||
+          await ParkExpiredWebhookRetry(failedPartition, await GetRetryConfiguration()) ||
+          !await IsDeferralDue(failedPartition));
 
     RetryFailedPartitionRequest CreateRetryFailedPartitionRequest(FailedPartition failedPartition, bool usesDeferrals) =>
         new(_observerKey, Definition.Type, failedPartition.Partition, failedPartition.Deferral?.ResumeFrom ?? (usesDeferrals ? failedPartition.RecoveryCursor?.Position : null) ?? failedPartition.LastAttempt.SequenceNumber, Definition.EventTypes)
@@ -625,49 +633,6 @@ public partial class Observer
             onStartAttempted?.Invoke();
             return Task.CompletedTask;
         }
-    }
-
-    /// <summary>
-    /// Check whether the observer's failures have reached a threshold that takes it out of service.
-    /// </summary>
-    /// <param name="config">The <see cref="Observers"/> configuration holding the thresholds.</param>
-    /// <returns>True when the observer should be quarantined, false if not.</returns>
-    /// <remarks>
-    /// For non-webhook observers, a partition whose last attempt timed out does not count toward either threshold. Quarantining stops retries
-    /// and needs an operator to undo, which is the right answer for an observer that is wrong and the wrong answer
-    /// for one that is only waiting on a congested kernel - the congestion is transient and takes the retries with it
-    /// when it clears. Counting timeouts would let a busy period take healthy projections out of service, and the
-    /// operator who then cleared the quarantine would find nothing wrong with them.
-    /// </remarks>
-    bool ShouldQuarantineObserver(Observers config)
-    {
-        var webhook = typeof(IWebhookObserverSubscriber).IsAssignableFrom(_subscription.SubscriberType);
-        var failedPartitionCount = Failures.Partitions.Count(_ => webhook ? _.IsQuarantined : _.Attempts.Any() && _.LastAttempt.Kind != FailureKind.Timeout);
-        if (config.QuarantineOnFailedPartitionCount > 0 && failedPartitionCount >= config.QuarantineOnFailedPartitionCount)
-        {
-            logger.ObserverFailedPartitionCountThresholdReached(failedPartitionCount, config.QuarantineOnFailedPartitionCount);
-            return true;
-        }
-
-        if (config.QuarantineOnFailedPartitionPercentage > 0.0 && failedPartitionCount > 0)
-        {
-            var totalObservedPartitions = Failures.Partitions
-                .Select(_ => _.Partition)
-                .Concat(Failures.ResolvedPartitions.Select(_ => _.Partition))
-                .Distinct()
-                .Count();
-
-            var failedPartitionRatio = totalObservedPartitions == 0
-                ? 0.0
-                : (double)failedPartitionCount / totalObservedPartitions;
-            if (webhook ? failedPartitionRatio >= config.QuarantineOnFailedPartitionPercentage : failedPartitionRatio > config.QuarantineOnFailedPartitionPercentage)
-            {
-                logger.ObserverFailedPartitionPercentageThresholdExceeded(failedPartitionRatio, config.QuarantineOnFailedPartitionPercentage);
-                return true;
-            }
-        }
-
-        return false;
     }
 
     void ArmWebhookProbeAfterFailure() =>
