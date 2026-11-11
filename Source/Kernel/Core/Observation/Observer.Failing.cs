@@ -30,7 +30,7 @@ public partial class Observer
         FailedPartitionId? episodeId = null,
         Guid? deferralId = null,
         WebhookDeliveryFailurePolicy failurePolicy = WebhookDeliveryFailurePolicy.Retry) =>
-        RecordPartitionFailure(partition, sequenceNumber, exceptionMessages, exceptionStackTrace, kind, episodeId, deferralId, new(failurePolicy));
+        RecordPartitionFailure(new(partition, sequenceNumber, exceptionMessages, exceptionStackTrace, kind, episodeId, deferralId, new(failurePolicy)));
 
     /// <inheritdoc/>
     public Task PartitionFailed(
@@ -42,7 +42,7 @@ public partial class Observer
         FailedPartitionId? episodeId,
         Guid? deferralId,
         PartitionFailureContext context) =>
-        RecordPartitionFailure(partition, sequenceNumber, exceptionMessages, exceptionStackTrace, kind, episodeId, deferralId, context);
+        RecordPartitionFailure(new(partition, sequenceNumber, exceptionMessages, exceptionStackTrace, kind, episodeId, deferralId, context));
 
     /// <inheritdoc/>
     public Task PartitionFailedWithDeliveryFence(
@@ -52,7 +52,7 @@ public partial class Observer
         string exceptionStackTrace,
         FailureKind kind,
         PartitionFailureContext context) =>
-        RecordPartitionFailure(partition, sequenceNumber, exceptionMessages, exceptionStackTrace, kind, null, null, context);
+        RecordPartitionFailure(new(partition, sequenceNumber, exceptionMessages, exceptionStackTrace, kind, null, null, context));
 
     /// <inheritdoc/>
     public Task FailedPartitionRecovered(Key partition, EventSequenceNumber lastHandledEventSequenceNumber) =>
@@ -294,7 +294,19 @@ public partial class Observer
         }
     }
 
-    async Task RecordPartitionFailure(
+    /// <summary>
+    /// Adapts an internal failed delivery to its recording request.
+    /// </summary>
+    /// <param name="partition">The failed partition.</param>
+    /// <param name="sequenceNumber">The failed event.</param>
+    /// <param name="exceptionMessages">The failure messages.</param>
+    /// <param name="exceptionStackTrace">The failure stack trace.</param>
+    /// <param name="kind">The failure kind.</param>
+    /// <param name="episodeId">The recovery episode.</param>
+    /// <param name="deferralId">The recovery deferral.</param>
+    /// <param name="context">The delivery context.</param>
+    /// <returns>The failure recording task.</returns>
+    Task RecordPartitionFailure(
         Key partition,
         EventSequenceNumber sequenceNumber,
         IEnumerable<string> exceptionMessages,
@@ -302,8 +314,17 @@ public partial class Observer
         FailureKind kind,
         FailedPartitionId? episodeId,
         Guid? deferralId,
-        PartitionFailureContext context)
+        PartitionFailureContext context) =>
+        RecordPartitionFailure(new(partition, sequenceNumber, exceptionMessages, exceptionStackTrace, kind, episodeId, deferralId, context));
+
+    /// <summary>
+    /// Records a failure while serializing source mutations, then transitions outside the lock.
+    /// </summary>
+    /// <param name="request">The failed delivery and its recovery identity.</param>
+    /// <returns>Awaitable task.</returns>
+    async Task RecordPartitionFailure(PartitionFailure request)
     {
+        var (partition, sequenceNumber, _, _, kind, episodeId, deferralId, context) = request;
         // An activation that does not own the definition is not the observer that failed; it records nothing.
         if (IsRetired || _removed || !KeyOwnsDefinition)
         {
@@ -318,21 +339,7 @@ public partial class Observer
             if (!IsCurrentRecovery(partition, episodeId, deferralId)) return;
             var config = await GetRetryConfiguration();
             using var scope = logger.BeginObserverScope(_observerId, _observerKey);
-            _metrics?.PartitionFailed();
-            var partitionWasAlreadyFailed = Failures.IsFailed(partition);
-            var failure = failures.State.RegisterAttempt(partition, sequenceNumber, exceptionMessages, exceptionStackTrace, kind);
-
-            // The epoch is an identity tag: a failure from a non-replay delivery never clears it.
-            if (context.ReplayEpoch is { } replayEpoch) failure.ReplayEpoch = replayEpoch;
-            if (partitionWasAlreadyFailed)
-            {
-                logger.PartitionFailedAgain(partition, sequenceNumber, failure.AttemptsInCurrentBudget);
-            }
-            else
-            {
-                logger.PartitionFailed(partition, sequenceNumber, FailureKindCode(kind));
-            }
-            logger.PartitionFailureDetails(partition, exceptionMessages, exceptionStackTrace);
+            var (failure, partitionWasAlreadyFailed) = RegisterFailureAttempt(request);
             await RecordAbandonedDeliveryFence(failure, kind, context.DeliveryFence);
             if (!partitionWasAlreadyFailed)
             {
@@ -343,35 +350,9 @@ public partial class Observer
             var webhook = typeof(IWebhookObserverSubscriber).IsAssignableFrom(_subscription.SubscriberType);
             if (webhook) SetWebhookFailureMetadata(failure, context.Policy, sequenceNumber);
 
-            if (!IsQuarantined)
-            {
-                quarantineObserver = webhook ? context.Policy == WebhookDeliveryFailurePolicy.PauseObserver : ShouldQuarantineObserver(config);
-                if (webhook && context.Policy == WebhookDeliveryFailurePolicy.ParkPartition)
-                {
-                    logger.QuarantiningFailedPartition(partition);
-                    failures.State.Quarantine(partition);
-                    _metrics?.PartitionQuarantined();
-                }
-                else if (!quarantineObserver)
-                {
-                    if ((config.MaxRetryAttempts == 0 || failure.AttemptsInCurrentBudget <= config.MaxRetryAttempts) &&
-                        (!webhook || GetRemainingRetryBudget(failure, config) > TimeSpan.Zero))
-                    {
-                        retryDelayToRegister = webhook ? SetWebhookRetryBackoff(failure, config, sequenceNumber) : GetNextRetryDelay(failure, config);
-                    }
-                    else
-                    {
-                        logger.QuarantiningFailedPartition(partition);
-                        failures.State.Quarantine(partition);
-                        _metrics?.PartitionQuarantined();
-                    }
-                }
-            }
-
-            if (webhook && !quarantineObserver)
-            {
-                quarantineObserver = ShouldQuarantineObserver(config);
-            }
+            var outcome = DecideQuarantineAndRetry(failure, config, webhook, request);
+            quarantineObserver = outcome.QuarantineObserver;
+            retryDelayToRegister = outcome.RetryDelay;
 
             // Arm durable webhook backoff before persisting it, including coalesced writes.
             if (failure.Deferral is { } backoff && retryDelayToRegister is not null)
@@ -381,32 +362,7 @@ public partial class Observer
             }
 
             ChangeAlertState();
-            if (_writeCoalescingInterval > TimeSpan.Zero)
-            {
-                // Only this partition is written now, and only once: rewriting every failed partition per failure is
-                // what made a burst of failures cost O(n) writes each. The reminder and the observer state, which a
-                // burst of failures has in common, are written together by the flush.
-                await SaveFailedPartition(partition);
-                if (retryDelayToRegister is { } pendingDelay)
-                {
-                    _pendingRetryReminders[failure.Id] = pendingDelay;
-                }
-
-                _failureStateWritePending = true;
-                EnsureCoalescedWriteTimer();
-            }
-            else
-            {
-                if (retryDelayToRegister is { } retryDelay)
-                {
-                    await this.RegisterOrUpdateReminder(PartitionReminderName(failure.Id), retryDelay, GetRetryReminderPeriod(retryDelay));
-                }
-
-                // Fence old reports before the partition write. A crash between the two writes reports whichever
-                // partition level actually committed. Reports alone are coalesced, never these source writes.
-                await WriteStateAsync();
-                await WriteFailedPartitions();
-            }
+            await PersistFailure(partition, failure, retryDelayToRegister);
         }
         finally
         {
