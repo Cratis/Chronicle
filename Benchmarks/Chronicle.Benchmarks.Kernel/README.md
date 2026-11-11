@@ -23,7 +23,7 @@ All observers are served by one client connection that the harness registers wit
 
 ```sh
 dotnet build Benchmarks/Chronicle.Benchmarks.Kernel/Chronicle.Benchmarks.Kernel.csproj -c Release
-dotnet Benchmarks/Chronicle.Benchmarks.Kernel/bin/Release/net10.0/Chronicle.Benchmarks.Kernel.dll --observer-footprint --count 2000 --idle-deactivation 3 --collection-age 10
+dotnet Benchmarks/Chronicle.Benchmarks.Kernel/bin/Release/net11.0/Chronicle.Benchmarks.Kernel.dll --observer-footprint --count 2000 --idle-deactivation 3 --collection-age 10
 ```
 
 | Option | Default | Meaning |
@@ -35,6 +35,17 @@ dotnet Benchmarks/Chronicle.Benchmarks.Kernel/bin/Release/net10.0/Chronicle.Benc
 | `--hold`, `--hold-unsubscribed` | 0 | Seconds to pause after the subscribed or the unsubscribed measurement, for `dotnet-gcdump collect -p <pid>`. |
 
 Compare runs with different `--count` values, or `dotnet-gcdump report` output from two runs, to attribute the growth to types. Results from November 2026 are in [decision 0030](../../decisions/0030-release-idle-unsubscribed-observers.md).
+
+### Lazy observer metric instruments
+
+An observer activation used to create all 17 of its metric instruments up front, each with its own copy of the scope's tags. They are now created the first time the observer records them, and the instruments of a scope share one copy of its tags. The command above, run twice on each build on .NET 11 under the default legacy metric names, measured:
+
+| Build | Subscribed, retained per observer | Unsubscribed, retained per observer |
+| --- | --- | --- |
+| Before (eager instruments) | 21.9 KiB, 21.8 KiB | 2.8 KiB, 2.8 KiB |
+| After (lazy instruments, shared tags) | 18.6 KiB, 18.7 KiB | 3.0 KiB, 2.9 KiB |
+
+That is about 3.2 KiB less for each subscribed observer that records no metrics, about 15 %. The unsubscribed difference is within the run-to-run spread. The machine was under heavy load (load average 28-55), which affects the activation time but not the retained bytes.
 
 ## Comparing a change with a baseline
 
