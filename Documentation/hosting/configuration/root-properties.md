@@ -58,7 +58,16 @@ Set `Cratis__Chronicle__Shutdown__DrainTimeout=00:00:05` to use a five-second bu
 
 Shutdown refuses new observer service calls, joins admitted catch-up and replay work, and flushes local bulk windows without promoting an unfinished replay. If the deadline expires, Chronicle cancels MongoDB bulk writes and logs the affected observer, partitions, and event sequence numbers when available. Cancellation means the write outcome is unknown, not that MongoDB rolled it back. Unconfirmed writes do not advance handled positions; failed partitions are recorded best-effort only while time remains.
 
-A stop that completes within the host shutdown timeout exits with code `0` and logs `Chronicle Server stopped. Exiting with code 0`. A stop that times out, or fails while stopping or releasing services, exits with code `70` and logs a Critical entry naming the reason. After a lost single-writer lease, an otherwise orderly stop exits with code `1`.
+The host shutdown timeout is ten seconds. A stop that takes all of it counts as timed out, even when no service reports a failure, because a timed-out service usually just returns late. The process exit code tells your orchestrator how the server stopped:
+
+| Exit code | When | Log entry |
+| --- | --- | --- |
+| `0` | The stop completed within the host shutdown timeout, or a stop was requested while the server was still starting. | Information: `Chronicle Server stopped. Exiting with code 0` |
+| `1` | The server requested it, for example after losing its single-writer lease, and then stopped. | Warning: `Chronicle Server stopped. Exiting with code 1, which the server requested` |
+| `4` | The command-line arguments, the connection file or the configuration cannot be read, so the server does not start. | The reason, written to standard error |
+| `70` | The server failed to start, the stop timed out, a service failed while stopping, or releasing services failed after the stop. | Critical, naming the reason; a timeout also logs how long the stop took |
+
+A code the server requested takes precedence over `70`: a server that lost its single-writer lease exits with code `1` even when its stop then times out or fails. The Critical entry still names the failure.
 
 ## Connected clients and server diagnostics
 
