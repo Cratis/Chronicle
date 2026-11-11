@@ -29,8 +29,10 @@ namespace Cratis.Chronicle.Benchmarks.Kernel;
 /// </remarks>
 public static class KeeperCalls
 {
-    static readonly string[] _keeperMethods = ["IsSubscriptionIntact", "KeepSubscription", "KnowsClient"];
+    static readonly string[] _keeperMethods = ["IsSubscriptionIntact", "KeepSubscription", "IsClientTarget", "KnowsClient"];
     static readonly ConcurrentDictionary<string, long> _calls = new();
+    static readonly ConcurrentDictionary<long, long> _callsPerSecond = new();
+    static readonly Stopwatch _clock = new();
 
     /// <summary>
     /// Runs the measurement.
@@ -47,6 +49,7 @@ public static class KeeperCalls
             if (_keeperMethods.Contains(context.MethodName))
             {
                 _calls.AddOrUpdate(context.MethodName, 1, (_, calls) => calls + 1);
+                _callsPerSecond.AddOrUpdate((long)_clock.Elapsed.TotalSeconds, 1, (_, calls) => calls + 1);
             }
 
             await context.Invoke();
@@ -63,6 +66,8 @@ public static class KeeperCalls
 
         using var streams = new CancellationTokenSource();
         _calls.Clear();
+        _callsPerSecond.Clear();
+        _clock.Restart();
         using var process = Process.GetCurrentProcess();
         var processorTime = process.TotalProcessorTime;
         var stopwatch = Stopwatch.StartNew();
@@ -78,11 +83,23 @@ public static class KeeperCalls
         foreach (var method in _keeperMethods)
         {
             var calls = _calls.GetValueOrDefault(method);
-            Console.WriteLine($"  {method}: {calls} calls, {calls / elapsed:F1} per second, {calls / elapsed / count * 60:F2} per observer per minute");
+            Console.WriteLine($"  {method}: {calls} calls, {calls / elapsed:F1} per second, {calls / elapsed / count * 60:F2} per observer per minute (run average)");
         }
 
         var total = _calls.Values.Sum();
         Console.WriteLine($"  all keeper calls: {total} calls, {total / elapsed:F1} per second over {elapsed:F1} s");
+        var busiest = _callsPerSecond.IsEmpty ? default : _callsPerSecond.MaxBy(second => second.Value);
+        Console.WriteLine($"  busiest second: {busiest.Value} calls, at {busiest.Key} s");
+
+        // The first check of every subscription comes one revise interval after it is kept; from then on an intact
+        // subscription is checked once per safety-net wait. The last full safety-net interval shows that steady state.
+        var steadyFrom = (long)Math.Ceiling(elapsed) - options.ConnectedClients.SubscriptionCheckIntervalSeconds;
+        if (steadyFrom > options.ConnectedClients.ReviseIntervalSeconds)
+        {
+            var steady = _callsPerSecond.Where(second => second.Key >= steadyFrom).Sum(second => second.Value);
+            Console.WriteLine($"  steady state, last {options.ConnectedClients.SubscriptionCheckIntervalSeconds} s: {steady} calls, {(double)steady / options.ConnectedClients.SubscriptionCheckIntervalSeconds:F1} per second, {(double)steady / count:F2} per observer");
+        }
+
         Console.WriteLine($"  process CPU while idle: {processorTime.TotalSeconds / elapsed:F3} cores");
 
         await host.StopAsync();
