@@ -66,7 +66,7 @@ public partial class EventSequence
         try
         {
             using var cursor = await EventSequenceStorage.ReadBackAppend(attempted[0].SequenceNumber, attempted[^1].SequenceNumber, deadline.Token).WaitAsync(deadline.Token);
-            var stored = new List<AppendedEvent>();
+            List<AppendedEvent> stored = [];
             while (await cursor.MoveNext().WaitAsync(deadline.Token))
             {
                 stored.AddRange(cursor.Current);
