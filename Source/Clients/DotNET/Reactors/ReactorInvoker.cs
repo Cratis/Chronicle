@@ -124,23 +124,7 @@ public class ReactorInvoker(
             {
                 await middlewares.BeforeInvoke(reactorId, eventContext, content);
 
-                var arguments = _argumentsResolver is IRegisteredReactorMethodArgumentsResolver registeredResolver &&
-                    method.GetParameters().Any(parameter => parameter.ParameterType == typeof(ReactorDelivery))
-                    ? await registeredResolver.Resolve(
-                        method,
-                        activatedReactor.Instance,
-                        content,
-                        eventContext,
-                        eventStore,
-                        serviceProvider,
-                        ResolveDelivery(reactorId, eventContext))
-                    : await _argumentsResolver.Resolve(
-                        method,
-                        activatedReactor.Instance,
-                        content,
-                        eventContext,
-                        eventStore,
-                        serviceProvider);
+                var arguments = await ResolveArguments(method, content, eventContext, reactorId);
 
                 var returnValue = method.Invoke(activatedReactor.Instance, arguments);
 
@@ -159,15 +143,7 @@ public class ReactorInvoker(
         }
         catch (Exception ex)
         {
-            if (ex.IsInterruptedByShutdown(StoppingToken))
-            {
-                logger.ReactorInterruptedByShutdown(reactorId, eventTypeName, ex);
-            }
-            else
-            {
-                logger.ReactorFailed(reactorId, eventTypeName, ex);
-            }
-
+            LogFailure(reactorId, eventTypeName, ex);
             return ReactorInvocationResult.FromException(ex);
         }
         finally
@@ -201,6 +177,24 @@ public class ReactorInvoker(
             await task;
         }
     }
+
+    void LogFailure(ReactorId reactorId, string eventTypeName, Exception ex)
+    {
+        if (ex.IsInterruptedByShutdown(StoppingToken))
+        {
+            logger.ReactorInterruptedByShutdown(reactorId, eventTypeName, ex);
+        }
+        else
+        {
+            logger.ReactorFailed(reactorId, eventTypeName, ex);
+        }
+    }
+
+    async Task<object?[]> ResolveArguments(MethodInfo method, object content, EventContext eventContext, ReactorId reactorId) =>
+        _argumentsResolver is IRegisteredReactorMethodArgumentsResolver registeredResolver &&
+        method.GetParameters().Any(parameter => parameter.ParameterType == typeof(ReactorDelivery))
+            ? await registeredResolver.Resolve(method, activatedReactor.Instance, content, eventContext, eventStore, serviceProvider, ResolveDelivery(reactorId, eventContext))
+            : await _argumentsResolver.Resolve(method, activatedReactor.Instance, content, eventContext, eventStore, serviceProvider);
 
     ReactorDelivery ResolveDelivery(ReactorId reactorId, EventContext eventContext)
     {
@@ -339,15 +333,7 @@ public class ReactorInvoker(
             {
                 if (!method.IsEventHandlerMethod(eventTypes, sideEffectHandlers))
                 {
-                    // A public method shaped like a handler (its first parameter is a known event type) but with
-                    // an unrecognized return type is almost always a mistake. Left unchecked it is silently
-                    // skipped, leaving the reactor subscribed to nothing and never observing events. Fail loudly
-                    // at registration instead.
-                    if (method.IsPublic && method.HasEventHandlerShape(eventTypes))
-                    {
-                        throw new InvalidReactorHandlerReturnType(targetType, method.Name, method.ReturnType);
-                    }
-
+                    ThrowIfMisshapedHandler(targetType, method, eventTypes);
                     continue;
                 }
 
@@ -366,6 +352,18 @@ public class ReactorInvoker(
 
             var batchMethods = GetBatchMethods(targetType, eventTypes, liveMethodsByEventType, replayMethodsByEventType);
             return new(liveMethodsByEventType.ToFrozenDictionary(), replayMethodsByEventType.ToFrozenDictionary(), onceOnlyMethods.ToFrozenSet(), batchMethods);
+        }
+
+        // A public method shaped like a handler (its first parameter is a known event type) but with
+        // an unrecognized return type is almost always a mistake. Left unchecked it is silently
+        // skipped, leaving the reactor subscribed to nothing and never observing events. Fail loudly
+        // at registration instead.
+        static void ThrowIfMisshapedHandler(Type targetType, MethodInfo method, IEnumerable<Type> eventTypes)
+        {
+            if (method.IsPublic && method.HasEventHandlerShape(eventTypes))
+            {
+                throw new InvalidReactorHandlerReturnType(targetType, method.Name, method.ReturnType);
+            }
         }
 
         static IReadOnlyList<BatchMethod> GetBatchMethods(Type targetType, IEnumerable<Type> eventTypes, Dictionary<Type, MethodInfo> live, Dictionary<Type, MethodInfo> replay)
