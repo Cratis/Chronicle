@@ -20,7 +20,7 @@ namespace Cratis.Chronicle.Observation;
 /// deliberately not part of this grain contract - state transitions are driven from within the observer
 /// implementation, never across a grain reference.
 /// </remarks>
-[Version(8)]
+[Version(9)]
 public interface IObserver : IGrainWithStringKey
 {
     /// <summary>
@@ -259,6 +259,20 @@ public interface IObserver : IGrainWithStringKey
     /// <returns>True if the client is known; otherwise false.</returns>
     [AlwaysInterleave]
     Task<bool> KnowsClient(ConnectionId connectionId);
+
+    /// <summary>
+    /// Checks whether a client is a target of this activation's subscription, which <see cref="KnowsClient"/> also
+    /// answers true for a superseded registration.
+    /// </summary>
+    /// <remarks>
+    /// An interleaved, read-only hint for the grain holding a client registration. A superseded registration is not a
+    /// target: it receives nothing until the client that replaced it leaves and it is promoted, and a failed promotion
+    /// leaves it unsubscribed, so its keeper keeps checking it as not confirmed.
+    /// </remarks>
+    /// <param name="connectionId">The <see cref="ConnectionId"/> of the client.</param>
+    /// <returns>True if the client is a subscription target; otherwise false.</returns>
+    [AlwaysInterleave]
+    Task<bool> IsClientTarget(ConnectionId connectionId);
 
     /// <summary>
     /// Restore the subscription of a connected client that this activation does not know about.

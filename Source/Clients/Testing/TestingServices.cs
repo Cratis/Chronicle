@@ -198,7 +198,8 @@ internal sealed class TestingServices : IServices
                 connectionOwnership,
                 NullLogger<KernelReactorsService>.Instance,
                 registrationGate,
-                namespaceCasing));
+                namespaceCasing,
+                KernelGrpc::Cratis.Chronicle.Services.Observation.NoSiloDepartures.Instance));
 
         _reducers = new(() =>
             new KernelReducersService(
@@ -211,7 +212,8 @@ internal sealed class TestingServices : IServices
                 connectionOwnership,
                 NullLogger<KernelReducersService>.Instance,
                 registrationGate,
-                namespaceCasing));
+                namespaceCasing,
+                KernelGrpc::Cratis.Chronicle.Services.Observation.NoSiloDepartures.Instance));
 
         _projections = new(() =>
             new KernelProjectionsService(

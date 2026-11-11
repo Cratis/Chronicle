@@ -75,12 +75,36 @@ The kernel tracks which clients are connected. These settings live under `connec
 
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
-| connectedClients.reviseIntervalSeconds | number | 2 | Seconds between passes that prune stale clients and expire connection reservations |
+| connectedClients.reviseIntervalSeconds | number | 2 | Seconds between passes that prune stale clients and expire connection reservations. Also how often a reactor or reducer subscription that is not yet confirmed intact is checked, see [Keeping client subscriptions](#keeping-client-subscriptions) |
+| connectedClients.subscriptionCheckIntervalSeconds | number | 60 | Longest wait between checks of a reactor or reducer subscription that is known to be intact. Each wait is drawn between three quarters of this value and all of it. The safety net for a subscription lost without a silo leaving. Values below `reviseIntervalSeconds` are raised to it |
+| connectedClients.subscriptionSettleSeconds | number | 30 | Seconds after a silo starts shutting down, and again after it is declared dead, during which every reactor and reducer subscription is checked every `reviseIntervalSeconds` |
 | connectedClients.reservationTtlSeconds | number | 30 | Seconds a connection reservation is kept. A reservation holds a slot for a client that is still connecting |
 | connectedClients.staleThresholdSeconds | number | 5 | Seconds a client can go unseen before it is considered disconnected. Raise it only if healthy clients are dropped on a slow network |
 | connectedClients.observeIntervalSeconds | number | 1 | Seconds between observations of the connected clients for observers |
 | connectedClients.keepAliveIntervalSeconds | number | 1 | Seconds between keep-alive messages the kernel sends to a connected client |
 | servers.observeIntervalSeconds | number | 5 | Seconds between observations of server instances for the live Workbench view |
+
+### Keeping client subscriptions
+
+The subscription of a connected reactor or reducer exists only in the memory of the kernel's grain activations. A silo that leaves the cluster takes the activations it hosted with it, and the remaining silos deactivate the activations whose directory entries it owned. The client stays connected and never registers again, so the kernel restores the subscription from the open observation stream.
+
+Each stream checks its subscription with two grain calls. How often depends on what the kernel knows:
+
+- A new subscription, one that was just restored, and one whose check failed are checked every `reviseIntervalSeconds`, until a check finds the subscription intact. So is a client the observer only holds as a superseded registration during a client rollout, and an inactive reducer whose registration is still held back for a webhook.
+- When a silo starts shutting down, and again when it is declared dead, every stream on the remaining silos checks within one `reviseIntervalSeconds`, spread over that interval, and then every `reviseIntervalSeconds` for `subscriptionSettleSeconds`. During a rolling deployment the kernel is therefore back at one check per subscription every `reviseIntervalSeconds` for as long as silos keep leaving.
+- Otherwise an intact subscription is checked after a wait drawn between three quarters of `subscriptionCheckIntervalSeconds` and all of it, so subscriptions registered together are not checked together.
+
+How long a lost subscription goes without delivery depends on how it was lost:
+
+- **A silo shuts down gracefully.** Its activations are deactivated while it shuts down, inside the settle window that starts when it begins shutting down. A subscription lost that way is restored within about two `reviseIntervalSeconds` of being lost, provided the shutdown takes no longer than `subscriptionSettleSeconds`.
+- **A silo crashes.** Nothing is signalled until Orleans declares the silo dead, which takes its failure detection: missed probes and votes from the other silos, usually far longer than the restore itself. From that moment the subscription is restored within about two `reviseIntervalSeconds`. The same holds for activations the remaining silos deactivate because the dead silo owned their directory entries, if that happens within `subscriptionSettleSeconds`.
+- **Any other way** - an observer deactivated on a healthy cluster, a client rollout whose handover failed in a way the checks above do not see, a membership the kernel could not follow - the subscription is restored by the safety net, within `subscriptionCheckIntervalSeconds` plus the duration of one check. A check normally takes milliseconds, but one that reaches an unreachable observer can take up to `clustering.responseTimeout` before it fails and is retried every `reviseIntervalSeconds`.
+
+With the defaults that is about 4 seconds after the loss or after death is declared, and about 62 seconds otherwise. Setting `subscriptionCheckIntervalSeconds` to the value of `reviseIntervalSeconds` restores the earlier behavior of checking every subscription every `reviseIntervalSeconds`, at the cost of one call per subscription every interval.
+
+These bounds cover the observer's subscription only. Delivery to a subscribed observer through the appended-events queue is watched separately by the observer watchdog, every [`observers.watchdogInterval`](observers.md) seconds.
+
+The settle window relies on how the kernel runs Orleans: the classic grain directory, no activation repartitioning or rebalancing, and no memory-based activation shedding. With any of those enabled, a silo joining or activations moving would lose subscriptions that only the safety net restores.
 
 Environment variables use the `Cratis__Chronicle__ConnectedClients__` and `Cratis__Chronicle__Servers__` prefixes. See [Azure container hosting](../azure-container-hosting.md) for why keep-alive and stale threshold matter for scale-to-zero platforms.
 

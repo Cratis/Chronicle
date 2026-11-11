@@ -47,6 +47,38 @@ An observer activation used to create all 17 of its metric instruments up front,
 
 That is about 3.2 KiB less for each subscribed observer that records no metrics, about 15 %. The unsubscribed difference is within the run-to-run spread. The machine was under heavy load (load average 28-55), which affects the activation time but not the retained bytes.
 
+## Client subscription keeper calls
+
+The `--keeper-calls` mode measures the grain calls the client subscription keeper makes on an idle kernel. It starts the same in-process silo as `--observer-footprint`, subscribes a number of reactor observers to one client connection, and runs the keeper of every observation stream the way the gRPC reactors service does, with nothing appended. An incoming grain call filter counts the calls to `IsSubscriptionIntact`, `KeepSubscription`, `IsClientTarget` and `KnowsClient`. The output reports them per second and per observer per minute as averages over the whole run, which include the first check of every subscription. It also reports the busiest single second, the steady state over the last `subscriptionCheckIntervalSeconds` of the run, and the process CPU over the run.
+
+The keeper before #5816 checked every subscription every `reviseIntervalSeconds`. To measure that cadence with the current build, set the safety net to the revise interval:
+
+```sh
+Cratis__Chronicle__ConnectedClients__SubscriptionCheckIntervalSeconds=2 dotnet Benchmarks/Chronicle.Benchmarks.Kernel/bin/Release/net11.0/Chronicle.Benchmarks.Kernel.dll --keeper-calls --count 2000 --seconds 125
+```
+
+The CPU figure comes from local grain calls in one process, which skip serialization and the network. Compare it with a `--without-keeper` run of the same length and repeat the runs; differences of a few hundredths of a core are within run-to-run noise.
+
+```sh
+dotnet Benchmarks/Chronicle.Benchmarks.Kernel/bin/Release/net11.0/Chronicle.Benchmarks.Kernel.dll --keeper-calls --count 2000 --seconds 125
+```
+
+| Option | Default | Meaning |
+| --- | --- | --- |
+| `--count` | 1000 | Subscribed reactor observers, each with its own keeper. |
+| `--seconds` | 30 | How long to keep them idle. Use more than `connectedClients.subscriptionCheckIntervalSeconds` to see the safety net. |
+| `--without-keeper` | off | Runs no keepers, for the CPU baseline of the same observers. |
+
+One run of each with 2 000 observers over 125 s, default options otherwise:
+
+| Run | Keeper calls per second (run average) | Steady state | Busiest second | Process CPU |
+| --- | --- | --- | --- | --- |
+| Every 2 s (`SubscriptionCheckIntervalSeconds=2`) | 1 983.6 | 2 000 per second | 4 000 | 0.283 cores |
+| Default (60 s safety net) | 96.0 | 66.7 per second | 4 000 | 0.297 cores |
+| `--without-keeper` | 0 | 0 | 0 | 0.231 cores |
+
+The keeper calls drop about thirtyfold. The busiest second in both runs is the first check of every subscription, one revise interval after it is kept; later safety-net checks are spread over the interval. The CPU difference between the two keeper runs is within run-to-run noise.
+
 ## Comparing a change with a baseline
 
 1. Build the project on the baseline (for example `origin/main`) and copy `bin/Release/net11.0/` somewhere outside the repository.
