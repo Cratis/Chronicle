@@ -276,7 +276,7 @@ The production image runs as the non-root user `1654` from `/app`, on a chiseled
 
 - `runAsNonRoot`, `runAsUser: 1654` and `runAsGroup: 1654` match the image's user. `fsGroup: 1654` lets that group read the Secret files, which are mounted with mode `0440`.
 - `readOnlyRootFilesystem: true`. The kernel writes nothing under `/app`; the Data Protection key ring is stored in the storage backend, not on disk, so it needs no volume.
-- An `emptyDir` on `/tmp`. The .NET runtime creates its diagnostics socket and debugger pipes there; `dotnet-counters`, `dotnet-trace` and `dotnet-dump` need them to attach to the kernel. Its 256Mi `sizeLimit` covers the socket and the pipes, not dumps. A full dump is about as large as the kernel's memory, up to the 2Gi limit, and the kubelet evicts a pod whose `emptyDir` grows past its `sizeLimit`, so a dump written to `/tmp` would kill the kernel you are diagnosing. If you expect to take dumps, add a separate volume larger than the memory limit in advance, for example a second `emptyDir` mounted at `/dumps`, and pass a path on it to `dotnet-dump collect --output`.
+- An `emptyDir` on `/tmp`. The .NET runtime creates its diagnostics socket and debugger pipes there; `dotnet-counters`, `dotnet-trace` and `dotnet-dump` need them to attach to the kernel. Its 256Mi `sizeLimit` covers the socket and the pipes, not dumps. A full dump is about as large as the kernel's memory, up to the 2Gi limit, and the kubelet evicts a pod whose `emptyDir` grows past its `sizeLimit`, so a dump written to `/tmp` would kill the kernel you are diagnosing. If you expect to take dumps, add a separate volume larger than the memory limit in advance, for example a second `emptyDir` mounted at `/dumps`, and pass a path on it to `dotnet-dump collect --output`. [Collect crash dumps](#collect-crash-dumps) sets one up.
 - No privilege escalation, every capability dropped, the runtime's default seccomp profile, and no service-account token, because the kernel does not call the Kubernetes API.
 
 ### Resources
@@ -517,6 +517,44 @@ After deploying:
 3. Check `kubectl -n chronicle get pdb chronicle`: with every kernel ready it allows one disruption.
 4. From a pod in a client namespace, request `https://chronicle.chronicle.svc.cluster.local:35000/health`. From any other namespace the request should time out.
 5. Optionally, in a maintenance window, drain a node that runs a kernel with `kubectl drain <node> --ignore-daemonsets --delete-emptydir-data`. A drain is a real disruption: it evicts every pod on the node, not only the kernel. `--delete-emptydir-data` is required because of the `/tmp` volume; without it the drain refuses to evict the kernel. The other kernels keep serving, the evicted one becomes ready again where it is scheduled, and a second drain is refused while it is not ready.
+
+## Collect crash dumps
+
+The production image carries `createdump`, which the .NET runtime runs to write a dump when the kernel crashes. Dumps are off by default. To turn them on, give the kernel a volume for dumps and the runtime's dump settings. In the StatefulSet's container, add:
+
+```yaml
+          env:
+            # ...the existing entries...
+            - name: DOTNET_DbgEnableMiniDump
+              value: "1"
+            - name: DOTNET_DbgMiniDumpType
+              value: "2" # A minidump with the managed heap
+            - name: DOTNET_DbgMiniDumpName
+              value: /dumps/core.%h.%t # Pod name and time, so a later crash does not overwrite an earlier dump
+          volumeMounts:
+            # ...the existing mounts...
+            - name: dumps
+              mountPath: /dumps
+      volumes:
+        # ...the existing volumes...
+        - name: dumps
+          emptyDir:
+            sizeLimit: 5Gi
+```
+
+Do not point `DOTNET_DbgMiniDumpName` at `/tmp`. With `readOnlyRootFilesystem: true` only the mounted volumes are writable, and the `/tmp` volume's 256Mi `sizeLimit` is far below the size of a dump: a heap dump is about as large as the kernel's memory, up to the 2Gi limit, and a kernel that had only just started wrote 770 MiB. The kubelet evicts a pod whose `emptyDir` grows past its `sizeLimit`, so size the dumps volume for more than one dump of the memory limit and check that the nodes have that much ephemeral storage free. `fsGroup: 1654` makes the volume writable for the kernel.
+
+After a crash the kubelet restarts the kernel's container in the same pod, and the `emptyDir` with the dump survives that restart. It does not survive the pod being deleted or rescheduled, so copy the dump out before you delete the pod, drain its node or roll out a change.
+
+`kubectl cp` needs `tar` in the container it copies from, and the chiseled production image has none. Copy through an ephemeral debug container that shares the kernel's process namespace instead. The pod's `runAsUser: 1654` applies to it, so it can read the kernel's files through `/proc/1/root`, where PID 1 is the kernel:
+
+```bash
+kubectl -n chronicle debug chronicle-0 --image=busybox:1.37 --target=chronicle --container=dumps --profile=restricted -- sleep 3600
+kubectl -n chronicle exec chronicle-0 -c dumps -- ls -l /proc/1/root/dumps
+kubectl -n chronicle cp -c dumps --retries=5 chronicle-0:/proc/1/root/dumps/core.chronicle-0.1794374298 ./core.chronicle-0.1794374298
+```
+
+Replace the file name with the one `ls` lists. The debug container stops when `sleep` ends; Kubernetes keeps its record in the pod until the pod is replaced. Open the dump with `dotnet-dump analyze`.
 
 ## See also
 

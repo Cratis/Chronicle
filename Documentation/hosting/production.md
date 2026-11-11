@@ -200,6 +200,31 @@ With the health port exclusive, serve the Workbench from the main port, 35000. R
 
 > **Note**: The health check endpoint path is configurable. See [Root Properties](configuration/root-properties.md#health-check-endpoint) for details, and [Health Endpoint](configuration/health-endpoint.md) for the dedicated port.
 
+## Crash dumps
+
+The production image carries `createdump` next to the .NET runtime in `/app`, so the kernel can write a dump when it crashes. Dumps are off by default. Turn them on with the .NET runtime's environment variables, and point them at a writable volume, because the image runs as user `1654` and nothing under `/app` is writable for it:
+
+| Variable | Value | Effect |
+| --- | --- | --- |
+| `DOTNET_DbgEnableMiniDump` | `1` | Write a dump when the process crashes. |
+| `DOTNET_DbgMiniDumpType` | `2` | A minidump with the managed heap, which is what `dotnet-dump analyze` needs. `4` writes a full dump, `1` a minidump without the heap. |
+| `DOTNET_DbgMiniDumpName` | `/dumps/core.%h.%t` | Where the dump is written. `%h` is the host name, `%t` the time of the dump in seconds since the epoch and `%p` the process id. |
+
+A heap dump is about as large as the kernel's memory use: a kernel that has only just started, with no clients, wrote 770 MiB. Give the volume room for more than one dump of the kernel's memory limit.
+
+```bash
+mkdir -p dumps && sudo chown 1654:1654 dumps
+
+docker run -d --name chronicle \
+  -v "$PWD/dumps:/dumps" \
+  -e DOTNET_DbgEnableMiniDump=1 \
+  -e DOTNET_DbgMiniDumpType=2 \
+  -e DOTNET_DbgMiniDumpName=/dumps/core.%h.%t \
+  cratis/chronicle:latest
+```
+
+The dump lands in `dumps/` on the host and outlives the container. Open it with `dotnet-dump analyze`. On Kubernetes, see [Collect crash dumps](kubernetes.md#collect-crash-dumps).
+
 ## Backup and restore
 
 Back up the encryption certificates alongside the database: the database contains protected keys and credentials, not the private keys needed to read them. If you use a separate compliance key store for personal data, include that too. Restore in this order before serving traffic:
