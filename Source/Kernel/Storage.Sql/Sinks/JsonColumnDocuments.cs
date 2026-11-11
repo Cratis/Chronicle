@@ -355,13 +355,13 @@ internal static class JsonColumnDocuments
     /// <param name="childSchema">The optional schema of a child.</param>
     static void PlaceAppendedChild(IList<object?> list, ChildrenOrdering? ordering, PropertyPath identifierName, JsonSchema? childSchema)
     {
-        if (ordering?.IsAppend() != false || ordering.Placement != ChildrenPlacement.Sorted || list.Count < 2)
+        if (!NeedsSorting(list, ordering))
         {
             list.PlaceAppendedChild(ordering, identifierName);
             return;
         }
 
-        var sortValue = SortValueReader(ordering.SortBy, childSchema);
+        var sortValue = SortValueReader(ordering!.SortBy, childSchema);
         var comparer = Comparer<object?>.Create(ChildrenOrderingExtensions.CompareSortValues);
         var ordered = ordering.Direction == SortDirection.Descending
             ? list.OrderByDescending(sortValue, comparer)
@@ -374,6 +374,9 @@ internal static class JsonColumnDocuments
             list.Add(child);
         }
     }
+
+    static bool NeedsSorting(IList<object?> list, ChildrenOrdering? ordering) =>
+        list.Count >= 2 && ordering is { Placement: ChildrenPlacement.Sorted } && !ordering.IsAppend();
 
     static Func<object?, object?> SortValueReader(PropertyPath path, JsonSchema? childSchema)
     {
