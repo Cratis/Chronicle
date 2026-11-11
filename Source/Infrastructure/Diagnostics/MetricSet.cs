@@ -10,29 +10,34 @@ namespace Cratis.Chronicle.Diagnostics;
 /// <summary>
 /// Creates a producer's instruments, names and cached tags once, not while recording measurements.
 /// </summary>
+/// <remarks>
+/// The legacy and convention scope tags are built the first time an instrument needs them and are then shared by
+/// every instrument of the set, so a set that never creates an instrument holds only the tags it was given.
+/// </remarks>
 internal sealed class MetricSet
 {
     readonly Meter? _meter;
     readonly MetricNames _names;
-    readonly TagList _legacyTags;
-    readonly TagList _conventionTags;
+    readonly IEnumerable<KeyValuePair<string, object?>> _tags;
+    MetricScopeTags? _legacyTags;
+    MetricScopeTags? _conventionTags;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MetricSet"/> class.
     /// </summary>
     /// <param name="meter">The meter that owns the instruments.</param>
     /// <param name="names">The selected naming mode.</param>
-    /// <param name="tags">The scope's convention tag keys and values.</param>
+    /// <param name="tags">The scope's convention tag keys and values. They are read when an instrument first needs them, so the collection must not change afterwards.</param>
     internal MetricSet(Meter? meter, MetricNames names, IEnumerable<KeyValuePair<string, object?>>? tags = null)
     {
         _meter = meter;
         _names = names;
-        foreach (var (key, value) in tags ?? [])
-        {
-            _legacyTags.Add(LegacyTelemetryNames.ToLegacyMetricKey(key), value);
-            _conventionTags.Add(key, value);
-        }
+        _tags = tags ?? [];
     }
+
+    MetricScopeTags LegacyTags => _legacyTags ??= CreateTags(LegacyTelemetryNames.ToLegacyMetricKey);
+
+    MetricScopeTags ConventionTags => _conventionTags ??= CreateTags(static key => key);
 
     /// <summary>Creates a counter in the selected naming mode.</summary>
     /// <typeparam name="T">The measurement type.</typeparam>
@@ -87,7 +92,7 @@ internal sealed class MetricSet
         var histogram = _meter?.CreateHistogram<T>(name, unit, description);
 #endif
         return new MetricInstrument<T, HistogramMetricRecorder<T>>(
-            new SingleMetricInstrument<T, HistogramMetricRecorder<T>>(new HistogramMetricRecorder<T>(histogram), _conventionTags, firstKey, string.Empty));
+            new SingleMetricInstrument<T, HistogramMetricRecorder<T>>(new HistogramMetricRecorder<T>(histogram), ConventionTags, firstKey, string.Empty));
     }
 
     /// <summary>Creates the legacy-only retry counter at its original recording point.</summary>
@@ -97,7 +102,7 @@ internal sealed class MetricSet
         var counter = _names is MetricNames.Convention ? null : _meter?.CreateCounter<int>(
             LegacyTelemetryNames.PartitionRetryAttempts, description: LegacyTelemetryNames.PartitionRetryAttemptsDescription);
         return new MetricInstrument<int, CounterMetricRecorder<int>>(new SingleMetricInstrument<int, CounterMetricRecorder<int>>(
-            new CounterMetricRecorder<int>(counter), _legacyTags, string.Empty, string.Empty));
+            new CounterMetricRecorder<int>(counter), LegacyTags, string.Empty, string.Empty));
     }
 
     MetricInstrument<T, TRecorder> Create<T, TRecorder>(string name, string? unit, string? description, string firstKey, string secondKey, Func<LegacyMetric, TRecorder> create)
@@ -116,10 +121,17 @@ internal sealed class MetricSet
 
         SingleMetricInstrument<T, TRecorder> CreateLegacy(LegacyMetric metadata) => new(
             create(metadata),
-            _legacyTags,
+            LegacyTags,
             LegacyTelemetryNames.ToLegacyMetricKey(firstKey),
             LegacyTelemetryNames.ToLegacyMetricKey(secondKey));
 
-        SingleMetricInstrument<T, TRecorder> CreateConvention(LegacyMetric metadata) => new(create(metadata), _conventionTags, firstKey, secondKey);
+        SingleMetricInstrument<T, TRecorder> CreateConvention(LegacyMetric metadata) => new(create(metadata), ConventionTags, firstKey, secondKey);
+    }
+
+    MetricScopeTags CreateTags(Func<string, string> toKey)
+    {
+        var tags = default(TagList);
+        foreach (var (key, value) in _tags) tags.Add(toKey(key), value);
+        return new(tags);
     }
 }
