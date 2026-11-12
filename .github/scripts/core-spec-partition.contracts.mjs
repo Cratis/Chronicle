@@ -84,9 +84,9 @@ test('trailing dots prevent sibling collisions and class terms avoid capturing c
 test('LPT is deterministic with ordinal ties and rejects empty parts', () => {
     const expected = partitionUnits([...simple, unit('E.', 2)]);
     assert.deepEqual(partitionUnits([...simple, unit('E.', 2)].reverse()), expected);
-    assert.deepEqual(expected.map(part => part.weight), [2, 2, 1, 1]);
-    assert.throws(() => partitionUnits(simple.slice(0, 3)), /Empty Core part/);
-    assert.throws(() => partitionUnits(simple, 3), /Expected 4/);
+    assert.deepEqual(expected.map(part => part.weight), [3, 3]);
+    assert.throws(() => partitionUnits(simple.slice(0, CORE_PARTS - 1)), /Empty Core part/);
+    assert.throws(() => partitionUnits(simple, CORE_PARTS + 1), /Expected 2/);
 });
 
 test('partition check fails closed for new specs, missing units, malformed weights and overlaps', async t => {
@@ -107,18 +107,18 @@ test('partition check fails closed for new specs, missing units, malformed weigh
     await assert.rejects(checkPartition(root, valid), /Unassigned.*--refresh/);
 });
 
-test('planner expands Core once into four unit identities and receipts cannot treat them as the whole project', async () => {
+test('planner expands Core once into configured unit identities and receipts cannot treat them as the whole project', async () => {
     const projects = [CORE_PROJECT, 'Source/A/A.csproj', 'Source/B/B.csproj'];
-    const timings = { version: 1, defaultSeconds: 1, measurements: [{ project: CORE_PROJECT, seconds: 100 }] };
+    const timings = { version: 1, defaultSeconds: 1, measurements: [], core: { fixedSeconds: 55, variableSeconds: 100 } };
     const plan = planShards(projects, timings, partitionUnits(simple));
     const ids = plan.flatMap(shard => shard.projects);
-    assert.equal(ids.length, 6);
+    assert.equal(ids.length, CORE_PARTS + 2);
     assert.equal(ids.includes(CORE_PROJECT), false);
     for (let part = 1; part <= CORE_PARTS; part++) assert.equal(ids.filter(id => id === coreUnitId(part)).length, 1);
-    assert.equal(plan.reduce((sum, shard) => sum + shard.seconds, 0), 110);
+    assert.equal(plan.reduce((sum, shard) => sum + shard.seconds, 0), 100 + CORE_PARTS * 55 + 2);
     const infos = unitInfos(ids, projects.map(project => ({ project, runner: 'v3', dll: '/Core.dll' })), partitionUnits(simple));
     const core = infos.filter(info => info.corePart);
-    assert.equal(core.length, 4);
+    assert.equal(core.length, CORE_PARTS);
     for (const info of core) {
         assert.equal(info.project, CORE_PROJECT);
         const call = invocation(info, { directory: `/out/part-${info.corePart}`, filter: `(ordinary)&${info.partFilter}`, timeout: 100 });

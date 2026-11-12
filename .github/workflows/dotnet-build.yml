@@ -134,7 +134,7 @@ jobs:
 
       - name: Spec executable runner contracts and forbid test-host dispatch
         run: |
-          node --test .github/scripts/test-mixed-spec-runners.mjs .github/scripts/test-spec-shards.mjs .github/scripts/spec-shard-workflow.test.mjs
+          node --test .github/scripts/test-mixed-spec-runners.mjs .github/scripts/test-spec-shards.mjs .github/scripts/spec-shard-workflow.test.mjs .github/scripts/test-spec-wall-timings.mjs
           node .github/scripts/spec-shards.mjs --dry-run
 
       - name: Spec coverage statistics honesty (missing input never advances the measurement date)
@@ -620,7 +620,7 @@ jobs:
     if: needs.already-ran.outputs.skip != 'true'
     needs: [already-ran]
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     permissions:
       contents: read
     steps:

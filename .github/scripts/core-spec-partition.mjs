@@ -10,7 +10,7 @@ import { pathToFileURL } from 'node:url';
 import { nodes, parseXml } from './mixed-specs-results.mjs';
 
 export const CORE_PROJECT = 'Source/Kernel/Core.Specs/Core.Specs.csproj';
-export const CORE_PARTS = 4;
+export const CORE_PARTS = 2;
 export const PER_TEST_SECONDS = 0.003;
 const table = new URL('./core-spec-partition.json', import.meta.url);
 const repair = 'run node .github/scripts/core-spec-partition.mjs --refresh <trx...>';

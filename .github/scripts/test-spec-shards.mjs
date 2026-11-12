@@ -12,7 +12,7 @@ import './core-spec-type-coverage.contracts.mjs';
 import { ORDINARY_SHARDS, planShards, parseShardArgs, validateTimings, sourcePlan, verifyReceipts, verifyResults, receiptFor } from './spec-shards.mjs';
 
 const ordinary = ordinaryProjects(v3Projects.map(project => ({ project }))).map(x => x.project);
-const weights = { version: 1, defaultSeconds: 60, measurements: [] };
+const weights = { version: 1, defaultSeconds: 60, measurements: [], core: { fixedSeconds: 55, variableSeconds: 60 } };
 const context = { sha: 'head', runId: '123', runAttempt: '1' };
 async function fixture() {
     const scratch = path.resolve('.ai-work/5501/fixtures');
