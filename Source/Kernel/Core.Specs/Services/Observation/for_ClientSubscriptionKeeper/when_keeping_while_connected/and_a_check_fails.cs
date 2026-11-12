@@ -4,15 +4,24 @@
 namespace Cratis.Chronicle.Services.Observation.for_ClientSubscriptionKeeper.when_keeping_while_connected;
 
 /// <summary>
-/// A silo that is still leaving the cluster can fail a check or two; the subscription must still be kept after that.
+/// A silo that is still leaving the cluster can fail a check or two; the subscription is checked again after one revise
+/// interval rather than left to the safety net.
 /// </summary>
 public class and_a_check_fails : given.a_client_subscription_keeper
 {
-    protected override Task Check(int check) =>
-        check == 1 ? Task.FromException(new InvalidOperationException("The silo is leaving")) : Task.CompletedTask;
+    TimeSpan _waitAfterTheFailure;
 
-    Task Because() => KeepUntilTheStreamCloses();
+    protected override Task<bool> Check(int check) =>
+        check == 1 ? Task.FromException<bool>(new InvalidOperationException("The silo is leaving")) : Task.FromResult(true);
 
-    [Fact] void should_keep_checking() => _checks.ShouldEqual(ChecksBeforeTheStreamCloses);
-    [Fact] void should_complete_when_the_stream_closes() => _completed.ShouldBeTrue();
+    async Task Because()
+    {
+        StartKeeping();
+        await _clock.Elapse();
+        _waitAfterTheFailure = await _clock.Elapse();
+        await _clock.NextWait();
+    }
+
+    [Fact] void should_check_again_after_one_revise_interval() => _waitAfterTheFailure.ShouldEqual(Revise);
+    [Fact] void should_keep_checking() => _checks.ShouldEqual(2);
 }

@@ -7,7 +7,7 @@ public class and_the_observer_knows_the_client : given.a_reactor_grain_with_a_st
 {
     bool _intact;
 
-    void Establish() => _observer.KnowsClient(_client.ConnectionId).Returns(true);
+    void Establish() => _observer.IsClientTarget(_client.ConnectionId).Returns(true);
 
     async Task Because() => _intact = await _grain.IsSubscriptionIntact();
 

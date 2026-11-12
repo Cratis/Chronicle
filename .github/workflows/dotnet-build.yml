@@ -112,6 +112,7 @@ jobs:
       packages: write
     outputs:
       chronicle-image: ${{ steps.export-image.outputs.image }}
+      build-version: ${{ steps.export-build-version.outputs.version }}
 
     steps:
       - name: Checkout code
@@ -133,7 +134,7 @@ jobs:
 
       - name: Spec executable runner contracts and forbid test-host dispatch
         run: |
-          node --test .github/scripts/test-mixed-spec-runners.mjs .github/scripts/test-spec-shards.mjs
+          node --test .github/scripts/test-mixed-spec-runners.mjs .github/scripts/test-spec-shards.mjs .github/scripts/spec-shard-workflow.test.mjs
           node .github/scripts/spec-shards.mjs --dry-run
 
       - name: Spec coverage statistics honesty (missing input never advances the measurement date)
@@ -221,6 +222,12 @@ jobs:
       - name: Stamp the build version
         run: python3 .github/scripts/derive-build-version.py >> "$GITHUB_ENV"
 
+      # Jobs that rebuild from this build's output reuse its version: deriving it again would read the
+      # release tags again, and a release tagged in between would stamp a different version.
+      - name: Export the build version
+        id: export-build-version
+        run: echo "version=$CRATIS_CHRONICLE_BUILD_VERSION" >> "$GITHUB_OUTPUT"
+
       - name: Build
         run: dotnet build --configuration Release -p:DisableProxyGenerator=true -p:DisableDockerBuild=true -p:ForceCodeGeneration=true
 
@@ -242,55 +249,24 @@ jobs:
             grep -a -F -q -- "$CRATIS_CHRONICLE_BUILD_VERSION" "$dll" || { echo "::error::$dll does not carry $CRATIS_CHRONICLE_BUILD_VERSION"; exit 1; }
           done
 
-      # The build above is net11.0 only. The client packages ship net10.0 as well, and that multi-target
-      # happens only under IsPackaging - which until now nothing ran before publish. So an API newer than net10.0
-      # passed every check on a pull request and failed while the release was being cut, with the merge already
-      # done. This builds what publish packs, on the frameworks it packs them for. The SDKs are already installed
-      # above for exactly this reason. The Build step above already analyzes net11.0 with warnings as errors, so
-      # analyzers are skipped for that framework here (generators still run) and own net10.0 only.
-      - name: Build client packages for every shipped framework
+      # Publish the net11.0 binaries before independent package checks. Spec shards need only bin;
+      # package-verification builds the shipped multi-target assets in its own workspace.
+      - name: Pack Release build output
         run: |
-          set -e
-          find ./Source/Clients -name "*.csproj" ! -name "*.Specs.csproj" -print0 | while IFS= read -r -d '' project; do
-            dotnet build "$project" --configuration Release -p:IsPackaging=true -p:SkipAnalyzersForTargetFramework=net11.0 -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
+          set -euo pipefail
+          for project in Source/Kernel/Core.Specs Source/Kernel/Server Integration/MongoDB Integration/Neo4j Integration/Api; do
+            test -d "$project/bin/Release/net11.0" || { echo "Missing build output for $project" >&2; exit 1; }
           done
-          dotnet build ./Source/Kernel/Contracts/Contracts.csproj --configuration Release -p:IsPackaging=true -p:SkipAnalyzersForTargetFramework=net11.0 -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
+          find . -type d -name bin -not -path '*/node_modules/*' -prune -print0 | tar --null -I 'zstd -T0' -cf build-output-release.tar.zst -T -
 
-      # Fail closed before any pack/image/artifact collection. The verifier is stdlib-only, outside
-      # the solution and package filters, and all of its own outputs stay outside the checkout.
-      - name: Validate rolling diagnostic guards and shipped-client absence
-        run: |
-          set -euo pipefail
-          node .github/scripts/verify-rolling-delivery-build.mjs
-          dotnet build .github/scripts/rolling-delivery-il/RollingDeliveryIl.csproj -c Release -warnaserror \
-            --artifacts-path "$RUNNER_TEMP/rolling-il-verifier" -o "$RUNNER_TEMP/rolling-il-tool"
-          for framework in net10.0 net11.0; do
-            dotnet "$RUNNER_TEMP/rolling-il-tool/RollingDeliveryIl.dll" \
-              "Source/Clients/DotNET/bin/Release/$framework/Cratis.Chronicle.dll"
-          done
-
-      # A package can build and still fail to restore for a consumer: a transitive dependency resolves below what
-      # another package declares (NU1605) or outside an exact constraint (NU1608), which only shows up once the
-      # packages are restored from a feed. Pack what publish packs from the build above, into a local feed that is
-      # never pushed, and restore one isolated consumer per package with those warnings as errors.
-      - name: Verify packed client packages restore for consumers
-        env:
-          PACKED_VERSION: 0.0.0-pr.${{ github.event.pull_request.number || github.run_number }}
-        run: |
-          set -euo pipefail
-          feed="$RUNNER_TEMP/packed"
-          dotnet pack ./Source/Clients/Packages.slnf --no-build --configuration Release -p:IsPackaging=true -p:DisableProxyGenerator=true -p:DisableDockerBuild=true -p:PackageVersion="$PACKED_VERSION" -o "$feed"
-          bash .github/scripts/verify-packed-consumer-restore.sh "$PACKED_VERSION" "$feed"
-
-      # Ordinary PRs can check the local Dockerfile against the Release binaries built above.
-      # No DEVELOPMENT-symbol build, registry login or image push is needed for this smoke check.
-      - name: Verify local Docker image without push
-        if: github.event_name == 'pull_request' && !inputs.integration_requested
-        run: |
-          set -euo pipefail
-          mkdir -p Source/Kernel/Server/out
-          cp -r Source/Kernel/Server/bin/Release/net11.0/. Source/Kernel/Server/out/
-          docker build -t "chronicle-dockerfile-check:${{ github.sha }}" -f Docker/Local/Dockerfile .
+      - name: Upload Release build output
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output-release
+          path: build-output-release.tar.zst
+          retention-days: 1
+          compression-level: 0
+          if-no-files-found: error
 
       # Integration runs need an image to share with their shards. The existing push guard
       # checks the event actor (the person applying a label), not the PR author. A read-only
@@ -311,34 +287,112 @@ jobs:
         if: (github.event_name != 'pull_request' || inputs.integration_requested) && github.actor != 'dependabot[bot]'
         run: docker push ${{ env.CRATIS_CHRONICLE_LOCAL_IMAGE }}
 
-      - name: Pack Release build output
-        run: |
-          set -euo pipefail
-          for project in Source/Kernel/Core.Specs Source/Kernel/Server Integration/MongoDB Integration/Neo4j Integration/Api; do
-            test -d "$project/bin/Release/net11.0" || { echo "Missing build output for $project" >&2; exit 1; }
-          done
-          find . -type d -name bin -not -path '*/node_modules/*' -prune -print0 | tar --null -I 'zstd -T0' -cf build-output-release.tar.zst -T -
-
-      - name: Upload Release build output
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-output-release
-          path: build-output-release.tar.zst
-          retention-days: 1
-          compression-level: 0
-          if-no-files-found: error
-
-      # The same pack command publish.yml runs, with a stable placeholder version, so pack-only failures
-      # (NU5104 stable-depends-on-prerelease, missing packed assets, nuspec errors) fail the pull request
-      # instead of surfacing after the release and tag exist. Runs after the build output is archived above.
-      - name: Verify NuGet packages can be created
-        if: github.event_name == 'pull_request'
-        run: dotnet pack ./Source/Clients/Packages.slnf --configuration Release -o "$RUNNER_TEMP/nuget-pack-check" -p:IsPackaging=true -p:Version=99.0.0 -p:PackageVersion=99.0.0 -p:SourceRevisionId=${{ github.sha }}
-
       - name: Export image
         if: github.event_name != 'pull_request' || inputs.integration_requested
         id: export-image
         run: echo "image=${{ env.CRATIS_CHRONICLE_LOCAL_IMAGE }}" >> "$GITHUB_OUTPUT"
+
+  # Independent verification runs beside the specs, never in front of them. The specs
+  # aggregate requires this job, preserving the integration and coverage gates as well.
+  package-verification:
+    needs: [already-ran, dotnet-build]
+    if: needs.already-ran.outputs.skip != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .Net
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Cache NuGet packages
+        uses: Cratis/Workflows/.github/actions/dotnet-cache@main
+
+      # Reuse the build's evaluated inputs when available; package builds still restore
+      # normally on a miss. Only dotnet-build saves this cache, avoiding competing writers.
+      - name: Restore obj cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ./**/obj
+          key: dotnet-obj-cache-${{ hashFiles('**/*.csproj', '**/Directory.*.props', '**/Directory.*.targets') }}-${{ github.sha }}
+          restore-keys: |
+            dotnet-obj-cache-${{ hashFiles('**/*.csproj', '**/Directory.*.props', '**/Directory.*.targets') }}-
+
+      - name: Add GitHub Package Registry to NuGet
+        run: |
+          dotnet nuget update source github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text || \
+          dotnet nuget add source --name github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text https://nuget.pkg.github.com/cratis/index.json
+
+      - name: Stamp the version of the downloaded build
+        env:
+          BUILD_VERSION: ${{ needs.dotnet-build.outputs.build-version }}
+        run: |
+          set -euo pipefail
+          [[ "$BUILD_VERSION" =~ ^[0-9]+\.[0-9]+\.0-ci-[0-9]+$ ]] || { echo "::error::dotnet-build exported no valid build version: '$BUILD_VERSION'"; exit 1; }
+          echo "CRATIS_CHRONICLE_BUILD_VERSION=$BUILD_VERSION" >> "$GITHUB_ENV"
+
+      - name: Download Release build output
+        uses: actions/download-artifact@v4
+        with:
+          name: build-output-release
+
+      - name: Extract Release build output
+        run: tar -I zstd -xf build-output-release.tar.zst
+
+      # The solution build analyzes net11.0 with warnings as errors. Build every shipped
+      # framework here, keeping generators on both and analyzers on net10.0 as before.
+      - name: Build client packages for every shipped framework
+        run: |
+          set -e
+          find ./Source/Clients -name "*.csproj" ! -name "*.Specs.csproj" -print0 | while IFS= read -r -d '' project; do
+            dotnet build "$project" --configuration Release -p:IsPackaging=true -p:SkipAnalyzersForTargetFramework=net11.0 -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
+          done
+          dotnet build ./Source/Kernel/Contracts/Contracts.csproj --configuration Release -p:IsPackaging=true -p:SkipAnalyzersForTargetFramework=net11.0 -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
+
+      # Fail closed before packing or checking an image in this workspace. The separate
+      # spec artifact is not published, and cannot pass the aggregate without these guards.
+      - name: Validate rolling diagnostic guards and shipped-client absence
+        run: |
+          set -euo pipefail
+          node .github/scripts/verify-rolling-delivery-build.mjs
+          dotnet build .github/scripts/rolling-delivery-il/RollingDeliveryIl.csproj -c Release -warnaserror \
+            --artifacts-path "$RUNNER_TEMP/rolling-il-verifier" -o "$RUNNER_TEMP/rolling-il-tool"
+          for framework in net10.0 net11.0; do
+            dotnet "$RUNNER_TEMP/rolling-il-tool/RollingDeliveryIl.dll" \
+              "Source/Clients/DotNET/bin/Release/$framework/Cratis.Chronicle.dll"
+          done
+
+      # Pack into a local feed that is never pushed, then restore an isolated consumer
+      # per package with NU1605/NU1608 as errors, exactly as on the serial path.
+      - name: Verify packed client packages restore for consumers
+        env:
+          PACKED_VERSION: 0.0.0-pr.${{ github.event.pull_request.number || github.run_number }}
+        run: |
+          set -euo pipefail
+          feed="$RUNNER_TEMP/packed"
+          dotnet pack ./Source/Clients/Packages.slnf --no-build --configuration Release -p:IsPackaging=true -p:DisableProxyGenerator=true -p:DisableDockerBuild=true -p:PackageVersion="$PACKED_VERSION" -o "$feed"
+          bash .github/scripts/verify-packed-consumer-restore.sh "$PACKED_VERSION" "$feed"
+
+      # Ordinary PRs check the Dockerfile against the downloaded Release server binaries.
+      - name: Verify local Docker image without push
+        if: github.event_name == 'pull_request' && !inputs.integration_requested
+        run: |
+          set -euo pipefail
+          mkdir -p Source/Kernel/Server/out
+          cp -r Source/Kernel/Server/bin/Release/net11.0/. Source/Kernel/Server/out/
+          docker build -t "chronicle-dockerfile-check:${{ github.sha }}" -f Docker/Local/Dockerfile .
+
+      # The same pack command publish.yml runs: stable-package, packed-asset and nuspec
+      # failures must still fail the PR, even though this now runs beside the specs.
+      - name: Verify NuGet packages can be created
+        if: github.event_name == 'pull_request'
+        run: dotnet pack ./Source/Clients/Packages.slnf --configuration Release -o "$RUNNER_TEMP/nuget-pack-check" -p:IsPackaging=true -p:Version=99.0.0 -p:PackageVersion=99.0.0 -p:SourceRevisionId=${{ github.sha }}
 
   # Only integration shards consume the DEVELOPMENT-symbol build. Ordinary PR pushes
   # keep the Release build and specs, without this extra build or artifact.
@@ -573,14 +627,14 @@ jobs:
   specs-sql:
     if: needs.already-ran.outputs.skip != 'true'
     runs-on: ubuntu-latest
-    # SQL Server specs are about five times slower than PostgreSQL ones, so they run as three shards of about
-    # seven minutes each (the single shard took 17-27 minutes and was the longest job on every pull request).
+    # SQL Server specs are about five times slower than PostgreSQL ones, so they run as four shards balanced by
+    # measured duration (.github/scripts/sql-spec-timings.json), about nine minutes of specs each.
     timeout-minutes: 45
     needs: [already-ran, dotnet-build]
     strategy:
       fail-fast: false
       matrix:
-        shard: [postgresql, sqlserver-1, sqlserver-2, sqlserver-3, remaining]
+        shard: [postgresql, sqlserver-1, sqlserver-2, sqlserver-3, sqlserver-4, remaining]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -690,7 +744,7 @@ jobs:
   # A failed, skipped or cancelled shard must never turn this aggregate green.
   specs:
     if: ${{ needs.already-ran.outputs.skip != 'true' && (always()) }}
-    needs: [already-ran, wire-compatibility, grain-compatibility, specs-other, specs-sql, specs-net10]
+    needs: [already-ran, wire-compatibility, grain-compatibility, package-verification, specs-other, specs-sql, specs-net10]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -704,7 +758,8 @@ jobs:
           OTHER_RESULT: ${{ needs.specs-other.result }}
           SQL_RESULT: ${{ needs.specs-sql.result }}
           NET10_RESULT: ${{ needs.specs-net10.result }}
-        run: test "$WIRE_RESULT" = success && test "$GRAIN_RESULT" = success && test "$OTHER_RESULT" = success && test "$SQL_RESULT" = success && test "$NET10_RESULT" = success
+          PACKAGE_RESULT: ${{ needs.package-verification.result }}
+        run: test "$WIRE_RESULT" = success && test "$GRAIN_RESULT" = success && test "$OTHER_RESULT" = success && test "$SQL_RESULT" = success && test "$NET10_RESULT" = success && test "$PACKAGE_RESULT" = success
 
       - name: Checkout shard contract
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4

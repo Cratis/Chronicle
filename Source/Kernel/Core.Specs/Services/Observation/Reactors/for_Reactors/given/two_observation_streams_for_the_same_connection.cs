@@ -60,7 +60,8 @@ public class two_observation_streams_for_the_same_connection : Specification
             AllowingConnectionOwnership.Create(),
             _logger,
             Substitute.For<IObserverRegistrationGate>(),
-            NamespaceCasingContext.Create());
+            NamespaceCasingContext.Create(),
+            NoSiloDepartures.Instance);
 
         _earlierSubscription = _reactors.Observe(_earlierMessages).Subscribe(_earlierDeliveries.Add);
         _earlierMessages.OnNext(Register());

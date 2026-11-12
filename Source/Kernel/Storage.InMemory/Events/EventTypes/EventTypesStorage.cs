@@ -203,7 +203,7 @@ public partial class EventTypesStorage : IEventTypesStorage, IDisposable
                 {
                     var stored = existing.Generations.FirstOrDefault(_ => _.Generation == generation.Generation);
                     return stored is not null &&
-                        JsonSchemaCompatibilityExtensions.EqualsIgnoringTitles(stored.Schema.ToJson(), generation.Schema.ToJson())
+                        JsonSchemaCompatibilityExtensions.EqualsIgnoringAnnotations(stored.Schema.ToJson(), generation.Schema.ToJson())
                         ? stored : generation;
                 }))
                 .ToList(),

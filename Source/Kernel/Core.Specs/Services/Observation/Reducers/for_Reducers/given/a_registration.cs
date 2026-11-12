@@ -70,7 +70,8 @@ public class a_registration : Specification
             AllowingConnectionOwnership.Create(),
             NullLogger<Reducers>.Instance,
             _gate,
-            NamespaceCasingContext.Create());
+            NamespaceCasingContext.Create(),
+            NoSiloDepartures.Instance);
         _grainFactory.ClearReceivedCalls();
         _readModel.ClearReceivedCalls();
         _client.ClearReceivedCalls();

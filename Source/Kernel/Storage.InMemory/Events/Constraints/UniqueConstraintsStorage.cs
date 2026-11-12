@@ -16,7 +16,7 @@ namespace Cratis.Chronicle.Storage.InMemory.Events.Constraints;
 /// </remarks>
 public class UniqueConstraintsStorage : IUniqueConstraintsStorage
 {
-    readonly object _lock = new();
+    readonly Lock _lock = new();
     readonly Dictionary<(string EventSourceId, string ConstraintName, string ScopeKey), (string Value, EventSequenceNumber SequenceNumber)> _index = [];
     readonly Dictionary<(string ConstraintName, string ScopeKey, string Value), (string EventSourceId, EventSequenceNumber SequenceNumber, string? Subject)> _values = [];
 

@@ -49,6 +49,7 @@ namespace Cratis.Chronicle.Services.Observation.Reducers;
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 /// <param name="registrationGate">The silo-wide gate for observer registrations.</param>
 /// <param name="namespaceCasing">The namespace casing resolver.</param>
+/// <param name="siloDepartures">The <see cref="ISiloDepartures"/> telling when to check client subscriptions early.</param>
 internal sealed class Reducers(
     IGrainFactory grainFactory,
     IReducerMediator reducerMediator,
@@ -59,7 +60,8 @@ internal sealed class Reducers(
     IConnectionOwnership connectionOwnership,
     ILogger<Reducers> logger,
     IObserverRegistrationGate registrationGate,
-    INamespaceCasing namespaceCasing) : IReducers
+    INamespaceCasing namespaceCasing,
+    ISiloDepartures siloDepartures) : IReducers
 {
     /// <summary>
     /// The size, in characters, of a reducer's serialized state from which each reduce is reported as expensive.
@@ -305,8 +307,10 @@ internal sealed class Reducers(
                     await ClientSubscriptionKeeper.KeepWhileConnected(
                         () => reducerDefinition.IsActive
                             ? ClientSubscriptionKeeper.KeepSubscription(clientObserver!.IsSubscriptionIntact, () => clientObserver.KeepSubscription(reducerDefinition))
-                            : clientObserver!.KeepSubscription(reducerDefinition),
-                        TimeSpan.FromSeconds(options.Value.ConnectedClients.ReviseIntervalSeconds),
+                            : KeepInactive(clientObserver!, reducerDefinition),
+                        SubscriptionCheckSchedule.From(options.Value),
+                        siloDepartures,
+                        TimeProvider.System,
                         registration.ConnectionId,
                         logger,
                         cancellation.Token);
@@ -386,6 +390,32 @@ internal sealed class Reducers(
             {
                 registrationTcs.TrySetException(exception);
             }
+        }
+    }
+
+    /// <summary>
+    /// Keeps an inactive reducer: there is no subscription to lose, only a registration a webhook may still hold back.
+    /// </summary>
+    /// <param name="reducer">The client <see cref="IReducer"/>.</param>
+    /// <param name="definition">The definition the client registered.</param>
+    /// <returns>
+    /// False while the registration is still deferred, so the keeper tries to complete it every revise interval; true once
+    /// it is complete, so the keeper checks it at the safety-net interval.
+    /// </returns>
+    /// <remarks>
+    /// A silo of an older version does not know <see cref="IReducer.IsRegistrationDeferred"/>; the failing call counts as
+    /// deferred, which is how it was kept before.
+    /// </remarks>
+    internal static async Task<bool> KeepInactive(IReducer reducer, Concepts.Observation.Reducers.ReducerDefinition definition)
+    {
+        await reducer.KeepSubscription(definition);
+        try
+        {
+            return !await reducer.IsRegistrationDeferred();
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            return false;
         }
     }
 
