@@ -217,12 +217,14 @@ test('three-shard workflow matches the planner and refreshed timing samples', as
     assert.equal(plan.length, ORDINARY_SHARDS);
     assert.ok(plan.every(shard => shard.projects.length && shard.defaulted.length === 0));
     const projects = plan.flatMap(shard => shard.projects);
-    assert.equal(projects.length, 25);
-    assert.equal(new Set(projects).size, 25);
-    // Train 6 includes the MongoDB speedup, so no project needs a dedicated shard.
-    // The 250-second bound covers completion intervals including startup/coverage overhead,
-    // with a small margin above the measured 246.48-second maximum, not a fixed layout.
-    assert.ok(plan.every(shard => shard.seconds < 250));
+    assert.equal(projects.length, 28);
+    assert.equal(new Set(projects).size, 28);
+    assert.equal(projects.filter(project => project.includes('#core-part-')).length, 4);
+    assert.ok(!projects.includes('Source/Kernel/Core.Specs/Core.Specs.csproj'));
+    // Train 7 completion intervals include startup/coverage overhead. Four Core units
+    // predict under 295 seconds per shard, rather than the observed 393-second long pole.
+    // This is a planning bound, not a claim of measured split-shard performance.
+    assert.ok(plan.every(shard => shard.seconds < 295));
     const timings = JSON.parse(await readFile(new URL('./spec-shard-timings.json', import.meta.url), 'utf8'));
     const runs = new Set(timings.samples.map(sample => sample.run));
     assert.ok(runs.size >= 1 && runs.size <= 8);

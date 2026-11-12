@@ -12,6 +12,7 @@ import { collectorArgs, verifyExit, verifyDeadline, main as verifyCollector } fr
 import './spec-project-contracts.mjs';
 import { benchmarkProject, inventory, ordinaryProjects, validateSolutionProjects } from './mixed-specs-selection.mjs';
 import { sourcePlan } from './spec-shards.mjs';
+import { coreSpecFixture } from './core-spec-fixture.mjs';
 import { selectProducerArtifacts, loadProducerEvidence } from './run-mixed-specs.mjs';
 
 const scratch = path.resolve('.ai-work/chronicle-spec5-runners/mock-contracts');
@@ -316,6 +317,7 @@ test('producer API acquisition paginates all attempts and propagates unavailable
 
 async function ordinaryDispatch(mode) {
     const { root } = await fixture();
+    await coreSpecFixture(root);
     await writeFile(path.join(root, 'Chronicle.slnx'), `<Solution>${v3Projects.filter(project => !project.includes('Storage.AzureKeyVault.Specs/')).map(project => `<Project Path="${project}" />`).join('')}</Solution>`);
     await mkdir(path.join(root, 'Benchmarks/Chronicle.Benchmarks.Clustering'), { recursive: true });
     await writeFile(path.join(root, 'Benchmarks/Chronicle.Benchmarks.Clustering/RebuildBaselineMath.cs'), '// mock benchmark production source');
@@ -364,7 +366,15 @@ async function ordinaryDispatch(mode) {
     assert.deepEqual(queried, [...v3Projects, ...shippingProjects]);
     const shard = (await sourcePlan(root)).find(s => s.shard === shardId);
     const expectedProjects = mode === 'whole' ? ordinaryProjects(queried.map(project => ({ project }))).map(x => x.project) : shard.projects;
-    const actualProjects = launched.map(args => queried.find((project, index) => args[9].includes(path.join(root, `Assembly${index + 1}.dll`))));
+    const actualProjects = launched.map(args => {
+        const project = queried.find((project, index) => args[9].includes(path.join(root, `Assembly${index + 1}.dll`)));
+        const part = args[8].match(/-core-part-(\d)\//)?.[1];
+        if (part) {
+            assert.ok(args[9].includes('FullyQualifiedName~'));
+            assert.ok(args[9].includes('&('));
+        }
+        return part ? `${project}#core-part-${part}-of-4` : project;
+    });
     assert.deepEqual([...actualProjects].sort(), [...expectedProjects].sort());
     const expected = expectedProjects.length;
     assert.equal(launched.length, expected);
