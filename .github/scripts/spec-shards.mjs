@@ -7,12 +7,12 @@ import { CORE_PROJECT, CORE_PARTS, coreUnitId, loadPartition, checkPartition, pa
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { validateSourceProjects } from './mixed-specs-selection.mjs';
+import { balanceJobs } from './spec-shard-balancing.mjs';
 
 export const ORDINARY_SHARDS = 3;
 export const ordinaryShardIds = () => Array.from({ length: ORDINARY_SHARDS }, (_, index) => index + 1);
 const validShard = shard => ordinaryShardIds().includes(shard);
 const fail = message => { throw new Error(message); };
-const ordinal = (a, b) => a < b ? -1 : a > b ? 1 : 0;
 const positive = value => typeof value === 'number' && Number.isFinite(value) && value > 0;
 function projectIdentity(project) {
     if (typeof project !== 'string') return false;
@@ -49,16 +49,16 @@ export function validateTimings(data, projects) {
     }
     return weights;
 }
-export const CORE_PART_OVERHEAD_SECONDS = 2;
 export function expandCore(projects, timings, parts) {
     const weights = validateTimings(timings, projects);
     const expanded = projects.flatMap(project => project === CORE_PROJECT ? parts.map(part => coreUnitId(part.part)) : [project]);
-    const defaults = new Set(projects.filter(project => !weights.has(project)));
-    const total = parts.reduce((sum, part) => sum + part.weight, 0);
-    for (const part of parts) {
-        const id = coreUnitId(part.part);
-        weights.set(id, (weights.get(CORE_PROJECT) ?? timings.defaultSeconds) * part.weight / total + CORE_PART_OVERHEAD_SECONDS);
-        if (defaults.has(CORE_PROJECT)) defaults.add(id);
+    const defaults = new Set(projects.filter(project => project !== CORE_PROJECT && !weights.has(project)));
+    if (projects.includes(CORE_PROJECT)) {
+        if (!positive(timings.core?.fixedSeconds) || !positive(timings.core?.variableSeconds)) fail('Missing/invalid Core wall-time model');
+        const total = parts.reduce((sum, part) => sum + part.weight, 0);
+        for (const part of parts) {
+            weights.set(coreUnitId(part.part), timings.core.fixedSeconds + timings.core.variableSeconds * part.weight / total);
+        }
     }
     return { projects: expanded, weights, defaults };
 }
@@ -69,14 +69,12 @@ export function planShards(projects, timings, parts = partitionUnits(JSON.parse(
     projects = expanded.projects;
     const { weights, defaults } = expanded;
     const weight = p => weights.get(p) ?? timings.defaultSeconds;
-    const sorted = [...projects].sort((a, b) => weight(b) - weight(a) || ordinal(a, b));
-    const shards = ordinaryShardIds().map(shard => ({ shard, projects: [], seconds: 0, defaulted: [] }));
-    for (const project of sorted) {
-        const shard = shards.reduce((lightest, candidate) => candidate.seconds < lightest.seconds ? candidate : lightest);
-        shard.projects.push(project);
-        shard.seconds += weight(project);
-        if (defaults.has(project)) shard.defaulted.push(project);
-    }
+    const overhead = timings.shardOverheadSeconds ?? 0;
+    if (!Number.isFinite(overhead) || overhead < 0) fail('Invalid shard overhead');
+    const jobs = projects.map(project => ({ project, seconds: weight(project), core: project.includes('#core-part-') }));
+    const shards = balanceJobs(jobs, ORDINARY_SHARDS).map(shard => ({ ...shard,
+        seconds: shard.seconds + overhead, defaulted: shard.projects.filter(project => defaults.has(project))
+    }));
     sameProjects(shards.flatMap(s => s.projects), projects, 'Shard union');
     if (shards.some(s => !s.projects.length)) fail(`Expected ${ORDINARY_SHARDS} nonempty ordinary shards`);
     return shards;

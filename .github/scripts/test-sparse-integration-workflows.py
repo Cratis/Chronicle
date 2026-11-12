@@ -453,7 +453,7 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         shared = jobs["spec-runner-checks"]
         self.assertEqual([], prerequisites_of(shared))
         self.assertEqual("ubuntu-latest", shared["runs-on"])
-        self.assertEqual("5", shared["timeout-minutes"])
+        self.assertEqual("10", shared["timeout-minutes"])
         self.assertEqual("needs.already-ran.outputs.skip != 'true'", shared["if"])
         self.assertNotIn("strategy", shared)
         self.assertNotIn("continue-on-error", shared)
