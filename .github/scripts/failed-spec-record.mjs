@@ -108,7 +108,9 @@ export async function record({ root, out, repo, runId, attempt, transport }) {
 export async function main({ environment = process.env, argv = process.argv.slice(2), fetchImpl = globalThis.fetch, output = console.log } = {}) {
     try {
         const { values } = parseArgs({ args: argv, options: { root: { type: 'string' }, out: { type: 'string' } } });
-        await record({ root: values.root, out: values.out, repo: environment.GITHUB_REPOSITORY, runId: environment.GITHUB_RUN_ID, attempt: environment.GITHUB_RUN_ATTEMPT,
+        await record({ root: values.root, out: values.out, repo: environment.GITHUB_REPOSITORY,
+            runId: environment.FAILED_SPEC_RUN_ID ?? environment.GITHUB_RUN_ID,
+            attempt: environment.FAILED_SPEC_RUN_ATTEMPT ?? environment.GITHUB_RUN_ATTEMPT,
             transport: restTransport({ token: environment.GITHUB_TOKEN, fetchImpl }) });
         output('Failed-spec record saved and reconciled');
         return 0;
