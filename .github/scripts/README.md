@@ -1,4 +1,51 @@
-# gRPC Contract Compatibility Validation
+# CI Scripts
+
+## Core spec partitioning
+
+The three ordinary `specs-other` jobs still cover all 25 ordinary projects.
+`Core.Specs.csproj` is planned as four units named
+`Core.Specs.csproj#core-part-K-of-4`; no workflow, artifact, or required-check name changes.
+Other projects retain their existing invocation. An unsharded invocation still runs Core once.
+
+`core-spec-partition.json` contains disjoint namespace/class prefixes and relative weights.
+Four parts are assigned by longest-processing-time-first (descending weight, ordinal prefix
+on ties, lowest numbered part on equal totals). The ordinary planner apportions the measured
+whole-Core interval by those weights, adding 2 seconds per part for collector startup.
+These predictions are hypotheses, not measured split-shard savings.
+
+The initial weights use the Core TRX from run `43166203967`, summing test durations plus
+0.003 seconds per test. Project completion intervals come from train-7 run `43176554724`.
+Refresh with a complete, non-overlapping set of Core TRX results (one whole run, or all four
+parts of a run), not duplicate downloads of the same results:
+
+```bash
+node .github/scripts/core-spec-partition.mjs --refresh path/to/Core/results.trx
+node .github/scripts/core-spec-partition.mjs --check
+node .github/scripts/spec-shards.mjs --dry-run
+node --test .github/scripts/test-spec-shards.mjs
+```
+
+The refresh groups namespaces by area, recursively splitting groups above one eighth of
+measured weight down to `for_*` boundaries. Direct spec classes receive class-specific terms
+when their child namespaces are split. Units without measurements receive a small positive
+floor. The checked-in weights sum to one; each part must be nonempty.
+
+The guard scans Core source for concrete classes with facts/theories or inherited tests;
+helper-only types and abstract fixtures are excluded. It evaluates actual substring matching
+against every class FQN and rejects zero or multiple matching parts, including middle-of-name
+collisions. Trailing dots prevent sibling-name collisions. New classes outside the recorded
+prefixes fail closed with the refresh command. Unsupported nested spec classes fail closed.
+The guard is imported by the existing `test-spec-shards.mjs` CI gate, with synthetic uncovered
+and double-covered cases proving its failure paths.
+
+Each part uses the same built executable and the existing ordinary/runsettings exclusions,
+ANDed with its OR-filter. Its TRX and Cobertura files are written under a distinct
+`-core-part-K` directory; unit identities also remain distinct in completion receipts.
+The existing path-based coverage merge retains every part's report and unions production hits.
+First CI should confirm per-part test counts, filter acceptance, coverage union, and actual
+collector/scan overhead before treating the predictions as achieved savings.
+
+## gRPC Contract Compatibility Validation
 
 This directory contains scripts for validating gRPC API contract compatibility to detect breaking changes.
 

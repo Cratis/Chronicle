@@ -2,6 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { readFile, readdir, mkdir, writeFile, appendFile } from 'node:fs/promises';
+import { readFileSync } from 'node:fs';
+import { CORE_PROJECT, CORE_PARTS, coreUnitId, loadPartition, checkPartition, partitionUnits } from './core-spec-partition.mjs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { validateSourceProjects } from './mixed-specs-selection.mjs';
@@ -14,6 +16,7 @@ const ordinal = (a, b) => a < b ? -1 : a > b ? 1 : 0;
 const positive = value => typeof value === 'number' && Number.isFinite(value) && value > 0;
 function projectIdentity(project) {
     if (typeof project !== 'string') return false;
+    if (Array.from({ length: CORE_PARTS }, (_, index) => coreUnitId(index + 1)).includes(project)) return true;
     return /^(Source|Integration|Benchmarks)\/(?:[\w.-]+\/)*[\w.-]+\.csproj$/.test(project) && !project.split('/').includes('..');
 }
 function unique(projects, label) {
@@ -46,10 +49,25 @@ export function validateTimings(data, projects) {
     }
     return weights;
 }
-export function planShards(projects, timings) {
+export const CORE_PART_OVERHEAD_SECONDS = 2;
+export function expandCore(projects, timings, parts) {
+    const weights = validateTimings(timings, projects);
+    const expanded = projects.flatMap(project => project === CORE_PROJECT ? parts.map(part => coreUnitId(part.part)) : [project]);
+    const defaults = new Set(projects.filter(project => !weights.has(project)));
+    const total = parts.reduce((sum, part) => sum + part.weight, 0);
+    for (const part of parts) {
+        const id = coreUnitId(part.part);
+        weights.set(id, (weights.get(CORE_PROJECT) ?? timings.defaultSeconds) * part.weight / total + CORE_PART_OVERHEAD_SECONDS);
+        if (defaults.has(CORE_PROJECT)) defaults.add(id);
+    }
+    return { projects: expanded, weights, defaults };
+}
+export function planShards(projects, timings, parts = partitionUnits(JSON.parse(readFileSync(new URL('./core-spec-partition.json', import.meta.url), 'utf8')).units)) {
     unique(projects, 'Ordinary selection');
     if (projects.length < ORDINARY_SHARDS) fail(`Expected ${ORDINARY_SHARDS} nonempty ordinary shards`);
-    const weights = validateTimings(timings, projects);
+    const expanded = expandCore(projects, timings, parts);
+    projects = expanded.projects;
+    const { weights, defaults } = expanded;
     const weight = p => weights.get(p) ?? timings.defaultSeconds;
     const sorted = [...projects].sort((a, b) => weight(b) - weight(a) || ordinal(a, b));
     const shards = ordinaryShardIds().map(shard => ({ shard, projects: [], seconds: 0, defaulted: [] }));
@@ -57,7 +75,7 @@ export function planShards(projects, timings) {
         const shard = shards.reduce((lightest, candidate) => candidate.seconds < lightest.seconds ? candidate : lightest);
         shard.projects.push(project);
         shard.seconds += weight(project);
-        if (!weights.has(project)) shard.defaulted.push(project);
+        if (defaults.has(project)) shard.defaulted.push(project);
     }
     sameProjects(shards.flatMap(s => s.projects), projects, 'Shard union');
     if (shards.some(s => !s.projects.length)) fail(`Expected ${ORDINARY_SHARDS} nonempty ordinary shards`);
@@ -65,7 +83,8 @@ export function planShards(projects, timings) {
 }
 export async function sourcePlan(root, timings) {
     const source = await validateSourceProjects(root);
-    return planShards(source.ordinary, timings ?? JSON.parse(await readFile(new URL('./spec-shard-timings.json', import.meta.url), 'utf8')));
+    const parts = await checkPartition(root, await loadPartition());
+    return planShards(source.ordinary, timings ?? JSON.parse(await readFile(new URL('./spec-shard-timings.json', import.meta.url), 'utf8')), parts);
 }
 export function parseShardArgs(args) {
     if (!args.length) return null;
