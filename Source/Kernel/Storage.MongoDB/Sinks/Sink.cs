@@ -132,7 +132,7 @@ public partial class Sink(
     /// </summary>
     const int MaxBulkSizeInBytes = 48 * 1024 * 1024;
 
-    readonly object _bulkLock = new();
+    readonly Lock _bulkLock = new();
     readonly CancellationTokenSource _bulkCancellation = new();
     readonly List<WriteModel<BsonDocument>> _bulkOperations = [];
     readonly HashSet<BsonValue> _bulkDestinations = [];

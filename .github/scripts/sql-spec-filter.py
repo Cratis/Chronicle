@@ -4,14 +4,21 @@
 """Partition SQL specs by their existing xUnit collection, not provider naming conventions."""
 
 import argparse
+import json
+import math
 from pathlib import Path
 import re
+import xml.etree.ElementTree as ElementTree
 
 SPEC_ROOT = Path(__file__).resolve().parents[2] / "Source/Kernel/Storage.Sql.Specs"
+TIMINGS = Path(__file__).with_name("sql-spec-timings.json")
 COLLECTIONS = {"postgresql": "PostgreSqlCollection", "sqlserver": "SqlServerCollection"}
 # SQL Server specs are about five times slower per spec than PostgreSQL, so one SQL Server shard decided how long
 # every pull request took. A provider listed here runs as that many parallel shards named `<provider>-<n>`.
-SHARDS = {"sqlserver": 3}
+# The shards are balanced by measured duration (sql-spec-timings.json): splitting by spec count left one shard
+# at 978 s of tests and another at 357 s, because a few classes take minutes each.
+SHARDS = {"sqlserver": 4}
+TRX = "{http://microsoft.com/schemas/VisualStudio/TeamTest/2010}"
 
 
 def provider_classes(root):
@@ -56,6 +63,51 @@ def partition(names, weights, count):
     return shards
 
 
+def _is_positive_seconds(value):
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value) and value > 0
+
+
+def load_timings(path=TIMINGS):
+    """Measured seconds per spec class; a missing file means no measurements yet."""
+    if not path.exists():
+        return {}
+    seconds = json.loads(path.read_text(encoding="utf-8"))["seconds"]
+    if not all(_is_positive_seconds(value) for value in seconds.values()):
+        raise ValueError(f"Every timing in {path} must be a positive, finite number of seconds")
+    return seconds
+
+
+def timed_weights(classes, facts, timings):
+    """Weigh each class by its measured duration, estimating unmeasured classes from their spec count.
+
+    An unmeasured class (new since the last refresh) costs its spec count times the provider's measured seconds
+    per spec, so it still lands somewhere sensible until the next refresh measures it.
+    """
+    weights = {}
+    for names in classes.values():
+        measured = [name for name in names if name in timings]
+        spec_count = sum(facts[name] for name in measured)
+        rate = sum(timings[name] for name in measured) / spec_count if spec_count else 1
+        for name in names:
+            weights[name] = timings[name] if name in timings else facts[name] * rate
+    return weights
+
+
+def measured_timings(classes, trx_files):
+    """Sum test durations per spec class from TRX results, keeping only classes the collections own."""
+    owned = {name for names in classes.values() for name in names}
+    seconds = {}
+    for trx in trx_files:
+        for result in ElementTree.parse(trx).getroot().iter(f"{TRX}UnitTestResult"):
+            test = result.get("testName", "").split("(", 1)[0]
+            name = test.rsplit(".", 1)[0] + "."
+            if name not in owned:
+                continue
+            hours, minutes, rest = result.get("duration", "0:0:0").split(":")
+            seconds[name] = seconds.get(name, 0) + int(hours) * 3600 + int(minutes) * 60 + float(rest)
+    return {name: round(max(value, 0.1), 1) for name, value in sorted(seconds.items())}
+
+
 def shard_names():
     """Every shard identifier the workflow matrix must list, in order."""
     return [shard for provider in COLLECTIONS
@@ -80,6 +132,15 @@ def test_filter(classes, weights, shard):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("shard", choices=shard_names())
+    parser.add_argument("shard", nargs="?", choices=shard_names())
+    parser.add_argument("--refresh-timings", nargs="+", metavar="TRX",
+                        help="rewrite sql-spec-timings.json from the TRX results of the SQL spec shards")
     args = parser.parse_args()
-    print(test_filter(*provider_classes(SPEC_ROOT), args.shard))
+    classes, facts = provider_classes(SPEC_ROOT)
+    if args.refresh_timings:
+        timings = measured_timings(classes, args.refresh_timings)
+        TIMINGS.write_text(json.dumps({"seconds": timings}, indent=2) + "\n", encoding="utf-8")
+    elif args.shard:
+        print(test_filter(classes, timed_weights(classes, facts, load_timings()), args.shard))
+    else:
+        parser.error("a shard or --refresh-timings is required")

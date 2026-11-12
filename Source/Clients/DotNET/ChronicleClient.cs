@@ -46,7 +46,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
     const string MachineNameMetadataKey = "machineName";
     const string ProcessMetadataKey = "process";
 
-    readonly object _deploymentCheckLock = new();
+    readonly Lock _deploymentCheckLock = new();
     readonly ConcurrentDictionary<EventStoreName, Lazy<Task>> _deploymentChecks = new();
 
     readonly IChronicleConnection _connection;

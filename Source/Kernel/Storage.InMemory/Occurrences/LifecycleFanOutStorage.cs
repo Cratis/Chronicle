@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Storage.InMemory.Occurrences;
 /// </summary>
 public class LifecycleFanOutStorage : ILifecycleFanOutStorage
 {
-    readonly object _sync = new();
+    readonly Lock _sync = new();
     readonly Dictionary<OccurrenceId, LifecycleFanOutIntent> _intents = [];
 
     /// <inheritdoc/>
