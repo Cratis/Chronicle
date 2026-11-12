@@ -9,8 +9,14 @@ namespace Cratis.Chronicle.Reactors;
 
 internal static partial class ReactorsLogMessages
 {
-    [LoggerMessage(LogLevel.Debug, "Registering Reactor '{Id}'")]
+    [LoggerMessage(LogLevel.Information, "Registering Reactor '{Id}'")]
     internal static partial void RegisteringReactor(this ILogger<Reactors> logger, ReactorId id);
+
+    [LoggerMessage(LogLevel.Information, "Subscribed to observation stream for Reactor '{Id}'")]
+    internal static partial void ReactorObservationSubscribed(this ILogger<Reactors> logger, ReactorId id);
+
+    [LoggerMessage(LogLevel.Information, "Reactor '{Id}' disconnected after connection loss")]
+    internal static partial void ReactorDisconnected(this ILogger<Reactors> logger, ReactorId id);
 
     [LoggerMessage(LogLevel.Trace, "Discover all Reactors")]
     internal static partial void DiscoverAllReactors(this ILogger<Reactors> logger);
