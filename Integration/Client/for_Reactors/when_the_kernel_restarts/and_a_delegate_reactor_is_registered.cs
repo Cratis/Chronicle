@@ -67,46 +67,36 @@ public class and_a_delegate_reactor_is_registered : Cratis.Specifications.Specif
         state.IsSubscribed.ShouldBeTrue();
     }
 
-    static async Task AppendUntilAccepted(IEventStore store, string value)
-    {
-        var deadline = DateTime.UtcNow.AddSeconds(90);
-        while (true)
+    static Task AppendUntilAccepted(IEventStore store, string value) =>
+        RetryWaits.Until(async () =>
         {
             try
             {
                 var result = await store.EventLog.Append(Guid.NewGuid().ToString("N"), new KernelRestartHappened(value));
-                if (result.IsSuccess)
-                {
-                    return;
-                }
+                return result.IsSuccess;
             }
-            catch (Exception) when (DateTime.UtcNow < deadline)
+            catch (Exception)
             {
                 // The client is still reconnecting to the restarted kernel.
+                return false;
             }
-
-            if (DateTime.UtcNow >= deadline)
-            {
-                throw new TimeoutException($"Appending '{value}' was not accepted within 90 seconds of the kernel restart.");
-            }
-
-            await Task.Delay(TimeSpan.FromSeconds(1));
-        }
-    }
+        });
 
     static async Task<Job> WaitForJobToFinish(IEventStore store, JobId jobId)
     {
-        var deadline = DateTime.UtcNow.AddSeconds(30);
-        while (DateTime.UtcNow < deadline)
+        Job? finished = null;
+        await RetryWaits.Until(async () =>
         {
             var job = await store.Jobs.GetJob(jobId);
             if (job?.Status is JobStatus.CompletedSuccessfully or JobStatus.CompletedWithFailures or JobStatus.Failed)
             {
-                return job;
+                finished = job;
+                return true;
             }
-            await Task.Delay(100);
-        }
-        throw new TimeoutException($"Interrupted catch-up job {jobId} did not finish");
+
+            return false;
+        });
+        return finished!;
     }
 
     static async Task<string> NextContaining(Channel<string> received, string value, TimeSpan timeout)

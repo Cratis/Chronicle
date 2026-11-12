@@ -122,7 +122,7 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         self.assertIn("Source/**", paths)
         self.assertIn("Directory.Packages.props", paths)
         self.assertNotIn("**", paths)
-        self.assertEqual("0 2 * * *", self.build["on"]["schedule"][0]["cron"])
+        self.assertEqual("23 2 * * *", self.build["on"]["schedule"][0]["cron"])
         self.assertIn("workflow_dispatch", self.build["on"])
         self.assertIn("workflow_dispatch", self.hot_core["on"])
 
