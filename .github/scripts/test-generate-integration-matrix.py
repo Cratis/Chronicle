@@ -18,6 +18,7 @@ import argparse
 import importlib.util
 import json
 import os
+from statistics import median
 import subprocess
 import sys
 import unittest
@@ -368,6 +369,55 @@ class for_a_namespace_selection(unittest.TestCase):
         completed = self._failing("--namespaces", "for_Reducers,for_Typo")
         self.assertNotEqual(0, completed.returncode)
         self.assertIn("for_Typo", completed.stderr)
+
+
+class for_sharded_namespaces(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.namespaces = {}
+        for namespace, count in matrix.SHARD_COUNTS.items():
+            groups = matrix._group_by_ancestor(
+                matrix._test_class_counts(os.path.join(matrix.CLIENT_ROOT, namespace)))
+            shards = matrix._shards_for(namespace)
+            terms = [test_filter.split("|") for _, test_filter in shards]
+            cls.namespaces[namespace] = (count, groups, shards, terms)
+
+    def test_event_sequence_has_four_shards(self):
+        self.assertEqual(4, matrix.SHARD_COUNTS["for_EventSequence"])
+
+    def test_labels_cover_every_configured_shard(self):
+        for namespace, (count, _, shards, _) in self.namespaces.items():
+            with self.subTest(namespace=namespace):
+                self.assertEqual([f"{index}of{count}" for index in range(1, count + 1)],
+                                 [label for label, _ in shards])
+
+    def test_shards_cover_every_group_exactly_once(self):
+        for namespace, (_, groups, _, terms) in self.namespaces.items():
+            with self.subTest(namespace=namespace):
+                expected = {f"FullyQualifiedName~{name}." for name in groups}
+                self.assertEqual(expected, set().union(*terms))
+                self.assertEqual(len(expected), sum(len(shard) for shard in terms))
+
+    def test_no_filter_owns_a_subtree_in_another_shard(self):
+        for namespace, (_, _, _, terms) in self.namespaces.items():
+            ownership = [(term, index) for index, shard in enumerate(terms) for term in shard]
+            with self.subTest(namespace=namespace):
+                self.assertFalse(any(other.startswith(term) for term, owner in ownership
+                                     for other, sibling in ownership if owner != sibling))
+
+    def test_fact_counts_are_conserved_and_balanced(self):
+        for namespace, (_, groups, _, terms) in self.namespaces.items():
+            counts = {f"FullyQualifiedName~{name}.": facts for name, facts in groups.items()}
+            loads = [sum(counts[term] for term in shard) for shard in terms]
+            with self.subTest(namespace=namespace, loads=loads):
+                total_facts = sum(matrix._test_class_counts(os.path.join(matrix.CLIENT_ROOT, namespace)).values())
+                self.assertEqual(total_facts, sum(loads))
+                self.assertLessEqual(max(loads), 1.5 * median(loads))
+
+    def test_event_sequence_keeps_the_old_two_shard_filter_union(self):
+        _, groups, _, terms = self.namespaces["for_EventSequence"]
+        old_terms = {f"FullyQualifiedName~{name}." for bucket in matrix._pack(groups, 2) for name in bucket}
+        self.assertEqual(old_terms, set().union(*terms))
 
 
 if __name__ == "__main__":
