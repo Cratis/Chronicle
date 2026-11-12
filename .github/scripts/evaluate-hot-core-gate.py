@@ -61,8 +61,13 @@ def detect_build(arguments):
 def has_green_evidence(runs, head_sha):
     """Only the requested gate in a pull-request run for this exact commit is evidence."""
     return any(run["head_sha"] == head_sha and run["event"] == "pull_request"
-               and any(job["name"] == EVIDENCE_JOB and job["conclusion"] == "success"
+               and any(is_evidence_job(job["name"]) and job["conclusion"] == "success"
                        for job in run.get("jobs", [])) for run in runs)
+
+
+def is_evidence_job(name):
+    """The standalone workflow's job, or the same job called from a gate run (shown as '<caller> / <job>')."""
+    return name == EVIDENCE_JOB or name.endswith(f" / {EVIDENCE_JOB}")
 
 
 def integration_status(latest, head_sha, repo):
@@ -180,8 +185,13 @@ def recorded(path):
 def evidence_runs(repo, head_sha, runs_json):
     if runs_json:
         return recorded(runs_json)
-    return [with_jobs(repo, run) for run in workflow_runs(repo, EVIDENCE_WORKFLOW, head_sha)
-            if run["conclusion"] == "success"]
+    standalone = [with_jobs(repo, run) for run in workflow_runs(repo, EVIDENCE_WORKFLOW, head_sha)
+                  if run["conclusion"] == "success"]
+    # A gate run can be red (for example, specs pending) while its called requested job passed: load every
+    # finished one and let the nested job's own conclusion decide. Runs without that job never count.
+    same_run = [with_jobs(repo, run) for run in workflow_runs(repo, GATE_WORKFLOW, head_sha)
+                if run.get("status") == "completed" and run.get("conclusion") in ("success", "failure")]
+    return standalone + same_run
 
 
 def latest_requested(repo, head_sha, runs_json):
@@ -194,6 +204,20 @@ def still_requested(repo, head_sha):
     pr = api(f"repos/{repo}/pulls/{os.environ['PR_NUMBER']}")
     return (pr["head"]["sha"] == head_sha
             and any(label["name"] == "run-integration" for label in pr.get("labels", [])))
+
+
+def same_run_evidence(state):
+    """The called Requested Integration's proof from this run, or None unless every part of it is present."""
+    proven = os.environ.get("REQUESTED_PROVEN", "")
+    run_id = os.environ.get("GITHUB_RUN_ID", "")
+    if os.environ.get("REQUESTED") != "success" or proven not in ("true", "skip") or not run_id:
+        return None
+    touched = state["touched"] == "true" or os.environ.get("REQUESTED_TOUCHED") == "true"
+    # A reused result (skip) was proven by the earlier run; a fresh one must have used every provider when touched.
+    if proven == "true" and touched and os.environ.get("REQUESTED_ALL_PROVIDERS") != "true":
+        return None
+    server = os.environ.get("GITHUB_SERVER_URL", "https://github.com")
+    return f"{server}/{state['repo']}/actions/runs/{run_id}"
 
 
 def gate(arguments):
@@ -213,8 +237,13 @@ def gate(arguments):
 def load_integration_evidence(state, runs_json):
     if state["detect"] != "success" or state["dispatch"] or state["fork"]:
         return
-    if state["touched"] != "true" and state["run_integration"]:
+    same_run = same_run_evidence(state)
+    if same_run or (state["touched"] != "true" and state["run_integration"]):
+        # The payload labels can be stale, so the current PR decides whether this proof is requested.
         state["run_integration"] = still_requested(state["repo"], state["head_sha"])
+    if same_run and state["run_integration"]:
+        state["evidence"] = same_run
+        return
     if state["touched"] != "true" and not state["run_integration"]:
         return
     runs = evidence_runs(state["repo"], state["head_sha"], runs_json)
@@ -290,15 +319,12 @@ def refresh(arguments):
             return True, "Nothing to do: no green specs evidence for this head commit."
     elif not has_green_evidence(evidence_runs(repo, head_sha, arguments.runs_json), head_sha):
         return True, "Nothing to do: no green requested-integration evidence for this head commit."
-    for attempt in range(21):
-        runs = gate_runs(repo, head_sha, arguments.gate_runs_json)
-        latest = latest_run(runs, head_sha)
-        if not latest or latest["status"] == "completed":
-            break
-        if arguments.gate_runs_json or attempt == 20:
-            return False, "::error::The latest hot-core gate is still running; refresh did not complete."
-        time.sleep(30)
-    # Re-read after polling: a new push owns the check now if the head moved while waiting.
+    runs = gate_runs(repo, head_sha, arguments.gate_runs_json)
+    latest = latest_run(runs, head_sha)
+    if latest and latest["status"] != "completed":
+        # A gate run waits for its called integration jobs (tens of minutes); it reports itself when it finishes.
+        return True, "Nothing to do: the latest hot-core gate is still running and will report for itself."
+    # Re-read: a new push owns the check now if the head moved meanwhile.
     pr = current_pr(repo, head_sha, arguments.pr_json)
     target = rerun_target(runs, head_sha, pr["head"]["sha"] if pr else "")
     if target is None:
