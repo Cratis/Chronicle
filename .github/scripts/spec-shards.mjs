@@ -114,12 +114,12 @@ function producerContexts(producers, context) {
         return { shard: producer.shard, ...context, runAttempt: producer.runAttempt };
     });
 }
+const hasOneEntryPerShard = list => Array.isArray(list) && list.length === ORDINARY_SHARDS;
+const validPlanShard = shard => [validShard(shard?.shard), Boolean(shard?.projects?.length)].every(Boolean);
 function validatePlan(plan) {
-    if (!Array.isArray(plan) || plan.length !== ORDINARY_SHARDS) fail('Invalid shard plan count');
+    if (!hasOneEntryPerShard(plan)) fail('Invalid shard plan count');
     if (new Set(plan.map(s => s?.shard)).size !== ORDINARY_SHARDS) fail('Duplicate plan shard');
-    for (const shard of plan) {
-        if (!validShard(shard?.shard) || !shard.projects?.length) fail('Invalid/empty plan shard');
-    }
+    if (!plan.every(validPlanShard)) fail('Invalid/empty plan shard');
     unique(plan.flatMap(s => s.projects), 'Shard plan');
 }
 export function verifyReceipts(receipts, plan, context = receiptContext(), producers) {
