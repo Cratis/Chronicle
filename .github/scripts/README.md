@@ -1,5 +1,39 @@
 # CI Scripts
 
+## Requested-integration reuse and rerun report
+
+`select-integration.py` retains the `skip|selected|full` contract. Reuse is limited to
+same-repository `pull_request` runs of the same PR with an ancestor head, an identical
+recorded tested-base SHA, identical configuration, and a delta containing only the
+existing `integration-selection.json` `ignore` paths. Unknown paths refuse reuse.
+Diffs disable rename detection so moving exercised source into docs cannot hide its deletion.
+
+Hot Core Gate records PR number, head SHA, and tested base in its run-name. The Actions
+API's `pull_requests[].base.sha` can change after a run and is not trusted. Legacy titles
+without the immutable record cannot be reused. The source must be successful, with a
+successful requested gate and at least one successful actual matrix lane; skipped or
+reused matrices cannot chain, and failed/cancelled inner jobs refuse reuse.
+
+The fingerprint hashes committed Git mode/blob/path records for all of `.github/`,
+`global.json`, `Directory.Packages.props`, `Chronicle.slnx`, `specs.runsettings`, root and
+nested `.editorconfig`/`.globalconfig` files, `Directory.Build.*`, `*.props`, `*.targets`,
+case-insensitive NuGet config names, package manifests, and npm/Yarn/pnpm lockfiles.
+Over-inclusion is intentional. Missing Git/API evidence falls back to normal selection,
+never supplies reuse evidence. Reused skips name the source run, head, and fingerprint;
+a wholly ignorable PR instead says no earlier run is needed.
+
+Run the read-only 14-day report with `node .github/scripts/classify-reruns.mjs`.
+Options: `--days 14`, `--repo Cratis/Chronicle`, `--json` (JSON instead of Markdown).
+It examines every rerun attempt of Requested Integration, Hot Core Gate, and
+.NET Build & Integration for runs **created** in the window, including paginated lists.
+A Hot Core Gate attempt triggered by `github-actions[bot]` is `gate-refresh`.
+Failure then success on the same head is a **probable flake**, not proof of a flaky test.
+Human reruns after success/cancellation/skip, or still failing, are `deliberate`.
+Missing attempt data is `unclassified`; unreadable run lists fail the report rather
+than pretending there were no reruns. These actor/conclusion rules are heuristics:
+older runs rerun recently are outside the creation window, and no logs are diagnosed.
+The report performs only GET requests through `gh api`, with no GitHub writes.
+
 ## Core spec partitioning
 
 The four ordinary `specs-other` jobs still cover all 25 ordinary projects.
