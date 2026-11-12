@@ -7,7 +7,7 @@ import { readFile } from 'node:fs/promises';
 import { CORE_PROJECT, CORE_PARTS, loadPartition, partitionUnits } from './core-spec-partition.mjs';
 import { ORDINARY_SHARDS, planShards } from './spec-shards.mjs';
 import { balanceJobs, balancePrefixes, slowest } from './spec-shard-balancing.mjs';
-import { wallRecords, measuredCore, candidatePlans, shardOverhead } from './refresh-spec-shard-timings.mjs';
+import { wallRecords, measuredCore, candidatePlans, shardOverhead, main } from './refresh-spec-shard-timings.mjs';
 
 const units = ['A.', 'B.', 'C.', 'D.'].map(prefix => ({ prefix, weight: 0.25 }));
 const records = [80, 120, 103, 102].map((seconds, index) => ({ project: `${CORE_PROJECT}#core-part-${index + 1}-of-4`, seconds }));
@@ -77,4 +77,14 @@ test('shard overhead is separate from per-project intervals and requires success
     assert.equal(shardOverhead(jobs, logs), 3);
     assert.throws(() => shardOverhead([], logs), /Missing/);
     assert.throws(() => shardOverhead(jobs, [log([{ project: 'A', seconds: 20 }])]), /overhead/);
+});
+
+test('the refresh accepts one log per ordinary shard and rejects too few or too many', async () => {
+    const meta = ['1', 'previous.json', 'jobs.json'];
+    const logs = count => Array.from({ length: count }, (_, index) => `shard-${index + 1}.log`);
+    await assert.rejects(main([...meta, ...logs(1)]), /Usage/);
+    await assert.rejects(main([...meta, ...logs(ORDINARY_SHARDS + 1)]), /Usage/);
+    // A valid count passes the usage check and fails only when it reads the (missing) files.
+    await assert.rejects(main([...meta, ...logs(ORDINARY_SHARDS)]), error => !/Usage/.test(error.message));
+    await assert.rejects(main([...meta, ...logs(3)]), error => !/Usage/.test(error.message));
 });

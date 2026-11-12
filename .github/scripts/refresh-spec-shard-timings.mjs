@@ -71,7 +71,8 @@ export function shardOverhead(jobs, logs) {
     return round(residuals.reduce((sum, seconds) => sum + seconds, 0) / residuals.length);
 }
 export async function main(args = process.argv.slice(2), root = process.cwd()) {
-    if (args.length !== 6) fail('Usage: refresh-spec-shard-timings.mjs <run> <previous-partition.json> <jobs.json> <shard-1.log> <shard-2.log> <shard-3.log>');
+    // One log per ordinary shard of the measured run; older runs had fewer shards than ORDINARY_SHARDS.
+    if (args.length < 5 || args.length > 3 + ORDINARY_SHARDS) fail(`Usage: refresh-spec-shard-timings.mjs <run> <previous-partition.json> <jobs.json> <shard-1.log> ... <shard-n.log> (2 to ${ORDINARY_SHARDS} shard logs)`);
     const [run, previous, jobsFile, ...files] = args;
     const logs = await Promise.all(files.map(file => readFile(file, 'utf8')));
     const records = wallRecords(logs);
@@ -89,7 +90,7 @@ export async function main(args = process.argv.slice(2), root = process.cwd()) {
     const { jobs } = JSON.parse(await readFile(jobsFile, 'utf8'));
     const timings = {
         version: 1, units: 'seconds', date: new Date(jobs[0].steps[0].startedAt).toISOString().slice(0, 10),
-        method: `Train 8 run ${run}: explicit Spec project completed seconds including validation from all three ordinary shards. Core namespace weights are calibrated within each old part by (wall seconds - 55) / predicted weight, then normalized. Core variable time is conserved; each new part pays 55 seconds fixed overhead. Shard overhead is the mean coverage-step duration minus logged project wall times. Predictions are hypotheses, not observed savings.`,
+        method: `Train 8 run ${run}: explicit Spec project completed seconds including validation from all ${files.length} ordinary shards. Core namespace weights are calibrated within each old part by (wall seconds - 55) / predicted weight, then normalized. Core variable time is conserved; each new part pays 55 seconds fixed overhead. Shard overhead is the mean coverage-step duration minus logged project wall times. Predictions are hypotheses, not observed savings.`,
         samples: files.map((_, index) => ({ run, shard: index + 1 })), defaultSeconds: 60,
         shardOverheadSeconds: shardOverhead(jobs, logs), core: calibrated.model,
         measurements: measurements.sort((a, b) => a.project < b.project ? -1 : a.project > b.project ? 1 : 0)
