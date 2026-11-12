@@ -620,7 +620,7 @@ jobs:
     if: needs.already-ran.outputs.skip != 'true'
     needs: [already-ran]
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     permissions:
       contents: read
     steps:
