@@ -130,7 +130,7 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         # synchronize and reopened reach this workflow through hot-core-gate.yml's same-run call instead.
         self.assertEqual(["labeled"], self.requested["on"]["pull_request"]["types"])
         self.assertNotIn("paths", self.requested["on"]["pull_request"])
-        self.assertEqual("${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}-"
+        self.assertEqual("requested-integration-${{ github.event.pull_request.number || github.ref }}-"
                          + "${{ " + EFFECTIVE_LABEL + " }}", self.requested["concurrency"]["group"])
         self.assertEqual("true", self.requested["concurrency"]["cancel-in-progress"])
 
@@ -379,6 +379,38 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         self.assertEqual(len(groups), len(set(groups)), groups)
         # Pushes still supersede the whole chain.
         self.assertEqual("true", self.hot_core["concurrency"]["cancel-in-progress"])
+
+    def test_every_entry_point_to_requested_integration_shares_one_cancellation_key(self):
+        group = self.requested["concurrency"]["group"]
+        # The key must not depend on the caller's github.workflow, or the label entry and the gate-run call differ.
+        self.assertNotIn("github.workflow", group)
+
+        def resolve(workflow_name, action, label_on_pr):
+            bindings = {"github.event.action": action, "github.event.label.name": "run-integration",
+                        "contains(github.event.pull_request.labels.*.name, 'run-integration')": label_on_pr}
+            effective = evaluate_string_label(bindings)
+            return (group.replace("${{ " + EFFECTIVE_LABEL + " }}", effective)
+                    .replace("${{ github.event.pull_request.number || github.ref }}", "7"))
+
+        def evaluate_string_label(bindings):
+            return "run-integration" if bindings["github.event.action"] == "labeled" or \
+                bindings["contains(github.event.pull_request.labels.*.name, 'run-integration')"] else "none"
+        # label on H1 (standalone, workflow "Requested Integration"), then push H2 (called from "Hot Core Gate"):
+        label_entry = resolve("Requested Integration", "labeled", True)
+        push_entry = resolve("Hot Core Gate", "synchronize", True)
+        self.assertEqual(label_entry, push_entry)
+        # push H2, then relabel: the standalone labeled run supersedes the called one with the same key.
+        self.assertEqual(push_entry, resolve("Requested Integration", "labeled", True))
+        self.assertEqual("true", self.requested["concurrency"]["cancel-in-progress"])
+        # An unrelated label carries no run-integration and never shares the key.
+        self.assertNotEqual(push_entry, resolve("Hot Core Gate", "synchronize", False))
+        # It stays distinct from the gate caller's key and from dotnet-build's inherited key in both entry points.
+        for caller in ("Requested Integration", "Hot Core Gate"):
+            others = {self.hot_core["concurrency"]["group"].replace("${{ github.workflow }}", caller)
+                      .replace("${{ github.event.pull_request.number || github.ref }}", "7"),
+                      self.build["concurrency"]["group"].replace("${{ github.workflow }}", caller)
+                      .replace("${{ github.ref }}", "refs/pull/7/merge")}
+            self.assertNotIn(push_entry, others)
 
     def test_hot_core_gate_reports_on_every_pull_request(self):
         trigger = self.hot_core["on"]["pull_request"]

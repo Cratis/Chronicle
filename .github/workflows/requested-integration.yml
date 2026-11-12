@@ -14,9 +14,11 @@ name: Requested Integration
 run-name: "Requested Integration${{ format(' - PR #{0} @ {1}', github.event.pull_request.number, github.event.pull_request.head.sha) }}"
 
 concurrency:
-  # A called .NET workflow uses the caller's github.workflow/ref; this extra PR/label
-  # suffix keeps its concurrency group distinct from the caller's while it runs.
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}-${{ (github.event.action == 'labeled' && github.event.label.name || contains(github.event.pull_request.labels.*.name, 'run-integration') && 'run-integration' || 'none') }}
+  # One key for both entry points (label event here, push via hot-core-gate.yml's call), so a push or a
+  # relabel cancels stale requested integration whichever entry started it. A literal prefix, not
+  # github.workflow (which is the caller's name when called). It differs from the gate caller's key and from
+  # dotnet-build.yml's inherited "<workflow>-<ref>", so nothing cancels its own caller.
+  group: requested-integration-${{ github.event.pull_request.number || github.ref }}-${{ (github.event.action == 'labeled' && github.event.label.name || contains(github.event.pull_request.labels.*.name, 'run-integration') && 'run-integration' || 'none') }}
   cancel-in-progress: true
 
 on:
