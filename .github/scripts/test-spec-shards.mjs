@@ -9,7 +9,7 @@ import { v3Projects, shippingProjects, ordinaryProjects, validateSourceProjects 
 import { coreSpecFixture, expandedProjects } from './core-spec-fixture.mjs';
 import './core-spec-partition.contracts.mjs';
 import './core-spec-type-coverage.contracts.mjs';
-import { ORDINARY_SHARDS, planShards, parseShardArgs, validateTimings, sourcePlan, verifyReceipts, verifyResults, receiptFor } from './spec-shards.mjs';
+import { ORDINARY_SHARDS, ordinaryShardIds, planShards, parseShardArgs, validateTimings, sourcePlan, verifyReceipts, verifyResults, receiptFor } from './spec-shards.mjs';
 
 const ordinary = ordinaryProjects(v3Projects.map(project => ({ project }))).map(x => x.project);
 const weights = { version: 1, defaultSeconds: 60, measurements: [], core: { fixedSeconds: 55, variableSeconds: 60 } };
@@ -37,14 +37,16 @@ test('LPT is deterministic, ordinal on ties, nonempty and exactly once, with pos
     assert.equal(plan.length, ORDINARY_SHARDS);
     assert.equal(plan[1].projects[0], [...ordinary].sort()[1]);
     assert.equal(plan[2].projects[0], [...ordinary].sort()[2]);
-    assert.deepEqual(planShards(ordinary.slice(0, 6), weights).map(s => s.projects),
-        [0, 1, 2].map(index => [ordinary.slice(0, 6).sort()[index], ordinary.slice(0, 6).sort()[index + 3]]));
+    assert.equal(plan[3].projects[0], [...ordinary].sort()[3]);
+    const six = ordinary.slice(0, 6).sort();
+    assert.deepEqual(planShards(six, weights).map(s => s.projects),
+        [[six[0], six[4]], [six[1], six[5]], [six[2]], [six[3]]]);
     assert.ok(plan.every(s => s.seconds === s.projects.length * 60));
     assert.deepEqual(plan.flatMap(s => s.defaulted).sort(), [...ordinary].sort());
     const future = 'Source/Future.Specs/Future.Specs.csproj';
     assert.equal(planShards([...ordinary, future], weights).flatMap(s => s.projects).filter(p => p === future).length, 1);
     assert.throws(() => planShards([...ordinary, ordinary[0]], weights), /duplicate/i);
-    for (const count of [0, 1, 2]) assert.throws(() => planShards(ordinary.slice(0, count), weights), /3 nonempty/i);
+    for (const count of [0, 1, 2, 3]) assert.throws(() => planShards(ordinary.slice(0, count), weights), new RegExp(`${ORDINARY_SHARDS} nonempty`, 'i'));
 });
 
 test('timings reject bad schema, duplicate, stale, nonpositive and nonfinite weights', () => {
@@ -61,11 +63,12 @@ test('timings reject bad schema, duplicate, stale, nonpositive and nonfinite wei
     }
 });
 
-test('only strict paired three-shard arguments are admitted; no arguments stays compatible', () => {
+test('only strict paired ordinary-shard-count arguments are admitted; no arguments stays compatible', () => {
     assert.equal(parseShardArgs([]), null);
-    for (const shard of [1, 2, 3]) assert.equal(parseShardArgs(['--shard', String(shard), '--shards', '3']), shard);
-    assert.equal(parseShardArgs(['--shards', '3', '--shard', '3']), 3);
-    for (const args of [['--shard', '1'], ['--shards', '3'], ['--shard', '0', '--shards', '3'], ['--shard', '4', '--shards', '3'], ['--shard', '1.0', '--shards', '3'], ['--shard', '1', '--shards', '2'], ['--shard', '1', '--shard', '2'], ['--other', '1', '--shards', '3'], ['--shard', '01', '--shards', '3']]) {
+    const total = String(ORDINARY_SHARDS);
+    for (const shard of ordinaryShardIds()) assert.equal(parseShardArgs(['--shard', String(shard), '--shards', total]), shard);
+    assert.equal(parseShardArgs(['--shards', total, '--shard', total]), ORDINARY_SHARDS);
+    for (const args of [['--shard', '1'], ['--shards', total], ['--shard', '0', '--shards', total], ['--shard', String(ORDINARY_SHARDS + 1), '--shards', total], ['--shard', '1.0', '--shards', total], ['--shard', '1', '--shards', String(ORDINARY_SHARDS - 1)], ['--shard', '1', '--shard', '2'], ['--other', '1', '--shards', total], ['--shard', '01', '--shards', total]]) {
         assert.throws(() => parseShardArgs(args), /shard|Usage/);
     }
 });
@@ -141,23 +144,24 @@ test('SQL-only failed-jobs retry retains all three successful attempt-1 ordinary
     const receipts = plan.map(s => receiptFor(s, s.projects, context));
     const retry = { ...context, runAttempt: '2' };
     // SQL failed in attempt 1; only SQL and the aggregate rerun in attempt 2.
-    const producers = [1, 2, 3].map(shard => ({ shard, runAttempt: '1' }));
+    const producers = ordinaryShardIds().map(shard => ({ shard, runAttempt: '1' }));
     assert.doesNotThrow(() => verifyReceipts(receipts, plan, retry, producers));
 });
 
 test('mixed producer attempts keep exact receipt freshness and complete unique execution', () => {
     const plan = planShards(ordinary, weights);
     const retry = { ...context, runAttempt: '3' };
-    const producers = [{ shard: 1, runAttempt: '1' }, { shard: 2, runAttempt: '2' }, { shard: 3, runAttempt: '3' }];
+    const producers = ordinaryShardIds().map(shard => ({ shard, runAttempt: String(Math.min(shard, 3)) }));
+    const last = producers.length - 1;
     const receipts = plan.map(s => receiptFor(s, s.projects, { ...context, runAttempt: producers[s.shard - 1].runAttempt }));
     assert.doesNotThrow(() => verifyReceipts(receipts, plan, retry, producers));
     for (const field of ['runAttempt', 'runId', 'sha']) {
         const bad = structuredClone(receipts);
-        bad[2].context[field] = 'stale';
+        bad[last].context[field] = 'stale';
         assert.throws(() => verifyReceipts(bad, plan, retry, producers), /context/);
     }
-    for (const bad of [[], producers.slice(0, 2), [...producers, producers[2]], [producers[0], producers[1], producers[1]],
-        [{ shard: 1, runAttempt: '4' }, producers[1], producers[2]], [producers[0], producers[1], { shard: 4, runAttempt: '1' }]]) {
+    for (const bad of [[], producers.slice(0, last), [...producers, producers[last]], [...producers.slice(0, last), producers[last - 1]],
+        [{ shard: 1, runAttempt: '4' }, ...producers.slice(1)], [...producers.slice(0, last), { shard: ORDINARY_SHARDS + 1, runAttempt: '1' }]]) {
         assert.throws(() => verifyReceipts(receipts, plan, retry, bad), /producer/i);
     }
     const incomplete = structuredClone(receipts);
@@ -180,7 +184,7 @@ test('result-directory verifier rejects absent, extra and malformed receipt file
     const thirdReceipt = path.join(results, 'coverage-results-specs-other-3', 'shard-receipt.json');
     const thirdContent = await readFile(thirdReceipt, 'utf8');
     await unlink(thirdReceipt);
-    await assert.rejects(verifyResults(results, plan, context), /exactly 3/);
+    await assert.rejects(verifyResults(results, plan, context), new RegExp(`exactly ${ORDINARY_SHARDS}`));
     await writeFile(thirdReceipt, thirdContent);
     const retry = { ...context, runAttempt: '2' };
     const evidence = { context: retry, producers: plan.map(s => ({ shard: s.shard, runAttempt: '1', artifactName: `coverage-results-specs-other-${s.shard}` })) };

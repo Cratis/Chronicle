@@ -2,7 +2,7 @@
 
 ## Core spec partitioning
 
-The three ordinary `specs-other` jobs still cover all 25 ordinary projects.
+The four ordinary `specs-other` jobs still cover all 25 ordinary projects.
 `Core.Specs.csproj` is planned as two units named
 `Core.Specs.csproj#core-part-K-of-2`; no workflow, artifact, or required-check name changes.
 Other projects retain their existing invocation. An unsharded invocation still runs Core once.
@@ -29,10 +29,11 @@ predicted slowest shard among counts of two or more. These are model predictions
 observed savings: train 8 actually took 263 / 388 / 320 seconds; train 7 took 393 / 254 / 224.
 
 For a wall-time refresh, preserve the partition used by the measured run, obtain its jobs
-JSON and all three ordinary job logs, then run (logs in shard order):
+JSON and every ordinary job log from that run (four since #5859; older runs have three), then
+run (logs in shard order):
 
 ```bash
-node .github/scripts/refresh-spec-shard-timings.mjs 43190307308 previous-partition.json jobs.json shard-1.log shard-2.log shard-3.log
+node .github/scripts/refresh-spec-shard-timings.mjs <run-id> previous-partition.json jobs.json shard-1.log shard-2.log shard-3.log shard-4.log
 ```
 
 The refresh rejects incomplete/duplicate measurements, compares part counts with explicit

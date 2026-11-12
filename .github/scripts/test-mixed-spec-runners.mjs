@@ -11,7 +11,7 @@ import { v3Projects, shippingProjects, shippingRunners, ordinaryFilter, childCom
 import { collectorArgs, verifyExit, verifyDeadline, main as verifyCollector } from './verify-mixed-specs-collector.mjs';
 import './spec-project-contracts.mjs';
 import { benchmarkProject, inventory, ordinaryProjects, validateSolutionProjects } from './mixed-specs-selection.mjs';
-import { sourcePlan } from './spec-shards.mjs';
+import { ORDINARY_SHARDS, sourcePlan } from './spec-shards.mjs';
 import { coreSpecFixture } from './core-spec-fixture.mjs';
 import { coreUnitId } from './core-spec-partition.mjs';
 import { selectProducerArtifacts, loadProducerEvidence } from './run-mixed-specs.mjs';
@@ -228,7 +228,7 @@ test('MOCK stale results are rejected before launch', async () => {
 });
 
 const retryContext = { sha: 'merge-sha', runId: '123', runAttempt: '2' };
-function producerFixture(attempts = [1, 1, 1]) {
+function producerFixture(attempts = Array(ORDINARY_SHARDS).fill(1)) {
     const jobs = attempts.flatMap((attempt, index) => Array.from({ length: attempt }, (_, i) => ({
         id: (index + 1) * 10 + i, name: `specs-other (${index + 1})`, run_id: 123, run_attempt: i + 1,
         head_sha: 'head-sha', status: 'completed', conclusion: 'success',
@@ -241,18 +241,18 @@ function producerFixture(attempts = [1, 1, 1]) {
     return [[{ jobs, total_count: jobs.length }], [{ artifacts, total_count: artifacts.length }]];
 }
 test('API evidence selects retained and mixed successful producer attempts, not aggregate attempt', () => {
-    for (const attempts of [[1, 1, 1], [1, 2, 1], [2, 1, 2], [2, 2, 2]]) {
+    for (const attempts of [[1, 1, 1, 1], [1, 2, 1, 2], [2, 1, 2, 1], [2, 2, 2, 2]]) {
         const pages = producerFixture(attempts);
         for (const job of pages[0][0].jobs) {
             if (job.run_attempt < attempts[Number(job.name.match(/\d/)[0]) - 1]) job.conclusion = 'failure';
         }
         const evidence = selectProducerArtifacts(...pages, retryContext);
         assert.deepEqual(evidence.producers.map(p => p.runAttempt), attempts.map(String));
-        assert.deepEqual(evidence.producers.map(p => p.artifactId), [100, 101, 102]);
+        assert.deepEqual(evidence.producers.map(p => p.artifactId), [100, 101, 102, 103]);
     }
 });
 test('API evidence accepts reusable workflow caller names, including retained and mixed attempts', () => {
-    for (const attempts of [[1, 1, 1], [1, 2, 2]]) {
+    for (const attempts of [[1, 1, 1, 1], [1, 2, 2, 1]]) {
         const [jobs, artifacts] = producerFixture(attempts);
         for (const job of jobs[0].jobs) job.name = `requested-integration-5501 / ${job.name}`;
         assert.deepEqual(selectProducerArtifacts(jobs, artifacts, retryContext).producers.map(p => p.runAttempt), attempts.map(String));
@@ -260,7 +260,7 @@ test('API evidence accepts reusable workflow caller names, including retained an
 });
 test('API evidence rejects ambiguous caller prefixes, including direct/reusable and disjoint attempts', () => {
     for (const prefix of ['', 'other-caller / ']) {
-        const [jobs, artifacts] = producerFixture([1, 2, 1]);
+        const [jobs, artifacts] = producerFixture([1, 2, 1, 1]);
         const duplicate = { ...jobs[0].jobs[0], id: 999, name: `${prefix}specs-other (1)`, run_attempt: 2 };
         for (const job of jobs[0].jobs) job.name = `requested-integration-5501 / ${job.name}`;
         jobs[0].jobs.push(duplicate);
@@ -275,7 +275,7 @@ test('API evidence does not match unrelated job-name suffixes', () => {
 });
 test('API evidence rejects unsuccessful latest jobs and stale, wrong-run/SHA, incomplete or duplicate provenance', () => {
     const reject = mutate => {
-        const [jobs, artifacts] = producerFixture([1, 2, 2]);
+        const [jobs, artifacts] = producerFixture([1, 2, 2, 1]);
         mutate(jobs[0], artifacts[0]);
         assert.throws(() => selectProducerArtifacts(jobs, artifacts, retryContext), /producer/i);
     };
@@ -283,8 +283,8 @@ test('API evidence rejects unsuccessful latest jobs and stale, wrong-run/SHA, in
     reject(j => { j.jobs[2].status = 'in_progress'; });
     for (const conclusion of ['failure', 'cancelled', 'skipped', null]) reject(j => { j.jobs[4].conclusion = conclusion; });
     reject((j, a) => { a.artifacts[2].created_at = '2026-11-01T00:01:15Z'; });
-    reject(j => { j.jobs = j.jobs.filter(job => job.name !== 'specs-other (3)'); j.total_count = j.jobs.length; });
-    reject((j, a) => { a.artifacts.push({ ...a.artifacts[2], name: 'coverage-results-specs-other-4' }); a.total_count++; });
+    reject(j => { j.jobs = j.jobs.filter(job => job.name !== 'specs-other (4)'); j.total_count = j.jobs.length; });
+    reject((j, a) => { a.artifacts.push({ ...a.artifacts[2], name: `coverage-results-specs-other-${ORDINARY_SHARDS + 1}` }); a.total_count++; });
     reject(j => { j.jobs[2].run_attempt = 3; });
     reject(j => { j.jobs[0].run_id = 999; });
     reject((j, a) => { a.artifacts[0].workflow_run.id = 999; });
@@ -300,7 +300,7 @@ test('API evidence rejects unsuccessful latest jobs and stale, wrong-run/SHA, in
     reject((j, a) => { a.artifacts.push({ ...a.artifacts[0], id: 999 }); a.total_count++; });
 });
 test('producer API acquisition paginates all attempts and propagates unavailable/malformed evidence', async () => {
-    const pages = producerFixture([1, 2, 1]);
+    const pages = producerFixture([1, 2, 1, 1]);
     const jobs = pages[0][0].jobs;
     pages[0] = [{ jobs: jobs.slice(0, 1), total_count: jobs.length }, { jobs: jobs.slice(1), total_count: jobs.length }];
     let calls = 0;
@@ -353,7 +353,7 @@ async function ordinaryDispatch(mode) {
         return { code: 0 };
     };
     const shardId = mode.startsWith('shard-') ? Number(mode.slice(-1)) : 1;
-    const args = mode === 'whole' ? [] : ['--shard', String(shardId), '--shards', '3'];
+    const args = mode === 'whole' ? [] : ['--shard', String(shardId), '--shards', String(ORDINARY_SHARDS)];
     const receiptPath = path.join(root, 'coverage-results', 'shard-receipt.json');
     if (mode === 'failed-shard') {
         await mkdir(path.dirname(receiptPath), { recursive: true });
@@ -388,7 +388,7 @@ async function ordinaryDispatch(mode) {
         assert.deepEqual(receipt.projects, shard.projects);
     }
 }
-for (const mode of ['whole', 'shard-1', 'shard-2', 'shard-3', 'failed-shard']) {
+for (const mode of ['whole', 'shard-1', 'shard-2', 'shard-3', 'shard-4', 'failed-shard']) {
     test(`MOCK ${mode} dispatch validates all 36 before children and preserves coverage guards`, () => ordinaryDispatch(mode));
 }
 
