@@ -4,8 +4,7 @@
        Mongo, and no kernel image is built, so they can be run and compared across commits in a few minutes. -->
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <!-- Honor the repository's opt-in net10/net11 multi-target mode for cross-runtime jobs. -->
-    <TargetFramework Condition="'$(IsPackaging)' != 'true'">$(ChronicleTfm)</TargetFramework>
+    <TargetFramework>net11.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
@@ -23,7 +22,6 @@
       <Aliases>Client</Aliases>
     </ProjectReference>
     <ProjectReference Include="../../Source/Kernel/Core/Core.csproj" />
-    <ProjectReference Include="../../Source/Kernel/Storage.MongoDB/Storage.MongoDB.csproj" />
     <ProjectReference Include="../../Source/Kernel/Concepts/Concepts.csproj" />
     <ProjectReference Include="../../Source/Kernel/Contracts/Contracts.csproj" />
   </ItemGroup>
