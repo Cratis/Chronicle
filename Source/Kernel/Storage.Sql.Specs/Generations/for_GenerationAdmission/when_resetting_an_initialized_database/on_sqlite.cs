@@ -6,6 +6,7 @@ using Cratis.Chronicle.Concepts.Projections.Generations.Enablement;
 
 namespace Cratis.Chronicle.Storage.Sql.Generations.for_GenerationAdmission.when_resetting_an_initialized_database;
 
+[PerFactSpecificationLifecycle] // Facts run their own asynchronous operations, so each fact gets its own context.
 public class on_sqlite : given.a_sqlite_provider
 {
     Exception _error;

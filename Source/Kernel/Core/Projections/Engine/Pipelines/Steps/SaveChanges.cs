@@ -67,9 +67,7 @@ public class SaveChanges : ICanPerformProjectionPipelineStep
             return context;
         }
 
-        var hasPendingFutureSaves = context.PendingFutureSaves.Any();
-
-        if (!context.Changeset.HasChanges && !hasPendingFutureSaves)
+        if (!context.Changeset.HasChanges && !context.HasPendingFutureSaves)
         {
             _logger.NotSaving(context.Event.Context.SequenceNumber);
             return context;
@@ -93,10 +91,12 @@ public class SaveChanges : ICanPerformProjectionPipelineStep
             // being pushed in the same update (see the comment in ResolveFutures), and the
             // per-call write also keeps SQL correct because the separate call reads the just-
             // written document state via the same key.
-            var pendingSavesToFold = context.PendingFutureSaves
-                .Where(p => Equals(p.Key.Value, context.Key.Value)
-                    && p.Changeset.Changes.All(c => c is PropertiesChanged<ExpandoObject>))
-                .ToArray();
+            var pendingSavesToFold = context.HasPendingFutureSaves
+                ? context.PendingFutureSaves
+                    .Where(p => Equals(p.Key.Value, context.Key.Value)
+                        && p.Changeset.Changes.All(c => c is PropertiesChanged<ExpandoObject>))
+                    .ToArray()
+                : [];
             foreach (var pendingSave in pendingSavesToFold)
             {
                 foreach (var change in pendingSave.Changeset.Changes)
@@ -152,6 +152,8 @@ public class SaveChanges : ICanPerformProjectionPipelineStep
 
     async Task ApplyPendingFutureSaves(ProjectionEventContext context)
     {
+        if (!context.HasPendingFutureSaves) return;
+
         var foldedSet = context.Changeset.HasChanges
             ? new HashSet<PendingFutureSave>(context.PendingFutureSaves
                 .Where(p => Equals(p.Key.Value, context.Key.Value)

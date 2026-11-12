@@ -3,6 +3,7 @@
 
 namespace Cratis.Chronicle.Storage.Sql.Cluster.for_ReminderTable.when_removing_a_legacy_row;
 
+[PerFactSpecificationLifecycle] // Facts run their own asynchronous operations, so each fact gets its own context.
 public class with_a_wrong_etag : given.a_reminder_table
 {
     GrainId _grainId;

@@ -5,6 +5,7 @@ using Cratis.Chronicle.Storage.Sql.Sinks;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.Encryption.for_EncryptionKeyStorage.when_provisioning_identifiers_that_differ_only_by_case_or_trailing_space;
 
+[PerFactSpecificationLifecycle] // Facts run their own asynchronous operations, so each fact gets its own context.
 [Collection(SqlServerCollection.Name)]
 public class on_sql_server(SqlServerFixture fixture) : conformance(new("sql_server", fixture.CreateDatabase, fixture.DropDatabase))
 {

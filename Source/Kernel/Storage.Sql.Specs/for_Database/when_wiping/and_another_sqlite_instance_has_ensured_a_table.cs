@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cratis.Chronicle.Storage.Sql.for_Database.when_wiping;
 
+[PerFactSpecificationLifecycle] // Facts run their own asynchronous operations, so each fact gets its own context.
 public class and_another_sqlite_instance_has_ensured_a_table : given.a_sqlite_database
 {
     Database _other;

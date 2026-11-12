@@ -9,6 +9,7 @@ namespace Cratis.Chronicle.Storage.Sql.Sinks.for_Sink.when_applying_changes_in_o
 /// An existing-row CAS clears row tracking before any join save; the pending receipt still reaches the fallback save.
 /// </summary>
 /// <typeparam name="THarness">The database.</typeparam>
+[PerFactSpecificationLifecycle] // Facts run their own asynchronous operations, so each fact gets its own context.
 public abstract class and_a_guarded_cycle_has_no_join_candidates<THarness> : given.a_cycle_with_failure_injection<THarness>
     where THarness : ISqlSinkHarness
 {

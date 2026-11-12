@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints.for_UniqueConstraintsStorage;
 
+[PerFactSpecificationLifecycle] // Facts run their own asynchronous operations, so each fact gets its own context.
 public class when_removing_unhashed_values : Specification
 {
     const string SourceTable = "log_unique_constraint";
