@@ -465,16 +465,16 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         self.assertEqual(evaluator.EVIDENCE_JOB, name.replace("${{ " + EFFECTIVE_LABEL + " }}", "run-integration"))
         self.assertEqual("hot-core-gate", evaluator.GATE_JOB)
 
-    def test_pull_request_integration_waits_for_passing_specs(self):
+    def test_requested_integration_starts_after_builds_beside_specs(self):
         jobs = self.build["jobs"]
         for job_id in ("integration", "integration-api", "mongodb", "neo4j"):
             with self.subTest(job=job_id):
                 job = jobs[job_id]
-                self.assertIn("specs", job["needs"])
+                self.assertNotIn("specs", job["needs"])
+                self.assertNotIn("needs.specs", job["if"])
                 self.assertIn("!cancelled()", job["if"])
                 self.assertIn("needs.dotnet-build.result == 'success'", job["if"])
-                self.assertIn("(github.event_name != 'pull_request' || (inputs.integration_requested && needs.specs.result == 'success'))",
-                              job["if"])
+                self.assertIn("(github.event_name != 'pull_request' || inputs.integration_requested)", job["if"])
         self.assertIn("needs.dotnet-build-development.result == 'success'", jobs["integration"]["if"])
         self.assertIn("github.actor != 'dependabot[bot]'", jobs["integration"]["if"])
 
@@ -700,10 +700,10 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         self.assertEqual("needs.already-ran.outputs.skip != 'true' && "
                          "(github.event_name == 'pull_request' && inputs.integration_requested)",
                          requested["if"])
-        # The compatibility gates run beside the builds, not in front of them; the `specs` aggregate, which the
-        # integration job waits for, is what requires them to be green.
+        # The compatibility gates run beside the builds, not in front of them; the `specs` aggregate
+        # still requires them to be green even though integration starts independently.
         self.assertEqual([], prerequisites_of(parallel))
-        # The requested PR build runs in parallel with the specs; the integration job keeps the specs gate.
+        # The requested PR build and its integration consumers run in parallel with the specs.
         self.assertEqual([], prerequisites_of(requested))
         self.assertEqual(["wire-compatibility", "grain-compatibility", "package-verification", "package-pack-check", "analyzers", "spec-runner-checks", "specs-other", "specs-sql", "specs-net10"],
                          prerequisites_of(jobs["specs"]))
@@ -751,7 +751,7 @@ class SparseIntegrationWorkflows(unittest.TestCase):
             results = {"wire-compatibility": wire, "grain-compatibility": grain, "specs": specs}
             context = ConditionContext(event, requested, results)
             with self.subTest(event=event, requested=requested, specs=specs, wire=wire, grain=grain):
-                # The builds do not wait for the compatibility gates; `specs` requires them before integration runs.
+                # The builds do not wait for the compatibility gates; `specs` still requires them.
                 self.assertEqual(event != "pull_request",
                                  condition_allows(jobs["dotnet-build-development"], context))
                 self.assertEqual(event == "pull_request" and requested,
@@ -759,7 +759,7 @@ class SparseIntegrationWorkflows(unittest.TestCase):
 
     def test_integration_requires_selected_output_but_allows_skipped_sibling(self):
         job = self.build["jobs"]["integration"]
-        self.assertEqual({"dotnet-build", "specs", "dotnet-build-development",
+        self.assertEqual({"dotnet-build", "dotnet-build-development",
                           "dotnet-build-development-requested"}, set(prerequisites_of(job)))
         states = ("success", "failure", "cancelled", "skipped")
         for event, requested, specs, development, release, cancelled in product(
@@ -770,7 +770,7 @@ class SparseIntegrationWorkflows(unittest.TestCase):
                        "dotnet-build-development": "skipped" if is_pr else development,
                        "dotnet-build-development-requested": development if is_pr else "skipped"}
             expected = (not cancelled and release == "success" and development == "success"
-                        and (not is_pr or (requested and specs == "success")))
+                        and (not is_pr or requested))
             with self.subTest(event=event, requested=requested, results=results, cancelled=cancelled):
                 context = ConditionContext(event, requested, results, cancelled)
                 self.assertEqual(expected, condition_allows(job, context))
@@ -1101,6 +1101,50 @@ sys.exit(1 if 'Failed' in outcomes.values() else 0)
                     self.assertEqual(0 if executed else 1, result.returncode, result.stderr)
                     if not executed:
                         self.assertIn("TRX executed no tests", result.stderr)
+
+
+class for_parallel_requested_integration(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.jobs = workflow("dotnet-build.yml")["jobs"]
+
+    def test_no_lane_waits_for_specs_even_indirectly(self):
+        for lane in ("integration", "integration-api", "mongodb", "neo4j"):
+            with self.subTest(lane=lane):
+                job = self.jobs[lane]
+                self.assertNotIn("specs", dependency_ancestors(self.jobs, lane))
+                self.assertIn("dotnet-build", prerequisites_of(job))
+                self.assertNotIn("needs.specs", job["if"])
+
+    def test_small_lanes_require_a_successful_build_and_a_requested_pr(self):
+        states = ("success", "failure", "cancelled", "skipped")
+        for lane, event, requested, build, cancelled, skip in product(
+                ("integration-api", "mongodb", "neo4j"),
+                ("pull_request", "schedule", "workflow_dispatch"),
+                (False, True), states, (False, True), ("false", "true")):
+            job = self.jobs[lane]
+            results = dict.fromkeys(prerequisites_of(job), "success")
+            results.update({"dotnet-build": build, "specs": "failure"})
+            context = ConditionContext(event, requested, results, cancelled, gate_skip=skip)
+            expected = (skip != "true" and not cancelled and build == "success"
+                        and (event != "pull_request" or requested))
+            with self.subTest(lane=lane, context=context):
+                self.assertEqual(expected, condition_allows(job, context))
+
+    def test_green_lanes_cannot_cache_coverage_when_specs_are_red(self):
+        coverage = self.jobs["coverage-merge-and-cache"]
+        results = dict.fromkeys(prerequisites_of(coverage), "success")
+        results["specs"] = "failure"
+        self.assertFalse(condition_allows(coverage, ConditionContext("pull_request", True, results)))
+
+    def test_requested_verdict_rejects_a_failed_reusable_call_even_with_green_lanes(self):
+        # A red specs aggregate fails the reusable call; the verdict checks that call, not just its lanes.
+        verdict = workflow("requested-integration.yml")["jobs"]["hot-core-gate-requested"]
+        decide = next(step for step in verdict["steps"] if step.get("name") == "Decide")
+        self.assertEqual("${{ needs.requested-integration.result }}", decide["env"]["INTEGRATION"])
+        self.assertIn('if [ "$INTEGRATION" != "success" ]; then\n'
+                      '  echo "::error::Requested integration did not pass ($INTEGRATION)."\n'
+                      '  exit 1', decide["run"])
 
 
 if __name__ == "__main__":
