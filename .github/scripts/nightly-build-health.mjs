@@ -87,7 +87,7 @@ function nextPage(link) {
     return url;
 }
 
-async function paginate(transport, endpoint, field) {
+export async function paginate(transport, endpoint, field) {
     let current = new URL(`https://api.github.com${endpoint}`);
     let total;
     const records = [];
@@ -113,7 +113,7 @@ function runNotificationScope(repo, event) {
 
 function notificationScope(repo, eventName, event) {
     if (eventName === 'workflow_run') return runNotificationScope(repo, event);
-    return ['schedule', 'workflow_dispatch'].includes(eventName);
+    return ['schedule', 'workflow_dispatch', 'push'].includes(eventName);
 }
 
 async function incidentSummary({ transport, root, scope }, latest, state, reporter) {

@@ -12,6 +12,14 @@ on:
       - .github/scripts/nightly-build-health-policy.mjs
       - .github/scripts/nightly-build-health.mjs
       - .github/scripts/test-nightly-build-health.mjs
+      - .github/quarantine.json
+      - .github/scripts/last-green-watchdog.mjs
+      - .github/scripts/test-last-green-watchdog.mjs
+      - .github/scripts/failed-spec-record.mjs
+      - .github/scripts/test-failed-spec-record.mjs
+      - .github/scripts/quarantine.mjs
+      - .github/scripts/test-quarantine.mjs
+      - .github/scripts/run-tests-with-retry.sh
 
 permissions:
   contents: read
@@ -36,4 +44,6 @@ jobs:
         with:
           persist-credentials: false
       - name: Test scheduled nightly health policy
-        run: node --test .github/scripts/test-nightly-build-health.mjs
+        run: node --test .github/scripts/test-nightly-build-health.mjs .github/scripts/test-last-green-watchdog.mjs .github/scripts/test-failed-spec-record.mjs .github/scripts/test-quarantine.mjs
+      - name: Reject expired quarantine entries
+        run: node .github/scripts/quarantine.mjs lint
