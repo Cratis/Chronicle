@@ -136,7 +136,7 @@ test('failed, cancelled and skipped package verification or analyzers cannot tur
     for (const result of ['success', 'failure', 'cancelled', 'skipped', '']) {
         const child = spawnSync('bash', ['-c', command], { env: {
             WIRE_RESULT: 'success', GRAIN_RESULT: 'success', OTHER_RESULT: 'success',
-            SQL_RESULT: 'success', NET10_RESULT: 'success', PACKAGE_RESULT: result, ANALYZER_RESULT: 'success', PACK_RESULT: 'success', EVENT_NAME: 'pull_request'
+            SQL_RESULT: 'success', NET10_RESULT: 'success', PACKAGE_RESULT: result, ANALYZER_RESULT: 'success', RUNNER_RESULT: 'success', PACK_RESULT: 'success', EVENT_NAME: 'pull_request'
         } });
         assert.equal(child.status, result === 'success' ? 0 : 1, `Package result: ${result}`);
     }
@@ -146,7 +146,7 @@ test('failed, cancelled and skipped package verification or analyzers cannot tur
     for (const result of ['success', 'failure', 'cancelled', 'skipped', '']) {
         const child = spawnSync('bash', ['-c', command], { env: {
             WIRE_RESULT: 'success', GRAIN_RESULT: 'success', OTHER_RESULT: 'success',
-            SQL_RESULT: 'success', NET10_RESULT: 'success', PACKAGE_RESULT: 'success', ANALYZER_RESULT: result, PACK_RESULT: 'success', EVENT_NAME: 'pull_request'
+            SQL_RESULT: 'success', NET10_RESULT: 'success', PACKAGE_RESULT: 'success', ANALYZER_RESULT: result, RUNNER_RESULT: 'success', PACK_RESULT: 'success', EVENT_NAME: 'pull_request'
         } });
         assert.equal(child.status, result === 'success' ? 0 : 1, `Analyzer result: ${result}`);
     }
@@ -174,7 +174,7 @@ test('pack result fails closed, permitting skipped only outside pull requests', 
         for (const result of ['success', 'failure', 'cancelled', 'skipped', '']) {
             const child = spawnSync('bash', ['-c', command], { env: {
                 WIRE_RESULT: 'success', GRAIN_RESULT: 'success', OTHER_RESULT: 'success', SQL_RESULT: 'success',
-                NET10_RESULT: 'success', PACKAGE_RESULT: 'success', ANALYZER_RESULT: 'success', PACK_RESULT: result, EVENT_NAME: event
+                NET10_RESULT: 'success', PACKAGE_RESULT: 'success', ANALYZER_RESULT: 'success', RUNNER_RESULT: 'success', PACK_RESULT: result, EVENT_NAME: event
             } });
             const accepted = result === 'success' || (event !== 'pull_request' && result === 'skipped');
             assert.equal(child.status, accepted ? 0 : 1, `${event}: ${result}`);
