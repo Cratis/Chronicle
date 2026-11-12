@@ -39,7 +39,7 @@ on:
   workflow_dispatch:
   # Nightly full-coverage run; ordinary pull-request events run only the build and specs.
   schedule:
-    - cron: "0 2 * * *"
+    - cron: "23 2 * * *"
   pull_request:
     types: [opened, synchronize, reopened]
     branches:

@@ -105,7 +105,7 @@ public partial class HandleEventsForObserver(
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
-        if (State.IsPrepared)
+        if (State.IsPrepared && State.ObserverKey != ObserverKey.NotSet)
         {
             _observer = GrainFactory.GetGrain<IObserver>(State.ObserverKey);
             _subscription = await _observer.GetSubscription();
@@ -208,7 +208,86 @@ public partial class HandleEventsForObserver(
     }
 
     /// <inheritdoc/>
-    protected override async Task<Catch<JobStepResult>> PerformStep(HandleEventsForObserverState currentState, CancellationToken cancellationToken)
+    protected override Task<Catch<JobStepResult>> PerformStep(HandleEventsForObserverState currentState, CancellationToken cancellationToken)
+    {
+        // Legacy truncated state cannot be re-prepared here. Let the normal terminal path notify the owning job.
+        if (currentState.ObserverKey == ObserverKey.NotSet)
+        {
+            logger.MissingObserverKey(currentState.Id.JobId, currentState.Id.JobStepId);
+            return Task.FromResult<Catch<JobStepResult>>(JobStepResult.Failed("The prepared job step state was missing its observer key"));
+        }
+
+        return PerformPreparedStep(currentState, cancellationToken);
+    }
+
+    static AppendedEvent[] SetObservationStateIfSpecified(EventObservationState eventObservationState, BoundedEventCursor events)
+    {
+        if (eventObservationState != EventObservationState.None)
+        {
+            return events.Current.Select(@event =>
+                @event with
+                {
+                    Context = @event.Context with
+                    {
+                        ObservationState = eventObservationState
+                    }
+                }).ToArray();
+        }
+
+        return events.Current.ToArray();
+    }
+
+    static AppendedEvent[] FilterRedactedEventsForUnsubscribedTypes(AppendedEvent[] events, HashSet<EventTypeId> nonRedactionEventTypeIds)
+    {
+        if (nonRedactionEventTypeIds.Count == 0)
+        {
+            return events;
+        }
+
+        var filtered = new AppendedEvent[events.Length];
+        var count = 0;
+        foreach (var @event in events)
+        {
+            if (@event.Context.EventType.Id != GlobalEventTypes.Redaction)
+            {
+                filtered[count++] = @event;
+                continue;
+            }
+
+            if (@event.Content is not IDictionary<string, object?> contentDict || !contentDict.TryGetValue("originalEventType", out var originalEventTypeObj))
+            {
+                continue;
+            }
+
+            var originalEventTypeId = originalEventTypeObj?.ToString();
+            if (originalEventTypeId is not null && nonRedactionEventTypeIds.Contains(new EventTypeId(originalEventTypeId)))
+            {
+                filtered[count++] = @event;
+            }
+        }
+
+        return count == filtered.Length ? filtered : filtered[..count];
+    }
+
+    static IEnumerable<AppendedEvent[]> GetConsecutivePartitionBatches(AppendedEvent[] events)
+    {
+        var index = 0;
+        while (index < events.Length)
+        {
+            var partition = events[index].Context.EventSourceId;
+            var start = index;
+            while (index < events.Length && events[index].Context.EventSourceId == partition)
+            {
+                index++;
+            }
+
+            yield return events[start..index];
+        }
+    }
+
+    static HandleEventsForPartitionResult CreateResult(EventSequenceNumber lastSuccessfullyHandled) => new(lastSuccessfullyHandled);
+
+    async Task<Catch<JobStepResult>> PerformPreparedStep(HandleEventsForObserverState currentState, CancellationToken cancellationToken)
     {
         var lastSuccessfullyHandledEventSequenceNumber = EventSequenceNumber.Unavailable;
         DeliversPages = currentState.EventObservationState == EventObservationState.Replay;
@@ -514,73 +593,6 @@ public partial class HandleEventsForObserver(
             return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(CreateResult(_lastDurableCheckpoint), e));
         }
     }
-
-    static AppendedEvent[] SetObservationStateIfSpecified(EventObservationState eventObservationState, BoundedEventCursor events)
-    {
-        if (eventObservationState != EventObservationState.None)
-        {
-            return events.Current.Select(@event =>
-                @event with
-                {
-                    Context = @event.Context with
-                    {
-                        ObservationState = eventObservationState
-                    }
-                }).ToArray();
-        }
-
-        return events.Current.ToArray();
-    }
-
-    static AppendedEvent[] FilterRedactedEventsForUnsubscribedTypes(AppendedEvent[] events, HashSet<EventTypeId> nonRedactionEventTypeIds)
-    {
-        if (nonRedactionEventTypeIds.Count == 0)
-        {
-            return events;
-        }
-
-        var filtered = new AppendedEvent[events.Length];
-        var count = 0;
-        foreach (var @event in events)
-        {
-            if (@event.Context.EventType.Id != GlobalEventTypes.Redaction)
-            {
-                filtered[count++] = @event;
-                continue;
-            }
-
-            if (@event.Content is not IDictionary<string, object?> contentDict || !contentDict.TryGetValue("originalEventType", out var originalEventTypeObj))
-            {
-                continue;
-            }
-
-            var originalEventTypeId = originalEventTypeObj?.ToString();
-            if (originalEventTypeId is not null && nonRedactionEventTypeIds.Contains(new EventTypeId(originalEventTypeId)))
-            {
-                filtered[count++] = @event;
-            }
-        }
-
-        return count == filtered.Length ? filtered : filtered[..count];
-    }
-
-    static IEnumerable<AppendedEvent[]> GetConsecutivePartitionBatches(AppendedEvent[] events)
-    {
-        var index = 0;
-        while (index < events.Length)
-        {
-            var partition = events[index].Context.EventSourceId;
-            var start = index;
-            while (index < events.Length && events[index].Context.EventSourceId == partition)
-            {
-                index++;
-            }
-
-            yield return events[start..index];
-        }
-    }
-
-    static HandleEventsForPartitionResult CreateResult(EventSequenceNumber lastSuccessfullyHandled) => new(lastSuccessfullyHandled);
 
     /// <summary>
     /// Records the handled position. Must run on the activation.

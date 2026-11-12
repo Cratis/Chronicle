@@ -9,6 +9,8 @@ on:
   schedule:
     - cron: '29 6 * * *'
   workflow_dispatch:
+  push:
+    branches: [main]
 
 permissions: {}
 
@@ -21,10 +23,11 @@ concurrency:
 jobs:
   report:
     if: >-
-      github.event_name != 'workflow_run' ||
-      (github.event.workflow_run.event == 'schedule' &&
-       github.event.workflow_run.head_repository.full_name == github.repository &&
-       github.event.workflow_run.head_branch == github.event.repository.default_branch)
+      github.repository == 'Cratis/Chronicle' &&
+      (github.event_name != 'workflow_run' ||
+       ((github.event.workflow_run.event == 'schedule' || github.event.workflow_run.event == 'workflow_dispatch') &&
+        github.event.workflow_run.head_repository.full_name == github.repository &&
+        github.event.workflow_run.head_branch == github.event.repository.default_branch))
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -42,11 +45,18 @@ jobs:
         run: node .github/scripts/nightly-build-health.mjs
         env:
           GITHUB_TOKEN: ${{ github.token }}
+      - name: Last-green watchdog
+        if: always()
+        run: node .github/scripts/last-green-watchdog.mjs
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
       - name: Retain allowlisted metadata only
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: nightly-health-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/nightly-health-summary.json
+          path: |
+            ${{ runner.temp }}/nightly-health-summary.json
+            ${{ runner.temp }}/last-green-watchdog-summary.json
           retention-days: 30
           if-no-files-found: error
