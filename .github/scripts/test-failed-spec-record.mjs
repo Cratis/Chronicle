@@ -17,7 +17,7 @@ async function tree(t) {
     for (const [file, xml] of [
         ['coverage-results-Projections/attempt-1/results.trx', '<UnitTestResult testName="First&lt;bad&gt;" outcome="Failed"/><UnitTestResult outcome="Passed" testName="Passed"/>'],
         ['coverage-results-Projections/attempt-2/results.trx', '<UnitTestResult outcome="Failed" testName="Last"/>'],
-        ['coverage-results-Sql/coverage-results/sql.trx', '<UnitTestResult testName="Sql.Spec" outcome="Failed"/>']
+        ['sql-clustering-SqlServer-results/coverage-results/sql.trx', '<UnitTestResult testName="Sql.Spec" outcome="Failed"/>']
     ]) {
         await mkdir(path.dirname(path.join(root, file)), { recursive: true });
         await writeFile(path.join(root, file), xml);
@@ -31,7 +31,8 @@ test('first failure, last attempt, SQL and missing TRX are retained by lane', as
     const body = render(lanes, { repo: 'example/chronicle', runId: 12, attempt: 1 });
     assert.match(body, /failed on attempt 1:.*Firstbad/s);
     assert.match(body, /still failing after the last attempt:.*Last/s);
-    assert.match(body, /Sql.Spec/);
+    assert.match(body, /### artifact sql-clustering-SqlServer-results\n\nfailed on attempt 1:\n- Sql\.Spec/);
+    assert.match(body, /still failing after the last attempt:\n- Sql\.Spec/);
     assert.match(body, /no TRX found for coverage-results-Crashed/);
     assert.doesNotMatch(body, /Passed/);
 });

@@ -34,10 +34,15 @@ async function scan(directory, lane) {
     }
 }
 
+function isResultArtifact(name) {
+    if (name.startsWith('coverage-results-')) return true;
+    return /^sql-clustering-.+-results$/.test(name);
+}
+
 export async function collect(root) {
     const lanes = [];
     for (const file of await readdir(root, { withFileTypes: true })) {
-        if (!file.isDirectory() || !file.name.startsWith('coverage-results-')) continue;
+        if (!file.isDirectory() || !isResultArtifact(file.name)) continue;
         const lane = { name: file.name, attempts: new Map(), files: 0, quarantined: [] };
         await scan(path.join(root, file.name), lane);
         lanes.push(lane);
@@ -65,11 +70,11 @@ function laneSection(lane, full) {
 export function render(lanes, { repo, runId, attempt }, { full = false } = {}) {
     const url = `https://github.com/${repo}/actions/runs/${Number(runId)}`;
     let body = `<!-- failed-specs:run-${Number(runId)}-attempt-${Number(attempt)} -->\n## Failed specs: [run ${Number(runId)}, attempt ${Number(attempt)}](${url})\n\nFull TRX and coverage artifacts: ${url}#artifacts\n\n`;
-    if (!lanes.length) body += 'no TRX found (no coverage-results-* artifacts downloaded)\n';
+    if (!lanes.length) body += 'no TRX found (no coverage-results-* or sql-clustering-*-results artifacts downloaded)\n';
     for (let i = 0; i < lanes.length; i++) {
         const section = `${laneSection(lanes[i], full)}\n\n`;
         if (!full && body.length + section.length > 60000) {
-            body += `+${lanes.length - i} more lanes; see coverage-results-* artifacts at ${url}#artifacts\n`;
+            body += `+${lanes.length - i} more lanes; see coverage-results-* and sql-clustering-*-results artifacts at ${url}#artifacts\n`;
             break;
         }
         body += section;
