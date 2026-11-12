@@ -4,6 +4,7 @@
 """Require integration evidence for a head commit, or refresh its failed ordinary gate."""
 
 import argparse
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -17,6 +18,44 @@ EVIDENCE_WORKFLOW = "requested-integration.yml"
 EVIDENCE_JOB = "hot-core-gate-requested-run-integration"
 GATE_WORKFLOW = "hot-core-gate.yml"
 GATE_JOB = "hot-core-gate"
+BUILD_WORKFLOW = "dotnet-build.yml"
+
+
+def build_triggered(paths, root):
+    """Reuse the build contract's reader and GitHub glob semantics, including exclusions."""
+    spec = importlib.util.spec_from_file_location(
+        "build_affecting_paths", Path(__file__).with_name("assert-build-affecting-paths.py"))
+    helper = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(helper)
+    patterns, ignored = helper.read_trigger_paths(root, f".github/workflows/{BUILD_WORKFLOW}")
+    rules = [(pattern.startswith("!"), helper.to_regex(pattern[1:] if pattern.startswith("!") else pattern))
+             for pattern in patterns]
+    exclusions = [helper.to_regex(pattern) for pattern in ignored]
+    for path in paths:
+        included = not patterns
+        for negative, expression in rules:
+            if expression.match(path):
+                included = not negative
+        if included and not any(expression.match(path) for expression in exclusions):
+            return True
+    return False
+
+
+def detect_build(arguments):
+    """Match the PR's merge-base diff; a failed diff or unreadable filter never emits success."""
+    triggered = False
+    if arguments.base:
+        # No rename pairing, so both the old and the new path are matched, as GitHub's filter does;
+        # NUL-separated so non-ASCII paths are never quoted.
+        result = subprocess.run(["git", "diff", "--no-renames", "--name-only", "-z",
+                                 f"{arguments.base}...{arguments.head}"],
+                                capture_output=True, text=True, check=True)
+        triggered = build_triggered([path for path in result.stdout.split("\0") if path], ".")
+    message = f"build-triggered={str(triggered).lower()}"
+    if output := os.environ.get("GITHUB_OUTPUT"):
+        with open(output, "a", encoding="utf-8") as file:
+            file.write(message + "\n")
+    return True, message
 
 
 def has_green_evidence(runs, head_sha):
@@ -162,17 +201,62 @@ def gate(arguments):
     state.update(dispatch=os.environ.get("DISPATCH") == "true", fork=os.environ.get("FORK") == "true",
                  head_sha=os.environ["HEAD_SHA"], repo=os.environ["REPO"], evidence=None,
                  run_integration=os.environ.get("RUN_INTEGRATION") == "true")
-    ordinary = state["detect"] == "success" and not state["dispatch"] and not state["fork"]
-    if ordinary and state["touched"] != "true" and state["run_integration"]:
+    load_integration_evidence(state, arguments.runs_json)
+    integration_ok, integration_message = with_exclusion_summary(decide(**state))
+    if state["dispatch"] or state["detect"] != "success":
+        return integration_ok, integration_message
+    latest = latest_build(state["repo"], state["head_sha"], arguments.build_runs_json)
+    specs_ok, specs_message = specs_verdict(latest, state)
+    return integration_ok and specs_ok, integration_message + "\n" + specs_message
+
+
+def load_integration_evidence(state, runs_json):
+    if state["detect"] != "success" or state["dispatch"] or state["fork"]:
+        return
+    if state["touched"] != "true" and state["run_integration"]:
         state["run_integration"] = still_requested(state["repo"], state["head_sha"])
-    if ordinary and (state["touched"] == "true" or state["run_integration"]):
-        runs = evidence_runs(state["repo"], state["head_sha"], arguments.runs_json)
-        green = next((run for run in runs if has_green_evidence([run], state["head_sha"])), None)
-        if green:
-            state["evidence"] = green.get("html_url") or f"https://github.com/{state['repo']}/actions/runs/{green['id']}"
+    if state["touched"] != "true" and not state["run_integration"]:
+        return
+    runs = evidence_runs(state["repo"], state["head_sha"], runs_json)
+    green = next((run for run in runs if has_green_evidence([run], state["head_sha"])), None)
+    if green:
+        state["evidence"] = green.get("html_url") or f"https://github.com/{state['repo']}/actions/runs/{green['id']}"
+    else:
+        state["latest"] = latest_requested(state["repo"], state["head_sha"], runs_json)
+
+
+def latest_build(repo, head_sha, runs_json):
+    """Only the newest PR build for this exact head can supply specs evidence."""
+    runs = recorded(runs_json) if runs_json else workflow_runs(repo, BUILD_WORKFLOW, head_sha)
+    latest = latest_run(runs, head_sha)
+    if latest and latest["status"] == "completed" and not runs_json:
+        return with_jobs(repo, latest)
+    return latest
+
+
+def specs_passed(latest):
+    return bool(latest and latest["status"] == "completed" and any(
+        job["name"] == "specs" and job["conclusion"] == "success" for job in latest.get("jobs", [])))
+
+
+def specs_verdict(latest, state):
+    if os.environ.get("BUILD_TRIGGERED") != "true" and latest is None:
+        return True, ".NET Build & Integration was not triggered; specs are not required."
+    if specs_passed(latest):
+        return True, f".NET Build & Integration specs passed for {state['head_sha']}."
+    retry = ("Re-run this check after specs pass; fork PRs do not refresh automatically." if state["fork"] else
+             "This check turns green automatically when it passes.")
+    if latest is None:
+        detail = f".NET Build & Integration has not started for {state['head_sha']}."
+    else:
+        url = latest.get("html_url") or f"https://github.com/{state['repo']}/actions/runs/{latest['id']}"
+        if latest["status"] != "completed":
+            detail = f".NET Build & Integration is still running for {state['head_sha']}: {url}"
         else:
-            state["latest"] = latest_requested(state["repo"], state["head_sha"], arguments.runs_json)
-    return with_exclusion_summary(decide(**state))
+            job = next((job for job in latest.get("jobs", []) if job["name"] == "specs"), None)
+            conclusion = job["conclusion"] if job else "missing"
+            detail = f".NET Build & Integration specs conclusion: {conclusion} for {state['head_sha']}: {url}"
+    return False, f"::error title=Specs required::{detail} {retry}"
 
 
 def current_pr(repo, head_sha, pr_json):
@@ -201,7 +285,10 @@ def refresh(arguments):
     pr = current_pr(repo, head_sha, arguments.pr_json)
     if not pr or pr["head"]["sha"] != head_sha:
         return True, "Nothing to do: the pull request head has moved or no matching pull request exists."
-    if not has_green_evidence(evidence_runs(repo, head_sha, arguments.runs_json), head_sha):
+    if os.environ.get("SOURCE_WORKFLOW", "").rsplit("/", 1)[-1] == BUILD_WORKFLOW:
+        if not specs_passed(latest_build(repo, head_sha, arguments.build_runs_json)):
+            return True, "Nothing to do: no green specs evidence for this head commit."
+    elif not has_green_evidence(evidence_runs(repo, head_sha, arguments.runs_json), head_sha):
         return True, "Nothing to do: no green requested-integration evidence for this head commit."
     for attempt in range(21):
         runs = gate_runs(repo, head_sha, arguments.gate_runs_json)
@@ -227,14 +314,19 @@ def main():
     commands = parser.add_subparsers(dest="command", required=True)
     gate_parser = commands.add_parser("gate")
     gate_parser.add_argument("--runs-json", help="Recorded runs with embedded jobs (no API lookup).")
+    gate_parser.add_argument("--build-runs-json", help="Recorded .NET Build & Integration runs with jobs.")
     refresh_parser = commands.add_parser("refresh")
     refresh_parser.add_argument("--runs-json", help="Recorded requested-integration runs with jobs.")
     refresh_parser.add_argument("--gate-runs-json", help="Recorded Hot Core Gate runs with jobs.")
     refresh_parser.add_argument("--pr-json", help="Recorded current pull request, including head.sha.")
     refresh_parser.add_argument("--dry-run", action="store_true")
+    refresh_parser.add_argument("--build-runs-json", help="Recorded .NET Build & Integration runs with jobs.")
+    detect_parser = commands.add_parser("detect-build")
+    detect_parser.add_argument("--base", default="")
+    detect_parser.add_argument("--head", default="HEAD")
     arguments = parser.parse_args()
     try:
-        ok, message = gate(arguments) if arguments.command == "gate" else refresh(arguments)
+        ok, message = {"gate": gate, "refresh": refresh, "detect-build": detect_build}[arguments.command](arguments)
     except (subprocess.SubprocessError, OSError, ValueError, KeyError, TypeError) as error:
         detail = getattr(error, "stderr", None) or str(error)
         ok, message = False, f"::error::Hot-core gate API/input error; failing closed: {detail.strip()}"

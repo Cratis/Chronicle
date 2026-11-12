@@ -34,13 +34,17 @@ SKIPPED = {"id": 39837419547, "head_sha": SKIPPED_SHA, "event": "pull_request", 
            "jobs": [{"name": "hot-core-gate-requested-${{ github.event.label.name }}", "conclusion": "skipped"}]}
 FAILED_GATE = {"id": 42, "head_sha": SHA, "event": "pull_request", "status": "completed",
                "jobs": [{"name": gate.GATE_JOB, "conclusion": "failure"}]}
+BUILD_GREEN = {"id": 70, "head_sha": SHA, "event": "pull_request", "status": "completed",
+               "conclusion": "success", "html_url": "https://github.com/Cratis/Chronicle/actions/runs/70",
+               "jobs": [{"name": "specs", "conclusion": "success"}]}
 ENV = {"DETECT": "success", "TOUCHED": "true", "DISPATCH": "false", "FORK": "false",
        "REPO": "Cratis/Chronicle", "HEAD_SHA": SHA, "BUILD": "skipped", "MATRIX": "skipped",
        "RUN_INTEGRATION": "false"}
 
 
 def arguments(**overrides):
-    return argparse.Namespace(runs_json=None, gate_runs_json=None, pr_json=None, dry_run=True, **overrides)
+    return argparse.Namespace(runs_json=None, build_runs_json=None, gate_runs_json=None, pr_json=None,
+                              dry_run=True, **overrides)
 
 
 class GateDecisions(unittest.TestCase):
@@ -48,6 +52,9 @@ class GateDecisions(unittest.TestCase):
         latest = patch.object(gate, "latest_requested", return_value=None)
         self.latest = latest.start()
         self.addCleanup(latest.stop)
+        build = patch.object(gate, "latest_build", return_value=None)
+        build.start()
+        self.addCleanup(build.stop)
 
     def test_message_tells_missing_running_and_failed_integration_apart(self):
         url = "https://github.com/Cratis/Chronicle/actions/runs/7"
@@ -258,6 +265,142 @@ class GateDecisions(unittest.TestCase):
         sleep.assert_not_called()
 
 
+class BuildPathDetection(unittest.TestCase):
+    def test_repository_build_paths(self):
+        root = SCRIPT.resolve().parents[2]
+        for paths, expected in [(["Documentation/concepts/events.mdx"], False),
+                                (["Source/Kernel/Core/Events.cs"], True),
+                                ([".github/workflows/hot-core-gate.yml"], True), ([], False)]:
+            with self.subTest(paths=paths):
+                self.assertEqual(expected, gate.build_triggered(paths, root))
+
+    def test_exclusions_and_reinclusions_reuse_the_contract_globs(self):
+        work = SCRIPT.resolve().parents[2] / ".ai-work" / "required-gate"
+        work.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(dir=work) as temporary:
+            workflow = Path(temporary) / ".github/workflows/dotnet-build.yml"
+            workflow.parent.mkdir(parents=True)
+            workflow.write_text('on:\n  pull_request:\n    paths:\n      - "Source/**"\n'
+                                '      - "!Source/skip/**"\n      - "Source/skip/keep.cs"\n'
+                                '    paths-ignore:\n      - "Source/ignored/**"\n', encoding="utf-8")
+            for path, expected in [("Source/a.cs", True), ("Source/skip/a.cs", False),
+                                   ("Source/skip/keep.cs", True), ("Source/ignored/a.cs", False)]:
+                with self.subTest(path=path):
+                    self.assertEqual(expected, gate.build_triggered([path], temporary))
+
+    def test_detect_uses_three_dot_diff_and_dispatch_never_reads_git(self):
+        with patch.dict(os.environ, {}, clear=True), patch.object(gate.subprocess, "run") as run, \
+                patch.object(gate, "build_triggered", return_value=True) as match:
+            self.assertEqual((True, "build-triggered=false"), gate.detect_build(argparse.Namespace(base="")))
+            run.assert_not_called()
+            match.assert_not_called()
+            run.return_value = subprocess.CompletedProcess([], 0, stdout="Source/tést.cs\0Docs/old name.md\0")
+            self.assertEqual((True, "build-triggered=true"),
+                             gate.detect_build(argparse.Namespace(base="base", head="pr-head")))
+            run.assert_called_once_with(["git", "diff", "--no-renames", "--name-only", "-z", "base...pr-head"],
+                                        capture_output=True, text=True, check=True)
+            match.assert_called_once_with(["Source/tést.cs", "Docs/old name.md"], ".")
+
+    def test_detect_errors_fail_closed_without_emitting_an_output(self):
+        for error in (subprocess.CalledProcessError(1, "git", stderr="bad diff"), ValueError("bad filter")):
+            with self.subTest(error=error), patch.dict(os.environ, {}, clear=True), \
+                    patch.object(sys, "argv", [str(SCRIPT), "detect-build", "--base", "base"]), \
+                    patch.object(gate.subprocess, "run", side_effect=error), redirect_stdout(io.StringIO()) as output:
+                self.assertEqual(1, gate.main())
+                self.assertIn("failing closed", output.getvalue())
+                self.assertNotIn("build-triggered=", output.getvalue())
+
+
+class SpecsDecisions(unittest.TestCase):
+    def evaluate(self, runs, **overrides):
+        with patch.dict(os.environ, dict(ENV, TOUCHED="false", **overrides), clear=True), \
+                patch.object(gate, "workflow_runs", return_value=runs) as lookup, \
+                patch.object(gate, "with_jobs", side_effect=lambda repo, run: run), \
+                patch.object(gate, "evidence_runs", return_value=[]):
+            result = gate.gate(arguments())
+        lookup.assert_called_once_with("Cratis/Chronicle", gate.BUILD_WORKFLOW, SHA)
+        return result
+
+    def test_not_triggered_and_no_run_keeps_both_hot_core_outcomes(self):
+        self.assertTrue(self.evaluate([])[0])
+        with patch.dict(os.environ, ENV, clear=True), patch.object(gate, "workflow_runs", return_value=[]), \
+                patch.object(gate, "evidence_runs", return_value=[GREEN]):
+            self.assertTrue(gate.gate(arguments())[0])
+
+    def test_triggered_build_must_start(self):
+        ok, message = self.evaluate([], BUILD_TRIGGERED="true")
+        self.assertFalse(ok)
+        self.assertIn("has not started", message)
+        self.assertIn("title=Specs required", message)
+        self.assertIn(SHA, message)
+
+    def test_running_build_fails_without_loading_jobs(self):
+        with patch.object(gate, "with_jobs", side_effect=AssertionError("must not fetch")):
+            latest = dict(BUILD_GREEN, status="in_progress", conclusion=None)
+            with patch.object(gate, "workflow_runs", return_value=[latest]):
+                self.assertEqual(latest, gate.latest_build("Cratis/Chronicle", SHA, None))
+        ok, message = self.evaluate([latest])
+        self.assertFalse(ok)
+        self.assertIn("still running", message)
+        self.assertIn("turns green automatically when it passes", message)
+        self.assertIn(BUILD_GREEN["html_url"], message)
+
+    def test_completed_build_requires_exact_specs_success(self):
+        for conclusion in ("failure", "cancelled", "skipped", None, "missing"):
+            jobs = [] if conclusion == "missing" else [{"name": "specs", "conclusion": conclusion}]
+            with self.subTest(conclusion=conclusion):
+                ok, message = self.evaluate([dict(BUILD_GREEN, jobs=jobs)])
+                self.assertFalse(ok)
+                self.assertIn(f"specs conclusion: {conclusion}", message)
+                self.assertIn(BUILD_GREEN["html_url"], message)
+        self.assertFalse(self.evaluate([dict(BUILD_GREEN, jobs=[{"name": "not-specs", "conclusion": "success"}])])[0])
+        self.assertTrue(self.evaluate([BUILD_GREEN])[0])
+        self.assertTrue(self.evaluate([BUILD_GREEN], BUILD_TRIGGERED="true")[0])
+
+    def test_latest_build_wins_and_other_heads_or_events_cannot_supply_evidence(self):
+        failed = dict(BUILD_GREEN, id=71, jobs=[])
+        other_head = dict(BUILD_GREEN, id=72, head_sha="new-push")
+        dispatch = dict(BUILD_GREEN, id=73, event="workflow_dispatch")
+        with patch.object(gate, "workflow_runs", return_value=[other_head, dispatch, BUILD_GREEN, failed]), \
+                patch.object(gate, "with_jobs", return_value=failed) as load:
+            self.assertEqual(failed, gate.latest_build("Cratis/Chronicle", SHA, None))
+        load.assert_called_once_with("Cratis/Chronicle", failed)
+        self.assertFalse(self.evaluate([other_head, dispatch], BUILD_TRIGGERED="true")[0])
+
+    def test_specs_success_cannot_waive_hot_core_failure_and_both_messages_remain(self):
+        with patch.dict(os.environ, ENV, clear=True), patch.object(gate, "latest_build", return_value=BUILD_GREEN), \
+                patch.object(gate, "evidence_runs", return_value=[]), patch.object(gate, "latest_requested", return_value=None):
+            ok, message = gate.gate(arguments())
+        self.assertFalse(ok)
+        self.assertIn("Hot core needs integration", message)
+        self.assertIn("specs passed", message)
+
+    def test_forks_require_specs_but_explain_manual_rerun(self):
+        ok, message = self.evaluate([dict(BUILD_GREEN, status="in_progress")], FORK="true")
+        self.assertFalse(ok)
+        self.assertIn("Re-run this check", message)
+        self.assertIn("fork PRs do not refresh automatically", message)
+        self.assertTrue(self.evaluate([BUILD_GREEN], FORK="true")[0])
+
+    def test_dispatch_and_failed_detection_never_query_build_runs(self):
+        for overrides in ({"DISPATCH": "true", "BUILD": "success", "MATRIX": "success"}, {"DETECT": "failure"}):
+            with self.subTest(overrides=overrides), patch.dict(os.environ, dict(ENV, **overrides), clear=True), \
+                    patch.object(gate, "latest_build", side_effect=AssertionError("must not fetch")):
+                ok, _ = gate.gate(arguments())
+                self.assertEqual(overrides.get("DETECT") != "failure", ok)
+
+    def test_recorded_inputs_through_the_cli_without_api_calls(self):
+        recorded_checks()
+
+    def test_build_api_and_parse_errors_fail_closed(self):
+        for error in (subprocess.CalledProcessError(1, "gh", stderr="HTTP 403"), ValueError("invalid JSON")):
+            with self.subTest(error=error), patch.dict(os.environ, dict(ENV, TOUCHED="false"), clear=True), \
+                    patch.object(sys, "argv", [str(SCRIPT), "gate"]), \
+                    patch.object(gate, "api", side_effect=error), redirect_stdout(io.StringIO()) as output:
+                self.assertEqual(1, gate.main())
+                self.assertIn("failing closed", output.getvalue())
+
+
 class RefreshDecisions(unittest.TestCase):
     def test_rerun_target_uses_latest_completed_failed_gate_only(self):
         passed = dict(FAILED_GATE, id=43, jobs=[{"name": gate.GATE_JOB, "conclusion": "success"}])
@@ -294,6 +437,34 @@ class RefreshDecisions(unittest.TestCase):
                 if expected_calls:
                     api.assert_called_once_with("repos/Cratis/Chronicle/actions/runs/42/rerun-failed-jobs", method="POST")
 
+    def test_build_source_refresh_requires_latest_green_specs(self):
+        for latest, expected_calls in [(BUILD_GREEN, 1), (None, 0),
+                                       (dict(BUILD_GREEN, jobs=[]), 0),
+                                       (dict(BUILD_GREEN, status="in_progress"), 0)]:
+            with self.subTest(latest=latest), \
+                    patch.dict(os.environ, dict(ENV, SOURCE_WORKFLOW=".github/workflows/dotnet-build.yml"), clear=True), \
+                    patch.object(gate, "current_pr", return_value={"head": {"sha": SHA}}), \
+                    patch.object(gate, "latest_build", return_value=latest) as build, \
+                    patch.object(gate, "evidence_runs", side_effect=AssertionError("wrong workflow")), \
+                    patch.object(gate, "gate_runs", return_value=[FAILED_GATE]), patch.object(gate, "api") as api:
+                args = arguments()
+                args.dry_run = False
+                self.assertTrue(gate.refresh(args)[0])
+                build.assert_called_once_with("Cratis/Chronicle", SHA, None)
+                self.assertEqual(expected_calls, api.call_count)
+                if expected_calls:
+                    api.assert_called_once_with("repos/Cratis/Chronicle/actions/runs/42/rerun-failed-jobs", method="POST")
+
+    def test_build_refresh_never_reruns_a_moved_head(self):
+        for heads in (["new"], [SHA, "new"]):
+            with self.subTest(heads=heads), \
+                    patch.dict(os.environ, dict(ENV, SOURCE_WORKFLOW=".github/workflows/dotnet-build.yml"), clear=True), \
+                    patch.object(gate, "current_pr", side_effect=[{"head": {"sha": sha}} for sha in heads]), \
+                    patch.object(gate, "latest_build", return_value=BUILD_GREEN), \
+                    patch.object(gate, "gate_runs", return_value=[FAILED_GATE]), patch.object(gate, "api") as api:
+                self.assertIn("Nothing to do", gate.refresh(arguments())[1])
+                api.assert_not_called()
+
     def test_empty_payload_pr_number_falls_back_to_commit_pulls(self):
         pr = {"state": "open", "head": {"sha": SHA, "repo": {"full_name": "Cratis/Chronicle"}}}
         with patch.dict(os.environ, ENV, clear=True), patch.object(gate, "api", return_value=[pr]) as api:
@@ -308,6 +479,7 @@ def recorded_checks():
     with tempfile.TemporaryDirectory(dir=work) as temporary:
         paths = {}
         for name, data in {"green": [GREEN], "skipped": [SKIPPED], "gate": [FAILED_GATE],
+                           "build": [BUILD_GREEN], "no-build": [],
                            "current": {"head": {"sha": SHA}}, "stale": {"head": {"sha": "new-push"}}}.items():
             paths[name] = str(Path(temporary) / (name + ".json"))
             Path(paths[name]).write_text(json.dumps(data), encoding="utf-8")
@@ -321,7 +493,17 @@ def recorded_checks():
             cases.append(("refresh-" + name, ["refresh", "--dry-run", "--runs-json", paths["green"],
                                              "--gate-runs-json", paths["gate"], "--pr-json", paths[name]],
                           {}, 0, "run 42" if name == "current" else "Nothing to do"))
+        cases.extend([
+            ("specs-green", ["gate", "--runs-json", paths["green"], "--build-runs-json", paths["build"]],
+             {"BUILD_TRIGGERED": "true"}, 0, "specs passed"),
+            ("specs-not-started", ["gate", "--runs-json", paths["green"], "--build-runs-json", paths["no-build"]],
+             {"BUILD_TRIGGERED": "true"}, 1, "has not started"),
+            ("refresh-build", ["refresh", "--dry-run", "--build-runs-json", paths["build"],
+                               "--gate-runs-json", paths["gate"], "--pr-json", paths["current"]],
+             {"SOURCE_WORKFLOW": ".github/workflows/dotnet-build.yml"}, 0, "run 42")])
         for name, args, overrides, expected, text in cases:
+            if args[0] == "gate" and "--build-runs-json" not in args:
+                args.extend(["--build-runs-json", paths["no-build"]])
             result = subprocess.run([sys.executable, str(SCRIPT), *args], env=dict(ENV, **overrides),
                                     capture_output=True, text=True, timeout=10)
             print(f"{name}: exit {result.returncode}; {result.stdout.strip()}")

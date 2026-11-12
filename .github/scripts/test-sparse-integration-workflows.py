@@ -275,14 +275,16 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         self.assertIn("python3 .github/scripts/test-evaluate-hot-core-gate.py", step["run"])
 
     def test_refresh_is_default_branch_only_and_least_privilege(self):
-        self.assertEqual({"workflow_run": {"workflows": [self.requested["name"]], "types": ["completed"]}},
+        self.assertEqual({"workflow_run": {"workflows": [self.requested["name"], self.build["name"]],
+                                               "types": ["completed"]}},
                          self.refresh["on"])
         self.assertEqual("Requested Integration", self.requested["name"])
         self.assertEqual({}, self.refresh["permissions"])
         job = self.refresh["jobs"]["refresh"]
         self.assertEqual({"contents": "read", "actions": "write", "pull-requests": "read"}, job["permissions"])
         for guard in ("github.event.workflow_run.event == 'pull_request'",
-                      "github.event.workflow_run.conclusion == 'success'",
+                      "(github.event.workflow_run.conclusion == 'success' || "
+                      "github.event.workflow_run.path == '.github/workflows/dotnet-build.yml')",
                       "github.event.workflow_run.head_repository.full_name == github.repository"):
             self.assertIn(guard, job["if"])
         for step in job["steps"]:
@@ -293,17 +295,30 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         self.assertNotIn("pull_request_target", self.refresh["on"])
         refresh_step = job["steps"][-1]
         self.assertEqual("${{ github.event.workflow_run.head_sha }}", refresh_step["env"]["HEAD_SHA"])
+        self.assertEqual("${{ github.event.workflow_run.path }}", refresh_step["env"]["SOURCE_WORKFLOW"])
         self.assertEqual("python3 .github/scripts/evaluate-hot-core-gate.py refresh", refresh_step["run"])
         self.assertEqual("false", self.refresh["concurrency"]["cancel-in-progress"])
         # workflow_run.event stays pull_request for labeled, synchronize and reopened alike.
         self.assertEqual("github.event.workflow_run.event == 'pull_request' && "
-                         "github.event.workflow_run.conclusion == 'success' && "
+                         "(github.event.workflow_run.conclusion == 'success' || "
+                         "github.event.workflow_run.path == '.github/workflows/dotnet-build.yml') && "
                          "github.event.workflow_run.head_repository.full_name == github.repository", job["if"])
-        self.assertTrue(evaluate_boolean_condition(job["if"], {
-            "github.event.workflow_run.event": "pull_request",
-            "github.event.workflow_run.conclusion": "success",
-            "github.event.workflow_run.head_repository.full_name == github.repository": True,
-        }))
+        build_path = ".github/workflows/dotnet-build.yml"
+        requested_path = ".github/workflows/requested-integration.yml"
+        # Requested Integration must succeed; a build refreshes on any conclusion (refresh checks its specs).
+        for event, conclusion, path, same_repo, expected in (
+                ("pull_request", "success", requested_path, True, True),
+                ("pull_request", "failure", requested_path, True, False),
+                ("pull_request", "failure", build_path, True, True),
+                ("pull_request", "success", build_path, False, False),
+                ("schedule", "success", build_path, True, False)):
+            with self.subTest(event=event, conclusion=conclusion, path=path, same_repo=same_repo):
+                self.assertEqual(expected, evaluate_boolean_condition(job["if"], {
+                    "github.event.workflow_run.event": event,
+                    "github.event.workflow_run.conclusion": conclusion,
+                    "github.event.workflow_run.path": path,
+                    "github.event.workflow_run.head_repository.full_name == github.repository": same_repo,
+                }))
 
     def test_hot_core_gate_reports_on_every_pull_request(self):
         trigger = self.hot_core["on"]["pull_request"]
@@ -318,9 +333,16 @@ class SparseIntegrationWorkflows(unittest.TestCase):
     def test_gate_keeps_check_name_and_evaluates_the_pr_head(self):
         job = self.hot_core["jobs"]["hot-core-gate"]
         self.assertEqual("hot-core-gate", job.get("name", "hot-core-gate"))
-        self.assertEqual("read", job["permissions"]["actions"])
+        self.assertEqual({"contents": "read", "actions": "read"}, job["permissions"])
         step = next(step for step in job["steps"] if step.get("name") == "Decide")
         self.assertEqual("${{ github.event.pull_request.head.sha || github.sha }}", step["env"]["HEAD_SHA"])
+        self.assertEqual("${{ needs.detect.outputs.build-triggered }}", step["env"]["BUILD_TRIGGERED"])
+        self.assertEqual("${{ steps.detect.outputs.build-triggered }}",
+                         self.hot_core["jobs"]["detect"]["outputs"]["build-triggered"])
+        build_detect = next(step for step in self.hot_core["jobs"]["detect"]["steps"] if step.get("id") == "detect")
+        self.assertEqual("${{ github.event.pull_request.head.sha || github.sha }}", build_detect["env"]["HEAD_SHA"])
+        self.assertIn('evaluate-hot-core-gate.py detect-build --base "$BASE_SHA" --head "$HEAD_SHA"',
+                      build_detect["run"])
         self.assertEqual("${{ contains(github.event.pull_request.labels.*.name, 'run-integration') }}",
                          step["env"]["RUN_INTEGRATION"])
         # All three pull_request actions build/detect the merge commit; evidence is keyed to the PR head.
@@ -388,9 +410,9 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         jobs = self.build["jobs"]
         ordinary = next(step["run"] for step in jobs["specs-other"]["steps"]
                         if step["name"] == "Run tests with coverage")
-        self.assertEqual("node .github/scripts/run-mixed-specs.mjs --shard ${{ matrix.shard }} --shards 2", ordinary)
+        self.assertEqual("node .github/scripts/run-mixed-specs.mjs --shard ${{ matrix.shard }} --shards 3", ordinary)
         other = jobs["specs-other"]
-        self.assertEqual(["1", "2"], other["strategy"]["matrix"]["shard"])
+        self.assertEqual(["1", "2", "3"], other["strategy"]["matrix"]["shard"])
         self.assertEqual("false", other["strategy"]["fail-fast"])
         self.assertNotIn("continue-on-error", other)
         self.assertEqual("specs-other (${{ matrix.shard }})", other["name"])
@@ -446,7 +468,7 @@ class SparseIntegrationWorkflows(unittest.TestCase):
     def test_stable_specs_check_requires_every_shard_to_succeed(self):
         aggregate = self.build["jobs"]["specs"]
         self.assertEqual("${{ needs.already-ran.outputs.skip != 'true' && (always()) }}", aggregate["if"])
-        self.assertEqual(["wire-compatibility", "grain-compatibility", "package-verification", "analyzers", "specs-other", "specs-sql", "specs-net10"],
+        self.assertEqual(["wire-compatibility", "grain-compatibility", "package-verification", "package-pack-check", "analyzers", "specs-other", "specs-sql", "specs-net10"],
                          prerequisites_of(aggregate))
         self.assertEqual({"contents": "read", "actions": "read"}, aggregate["permissions"])
         self.assertEqual("Checkout shard contract", aggregate["steps"][1]["name"])
@@ -477,7 +499,8 @@ class SparseIntegrationWorkflows(unittest.TestCase):
                                         env={"WIRE_RESULT": wire, "GRAIN_RESULT": grain,
                                              "OTHER_RESULT": ordinary, "SQL_RESULT": sql,
                                              "NET10_RESULT": net10, "PACKAGE_RESULT": "success",
-                                             "ANALYZER_RESULT": "success"}, check=False)
+                                             "ANALYZER_RESULT": "success", "PACK_RESULT": "success",
+                                             "EVENT_NAME": "pull_request"}, check=False)
                 self.assertEqual(wire == grain == ordinary == sql == net10 == "success",
                                  result.returncode == 0)
         self.assertEqual("${{ needs.package-verification.result }}", step["env"]["PACKAGE_RESULT"])
@@ -487,7 +510,8 @@ class SparseIntegrationWorkflows(unittest.TestCase):
                                         env={"WIRE_RESULT": "success", "GRAIN_RESULT": "success",
                                              "OTHER_RESULT": "success", "SQL_RESULT": "success",
                                              "NET10_RESULT": "success", "PACKAGE_RESULT": package,
-                                             "ANALYZER_RESULT": "success"}, check=False)
+                                             "ANALYZER_RESULT": "success", "PACK_RESULT": "success",
+                                             "EVENT_NAME": "pull_request"}, check=False)
                 self.assertNotEqual(0, result.returncode)
         self.assertEqual("${{ needs.analyzers.result }}", step["env"]["ANALYZER_RESULT"])
         for analyzers in ("success", "failure", "cancelled", "skipped", ""):
@@ -496,7 +520,8 @@ class SparseIntegrationWorkflows(unittest.TestCase):
                                         env={"WIRE_RESULT": "success", "GRAIN_RESULT": "success",
                                              "OTHER_RESULT": "success", "SQL_RESULT": "success",
                                              "NET10_RESULT": "success", "PACKAGE_RESULT": "success",
-                                             "ANALYZER_RESULT": analyzers}, check=False)
+                                             "ANALYZER_RESULT": analyzers, "PACK_RESULT": "success",
+                                             "EVENT_NAME": "pull_request"}, check=False)
                 self.assertEqual(analyzers == "success", result.returncode == 0)
 
     def test_development_paths_preserve_steps_permissions_and_artifact(self):
@@ -513,7 +538,7 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         self.assertEqual([], prerequisites_of(parallel))
         # The requested PR build runs in parallel with the specs; the integration job keeps the specs gate.
         self.assertEqual([], prerequisites_of(requested))
-        self.assertEqual(["wire-compatibility", "grain-compatibility", "package-verification", "analyzers", "specs-other", "specs-sql", "specs-net10"],
+        self.assertEqual(["wire-compatibility", "grain-compatibility", "package-verification", "package-pack-check", "analyzers", "specs-other", "specs-sql", "specs-net10"],
                          prerequisites_of(jobs["specs"]))
         for job_id in ("specs-other", "specs-sql"):
             self.assertEqual(["dotnet-build"], prerequisites_of(jobs[job_id]))

@@ -29,6 +29,7 @@ jobs:
     timeout-minutes: 30
     outputs:
       touched: ${{ steps.detect.outputs.touched }}
+      build-triggered: ${{ steps.detect.outputs.build-triggered }}
 
     steps:
       # The full history is what makes the diff against the base commit possible; the default
@@ -52,9 +53,10 @@ jobs:
         id: detect
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
           RUN_INTEGRATION: ${{ github.event_name == 'workflow_dispatch' }}
         run: |
+          python3 .github/scripts/evaluate-hot-core-gate.py detect-build --base "$BASE_SHA" --head "$HEAD_SHA"
           if [ -z "$BASE_SHA" ]; then
             echo "Manual run - there is no pull request to diff, so the full matrix runs unconditionally."
             echo "touched=true" >> "$GITHUB_OUTPUT"
@@ -197,6 +199,7 @@ jobs:
           REPO: ${{ github.repository }}
           DETECT: ${{ needs.detect.result }}
           TOUCHED: ${{ needs.detect.outputs.touched }}
+          BUILD_TRIGGERED: ${{ needs.detect.outputs.build-triggered }}
           BUILD: ${{ needs.build.result }}
           MATRIX: ${{ needs.full-out-of-process-matrix.result }}
           DISPATCH: ${{ github.event_name == 'workflow_dispatch' }}
