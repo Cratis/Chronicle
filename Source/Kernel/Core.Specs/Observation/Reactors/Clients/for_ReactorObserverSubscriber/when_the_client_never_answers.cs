@@ -15,5 +15,5 @@ public class when_the_client_never_answers : given.a_subscriber
     }
 
     [Fact] void should_release_at_the_maximum_hold() => _result.State.ShouldEqual(ObserverSubscriberState.Failed);
-    [Fact] void should_not_claim_the_client_work_ended() => _completion.Task.IsCompleted.ShouldBeFalse();
+    [Fact] void should_cancel_the_abandoned_wait() => _completion.Task.IsCanceled.ShouldBeTrue();
 }
