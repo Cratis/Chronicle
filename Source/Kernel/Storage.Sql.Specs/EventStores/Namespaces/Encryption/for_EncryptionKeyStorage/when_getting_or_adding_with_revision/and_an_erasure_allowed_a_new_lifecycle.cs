@@ -9,6 +9,7 @@ using ComplianceKey = Cratis.Chronicle.Storage.Compliance.EncryptionKey;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.Encryption.for_EncryptionKeyStorage.when_getting_or_adding_with_revision;
 
+[PerFactSpecificationLifecycle] // Facts run their own asynchronous operations, so each fact gets its own context.
 public class and_an_erasure_allowed_a_new_lifecycle : Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.given.a_migrated_namespace_database
 {
     IEncryptionKeyStorage _store;

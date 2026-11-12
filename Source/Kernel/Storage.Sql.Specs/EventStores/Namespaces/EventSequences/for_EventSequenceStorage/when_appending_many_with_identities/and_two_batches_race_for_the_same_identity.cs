@@ -7,6 +7,7 @@ using Cratis.Monads;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences.for_EventSequenceStorage.when_appending_many_with_identities;
 
+[PerFactSpecificationLifecycle] // Facts run their own asynchronous operations, so each fact gets its own context.
 public class and_two_batches_race_for_the_same_identity : given.a_keyed_batch_storage
 {
     Result<IEnumerable<AppendedEvent>, AppendManyStorageFailure>[] _results;

@@ -3,6 +3,7 @@
 
 namespace Cratis.Chronicle.Storage.Sql.Sinks.for_Sink.when_reading_an_unregistered_occurrence;
 
+[PerFactSpecificationLifecycle] // Facts run their own asynchronous operations, so each fact gets its own context.
 [Collection(PostgreSqlCollection.Name)]
 public class and_the_name_breaks_out_of_a_string_literal_on_postgresql(PostgreSqlFixture fixture) : and_the_name_breaks_out_of_a_string_literal<PostgreSqlSinkHarness>
 {
