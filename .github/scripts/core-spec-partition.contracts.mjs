@@ -108,14 +108,14 @@ test('partition check fails closed for new specs, missing units, malformed weigh
 });
 
 test('planner expands Core once into configured unit identities and receipts cannot treat them as the whole project', async () => {
-    const projects = [CORE_PROJECT, 'Source/A/A.csproj', 'Source/B/B.csproj'];
+    const projects = [CORE_PROJECT, 'Source/A/A.csproj', 'Source/B/B.csproj', 'Source/C/C.csproj'];
     const timings = { version: 1, defaultSeconds: 1, measurements: [], core: { fixedSeconds: 55, variableSeconds: 100 } };
     const plan = planShards(projects, timings, partitionUnits(simple));
     const ids = plan.flatMap(shard => shard.projects);
-    assert.equal(ids.length, CORE_PARTS + 2);
+    assert.equal(ids.length, CORE_PARTS + 3);
     assert.equal(ids.includes(CORE_PROJECT), false);
     for (let part = 1; part <= CORE_PARTS; part++) assert.equal(ids.filter(id => id === coreUnitId(part)).length, 1);
-    assert.equal(plan.reduce((sum, shard) => sum + shard.seconds, 0), 100 + CORE_PARTS * 55 + 2);
+    assert.equal(plan.reduce((sum, shard) => sum + shard.seconds, 0), 100 + CORE_PARTS * 55 + 3);
     const infos = unitInfos(ids, projects.map(project => ({ project, runner: 'v3', dll: '/Core.dll' })), partitionUnits(simple));
     const core = infos.filter(info => info.corePart);
     assert.equal(core.length, CORE_PARTS);

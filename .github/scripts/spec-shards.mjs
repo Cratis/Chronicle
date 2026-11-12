@@ -9,7 +9,7 @@ import { pathToFileURL } from 'node:url';
 import { validateSourceProjects } from './mixed-specs-selection.mjs';
 import { balanceJobs } from './spec-shard-balancing.mjs';
 
-export const ORDINARY_SHARDS = 3;
+export const ORDINARY_SHARDS = 4;
 export const ordinaryShardIds = () => Array.from({ length: ORDINARY_SHARDS }, (_, index) => index + 1);
 const validShard = shard => ordinaryShardIds().includes(shard);
 const fail = message => { throw new Error(message); };

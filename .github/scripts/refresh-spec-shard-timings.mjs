@@ -7,6 +7,7 @@ import { pathToFileURL } from 'node:url';
 import { CORE_PROJECT, CORE_PARTS, checkPartition } from './core-spec-partition.mjs';
 import { validateSourceProjects } from './mixed-specs-selection.mjs';
 import { balanceJobs, balancePrefixes, slowest } from './spec-shard-balancing.mjs';
+import { ORDINARY_SHARDS } from './spec-shards.mjs';
 
 const fail = message => { throw new Error(message); };
 const positive = value => Number.isFinite(value) && value > 0;
@@ -48,12 +49,12 @@ export function candidatePlans(units, ordinary, model) {
     const ordinarySeconds = ordinary.reduce((sum, record) => sum + record.seconds, 0);
     for (let count = 2; count <= units.length; count++) {
         // Every larger count has at least this average load, independent of placement.
-        const lowerBound = (ordinarySeconds + model.variableSeconds + count * model.fixedSeconds) / 3;
+        const lowerBound = (ordinarySeconds + model.variableSeconds + count * model.fixedSeconds) / ORDINARY_SHARDS;
         if (candidates.length && lowerBound >= Math.min(...candidates.map(candidate => slowest(candidate.shards)))) break;
         const parts = balancePrefixes(units, count);
         const jobs = [...ordinary, ...parts.map(part => ({ project: coreId(part.part, count), core: true,
             seconds: model.fixedSeconds + model.variableSeconds * part.weight }))];
-        candidates.push({ count, shards: balanceJobs(jobs) });
+        candidates.push({ count, shards: balanceJobs(jobs, ORDINARY_SHARDS) });
     }
     return candidates.sort((a, b) => slowest(a.shards) - slowest(b.shards) || a.count - b.count);
 }
