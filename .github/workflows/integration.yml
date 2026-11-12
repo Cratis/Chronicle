@@ -8,7 +8,7 @@ on:
         value: ${{ jobs.discover.outputs.all-providers }}
     inputs:
       build-output-artifact:
-        description: "Name of the DEVELOPMENT-symbol build output artifact. The Client, Kernel and Clustering lanes download <name>-client, <name>-kernel and <name>-clustering (see .github/actions/pack-integration-output); the SQL clustering lane downloads <name>."
+        description: "Name of the DEVELOPMENT-symbol build output artifact. The Client, Kernel and Clustering lanes download <name>-client, <name>-kernel and <name>-clustering (see .github/actions/pack-integration-output); the SQL clustering lane downloads <name>-sqlclustering, which also carries the stamped client output."
         required: true
         type: string
       chronicle-image:
@@ -152,11 +152,17 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Restore Client project
-        run: dotnet restore Integration/Client/Client.csproj
-
-      - name: Restore pinned coverage tool
-        run: dotnet tool restore
+      # The project restore and the pinned coverage tool restore are independent, so run them together;
+      # either failing fails the step.
+      - name: Restore Client project and pinned coverage tool
+        run: |
+          set -uo pipefail
+          dotnet tool restore & tool=$!
+          dotnet restore Integration/Client/Client.csproj & proj=$!
+          status=0
+          wait "$tool" || status=1
+          wait "$proj" || status=1
+          exit "$status"
 
       # Pre-pull Docker Hub images once per job so the per-fixture image
       # existence checks in Testcontainers do not race against anonymous
@@ -267,11 +273,17 @@ jobs:
           BUILD_OUTPUT_ARTIFACT: ${{ inputs.build-output-artifact }}
         run: tar -I zstd -xf "${BUILD_OUTPUT_ARTIFACT}-kernel.tar.zst"
 
-      - name: Restore Kernel project
-        run: dotnet restore Integration/Kernel/Kernel.csproj
-
-      - name: Restore pinned coverage tool
-        run: dotnet tool restore
+      # The project restore and the pinned coverage tool restore are independent, so run them together;
+      # either failing fails the step.
+      - name: Restore Kernel project and pinned coverage tool
+        run: |
+          set -uo pipefail
+          dotnet tool restore & tool=$!
+          dotnet restore Integration/Kernel/Kernel.csproj & proj=$!
+          status=0
+          wait "$tool" || status=1
+          wait "$proj" || status=1
+          exit "$status"
 
       # See the equivalent step in client-integration-specs for the rationale.
       - name: Pre-pull Docker Hub images
@@ -342,11 +354,17 @@ jobs:
           BUILD_OUTPUT_ARTIFACT: ${{ inputs.build-output-artifact }}
         run: tar -I zstd -xf "${BUILD_OUTPUT_ARTIFACT}-clustering.tar.zst"
 
-      - name: Restore Clustering project
-        run: dotnet restore Integration/Clustering/Clustering.csproj
-
-      - name: Restore pinned coverage tool
-        run: dotnet tool restore
+      # The project restore and the pinned coverage tool restore are independent, so run them together;
+      # either failing fails the step.
+      - name: Restore Clustering project and pinned coverage tool
+        run: |
+          set -uo pipefail
+          dotnet tool restore & tool=$!
+          dotnet restore Integration/Clustering/Clustering.csproj & proj=$!
+          status=0
+          wait "$tool" || status=1
+          wait "$proj" || status=1
+          exit "$status"
 
       - name: Run Clustering integration tests (${{ matrix.namespace }})
         env:
@@ -432,12 +450,12 @@ jobs:
       - name: Download build output
         uses: actions/download-artifact@v4
         with:
-          name: ${{ inputs.build-output-artifact }}
+          name: ${{ inputs.build-output-artifact }}-sqlclustering
 
       - name: Extract build output
         env:
           BUILD_OUTPUT_ARTIFACT: ${{ inputs.build-output-artifact }}
-        run: tar -I zstd -xf "${BUILD_OUTPUT_ARTIFACT}.tar.zst"
+        run: tar -I zstd -xf "${BUILD_OUTPUT_ARTIFACT}-sqlclustering.tar.zst"
 
       - name: Read the stamped build version
         if: matrix.provider == 'RollingUpgrade'

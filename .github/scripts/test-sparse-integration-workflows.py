@@ -465,16 +465,16 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         self.assertEqual(evaluator.EVIDENCE_JOB, name.replace("${{ " + EFFECTIVE_LABEL + " }}", "run-integration"))
         self.assertEqual("hot-core-gate", evaluator.GATE_JOB)
 
-    def test_pull_request_integration_waits_for_passing_specs(self):
+    def test_requested_integration_starts_after_builds_beside_specs(self):
         jobs = self.build["jobs"]
         for job_id in ("integration", "integration-api", "mongodb", "neo4j"):
             with self.subTest(job=job_id):
                 job = jobs[job_id]
-                self.assertIn("specs", job["needs"])
+                self.assertNotIn("specs", job["needs"])
+                self.assertNotIn("needs.specs", job["if"])
                 self.assertIn("!cancelled()", job["if"])
                 self.assertIn("needs.dotnet-build.result == 'success'", job["if"])
-                self.assertIn("(github.event_name != 'pull_request' || (inputs.integration_requested && needs.specs.result == 'success'))",
-                              job["if"])
+                self.assertIn("(github.event_name != 'pull_request' || inputs.integration_requested)", job["if"])
         self.assertIn("needs.dotnet-build-development.result == 'success'", jobs["integration"]["if"])
         self.assertIn("github.actor != 'dependabot[bot]'", jobs["integration"]["if"])
 
@@ -700,10 +700,10 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         self.assertEqual("needs.already-ran.outputs.skip != 'true' && "
                          "(github.event_name == 'pull_request' && inputs.integration_requested)",
                          requested["if"])
-        # The compatibility gates run beside the builds, not in front of them; the `specs` aggregate, which the
-        # integration job waits for, is what requires them to be green.
+        # The compatibility gates run beside the builds, not in front of them; the `specs` aggregate
+        # still requires them to be green even though integration starts independently.
         self.assertEqual([], prerequisites_of(parallel))
-        # The requested PR build runs in parallel with the specs; the integration job keeps the specs gate.
+        # The requested PR build and its integration consumers run in parallel with the specs.
         self.assertEqual([], prerequisites_of(requested))
         self.assertEqual(["wire-compatibility", "grain-compatibility", "package-verification", "package-pack-check", "analyzers", "spec-runner-checks", "specs-other", "specs-sql", "specs-net10"],
                          prerequisites_of(jobs["specs"]))
@@ -751,7 +751,7 @@ class SparseIntegrationWorkflows(unittest.TestCase):
             results = {"wire-compatibility": wire, "grain-compatibility": grain, "specs": specs}
             context = ConditionContext(event, requested, results)
             with self.subTest(event=event, requested=requested, specs=specs, wire=wire, grain=grain):
-                # The builds do not wait for the compatibility gates; `specs` requires them before integration runs.
+                # The builds do not wait for the compatibility gates; `specs` still requires them.
                 self.assertEqual(event != "pull_request",
                                  condition_allows(jobs["dotnet-build-development"], context))
                 self.assertEqual(event == "pull_request" and requested,
@@ -759,7 +759,7 @@ class SparseIntegrationWorkflows(unittest.TestCase):
 
     def test_integration_requires_selected_output_but_allows_skipped_sibling(self):
         job = self.build["jobs"]["integration"]
-        self.assertEqual({"dotnet-build", "specs", "dotnet-build-development",
+        self.assertEqual({"dotnet-build", "dotnet-build-development",
                           "dotnet-build-development-requested"}, set(prerequisites_of(job)))
         states = ("success", "failure", "cancelled", "skipped")
         for event, requested, specs, development, release, cancelled in product(
@@ -770,7 +770,7 @@ class SparseIntegrationWorkflows(unittest.TestCase):
                        "dotnet-build-development": "skipped" if is_pr else development,
                        "dotnet-build-development-requested": development if is_pr else "skipped"}
             expected = (not cancelled and release == "success" and development == "success"
-                        and (not is_pr or (requested and specs == "success")))
+                        and (not is_pr or requested))
             with self.subTest(event=event, requested=requested, results=results, cancelled=cancelled):
                 context = ConditionContext(event, requested, results, cancelled)
                 self.assertEqual(expected, condition_allows(job, context))
@@ -839,9 +839,9 @@ class IntegrationSingleBuildContracts(unittest.TestCase):
             with self.subTest(lane=lane):
                 steps = jobs[f"{lane}-integration-specs"]["steps"]
                 download = next(step for step in steps if step.get("uses") == "actions/download-artifact@v4")
-                # Lanes that run a single project's output download only that project's artifact; SQL clustering
-                # also reads the client output, so it keeps the full one.
-                suffix = "" if lane == "sql-clustering" else f"-{lane}"
+                # Every lane downloads only its own project's artifact; the SQL clustering one also carries the
+                # stamped client output that the RollingUpgrade provider reads.
+                suffix = "-sqlclustering" if lane == "sql-clustering" else f"-{lane}"
                 self.assertEqual({"name": "${{ inputs.build-output-artifact }}" + suffix}, download["with"])
                 extract = next(step for step in steps if step["name"] == "Extract build output")
                 self.assertEqual('tar -I zstd -xf "${BUILD_OUTPUT_ARTIFACT}' + suffix + '.tar.zst"', extract["run"])
@@ -898,12 +898,48 @@ class IntegrationSingleBuildContracts(unittest.TestCase):
 
     def test_per_project_artifacts_are_packed_for_exactly_the_lanes_that_download_them(self):
         action = (WORKFLOWS.parents[0] / "actions/pack-integration-output/action.yml").read_text(encoding="utf-8")
-        self.assertIn("for project in Client Kernel Clustering; do", action)
+        self.assertIn("for project in Client Kernel Clustering SqlClustering; do", action)
+        self.assertIn("Source/Clients/DotNET/bin/Release/net11.0", action)
         self.assertIn('test -d "Integration/$project/bin/Release/net11.0"', action)
-        self.assertIn('tar -I \'zstd -T0\' -cf "${PREFIX}-${project,,}.tar.zst" "Integration/$project/bin"', action)
-        for lane in ("client", "kernel", "clustering"):
+        self.assertIn('paths=("Integration/$project/bin")', action)
+        self.assertIn('tar -I \'zstd -T0\' -cf "${PREFIX}-${project,,}.tar.zst" "${paths[@]}"', action)
+        for lane in ("client", "kernel", "clustering", "sqlclustering"):
             self.assertIn("name: ${{ inputs.prefix }}-" + lane, action)
-        self.assertEqual(3, action.count("if-no-files-found: error"))
+        self.assertEqual(4, action.count("if-no-files-found: error"))
+
+    def test_sql_clustering_artifact_carries_what_the_lane_reads(self):
+        action = (WORKFLOWS.parents[0] / "actions/pack-integration-output/action.yml").read_text(encoding="utf-8")
+        pack = next(step["run"] for step in yaml.safe_load(action)["runs"]["steps"] if step["name"].startswith("Pack"))
+        self.assertIn("set -euo pipefail", pack)
+        # The stamped client the RollingUpgrade step greps must be in the tarball, and its absence must fail closed.
+        self.assertIn('test -d "Source/Clients/DotNET/bin/Release/net11.0"', pack)
+        self.assertIn('if [ "$project" = SqlClustering ]; then', pack)
+        self.assertIn('paths+=("Source/Clients/DotNET/bin/Release/net11.0")', pack)
+        self.assertEqual(2, pack.count("exit 1"))
+        steps = workflow("integration.yml")["jobs"]["sql-clustering-integration-specs"]["steps"]
+        stamp = next(step for step in steps if step["name"] == "Read the stamped build version")
+        self.assertIn("Source/Clients/DotNET/bin/Release/net11.0/Cratis.Chronicle.dll", stamp["run"])
+        for step in steps:
+            if step.get("uses") == "actions/download-artifact@v4":
+                self.assertEqual("${{ inputs.build-output-artifact }}-sqlclustering", step["with"]["name"])
+            self.assertNotRegex(step.get("run", ""), r'BUILD_OUTPUT_ARTIFACT\}\.tar')
+
+    def test_restore_and_coverage_tool_restore_run_together_and_fail_closed(self):
+        jobs = workflow("integration.yml")["jobs"]
+        for lane, project in (("client", "Client"), ("kernel", "Kernel"), ("clustering", "Clustering")):
+            with self.subTest(lane=lane):
+                steps = jobs[f"{lane}-integration-specs"]["steps"]
+                self.assertFalse([s for s in steps if s.get("name") == "Restore pinned coverage tool"])
+                both = [s for s in steps if "dotnet tool restore" in s.get("run", "")
+                        and f"dotnet restore Integration/{project}/{project}.csproj" in s.get("run", "")]
+                self.assertEqual(1, len(both))
+                run = both[0]["run"]
+                self.assertIn("dotnet tool restore &", run)
+                self.assertIn(f"dotnet restore Integration/{project}/{project}.csproj &", run)
+                self.assertEqual(2, run.count("wait "))
+                self.assertNotIn("set -e\n", run)
+                self.assertNotIn("continue-on-error", both[0])
+                self.assertNotIn("if", both[0])
 
     def test_every_batched_lane_keeps_a_per_member_zero_test_guard(self):
         jobs = workflow("integration.yml")["jobs"]
@@ -1101,6 +1137,50 @@ sys.exit(1 if 'Failed' in outcomes.values() else 0)
                     self.assertEqual(0 if executed else 1, result.returncode, result.stderr)
                     if not executed:
                         self.assertIn("TRX executed no tests", result.stderr)
+
+
+class for_parallel_requested_integration(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.jobs = workflow("dotnet-build.yml")["jobs"]
+
+    def test_no_lane_waits_for_specs_even_indirectly(self):
+        for lane in ("integration", "integration-api", "mongodb", "neo4j"):
+            with self.subTest(lane=lane):
+                job = self.jobs[lane]
+                self.assertNotIn("specs", dependency_ancestors(self.jobs, lane))
+                self.assertIn("dotnet-build", prerequisites_of(job))
+                self.assertNotIn("needs.specs", job["if"])
+
+    def test_small_lanes_require_a_successful_build_and_a_requested_pr(self):
+        states = ("success", "failure", "cancelled", "skipped")
+        for lane, event, requested, build, cancelled, skip in product(
+                ("integration-api", "mongodb", "neo4j"),
+                ("pull_request", "schedule", "workflow_dispatch"),
+                (False, True), states, (False, True), ("false", "true")):
+            job = self.jobs[lane]
+            results = dict.fromkeys(prerequisites_of(job), "success")
+            results.update({"dotnet-build": build, "specs": "failure"})
+            context = ConditionContext(event, requested, results, cancelled, gate_skip=skip)
+            expected = (skip != "true" and not cancelled and build == "success"
+                        and (event != "pull_request" or requested))
+            with self.subTest(lane=lane, context=context):
+                self.assertEqual(expected, condition_allows(job, context))
+
+    def test_green_lanes_cannot_cache_coverage_when_specs_are_red(self):
+        coverage = self.jobs["coverage-merge-and-cache"]
+        results = dict.fromkeys(prerequisites_of(coverage), "success")
+        results["specs"] = "failure"
+        self.assertFalse(condition_allows(coverage, ConditionContext("pull_request", True, results)))
+
+    def test_requested_verdict_rejects_a_failed_reusable_call_even_with_green_lanes(self):
+        # A red specs aggregate fails the reusable call; the verdict checks that call, not just its lanes.
+        verdict = workflow("requested-integration.yml")["jobs"]["hot-core-gate-requested"]
+        decide = next(step for step in verdict["steps"] if step.get("name") == "Decide")
+        self.assertEqual("${{ needs.requested-integration.result }}", decide["env"]["INTEGRATION"])
+        self.assertIn('if [ "$INTEGRATION" != "success" ]; then\n'
+                      '  echo "::error::Requested integration did not pass ($INTEGRATION)."\n'
+                      '  exit 1', decide["run"])
 
 
 if __name__ == "__main__":

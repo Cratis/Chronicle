@@ -20,6 +20,8 @@ on:
       - .github/scripts/quarantine.mjs
       - .github/scripts/test-quarantine.mjs
       - .github/scripts/run-tests-with-retry.sh
+      - .github/scripts/assert-image-push-permissions.py
+      - .github/scripts/test-assert-image-push-permissions.py
 
 permissions:
   contents: read
@@ -47,3 +49,9 @@ jobs:
         run: node --test .github/scripts/test-nightly-build-health.mjs .github/scripts/test-last-green-watchdog.mjs .github/scripts/test-failed-spec-record.mjs .github/scripts/test-quarantine.mjs
       - name: Reject expired quarantine entries
         run: node .github/scripts/quarantine.mjs lint
+      - name: Install workflow parser
+        run: python3 -m pip install PyYAML==6.0.3
+      - name: Test image-push permission assertion
+        run: python3 -B .github/scripts/test-assert-image-push-permissions.py
+      - name: Require package-write permission for image pushes
+        run: python3 .github/scripts/assert-image-push-permissions.py
