@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Frozen;
 using System.Diagnostics;
 using System.Threading.Channels;
 using Cratis.Chronicle.Concepts;
@@ -420,9 +421,10 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         return subscription.Filters?.Matches(@event) ?? true;
     }
 
-    static bool MatchesSubscription(AppendedEventsQueueObserverSubscription subscription, AppendedEvent @event)
+    static bool MatchesSubscription(AppendedEventsQueueObserverSubscription subscription, AppendedEvent @event, FrozenSet<EventTypeId>? eventTypeIds = null)
     {
-        if (!subscription.AllEventTypes && !subscription.EventTypeIds.Contains(@event.Context.EventType.Id))
+        eventTypeIds ??= subscription.EventTypeIdSet;
+        if (!subscription.AllEventTypes && !eventTypeIds.Contains(@event.Context.EventType.Id))
         {
             return false;
         }
@@ -434,13 +436,13 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
 
         if (@event.Context.EventType.Id == GlobalEventTypes.Redaction && !subscription.AllEventTypes)
         {
-            return IsRedactionForSubscribedEventType(@event, subscription.EventTypeIds);
+            return IsRedactionForSubscribedEventType(@event, eventTypeIds);
         }
 
         return true;
     }
 
-    static bool IsRedactionForSubscribedEventType(AppendedEvent @event, IEnumerable<EventTypeId> subscribedEventTypeIds)
+    static bool IsRedactionForSubscribedEventType(AppendedEvent @event, FrozenSet<EventTypeId> subscribedEventTypeIds)
     {
         if (@event.Content is not IDictionary<string, object?> contentDict || !contentDict.TryGetValue("originalEventType", out var originalEventTypeObj))
         {
@@ -501,9 +503,10 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
             return true;
         }
 
-        foreach (var eventTypeId in subscription.EventTypeIds)
+        var eventTypeIds = subscription.EventTypeIdSet;
+        foreach (var eventTypeId in batchEventTypes)
         {
-            if (batchEventTypes.Contains(eventTypeId))
+            if (eventTypeIds.Contains(eventTypeId))
             {
                 return true;
             }
@@ -522,10 +525,11 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         IReadOnlyList<AppendedEvent> events,
         AppendedEventsQueueObserverSubscription subscription)
     {
+        var eventTypeIds = subscription.EventTypeIdSet;
         var numberOfMatchingEvents = 0;
         foreach (var @event in events)
         {
-            if (MatchesSubscription(subscription, @event))
+            if (MatchesSubscription(subscription, @event, eventTypeIds))
             {
                 numberOfMatchingEvents++;
             }
@@ -546,7 +550,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         var next = 0;
         foreach (var @event in events)
         {
-            if (MatchesSubscription(subscription, @event))
+            if (MatchesSubscription(subscription, @event, eventTypeIds))
             {
                 matchingEvents[next++] = @event;
             }
