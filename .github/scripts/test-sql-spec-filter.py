@@ -132,9 +132,10 @@ class SqlSpecFilters(unittest.TestCase):
 
     def test_invalid_timings_fail_instead_of_unbalancing_silently(self):
         path = self.root / "timings.json"
-        path.write_text('{"seconds": {"Specs.server_name.": 0}}', encoding="utf-8")
-        with self.assertRaisesRegex(ValueError, "positive number"):
-            filters.load_timings(path)
+        for invalid in ("0", "-1", "true", "1e999", '"5"'):
+            path.write_text('{"seconds": {"Specs.server_name.": ' + invalid + '}}', encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "positive, finite number"):
+                filters.load_timings(path)
         self.assertEqual({}, filters.load_timings(self.root / "absent.json"))
 
     def test_repository_timings_measure_most_sql_server_specs_and_balance_the_shards(self):

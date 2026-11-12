@@ -5,6 +5,7 @@
 
 import argparse
 import json
+import math
 from pathlib import Path
 import re
 import xml.etree.ElementTree as ElementTree
@@ -62,13 +63,17 @@ def partition(names, weights, count):
     return shards
 
 
+def _is_positive_seconds(value):
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value) and value > 0
+
+
 def load_timings(path=TIMINGS):
     """Measured seconds per spec class; a missing file means no measurements yet."""
     if not path.exists():
         return {}
     seconds = json.loads(path.read_text(encoding="utf-8"))["seconds"]
-    if not all(isinstance(value, (int, float)) and value > 0 for value in seconds.values()):
-        raise ValueError(f"Every timing in {path} must be a positive number of seconds")
+    if not all(_is_positive_seconds(value) for value in seconds.values()):
+        raise ValueError(f"Every timing in {path} must be a positive, finite number of seconds")
     return seconds
 
 
