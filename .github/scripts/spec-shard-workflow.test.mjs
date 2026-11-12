@@ -8,6 +8,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { ORDINARY_SHARDS, ordinaryShardIds, sourcePlan } from './spec-shards.mjs';
+import { CORE_PARTS } from './core-spec-partition.mjs';
 
 const workflow = await readFile(new URL('../workflows/dotnet-build.yml', import.meta.url), 'utf8');
 const jobs = new Map([...workflow.matchAll(/^  ([\w-]+):\n([\s\S]*?)(?=^  [\w-]+:|$(?![\s\S]))/gm)].map(match => [match[1], match[2]]));
@@ -217,14 +218,14 @@ test('three-shard workflow matches the planner and refreshed timing samples', as
     assert.equal(plan.length, ORDINARY_SHARDS);
     assert.ok(plan.every(shard => shard.projects.length && shard.defaulted.length === 0));
     const projects = plan.flatMap(shard => shard.projects);
-    assert.equal(projects.length, 28);
-    assert.equal(new Set(projects).size, 28);
-    assert.equal(projects.filter(project => project.includes('#core-part-')).length, 4);
+    assert.equal(projects.length, 24 + CORE_PARTS);
+    assert.equal(new Set(projects).size, 24 + CORE_PARTS);
+    assert.equal(projects.filter(project => project.includes('#core-part-')).length, CORE_PARTS);
     assert.ok(!projects.includes('Source/Kernel/Core.Specs/Core.Specs.csproj'));
-    // Train 7 completion intervals include startup/coverage overhead. Four Core units
-    // predict under 295 seconds per shard, rather than the observed 393-second long pole.
+    // Train 8 wall calibration includes 55 seconds per Core part and mean shard overhead.
     // This is a planning bound, not a claim of measured split-shard performance.
     assert.ok(plan.every(shard => shard.seconds < 295));
+    assert.ok(plan.every(shard => shard.projects.filter(project => project.includes('#core-part-')).length <= 1));
     const timings = JSON.parse(await readFile(new URL('./spec-shard-timings.json', import.meta.url), 'utf8'));
     const runs = new Set(timings.samples.map(sample => sample.run));
     assert.ok(runs.size >= 1 && runs.size <= 8);

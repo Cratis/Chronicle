@@ -13,6 +13,7 @@ import './spec-project-contracts.mjs';
 import { benchmarkProject, inventory, ordinaryProjects, validateSolutionProjects } from './mixed-specs-selection.mjs';
 import { sourcePlan } from './spec-shards.mjs';
 import { coreSpecFixture } from './core-spec-fixture.mjs';
+import { coreUnitId } from './core-spec-partition.mjs';
 import { selectProducerArtifacts, loadProducerEvidence } from './run-mixed-specs.mjs';
 
 const scratch = path.resolve('.ai-work/chronicle-spec5-runners/mock-contracts');
@@ -373,7 +374,7 @@ async function ordinaryDispatch(mode) {
             assert.ok(args[9].includes('FullyQualifiedName~'));
             assert.ok(args[9].includes('&('));
         }
-        return part ? `${project}#core-part-${part}-of-4` : project;
+        return part ? coreUnitId(Number(part)) : project;
     });
     assert.deepEqual([...actualProjects].sort(), [...expectedProjects].sort());
     const expected = expectedProjects.length;

@@ -3,11 +3,11 @@
 
 import { mkdir, writeFile, readFile } from 'node:fs/promises';
 import path from 'node:path';
-import { CORE_PROJECT, coreUnitId, loadPartition } from './core-spec-partition.mjs';
+import { CORE_PROJECT, CORE_PARTS, coreUnitId, loadPartition } from './core-spec-partition.mjs';
 import { exclusionPath } from './core-spec-coverage.mjs';
 
 export const expandedProjects = projects => projects.flatMap(project => project === CORE_PROJECT
-    ? [1, 2, 3, 4].map(coreUnitId) : [project]);
+    ? Array.from({ length: CORE_PARTS }, (_, index) => coreUnitId(index + 1)) : [project]);
 export async function coreExclusionFixture(root) {
     const entries = JSON.parse(await readFile(new URL('./core-spec-exclusions.json', import.meta.url), 'utf8'));
     await mkdir(path.join(root, '.github/scripts'), { recursive: true });

@@ -3,20 +3,47 @@
 ## Core spec partitioning
 
 The three ordinary `specs-other` jobs still cover all 25 ordinary projects.
-`Core.Specs.csproj` is planned as four units named
-`Core.Specs.csproj#core-part-K-of-4`; no workflow, artifact, or required-check name changes.
+`Core.Specs.csproj` is planned as two units named
+`Core.Specs.csproj#core-part-K-of-2`; no workflow, artifact, or required-check name changes.
 Other projects retain their existing invocation. An unsharded invocation still runs Core once.
 
 `core-spec-partition.json` contains disjoint namespace/class prefixes and relative weights.
-Four parts are assigned by longest-processing-time-first (descending weight, ordinal prefix
-on ties, lowest numbered part on equal totals). The ordinary planner apportions the measured
-whole-Core interval by those weights, adding 2 seconds per part for collector startup.
-These predictions are hypotheses, not measured split-shard savings.
+Parts are assigned by longest-processing-time-first (descending weight, ordinal prefix
+on ties, lowest numbered part on equal totals). The ordinary planner compares normal LPT
+with Core-first placement, keeping the lower predicted critical path. It never forces
+Core spreading when stacking is faster.
 
-The initial weights use the Core TRX from run `43166203967`, summing test durations plus
-0.003 seconds per test. Project completion intervals come from train-7 run `43176554724`.
-Refresh with a complete, non-overlapping set of Core TRX results (one whole run, or all four
-parts of a run), not duplicate downloads of the same results:
+Train-8 run `43190307308`, attempt 1, measured Core parts at 80.179 / 119.541 / 103.457 /
+101.729 seconds including validation. The model subtracts 55 seconds fixed overhead from
+each old part, scales its namespace weights to the residual, and conserves 184.906 seconds
+of variable work. Every new part pays 55 seconds; mean per-shard inventory overhead is
+32.308 seconds, separate from project intervals. The original weights came from run
+`43166203967` TRX durations plus 0.003 seconds per test. Train-8 artifacts also contain
+per-test TRX durations, but no per-namespace wall intervals.
+
+Two parts predict 147.454 / 147.452 seconds each, with ordinary coverage steps at
+287.756 / 286.624 / 286.620 seconds (project-only: 255.448 / 254.316 / 254.312).
+Three parts have a perfect-placement lower bound of 305.333 seconds per shard including
+inventory overhead; every additional part increases that bound. Thus two minimizes the
+predicted slowest shard among counts of two or more. These are model predictions, not
+observed savings: train 8 actually took 263 / 388 / 320 seconds; train 7 took 393 / 254 / 224.
+
+For a wall-time refresh, preserve the partition used by the measured run, obtain its jobs
+JSON and all three ordinary job logs, then run (logs in shard order):
+
+```bash
+node .github/scripts/refresh-spec-shard-timings.mjs 43190307308 previous-partition.json jobs.json shard-1.log shard-2.log shard-3.log
+```
+
+The refresh rejects incomplete/duplicate measurements, compares part counts with explicit
+fixed overhead, and checks the exact-once partition before writing either timing table.
+It stops if `CORE_PARTS` differs from the model-selected count; update that constant and
+its count-specific regression expectations before refreshing. Always calibrate from the
+partition that produced the logs, not an already recalibrated table.
+
+For source additions, refresh prefixes with a complete, non-overlapping set of Core TRX
+results (one whole run, or every part of a run), not duplicate downloads. This replaces
+wall calibration with TRX weights, so recalibrate against a matching measured run afterward:
 
 ```bash
 node .github/scripts/core-spec-partition.mjs --refresh path/to/Core/results.trx
@@ -50,8 +77,9 @@ Each part uses the same built executable and the existing ordinary/runsettings e
 ANDed with its OR-filter. Its TRX and Cobertura files are written under a distinct
 `-core-part-K` directory; unit identities also remain distinct in completion receipts.
 The existing path-based coverage merge retains every part's report and unions production hits.
-First CI should confirm per-part test counts, filter acceptance, coverage union, and actual
-collector/scan overhead before treating the predictions as achieved savings.
+Train 8 confirmed the four-part test total of 27,040. All four downloaded Core TRX files
+also match the new two-part filters exactly once. CI must still measure the new two-part
+wall times and confirm coverage union before treating these predictions as achieved savings.
 
 ## gRPC Contract Compatibility Validation
 
