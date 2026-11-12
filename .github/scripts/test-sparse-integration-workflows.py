@@ -283,7 +283,8 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         job = self.refresh["jobs"]["refresh"]
         self.assertEqual({"contents": "read", "actions": "write", "pull-requests": "read"}, job["permissions"])
         for guard in ("github.event.workflow_run.event == 'pull_request'",
-                      "github.event.workflow_run.conclusion == 'success'",
+                      "(github.event.workflow_run.conclusion == 'success' || "
+                      "github.event.workflow_run.path == '.github/workflows/dotnet-build.yml')",
                       "github.event.workflow_run.head_repository.full_name == github.repository"):
             self.assertIn(guard, job["if"])
         for step in job["steps"]:
@@ -299,13 +300,25 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         self.assertEqual("false", self.refresh["concurrency"]["cancel-in-progress"])
         # workflow_run.event stays pull_request for labeled, synchronize and reopened alike.
         self.assertEqual("github.event.workflow_run.event == 'pull_request' && "
-                         "github.event.workflow_run.conclusion == 'success' && "
+                         "(github.event.workflow_run.conclusion == 'success' || "
+                         "github.event.workflow_run.path == '.github/workflows/dotnet-build.yml') && "
                          "github.event.workflow_run.head_repository.full_name == github.repository", job["if"])
-        self.assertTrue(evaluate_boolean_condition(job["if"], {
-            "github.event.workflow_run.event": "pull_request",
-            "github.event.workflow_run.conclusion": "success",
-            "github.event.workflow_run.head_repository.full_name == github.repository": True,
-        }))
+        build_path = ".github/workflows/dotnet-build.yml"
+        requested_path = ".github/workflows/requested-integration.yml"
+        # Requested Integration must succeed; a build refreshes on any conclusion (refresh checks its specs).
+        for event, conclusion, path, same_repo, expected in (
+                ("pull_request", "success", requested_path, True, True),
+                ("pull_request", "failure", requested_path, True, False),
+                ("pull_request", "failure", build_path, True, True),
+                ("pull_request", "success", build_path, False, False),
+                ("schedule", "success", build_path, True, False)):
+            with self.subTest(event=event, conclusion=conclusion, path=path, same_repo=same_repo):
+                self.assertEqual(expected, evaluate_boolean_condition(job["if"], {
+                    "github.event.workflow_run.event": event,
+                    "github.event.workflow_run.conclusion": conclusion,
+                    "github.event.workflow_run.path": path,
+                    "github.event.workflow_run.head_repository.full_name == github.repository": same_repo,
+                }))
 
     def test_hot_core_gate_reports_on_every_pull_request(self):
         trigger = self.hot_core["on"]["pull_request"]

@@ -294,12 +294,12 @@ class BuildPathDetection(unittest.TestCase):
             self.assertEqual((True, "build-triggered=false"), gate.detect_build(argparse.Namespace(base="")))
             run.assert_not_called()
             match.assert_not_called()
-            run.return_value = subprocess.CompletedProcess([], 0, stdout="Source/test.cs\n")
+            run.return_value = subprocess.CompletedProcess([], 0, stdout="Source/tést.cs\0Docs/old name.md\0")
             self.assertEqual((True, "build-triggered=true"),
                              gate.detect_build(argparse.Namespace(base="base", head="pr-head")))
-            run.assert_called_once_with(["git", "diff", "--name-only", "base...pr-head"],
+            run.assert_called_once_with(["git", "diff", "--no-renames", "--name-only", "-z", "base...pr-head"],
                                         capture_output=True, text=True, check=True)
-            match.assert_called_once_with(["Source/test.cs"], ".")
+            match.assert_called_once_with(["Source/tést.cs", "Docs/old name.md"], ".")
 
     def test_detect_errors_fail_closed_without_emitting_an_output(self):
         for error in (subprocess.CalledProcessError(1, "git", stderr="bad diff"), ValueError("bad filter")):

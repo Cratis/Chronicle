@@ -12,10 +12,13 @@ concurrency:
   cancel-in-progress: false
 jobs:
   refresh:
-    # Same-repo PR runs that succeeded only; other labels cannot supply green evidence.
+    # Same-repo PR runs only. Requested Integration must have succeeded; other labels cannot supply green
+    # evidence. A .NET Build & Integration run refreshes whatever its conclusion, because the refresh itself
+    # requires its `specs` job to have passed, and another job failing must not leave the gate red.
     if: >-
       github.event.workflow_run.event == 'pull_request' &&
-      github.event.workflow_run.conclusion == 'success' &&
+      (github.event.workflow_run.conclusion == 'success' ||
+      github.event.workflow_run.path == '.github/workflows/dotnet-build.yml') &&
       github.event.workflow_run.head_repository.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 20
