@@ -1,7 +1,12 @@
 # Copyright (c) Cratis. All rights reserved.
 # Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-"""Require package-write permission for GHCR pushes using the workflow token (#5854)."""
+"""Require package-write permission for GHCR pushes using the workflow token (#5854).
+
+This is a best-effort lint, not a security boundary: it inspects the steps of workflow
+files only, so pushes inside composite actions or called reusable workflows, and
+unusual spellings of the login or push commands, are not detected.
+"""
 
 from pathlib import Path
 import re
@@ -12,7 +17,9 @@ import yaml
 DOCKER_PUSH = re.compile(
     r"\bdocker\s+(?:(?:image\s+)?push\b|buildx\b[^\n;&|]*?\s--push\b)"
 )
-GHCR_LOGIN = re.compile(r"\bdocker\s+login\s+ghcr\.io(?=\s|$)", re.IGNORECASE)
+GHCR_LOGIN = re.compile(
+    r"\bdocker\s+login\b[^\n;&|]*?\s(?:https?://)?ghcr\.io(?=[\s/]|$)", re.IGNORECASE
+)
 WORKFLOW_TOKEN = re.compile(r"\b(?:github\.token|secrets\.GITHUB_TOKEN)\b", re.IGNORECASE)
 SHELL_TOKEN = re.compile(r"\b(?:GITHUB_TOKEN|github\.token)\b", re.IGNORECASE)
 
@@ -54,7 +61,8 @@ def packages_permission(permissions):
 
 def scan(root):
     """Inspect every workflow and count each token-authenticated GHCR pushing job once."""
-    paths = sorted((root / ".github/workflows").glob("*.yml"))
+    workflows = root / ".github/workflows"
+    paths = sorted([*workflows.glob("*.yml"), *workflows.glob("*.yaml")])
     pushing_jobs = 0
     violations = []
     for path in paths:

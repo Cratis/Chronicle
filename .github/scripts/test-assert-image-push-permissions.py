@@ -28,11 +28,11 @@ class ImagePushPermissions(unittest.TestCase):
             result = checker.main([str(SCRIPT), str(root)])
         return result, output.getvalue(), errors.getvalue()
 
-    def tree_check(self, workflow):
+    def tree_check(self, workflow, name="image.yml"):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             if workflow is not None:
-                path = root / ".github/workflows/image.yml"
+                path = root / ".github/workflows" / name
                 path.parent.mkdir(parents=True)
                 path.write_text(yaml.safe_dump(workflow), encoding="utf-8")
             return self.run_check(root)
@@ -140,6 +140,21 @@ class ImagePushPermissions(unittest.TestCase):
                 login = {"run": f'echo {token} | docker login GHCR.IO -u example --password-stdin'}
                 result, _, errors = self.tree_check({"jobs": {"publish": {"steps": [login, PUSH]}}})
                 self.assertEqual(1, result, errors)
+
+    def test_shell_ghcr_login_argument_orders_are_detected(self):
+        for command in (
+            'echo "$GITHUB_TOKEN" | docker login -u example --password-stdin ghcr.io',
+            'echo "$GITHUB_TOKEN" | docker login --username example --password-stdin https://ghcr.io',
+            'docker login -u example -p "${{ github.token }}" ghcr.io/cratis',
+        ):
+            with self.subTest(command=command):
+                result, _, errors = self.tree_check({"jobs": {"publish": {"steps": [{"run": command}, PUSH]}}})
+                self.assertEqual(1, result, errors)
+
+    def test_yaml_extension_workflows_are_scanned(self):
+        result, _, errors = self.tree_check({"jobs": {"publish": {"steps": PUSH_STEPS}}}, name="image.yaml")
+        self.assertEqual(1, result, errors)
+        self.assertIn("image.yaml: job publish pushes an image", errors)
 
     def test_shell_other_credentials_and_registries_are_ignored(self):
         for command in (
