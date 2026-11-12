@@ -26,7 +26,10 @@ internal sealed class EventStoreListAccess
         var context = services.GetService<IHttpContextAccessor>()?.HttpContext;
         _services = context?.RequestServices ?? services;
         _caller = SystemStoreRouting.CallerFor(_services, context?.User);
-        _enforce = _services.GetService<IOptions<ChronicleOptions>>()?.Value.Authentication.EnforceStoreEntitlements is true;
+
+        // A requestless call from the explicitly marked in-process host is trusted, as in StoreCapabilityGuard.
+        var inProcess = context is null && _services.GetService<InProcessKernelHost>() is not null;
+        _enforce = !inProcess && _services.GetService<IOptions<ChronicleOptions>>()?.Value.Authentication.EnforceStoreEntitlements is true;
     }
 
     /// <summary>Retains only the event stores the caller may read when entitlements are enforced.</summary>
@@ -60,7 +63,14 @@ internal sealed class EventStoreListAccess
         if (!_enforce) return stores;
 
         var changes = _services.GetService<IStoreEntitlementsCache>()?.Changes ?? Observable.Never<Unit>();
-        return stores.CombineLatest(changes.StartWith(Unit.Default), (names, _) => names)
+        var checks = Observable.Create<Unit>(observer =>
+        {
+            // Subscribe before the initial check so a change during filtering cannot be missed.
+            var subscription = changes.Subscribe(observer);
+            observer.OnNext(Unit.Default);
+            return subscription;
+        });
+        return stores.CombineLatest(checks, (names, _) => names)
             .Select(names => Observable.FromAsync(() => Filter(names)))
             .Switch();
     }

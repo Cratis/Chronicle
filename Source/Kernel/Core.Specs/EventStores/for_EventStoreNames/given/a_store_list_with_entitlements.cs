@@ -47,10 +47,11 @@ public class a_store_list_with_entitlements : Specification
         Configure(_authentication);
     }
 
-    protected void Configure(Authentication authentication)
+    protected void Configure(Authentication authentication, bool inProcess = false)
     {
         _services?.Dispose();
         var services = new ServiceCollection().AddLogging();
+        if (inProcess) services.AddSingleton(new InProcessKernelHost());
         services.AddSingleton(Options.Create(new ChronicleOptions { Authentication = authentication }));
         services.AddSingleton(_cache);
         services.AddSingleton<IHttpContextAccessor>(new HttpContextAccessor { HttpContext = new DefaultHttpContext { User = _caller } });
@@ -67,6 +68,11 @@ public class a_store_list_with_entitlements : Specification
     protected async Task ReadLists()
     {
         _snapshot = await EventStoreNames.AllEventStores(_storage, _initialization, _services);
+        await Observe();
+    }
+
+    protected async Task Observe()
+    {
         _subscription = EventStoreNames.ObserveEventStores(_storage, _initialization, _services)
             .Subscribe(names => _emissions.Writer.TryWrite(names), error => _emissions.Writer.TryComplete(error));
         await ReadEmission();
