@@ -150,9 +150,14 @@ test('failed, cancelled and skipped package verification or analyzers cannot tur
         } });
         assert.equal(child.status, result === 'success' ? 0 : 1, `Analyzer result: ${result}`);
     }
-    for (const job of ['integration', 'integration-api', 'mongodb', 'neo4j', 'coverage-merge-and-cache']) {
-        assert.ok(dependencies(job).includes('specs'), `${job} no longer waits for the aggregate`);
+    // #5865: the requested lanes start after their builds, beside the ordinary specs. Only the coverage merge (and
+    // the run's verdict through the specs aggregate) still requires every spec and every lane, so nothing caches or
+    // goes green with a failed, cancelled or skipped one.
+    for (const job of ['integration', 'integration-api', 'mongodb', 'neo4j']) {
+        assert.ok(!dependencies(job).includes('specs'), `${job} starts without waiting for the aggregate`);
+        assert.ok(dependencies('coverage-merge-and-cache').includes(job), `coverage merge waits for ${job}`);
     }
+    assert.ok(dependencies('coverage-merge-and-cache').includes('specs'), 'coverage merge still waits for the aggregate');
 });
 
 test('publish-equivalent pack runs independently with the same setup and restore-only cache', () => {
