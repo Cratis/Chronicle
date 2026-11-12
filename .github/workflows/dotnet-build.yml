@@ -195,7 +195,8 @@ jobs:
         uses: Cratis/Workflows/.github/actions/dotnet-cache@main
 
       - name: Restore obj cache
-        uses: actions/cache@v4
+        id: restore-obj
+        uses: actions/cache/restore@v4
         with:
           path: ./**/obj
           # Key on the package manifests so a dependency version change never restores a stale obj
@@ -293,6 +294,13 @@ jobs:
         if: github.event_name != 'pull_request' || inputs.integration_requested
         id: export-image
         run: echo "image=${{ env.CRATIS_CHRONICLE_LOCAL_IMAGE }}" >> "$GITHUB_OUTPUT"
+
+      - name: Save obj cache
+        if: github.event_name != 'pull_request' && steps.restore-obj.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ./**/obj
+          key: ${{ steps.restore-obj.outputs.cache-primary-key }}
 
   # The analyzer-owning Release build of the solution, beside the build and the specs rather
   # than in front of them. The specs aggregate requires it, so an analyzer warning still fails.
@@ -495,7 +503,8 @@ jobs:
         uses: Cratis/Workflows/.github/actions/dotnet-cache@main
 
       - name: Restore obj cache
-        uses: actions/cache@v4
+        id: restore-obj
+        uses: actions/cache/restore@v4
         with:
           path: ./**/obj
           # Package-aware key (see the dotnet-build job) so a dependency bump busts the stale obj cache.
@@ -538,6 +547,13 @@ jobs:
           compression-level: 0
           if-no-files-found: error
 
+      - name: Save obj cache
+        if: github.event_name != 'pull_request' && steps.restore-obj.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ./**/obj
+          key: ${{ steps.restore-obj.outputs.cache-primary-key }}
+
   # Requested PR path: builds in parallel with the specs, so integration does not wait for
   # specs and then for this build in sequence. The integration job still requires successful
   # specs before any shard runs; a red spec costs only this one build.
@@ -563,7 +579,7 @@ jobs:
         uses: Cratis/Workflows/.github/actions/dotnet-cache@main
 
       - name: Restore obj cache
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: ./**/obj
           # Package-aware key (see the dotnet-build job) so a dependency bump busts the stale obj cache.

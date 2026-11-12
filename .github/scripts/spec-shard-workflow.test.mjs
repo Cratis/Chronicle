@@ -71,6 +71,25 @@ test('every Release artifact reader accepts the measured long-window compression
     }
 });
 
+test('obj caches restore on PRs and save only non-PR misses under the restored primary key', () => {
+    const restoring = [...jobs.values()].filter(job => job.includes('- name: Restore obj cache\n'));
+    assert.equal(restoring.length, 5);
+    for (const job of restoring) assert.match(step(job, 'Restore obj cache'), /uses: actions\/cache\/restore@v4/);
+    for (const name of ['dotnet-build', 'dotnet-build-development']) {
+        const job = jobs.get(name);
+        const restore = step(job, 'Restore obj cache');
+        assert.match(restore, /id: restore-obj/);
+        const prefix = name === 'dotnet-build' ? 'dotnet-obj-cache' : 'dotnet-dev-obj-cache';
+        assert.ok(restore.includes(`key: ${prefix}-\u0024{{ hashFiles('**/*.csproj', '**/Directory.*.props', '**/Directory.*.targets') }}-\u0024{{ github.sha }}`));
+        const save = step(job, 'Save obj cache');
+        assert.match(save, /if: github\.event_name != 'pull_request' && steps\.restore-obj\.outputs\.cache-hit != 'true'/);
+        assert.match(save, /uses: actions\/cache\/save@v4/);
+        assert.match(save, /path: \.\/\*\*\/obj/);
+        assert.match(save, /key: \u0024\{\{ steps\.restore-obj\.outputs\.cache-primary-key \}\}/);
+    }
+    assert.ok(!jobs.get('dotnet-build-development-requested').includes('actions/cache/save@'));
+});
+
 test('package verification stamps exactly the version dotnet-build derived', () => {
     assert.match(build, /^      build-version: \$\{\{ steps\.export-build-version\.outputs\.version \}\}$/m);
     const names = [...build.matchAll(/^      - name: (.+)$/gm)].map(match => match[1]);
