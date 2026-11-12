@@ -158,6 +158,27 @@ class LastGreenSpecs(unittest.TestCase):
         with patch.object(select, "run", self.fake_run(ancestors={"aaa", "bbb"}, present=())):
             self.assertIsNone(select.last_green_head("o/r", 7, "hhh"))
 
+    GATE_RUNS = "\n".join(["ggg\t2026-01-05T00:00:00Z\t7\t901", "ddd\t2026-01-06T00:00:00Z\t8\t902"])
+
+    def gate_run(self, proof):
+        """Requested runs list nothing; hot-core-gate.yml runs list ggg (and another pull request's ddd)."""
+        def run(*arguments):
+            if arguments[0] == "gh" and "/jobs" in arguments[3]:
+                return 0, proof, ""
+            if arguments[0] == "gh":
+                return 0, (self.GATE_RUNS if select.GATE_WORKFLOW in arguments[3] else ""), ""
+            if arguments[1] == "cat-file":
+                return 0, "", ""
+            return 0, "", ""
+        return run
+
+    def test_a_same_run_gate_run_counts_only_when_its_nested_requested_job_passed(self):
+        with patch.object(select, "run", self.gate_run("success")):
+            self.assertEqual("ggg", select.last_green_head("o/r", 7, "hhh"))
+        for proof in ("", "failure", "skipped", "success\nfailure"):
+            with self.subTest(proof=proof), patch.object(select, "run", self.gate_run(proof)):
+                self.assertIsNone(select.last_green_head("o/r", 7, "hhh"))
+
     def test_an_api_failure_reuses_nothing(self):
         with patch.object(select, "run", lambda *a: (1, "", "boom")):
             self.assertIsNone(select.last_green_head("o/r", 7, "hhh"))

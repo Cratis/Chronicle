@@ -37,6 +37,7 @@ FAILED_GATE = {"id": 42, "head_sha": SHA, "event": "pull_request", "status": "co
 BUILD_GREEN = {"id": 70, "head_sha": SHA, "event": "pull_request", "status": "completed",
                "conclusion": "success", "html_url": "https://github.com/Cratis/Chronicle/actions/runs/70",
                "jobs": [{"name": "specs", "conclusion": "success"}]}
+NESTED_JOB = "requested / " + gate.EVIDENCE_JOB
 ENV = {"DETECT": "success", "TOUCHED": "true", "DISPATCH": "false", "FORK": "false",
        "REPO": "Cratis/Chronicle", "HEAD_SHA": SHA, "BUILD": "skipped", "MATRIX": "skipped",
        "RUN_INTEGRATION": "false"}
@@ -206,9 +207,66 @@ class GateDecisions(unittest.TestCase):
                 patch.object(gate, "collection", return_value=[GREEN]) as collect, \
                 patch.object(gate, "with_jobs", return_value=GREEN):
             self.assertTrue(gate.gate(arguments())[0])
-        collect.assert_called_once_with(
+        collect.assert_any_call(
             f"repos/Cratis/Chronicle/actions/workflows/requested-integration.yml/runs"
             f"?head_sha={SHA}&event=pull_request&per_page=100", "workflow_runs")
+
+    SAME_RUN = {"REQUESTED": "success", "REQUESTED_PROVEN": "true", "REQUESTED_TOUCHED": "true",
+                "REQUESTED_ALL_PROVIDERS": "true", "PR_NUMBER": "7", "GITHUB_RUN_ID": "555",
+                "GITHUB_SERVER_URL": "https://github.com"}
+    LABELLED = {"head": {"sha": SHA}, "labels": [{"name": "run-integration"}]}
+
+    def same_run(self, pr=None, evidence=None, **overrides):
+        env = dict(ENV, RUN_INTEGRATION="true", **{**self.SAME_RUN, **overrides})
+        lookup = patch.object(gate, "evidence_runs", return_value=evidence or [])
+        with patch.dict(os.environ, env, clear=True), patch.object(gate, "api", return_value=pr or self.LABELLED), \
+                lookup:
+            return gate.gate(arguments())
+
+    def test_same_run_proof_turns_a_touched_gate_green_without_looking_up_runs(self):
+        ok, message = self.same_run()
+        self.assertTrue(ok)
+        self.assertIn("https://github.com/Cratis/Chronicle/actions/runs/555", message)
+        ok, _ = self.same_run(TOUCHED="false", REQUESTED_TOUCHED="false", REQUESTED_ALL_PROVIDERS="false")
+        self.assertTrue(ok)
+
+    def test_same_run_proof_accepts_a_reused_result_only_when_the_callee_reports_it(self):
+        self.assertTrue(self.same_run(REQUESTED_PROVEN="skip", REQUESTED_ALL_PROVIDERS="")[0])
+
+    def test_same_run_proof_is_never_a_verdict_unless_complete_and_every_gap_stays_red(self):
+        for overrides in ({"REQUESTED": "failure"}, {"REQUESTED": "cancelled"}, {"REQUESTED": "skipped"},
+                          {"REQUESTED": ""}, {"REQUESTED_PROVEN": ""}, {"REQUESTED_PROVEN": "false"},
+                          {"REQUESTED_ALL_PROVIDERS": ""}, {"REQUESTED_ALL_PROVIDERS": "false"},
+                          {"REQUESTED_TOUCHED": "true", "TOUCHED": "false", "REQUESTED_ALL_PROVIDERS": "false"},
+                          {"GITHUB_RUN_ID": ""}):
+            with self.subTest(overrides=overrides):
+                ok, message = self.same_run(**overrides)
+                self.assertFalse(ok)
+
+    def test_same_run_proof_needs_the_current_label_and_head_never_the_payload(self):
+        for pr in ({"head": {"sha": SHA}, "labels": []},
+                   {"head": {"sha": "new-push"}, "labels": [{"name": "run-integration"}]}):
+            with self.subTest(pr=pr):
+                ok, message = self.same_run(pr=pr)
+                self.assertFalse(ok)
+                self.assertIn("Add the `run-integration` label", message)
+        # Label removed but untouched stays green as before.
+        self.assertTrue(self.same_run(pr={"head": {"sha": SHA}, "labels": []}, TOUCHED="false",
+                                      REQUESTED_TOUCHED="false")[0])
+
+    def test_same_run_proof_never_applies_to_forks_dispatch_or_failed_detection(self):
+        for overrides in ({"FORK": "true"}, {"DETECT": "failure"}, {"DISPATCH": "true", "BUILD": "failure"}):
+            with self.subTest(overrides=overrides):
+                self.assertFalse(self.same_run(**overrides)[0])
+
+    def test_same_run_label_api_error_fails_closed_in_cli(self):
+        output = io.StringIO()
+        env = dict(ENV, RUN_INTEGRATION="true", **self.SAME_RUN)
+        with patch.dict(os.environ, env, clear=True), patch.object(sys, "argv", [str(SCRIPT), "gate"]), \
+                patch.object(gate, "api", side_effect=subprocess.CalledProcessError(1, "gh", stderr="HTTP 403")), \
+                redirect_stdout(output):
+            self.assertEqual(1, gate.main())
+        self.assertIn("failing closed: HTTP 403", output.getvalue())
 
     def test_api_error_fails_closed_in_cli(self):
         output = io.StringIO()
@@ -219,10 +277,41 @@ class GateDecisions(unittest.TestCase):
         self.assertIn("failing closed: HTTP 403", output.getvalue())
 
     def test_only_successful_runs_load_latest_jobs(self):
-        with patch.object(gate, "workflow_runs", return_value=[SKIPPED, GREEN]), \
+        def runs(repo, workflow, head_sha):
+            return [SKIPPED, GREEN] if workflow == gate.EVIDENCE_WORKFLOW else []
+        with patch.object(gate, "workflow_runs", side_effect=runs), \
                 patch.object(gate, "with_jobs", return_value=GREEN) as load:
             self.assertEqual([GREEN], gate.evidence_runs("Cratis/Chronicle", SHA, None))
         load.assert_called_once_with("Cratis/Chronicle", GREEN)
+
+    def test_same_run_workflow_runs_load_jobs_when_completed_even_if_the_gate_failed(self):
+        # The nested requested job can pass while the ordinary gate fails on specs; that run is still evidence.
+        failed_gate_run = {"id": 90, "head_sha": SHA, "event": "pull_request", "status": "completed",
+                           "conclusion": "failure"}
+        running = dict(failed_gate_run, id=91, status="in_progress", conclusion=None)
+        cancelled = dict(failed_gate_run, id=92, conclusion="cancelled")
+        loaded = dict(failed_gate_run, jobs=[{"name": NESTED_JOB, "conclusion": "success"}])
+
+        def runs(repo, workflow, head_sha):
+            return [failed_gate_run, running, cancelled] if workflow == gate.GATE_WORKFLOW else []
+        with patch.object(gate, "workflow_runs", side_effect=runs), \
+                patch.object(gate, "with_jobs", return_value=loaded) as load:
+            self.assertEqual([loaded], gate.evidence_runs("Cratis/Chronicle", SHA, None))
+        load.assert_called_once_with("Cratis/Chronicle", failed_gate_run)
+
+    def test_nested_requested_job_in_a_gate_run_is_evidence_but_a_run_without_it_is_not(self):
+        same_run = dict(GREEN, jobs=[{"name": NESTED_JOB, "conclusion": "success"}])
+        self.assertTrue(gate.has_green_evidence([same_run], SHA))
+        for jobs in ([], [{"name": "hot-core-gate", "conclusion": "success"}],
+                     [{"name": NESTED_JOB, "conclusion": "failure"}],
+                     [{"name": NESTED_JOB, "conclusion": "skipped"}],
+                     [{"name": "requested / hot-core-gate-requested-patch", "conclusion": "success"}],
+                     [{"name": "xhot-core-gate-requested-run-integration", "conclusion": "success"}],
+                     [{"name": "requested / hot-core-gate-requested-run-integration-x", "conclusion": "success"}]):
+            with self.subTest(jobs=jobs):
+                self.assertFalse(gate.has_green_evidence([dict(GREEN, jobs=jobs)], SHA))
+        # The standalone requested workflow keeps its exact job name.
+        self.assertTrue(gate.has_green_evidence([GREEN], SHA))
 
     def test_api_collection_keeps_all_pages(self):
         with patch.object(gate, "api", return_value=[{"jobs": [{"name": "other"}]}, {"jobs": GREEN["jobs"]}]):
@@ -414,14 +503,36 @@ class RefreshDecisions(unittest.TestCase):
             with self.subTest(runs=runs, current=current):
                 self.assertEqual(expected, gate.rerun_target(runs, SHA, current))
 
-    def test_refresh_rechecks_head_after_polling_and_never_posts_stale(self):
+    def test_refresh_returns_without_polling_while_the_latest_gate_is_running(self):
+        for status in ("queued", "in_progress"):
+            with self.subTest(status=status), patch.dict(os.environ, ENV, clear=True), \
+                    patch.object(gate, "current_pr", return_value={"head": {"sha": SHA}}), \
+                    patch.object(gate, "evidence_runs", return_value=[GREEN]), \
+                    patch.object(gate, "gate_runs", return_value=[dict(FAILED_GATE, status=status)]) as runs, \
+                    patch.object(gate.time, "sleep") as sleep, patch.object(gate, "api") as api:
+                ok, message = gate.refresh(arguments())
+                self.assertTrue(ok)
+                self.assertIn("still running", message)
+                runs.assert_called_once()
+                sleep.assert_not_called()
+                api.assert_not_called()
+
+    def test_refresh_rechecks_head_and_never_posts_stale(self):
         with patch.dict(os.environ, ENV, clear=True), \
                 patch.object(gate, "current_pr", side_effect=[{"head": {"sha": SHA}}, {"head": {"sha": "new"}}]), \
                 patch.object(gate, "evidence_runs", return_value=[GREEN]), \
-                patch.object(gate, "gate_runs", side_effect=[[dict(FAILED_GATE, status="in_progress")], [FAILED_GATE]]), \
+                patch.object(gate, "gate_runs", return_value=[FAILED_GATE]), \
                 patch.object(gate.time, "sleep") as sleep, patch.object(gate, "api") as api:
             self.assertIn("Nothing to do", gate.refresh(arguments())[1])
-        sleep.assert_called_once_with(30)
+        sleep.assert_not_called()
+        api.assert_not_called()
+
+    def test_refresh_with_no_gate_run_posts_nothing(self):
+        with patch.dict(os.environ, ENV, clear=True), \
+                patch.object(gate, "current_pr", return_value={"head": {"sha": SHA}}), \
+                patch.object(gate, "evidence_runs", return_value=[GREEN]), \
+                patch.object(gate, "gate_runs", return_value=[]), patch.object(gate, "api") as api:
+            self.assertTrue(gate.refresh(arguments())[0])
         api.assert_not_called()
 
     def test_refresh_posts_only_for_green_evidence_and_failed_gate(self):

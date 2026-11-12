@@ -5,22 +5,38 @@
 # hot-core gate. Even inside this workflow, the label is part of each check name: a later semver
 # label cannot mask a failed requested integration run with a skipped check on the same SHA.
 # Effective label: the event label on labeled; otherwise run-integration if present, else none.
+# This workflow is also called by hot-core-gate.yml on opened/synchronize/reopened of a PR that carries
+# run-integration, so those events do not subscribe here (integration would run twice); there github.event
+# is the caller's pull_request event and the same expressions apply.
 # Repeat that expression in names, conditions and concurrency (env is unavailable in these contexts).
 name: Requested Integration
 
 run-name: "Requested Integration${{ format(' - PR #{0} @ {1}', github.event.pull_request.number, github.event.pull_request.head.sha) }}"
 
 concurrency:
-  # A called .NET workflow uses the caller's github.workflow/ref; this extra PR/label
-  # suffix keeps its concurrency group distinct from the caller's while it runs.
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}-${{ (github.event.action == 'labeled' && github.event.label.name || contains(github.event.pull_request.labels.*.name, 'run-integration') && 'run-integration' || 'none') }}
+  # One key for both entry points (label event here, push via hot-core-gate.yml's call), so a push or a
+  # relabel cancels stale requested integration whichever entry started it. A literal prefix, not
+  # github.workflow (which is the caller's name when called). It differs from the gate caller's key and from
+  # dotnet-build.yml's inherited "<workflow>-<ref>", so nothing cancels its own caller.
+  group: requested-integration-${{ github.event.pull_request.number || github.ref }}-${{ (github.event.action == 'labeled' && github.event.label.name || contains(github.event.pull_request.labels.*.name, 'run-integration') && 'run-integration' || 'none') }}
   cancel-in-progress: true
 
 on:
   pull_request:
-    types: [labeled, synchronize, reopened]
+    types: [labeled]
     branches:
       - "**"
+  workflow_call:
+    outputs:
+      touched:
+        description: Whether the pull request touches the hot core.
+        value: ${{ jobs.requested-detect-hot-core.outputs.touched }}
+      all_providers:
+        description: Whether the requested integration matrix used every storage provider.
+        value: ${{ jobs.requested-integration.outputs.all_providers }}
+      proven:
+        description: "true when the matrix ran and passed, skip when selection reused an earlier pass; empty otherwise."
+        value: ${{ jobs.hot-core-gate-requested.outputs.proven }}
 
 jobs:
   requested-integration:
@@ -95,8 +111,12 @@ jobs:
     if: ${{ !cancelled() && (github.event.action == 'labeled' && github.event.label.name || contains(github.event.pull_request.labels.*.name, 'run-integration') && 'run-integration' || 'none') == 'run-integration' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    outputs:
+      # Written only on the paths that exit 0, so a caller can trust it without re-deriving the checks.
+      proven: ${{ steps.decide.outputs.proven }}
     steps:
       - name: Decide
+        id: decide
         env:
           DETECT: ${{ needs.requested-detect-hot-core.result }}
           TOUCHED: ${{ needs.requested-detect-hot-core.outputs.touched }}
@@ -125,6 +145,7 @@ jobs:
           # job is skipped on purpose; the selection step's summary names the evidence.
           if [ "$MODE" = "skip" ] && [ "$INTEGRATION" = "skipped" ]; then
             echo "No integration-relevant file changed since the last passing requested run; its result stands for $HEAD_SHA."
+            echo "proven=skip" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           if [ "$INTEGRATION" != "success" ]; then
@@ -140,6 +161,7 @@ jobs:
 
           if [ "$TOUCHED" != "true" ]; then
             echo "No hot-core path is touched; the requested PR integration suites passed."
+            echo "proven=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
@@ -150,3 +172,4 @@ jobs:
 
           # integration.yml reports reviewed exclusions and skips their jobs explicitly; all other lanes must pass.
           echo "This PR changes the hot core, and the out-of-process matrix passed with any declared lane exclusions reported in discovery's summary."
+          echo "proven=true" >> "$GITHUB_OUTPUT"
