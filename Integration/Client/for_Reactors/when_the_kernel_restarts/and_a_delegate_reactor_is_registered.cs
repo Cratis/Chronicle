@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Threading.Channels;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Integration.for_OccurrenceProcessRecovery;
+using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.Registrations;
 
@@ -35,25 +36,32 @@ public class and_a_delegate_reactor_is_registered : Cratis.Specifications.Specif
         var store = await client.GetEventStore(kernel.Store);
         (await store.WaitForRegistration(TimeSpan.FromSeconds(60))).IsSuccess.ShouldBeTrue();
 
+        // Start behind the tail and keep the first catch-up delivery unacknowledged when the kernel is killed.
+        // This makes a persisted running step, rather than the timing of live delivery, drive the regression.
+        await AppendUntilAccepted(store, "before");
         var received = Channel.CreateUnbounded<string>();
+        var releaseDelivery = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         await store.Reactors.Register(
             _reactorId,
             definition => definition.WithEventType(store.EventTypes.GetEventTypeFor(typeof(KernelRestartHappened))),
-            (@event, _) =>
+            async (@event, cancellationToken) =>
             {
                 received.Writer.TryWrite(@event.Content.ToJsonString());
-                return Task.CompletedTask;
+                await releaseDelivery.Task.WaitAsync(cancellationToken);
             });
 
-        await AppendUntilAccepted(store, "before");
         (await Next(received, TimeSpan.FromSeconds(60))).ShouldContain("before");
+        var interruptedJob = (await store.Jobs.GetJobs()).Single(_ => _.Status == JobStatus.Running);
 
         await kernel.KillKernel();
+        releaseDelivery.TrySetResult();
         await kernel.RestartKernel();
 
         await AppendUntilAccepted(store, "after");
         var afterRestart = await NextContaining(received, "after", TimeSpan.FromSeconds(90));
         var state = await store.Reactors.GetHandlerById(_reactorId).GetState();
+        var recoveredJob = await WaitForJobToFinish(store, interruptedJob.Id);
+        Console.WriteLine($"After restart: received={afterRestart}; observer={state}; interrupted job {recoveredJob.Id}={recoveredJob.Status}");
 
         afterRestart.ShouldContain("after");
         state.IsSubscribed.ShouldBeTrue();
@@ -84,6 +92,21 @@ public class and_a_delegate_reactor_is_registered : Cratis.Specifications.Specif
 
             await Task.Delay(TimeSpan.FromSeconds(1));
         }
+    }
+
+    static async Task<Job> WaitForJobToFinish(IEventStore store, JobId jobId)
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(30);
+        while (DateTime.UtcNow < deadline)
+        {
+            var job = await store.Jobs.GetJob(jobId);
+            if (job?.Status is JobStatus.CompletedSuccessfully or JobStatus.CompletedWithFailures or JobStatus.Failed)
+            {
+                return job;
+            }
+            await Task.Delay(100);
+        }
+        throw new TimeoutException($"Interrupted catch-up job {jobId} did not finish");
     }
 
     static async Task<string> NextContaining(Channel<string> received, string value, TimeSpan timeout)
