@@ -199,7 +199,9 @@ test('three-shard workflow matches the planner and refreshed timing samples', as
     const runs = new Set(timings.samples.map(sample => sample.run));
     assert.ok(runs.size >= 1 && runs.size <= 8);
     for (const run of runs) {
-        const expected = run === '43166203967' ? [1, 2, 3] : [1, 2];
-        assert.deepEqual(timings.samples.filter(sample => sample.run === run).map(sample => sample.shard).sort(), expected);
+        // Each sampled run must contribute every shard it had, numbered 1..n, whatever the shard count was then.
+        const shards = timings.samples.filter(sample => sample.run === run).map(sample => sample.shard).sort((a, b) => a - b);
+        assert.ok(shards.length >= 2 && shards.length <= ORDINARY_SHARDS);
+        assert.deepEqual(shards, shards.map((_, index) => index + 1));
     }
 });
