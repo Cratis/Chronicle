@@ -319,15 +319,12 @@ def refresh(arguments):
             return True, "Nothing to do: no green specs evidence for this head commit."
     elif not has_green_evidence(evidence_runs(repo, head_sha, arguments.runs_json), head_sha):
         return True, "Nothing to do: no green requested-integration evidence for this head commit."
-    for attempt in range(21):
-        runs = gate_runs(repo, head_sha, arguments.gate_runs_json)
-        latest = latest_run(runs, head_sha)
-        if not latest or latest["status"] == "completed":
-            break
-        if arguments.gate_runs_json or attempt == 20:
-            return False, "::error::The latest hot-core gate is still running; refresh did not complete."
-        time.sleep(30)
-    # Re-read after polling: a new push owns the check now if the head moved while waiting.
+    runs = gate_runs(repo, head_sha, arguments.gate_runs_json)
+    latest = latest_run(runs, head_sha)
+    if latest and latest["status"] != "completed":
+        # A gate run waits for its called integration jobs (tens of minutes); it reports itself when it finishes.
+        return True, "Nothing to do: the latest hot-core gate is still running and will report for itself."
+    # Re-read: a new push owns the check now if the head moved meanwhile.
     pr = current_pr(repo, head_sha, arguments.pr_json)
     target = rerun_target(runs, head_sha, pr["head"]["sha"] if pr else "")
     if target is None:

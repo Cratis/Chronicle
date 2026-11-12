@@ -503,14 +503,36 @@ class RefreshDecisions(unittest.TestCase):
             with self.subTest(runs=runs, current=current):
                 self.assertEqual(expected, gate.rerun_target(runs, SHA, current))
 
-    def test_refresh_rechecks_head_after_polling_and_never_posts_stale(self):
+    def test_refresh_returns_without_polling_while_the_latest_gate_is_running(self):
+        for status in ("queued", "in_progress"):
+            with self.subTest(status=status), patch.dict(os.environ, ENV, clear=True), \
+                    patch.object(gate, "current_pr", return_value={"head": {"sha": SHA}}), \
+                    patch.object(gate, "evidence_runs", return_value=[GREEN]), \
+                    patch.object(gate, "gate_runs", return_value=[dict(FAILED_GATE, status=status)]) as runs, \
+                    patch.object(gate.time, "sleep") as sleep, patch.object(gate, "api") as api:
+                ok, message = gate.refresh(arguments())
+                self.assertTrue(ok)
+                self.assertIn("still running", message)
+                runs.assert_called_once()
+                sleep.assert_not_called()
+                api.assert_not_called()
+
+    def test_refresh_rechecks_head_and_never_posts_stale(self):
         with patch.dict(os.environ, ENV, clear=True), \
                 patch.object(gate, "current_pr", side_effect=[{"head": {"sha": SHA}}, {"head": {"sha": "new"}}]), \
                 patch.object(gate, "evidence_runs", return_value=[GREEN]), \
-                patch.object(gate, "gate_runs", side_effect=[[dict(FAILED_GATE, status="in_progress")], [FAILED_GATE]]), \
+                patch.object(gate, "gate_runs", return_value=[FAILED_GATE]), \
                 patch.object(gate.time, "sleep") as sleep, patch.object(gate, "api") as api:
             self.assertIn("Nothing to do", gate.refresh(arguments())[1])
-        sleep.assert_called_once_with(30)
+        sleep.assert_not_called()
+        api.assert_not_called()
+
+    def test_refresh_with_no_gate_run_posts_nothing(self):
+        with patch.dict(os.environ, ENV, clear=True), \
+                patch.object(gate, "current_pr", return_value={"head": {"sha": SHA}}), \
+                patch.object(gate, "evidence_runs", return_value=[GREEN]), \
+                patch.object(gate, "gate_runs", return_value=[]), patch.object(gate, "api") as api:
+            self.assertTrue(gate.refresh(arguments())[0])
         api.assert_not_called()
 
     def test_refresh_posts_only_for_green_evidence_and_failed_gate(self):
