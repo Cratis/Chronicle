@@ -58,20 +58,48 @@ public class CacheEncryptionKeyStorage(
     /// </summary>
     public static readonly TimeSpan DefaultNegativeCacheTimeToLive = TimeSpan.FromSeconds(5);
 
-    readonly Dictionary<Key, EncryptionKey> _keys = [];
-    readonly Dictionary<KeyScope, EncryptionKeyAtRevision> _latestPairs = [];
-    readonly Dictionary<Key, EncryptionKeyAtRevision> _revisionPairs = [];
-    readonly Dictionary<Key, DateTimeOffset> _absentKeys = [];
+    /// <summary>
+    /// Each material, pair, absence and generation map retains at most 10,000 entries. Revision entries count
+    /// separately so a single identifier with many revisions cannot bypass the bound. Material is evicted oldest-first.
+    /// </summary>
+    internal const int CacheCapacity = 10_000;
+
+    /// <summary>
+    /// Sweep expired absences every 256 cache operations, including hits for unrelated identifiers.
+    /// </summary>
+    internal const int SweepInterval = 256;
+
+    readonly BoundedEncryptionKeyCache<Key, EncryptionKey> _keys = new(CacheCapacity);
+    readonly BoundedEncryptionKeyCache<KeyScope, EncryptionKeyAtRevision> _latestPairs = new(CacheCapacity);
+    readonly BoundedEncryptionKeyCache<Key, EncryptionKeyAtRevision> _revisionPairs = new(CacheCapacity);
+    readonly BoundedEncryptionKeyCache<Key, DateTimeOffset> _absentKeys = new(CacheCapacity);
     readonly Dictionary<KeyScope, long> _generations = [];
     readonly Lock _lock = new();
     readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
     readonly TimeSpan _negativeCacheTimeToLive = negativeCacheTimeToLive ?? DefaultNegativeCacheTimeToLive;
+    long _generationClock;
+    long _generationFloor;
+    int _operationsSinceSweep;
 
     /// <inheritdoc/>
     public IReadOnlyList<EncryptionKeyStorageCapability> Capabilities => actualKeyStore.Capabilities;
 
     /// <inheritdoc/>
     public EncryptionKeyFenceGuarantees FenceGuarantees => actualKeyStore.FenceGuarantees;
+
+    /// <summary>
+    /// Gets a consistent snapshot of the retained entry counts.
+    /// </summary>
+    internal (int Keys, int LatestPairs, int RevisionPairs, int AbsentKeys, int Generations) Counts
+    {
+        get
+        {
+            lock (_lock)
+            {
+                return (_keys.Count, _latestPairs.Count, _revisionPairs.Count, _absentKeys.Count, _generations.Count);
+            }
+        }
+    }
 
     /// <inheritdoc/>
     public Task<EncryptionKeyErasureRequest?> GetErasureRequestFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, string requestId) =>
@@ -182,6 +210,7 @@ public class CacheEncryptionKeyStorage(
 
         lock (_lock)
         {
+            Maintain();
             if (_keys.TryGetValue(cacheKey, out var cached))
             {
                 return cached;
@@ -195,7 +224,7 @@ public class CacheEncryptionKeyStorage(
         {
             if (generation == GenerationFor(scope))
             {
-                _keys[cacheKey] = provisioned;
+                _keys.Set(cacheKey, provisioned);
                 _absentKeys.Remove(cacheKey);
             }
         }
@@ -211,6 +240,7 @@ public class CacheEncryptionKeyStorage(
         long generation;
         lock (_lock)
         {
+            Maintain();
             if (_latestPairs.TryGetValue(scope, out var cached))
             {
                 return cached;
@@ -251,6 +281,7 @@ public class CacheEncryptionKeyStorage(
         long generation;
         lock (_lock)
         {
+            Maintain();
             if (_revisionPairs.TryGetValue(cacheKey, out var cached)) return cached;
             if (_latestPairs.TryGetValue(scope, out var latest) && latest.Revision == revision) return latest;
             if (IsRememberedAbsent(cacheKey)) return null;
@@ -262,7 +293,7 @@ public class CacheEncryptionKeyStorage(
         {
             if (generation == GenerationFor(scope))
             {
-                if (pair is not null) _revisionPairs[cacheKey] = pair;
+                if (pair is not null) _revisionPairs.Set(cacheKey, pair);
                 else RememberAbsent(cacheKey);
             }
         }
@@ -277,6 +308,7 @@ public class CacheEncryptionKeyStorage(
         long generation;
         lock (_lock)
         {
+            Maintain();
             if (_latestPairs.TryGetValue(scope, out var cached))
             {
                 return cached;
@@ -292,7 +324,7 @@ public class CacheEncryptionKeyStorage(
             {
                 CachePair(scope, pair);
                 var cacheKey = new Key(scope, pair.Revision);
-                _keys[cacheKey] = pair.Key;
+                _keys.Set(cacheKey, pair.Key);
                 _absentKeys.Remove(cacheKey);
             }
         }
@@ -310,6 +342,7 @@ public class CacheEncryptionKeyStorage(
 
         lock (_lock)
         {
+            Maintain();
             if (_keys.TryGetValue(cacheKey, out var encryptionKey))
             {
                 return encryptionKey;
@@ -328,7 +361,7 @@ public class CacheEncryptionKeyStorage(
         {
             if (generation == GenerationFor(scope) && key is not null)
             {
-                _keys[cacheKey] = key;
+                _keys.Set(cacheKey, key);
                 _absentKeys.Remove(cacheKey);
             }
             else if (generation == GenerationFor(scope))
@@ -353,6 +386,7 @@ public class CacheEncryptionKeyStorage(
 
         lock (_lock)
         {
+            Maintain();
             if (_keys.ContainsKey(cacheKey))
             {
                 return true;
@@ -401,17 +435,17 @@ public class CacheEncryptionKeyStorage(
             }
 
             Invalidate(scope, revision);
-            _keys[new Key(scope, EncryptionKeyRevision.Latest)] = key;
+            _keys.Set(new Key(scope, EncryptionKeyRevision.Latest), key);
             if (!IsLatest(revision))
             {
-                _keys[new Key(scope, revision!)] = key;
+                _keys.Set(new Key(scope, revision!), key);
             }
         }
     }
 
     static bool IsLatest(EncryptionKeyRevision? revision) => revision is null || revision == EncryptionKeyRevision.Latest;
 
-    static void RemoveAllFor<TValue>(Dictionary<Key, TValue> map, KeyScope scope)
+    static void RemoveAllFor<TValue>(BoundedEncryptionKeyCache<Key, TValue> map, KeyScope scope)
     {
         foreach (var key in map.Keys.Where(_ => _.Scope == scope).ToList())
         {
@@ -437,6 +471,7 @@ public class CacheEncryptionKeyStorage(
     {
         lock (_lock)
         {
+            Maintain();
             AdvanceGeneration(scope);
             _latestPairs.Remove(scope);
 
@@ -461,7 +496,7 @@ public class CacheEncryptionKeyStorage(
     void CachePair(KeyScope scope, EncryptionKeyAtRevision pair)
     {
         var latest = new Key(scope, EncryptionKeyRevision.Latest);
-        _latestPairs[scope] = pair;
+        _latestPairs.Set(scope, pair);
         _absentKeys.Remove(latest);
     }
 
@@ -473,9 +508,35 @@ public class CacheEncryptionKeyStorage(
         }
     }
 
-    long GenerationFor(KeyScope scope) => _generations.GetValueOrDefault(scope);
+    long GenerationFor(KeyScope scope) => _generations.GetValueOrDefault(scope, _generationFloor);
 
-    void AdvanceGeneration(KeyScope scope) => _generations[scope] = GenerationFor(scope) + 1;
+    void AdvanceGeneration(KeyScope scope)
+    {
+        if (_generations.Count == CacheCapacity)
+        {
+            // Never reset a pruned scope to a generation an in-flight operation could have captured. Clearing
+            // all entries after raising the floor only causes safe, spurious mismatches for unrelated operations.
+            _generationFloor = ++_generationClock;
+            _generations.Clear();
+        }
+
+        _generations[scope] = ++_generationClock;
+    }
+
+    void Maintain()
+    {
+        if (++_operationsSinceSweep < SweepInterval)
+        {
+            return;
+        }
+
+        _operationsSinceSweep = 0;
+        var now = _timeProvider.GetUtcNow();
+        foreach (var key in _absentKeys.Keys.Where(key => _absentKeys.TryGetValue(key, out var expiresAt) && expiresAt <= now).ToList())
+        {
+            _absentKeys.Remove(key);
+        }
+    }
 
     bool IsRememberedAbsent(Key cacheKey)
     {
@@ -492,7 +553,7 @@ public class CacheEncryptionKeyStorage(
         return false;
     }
 
-    void RememberAbsent(Key cacheKey) => _absentKeys[cacheKey] = _timeProvider.GetUtcNow() + _negativeCacheTimeToLive;
+    void RememberAbsent(Key cacheKey) => _absentKeys.Set(cacheKey, _timeProvider.GetUtcNow() + _negativeCacheTimeToLive);
 
     sealed record KeyScope(EventStoreName EventStore, EventStoreNamespaceName EventStoreNamespace, EncryptionKeyIdentifier Identifier);
 
