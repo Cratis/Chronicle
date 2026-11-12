@@ -11,7 +11,8 @@
 # Repeat that expression in names, conditions and concurrency (env is unavailable in these contexts).
 name: Requested Integration
 
-run-name: "Requested Integration${{ format(' - PR #{0} @ {1}', github.event.pull_request.number, github.event.pull_request.head.sha) }}"
+# The tested base is part of the run name: select-integration.py only reuses a run whose recorded base matches.
+run-name: "Requested Integration${{ format(' - PR #{0} @ {1} base {2}', github.event.pull_request.number, github.event.pull_request.head.sha, github.event.pull_request.base.sha) }}"
 
 concurrency:
   # One key for both entry points (label event here, push via hot-core-gate.yml's call), so a push or a
@@ -71,6 +72,9 @@ jobs:
       touched: ${{ steps.detect.outputs.touched }}
       mode: ${{ steps.select.outputs.mode }}
       selection: ${{ steps.select.outputs.selection }}
+      reused_run: ${{ steps.select.outputs.reused_run }}
+      reused_head: ${{ steps.select.outputs.reused_head }}
+      config_fingerprint: ${{ steps.select.outputs.config_fingerprint }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -99,10 +103,13 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          EVENT_NAME: ${{ github.event_name }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
         run: |
+          python3 .github/scripts/test-requested-reuse.py
           python3 .github/scripts/test-select-integration.py
           python3 .github/scripts/select-integration.py --base "$BASE_SHA" --head "$HEAD_SHA" --touched "$TOUCHED" \
-            --repo "$GITHUB_REPOSITORY" --pull-request "$PR_NUMBER"
+            --repo "$GITHUB_REPOSITORY" --pull-request "$PR_NUMBER" --event "$EVENT_NAME" --head-repo "$HEAD_REPO"
 
   hot-core-gate-requested:
     name: hot-core-gate-requested-${{ (github.event.action == 'labeled' && github.event.label.name || contains(github.event.pull_request.labels.*.name, 'run-integration') && 'run-integration' || 'none') }}
@@ -121,6 +128,10 @@ jobs:
           DETECT: ${{ needs.requested-detect-hot-core.result }}
           TOUCHED: ${{ needs.requested-detect-hot-core.outputs.touched }}
           MODE: ${{ needs.requested-detect-hot-core.outputs.mode }}
+          REUSED_RUN: ${{ needs.requested-detect-hot-core.outputs.reused_run }}
+          REUSED_HEAD: ${{ needs.requested-detect-hot-core.outputs.reused_head }}
+          CONFIG_FINGERPRINT: ${{ needs.requested-detect-hot-core.outputs.config_fingerprint }}
+          TESTED_BASE: ${{ github.event.pull_request.base.sha }}
           INTEGRATION: ${{ needs.requested-integration.result }}
           ALL_PROVIDERS: ${{ needs.requested-integration.outputs.all_providers }}
           FORK: ${{ github.event.pull_request.head.repo.full_name != github.repository }}
@@ -144,8 +155,17 @@ jobs:
           # files no integration lane exercises changed since (or the whole change is such files). The matrix
           # job is skipped on purpose; the selection step's summary names the evidence.
           if [ "$MODE" = "skip" ] && [ "$INTEGRATION" = "skipped" ]; then
-            echo "No integration-relevant file changed since the last passing requested run; its result stands for $HEAD_SHA."
-            echo "proven=skip" >> "$GITHUB_OUTPUT"
+            if [ -n "$REUSED_RUN" ]; then
+              echo "Requested integration REUSED for ${HEAD_SHA}: source run ${REUSED_RUN} at head ${REUSED_HEAD}; base ${TESTED_BASE}, config ${CONFIG_FINGERPRINT} identical; delta limited to files no lane exercises. Matrix not re-run."
+              echo "Reused run ${REUSED_RUN} (head ${REUSED_HEAD}), base/config unchanged: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${REUSED_RUN}" >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "Requested integration NOT NEEDED for ${HEAD_SHA}: the whole PR is ignorable; no earlier run needed. Matrix not run."
+            fi
+            {
+              echo "reused_run=$REUSED_RUN"
+              echo "reused_head=$REUSED_HEAD"
+              echo "proven=skip"
+            } >> "$GITHUB_OUTPUT"
             exit 0
           fi
           if [ "$INTEGRATION" != "success" ]; then

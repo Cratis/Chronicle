@@ -9,6 +9,7 @@
 # This workflow has no paths filter so detection covers documentation-only PRs too.
 
 name: Hot Core Gate
+run-name: "Hot Core Gate - PR #${{ github.event.pull_request.number || github.ref }} @ ${{ github.event.pull_request.head.sha || github.sha }} base ${{ github.event.pull_request.base.sha }}"
 
 concurrency:
   # The called workflows inherit this github.workflow and github.ref: dotnet-build.yml's group is
