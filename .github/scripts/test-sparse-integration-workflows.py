@@ -479,6 +479,14 @@ class SparseIntegrationWorkflows(unittest.TestCase):
                                              "NET10_RESULT": net10, "PACKAGE_RESULT": "success"}, check=False)
                 self.assertEqual(wire == grain == ordinary == sql == net10 == "success",
                                  result.returncode == 0)
+        self.assertEqual("${{ needs.package-verification.result }}", step["env"]["PACKAGE_RESULT"])
+        for package in ("failure", "cancelled", "skipped", ""):
+            with self.subTest(package=package):
+                result = subprocess.run(["bash", "-c", step["run"]],
+                                        env={"WIRE_RESULT": "success", "GRAIN_RESULT": "success",
+                                             "OTHER_RESULT": "success", "SQL_RESULT": "success",
+                                             "NET10_RESULT": "success", "PACKAGE_RESULT": package}, check=False)
+                self.assertNotEqual(0, result.returncode)
 
     def test_development_paths_preserve_steps_permissions_and_artifact(self):
         jobs = self.build["jobs"]

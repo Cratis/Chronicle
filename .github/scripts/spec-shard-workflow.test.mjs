@@ -56,7 +56,23 @@ test('Release artifact is uploaded immediately after the build integrity checks'
     assert.match(step(packages, 'Download Release build output'), /name: build-output-release/);
     assert.match(step(packages, 'Extract Release build output'), /tar -I zstd -xf build-output-release\.tar\.zst/);
     assert.match(step(packages, 'Restore obj cache'), /uses: actions\/cache\/restore@v4/);
-    assert.equal(step(packages, 'Stamp the build version').trim(), step(build, 'Stamp the build version').trim());
+    assert.ok(!packages.includes('derive-build-version'), 'package verification must reuse the build version, not derive it again');
+});
+
+test('package verification stamps exactly the version dotnet-build derived', () => {
+    assert.match(build, /^      build-version: \$\{\{ steps\.export-build-version\.outputs\.version \}\}$/m);
+    const names = [...build.matchAll(/^      - name: (.+)$/gm)].map(match => match[1]);
+    assert.equal(names.indexOf('Export the build version'), names.indexOf('Stamp the build version') + 1);
+    assert.match(step(build, 'Export the build version'), /id: export-build-version\n\s+run: echo "version=\$CRATIS_CHRONICLE_BUILD_VERSION" >> "\$GITHUB_OUTPUT"/);
+    const stamp = step(packages, 'Stamp the version of the downloaded build');
+    assert.match(stamp, /BUILD_VERSION: \$\{\{ needs\.dotnet-build\.outputs\.build-version \}\}/);
+    const script = stamp.match(/run: \|\n([\s\S]+)/)[1].replace(/^ {10}/gm, '');
+    for (const [version, accepted] of [['19.51.0-ci-42', true], ['', false], ['19.51.0', false], ['19.51.0-ci-42\nEVIL=1', false]]) {
+        const child = spawnSync('bash', ['-c', `GITHUB_ENV="$OUT"; ${script}`], {
+            env: { ...process.env, BUILD_VERSION: version, OUT: '/dev/null' }, encoding: 'utf8'
+        });
+        assert.equal(child.status === 0, accepted, `Version: ${JSON.stringify(version)}`);
+    }
 });
 
 test('all shipped frameworks, diagnostic guards, consumer restore, Docker and stable pack stay covered', () => {

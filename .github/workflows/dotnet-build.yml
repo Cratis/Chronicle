@@ -112,6 +112,7 @@ jobs:
       packages: write
     outputs:
       chronicle-image: ${{ steps.export-image.outputs.image }}
+      build-version: ${{ steps.export-build-version.outputs.version }}
 
     steps:
       - name: Checkout code
@@ -221,6 +222,12 @@ jobs:
       - name: Stamp the build version
         run: python3 .github/scripts/derive-build-version.py >> "$GITHUB_ENV"
 
+      # Jobs that rebuild from this build's output reuse its version: deriving it again would read the
+      # release tags again, and a release tagged in between would stamp a different version.
+      - name: Export the build version
+        id: export-build-version
+        run: echo "version=$CRATIS_CHRONICLE_BUILD_VERSION" >> "$GITHUB_OUTPUT"
+
       - name: Build
         run: dotnet build --configuration Release -p:DisableProxyGenerator=true -p:DisableDockerBuild=true -p:ForceCodeGeneration=true
 
@@ -322,8 +329,13 @@ jobs:
           dotnet nuget update source github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text || \
           dotnet nuget add source --name github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text https://nuget.pkg.github.com/cratis/index.json
 
-      - name: Stamp the build version
-        run: python3 .github/scripts/derive-build-version.py >> "$GITHUB_ENV"
+      - name: Stamp the version of the downloaded build
+        env:
+          BUILD_VERSION: ${{ needs.dotnet-build.outputs.build-version }}
+        run: |
+          set -euo pipefail
+          [[ "$BUILD_VERSION" =~ ^[0-9]+\.[0-9]+\.0-ci-[0-9]+$ ]] || { echo "::error::dotnet-build exported no valid build version: '$BUILD_VERSION'"; exit 1; }
+          echo "CRATIS_CHRONICLE_BUILD_VERSION=$BUILD_VERSION" >> "$GITHUB_ENV"
 
       - name: Download Release build output
         uses: actions/download-artifact@v4
