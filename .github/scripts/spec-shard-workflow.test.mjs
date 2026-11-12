@@ -3,7 +3,9 @@
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { sourcePlan } from './spec-shards.mjs';
 
@@ -11,6 +13,7 @@ const workflow = await readFile(new URL('../workflows/dotnet-build.yml', import.
 const jobs = new Map([...workflow.matchAll(/^  ([\w-]+):\n([\s\S]*?)(?=^  [\w-]+:|$(?![\s\S]))/gm)].map(match => [match[1], match[2]]));
 const build = jobs.get('dotnet-build');
 const packages = jobs.get('package-verification');
+const pack = jobs.get('package-pack-check');
 const moved = [
     'Build client packages for every shipped framework',
     'Validate rolling diagnostic guards and shipped-client absence',
@@ -35,10 +38,10 @@ test('only independent verifications leave the build; every moved check remains 
     assert.ok(build && packages);
     for (const name of moved) {
         assert.ok(!build.includes(`- name: ${name}\n`), `${name} is still serial`);
-        step(packages, name);
+        step(name === moved[4] ? pack : packages, name);
         assert.equal(workflow.split(`- name: ${name}\n`).length - 1, 1);
     }
-    assert.doesNotMatch(packages, /continue-on-error:/);
+    assert.doesNotMatch(packages + pack, /continue-on-error:/);
     assert.match(packages, /if: needs\.already-ran\.outputs\.skip != 'true'/);
     assert.deepEqual(dependencies('package-verification'), ['already-ran', 'dotnet-build']);
     for (const shard of ['specs-other', 'specs-sql']) {
@@ -78,8 +81,9 @@ test('package verification stamps exactly the version dotnet-build derived', () 
 test('all shipped frameworks, diagnostic guards, consumer restore, Docker and stable pack stay covered', () => {
     const clients = step(packages, moved[0]);
     assert.match(clients, /find \.\/Source\/Clients -name "\*\.csproj" ! -name "\*\.Specs\.csproj"/);
-    assert.match(clients, /dotnet build \.\/Source\/Kernel\/Contracts\/Contracts\.csproj/);
-    assert.equal(clients.match(/-p:IsPackaging=true -p:SkipAnalyzersForTargetFramework=net11\.0/g)?.length, 2);
+    assert.match(clients, /dotnet sln "\$solution_dir\/ClientPackages\.slnx" add --include-references=false "\$\{projects\[@\]\}" \.\/Source\/Kernel\/Contracts\/Contracts\.csproj/);
+    assert.equal(clients.match(/dotnet build /g)?.length, 1);
+    assert.match(clients, /dotnet build "\$solution_dir\/ClientPackages\.slnx" --configuration Release -p:ShouldUnsetParentConfigurationAndPlatform=false -p:IsPackaging=true -p:SkipAnalyzersForTargetFramework=net11\.0 -p:DisableProxyGenerator=true -p:DisableDockerBuild=true/);
     const guards = step(packages, moved[1]);
     assert.match(guards, /node \.github\/scripts\/verify-rolling-delivery-build\.mjs/);
     assert.match(guards, /for framework in net10\.0 net11\.0/);
@@ -88,7 +92,8 @@ test('all shipped frameworks, diagnostic guards, consumer restore, Docker and st
     assert.match(docker, /if: github\.event_name == 'pull_request' && !inputs\.integration_requested/);
     assert.match(docker, /cp -r Source\/Kernel\/Server\/bin\/Release\/net11\.0\/\./);
     assert.match(docker, /docker build -t "chronicle-dockerfile-check:/);
-    assert.match(step(packages, moved[4]), /-p:IsPackaging=true -p:Version=99\.0\.0 -p:PackageVersion=99\.0\.0/);
+    assert.match(step(pack, moved[4]), /if: github\.event_name == 'pull_request'/);
+    assert.equal(step(pack, moved[4]).match(/^        run: (.+)$/m)[1], 'dotnet pack ./Source/Clients/Packages.slnf --configuration Release -o "$RUNNER_TEMP/nuget-pack-check" -p:IsPackaging=true -p:Version=99.0.0 -p:PackageVersion=99.0.0 -p:SourceRevisionId=${{ github.sha }}');
     assert.ok(packages.indexOf(moved[1]) < packages.indexOf(moved[2]));
     for (const name of ['Build development Docker image', 'Push development Docker image', 'Export image']) step(build, name);
 });
@@ -102,7 +107,7 @@ test('failed, cancelled and skipped package verification or analyzers cannot tur
     for (const result of ['success', 'failure', 'cancelled', 'skipped', '']) {
         const child = spawnSync('bash', ['-c', command], { env: {
             WIRE_RESULT: 'success', GRAIN_RESULT: 'success', OTHER_RESULT: 'success',
-            SQL_RESULT: 'success', NET10_RESULT: 'success', PACKAGE_RESULT: result, ANALYZER_RESULT: 'success'
+            SQL_RESULT: 'success', NET10_RESULT: 'success', PACKAGE_RESULT: result, ANALYZER_RESULT: 'success', PACK_RESULT: 'success', EVENT_NAME: 'pull_request'
         } });
         assert.equal(child.status, result === 'success' ? 0 : 1, `Package result: ${result}`);
     }
@@ -112,12 +117,65 @@ test('failed, cancelled and skipped package verification or analyzers cannot tur
     for (const result of ['success', 'failure', 'cancelled', 'skipped', '']) {
         const child = spawnSync('bash', ['-c', command], { env: {
             WIRE_RESULT: 'success', GRAIN_RESULT: 'success', OTHER_RESULT: 'success',
-            SQL_RESULT: 'success', NET10_RESULT: 'success', PACKAGE_RESULT: 'success', ANALYZER_RESULT: result
+            SQL_RESULT: 'success', NET10_RESULT: 'success', PACKAGE_RESULT: 'success', ANALYZER_RESULT: result, PACK_RESULT: 'success', EVENT_NAME: 'pull_request'
         } });
         assert.equal(child.status, result === 'success' ? 0 : 1, `Analyzer result: ${result}`);
     }
     for (const job of ['integration', 'integration-api', 'mongodb', 'neo4j', 'coverage-merge-and-cache']) {
         assert.ok(dependencies(job).includes('specs'), `${job} no longer waits for the aggregate`);
+    }
+});
+
+test('publish-equivalent pack runs independently with the same setup and restore-only cache', () => {
+    assert.deepEqual(dependencies('package-pack-check'), ['already-ran']);
+    assert.match(pack, /if: needs\.already-ran\.outputs\.skip != 'true' && github\.event_name == 'pull_request'/);
+    assert.ok(dependencies('specs').includes('package-pack-check'));
+    for (const name of ['Checkout code', 'Setup .Net', 'Cache NuGet packages', 'Restore obj cache', 'Add GitHub Package Registry to NuGet']) {
+        assert.equal(step(pack, name).replace(/^ +#.*\n/gm, '').trim(), step(packages, name).replace(/^ +#.*\n/gm, '').trim());
+    }
+    assert.doesNotMatch(pack, /actions\/cache\/save|actions\/download-artifact|derive-build-version|CRATIS_CHRONICLE_BUILD_VERSION/);
+});
+
+test('pack result fails closed, permitting skipped only outside pull requests', () => {
+    const aggregate = step(jobs.get('specs'), 'Require every spec job to pass');
+    assert.match(aggregate, /PACK_RESULT: \$\{\{ needs\.package-pack-check\.result \}\}/);
+    assert.match(aggregate, /EVENT_NAME: \$\{\{ github\.event_name \}\}/);
+    const command = aggregate.match(/^        run: (.+)$/m)[1];
+    for (const event of ['pull_request', 'push', 'schedule', 'workflow_call', 'workflow_dispatch']) {
+        for (const result of ['success', 'failure', 'cancelled', 'skipped', '']) {
+            const child = spawnSync('bash', ['-c', command], { env: {
+                WIRE_RESULT: 'success', GRAIN_RESULT: 'success', OTHER_RESULT: 'success', SQL_RESULT: 'success',
+                NET10_RESULT: 'success', PACKAGE_RESULT: 'success', ANALYZER_RESULT: 'success', PACK_RESULT: result, EVENT_NAME: event
+            } });
+            const accepted = result === 'success' || (event !== 'pull_request' && result === 'skipped');
+            assert.equal(child.status, accepted ? 0 : 1, `${event}: ${result}`);
+        }
+    }
+});
+
+test('single build receives the find-derived client set, including new projects but not specs', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'chronicle-client-build-'));
+    try {
+        const projects = ['Source/Clients/First/First.csproj', 'Source/Clients/New Client/New.csproj', 'Source/Kernel/Contracts/Contracts.csproj'];
+        for (const project of [...projects, 'Source/Clients/First/First.Specs.csproj', 'Source/Other/Other.csproj']) {
+            await mkdir(join(root, project, '..'), { recursive: true });
+            await writeFile(join(root, project), '<Project />');
+        }
+        await writeFile(join(root, 'dotnet'), `#!${process.execPath}\nrequire('node:fs').appendFileSync(process.env.CALL_LOG, JSON.stringify(process.argv.slice(2)) + '\\n');\n`);
+        await chmod(join(root, 'dotnet'), 0o755);
+        const log = join(root, 'calls.jsonl');
+        const child = spawnSync('bash', ['-c', step(packages, moved[0]).match(/run: \|\n([\s\S]+)/)[1]], {
+            cwd: root, env: { ...process.env, RUNNER_TEMP: root, PATH: `${root}:${process.env.PATH}`, CALL_LOG: log }, encoding: 'utf8'
+        });
+        assert.equal(child.status, 0, child.stderr);
+        const calls = (await readFile(log, 'utf8')).trim().split('\n').map(line => JSON.parse(line));
+        assert.deepEqual(calls.map(call => call[0]), ['new', 'sln', 'build']);
+        assert.equal(calls[1][3], '--include-references=false');
+        assert.deepEqual(calls[1].slice(4).sort(), projects.map(project => `./${project}`).sort());
+        assert.equal(calls[1][1], calls[2][1]);
+        assert.deepEqual(calls[2].slice(2), ['--configuration', 'Release', '-p:ShouldUnsetParentConfigurationAndPlatform=false', '-p:IsPackaging=true', '-p:SkipAnalyzersForTargetFramework=net11.0', '-p:DisableProxyGenerator=true', '-p:DisableDockerBuild=true']);
+    } finally {
+        await rm(root, { recursive: true, force: true });
     }
 });
 
