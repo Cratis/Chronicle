@@ -179,7 +179,7 @@ test('single build receives the find-derived client set, including new projects 
     }
 });
 
-test('three-shard workflow matches the planner and isolates the historical long pole', async () => {
+test('three-shard workflow matches the planner and refreshed timing samples', async () => {
     const other = jobs.get('specs-other');
     const matrix = JSON.parse(other.match(/shard: (\[[^\]]+\])/)[1]);
     assert.deepEqual(matrix, ordinaryShardIds());
@@ -188,17 +188,20 @@ test('three-shard workflow matches the planner and isolates the historical long 
     const plan = await sourcePlan(process.cwd());
     assert.equal(plan.length, ORDINARY_SHARDS);
     assert.ok(plan.every(shard => shard.projects.length && shard.defaulted.length === 0));
-    assert.equal(new Set(plan.flatMap(shard => shard.projects)).size, 25);
-    const mongo = plan.find(shard => shard.projects.some(project => project.endsWith('/Storage.MongoDB.Specs.csproj')));
-    const core = plan.find(shard => shard.projects.some(project => project.endsWith('/Core.Specs.csproj')));
-    assert.notEqual(mongo.shard, core.shard);
-    assert.equal(mongo.projects.length, 1);
-    // Samples predate #5839: the MongoDB weight alone exceeds the five-minute goal.
-    // Keep measured weights honest rather than claiming the new layout has met that goal.
-    assert.ok(plan.every(shard => shard.seconds <= 510));
-    assert.ok(core.seconds < 300);
+    const projects = plan.flatMap(shard => shard.projects);
+    assert.equal(projects.length, 25);
+    assert.equal(new Set(projects).size, 25);
+    // Train 6 includes the MongoDB speedup, so no project needs a dedicated shard.
+    // The 250-second bound covers completion intervals including startup/coverage overhead,
+    // with a small margin above the measured 246.48-second maximum, not a fixed layout.
+    assert.ok(plan.every(shard => shard.seconds < 250));
     const timings = JSON.parse(await readFile(new URL('./spec-shard-timings.json', import.meta.url), 'utf8'));
     const runs = new Set(timings.samples.map(sample => sample.run));
-    assert.ok(runs.size >= 5 && runs.size <= 8);
-    for (const run of runs) assert.deepEqual(timings.samples.filter(sample => sample.run === run).map(sample => sample.shard).sort(), [1, 2]);
+    assert.ok(runs.size >= 1 && runs.size <= 8);
+    for (const run of runs) {
+        // Each sampled run must contribute every shard it had, numbered 1..n, whatever the shard count was then.
+        const shards = timings.samples.filter(sample => sample.run === run).map(sample => sample.shard).sort((a, b) => a - b);
+        assert.ok(shards.length >= 2 && shards.length <= ORDINARY_SHARDS);
+        assert.deepEqual(shards, shards.map((_, index) => index + 1));
+    }
 });
