@@ -32,12 +32,14 @@ public class a_grpc_host_with_store_entitlements : Specification
     protected WebApplication _app;
     protected GrpcChannel _channel;
     protected IGuardProbe _probe;
+    protected Subject<ProbeReply> _replies;
     protected Subject<Unit> _changes;
     protected bool _revoked;
 
     async Task Establish()
     {
         _changes = new();
+        _replies = new();
         var decisions = Substitute.For<IAuthorizationDecisions>();
         decisions.Decide(Arg.Any<ClaimsPrincipal?>(), Arg.Any<Capability>(), Arg.Any<AuthorizationScope>()).Returns(call =>
         {
@@ -53,7 +55,8 @@ public class a_grpc_host_with_store_entitlements : Specification
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
         builder.Logging.ClearProviders();
-        builder.Services.AddCodeFirstGrpc();
+        builder.Services.AddCodeFirstGrpc(options => options.Interceptors.Add<StreamingCallInterceptor>());
+        builder.Services.AddSingleton(_replies);
         builder.Services.AddAuthentication(SubjectHeaderAuthentication.Scheme)
             .AddScheme<AuthenticationSchemeOptions, SubjectHeaderAuthentication>(SubjectHeaderAuthentication.Scheme, null);
         builder.Services.AddSingleton(decisions);
@@ -74,6 +77,8 @@ public class a_grpc_host_with_store_entitlements : Specification
         _channel.Dispose();
         await _app.StopAsync();
         await _app.DisposeAsync();
+        _changes.Dispose();
+        _replies.Dispose();
     }
 
     protected static CallContext As(string? subject)
