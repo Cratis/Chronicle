@@ -6,7 +6,7 @@ import path from 'node:path';
 
 const fail = message => { throw new Error(`${message}; refresh the Core spec partition`); };
 const ordinal = (a, b) => a < b ? -1 : a > b ? 1 : 0;
-const tests = /(?:\[|,)\s*(?:global::)?(?:Xunit\.)?(?:Fact|Theory)(?:Attribute)?\b/g;
+const tests = /(?:\[|,)\s*(?:global::)?(?:Xunit\.)?(?:\w*Fact|\w*Theory|Test|TestCase|TestMethod)(?:Attribute)?\b/g;
 // Mask literals/comments while retaining offsets and braces outside them.
 function declarations(source) {
     return source.replace(/\/\/[^\n]*|\/\*[\s\S]*?\*\/|(?:\$*)"{3,}[\s\S]*?"{3,}|@"(?:""|[^"])*"|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'/g,
@@ -23,65 +23,104 @@ function closingBrace(source, start) {
 function namespaceAt(source, index) {
     const scopes = [...source.matchAll(/\bnamespace\s+([\w.]+)\s*([;{])/g)].filter(match =>
         match.index < index && (match[2] === ';' || closingBrace(source, match.index + match[0].lastIndexOf('{')) > index));
-    if (!scopes.length) fail('C# class without namespace');
+    if (!scopes.length) fail('C# type without namespace');
     return scopes.map(scope => scope[1]).join('.');
 }
-function classDeclarations(source, file) {
-    const text = declarations(source);
-    const matches = [...text.matchAll(/\b((?:(?:public|internal|private|protected|abstract|sealed|static|partial|new)\s+)*)class\s+(\w+)(?:<[^>{}]+>)?\s*(?:\([^{}]*?\))?\s*(?::\s*([^{}]+?))?\s*\{/g)];
-    const classes = matches.map(match => classDeclaration(text, match, matches, file));
-    for (const fact of text.matchAll(tests)) {
-        if (!classes.some(info => fact.index > info.start && fact.index < info.end)) fail(`Unrecognized test declaration in ${file}`);
+// Balanced removal handles nested generic arguments as well as primary constructors.
+function withoutArguments(header) {
+    let depth = 0, result = '';
+    for (const char of header) {
+        if ('<(['.includes(char)) depth++;
+        else if ('>)]'.includes(char)) depth--;
+        else if (depth === 0) result += char;
     }
-    return classes;
+    if (depth !== 0) fail('Unbalanced C# type header');
+    return result;
 }
-function ownBody(text, start, end, matches) {
-    let body = text.slice(start + 1, end);
-    for (const child of matches.filter(other => other.index > start && other.index < end)) {
-        body = body.replace(text.slice(child.index, closingBrace(text, child.index + child[0].lastIndexOf('{')) + 1), '');
+function typeHeader(text, match) {
+    const from = match.index + match[0].length;
+    const end = text.slice(from).search(/[;{]/);
+    if (end < 0) fail('Unterminated C# type declaration');
+    const start = from + end;
+    const header = text.slice(from, start);
+    const signature = withoutArguments(header).split(/\bwhere\b/)[0];
+    const bases = (signature.match(/^\s*:\s*(.*)$/s)?.[1] ?? '').split(',').map(base => base.trim().replace(/global::/g, '')).filter(Boolean);
+    const parameters = header.match(/^\s*<([^<>]*)>/)?.[1];
+    const name = match[3].replace(/^@/, '');
+    return { start, end: text[start] === '{' ? closingBrace(text, start) : start, bases, header,
+        name, runtimeName: parameters ? `${name}\`${parameters.split(',').length}` : name };
+}
+function ownBody(text, info, types) {
+    let body = text.slice(info.start + 1, info.end);
+    for (const child of types.filter(other => other.index > info.start && other.index < info.end)) {
+        body = body.replace(text.slice(child.index, child.end + 1), '');
     }
     return body;
 }
-function classDeclaration(text, match, matches, file) {
-    const start = match.index + match[0].lastIndexOf('{');
-    const end = closingBrace(text, start);
-    const parents = matches.filter(other => other.index < match.index && closingBrace(text, other.index + other[0].lastIndexOf('{')) > end);
-    const namespace = namespaceAt(text, match.index);
-    return { name: [...parents.map(parent => parent[2]), match[2]].join('.'), namespace, file, start, end,
-        abstract: /\babstract\b/.test(match[1]), ownTests: [...ownBody(text, start, end, matches).matchAll(tests)].length > 0,
-        base: (match[3] ?? '').replace(/<[^<>]*>/g, '').split(/[,\s(]/)[0].replace(/^global::/, ''),
-        usings: [...text.matchAll(/\busing\s+([\w.]+)\s*;/g)].map(using => using[1]),
-        aliases: new Map([...text.matchAll(/\busing\s+(\w+)\s*=\s*(?:global::)?([\w.]+)\s*;/g)].map(using => [using[1], using[2]])) };
+function rejectUnsupportedDeclarations(text, file) {
+    const heads = text.matchAll(/(?<![@\w])(?:class|record|struct|interface|enum|namespace)\s+(@?[\p{ID_Start}_][\p{ID_Continue}]*(?:\.@?[\p{ID_Start}_][\p{ID_Continue}]*)*)/gu);
+    if ([...heads].some(head => /[^\x00-\x7f]/.test(head[1]))) fail(`Unsupported Unicode type/namespace declaration in ${file}`);
+    if (/(?<![@\w])namespace\s+[^;{]*@/.test(text)) fail(`Unsupported escaped namespace in ${file}`);
+    if (/\bdelegate\s+(?![({])\S/.test(text)) fail(`Unsupported named delegate declaration in ${file}`);
 }
-async function sourceClasses(directory) {
-    const classes = [];
+function typeDeclarations(source, file) {
+    const text = declarations(source);
+    rejectUnsupportedDeclarations(text, file);
+    const pattern = /(?<![@\w])((?:(?:public|internal|private|protected|abstract|sealed|static|partial|new|readonly|ref|file)\s+)*)(class|record(?:\s+(?:class|struct))?|struct|interface|enum)\s+(@?\w+)/g;
+    const types = [...text.matchAll(pattern)].map(match => ({ ...typeHeader(text, match), index: match.index,
+        abstract: /\babstract\b/.test(match[1]), kind: match[2] }));
+    const infos = types.map(info => typeInfo(text, info, types, file));
+    for (const fact of text.matchAll(tests)) {
+        if (!infos.some(info => fact.index > info.start && fact.index < info.end)) fail(`Unrecognized test declaration in ${file}`);
+    }
+    return infos;
+}
+function typeInfo(text, info, types, file) {
+    const parents = types.filter(other => other.index < info.index && other.end > info.end);
+    const namespace = namespaceAt(text, info.index);
+    const name = [...parents.map(parent => parent.name), info.name].join('.');
+    const runtimeName = [...parents.map(parent => parent.runtimeName), info.runtimeName].join('+');
+    const body = ownBody(text, info, types);
+    const aliases = [...text.matchAll(/\busing\s+(\w+)\s*=\s*(?:global::)?([\w.]+)\s*;/g)].map(using => [using[1], using[2]]);
+    const baseNames = info.header.match(/\b[A-Za-z_]\w*\b/g) ?? [];
+    return { ...info, name, namespace, file, fqn: `${namespace}.${runtimeName}`, lookupName: `${namespace}.${name}`,
+        ownTests: [...body.matchAll(tests)].length > 0,
+        testSignals: [...text.slice(info.start + 1, info.end).matchAll(tests)].length > 0 || /\b(?:should_|test_)\w*\s*\(/.test(body),
+        baseNames, aliasNames: aliases.filter(([name]) => baseNames.includes(name)).flatMap(([, target]) => target.split('.')),
+        usings: [...text.matchAll(/\busing\s+([\w.]+)\s*;/g)].map(using => using[1]),
+        aliases: new Map(aliases) };
+}
+async function sourceTypes(directory) {
+    const types = [];
     for (const entry of await readdir(directory, { withFileTypes: true })) {
         if (['bin', 'obj', '.ai-work'].includes(entry.name)) continue;
         const file = path.join(directory, entry.name);
         if (entry.isSymbolicLink()) fail(`Unsupported Core spec source symlink ${file}`);
-        if (entry.isDirectory()) classes.push(...await sourceClasses(file));
-        else if (entry.name.endsWith('.cs')) classes.push(...classDeclarations(await readFile(file, 'utf8'), file));
+        if (entry.isDirectory()) types.push(...await sourceTypes(file));
+        else if (entry.name.endsWith('.cs')) types.push(...typeDeclarations(await readFile(file, 'utf8'), file));
     }
-    return classes;
+    return types;
 }
-function baseClasses(info, byName) {
-    if (!info.base) return [];
-    const [first, ...rest] = info.base.split('.');
-    const base = info.aliases.has(first) ? [info.aliases.get(first), ...rest].join('.') : info.base;
-    const namespaces = info.namespace.split('.');
-    for (let count = namespaces.length; count >= 0; count--) {
-        const candidate = [...namespaces.slice(0, count), base].join('.');
+function resolveBase(info, base, byName) {
+    const [first, ...rest] = base.split('.');
+    if (info.aliases.has(first)) base = [info.aliases.get(first), ...rest].join('.');
+    // Lexical enclosing types come before namespace scopes (Outer.when_x : Base).
+    const scopes = info.lookupName.split('.').slice(0, -1);
+    for (let count = scopes.length; count >= 0; count--) {
+        const candidate = [...scopes.slice(0, count), base].join('.');
         if (byName.has(candidate)) return byName.get(candidate);
     }
     return info.usings.flatMap(using => byName.get(`${using}.${base}`) ?? []);
 }
-function testedClasses(classes, byName) {
-    const tested = new Set(classes.filter(info => info.ownTests).map(info => info.fqn));
+function testedTypes(types) {
+    const byName = new Map();
+    for (const info of types) byName.set(info.lookupName, [...(byName.get(info.lookupName) ?? []), info]);
+    const tested = new Set(types.filter(info => info.ownTests).map(info => info.fqn));
     let changed = true;
     while (changed) {
         changed = false;
-        for (const info of classes) {
-            if (!tested.has(info.fqn) && baseClasses(info, byName).some(base => tested.has(base.fqn))) {
+        for (const info of types) {
+            if (!tested.has(info.fqn) && info.bases.flatMap(base => resolveBase(info, base, byName)).some(base => tested.has(base.fqn))) {
                 tested.add(info.fqn);
                 changed = true;
             }
@@ -89,19 +128,17 @@ function testedClasses(classes, byName) {
     }
     return tested;
 }
+export async function discoverTypes(root) {
+    const types = await sourceTypes(path.join(root, 'Source/Kernel/Core.Specs'));
+    if (!types.length) fail(`No Core source types under ${root}`);
+    return types.sort((a, b) => ordinal(a.fqn, b.fqn));
+}
 export async function discoverSpecClasses(root) {
-    const classes = await sourceClasses(path.join(root, 'Source/Kernel/Core.Specs'));
-    const byName = new Map();
-    for (const info of classes) {
-        info.fqn = `${info.namespace}.${info.name}`;
-        byName.set(info.fqn, [...(byName.get(info.fqn) ?? []), info]);
-    }
-    // Fixed point includes concrete derived classes with inherited tests, including partial bases.
-    const tested = testedClasses(classes, byName);
-    const specs = [...new Map(classes.filter(info => !info.abstract && tested.has(info.fqn)).map(info => [info.fqn, info])).values()];
+    const types = await discoverTypes(root);
+    const tested = testedTypes(types);
+    const specs = [...new Map(types.filter(info => !info.abstract && tested.has(info.fqn)).map(info => [info.fqn, info])).values()];
     if (!specs.length) fail(`No Core spec classes under ${root}`);
-    if (specs.some(info => info.name.includes('.'))) fail('Nested Core spec classes require explicit adapter name handling');
-    return specs.sort((a, b) => ordinal(a.fqn, b.fqn));
+    return specs;
 }
 export async function discoverNamespaces(root) {
     return [...new Set((await discoverSpecClasses(root)).map(info => info.namespace))].sort(ordinal);

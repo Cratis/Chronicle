@@ -30,13 +30,21 @@ measured weight down to `for_*` boundaries. Direct spec classes receive class-sp
 when their child namespaces are split. Units without measurements receive a small positive
 floor. The checked-in weights sum to one; each part must be nonempty.
 
-The guard scans Core source for concrete classes with facts/theories or inherited tests;
-helper-only types and abstract fixtures are excluded. It evaluates actual substring matching
-against every class FQN and rejects zero or multiple matching parts, including middle-of-name
-collisions. Trailing dots prevent sibling-name collisions. New classes outside the recorded
-prefixes fail closed with the refresh command. Unsupported nested spec classes fail closed.
-The guard is imported by the existing `test-spec-shards.mjs` CI gate, with synthetic uncovered
-and double-covered cases proving its failure paths.
+The guard covers every source class, record, struct, interface and enum, including abstract
+and nested types, regardless of detected tests or inheritance. Nested FQNs use `+`, and generic
+definitions include their arity. Only the five named, test-free helpers in
+`core-spec-exclusions.json` are exempt. Exclusions must exist and remain test-free; test
+attributes, `should_`/`test_` methods, and Specification/Scenario bases on a helper, source
+base or any by-name derivative reject the exclusion. This conservative closure also follows aliases and
+generic/nested base names without relying on exact inheritance resolution.
+
+The guard evaluates actual substring matching against every non-excluded type FQN and rejects
+zero or multiple matching parts, including middle-of-name collisions. Trailing dots prevent
+sibling-name collisions. New types outside the recorded prefixes fail closed with the refresh
+command. Unsupported declaration syntax fails closed rather than silently omitting a type.
+Spec-class discovery is only for reporting; weighting sums TRX durations over guarded types.
+The guard is imported by the existing `test-spec-shards.mjs` CI gate, with synthetic uncovered,
+double-covered, nested/generic inheritance and unsafe/stale exclusion regression cases.
 
 Each part uses the same built executable and the existing ordinary/runsettings exclusions,
 ANDed with its OR-filter. Its TRX and Cobertura files are written under a distinct

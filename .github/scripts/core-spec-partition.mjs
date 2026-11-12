@@ -3,6 +3,7 @@
 
 import { readFile, writeFile } from 'node:fs/promises';
 import { discoverSpecClasses } from './core-spec-source.mjs';
+import { coverageTypes } from './core-spec-coverage.mjs';
 export { discoverSpecClasses, discoverNamespaces } from './core-spec-source.mjs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -32,15 +33,15 @@ export function partitionUnits(units, parts = CORE_PARTS) {
     return result;
 }
 export function partFilter(prefixes) {
-    if (!prefixes.length || prefixes.some(prefix => !/^(?:\w+\.)+$/.test(prefix))) fail('Invalid/empty Core filter prefixes');
+    if (!prefixes.length || prefixes.some(prefix => !/^(?:[\w+`]+\.)+$/.test(prefix))) fail('Invalid/empty Core filter prefixes');
     return `(${prefixes.map(prefix => `FullyQualifiedName~${prefix}`).join('|')})`;
 }
 export const matchesFilter = (fqn, prefixes) => prefixes.some(prefix => `${fqn}.`.includes(prefix));
 export function assertExactOnce(classes, parts) {
-    if (!classes.length) fail('No spec classes for exact-once guard');
+    if (!classes.length) fail('No type declarations for exact-once guard');
     for (const fqn of classes) {
         const matches = parts.filter(part => matchesFilter(fqn, part.units.map(unit => unit.prefix)));
-        if (matches.length !== 1) fail(`Core spec class ${fqn} matches ${matches.length} parts (expected exactly one)`);
+        if (matches.length !== 1) fail(`Core type ${fqn} matches ${matches.length} parts (expected exactly one)`);
     }
 }
 function validateUnits(data) {
@@ -48,17 +49,20 @@ function validateUnits(data) {
     if (!valid) fail('Invalid Core partition schema');
     const prefixes = [];
     for (const unit of data.units) {
-        partFilter([unit.prefix]);
-        if (!(Number.isFinite(unit.weight) && unit.weight > 0)) fail(`Invalid Core weight ${unit.prefix}`);
-        if (prefixes.some(prefix => prefix.startsWith(unit.prefix) || unit.prefix.startsWith(prefix))) fail(`Duplicate/overlapping Core unit ${unit.prefix}`);
+        validateUnit(unit, prefixes);
         prefixes.push(unit.prefix);
     }
 }
+function validateUnit(unit, prefixes) {
+    partFilter([unit.prefix]);
+    if (!(Number.isFinite(unit.weight) && unit.weight > 0)) fail(`Invalid Core weight ${unit.prefix}`);
+    if (prefixes.some(prefix => prefix.startsWith(unit.prefix) || unit.prefix.startsWith(prefix))) fail(`Duplicate/overlapping Core unit ${unit.prefix}`);
+}
 export async function checkPartition(root, data, parts = CORE_PARTS) {
     validateUnits(data);
-    const classes = await discoverSpecClasses(root);
+    const classes = await coverageTypes(root);
     const unassigned = classes.find(info => data.units.filter(unit => `${info.fqn}.`.startsWith(unit.prefix)).length !== 1);
-    if (unassigned) fail(`Unassigned Core spec class ${unassigned.fqn}`);
+    if (unassigned) fail(`Unassigned Core type ${unassigned.fqn}`);
     const unmatched = data.units.find(unit => !classes.some(info => `${info.fqn}.`.startsWith(unit.prefix)));
     if (unmatched) fail(`Unmatched Core unit ${unmatched.prefix}`);
     const result = partitionUnits(data.units, parts);
@@ -85,10 +89,14 @@ export async function trxTests(files) {
     for (const file of files) tests.push(...fileTests(parseXml(await readFile(file, 'utf8')), file));
     return tests;
 }
+function terminalUnit(prefix, classes, weight, threshold) {
+    if (weight <= threshold) return true;
+    if (prefix.split('.').at(-2).startsWith('for_')) return true;
+    return classes.every(info => `${info.fqn}.` === prefix);
+}
 function splitUnit(prefix, classes, weights, threshold) {
     const weight = classes.reduce((sum, info) => sum + (weights.get(info.fqn) ?? 0), 0);
-    const leaf = classes.every(info => `${info.fqn}.` === prefix);
-    if (leaf || weight <= threshold || prefix.split('.').at(-2).startsWith('for_')) return [{ prefix, weight: Math.max(weight, 0.1) }];
+    if (terminalUnit(prefix, classes, weight, threshold)) return [{ prefix, weight: Math.max(weight, 0.1) }];
     const children = new Map();
     for (const info of classes) {
         const rest = `${info.fqn}.`.slice(prefix.length);
@@ -101,7 +109,7 @@ function splitUnit(prefix, classes, weights, threshold) {
         : splitUnit(child, members, weights, threshold));
 }
 export async function refresh(root, files) {
-    const classes = await discoverSpecClasses(root);
+    const classes = await coverageTypes(root);
     const tests = await trxTests(files);
     const known = new Set(classes.map(info => info.fqn));
     const weights = new Map();
@@ -130,7 +138,7 @@ export async function main(args = process.argv.slice(2), root = process.cwd()) {
     } else if (args.length === 1 && args[0] === '--check') data = await loadPartition();
     else fail('Usage: core-spec-partition.mjs --check | --refresh <trx...>');
     const parts = await checkPartition(root, data);
-    console.log(`Checked ${(await discoverSpecClasses(root)).length} spec classes; ${data.units.length} units; ${CORE_PARTS} nonempty parts`);
+    console.log(`Checked ${(await coverageTypes(root)).length} type declarations (${(await discoverSpecClasses(root)).length} detected spec classes); ${data.units.length} units; ${CORE_PARTS} nonempty parts`);
     for (const part of parts) console.log(`Core part ${part.part}: ${part.units.length} units; relative weight ${part.weight.toFixed(6)}`);
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {

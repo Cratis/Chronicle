@@ -8,6 +8,7 @@ import path from 'node:path';
 import { v3Projects, shippingProjects, ordinaryProjects, validateSourceProjects } from './mixed-specs-selection.mjs';
 import { coreSpecFixture, expandedProjects } from './core-spec-fixture.mjs';
 import './core-spec-partition.contracts.mjs';
+import './core-spec-type-coverage.contracts.mjs';
 import { ORDINARY_SHARDS, planShards, parseShardArgs, validateTimings, sourcePlan, verifyReceipts, verifyResults, receiptFor } from './spec-shards.mjs';
 
 const ordinary = ordinaryProjects(v3Projects.map(project => ({ project }))).map(x => x.project);

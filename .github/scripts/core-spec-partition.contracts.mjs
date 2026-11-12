@@ -8,7 +8,8 @@ import path from 'node:path';
 import { CORE_PROJECT, CORE_PARTS, coreUnitId, discoverSpecClasses, discoverNamespaces, loadPartition,
     partitionUnits, checkPartition, assertExactOnce, matchesFilter, partFilter, refresh } from './core-spec-partition.mjs';
 import { planShards } from './spec-shards.mjs';
-import { coreSpecFixture } from './core-spec-fixture.mjs';
+import { coreSpecFixture, coreExclusionFixture } from './core-spec-fixture.mjs';
+import { coverageTypes } from './core-spec-coverage.mjs';
 import { unitInfos, invocation } from './run-mixed-specs.mjs';
 
 const unit = (prefix, weight = 1) => ({ prefix, weight });
@@ -21,17 +22,21 @@ async function fixture(t, source) {
     t.after(() => rm(root, { recursive: true, force: true }));
     const directory = path.join(root, path.dirname(CORE_PROJECT));
     await mkdir(directory, { recursive: true });
+    await coreExclusionFixture(root);
     if (source) await writeFile(path.join(directory, 'Specs.cs'), source);
     return root;
 }
 
-test('Core source guard covers every real spec class exactly once, not helper-only namespaces', async () => {
+test('Core source guard covers every non-excluded type, independent of spec discovery', async () => {
     const classes = await discoverSpecClasses(process.cwd());
     assert.ok(classes.length > 7000);
     assert.ok(classes.every(info => info.namespace !== 'ThirdParty' && info.namespace !== 'Cratis.Chronicle'));
     const parts = await checkPartition(process.cwd(), await loadPartition());
     assert.equal(parts.length, CORE_PARTS);
-    assertExactOnce(classes.map(info => info.fqn), parts);
+    const types = await coverageTypes(process.cwd());
+    assert.ok(types.length > classes.length);
+    assert.ok(types.some(info => info.fqn.includes('+')));
+    assertExactOnce(types.map(info => info.fqn), parts);
     assert.ok(parts.every(part => part.units.length && part.weight > 0));
 });
 
