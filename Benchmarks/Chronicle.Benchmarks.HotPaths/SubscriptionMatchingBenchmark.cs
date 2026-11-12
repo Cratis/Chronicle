@@ -24,19 +24,16 @@ public class SubscriptionMatchingBenchmark
     /// <summary>
     /// Gets or sets the number of subscribed IDs.
     /// </summary>
-    [Params(1, 128, 4096)]
-    public int SubscribedTypes { get; set; }
+    public int SubscribedTypes { get; set; } = 4096;
 
     /// <summary>
     /// Gets or sets the batch size.
     /// </summary>
-    [Params(1, 128)]
-    public int BatchSize { get; set; }
+    public int BatchSize { get; set; } = 128;
 
     /// <summary>
     /// Gets or sets whether events match, miss, or bypass membership for an all-types subscription.
     /// </summary>
-    [Params("Match", "Miss", "All")]
     public string Scenario { get; set; } = "Match";
 
     /// <summary>

@@ -73,9 +73,62 @@ public class SaveChanges : ICanPerformProjectionPipelineStep
             return context;
         }
 
-        if (context.Changeset.HasChanges && !await SaveMainChanges(projection, context))
+        if (context.Changeset.HasChanges)
         {
-            return context;
+            _logger.SavingResult(context.Event.Context.SequenceNumber);
+
+            // Sinks that serialize a whole document per ApplyChanges call (the SQL sink does;
+            // MongoDB instead uses field-level $set operators that compose naturally) cannot
+            // safely process the main changeset plus several pendingSaves for the same key as
+            // separate operations — each pendingSave starts from its own InitialState clone,
+            // so later pendingSaves serialize on top of the unmutated initial document and
+            // overwrite earlier pendingSaves' mutations. Fold same-key pendingSaves whose
+            // changes are *purely* PropertiesChanged into the main changeset so the sink sees
+            // one composite write per key.
+            //
+            // PendingSaves containing ChildAdded / ChildRemoved are left for their own
+            // ApplyChanges call: MongoDB cannot push a child into an array element that is
+            // being pushed in the same update (see the comment in ResolveFutures), and the
+            // per-call write also keeps SQL correct because the separate call reads the just-
+            // written document state via the same key.
+            var pendingSavesToFold = context.HasPendingFutureSaves
+                ? context.PendingFutureSaves
+                    .Where(p => Equals(p.Key.Value, context.Key.Value)
+                        && p.Changeset.Changes.All(c => c is PropertiesChanged<ExpandoObject>))
+                    .ToArray()
+                : [];
+            foreach (var pendingSave in pendingSavesToFold)
+            {
+                foreach (var change in pendingSave.Changeset.Changes)
+                {
+                    context.Changeset.Add(change);
+                }
+            }
+
+            // TODO: Return the number of affected records and pass this along to the changeset storage
+            var failedPartitions = await ApplyMainChanges(projection, context, pendingSavesToFold);
+
+            // A bulk flush may report partitions other than this event's. Every one is recorded, but only a failure
+            // of this event's own partition stops the rest of the save: the other partitions' events are retried.
+            foreach (var failedPartition in failedPartitions)
+            {
+                context.AddFailedPartition(failedPartition);
+            }
+
+            if (HasFailedOwnPartition(failedPartitions, context.Changeset, context.Key))
+            {
+                return context;
+            }
+
+            await ResolveSavedFutures(pendingSavesToFold);
+
+            await _changesetStorage.Save(
+                _changesetContainer ?? projection.ReadModel.ContainerName,
+                context.Key,
+                context.Event.Context.EventType,
+                context.Event.Context.SequenceNumber,
+                context.Event.Context.CorrelationId,
+                context.Changeset);
         }
 
         await ApplyPendingFutureSaves(context);
@@ -86,102 +139,7 @@ public class SaveChanges : ICanPerformProjectionPipelineStep
     static bool HasFailedOwnPartition(IEnumerable<FailedPartition> failedPartitions, IChangeset<AppendedEvent, ExpandoObject> changeset, Key key)
     {
         var ownPartition = changeset.Incoming is { } incoming ? incoming.Context.EventSourceId.Value : key.Value;
-        foreach (var failure in failedPartitions)
-        {
-            if (Equals(failure.EventSourceId.Value, ownPartition) || Equals(failure.EventSourceId.Value, key.Value)) return true;
-        }
-        return false;
-    }
-
-    static PendingFutureSave[] GetFoldedFutureSaves(ProjectionEventContext context)
-    {
-        if (!context.HasPendingFutureSaves) return [];
-
-        List<PendingFutureSave>? folded = null;
-        foreach (var pendingSave in context.PendingFutureSaves)
-        {
-            if (!CanFold(context, pendingSave)) continue;
-            folded ??= [];
-            folded.Add(pendingSave);
-        }
-        return folded is null ? [] : folded.ToArray();
-    }
-
-    static bool CanFold(ProjectionEventContext context, PendingFutureSave pendingSave)
-    {
-        if (!Equals(pendingSave.Key.Value, context.Key.Value)) return false;
-        foreach (var change in pendingSave.Changeset.Changes)
-        {
-            if (change is not PropertiesChanged<ExpandoObject>) return false;
-        }
-        return true;
-    }
-
-    static void FoldFutureChanges(ProjectionEventContext context, PendingFutureSave[] pendingSaves)
-    {
-        foreach (var pendingSave in pendingSaves)
-        {
-            foreach (var change in pendingSave.Changeset.Changes)
-            {
-                context.Changeset.Add(change);
-            }
-        }
-    }
-
-    static HashSet<PendingFutureSave>? GetFoldedFutureSaveSet(ProjectionEventContext context)
-    {
-        if (!context.Changeset.HasChanges) return null;
-
-        HashSet<PendingFutureSave> folded = [];
-        foreach (var pendingSave in context.PendingFutureSaves)
-        {
-            if (CanFold(context, pendingSave)) folded.Add(pendingSave);
-        }
-        return folded;
-    }
-
-    async Task<bool> SaveMainChanges(IProjection projection, ProjectionEventContext context)
-    {
-        _logger.SavingResult(context.Event.Context.SequenceNumber);
-
-        // Sinks that serialize a whole document per ApplyChanges call (the SQL sink does;
-        // MongoDB instead uses field-level $set operators that compose naturally) cannot
-        // safely process the main changeset plus several pendingSaves for the same key as
-        // separate operations — each pendingSave starts from its own InitialState clone,
-        // so later pendingSaves serialize on top of the unmutated initial document and
-        // overwrite earlier pendingSaves' mutations. Fold same-key pendingSaves whose
-        // changes are *purely* PropertiesChanged into the main changeset so the sink sees
-        // one composite write per key.
-        //
-        // PendingSaves containing ChildAdded / ChildRemoved are left for their own
-        // ApplyChanges call: MongoDB cannot push a child into an array element that is
-        // being pushed in the same update (see the comment in ResolveFutures), and the
-        // per-call write also keeps SQL correct because the separate call reads the just-
-        // written document state via the same key.
-        var pendingSavesToFold = GetFoldedFutureSaves(context);
-        FoldFutureChanges(context, pendingSavesToFold);
-
-        // TODO: Return the number of affected records and pass this along to the changeset storage
-        var failedPartitions = await ApplyMainChanges(projection, context, pendingSavesToFold);
-
-        // A bulk flush may report partitions other than this event's. Every one is recorded, but only a failure
-        // of this event's own partition stops the rest of the save: the other partitions' events are retried.
-        foreach (var failedPartition in failedPartitions)
-        {
-            context.AddFailedPartition(failedPartition);
-        }
-
-        if (HasFailedOwnPartition(failedPartitions, context.Changeset, context.Key)) return false;
-
-        await ResolveSavedFutures(pendingSavesToFold);
-        await _changesetStorage.Save(
-            _changesetContainer ?? projection.ReadModel.ContainerName,
-            context.Key,
-            context.Event.Context.EventType,
-            context.Event.Context.SequenceNumber,
-            context.Event.Context.CorrelationId,
-            context.Changeset);
-        return true;
+        return failedPartitions.Any(failure => Equals(failure.EventSourceId.Value, ownPartition) || Equals(failure.EventSourceId.Value, key.Value));
     }
 
     Task<IEnumerable<FailedPartition>> ApplyMainChanges(IProjection projection, ProjectionEventContext context, PendingFutureSave[] foldedFutureSaves)
@@ -196,10 +154,13 @@ public class SaveChanges : ICanPerformProjectionPipelineStep
     {
         if (!context.HasPendingFutureSaves) return;
 
-        var foldedSet = GetFoldedFutureSaveSet(context);
-        foreach (var pendingSave in context.PendingFutureSaves)
+        var foldedSet = context.Changeset.HasChanges
+            ? new HashSet<PendingFutureSave>(context.PendingFutureSaves
+                .Where(p => Equals(p.Key.Value, context.Key.Value)
+                    && p.Changeset.Changes.All(c => c is PropertiesChanged<ExpandoObject>)))
+            : [];
+        foreach (var pendingSave in context.PendingFutureSaves.Where(p => !foldedSet.Contains(p)))
         {
-            if (foldedSet?.Contains(pendingSave) == true) continue;
             await ApplyPendingFutureSave(context, pendingSave);
         }
     }

@@ -20,8 +20,8 @@ using Microsoft.Extensions.Logging.Abstractions;
 namespace Cratis.Chronicle.Benchmarks.HotPaths;
 
 /// <summary>
-/// Measures production SaveChanges with no-op dependencies, including the zero-future path.
-/// Dependencies do not retain call history or mutate the reused changeset during folding.
+/// Measures production SaveChanges with no-op dependencies and no pending futures.
+/// Dependencies do not retain call history.
 /// </summary>
 [MemoryDiagnoser]
 public class SaveChangesBenchmark
@@ -30,18 +30,6 @@ public class SaveChangesBenchmark
     SaveChanges _step = null!;
     IProjection _projection = null!;
     ProjectionEventContext _context = null!;
-
-    /// <summary>
-    /// Gets or sets the number of pending futures.
-    /// </summary>
-    [Params(0, 1, 16)]
-    public int PendingFutures { get; set; }
-
-    /// <summary>
-    /// Gets or sets whether pending writes fold into the main key or use separate keys.
-    /// </summary>
-    [Params(false, true)]
-    public bool Fold { get; set; }
 
     /// <summary>
     /// Creates all state outside measurement. The same fixture compiles against main.
@@ -86,10 +74,6 @@ public class SaveChangesBenchmark
             _ => throw new InvalidOperationException(name)
         });
         _context = new(new Key("main-key", ArrayIndexers.NoIndexers), @event, changeset, ProjectionOperationType.None, false);
-        for (var index = 0; index < PendingFutures; index++)
-        {
-            _context.AddPendingFutureSave(Fold ? _context.Key : new Key($"future-{index}", ArrayIndexers.NoIndexers), changeset);
-        }
     }
 
     /// <summary>
