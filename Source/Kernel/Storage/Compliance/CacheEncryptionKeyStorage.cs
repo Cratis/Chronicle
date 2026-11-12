@@ -222,7 +222,7 @@ public class CacheEncryptionKeyStorage(
         var provisioned = await actualKeyStore.GetOrAddFor(eventStore, eventStoreNamespace, identifier, key);
         lock (_lock)
         {
-            if (generation == GenerationFor(scope))
+            if (CanPublishProvision(scope, generation))
             {
                 _keys.Set(cacheKey, provisioned);
                 _absentKeys.Remove(cacheKey);
@@ -320,7 +320,7 @@ public class CacheEncryptionKeyStorage(
         var pair = await actualKeyStore.GetOrAddWithRevisionFor(eventStore, eventStoreNamespace, identifier, key);
         lock (_lock)
         {
-            if (generation == GenerationFor(scope))
+            if (CanPublishProvision(scope, generation))
             {
                 CachePair(scope, pair);
                 var cacheKey = new Key(scope, pair.Revision);
@@ -429,12 +429,16 @@ public class CacheEncryptionKeyStorage(
         await actualKeyStore.SaveFor(eventStore, eventStoreNamespace, identifier, key, revision);
         lock (_lock)
         {
-            if (generation != GenerationFor(scope))
+            var canPublish = generation == GenerationFor(scope);
+
+            // A pruned generation may mismatch without a mutation of this subject. Always invalidate
+            // reads cached while the save was in flight, even when publishing the saved value is unsafe.
+            Invalidate(scope, revision);
+            if (!canPublish)
             {
                 return;
             }
 
-            Invalidate(scope, revision);
             _keys.Set(new Key(scope, EncryptionKeyRevision.Latest), key);
             if (!IsLatest(revision))
             {
@@ -491,6 +495,18 @@ public class CacheEncryptionKeyStorage(
             _absentKeys.Remove(specific);
             _absentKeys.Remove(latest);
         }
+    }
+
+    bool CanPublishProvision(KeyScope scope, long generation)
+    {
+        if (generation == GenerationFor(scope))
+        {
+            return true;
+        }
+
+        // Provisioning can write to storage. A mismatch prevents publication, not completion invalidation.
+        Invalidate(scope, revision: null);
+        return false;
     }
 
     void CachePair(KeyScope scope, EncryptionKeyAtRevision pair)
