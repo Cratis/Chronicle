@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cratis.Chronicle.Storage.Sql.Generations.for_GenerationAdmission.when_admitting_a_fresh_provider;
 
+[PerFactSpecificationLifecycle] // Facts run their own asynchronous operations, so each fact gets its own context.
 [Collection(PostgreSqlCollection.Name)]
 public class on_postgresql(PostgreSqlFixture fixture) : given.a_postgresql_provider(fixture)
 {

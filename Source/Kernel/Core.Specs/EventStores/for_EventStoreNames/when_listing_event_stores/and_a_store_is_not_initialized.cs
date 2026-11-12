@@ -21,7 +21,7 @@ public class and_a_store_is_not_initialized : Specification
             .Returns([(EventStoreName)"ready"]);
     }
 
-    async Task Because() => _result = await EventStoreNames.AllEventStores(_storage, _initialization);
+    async Task Because() => _result = await EventStoreNames.AllEventStores(_storage, _initialization, Substitute.For<IServiceProvider>());
 
     [Fact] void should_only_list_initialized_stores() => _result.ShouldEqual([new EventStoreNames("ready", "ready")]);
 }

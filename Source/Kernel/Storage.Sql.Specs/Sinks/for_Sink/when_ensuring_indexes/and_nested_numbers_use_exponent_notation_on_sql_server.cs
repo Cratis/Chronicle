@@ -16,6 +16,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cratis.Chronicle.Storage.Sql.Sinks.for_Sink.when_ensuring_indexes;
 
+[PerFactSpecificationLifecycle] // Facts run their own asynchronous operations, so each fact gets its own context.
 [Collection(SqlServerCollection.Name)]
 public class and_nested_numbers_use_exponent_notation_on_sql_server(SqlServerFixture fixture) : Specification
 {

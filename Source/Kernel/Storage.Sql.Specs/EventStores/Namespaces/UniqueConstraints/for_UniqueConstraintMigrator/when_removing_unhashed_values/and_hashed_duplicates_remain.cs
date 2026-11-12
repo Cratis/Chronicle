@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints.for_UniqueConstraintMigrator.when_removing_unhashed_values;
 
+[PerFactSpecificationLifecycle] // Facts run their own asynchronous operations, so each fact gets its own context.
 public class and_hashed_duplicates_remain : given.a_legacy_sqlite_table
 {
     long _deleted;

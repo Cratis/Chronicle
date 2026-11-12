@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Frozen;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using Cratis.Choreography.Jobs;
@@ -19,6 +20,8 @@ public partial class Observer
     const int MaxPendingHandledCountPartitions = 512;
 
     readonly HandledEventsReportDeduplication _handledEventsReports = new();
+    ObserverSubscription? _eventTypeSubscription;
+    FrozenSet<EventTypeId> _subscribedEventTypeIds = [];
 
     /// <inheritdoc/>
     public Task SetHandledStats(EventSequenceNumber lastHandledEventSequenceNumber)
@@ -401,6 +404,20 @@ public partial class Observer
         }
     }
 
+    bool HasSubscribedEvent(IEnumerable<AppendedEvent> events)
+    {
+        if (!ReferenceEquals(_eventTypeSubscription, _subscription))
+        {
+            _subscribedEventTypeIds = _subscription.EventTypes.Select(static eventType => eventType.Id).ToFrozenSet();
+            _eventTypeSubscription = _subscription;
+        }
+        foreach (var @event in events)
+        {
+            if (_subscribedEventTypeIds.Contains(@event.Context.EventType.Id)) return true;
+        }
+        return false;
+    }
+
     async Task HandleEventsForPartition(Key partition, IEnumerable<AppendedEvent> events, Activity? activity)
     {
         var observedTailEventSequenceNumber = events.Last().Context.SequenceNumber;
@@ -408,7 +425,7 @@ public partial class Observer
         // An observer subscribed to all events has no fixed event type list to match against - every event is
         // of interest to it by definition, so this "none of these events are ones we're subscribed to" fast
         // path never applies to it.
-        if (!State.SubscribesToAllEvents && !events.Any(_ => _subscription.EventTypes.Any(et => et.Id == _.Context.EventType.Id)))
+        if (!State.SubscribesToAllEvents && !HasSubscribedEvent(events))
         {
             State = State with
             {

@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Runtime.ExceptionServices;
 using Grpc.Core;
 using ProtoBuf.Grpc;
 
@@ -29,14 +30,37 @@ internal static class StreamingCallFailures
     /// <param name="context">The <see cref="CallContext"/> of the call.</param>
     /// <param name="failure">The failure.</param>
     /// <remarks>Calls that do not come through the gRPC transport, such as in-process calls, have nothing to record on.</remarks>
-    public static void RecordFailure(this CallContext context, Exception failure) =>
-        context.ServerCallContext?.UserState[Key] = failure;
+    public static void RecordFailure(this CallContext context, Exception failure)
+    {
+        if (context.ServerCallContext is not { } serverContext) return;
+        lock (serverContext.UserState)
+        {
+            serverContext.UserState[Key] = failure;
+        }
+    }
 
     /// <summary>
     /// Get the failure recorded for the call, if any.
     /// </summary>
     /// <param name="context">The <see cref="ServerCallContext"/> of the call.</param>
     /// <returns>The recorded failure, or null if none was recorded.</returns>
-    public static Exception? GetRecordedFailure(this ServerCallContext context) =>
-        context.UserState.TryGetValue(Key, out var failure) ? failure as Exception : null;
+    public static Exception? GetRecordedFailure(this ServerCallContext context)
+    {
+        lock (context.UserState)
+        {
+            return context.UserState.TryGetValue(Key, out var failure) ? failure as Exception : null;
+        }
+    }
+
+    /// <summary>
+    /// Throw the failure recorded for the call, if any, preserving its dispatch information.
+    /// </summary>
+    /// <param name="context">The <see cref="ServerCallContext"/> of the call.</param>
+    public static void ThrowRecordedFailure(this ServerCallContext context)
+    {
+        if (context.GetRecordedFailure() is { } failure)
+        {
+            ExceptionDispatchInfo.Throw(failure);
+        }
+    }
 }

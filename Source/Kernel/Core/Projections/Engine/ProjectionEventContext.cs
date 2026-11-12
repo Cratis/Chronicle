@@ -107,6 +107,11 @@ public record ProjectionEventContext(
     public bool CreatesInstance => !IsJoin && !ChildrenAffected;
 
     /// <summary>
+    /// Gets whether any pending future saves must be applied.
+    /// </summary>
+    internal bool HasPendingFutureSaves => _pendingFutureSaves.Count > 0;
+
+    /// <summary>
     /// Adds a deferred future to the context.
     /// </summary>
     /// <param name="future">The <see cref="ProjectionFuture"/> to add.</param>

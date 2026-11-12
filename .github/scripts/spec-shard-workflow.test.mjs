@@ -93,7 +93,7 @@ test('all shipped frameworks, diagnostic guards, consumer restore, Docker and st
     for (const name of ['Build development Docker image', 'Push development Docker image', 'Export image']) step(build, name);
 });
 
-test('failed, cancelled and skipped package verification cannot turn the aggregate green', () => {
+test('failed, cancelled and skipped package verification or analyzers cannot turn the aggregate green', () => {
     assert.ok(dependencies('specs').includes('package-verification'));
     const aggregate = step(jobs.get('specs'), 'Require every spec job to pass');
     assert.match(aggregate, /PACKAGE_RESULT: \$\{\{ needs\.package-verification\.result \}\}/);
@@ -102,9 +102,19 @@ test('failed, cancelled and skipped package verification cannot turn the aggrega
     for (const result of ['success', 'failure', 'cancelled', 'skipped', '']) {
         const child = spawnSync('bash', ['-c', command], { env: {
             WIRE_RESULT: 'success', GRAIN_RESULT: 'success', OTHER_RESULT: 'success',
-            SQL_RESULT: 'success', NET10_RESULT: 'success', PACKAGE_RESULT: result
+            SQL_RESULT: 'success', NET10_RESULT: 'success', PACKAGE_RESULT: result, ANALYZER_RESULT: 'success'
         } });
         assert.equal(child.status, result === 'success' ? 0 : 1, `Package result: ${result}`);
+    }
+    assert.ok(dependencies('specs').includes('analyzers'));
+    assert.deepEqual(dependencies('analyzers'), ['already-ran']);
+    assert.match(aggregate, /ANALYZER_RESULT: \$\{\{ needs\.analyzers\.result \}\}/);
+    for (const result of ['success', 'failure', 'cancelled', 'skipped', '']) {
+        const child = spawnSync('bash', ['-c', command], { env: {
+            WIRE_RESULT: 'success', GRAIN_RESULT: 'success', OTHER_RESULT: 'success',
+            SQL_RESULT: 'success', NET10_RESULT: 'success', PACKAGE_RESULT: 'success', ANALYZER_RESULT: result
+        } });
+        assert.equal(child.status, result === 'success' ? 0 : 1, `Analyzer result: ${result}`);
     }
     for (const job of ['integration', 'integration-api', 'mongodb', 'neo4j', 'coverage-merge-and-cache']) {
         assert.ok(dependencies(job).includes('specs'), `${job} no longer waits for the aggregate`);

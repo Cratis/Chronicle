@@ -5,6 +5,7 @@ using Cratis.Chronicle.Concepts.Events;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints.for_UniqueConstraintsStorage.when_saving;
 
+[PerFactSpecificationLifecycle] // Facts run their own asynchronous operations, so each fact gets its own context.
 public class and_the_owner_reclaims_a_retained_value : given.a_per_value_constraint
 {
     async Task Establish() => await _storage.Save(_owner, _definition, 42L, "first");
