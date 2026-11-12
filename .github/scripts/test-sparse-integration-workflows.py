@@ -468,7 +468,7 @@ class SparseIntegrationWorkflows(unittest.TestCase):
     def test_stable_specs_check_requires_every_shard_to_succeed(self):
         aggregate = self.build["jobs"]["specs"]
         self.assertEqual("${{ needs.already-ran.outputs.skip != 'true' && (always()) }}", aggregate["if"])
-        self.assertEqual(["wire-compatibility", "grain-compatibility", "package-verification", "analyzers", "specs-other", "specs-sql", "specs-net10"],
+        self.assertEqual(["wire-compatibility", "grain-compatibility", "package-verification", "package-pack-check", "analyzers", "specs-other", "specs-sql", "specs-net10"],
                          prerequisites_of(aggregate))
         self.assertEqual({"contents": "read", "actions": "read"}, aggregate["permissions"])
         self.assertEqual("Checkout shard contract", aggregate["steps"][1]["name"])
@@ -499,7 +499,8 @@ class SparseIntegrationWorkflows(unittest.TestCase):
                                         env={"WIRE_RESULT": wire, "GRAIN_RESULT": grain,
                                              "OTHER_RESULT": ordinary, "SQL_RESULT": sql,
                                              "NET10_RESULT": net10, "PACKAGE_RESULT": "success",
-                                             "ANALYZER_RESULT": "success"}, check=False)
+                                             "ANALYZER_RESULT": "success", "PACK_RESULT": "success",
+                                             "EVENT_NAME": "pull_request"}, check=False)
                 self.assertEqual(wire == grain == ordinary == sql == net10 == "success",
                                  result.returncode == 0)
         self.assertEqual("${{ needs.package-verification.result }}", step["env"]["PACKAGE_RESULT"])
@@ -509,7 +510,8 @@ class SparseIntegrationWorkflows(unittest.TestCase):
                                         env={"WIRE_RESULT": "success", "GRAIN_RESULT": "success",
                                              "OTHER_RESULT": "success", "SQL_RESULT": "success",
                                              "NET10_RESULT": "success", "PACKAGE_RESULT": package,
-                                             "ANALYZER_RESULT": "success"}, check=False)
+                                             "ANALYZER_RESULT": "success", "PACK_RESULT": "success",
+                                             "EVENT_NAME": "pull_request"}, check=False)
                 self.assertNotEqual(0, result.returncode)
         self.assertEqual("${{ needs.analyzers.result }}", step["env"]["ANALYZER_RESULT"])
         for analyzers in ("success", "failure", "cancelled", "skipped", ""):
@@ -518,7 +520,8 @@ class SparseIntegrationWorkflows(unittest.TestCase):
                                         env={"WIRE_RESULT": "success", "GRAIN_RESULT": "success",
                                              "OTHER_RESULT": "success", "SQL_RESULT": "success",
                                              "NET10_RESULT": "success", "PACKAGE_RESULT": "success",
-                                             "ANALYZER_RESULT": analyzers}, check=False)
+                                             "ANALYZER_RESULT": analyzers, "PACK_RESULT": "success",
+                                             "EVENT_NAME": "pull_request"}, check=False)
                 self.assertEqual(analyzers == "success", result.returncode == 0)
 
     def test_development_paths_preserve_steps_permissions_and_artifact(self):
@@ -535,7 +538,7 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         self.assertEqual([], prerequisites_of(parallel))
         # The requested PR build runs in parallel with the specs; the integration job keeps the specs gate.
         self.assertEqual([], prerequisites_of(requested))
-        self.assertEqual(["wire-compatibility", "grain-compatibility", "package-verification", "analyzers", "specs-other", "specs-sql", "specs-net10"],
+        self.assertEqual(["wire-compatibility", "grain-compatibility", "package-verification", "package-pack-check", "analyzers", "specs-other", "specs-sql", "specs-net10"],
                          prerequisites_of(jobs["specs"]))
         for job_id in ("specs-other", "specs-sql"):
             self.assertEqual(["dotnet-build"], prerequisites_of(jobs[job_id]))

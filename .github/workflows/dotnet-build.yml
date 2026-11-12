@@ -383,11 +383,19 @@ jobs:
       # framework here, keeping generators on both and analyzers on net10.0 as before.
       - name: Build client packages for every shipped framework
         run: |
-          set -e
-          find ./Source/Clients -name "*.csproj" ! -name "*.Specs.csproj" -print0 | while IFS= read -r -d '' project; do
-            dotnet build "$project" --configuration Release -p:IsPackaging=true -p:SkipAnalyzersForTargetFramework=net11.0 -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
-          done
-          dotnet build ./Source/Kernel/Contracts/Contracts.csproj --configuration Release -p:IsPackaging=true -p:SkipAnalyzersForTargetFramework=net11.0 -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
+          set -euo pipefail
+          solution_dir=$(mktemp -d "$RUNNER_TEMP/client-packages.XXXXXX")
+          find ./Source/Clients -name "*.csproj" ! -name "*.Specs.csproj" -print0 > "$solution_dir/projects"
+          projects=()
+          while IFS= read -r -d '' project; do
+            projects+=("$project")
+          done < "$solution_dir/projects"
+          test "${#projects[@]}" -gt 0
+          echo "Building ${#projects[@]} client projects plus Contracts for every shipped framework"
+          dotnet new sln --name ClientPackages --format slnx --output "$solution_dir"
+          dotnet sln "$solution_dir/ClientPackages.slnx" add --include-references=false "${projects[@]}" ./Source/Kernel/Contracts/Contracts.csproj
+          # Match direct project builds: references outside this solution inherit Release.
+          dotnet build "$solution_dir/ClientPackages.slnx" --configuration Release -p:ShouldUnsetParentConfigurationAndPlatform=false -p:IsPackaging=true -p:SkipAnalyzersForTargetFramework=net11.0 -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
 
       # Fail closed before packing or checking an image in this workspace. The separate
       # spec artifact is not published, and cannot pass the aggregate without these guards.
@@ -422,8 +430,43 @@ jobs:
           cp -r Source/Kernel/Server/bin/Release/net11.0/. Source/Kernel/Server/out/
           docker build -t "chronicle-dockerfile-check:${{ github.sha }}" -f Docker/Local/Dockerfile .
 
-      # The same pack command publish.yml runs: stable-package, packed-asset and nuspec
-      # failures must still fail the PR, even though this now runs beside the specs.
+  # The publish-equivalent pack builds its own inputs. Version=99.0.0 overrides the
+  # optional CI stamp, so this check does not need dotnet-build's version or artifacts.
+  package-pack-check:
+    needs: [already-ran]
+    if: needs.already-ran.outputs.skip != 'true' && github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .Net
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Cache NuGet packages
+        uses: Cratis/Workflows/.github/actions/dotnet-cache@main
+
+      # Restore only: dotnet-build remains the sole writer of this optional cache.
+      - name: Restore obj cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ./**/obj
+          key: dotnet-obj-cache-${{ hashFiles('**/*.csproj', '**/Directory.*.props', '**/Directory.*.targets') }}-${{ github.sha }}
+          restore-keys: |
+            dotnet-obj-cache-${{ hashFiles('**/*.csproj', '**/Directory.*.props', '**/Directory.*.targets') }}-
+
+      - name: Add GitHub Package Registry to NuGet
+        run: |
+          dotnet nuget update source github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text || \
+          dotnet nuget add source --name github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text https://nuget.pkg.github.com/cratis/index.json
+
+      # Stable-package, packed-asset and nuspec failures must still fail the PR.
       - name: Verify NuGet packages can be created
         if: github.event_name == 'pull_request'
         run: dotnet pack ./Source/Clients/Packages.slnf --configuration Release -o "$RUNNER_TEMP/nuget-pack-check" -p:IsPackaging=true -p:Version=99.0.0 -p:PackageVersion=99.0.0 -p:SourceRevisionId=${{ github.sha }}
@@ -778,7 +821,7 @@ jobs:
   # A failed, skipped or cancelled shard must never turn this aggregate green.
   specs:
     if: ${{ needs.already-ran.outputs.skip != 'true' && (always()) }}
-    needs: [already-ran, wire-compatibility, grain-compatibility, package-verification, analyzers, specs-other, specs-sql, specs-net10]
+    needs: [already-ran, wire-compatibility, grain-compatibility, package-verification, package-pack-check, analyzers, specs-other, specs-sql, specs-net10]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -793,8 +836,10 @@ jobs:
           SQL_RESULT: ${{ needs.specs-sql.result }}
           NET10_RESULT: ${{ needs.specs-net10.result }}
           PACKAGE_RESULT: ${{ needs.package-verification.result }}
+          PACK_RESULT: ${{ needs.package-pack-check.result }}
+          EVENT_NAME: ${{ github.event_name }}
           ANALYZER_RESULT: ${{ needs.analyzers.result }}
-        run: test "$WIRE_RESULT" = success && test "$GRAIN_RESULT" = success && test "$OTHER_RESULT" = success && test "$SQL_RESULT" = success && test "$NET10_RESULT" = success && test "$PACKAGE_RESULT" = success && test "$ANALYZER_RESULT" = success
+        run: test "$WIRE_RESULT" = success && test "$GRAIN_RESULT" = success && test "$OTHER_RESULT" = success && test "$SQL_RESULT" = success && test "$NET10_RESULT" = success && test "$PACKAGE_RESULT" = success && test "$ANALYZER_RESULT" = success && { test "$PACK_RESULT" = success || { test "$EVENT_NAME" != pull_request && test "$PACK_RESULT" = skipped; }; }
 
       - name: Checkout shard contract
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
