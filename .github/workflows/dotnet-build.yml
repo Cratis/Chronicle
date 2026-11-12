@@ -662,7 +662,7 @@ jobs:
       fail-fast: false
       matrix:
         # Must match ORDINARY_SHARDS in spec-shards.mjs; pinned by the workflow contract test.
-        shard: [1, 2, 3]
+        shard: [1, 2, 3, 4]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -737,7 +737,7 @@ jobs:
         # &FullyQualifiedName!~Cratis.Chronicle.Storage.Sql. and applies specs.runsettings.
         # Each project gets fresh, unique TRX/Cobertura; empty/spec-only coverage fails.
         # Actual production hits come only from these real library specs.
-        run: node .github/scripts/run-mixed-specs.mjs --shard ${{ matrix.shard }} --shards 3
+        run: node .github/scripts/run-mixed-specs.mjs --shard ${{ matrix.shard }} --shards 4
 
       - name: Assert specs ran
         uses: ./.github/actions/assert-tests-ran

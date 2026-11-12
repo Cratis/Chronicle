@@ -5,7 +5,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { CORE_PROJECT, CORE_PARTS, loadPartition, partitionUnits } from './core-spec-partition.mjs';
-import { planShards } from './spec-shards.mjs';
+import { ORDINARY_SHARDS, planShards } from './spec-shards.mjs';
 import { balanceJobs, balancePrefixes, slowest } from './spec-shard-balancing.mjs';
 import { wallRecords, measuredCore, candidatePlans, shardOverhead } from './refresh-spec-shard-timings.mjs';
 
@@ -56,7 +56,7 @@ test('train 8 model selects two parts; all larger counts lose even with perfect 
     assert.equal(CORE_PARTS, 2);
     const best = slowest(candidates[0].shards);
     const ordinary = timings.measurements.reduce((sum, record) => sum + record.seconds, 0);
-    const threePartLowerBound = (ordinary + timings.core.variableSeconds + 3 * timings.core.fixedSeconds) / 3;
+    const threePartLowerBound = (ordinary + timings.core.variableSeconds + 3 * timings.core.fixedSeconds) / ORDINARY_SHARDS;
     assert.ok(threePartLowerBound > best);
     const projects = [...timings.measurements.map(record => record.project), CORE_PROJECT];
     const plan = planShards(projects, timings, partitionUnits(partition.units));

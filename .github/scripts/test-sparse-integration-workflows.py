@@ -410,9 +410,9 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         jobs = self.build["jobs"]
         ordinary = next(step["run"] for step in jobs["specs-other"]["steps"]
                         if step["name"] == "Run tests with coverage")
-        self.assertEqual("node .github/scripts/run-mixed-specs.mjs --shard ${{ matrix.shard }} --shards 3", ordinary)
+        self.assertEqual("node .github/scripts/run-mixed-specs.mjs --shard ${{ matrix.shard }} --shards 4", ordinary)
         other = jobs["specs-other"]
-        self.assertEqual(["1", "2", "3"], other["strategy"]["matrix"]["shard"])
+        self.assertEqual(["1", "2", "3", "4"], other["strategy"]["matrix"]["shard"])
         self.assertEqual("false", other["strategy"]["fail-fast"])
         self.assertNotIn("continue-on-error", other)
         self.assertEqual("specs-other (${{ matrix.shard }})", other["name"])
