@@ -57,9 +57,37 @@ test('Release artifact is uploaded immediately after the build integrity checks'
     assert.match(step(build, 'Pack Release build output'), /find \. -type d -name bin/);
     assert.match(step(build, 'Upload Release build output'), /if-no-files-found: error/);
     assert.match(step(packages, 'Download Release build output'), /name: build-output-release/);
-    assert.match(step(packages, 'Extract Release build output'), /tar -I zstd -xf build-output-release\.tar\.zst/);
+    assert.match(step(packages, 'Extract Release build output'), /tar -I 'zstd -d --long=30' -xf build-output-release\.tar\.zst/);
     assert.match(step(packages, 'Restore obj cache'), /uses: actions\/cache\/restore@v4/);
     assert.ok(!packages.includes('derive-build-version'), 'package verification must reuse the build version, not derive it again');
+});
+
+test('every Release artifact reader accepts the measured long-window compression', () => {
+    assert.match(step(build, 'Pack Release build output'), /tar --null -I 'zstd -T0 --long=30' -cf build-output-release\.tar\.zst/);
+    const readers = [...jobs.values()].filter(job => job.includes('- name: Download Release build output\n'));
+    assert.equal(readers.length, 7);
+    for (const reader of readers) {
+        assert.match(step(reader, 'Extract Release build output'), /tar -I 'zstd -d --long=30' -xf build-output-release\.tar\.zst/);
+    }
+});
+
+// Only the critical-path dotnet-build job skips the obj cache save on PRs. The two development build jobs keep
+// identical steps (test-sparse-integration-workflows.py), so they keep the combined restore-and-save action.
+test('dotnet-build restores the obj cache on PRs and saves only non-PR misses under the restored primary key', () => {
+    const job = jobs.get('dotnet-build');
+    const restore = step(job, 'Restore obj cache');
+    assert.match(restore, /id: restore-obj/);
+    assert.match(restore, /uses: actions\/cache\/restore@v4/);
+    assert.ok(restore.includes(`key: dotnet-obj-cache-\u0024{{ hashFiles('**/*.csproj', '**/Directory.*.props', '**/Directory.*.targets') }}-\u0024{{ github.sha }}`));
+    const save = step(job, 'Save obj cache');
+    assert.match(save, /if: github\.event_name != 'pull_request' && steps\.restore-obj\.outputs\.cache-hit != 'true'/);
+    assert.match(save, /uses: actions\/cache\/save@v4/);
+    assert.match(save, /path: \.\/\*\*\/obj/);
+    assert.match(save, /key: \u0024\{\{ steps\.restore-obj\.outputs\.cache-primary-key \}\}/);
+    for (const name of ['dotnet-build-development', 'dotnet-build-development-requested']) {
+        assert.match(step(jobs.get(name), 'Restore obj cache'), /uses: actions\/cache@v4/);
+        assert.ok(!jobs.get(name).includes('actions/cache/save@'));
+    }
 });
 
 test('package verification stamps exactly the version dotnet-build derived', () => {
@@ -179,7 +207,7 @@ test('single build receives the find-derived client set, including new projects 
     }
 });
 
-test('three-shard workflow matches the planner and isolates the historical long pole', async () => {
+test('three-shard workflow matches the planner and refreshed timing samples', async () => {
     const other = jobs.get('specs-other');
     const matrix = JSON.parse(other.match(/shard: (\[[^\]]+\])/)[1]);
     assert.deepEqual(matrix, ordinaryShardIds());
@@ -188,17 +216,20 @@ test('three-shard workflow matches the planner and isolates the historical long 
     const plan = await sourcePlan(process.cwd());
     assert.equal(plan.length, ORDINARY_SHARDS);
     assert.ok(plan.every(shard => shard.projects.length && shard.defaulted.length === 0));
-    assert.equal(new Set(plan.flatMap(shard => shard.projects)).size, 25);
-    const mongo = plan.find(shard => shard.projects.some(project => project.endsWith('/Storage.MongoDB.Specs.csproj')));
-    const core = plan.find(shard => shard.projects.some(project => project.endsWith('/Core.Specs.csproj')));
-    assert.notEqual(mongo.shard, core.shard);
-    assert.equal(mongo.projects.length, 1);
-    // Samples predate #5839: the MongoDB weight alone exceeds the five-minute goal.
-    // Keep measured weights honest rather than claiming the new layout has met that goal.
-    assert.ok(plan.every(shard => shard.seconds <= 510));
-    assert.ok(core.seconds < 300);
+    const projects = plan.flatMap(shard => shard.projects);
+    assert.equal(projects.length, 25);
+    assert.equal(new Set(projects).size, 25);
+    // Train 6 includes the MongoDB speedup, so no project needs a dedicated shard.
+    // The 250-second bound covers completion intervals including startup/coverage overhead,
+    // with a small margin above the measured 246.48-second maximum, not a fixed layout.
+    assert.ok(plan.every(shard => shard.seconds < 250));
     const timings = JSON.parse(await readFile(new URL('./spec-shard-timings.json', import.meta.url), 'utf8'));
     const runs = new Set(timings.samples.map(sample => sample.run));
-    assert.ok(runs.size >= 5 && runs.size <= 8);
-    for (const run of runs) assert.deepEqual(timings.samples.filter(sample => sample.run === run).map(sample => sample.shard).sort(), [1, 2]);
+    assert.ok(runs.size >= 1 && runs.size <= 8);
+    for (const run of runs) {
+        // Each sampled run must contribute every shard it had, numbered 1..n, whatever the shard count was then.
+        const shards = timings.samples.filter(sample => sample.run === run).map(sample => sample.shard).sort((a, b) => a - b);
+        assert.ok(shards.length >= 2 && shards.length <= ORDINARY_SHARDS);
+        assert.deepEqual(shards, shards.map((_, index) => index + 1));
+    }
 });

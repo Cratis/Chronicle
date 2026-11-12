@@ -4,6 +4,7 @@
 """Partition SQL specs by their existing xUnit collection, not provider naming conventions."""
 
 import argparse
+from datetime import datetime
 import json
 import math
 from pathlib import Path
@@ -93,18 +94,52 @@ def timed_weights(classes, facts, timings):
     return weights
 
 
+def result_timestamp(result, attribute):
+    """TRX timestamps must carry their offset so separate machines' local clocks are not compared."""
+    timestamp = datetime.fromisoformat(result.get(attribute, ""))
+    if timestamp.tzinfo is None:
+        raise ValueError(f"Missing timezone in {attribute}")
+    return timestamp
+
+
+def result_interval(result, trx):
+    """Require class identity and timestamped facts rather than falling back to fact durations."""
+    test = result.get("testName", "").split("(", 1)[0]
+    name, _, fact = test.rpartition(".")
+    if not all((name, fact)):
+        raise ValueError(f"Missing test class in {trx}")
+    start = result_timestamp(result, "startTime")
+    end = result_timestamp(result, "endTime")
+    if end < start:
+        raise ValueError(f"Invalid test interval in {trx}: {test}")
+    return name + ".", start, end
+
+
+def class_completion_intervals(trx):
+    """Include inter-class setup time, ordering classes by their last fact's completion."""
+    results = [result_interval(result, trx)
+               for result in ElementTree.parse(trx).getroot().iter(f"{TRX}UnitTestResult")]
+    if not results:
+        raise ValueError(f"No test results in {trx}")
+    previous = min(start for _, start, _ in results)
+    ends = {}
+    for name, _, end in results:
+        ends[name] = max(ends.get(name, end), end)
+    for name in sorted(ends, key=lambda name: (ends[name], name)):
+        yield name, (ends[name] - previous).total_seconds()
+        previous = ends[name]
+
+
 def measured_timings(classes, trx_files):
-    """Sum test durations per spec class from TRX results, keeping only classes the collections own."""
-    owned = {name for names in classes.values() for name in names}
+    """Sum per-file class completion gaps, keeping only classes the collections own."""
+    owned = set().union(*classes.values())
     seconds = {}
     for trx in trx_files:
-        for result in ElementTree.parse(trx).getroot().iter(f"{TRX}UnitTestResult"):
-            test = result.get("testName", "").split("(", 1)[0]
-            name = test.rsplit(".", 1)[0] + "."
-            if name not in owned:
-                continue
-            hours, minutes, rest = result.get("duration", "0:0:0").split(":")
-            seconds[name] = seconds.get(name, 0) + int(hours) * 3600 + int(minutes) * 60 + float(rest)
+        for name, elapsed in class_completion_intervals(trx):
+            if name in owned:
+                seconds[name] = seconds.get(name, 0) + elapsed
+    if not seconds:
+        raise ValueError("No owned SQL spec timings in TRX results")
     return {name: round(max(value, 0.1), 1) for name, value in sorted(seconds.items())}
 
 

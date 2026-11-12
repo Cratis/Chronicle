@@ -119,16 +119,72 @@ class SqlSpecFilters(unittest.TestCase):
         shards = filters.partition(classes["sqlserver"], weights, 2)
         self.assertEqual([["Specs.b."], ["Specs.new.", "Specs.c."]], shards)
 
-    def test_timings_are_summed_per_owned_class_from_trx_results(self):
-        trx = self.root / "results.trx"
-        ns = "http://microsoft.com/schemas/VisualStudio/TeamTest/2010"
-        trx.write_text(f'<TestRun xmlns="{ns}"><Results>'
-                       '<UnitTestResult testName="Specs.server_name.should_a" duration="00:01:00.5000000" />'
-                       '<UnitTestResult testName="Specs.server_name.should_b(value: 1.5)" duration="00:00:02" />'
-                       '<UnitTestResult testName="Specs.sqlite.should_c" duration="00:00:09" />'
+    def write_trx(self, rows, file="results.trx"):
+        trx = self.root / file
+        trx.write_text(f'<TestRun xmlns="{filters.TRX[1:-1]}"><Results>' + rows +
                        '</Results></TestRun>', encoding="utf-8")
+        return trx
+
+    def test_timings_include_setup_gaps_and_order_classes_by_their_last_fact(self):
+        trx = self.write_trx(
+            '<UnitTestResult testName="Specs.server_name_two.should_a" duration="00:00:01" '
+            'startTime="2026-11-12T00:01:30+00:00" endTime="2026-11-12T00:01:31+00:00" />'
+            '<UnitTestResult testName="Specs.server_name.should_b(value: 1.5)" duration="00:00:01" '
+            'startTime="2026-11-12T00:01:00+00:00" endTime="2026-11-12T00:01:02.5+00:00" />'
+            '<UnitTestResult testName="Specs.server_name.should_a" duration="00:00:01" '
+            'startTime="2026-11-12T00:00:00+00:00" endTime="2026-11-12T00:00:01+00:00" />')
         classes, _ = filters.provider_classes(self.root)
-        self.assertEqual({"Specs.server_name.": 62.5}, filters.measured_timings(classes, [trx]))
+        self.assertEqual({"Specs.server_name.": 62.5, "Specs.server_name_two.": 28.5},
+                         filters.measured_timings(classes, [trx]))
+
+    def test_each_trx_has_its_own_start_and_repeated_classes_are_summed(self):
+        rows = ('<UnitTestResult testName="Specs.server_name.should_a" '
+                'startTime="2026-11-12T00:00:00+00:00" endTime="2026-11-12T00:00:02+00:00" />')
+        first = self.write_trx(rows, "first.trx")
+        second = self.write_trx(rows.replace("00:00:02", "00:00:03"), "second.trx")
+        classes, _ = filters.provider_classes(self.root)
+        self.assertEqual({"Specs.server_name.": 5.0}, filters.measured_timings(classes, [first, second]))
+
+    def test_unowned_classes_bound_intervals_without_becoming_weights(self):
+        trx = self.write_trx(
+            '<UnitTestResult testName="Specs.sqlite.should_a" '
+            'startTime="2026-11-12T00:00:00+00:00" endTime="2026-11-12T00:00:10+00:00" />'
+            '<UnitTestResult testName="Specs.server_name.should_a" '
+            'startTime="2026-11-12T00:00:30+00:00" endTime="2026-11-12T00:00:31+00:00" />')
+        classes, _ = filters.provider_classes(self.root)
+        self.assertEqual({"Specs.server_name.": 21.0}, filters.measured_timings(classes, [trx]))
+
+    def test_missing_or_invalid_class_and_timestamp_data_fail_closed(self):
+        valid = ('<UnitTestResult testName="Specs.server_name.should_a" '
+                 'startTime="2026-11-12T00:00:00+00:00" endTime="2026-11-12T00:00:01+00:00" />')
+        classes, _ = filters.provider_classes(self.root)
+        for old, new in (('testName="Specs.server_name.should_a"', ''),
+                         ('Specs.server_name.should_a', 'should_a'),
+                         ('startTime=', 'missingStart='), ('endTime=', 'missingEnd='),
+                         ('00:00:00+00:00', 'invalid'), ('00:00:01+00:00', 'invalid'),
+                         ('00:00:01+00:00', '00:00:01'),
+                         ('00:00:00+00:00', '00:00:02+00:00')):
+            with self.subTest(old=old, new=new):
+                trx = self.write_trx(valid.replace(old, new))
+                with self.assertRaises(ValueError):
+                    filters.measured_timings(classes, [trx])
+
+    def test_empty_or_unowned_results_fail_closed(self):
+        classes, _ = filters.provider_classes(self.root)
+        with self.assertRaisesRegex(ValueError, "No test results"):
+            filters.measured_timings(classes, [self.write_trx("")])
+        trx = self.write_trx('<UnitTestResult testName="Specs.sqlite.should_a" '
+                             'startTime="2026-11-12T00:00:00+00:00" endTime="2026-11-12T00:00:01+00:00" />')
+        with self.assertRaisesRegex(ValueError, "No owned SQL spec timings"):
+            filters.measured_timings(classes, [trx])
+
+    def test_simultaneous_class_completions_keep_positive_rounded_weights(self):
+        rows = ('<UnitTestResult testName="Specs.server_name.should_a" '
+                'startTime="2026-11-12T00:00:00+00:00" endTime="2026-11-12T01:00:01+01:00" />')
+        trx = self.write_trx(rows + rows.replace("server_name.", "server_name_two."))
+        classes, _ = filters.provider_classes(self.root)
+        self.assertEqual({"Specs.server_name.": 1.0, "Specs.server_name_two.": 0.1},
+                         filters.measured_timings(classes, [trx]))
 
     def test_invalid_timings_fail_instead_of_unbalancing_silently(self):
         path = self.root / "timings.json"
