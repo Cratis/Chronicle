@@ -3,6 +3,7 @@
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints.for_UniqueConstraintsStorage.when_removing;
 
+[PerFactSpecificationLifecycle] // Facts run their own asynchronous operations, so each fact gets its own context.
 public class and_mode_is_per_value : given.a_per_value_constraint
 {
     async Task Establish()

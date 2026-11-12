@@ -7,6 +7,7 @@ using Cratis.Chronicle.Storage.Compliance;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.Encryption.for_EncryptionKeyStorage.when_getting_the_latest_key_with_its_revision;
 
+[PerFactSpecificationLifecycle] // Facts run their own asynchronous operations, so each fact gets its own context.
 public class and_there_is_no_key : Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.given.a_migrated_namespace_database
 {
     IEncryptionKeyStorage _store;

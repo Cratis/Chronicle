@@ -5,6 +5,7 @@ using Cratis.Chronicle.Storage.Occurrences;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Occurrences.for_OccurrencesStorage.when_rearming;
 
+[PerFactSpecificationLifecycle] // Facts run their own asynchronous operations, so each fact gets its own context.
 public class with_an_operator : given.an_occurrence_storage
 {
     bool _result;
