@@ -7,7 +7,7 @@ import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { sourcePlan } from './spec-shards.mjs';
+import { ORDINARY_SHARDS, ordinaryShardIds, sourcePlan } from './spec-shards.mjs';
 
 const workflow = await readFile(new URL('../workflows/dotnet-build.yml', import.meta.url), 'utf8');
 const jobs = new Map([...workflow.matchAll(/^  ([\w-]+):\n([\s\S]*?)(?=^  [\w-]+:|$(?![\s\S]))/gm)].map(match => [match[1], match[2]]));
@@ -179,12 +179,24 @@ test('single build receives the find-derived client set, including new projects 
     }
 });
 
-test('refreshed timings cover every ordinary project without defaults and balance within nine minutes', async () => {
+test('three-shard workflow matches the planner and isolates the historical long pole', async () => {
+    const other = jobs.get('specs-other');
+    const matrix = JSON.parse(other.match(/shard: (\[[^\]]+\])/)[1]);
+    assert.deepEqual(matrix, ordinaryShardIds());
+    assert.equal(step(other, 'Run tests with coverage').match(/^        run: (.+)$/m)[1],
+        `node .github/scripts/run-mixed-specs.mjs --shard \u0024{{ matrix.shard }} --shards ${ORDINARY_SHARDS}`);
     const plan = await sourcePlan(process.cwd());
-    assert.equal(plan.length, 2);
-    assert.ok(plan.every(shard => shard.defaulted.length === 0));
-    assert.ok(plan.every(shard => shard.seconds <= 540));
-    assert.ok(Math.abs(plan[0].seconds - plan[1].seconds) < 5);
+    assert.equal(plan.length, ORDINARY_SHARDS);
+    assert.ok(plan.every(shard => shard.projects.length && shard.defaulted.length === 0));
+    assert.equal(new Set(plan.flatMap(shard => shard.projects)).size, 25);
+    const mongo = plan.find(shard => shard.projects.some(project => project.endsWith('/Storage.MongoDB.Specs.csproj')));
+    const core = plan.find(shard => shard.projects.some(project => project.endsWith('/Core.Specs.csproj')));
+    assert.notEqual(mongo.shard, core.shard);
+    assert.equal(mongo.projects.length, 1);
+    // Samples predate #5839: the MongoDB weight alone exceeds the five-minute goal.
+    // Keep measured weights honest rather than claiming the new layout has met that goal.
+    assert.ok(plan.every(shard => shard.seconds <= 510));
+    assert.ok(core.seconds < 300);
     const timings = JSON.parse(await readFile(new URL('./spec-shard-timings.json', import.meta.url), 'utf8'));
     const runs = new Set(timings.samples.map(sample => sample.run));
     assert.ok(runs.size >= 5 && runs.size <= 8);
