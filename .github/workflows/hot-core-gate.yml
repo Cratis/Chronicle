@@ -2,13 +2,19 @@
 # Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 # Detect hot-core changes on every PR push; fail the gate until requested integration passes
-# for the head commit. The refresh workflow re-runs the same gate without another push.
+# for the head commit. A pull request that already carries run-integration runs Requested Integration
+# in this same run (job `requested`), so the gate reads its verdict through `needs` without polling.
+# The refresh workflow still re-runs the gate when the evidence arrives from another run (a label added
+# after the push, or the ordinary build's specs) without another push.
 # This workflow has no paths filter so detection covers documentation-only PRs too.
 
 name: Hot Core Gate
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  # The called workflows inherit this github.workflow and github.ref: dotnet-build.yml's group is
+  # "<workflow>-<ref>", so this caller's key must differ (PR number and suffix) or the nested build
+  # cancels this run while it waits. A new push still supersedes the caller and everything it called.
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}-gate
   cancel-in-progress: true
 
 on:
@@ -176,9 +182,23 @@ jobs:
       chronicle-image: ${{ needs.build.outputs.chronicle-image }}
       all-providers: true
 
+  # Same-run requested integration for pull requests that already carry the label. It runs in parallel
+  # with detect and reports a proven verdict the gate reads below. Label-after-push and fork pull requests
+  # do not reach it; the standalone Requested Integration workflow and the refresh keep covering them.
+  requested:
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && contains(github.event.pull_request.labels.*.name, 'run-integration')
+    # Same permissions as the standalone caller: the called build pushes the image consumed by its shards.
+    permissions:
+      contents: read
+      packages: write
+      issues: read
+      actions: read
+    uses: ./.github/workflows/requested-integration.yml
+    secrets: inherit
+
   # Keep this ordinary PR check name stable; label events never create a newer skipped check.
   hot-core-gate:
-    needs: [detect, build, full-out-of-process-matrix]
+    needs: [detect, build, full-out-of-process-matrix, requested]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -202,6 +222,11 @@ jobs:
           BUILD_TRIGGERED: ${{ needs.detect.outputs.build-triggered }}
           BUILD: ${{ needs.build.result }}
           MATRIX: ${{ needs.full-out-of-process-matrix.result }}
+          # Same-run proof from the called Requested Integration; only trusted while the label is still on the PR head.
+          REQUESTED: ${{ needs.requested.result }}
+          REQUESTED_PROVEN: ${{ needs.requested.outputs.proven }}
+          REQUESTED_TOUCHED: ${{ needs.requested.outputs.touched }}
+          REQUESTED_ALL_PROVIDERS: ${{ needs.requested.outputs.all_providers }}
           DISPATCH: ${{ github.event_name == 'workflow_dispatch' }}
           RUN_INTEGRATION: ${{ contains(github.event.pull_request.labels.*.name, 'run-integration') }}
           PR_NUMBER: ${{ github.event.pull_request.number }}

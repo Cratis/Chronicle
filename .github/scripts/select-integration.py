@@ -24,6 +24,9 @@ import sys
 
 CONTRACT = ".github/integration-selection.json"
 REQUESTED_WORKFLOW = "requested-integration.yml"
+# Hot Core Gate also runs Requested Integration as a called workflow; its nested job is the proof (see nested_pass).
+GATE_WORKFLOW = "hot-core-gate.yml"
+NESTED_JOB_SUFFIX = " / hot-core-gate-requested-run-integration"
 LANES = ("client", "kernel", "clustering", "sql")
 
 
@@ -124,21 +127,46 @@ def changed_files(base, head):
     return [line for line in out.splitlines() if line] if code == 0 else None
 
 
-def last_green_head(repo, pull_request, current_head):
-    """The newest head that passed the requested gate for this pull request, if it is an ancestor of the current one."""
+def candidate_runs(repo, pull_request, current_head, workflow, status):
+    """(created_at, head_sha, run_id) of this pull request's runs of a workflow; None when the API cannot say."""
     code, out, _ = run(
         "gh", "api", "--paginate",
-        f"repos/{repo}/actions/workflows/{REQUESTED_WORKFLOW}/runs?event=pull_request&status=success&per_page=100",
-        "--jq", ".workflow_runs[] | [.head_sha, .created_at, ([.pull_requests[].number] | join(\",\"))] | @tsv")
+        f"repos/{repo}/actions/workflows/{workflow}/runs?event=pull_request&status={status}&per_page=100",
+        "--jq", ".workflow_runs[] | [.head_sha, .created_at, ([.pull_requests[].number] | join(\",\")), .id] | @tsv")
     if code != 0:
         return None
     candidates = []
     for line in out.splitlines():
         fields = line.split("\t")
-        if len(fields) == 3 and str(pull_request) in fields[2].split(",") and fields[0] != current_head:
-            candidates.append((fields[1], fields[0]))
-    for _, sha in sorted(candidates, reverse=True):
-        if run("git", "cat-file", "-e", f"{sha}^{{commit}}")[0] == 0 and run("git", "merge-base", "--is-ancestor", sha, current_head)[0] == 0:
+        if len(fields) >= 3 and str(pull_request) in fields[2].split(",") and fields[0] != current_head:
+            candidates.append((fields[1], fields[0], fields[3] if len(fields) > 3 else ""))
+    return candidates
+
+
+def nested_pass(repo, run_id):
+    """A Hot Core Gate run counts only if its called requested job passed (the gate itself may be red for other reasons)."""
+    if not run_id:
+        return False
+    code, out, _ = run(
+        "gh", "api", "--paginate", f"repos/{repo}/actions/runs/{run_id}/jobs?filter=latest&per_page=30",
+        "--jq", f".jobs[] | select(.name | endswith(\"{NESTED_JOB_SUFFIX}\")) | .conclusion")
+    # Exactly one nested job and it succeeded; anything else, including an API failure, is no proof.
+    return code == 0 and out.splitlines() == ["success"]
+
+
+def last_green_head(repo, pull_request, current_head):
+    """The newest head that passed the requested gate for this pull request, if it is an ancestor of the current one."""
+    standalone = candidate_runs(repo, pull_request, current_head, REQUESTED_WORKFLOW, "success")
+    if standalone is None:
+        return None
+    # An unreadable gate-run list only loses this extra evidence; it never adds any.
+    same_run = candidate_runs(repo, pull_request, current_head, GATE_WORKFLOW, "completed") or []
+    candidates = [(created, sha, None) for created, sha, _ in standalone] + \
+                 [(created, sha, run_id) for created, sha, run_id in same_run]
+    for _, sha, run_id in sorted(candidates, key=lambda item: item[:2], reverse=True):
+        if run("git", "cat-file", "-e", f"{sha}^{{commit}}")[0] != 0 or run("git", "merge-base", "--is-ancestor", sha, current_head)[0] != 0:
+            continue
+        if run_id is None or nested_pass(repo, run_id):
             return sha
     return None
 

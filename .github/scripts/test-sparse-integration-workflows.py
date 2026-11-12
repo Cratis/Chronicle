@@ -127,7 +127,8 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         self.assertIn("workflow_dispatch", self.hot_core["on"])
 
     def test_requested_workflow_runs_on_labels_pushes_and_reopening_without_path_filter(self):
-        self.assertEqual(["labeled", "synchronize", "reopened"], self.requested["on"]["pull_request"]["types"])
+        # synchronize and reopened reach this workflow through hot-core-gate.yml's same-run call instead.
+        self.assertEqual(["labeled"], self.requested["on"]["pull_request"]["types"])
         self.assertNotIn("paths", self.requested["on"]["pull_request"])
         self.assertEqual("${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}-"
                          + "${{ " + EFFECTIVE_LABEL + " }}", self.requested["concurrency"]["group"])
@@ -319,6 +320,65 @@ class SparseIntegrationWorkflows(unittest.TestCase):
                     "github.event.workflow_run.path": path,
                     "github.event.workflow_run.head_repository.full_name == github.repository": same_repo,
                 }))
+
+    def test_requested_workflow_is_callable_and_reports_what_the_gate_needs(self):
+        outputs = self.requested["on"]["workflow_call"]["outputs"]
+        self.assertEqual({"touched", "all_providers", "proven"}, set(outputs))
+        self.assertEqual("${{ jobs.requested-detect-hot-core.outputs.touched }}", outputs["touched"]["value"])
+        self.assertEqual("${{ jobs.requested-integration.outputs.all_providers }}", outputs["all_providers"]["value"])
+        self.assertEqual("${{ jobs.hot-core-gate-requested.outputs.proven }}", outputs["proven"]["value"])
+        verdict = self.requested["jobs"]["hot-core-gate-requested"]
+        self.assertEqual("${{ steps.decide.outputs.proven }}", verdict["outputs"]["proven"])
+        script = next(step for step in verdict["steps"] if step.get("id") == "decide")["run"]
+        # proven is written only on the three paths that exit 0 after the checks, never before the fork/detect/matrix checks.
+        self.assertEqual(3, script.count('echo "proven='))
+        self.assertLess(script.index('"$FORK" = "true"'), script.index('echo "proven=skip"'))
+        self.assertLess(script.index('"$DETECT" != "success"'), script.index('echo "proven=skip"'))
+        self.assertLess(script.index('"$INTEGRATION" != "success"'), script.index('echo "proven=true"'))
+        self.assertLess(script.index('"$ALL_PROVIDERS" != "true"'), script.rindex('echo "proven=true"'))
+        self.assertLess(script.index('-z "$ALL_PROVIDERS"'), script.index('echo "proven=true"'))
+
+    def test_the_gate_run_calls_requested_integration_and_waits_for_it(self):
+        called = self.hot_core["jobs"]["requested"]
+        own = self.requested["jobs"]["requested-integration"]
+        self.assertEqual("./.github/workflows/requested-integration.yml", called["uses"])
+        self.assertEqual("inherit", called["secrets"])
+        self.assertEqual(own["permissions"], called["permissions"])
+        self.assertEqual({"contents": "read", "packages": "write", "issues": "read", "actions": "read"},
+                         called["permissions"])
+        for guard in ("github.event_name == 'pull_request'",
+                      "github.event.pull_request.head.repo.full_name == github.repository",
+                      "contains(github.event.pull_request.labels.*.name, 'run-integration')"):
+            self.assertIn(guard, called["if"])
+        self.assertIn("requested", self.hot_core["jobs"]["hot-core-gate"]["needs"])
+        step = next(step for step in self.hot_core["jobs"]["hot-core-gate"]["steps"] if step.get("name") == "Decide")
+        for name, value in (("REQUESTED", "result"), ("REQUESTED_PROVEN", "outputs.proven"),
+                            ("REQUESTED_TOUCHED", "outputs.touched"),
+                            ("REQUESTED_ALL_PROVIDERS", "outputs.all_providers")):
+            self.assertEqual("${{ needs.requested." + value + " }}", step["env"][name])
+
+    def test_gate_check_identity_and_event_contract_are_unchanged(self):
+        job = self.hot_core["jobs"]["hot-core-gate"]
+        self.assertEqual("hot-core-gate", job.get("name", "hot-core-gate"))
+        self.assertIsNone(job.get("uses"))
+        self.assertEqual("always()", job["if"])
+        self.assertEqual(["opened", "synchronize", "reopened"], self.hot_core["on"]["pull_request"]["types"])
+        self.assertNotIn("labeled", self.hot_core["on"]["pull_request"]["types"])
+        # Caller, called workflow and the build's own group never share a key (or one would cancel the other).
+        # Everything called from hot-core-gate.yml inherits its github.workflow, so resolve the groups as that run sees them.
+        def resolve(group):
+            for token, value in (("${{ " + EFFECTIVE_LABEL + " }}", "run-integration"),
+                                 ("${{ github.event.pull_request.number || github.ref }}", "7"),
+                                 ("${{ github.workflow }}", "Hot Core Gate"), ("${{ github.ref }}", "refs/pull/7/merge"),
+                                 ("${{ github.event.pull_request.number }}", "7")):
+                group = group.replace(token, value)
+            self.assertNotIn("${{", group)
+            return group
+        groups = [resolve(workflow["concurrency"]["group"])
+                  for workflow in (self.hot_core, self.requested, self.build)]
+        self.assertEqual(len(groups), len(set(groups)), groups)
+        # Pushes still supersede the whole chain.
+        self.assertEqual("true", self.hot_core["concurrency"]["cancel-in-progress"])
 
     def test_hot_core_gate_reports_on_every_pull_request(self):
         trigger = self.hot_core["on"]["pull_request"]
