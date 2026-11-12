@@ -172,15 +172,19 @@ def last_green_run(current, entries):
     return None
 
 
+def proven_reuse(green, head, entries, files_between=changed_files):
+    """The earlier green run, only when nothing a lane exercises changed since its head."""
+    if not green:
+        return None
+    since = files_between(green["head_sha"], head)
+    return green if since is not None and classify(since, entries)[0] == "skip" else None
+
+
 def decide(*, entries, base, head, touched, green=None, files_between=changed_files):
     """Applies the rules in order of how much they can save, widest answer on any doubt. Returns `(mode, selection, reasons)`."""
-    if green:
-        since = files_between(green["head_sha"], head)
-        if since is not None:
-            mode, _, reasons = classify(since, entries)
-            if mode == "skip":
-                return "skip", None, [f"Reused run {green['run_id']} (head {green['head_sha']}): same base, "
-                                      f"same config fingerprint {green['fingerprint']}, only files no lane exercises changed."]
+    if proven_reuse(green, head, entries, files_between):
+        return "skip", None, [f"Reused run {green['run_id']} (head {green['head_sha']}): same base, "
+                              f"same config fingerprint {green['fingerprint']}, only files no lane exercises changed."]
     if touched:
         return "full", None, ["This pull request touches the hot core, so the whole matrix runs."]
     files = files_between(base, head) if base else None
@@ -233,7 +237,8 @@ def main():
                                       touched=args.touched == "true", green=green)
     summarize(mode, selection, reasons)
     emit("mode", mode)
-    reused = green if mode == "skip" else None
+    # A skip of a wholly ignorable PR is not a reuse; only report a run that decided the outcome.
+    reused = proven_reuse(green, args.head, entries) if mode == "skip" else None
     emit("reused_run", reused["run_id"] if reused else "")
     emit("reused_head", reused["head_sha"] if reused else "")
     emit("config_fingerprint", reused["fingerprint"] if reused else "")

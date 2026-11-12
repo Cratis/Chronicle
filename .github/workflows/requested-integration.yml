@@ -11,7 +11,8 @@
 # Repeat that expression in names, conditions and concurrency (env is unavailable in these contexts).
 name: Requested Integration
 
-run-name: "Requested Integration${{ format(' - PR #{0} @ {1}', github.event.pull_request.number, github.event.pull_request.head.sha) }}"
+# The tested base is part of the run name: select-integration.py only reuses a run whose recorded base matches.
+run-name: "Requested Integration${{ format(' - PR #{0} @ {1} base {2}', github.event.pull_request.number, github.event.pull_request.head.sha, github.event.pull_request.base.sha) }}"
 
 concurrency:
   # One key for both entry points (label event here, push via hot-core-gate.yml's call), so a push or a

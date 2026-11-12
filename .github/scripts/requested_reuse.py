@@ -104,20 +104,29 @@ class ReuseEvidence(NamedTuple):
     ancestor: Callable[[str, str], bool]
 
 
+def same_config(old, head, evidence):
+    source_config = evidence.fingerprint(old)
+    return bool(source_config) and source_config == evidence.fingerprint(head)
+
+
+def non_reaching_delta(old, head, evidence):
+    files = evidence.files_between(old, head)
+    return files is not None and evidence.classify_delta(files) == "skip"
+
+
+def history_refusal(old, head, evidence):
+    """Each check is evaluated in order; the first failure refuses."""
+    checks = ((same_config, "config fingerprint changed or unavailable"),
+              (non_reaching_delta, "delta is not proven non-reaching"),
+              (lambda o, h, e: e.ancestor(o, h), "source head is missing or not an ancestor"))
+    return next((reason for check, reason in checks if not check(old, head, evidence)), None)
+
+
 def reuse_decision(candidate, current, evidence):
     """Dependencies are injected; any unavailable evidence refuses, not an empty guess."""
     result = dict(state="refused", run_id=candidate.get("id"), head_sha=candidate.get("head_sha"),
                   fingerprint=None, reasons=[])
-    reason = source_run_refusal(candidate, current)
+    reason = source_run_refusal(candidate, current) or history_refusal(candidate["head_sha"], current["head"], evidence)
     if reason:
         return result | dict(reasons=[reason])
-    old, head = candidate["head_sha"], current["head"]
-    source_config, head_config = evidence.fingerprint(old), evidence.fingerprint(head)
-    if not source_config or source_config != head_config:
-        return result | dict(reasons=["config fingerprint changed or unavailable"])
-    files = evidence.files_between(old, head)
-    if files is None or evidence.classify_delta(files) != "skip":
-        return result | dict(reasons=["delta is not proven non-reaching"])
-    if not evidence.ancestor(old, head):
-        return result | dict(reasons=["source head is missing or not an ancestor"])
-    return result | dict(state="reused", fingerprint=head_config)
+    return result | dict(state="reused", fingerprint=evidence.fingerprint(current["head"]))

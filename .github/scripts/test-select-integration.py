@@ -132,6 +132,14 @@ class DecisionSpecs(unittest.TestCase):
     def test_a_whole_pull_request_of_ignorable_files_skips_without_any_earlier_run(self):
         self.assertEqual("skip", self.decide({("B", "H"): ["Documentation/a.md"]})[0])
 
+    def test_an_ignorable_pull_request_does_not_report_an_unproven_green_run_as_reused(self):
+        mapping = {("G", "H"): ["Source/Kernel/Core/a.cs"], ("B", "H"): ["Documentation/a.md"]}
+        green = dict(head_sha="G", run_id=123, fingerprint="config")
+        mode, _, reasons = self.decide(mapping, green=green)
+        self.assertEqual("skip", mode)
+        self.assertNotIn("Reused", reasons[0])
+        self.assertIsNone(select.proven_reuse(green, "H", ENTRIES, self.files(mapping)))
+
 
 class RenameSpecs(unittest.TestCase):
     def test_rename_from_exercised_source_into_docs_keeps_the_deleted_source_path(self):
