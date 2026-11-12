@@ -14,4 +14,6 @@ public interface IGuardProbe
 
     [Operation]
     IObservable<ProbeReply> Watch(ProbeRequest request, CallContext context = default);
+
+    IObservable<ProbeReply> CompleteWithRecordedFailure(ProbeRequest request, CallContext context = default);
 }
