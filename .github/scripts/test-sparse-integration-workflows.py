@@ -420,8 +420,7 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         self.assertEqual("true", other["steps"][-1]["with"]["overwrite"])
         self.assertTrue(any(step.get("uses") == "./.github/actions/assert-tests-ran" for step in other["steps"]))
         names = [step.get("name") for step in other["steps"]]
-        for name in ("Restore mixed runner evaluation inputs", "Restore pinned coverage tool",
-                     "Verify real collector exit and deadline cleanup"):
+        for name in ("Restore mixed runner evaluation inputs", "Restore pinned coverage tool"):
             self.assertLess(names.index(name), names.index("Run tests with coverage"))
         contracts = next(step["run"] for step in jobs["dotnet-build"]["steps"]
                          if step.get("name") == "Spec executable runner contracts and forbid test-host dispatch")
@@ -449,6 +448,82 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         self.assertIn("Source/Kernel/Storage.MongoDB.Specs/Storage.MongoDB.Specs.csproj", projects)
         self.assertFalse(any(project.startswith("Integration/") for project in projects))
 
+    def test_shared_runner_checks_run_once_off_the_shard_setup_path(self):
+        jobs = self.build["jobs"]
+        shared = jobs["spec-runner-checks"]
+        self.assertEqual([], prerequisites_of(shared))
+        self.assertEqual("ubuntu-latest", shared["runs-on"])
+        self.assertEqual("5", shared["timeout-minutes"])
+        self.assertEqual("needs.already-ran.outputs.skip != 'true'", shared["if"])
+        self.assertNotIn("strategy", shared)
+        self.assertNotIn("continue-on-error", shared)
+        for command in ("node .github/scripts/verify-mixed-specs-collector.mjs",
+                        "python3 .github/scripts/test-sql-spec-filter.py"):
+            owners = [job_id for job_id, job in jobs.items()
+                      for step in job.get("steps", []) if command in step.get("run", "")]
+            self.assertEqual(["spec-runner-checks"], owners)
+            step = next(step for step in shared["steps"] if step.get("run") == command)
+            self.assertNotIn("if", step)
+            self.assertNotIn("continue-on-error", step)
+        names = [step.get("name") for step in shared["steps"]]
+        self.assertLess(names.index("Restore pinned coverage tool"),
+                        names.index("Verify real collector exit and deadline cleanup"))
+
+    def test_shared_runner_checks_use_pinned_actions_and_the_same_linux_sdk(self):
+        jobs = self.build["jobs"]
+        shared = jobs["spec-runner-checks"]
+        self.assertEqual({"contents": "read"}, shared["permissions"])
+        setup = next(step for step in shared["steps"] if step.get("name") == "Setup .Net")
+        shard_setup = next(step for step in jobs["specs-other"]["steps"] if step.get("name") == "Setup .Net")
+        self.assertEqual(shard_setup["with"], setup["with"])
+        for action in (step["uses"] for step in shared["steps"] if "uses" in step):
+            self.assertRegex(action, r"@[a-f0-9]{40}$")
+
+    def test_shard_evaluation_caches_reuse_the_build_key_without_skipping_restore(self):
+        jobs = self.build["jobs"]
+        build_cache = next(step for step in jobs["dotnet-build"]["steps"]
+                           if step.get("name") == "Restore obj cache")
+        for job_id, command in (
+                ("specs-other", "dotnet restore -p:DisableProxyGenerator=true -p:DisableDockerBuild=true"),
+                ("specs-sql", "dotnet restore Source/Kernel/Storage.Sql.Specs/Storage.Sql.Specs.csproj")):
+            with self.subTest(job=job_id):
+                steps = jobs[job_id]["steps"]
+                self.assertFalse(any(step.get("name") == "Cache NuGet packages" for step in steps))
+                cache = next(step for step in steps if step.get("name") == "Restore obj cache")
+                self.assertEqual("actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830", cache["uses"])
+                self.assertEqual(build_cache["with"], cache["with"])
+                restore = next(step for step in steps if step.get("run") == command)
+                self.assertNotIn("if", restore)
+                self.assertNotIn("continue-on-error", restore)
+                self.assertLess(steps.index(cache), steps.index(restore))
+
+    def test_coverage_tool_cache_is_manifest_keyed_and_restore_is_unconditional(self):
+        expected = {
+            "path": "~/.nuget/packages/dotnet-coverage",
+            "key": "dotnet-coverage-${{ runner.os }}-${{ hashFiles('.config/dotnet-tools.json', 'global.json') }}",
+        }
+        for job_id in ("spec-runner-checks", "specs-other", "specs-sql"):
+            with self.subTest(job=job_id):
+                steps = self.build["jobs"][job_id]["steps"]
+                cache = next(step for step in steps if step.get("name") == "Cache pinned coverage tool")
+                self.assertEqual("actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830", cache["uses"])
+                self.assertEqual(expected, cache["with"])
+                restore = next(step for step in steps if step.get("name") == "Restore pinned coverage tool")
+                self.assertEqual("dotnet tool restore", restore["run"])
+                self.assertNotIn("if", restore)
+                self.assertNotIn("continue-on-error", restore)
+                self.assertLess(steps.index(cache), steps.index(restore))
+
+    def test_specs_gate_rejects_failed_cancelled_skipped_or_absent_shared_runner_checks(self):
+        step = self.build["jobs"]["specs"]["steps"][0]
+        self.assertEqual("${{ needs.spec-runner-checks.result }}", step["env"]["RUNNER_RESULT"])
+        for runner in ("success", "failure", "cancelled", "skipped", ""):
+            with self.subTest(runner=runner):
+                environment = dict.fromkeys(step["env"], "success")
+                environment.update(RUNNER_RESULT=runner, EVENT_NAME="pull_request")
+                result = subprocess.run(["bash", "-c", step["run"]], env=environment, check=False)
+                self.assertEqual(runner == "success", result.returncode == 0)
+
     def test_every_job_is_skipped_when_the_workflow_already_succeeded_on_this_commit(self):
         jobs = self.build["jobs"]
         gate = jobs[GATE]
@@ -468,7 +543,7 @@ class SparseIntegrationWorkflows(unittest.TestCase):
     def test_stable_specs_check_requires_every_shard_to_succeed(self):
         aggregate = self.build["jobs"]["specs"]
         self.assertEqual("${{ needs.already-ran.outputs.skip != 'true' && (always()) }}", aggregate["if"])
-        self.assertEqual(["wire-compatibility", "grain-compatibility", "package-verification", "package-pack-check", "analyzers", "specs-other", "specs-sql", "specs-net10"],
+        self.assertEqual(["wire-compatibility", "grain-compatibility", "package-verification", "package-pack-check", "analyzers", "spec-runner-checks", "specs-other", "specs-sql", "specs-net10"],
                          prerequisites_of(aggregate))
         self.assertEqual({"contents": "read", "actions": "read"}, aggregate["permissions"])
         self.assertEqual("Checkout shard contract", aggregate["steps"][1]["name"])
@@ -498,7 +573,7 @@ class SparseIntegrationWorkflows(unittest.TestCase):
                 result = subprocess.run(["bash", "-c", step["run"]],
                                         env={"WIRE_RESULT": wire, "GRAIN_RESULT": grain,
                                              "OTHER_RESULT": ordinary, "SQL_RESULT": sql,
-                                             "NET10_RESULT": net10, "PACKAGE_RESULT": "success",
+                                             "NET10_RESULT": net10, "PACKAGE_RESULT": "success", "RUNNER_RESULT": "success",
                                              "ANALYZER_RESULT": "success", "PACK_RESULT": "success",
                                              "EVENT_NAME": "pull_request"}, check=False)
                 self.assertEqual(wire == grain == ordinary == sql == net10 == "success",
@@ -509,7 +584,7 @@ class SparseIntegrationWorkflows(unittest.TestCase):
                 result = subprocess.run(["bash", "-c", step["run"]],
                                         env={"WIRE_RESULT": "success", "GRAIN_RESULT": "success",
                                              "OTHER_RESULT": "success", "SQL_RESULT": "success",
-                                             "NET10_RESULT": "success", "PACKAGE_RESULT": package,
+                                             "NET10_RESULT": "success", "PACKAGE_RESULT": package, "RUNNER_RESULT": "success",
                                              "ANALYZER_RESULT": "success", "PACK_RESULT": "success",
                                              "EVENT_NAME": "pull_request"}, check=False)
                 self.assertNotEqual(0, result.returncode)
@@ -519,7 +594,7 @@ class SparseIntegrationWorkflows(unittest.TestCase):
                 result = subprocess.run(["bash", "-c", step["run"]],
                                         env={"WIRE_RESULT": "success", "GRAIN_RESULT": "success",
                                              "OTHER_RESULT": "success", "SQL_RESULT": "success",
-                                             "NET10_RESULT": "success", "PACKAGE_RESULT": "success",
+                                             "NET10_RESULT": "success", "PACKAGE_RESULT": "success", "RUNNER_RESULT": "success",
                                              "ANALYZER_RESULT": analyzers, "PACK_RESULT": "success",
                                              "EVENT_NAME": "pull_request"}, check=False)
                 self.assertEqual(analyzers == "success", result.returncode == 0)
@@ -538,7 +613,7 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         self.assertEqual([], prerequisites_of(parallel))
         # The requested PR build runs in parallel with the specs; the integration job keeps the specs gate.
         self.assertEqual([], prerequisites_of(requested))
-        self.assertEqual(["wire-compatibility", "grain-compatibility", "package-verification", "package-pack-check", "analyzers", "specs-other", "specs-sql", "specs-net10"],
+        self.assertEqual(["wire-compatibility", "grain-compatibility", "package-verification", "package-pack-check", "analyzers", "spec-runner-checks", "specs-other", "specs-sql", "specs-net10"],
                          prerequisites_of(jobs["specs"]))
         for job_id in ("specs-other", "specs-sql"):
             self.assertEqual(["dotnet-build"], prerequisites_of(jobs[job_id]))
