@@ -228,8 +228,10 @@ jobs:
         id: export-build-version
         run: echo "version=$CRATIS_CHRONICLE_BUILD_VERSION" >> "$GITHUB_OUTPUT"
 
+      # Analyzers take more than half of a full solution build, so this build skips them and the
+      # spec shards start sooner. The analyzers job owns them in parallel; generators still run here.
       - name: Build
-        run: dotnet build --configuration Release -p:DisableProxyGenerator=true -p:DisableDockerBuild=true -p:ForceCodeGeneration=true
+        run: dotnet build --configuration Release -p:DisableProxyGenerator=true -p:DisableDockerBuild=true -p:ForceCodeGeneration=true -p:RunAnalyzers=false
 
       - name: Verify generated contracts and services are up to date
         run: |
@@ -274,7 +276,7 @@ jobs:
       - name: Build development Docker image
         if: github.event_name != 'pull_request' || inputs.integration_requested
         run: |
-          # Debug analyzers never gate (warnings are not errors). The Release Build step owns them; generators still run.
+          # Debug analyzers never gate (warnings are not errors). The analyzers job owns them; generators still run.
           dotnet publish Source/Kernel/Server/Server.csproj \
             --configuration Debug \
             --no-restore \
@@ -291,6 +293,38 @@ jobs:
         if: github.event_name != 'pull_request' || inputs.integration_requested
         id: export-image
         run: echo "image=${{ env.CRATIS_CHRONICLE_LOCAL_IMAGE }}" >> "$GITHUB_OUTPUT"
+
+  # The analyzer-owning Release build of the solution, beside the build and the specs rather
+  # than in front of them. The specs aggregate requires it, so an analyzer warning still fails.
+  analyzers:
+    needs: [already-ran]
+    if: needs.already-ran.outputs.skip != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .Net
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Cache NuGet packages
+        uses: Cratis/Workflows/.github/actions/dotnet-cache@main
+
+      # No obj cache: dotnet-build saves one built without analyzers, and an up-to-date
+      # compilation restored from it must never stand in for an analyzed one.
+      - name: Add GitHub Package Registry to NuGet
+        run: |
+          dotnet nuget update source github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text || \
+          dotnet nuget add source --name github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text https://nuget.pkg.github.com/cratis/index.json
+
+      - name: Build with analyzers
+        run: dotnet build --configuration Release -p:DisableProxyGenerator=true -p:DisableDockerBuild=true -p:ForceCodeGeneration=true
 
   # Independent verification runs beside the specs, never in front of them. The specs
   # aggregate requires this job, preserving the integration and coverage gates as well.
@@ -345,7 +379,7 @@ jobs:
       - name: Extract Release build output
         run: tar -I zstd -xf build-output-release.tar.zst
 
-      # The solution build analyzes net11.0 with warnings as errors. Build every shipped
+      # The analyzers job analyzes net11.0 with warnings as errors. Build every shipped
       # framework here, keeping generators on both and analyzers on net10.0 as before.
       - name: Build client packages for every shipped framework
         run: |
@@ -744,7 +778,7 @@ jobs:
   # A failed, skipped or cancelled shard must never turn this aggregate green.
   specs:
     if: ${{ needs.already-ran.outputs.skip != 'true' && (always()) }}
-    needs: [already-ran, wire-compatibility, grain-compatibility, package-verification, specs-other, specs-sql, specs-net10]
+    needs: [already-ran, wire-compatibility, grain-compatibility, package-verification, analyzers, specs-other, specs-sql, specs-net10]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -759,7 +793,8 @@ jobs:
           SQL_RESULT: ${{ needs.specs-sql.result }}
           NET10_RESULT: ${{ needs.specs-net10.result }}
           PACKAGE_RESULT: ${{ needs.package-verification.result }}
-        run: test "$WIRE_RESULT" = success && test "$GRAIN_RESULT" = success && test "$OTHER_RESULT" = success && test "$SQL_RESULT" = success && test "$NET10_RESULT" = success && test "$PACKAGE_RESULT" = success
+          ANALYZER_RESULT: ${{ needs.analyzers.result }}
+        run: test "$WIRE_RESULT" = success && test "$GRAIN_RESULT" = success && test "$OTHER_RESULT" = success && test "$SQL_RESULT" = success && test "$NET10_RESULT" = success && test "$PACKAGE_RESULT" = success && test "$ANALYZER_RESULT" = success
 
       - name: Checkout shard contract
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -1240,7 +1275,7 @@ jobs:
           # path and crashes before benchmarks ever need a proxy.
           # The benchmark projects are not in Chronicle.slnx, so this is the only PR build that analyzes them.
           # AnalyzeOnlyProject keeps analyzers on for the benchmark project itself and skips them for its
-          # project references, which the Release Build step already analyzes. Generators still run.
+          # project references, which the analyzers job already analyzes. Generators still run.
           dotnet build Benchmarks/Chronicle.Benchmarks/Chronicle.Benchmarks.csproj \
             -c Release /p:TreatWarningsAsErrors=false /p:AnalyzeOnlyProject=Chronicle.Benchmarks /p:DisableDockerBuild=true \
             /p:CratisProxiesOutputPath= \
