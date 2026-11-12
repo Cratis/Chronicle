@@ -367,7 +367,7 @@ class SparseIntegrationWorkflows(unittest.TestCase):
     def test_sql_specs_run_in_parallel_without_reducing_coverage(self):
         jobs = self.build["jobs"]
         sql = jobs["specs-sql"]
-        self.assertEqual(["postgresql", "sqlserver-1", "sqlserver-2", "sqlserver-3", "remaining"],
+        self.assertEqual(["postgresql", "sqlserver-1", "sqlserver-2", "sqlserver-3", "sqlserver-4", "remaining"],
                          sql["strategy"]["matrix"]["shard"])
         self.assertEqual("false", sql["strategy"]["fail-fast"])
         steps = sql["steps"]

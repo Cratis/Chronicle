@@ -573,14 +573,14 @@ jobs:
   specs-sql:
     if: needs.already-ran.outputs.skip != 'true'
     runs-on: ubuntu-latest
-    # SQL Server specs are about five times slower than PostgreSQL ones, so they run as three shards of about
-    # seven minutes each (the single shard took 17-27 minutes and was the longest job on every pull request).
+    # SQL Server specs are about five times slower than PostgreSQL ones, so they run as four shards balanced by
+    # measured duration (.github/scripts/sql-spec-timings.json), about nine minutes of specs each.
     timeout-minutes: 45
     needs: [already-ran, dotnet-build]
     strategy:
       fail-fast: false
       matrix:
-        shard: [postgresql, sqlserver-1, sqlserver-2, sqlserver-3, remaining]
+        shard: [postgresql, sqlserver-1, sqlserver-2, sqlserver-3, sqlserver-4, remaining]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
