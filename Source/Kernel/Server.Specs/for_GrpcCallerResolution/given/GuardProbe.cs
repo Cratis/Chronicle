@@ -34,7 +34,7 @@ public class GuardProbe(IOptions<ChronicleOptions> options, Subject<ProbeReply> 
 
     public IObservable<ProbeReply> CompleteWithRecordedFailure(ProbeRequest request, CallContext context = default)
     {
-        context.RecordFailure( new global::Grpc.Core.RpcException(new(global::Grpc.Core.StatusCode.PermissionDenied, "Refused")));
+        context.RecordFailure(new global::Grpc.Core.RpcException(new(global::Grpc.Core.StatusCode.PermissionDenied, "Refused")));
         return Observable.Empty<ProbeReply>();
     }
 }
