@@ -25,68 +25,25 @@ public class KeyJsonConverter : JsonConverter<Key>
                 break;
             }
 
-            if (reader.TokenType == JsonTokenType.PropertyName)
+            if (reader.TokenType != JsonTokenType.PropertyName)
             {
-                var propertyName = reader.GetString();
-                if (propertyName == "value")
-                {
-                    reader.Read();
-                    value = reader.GetString();
-                }
+                continue;
+            }
 
-                if (propertyName == "arrayIndexers")
-                {
-                    while (reader.Read())
-                    {
-                        if (reader.TokenType == JsonTokenType.EndArray)
-                        {
-                            break;
-                        }
+            var propertyName = reader.GetString();
+            if (propertyName == "value")
+            {
+                reader.Read();
+                value = reader.GetString();
+            }
 
-                        if (reader.TokenType == JsonTokenType.StartObject)
-                        {
-                            var arrayProperty = string.Empty;
-                            var identifierProperty = string.Empty;
-                            var identifier = string.Empty;
-
-                            while (reader.Read())
-                            {
-                                if (reader.TokenType == JsonTokenType.EndObject)
-                                {
-                                    break;
-                                }
-
-                                if (reader.TokenType == JsonTokenType.PropertyName)
-                                {
-                                    var arrayIndexerPropertyName = reader.GetString();
-                                    reader.Read();
-                                    var arrayIndexerValue = reader.GetString();
-                                    switch (arrayIndexerPropertyName)
-                                    {
-                                        case "arrayProperty":
-                                            arrayProperty = arrayIndexerValue;
-                                            break;
-
-                                        case "identifierProperty":
-                                            identifierProperty = arrayIndexerValue;
-                                            break;
-
-                                        case "identifier":
-                                            identifier = arrayIndexerValue;
-                                            break;
-                                    }
-                                }
-                            }
-
-                            var arrayIndexer = new ArrayIndexer(arrayProperty!, identifierProperty!, identifier!);
-                            arrayIndexers.Add(arrayIndexer);
-                        }
-                    }
-                }
+            if (propertyName == "arrayIndexers")
+            {
+                ReadArrayIndexers(ref reader, arrayIndexers);
             }
         }
 
-        return new Key(value!, new ArrayIndexers(arrayIndexers));
+        return value is null ? Key.Undefined : new Key(value, new ArrayIndexers(arrayIndexers));
     }
 
     /// <inheritdoc/>
@@ -94,13 +51,13 @@ public class KeyJsonConverter : JsonConverter<Key>
     {
         writer.WriteStartObject();
         writer.WritePropertyName("value");
-        writer.WriteStringValue(value.Value.ToString());
+        writer.WriteStringValue(value.Value?.ToString());
         writer.WriteStartArray("arrayIndexers");
         foreach (var arrayIndexer in value.ArrayIndexers.All)
         {
             writer.WriteStartObject();
             writer.WritePropertyName("value");
-            writer.WriteStringValue(value.Value.ToString());
+            writer.WriteStringValue(arrayIndexer.Identifier.ToString());
             writer.WritePropertyName("arrayProperty");
             writer.WriteStringValue(arrayIndexer.ArrayProperty.ToString());
             writer.WritePropertyName("identifierProperty");
@@ -120,4 +77,60 @@ public class KeyJsonConverter : JsonConverter<Key>
     /// <inheritdoc/>
     public override Key ReadAsPropertyName(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
         new(reader.GetString()!, ArrayIndexers.NoIndexers);
+
+    static void ReadArrayIndexers(ref Utf8JsonReader reader, List<ArrayIndexer> arrayIndexers)
+    {
+        while (reader.Read())
+        {
+            if (reader.TokenType == JsonTokenType.EndArray)
+            {
+                break;
+            }
+
+            if (reader.TokenType == JsonTokenType.StartObject)
+            {
+                arrayIndexers.Add(ReadArrayIndexer(ref reader));
+            }
+        }
+    }
+
+    static ArrayIndexer ReadArrayIndexer(ref Utf8JsonReader reader)
+    {
+        var arrayProperty = string.Empty;
+        var identifierProperty = string.Empty;
+        var identifier = string.Empty;
+
+        while (reader.Read())
+        {
+            if (reader.TokenType == JsonTokenType.EndObject)
+            {
+                break;
+            }
+
+            if (reader.TokenType != JsonTokenType.PropertyName)
+            {
+                continue;
+            }
+
+            var propertyName = reader.GetString();
+            reader.Read();
+            var value = reader.GetString();
+            switch (propertyName)
+            {
+                case "arrayProperty":
+                    arrayProperty = value;
+                    break;
+
+                case "identifierProperty":
+                    identifierProperty = value;
+                    break;
+
+                case "identifier":
+                    identifier = value;
+                    break;
+            }
+        }
+
+        return new ArrayIndexer(arrayProperty!, identifierProperty!, identifier!);
+    }
 }
