@@ -6,6 +6,9 @@ import assert from 'node:assert/strict';
 import { mkdir, mkdtemp, writeFile, readFile, unlink } from 'node:fs/promises';
 import path from 'node:path';
 import { v3Projects, shippingProjects, ordinaryProjects, validateSourceProjects } from './mixed-specs-selection.mjs';
+import { coreSpecFixture, expandedProjects } from './core-spec-fixture.mjs';
+import './core-spec-partition.contracts.mjs';
+import './core-spec-type-coverage.contracts.mjs';
 import { ORDINARY_SHARDS, planShards, parseShardArgs, validateTimings, sourcePlan, verifyReceipts, verifyResults, receiptFor } from './spec-shards.mjs';
 
 const ordinary = ordinaryProjects(v3Projects.map(project => ({ project }))).map(x => x.project);
@@ -19,11 +22,13 @@ async function fixture() {
         await mkdir(path.dirname(path.join(root, project)), { recursive: true });
         await writeFile(path.join(root, project), '<Project/>');
     }
+    await coreSpecFixture(root);
     await writeFile(path.join(root, 'Chronicle.slnx'), `<Solution>${v3Projects.filter(p => !p.startsWith('Benchmarks/')).map(p => `<Project Path="${p}"/>`).join('')}</Solution>`);
     return root;
 }
 
 test('LPT is deterministic, ordinal on ties, nonempty and exactly once, with positive defaults', () => {
+    const ordinary = ordinaryProjects(v3Projects.map(project => ({ project }))).map(x => x.project).filter(project => !project.includes('/Core.Specs/'));
     const plan = planShards(ordinary, weights);
     assert.deepEqual(plan, planShards([...ordinary].reverse(), weights));
     assert.deepEqual(plan.flatMap(s => s.projects).sort(), [...ordinary].sort());
@@ -74,7 +79,7 @@ test('source proof covers actual source including Benchmarks, not just the regis
     assert.equal(discovered.sql.length, 1);
     assert.equal(discovered.shipping.length, 3);
     const plan = await sourcePlan(root, weights);
-    assert.deepEqual(plan.flatMap(s => s.projects).sort(), [...ordinary].sort());
+    assert.deepEqual(plan.flatMap(s => s.projects).sort(), expandedProjects(ordinary).sort());
     for (const project of ['Source/New.Specs/New.Specs.csproj', 'Benchmarks/New.Specs/New.Specs.csproj', 'Integration/New/New.csproj']) {
         await mkdir(path.dirname(path.join(root, project)), { recursive: true });
         await writeFile(path.join(root, project), '<Project/>');
