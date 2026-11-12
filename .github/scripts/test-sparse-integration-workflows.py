@@ -747,9 +747,9 @@ class IntegrationSingleBuildContracts(unittest.TestCase):
             with self.subTest(lane=lane):
                 steps = jobs[f"{lane}-integration-specs"]["steps"]
                 download = next(step for step in steps if step.get("uses") == "actions/download-artifact@v4")
-                # Lanes that run a single project's output download only that project's artifact; SQL clustering
-                # also reads the client output, so it keeps the full one.
-                suffix = "" if lane == "sql-clustering" else f"-{lane}"
+                # Every lane downloads only its own project's artifact; the SQL clustering one also carries the
+                # stamped client output that the RollingUpgrade provider reads.
+                suffix = "-sqlclustering" if lane == "sql-clustering" else f"-{lane}"
                 self.assertEqual({"name": "${{ inputs.build-output-artifact }}" + suffix}, download["with"])
                 extract = next(step for step in steps if step["name"] == "Extract build output")
                 self.assertEqual('tar -I zstd -xf "${BUILD_OUTPUT_ARTIFACT}' + suffix + '.tar.zst"', extract["run"])
@@ -806,12 +806,48 @@ class IntegrationSingleBuildContracts(unittest.TestCase):
 
     def test_per_project_artifacts_are_packed_for_exactly_the_lanes_that_download_them(self):
         action = (WORKFLOWS.parents[0] / "actions/pack-integration-output/action.yml").read_text(encoding="utf-8")
-        self.assertIn("for project in Client Kernel Clustering; do", action)
+        self.assertIn("for project in Client Kernel Clustering SqlClustering; do", action)
+        self.assertIn("Source/Clients/DotNET/bin/Release/net11.0", action)
         self.assertIn('test -d "Integration/$project/bin/Release/net11.0"', action)
-        self.assertIn('tar -I \'zstd -T0\' -cf "${PREFIX}-${project,,}.tar.zst" "Integration/$project/bin"', action)
-        for lane in ("client", "kernel", "clustering"):
+        self.assertIn('paths=("Integration/$project/bin")', action)
+        self.assertIn('tar -I \'zstd -T0\' -cf "${PREFIX}-${project,,}.tar.zst" "${paths[@]}"', action)
+        for lane in ("client", "kernel", "clustering", "sqlclustering"):
             self.assertIn("name: ${{ inputs.prefix }}-" + lane, action)
-        self.assertEqual(3, action.count("if-no-files-found: error"))
+        self.assertEqual(4, action.count("if-no-files-found: error"))
+
+    def test_sql_clustering_artifact_carries_what_the_lane_reads(self):
+        action = (WORKFLOWS.parents[0] / "actions/pack-integration-output/action.yml").read_text(encoding="utf-8")
+        pack = next(step["run"] for step in yaml.safe_load(action)["runs"]["steps"] if step["name"].startswith("Pack"))
+        self.assertIn("set -euo pipefail", pack)
+        # The stamped client the RollingUpgrade step greps must be in the tarball, and its absence must fail closed.
+        self.assertIn('test -d "Source/Clients/DotNET/bin/Release/net11.0"', pack)
+        self.assertIn('if [ "$project" = SqlClustering ]; then', pack)
+        self.assertIn('paths+=("Source/Clients/DotNET/bin/Release/net11.0")', pack)
+        self.assertEqual(2, pack.count("exit 1"))
+        steps = workflow("integration.yml")["jobs"]["sql-clustering-integration-specs"]["steps"]
+        stamp = next(step for step in steps if step["name"] == "Read the stamped build version")
+        self.assertIn("Source/Clients/DotNET/bin/Release/net11.0/Cratis.Chronicle.dll", stamp["run"])
+        for step in steps:
+            if step.get("uses") == "actions/download-artifact@v4":
+                self.assertEqual("${{ inputs.build-output-artifact }}-sqlclustering", step["with"]["name"])
+            self.assertNotRegex(step.get("run", ""), r'BUILD_OUTPUT_ARTIFACT\}\.tar')
+
+    def test_restore_and_coverage_tool_restore_run_together_and_fail_closed(self):
+        jobs = workflow("integration.yml")["jobs"]
+        for lane, project in (("client", "Client"), ("kernel", "Kernel"), ("clustering", "Clustering")):
+            with self.subTest(lane=lane):
+                steps = jobs[f"{lane}-integration-specs"]["steps"]
+                self.assertFalse([s for s in steps if s.get("name") == "Restore pinned coverage tool"])
+                both = [s for s in steps if "dotnet tool restore" in s.get("run", "")
+                        and f"dotnet restore Integration/{project}/{project}.csproj" in s.get("run", "")]
+                self.assertEqual(1, len(both))
+                run = both[0]["run"]
+                self.assertIn("dotnet tool restore &", run)
+                self.assertIn(f"dotnet restore Integration/{project}/{project}.csproj &", run)
+                self.assertEqual(2, run.count("wait "))
+                self.assertNotIn("set -e\n", run)
+                self.assertNotIn("continue-on-error", both[0])
+                self.assertNotIn("if", both[0])
 
     def test_every_batched_lane_keeps_a_per_member_zero_test_guard(self):
         jobs = workflow("integration.yml")["jobs"]
