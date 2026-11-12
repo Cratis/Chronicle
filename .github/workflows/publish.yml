@@ -515,12 +515,6 @@ jobs:
 
   publish-docker-production:
     if: needs.release.outputs.publish == 'true'
-    permissions:
-      issues: write
-      contents: write
-      deployments: write
-      id-token: write
-      packages: write
     runs-on: ubuntu-latest
     timeout-minutes: 60
     needs: [release, dotnet-x64, dotnet-arm64, workbench, dotnet-x64-development, dotnet-arm64-development]
@@ -617,12 +611,6 @@ jobs:
 
   publish-docker-workbench:
     if: needs.release.outputs.publish == 'true'
-    permissions:
-      issues: write
-      contents: write
-      deployments: write
-      id-token: write
-      packages: write
     runs-on: ubuntu-latest
     timeout-minutes: 60
     needs: [release, dotnet-x64, dotnet-arm64, workbench, dotnet-x64-development, dotnet-arm64-development]
@@ -678,12 +666,6 @@ jobs:
 
   publish-docker-development:
     if: needs.release.outputs.publish == 'true'
-    permissions:
-      issues: write
-      contents: write
-      deployments: write
-      id-token: write
-      packages: write
     runs-on: ubuntu-latest
     timeout-minutes: 60
     needs: [release, dotnet-x64, dotnet-arm64, workbench, dotnet-x64-development, dotnet-arm64-development]
@@ -759,12 +741,6 @@ jobs:
 
   publish-docker-development-slim:
     if: needs.release.outputs.publish == 'true'
-    permissions:
-      issues: write
-      contents: write
-      deployments: write
-      id-token: write
-      packages: write
     runs-on: ubuntu-latest
     timeout-minutes: 60
     needs: [release, dotnet-x64, dotnet-arm64, workbench, dotnet-x64-development, dotnet-arm64-development]
