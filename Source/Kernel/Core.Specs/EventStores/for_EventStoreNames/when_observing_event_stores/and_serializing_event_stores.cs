@@ -45,7 +45,7 @@ public class and_serializing_event_stores : Specification
     async Task Because()
     {
         var received = new TaskCompletionSource<IEnumerable<EventStoreNames>>(TaskCreationOptions.RunContinuationsAsynchronously);
-        using var subscription = EventStoreNames.ObserveEventStores(_storage, _initialization).Subscribe(names => received.TrySetResult(names));
+        using var subscription = EventStoreNames.ObserveEventStores(_storage, _initialization, Substitute.For<IServiceProvider>()).Subscribe(names => received.TrySetResult(names));
         _emitted = await received.Task.WaitAsync(TimeSpan.FromSeconds(5));
         _json = JsonSerializer.Serialize<object>(_emitted, _serializerOptions);
     }
