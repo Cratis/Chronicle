@@ -45,9 +45,8 @@ SUITES = {
 
 # Namespaces whose runs are too short to justify a job of their own share one job. The batches are static
 # and reviewable: a namespace that is not listed runs alone, so a new namespace never joins a batch silently.
-# Each batch stays under about 240 s of p50 test time, below the previous slowest solo shard
-# (for_EventSequence with 2 shards: 339 s p50 test, 441 s p50 job). EventSequence now uses 4 shards
-# (#5864); recheck the critical path with hosted timings after the split.
+# Each batch stays under about 240 s of p50 test time, below the slowest solo shard
+# (for_EventSequence: 339 s p50 test, 441 s p50 job), so the critical path does not grow.
 # Client p50 test seconds: for_ReadModelReactors 66, for_ContextStorageIsolation 68, for_ExplicitArtifacts 68
 # (202 s); for_ShortLivedProcess 69, for_PIIManager 85, for_PublicClientApis 86 (240 s).
 # Every member keeps its own zero-test guard (the assert-tests-ran action's prefixes input).
@@ -83,7 +82,7 @@ GRAPH_ENTERPRISE_IMAGE = "neo4j:5-enterprise"
 # SQLite configuration whose contention eases when fewer tests share one job.
 SHARD_COUNTS = {
     "Projections": 4,
-    "for_EventSequence": 4,
+    "for_EventSequence": 2,
     "for_Reactors": 2,
     "for_Reducers": 2,
 }

@@ -933,12 +933,12 @@ jobs:
   # Dependabot's read-only token cannot push the image these shards pull. A bump needing
   # the full matrix must be reopened as an ordinary PR, where the token can push.
   integration:
-    # Requested lanes start after their builds, in parallel with ordinary specs (#5865, supersedes #5050).
-    # A red spec still fails the run through the specs aggregate and the requested verdict; coverage-merge-and-cache
-    # requires specs and all lanes to succeed. The trade-off is wasted lane minutes when specs are red.
+    # On a pull request the matrix fans out only after the ordinary specs passed in this same run
+    # (#5050): a red spec must not spend the matrix. Nightly and manual runs keep integration
+    # independent of specs, so a failing spec does not hide integration results there.
     # !cancelled() overrides implicit success(): the unused DEVELOPMENT sibling is skipped.
-    if: ${{ needs.already-ran.outputs.skip != 'true' && (!cancelled() && needs.dotnet-build.result == 'success' && ((github.event_name != 'pull_request' && needs.dotnet-build-development.result == 'success') || (github.event_name == 'pull_request' && needs.dotnet-build-development-requested.result == 'success')) && (github.event_name != 'pull_request' || inputs.integration_requested) && github.actor != 'dependabot[bot]') }}
-    needs: [already-ran, dotnet-build, dotnet-build-development, dotnet-build-development-requested]
+    if: ${{ needs.already-ran.outputs.skip != 'true' && (!cancelled() && needs.dotnet-build.result == 'success' && ((github.event_name != 'pull_request' && needs.dotnet-build-development.result == 'success') || (github.event_name == 'pull_request' && needs.dotnet-build-development-requested.result == 'success')) && (github.event_name != 'pull_request' || (inputs.integration_requested && needs.specs.result == 'success')) && github.actor != 'dependabot[bot]') }}
+    needs: [already-ran, dotnet-build, dotnet-build-development, dotnet-build-development-requested, specs]
     permissions:
       contents: read
       packages: read
@@ -955,11 +955,11 @@ jobs:
       selection: ${{ github.event_name == 'pull_request' && inputs.integration_selection || '' }}
 
   integration-api:
-    # Starts after its build, beside ordinary specs; the run and coverage still require specs (#5865).
-    if: ${{ needs.already-ran.outputs.skip != 'true' && (!cancelled() && needs.dotnet-build.result == 'success' && (github.event_name != 'pull_request' || inputs.integration_requested)) }}
+    # Waits for the ordinary specs on pull requests, like the integration matrix (#5050).
+    if: ${{ needs.already-ran.outputs.skip != 'true' && (!cancelled() && needs.dotnet-build.result == 'success' && (github.event_name != 'pull_request' || (inputs.integration_requested && needs.specs.result == 'success'))) }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
-    needs: [already-ran, dotnet-build]
+    needs: [already-ran, dotnet-build, specs]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -1015,11 +1015,11 @@ jobs:
           retention-days: 1
 
   mongodb:
-    # Starts after its build, beside ordinary specs; the run and coverage still require specs (#5865).
-    if: ${{ needs.already-ran.outputs.skip != 'true' && (!cancelled() && needs.dotnet-build.result == 'success' && (github.event_name != 'pull_request' || inputs.integration_requested)) }}
+    # Waits for the ordinary specs on pull requests, like the integration matrix (#5050).
+    if: ${{ needs.already-ran.outputs.skip != 'true' && (!cancelled() && needs.dotnet-build.result == 'success' && (github.event_name != 'pull_request' || (inputs.integration_requested && needs.specs.result == 'success'))) }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
-    needs: [already-ran, dotnet-build]
+    needs: [already-ran, dotnet-build, specs]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -1161,13 +1161,13 @@ jobs:
           retention-days: 1
 
   neo4j:
-    # Starts after its build, beside ordinary specs; the run and coverage still require specs (#5865).
+    # Waits for the ordinary specs on pull requests, like the integration matrix (#5050).
     # Exercises the Neo4j storage directly against a Neo4j container, with no kernel. It starts the image and nothing else, so it needs no Docker image of the kernel.
     name: neo4j (${{ matrix.lane }})
-    if: ${{ needs.already-ran.outputs.skip != 'true' && (!cancelled() && needs.dotnet-build.result == 'success' && (github.event_name != 'pull_request' || inputs.integration_requested)) }}
+    if: ${{ needs.already-ran.outputs.skip != 'true' && (!cancelled() && needs.dotnet-build.result == 'success' && (github.event_name != 'pull_request' || (inputs.integration_requested && needs.specs.result == 'success'))) }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    needs: [already-ran, dotnet-build]
+    needs: [already-ran, dotnet-build, specs]
     strategy:
       fail-fast: false
       matrix:
