@@ -57,9 +57,18 @@ test('Release artifact is uploaded immediately after the build integrity checks'
     assert.match(step(build, 'Pack Release build output'), /find \. -type d -name bin/);
     assert.match(step(build, 'Upload Release build output'), /if-no-files-found: error/);
     assert.match(step(packages, 'Download Release build output'), /name: build-output-release/);
-    assert.match(step(packages, 'Extract Release build output'), /tar -I zstd -xf build-output-release\.tar\.zst/);
+    assert.match(step(packages, 'Extract Release build output'), /tar -I 'zstd -d --long=30' -xf build-output-release\.tar\.zst/);
     assert.match(step(packages, 'Restore obj cache'), /uses: actions\/cache\/restore@v4/);
     assert.ok(!packages.includes('derive-build-version'), 'package verification must reuse the build version, not derive it again');
+});
+
+test('every Release artifact reader accepts the measured long-window compression', () => {
+    assert.match(step(build, 'Pack Release build output'), /tar --null -I 'zstd -T0 --long=30' -cf build-output-release\.tar\.zst/);
+    const readers = [...jobs.values()].filter(job => job.includes('- name: Download Release build output\n'));
+    assert.equal(readers.length, 7);
+    for (const reader of readers) {
+        assert.match(step(reader, 'Extract Release build output'), /tar -I 'zstd -d --long=30' -xf build-output-release\.tar\.zst/);
+    }
 });
 
 test('package verification stamps exactly the version dotnet-build derived', () => {

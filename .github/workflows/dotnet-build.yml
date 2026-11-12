@@ -259,7 +259,7 @@ jobs:
           for project in Source/Kernel/Core.Specs Source/Kernel/Server Integration/MongoDB Integration/Neo4j Integration/Api; do
             test -d "$project/bin/Release/net11.0" || { echo "Missing build output for $project" >&2; exit 1; }
           done
-          find . -type d -name bin -not -path '*/node_modules/*' -prune -print0 | tar --null -I 'zstd -T0' -cf build-output-release.tar.zst -T -
+          find . -type d -name bin -not -path '*/node_modules/*' -prune -print0 | tar --null -I 'zstd -T0 --long=30' -cf build-output-release.tar.zst -T -
 
       - name: Upload Release build output
         uses: actions/upload-artifact@v4
@@ -377,7 +377,7 @@ jobs:
           name: build-output-release
 
       - name: Extract Release build output
-        run: tar -I zstd -xf build-output-release.tar.zst
+        run: tar -I 'zstd -d --long=30' -xf build-output-release.tar.zst
 
       # The analyzers job analyzes net11.0 with warnings as errors. Build every shipped
       # framework here, keeping generators on both and analyzers on net10.0 as before.
@@ -632,7 +632,7 @@ jobs:
           name: build-output-release
 
       - name: Extract Release build output
-        run: tar -I zstd -xf build-output-release.tar.zst
+        run: tar -I 'zstd -d --long=30' -xf build-output-release.tar.zst
 
       # Release artifacts contain bin, not obj. Restore current evaluated package inputs
       # before comparing all 31 test + 2 shipping selections with the built runtime graph.
@@ -728,7 +728,7 @@ jobs:
           name: build-output-release
 
       - name: Extract Release build output
-        run: tar -I zstd -xf build-output-release.tar.zst
+        run: tar -I 'zstd -d --long=30' -xf build-output-release.tar.zst
 
       - name: Restore SQL runner evaluation inputs
         run: dotnet restore Source/Kernel/Storage.Sql.Specs/Storage.Sql.Specs.csproj
@@ -908,7 +908,7 @@ jobs:
           name: build-output-release
 
       - name: Extract Release build output
-        run: tar -I zstd -xf build-output-release.tar.zst
+        run: tar -I 'zstd -d --long=30' -xf build-output-release.tar.zst
 
       - name: Login to GitHub Docker Registry
         uses: docker/login-action@v3
@@ -968,7 +968,7 @@ jobs:
           name: build-output-release
 
       - name: Extract Release build output
-        run: tar -I zstd -xf build-output-release.tar.zst
+        run: tar -I 'zstd -d --long=30' -xf build-output-release.tar.zst
 
       - name: Login to GitHub Docker Registry
         uses: docker/login-action@v3
@@ -1129,7 +1129,7 @@ jobs:
           name: build-output-release
 
       - name: Extract Release build output
-        run: tar -I zstd -xf build-output-release.tar.zst
+        run: tar -I 'zstd -d --long=30' -xf build-output-release.tar.zst
 
       # Pre-pull once per job so the Testcontainers image check does not race anonymous Docker Hub rate limits.
       - name: Pre-pull Neo4j image
@@ -1309,7 +1309,7 @@ jobs:
           name: build-output-release
 
       - name: Extract Release build output
-        run: tar -I zstd -xf build-output-release.tar.zst
+        run: tar -I 'zstd -d --long=30' -xf build-output-release.tar.zst
 
       - name: Build benchmarks the way BenchmarkDotNet does
         run: |
