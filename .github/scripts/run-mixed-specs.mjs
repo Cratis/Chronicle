@@ -10,7 +10,7 @@ import { pathToFileURL } from 'node:url';
 import { runProcess } from './mixed-specs-process.mjs';
 import { decode, validateTrx, validateCoverage, coverageFiles } from './mixed-specs-results.mjs';
 import { ordinaryProjects, ordinaryFilter, inventory } from './mixed-specs-selection.mjs';
-import { parseShardArgs, sourcePlan, sameProjects, receiptFor } from './spec-shards.mjs';
+import { ORDINARY_SHARDS, ordinaryShardIds, parseShardArgs, sourcePlan, sameProjects, receiptFor } from './spec-shards.mjs';
 
 // Preserve the existing import surface for contract consumers.
 export { runProcess } from './mixed-specs-process.mjs';
@@ -100,7 +100,9 @@ function producerArtifact(artifacts, job, shard, context) {
 export function selectProducerArtifacts(jobPages, artifactPages, context) {
     const jobs = apiRecords(jobPages, 'jobs');
     const artifacts = apiRecords(artifactPages, 'artifacts');
-    return { context, producers: [1, 2].map(shard => producerArtifact(artifacts, producerJob(jobs, shard, context), shard, context)) };
+    const ordinaryArtifacts = artifacts.filter(artifact => artifact.name?.startsWith('coverage-results-specs-other-'));
+    if (ordinaryArtifacts.length !== ORDINARY_SHARDS) fail(`Expected exactly ${ORDINARY_SHARDS} producer artifacts`);
+    return { context, producers: ordinaryShardIds().map(shard => producerArtifact(ordinaryArtifacts, producerJob(jobs, shard, context), shard, context)) };
 }
 async function producerApiPages(endpoint, context, env, execute) {
     const result = await execute('gh', ['api', '--paginate', '--slurp', `repos/${env.GITHUB_REPOSITORY}/actions/runs/${context.runId}/${endpoint}`], { capture: true, timeout: 60000 });
