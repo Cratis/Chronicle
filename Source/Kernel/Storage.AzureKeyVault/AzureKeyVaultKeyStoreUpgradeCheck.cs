@@ -34,8 +34,14 @@ internal class AzureKeyVaultKeyStoreUpgradeCheck(ISecretVault vault, IReadOnlyLi
         var keys = 0L;
         var erasures = 0L;
         var retained = 0L;
+        var unresolved = 0L;
         foreach (var properties in (await vault.ListLive(cancellationToken)).Where(_ => LegacySecretName.IsEarlier(_.Name)))
         {
+            if (LegacySecretName.Resolve(properties.Name, scopes) is null)
+            {
+                unresolved++;
+            }
+
             if (full && await IsRetained(properties, cancellationToken))
             {
                 retained++;
@@ -50,7 +56,7 @@ internal class AzureKeyVaultKeyStoreUpgradeCheck(ISecretVault vault, IReadOnlyLi
             }
         }
 
-        return new(true, false, keys, erasures, 0, true, retained);
+        return new(true, false, keys, erasures, unresolved, true, retained);
     }
 
     async Task<bool> IsRetained(SecretVersionInfo properties, CancellationToken cancellationToken)

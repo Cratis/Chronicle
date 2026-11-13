@@ -319,6 +319,8 @@ Chronicle connects to Vault at the `connectionDetails` address as given. Use an 
 
 ### Migrating Azure Key Vault keys to their new names
 
+The startup inventory reports unresolved entries when earlier names are malformed, fall outside the configured `legacyKeyScopes`, or match more than one scope. This count is a subset of the earlier key and erasure counts, not an additional total. Reports contain counts only, never secret names or values.
+
 For Azure Key Vault, the same `--migrate-encryption-keys`, `--dry-run` and `--remove-migrated-legacy-keys` options copy keys stored under earlier names to their current names, with the same exit codes. Earlier names are lowercased and reduced to letters, digits and hyphens, so the event store and namespace cannot be read off them. List them under `compliance.encryption.legacyKeyScopes`, each with the exact `eventStore` and `namespace`:
 
 ```json
