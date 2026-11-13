@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Projections;
@@ -43,7 +44,11 @@ public class ProjectionPipelineManager(
     IOptions<ChronicleOptions> options,
     ILoggerFactory loggerFactory) : IProjectionPipelineManager
 {
-    readonly ConcurrentDictionary<string, CachedPipeline> _pipelines = new();
+    /// <summary>
+    /// Owns pipelines with buffered work, independently of the compiled-graph LRU.
+    /// Not size-bounded or tied to subscriber deactivation; only explicit eviction/clear releases entries.
+    /// </summary>
+    readonly ConcurrentDictionary<string, ProjectionPipelineBinding> _pipelines = new();
 
     /// <summary>
     /// Per-projection handle lock keyed by (eventStore, namespace, projectionId).
@@ -55,9 +60,14 @@ public class ProjectionPipelineManager(
     /// same lock. Without this, the read-modify-write cycle in SetInitialState → HandleEvent
     /// → SaveChanges races for hierarchical or join projections, leaving parent/child links
     /// empty. Each lock stripes purely event-source-keyed projections per event source id and
-    /// serializes all other projections coarsely; growth is bounded by projection count.
+    /// serializes all other projections coarsely. Keys include namespaces and remain for the manager's lifetime,
+    /// so this registry's growth is not bounded by the compiled-graph cache capacity.
     /// </remarks>
     readonly ConcurrentDictionary<string, ProjectionHandleLock> _handleLocks = new();
+
+    /// <inheritdoc/>
+    public bool TryGetFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, ProjectionId id, [NotNullWhen(true)] out ProjectionPipelineBinding? binding) =>
+        _pipelines.TryGetValue(KeyHelper.Combine(eventStore, @namespace, id), out binding);
 
     /// <inheritdoc/>
     public async Task<IProjectionPipeline> GetFor(
@@ -84,7 +94,7 @@ public class ProjectionPipelineManager(
                 _handleLocks.GetOrAdd(key, _ => new ProjectionHandleLock()),
                 objectComparer,
                 loggerFactory.CreateLogger<GraphProjectionPipeline>());
-            _pipelines[key] = new(graphPipeline, projection.DefinitionFingerprint);
+            _pipelines[key] = new(projection, graphPipeline);
             return graphPipeline;
         }
 
@@ -102,7 +112,7 @@ public class ProjectionPipelineManager(
         var sink = await sinkStorage.Sinks.GetFor(projection.ReadModel);
         var projectionFutures = grainFactory.GetProjectionFutures(eventStore, @namespace, projection.Identifier);
         var newPipeline = Build(eventStore, @namespace, projection, namespaceStorage, namespaceStorage.Changesets, sink, new ProjectionFuturesStore(projectionFutures), key, null);
-        _pipelines[key] = new(newPipeline, projection.DefinitionFingerprint);
+        _pipelines[key] = new(projection, newPipeline);
         return newPipeline;
     }
 
@@ -132,7 +142,7 @@ public class ProjectionPipelineManager(
         // itself, so its futures stay where they always were.
         var projectionFutures = grainFactory.GetProjectionFutures(eventStore, @namespace, generation.ObserverId);
         var newPipeline = Build(eventStore, @namespace, projection, namespaceStorage, namespaceStorage.Changesets, sink, new ProjectionFuturesStore(projectionFutures), key, generation);
-        _pipelines[key] = new(newPipeline, projection.DefinitionFingerprint);
+        _pipelines[key] = new(projection, newPipeline);
         return newPipeline;
     }
 
@@ -227,6 +237,4 @@ public class ProjectionPipelineManager(
             loggerFactory.CreateLogger<ProjectionPipeline>(),
             generation);
     }
-
-    sealed record CachedPipeline(IProjectionPipeline Pipeline, string Fingerprint);
 }

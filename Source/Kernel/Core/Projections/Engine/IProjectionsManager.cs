@@ -35,8 +35,12 @@ public interface IProjectionsManager
     Task AddNamespace(EventStoreName eventStore, EventStoreNamespaceName @namespace, IEnumerable<ReadModelDefinition> readModelDefinitions);
 
     /// <summary>
-    /// Try to get a <see cref="IProjection"/> by <see cref="ProjectionId"/>.
+    /// Try to get a cached <see cref="IProjection"/> by <see cref="ProjectionId"/>.
     /// </summary>
+    /// <remarks>
+    /// This is only a bounded cache probe. A miss does not mean no live pipeline owns the graph.
+    /// Resolve buffered work through <see cref="Pipelines.IProjectionPipelineManager.TryGetFor"/> instead.
+    /// </remarks>
     /// <param name="eventStore"><see cref="EventStoreName"/> the projection is for.</param>
     /// <param name="namespace"><see cref="EventStoreNamespaceName"/> the projection is for.</param>
     /// <param name="id"><see cref="ProjectionId"/> of the projection.</param>
