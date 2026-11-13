@@ -40,6 +40,8 @@ public class a_closing_constraint_reindex_step : Specification
     protected CancellationToken _cancellationToken;
     protected IStorage _storage;
     protected IEventTypesStorage _eventTypes;
+    protected IEventSequenceStorage _eventsStorage;
+    protected bool _ignoreEventTypeFilter;
     protected IJsonSchemaMetadataManager _metadata;
     protected IExpandoObjectConverter _converter;
     protected IEventTypeSchemaCache _schemaCache = new OwnGenerationSchemaCache();
@@ -59,6 +61,7 @@ public class a_closing_constraint_reindex_step : Specification
         var @namespace = Substitute.For<IEventStoreNamespaceStorage>();
         _eventTypes = Substitute.For<IEventTypesStorage>();
         var sequence = Substitute.For<IEventSequenceStorage>();
+        _eventsStorage = sequence;
         _storage.GetEventStore(Arg.Any<Concepts.EventStoreName>()).Returns(eventStore);
         eventStore.GetNamespace(Arg.Any<Concepts.EventStoreNamespaceName>()).Returns(@namespace);
         eventStore.Constraints.GetDefinitions().Returns(_ => _definitions.ToArray());
@@ -69,7 +72,11 @@ public class a_closing_constraint_reindex_step : Specification
         @namespace.GetUniqueConstraintsStorage(EventSequenceId.Log).Returns(_uniqueStorage);
         _eventTypes.GetFor(Arg.Any<EventTypeId>(), Arg.Any<EventTypeGeneration?>()).Returns(call =>
             new EventTypeSchema(new EventType(call.Arg<EventTypeId>(), EventTypeGeneration.First), EventTypeOwner.Server, EventTypeSource.Code, new JsonSchema()));
-        sequence.GetFromSequenceNumber(EventSequenceNumber.First, cancellationToken: Arg.Any<CancellationToken>()).Returns(_ => new EventCursor(_events));
+        sequence.GetFromSequenceNumber(EventSequenceNumber.First, eventTypes: Arg.Any<IEnumerable<EventType>>(), cancellationToken: Arg.Any<CancellationToken>()).Returns(call =>
+        {
+            var types = call.Arg<IEnumerable<EventType>>()?.Select(type => type.Id).ToArray();
+            return new EventCursor(_events.Where(@event => _ignoreEventTypeFilter || types?.Contains(@event.Context.EventType.Id) != false).ToArray());
+        });
 
         var silo = new TestKitSilo();
         _sequence = Substitute.For<IEventSequence>();

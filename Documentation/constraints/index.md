@@ -73,6 +73,12 @@ Know the limits of what a constraint covers:
 - The index that records a claim is updated after the event is durable; the event and index update are not crash-atomic. If the update cannot complete, the kernel marks the affected index as pending and refuses governed appends with `ConstraintIndexUnavailable` while it catches up.
 - It is not checked again when the kernel renumbers an append after a duplicate sequence number.
 
+## Rebuilding constraint indexes
+
+A reindex reads only the event types that contribute to the selected constraints, across all their stored generations. For uniqueness, this includes claiming and removal events. For stream closure, it includes closing, reopening, and redaction events. A missing schema for one of those governed types still fails the rebuild; an unrelated type with a missing schema does not prevent it.
+
+Unscoped unique indexes are cleared even when no governed events remain. Scoped unique indexes are cleared as their scopes are encountered in governed history; a scope containing no governed events is left untouched. Reindex progress follows the last governed event processed, not the end of unrelated history. If an index was cleared without processing an event, completion leaves progress unknown so catch-up can establish it safely.
+
 ## Topics
 
 - [Declarative](declarative/toc.yml): define a dedicated rule with builder calls.
