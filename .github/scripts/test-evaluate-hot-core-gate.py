@@ -317,10 +317,17 @@ class GateDecisions(unittest.TestCase):
         with patch.object(gate, "api", return_value=[{"jobs": [{"name": "other"}]}, {"jobs": GREEN["jobs"]}]):
             self.assertEqual(2, len(gate.collection("jobs", "jobs")))
 
-    def test_jobs_are_listed_with_a_small_page_size(self):
+    def test_collection_forwards_its_timeout_to_api(self):
+        with patch.object(gate, "api", return_value=[]) as api:
+            gate.collection("jobs", "jobs", timeout=90)
+        api.assert_called_once_with("jobs", paginate=True, timeout=90)
+
+    def test_jobs_are_listed_with_a_small_page_size_and_a_wider_timeout(self):
         with patch.object(gate, "collection", return_value=[]) as collect:
             gate.with_jobs("Cratis/Chronicle", {"id": 7})
-        collect.assert_called_once_with("repos/Cratis/Chronicle/actions/runs/7/jobs?filter=latest&per_page=30", "jobs")
+        collect.assert_called_once_with("repos/Cratis/Chronicle/actions/runs/7/jobs?filter=latest&per_page=30",
+                                        "jobs", timeout=gate.JOBS_FETCH_TIMEOUT)
+        self.assertGreater(gate.JOBS_FETCH_TIMEOUT, 30)
 
     def test_api_retries_server_errors_then_succeeds(self):
         server_error = subprocess.CalledProcessError(1, "gh", stderr="gh: Server Error (HTTP 502)")
@@ -344,6 +351,12 @@ class GateDecisions(unittest.TestCase):
                 patch.object(gate.time, "sleep"):
             self.assertIsNone(gate.api("anything"))
         self.assertEqual(2, run.call_count)
+
+    def test_api_passes_its_timeout_to_every_attempt(self):
+        ok = subprocess.CompletedProcess(["gh"], 0, stdout="", stderr="")
+        with patch.object(gate.subprocess, "run", return_value=ok) as run:
+            gate.api("anything", timeout=90)
+        self.assertEqual(90, run.call_args.kwargs["timeout"])
 
     def test_api_never_retries_client_errors(self):
         forbidden = subprocess.CalledProcessError(1, "gh", stderr="gh: Forbidden (HTTP 403)")

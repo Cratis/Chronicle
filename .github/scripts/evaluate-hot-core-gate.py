@@ -149,13 +149,13 @@ def transient(error):
     return re.search(r"HTTP 5\d\d", stderr) is not None
 
 
-def api(path, *, method="GET", paginate=False):
+def api(path, *, method="GET", paginate=False, timeout=30):
     command = ["gh", "api", "-X", method, path]
     if paginate:
         command += ["--paginate", "--slurp"]
     for delay in (*RETRY_DELAYS, None):
         try:
-            result = subprocess.run(command, capture_output=True, text=True, check=True, timeout=30)
+            result = subprocess.run(command, capture_output=True, text=True, check=True, timeout=timeout)
             return json.loads(result.stdout) if result.stdout.strip() else None
         except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as error:
             if delay is None or not transient(error):
@@ -163,8 +163,8 @@ def api(path, *, method="GET", paginate=False):
             time.sleep(delay)
 
 
-def collection(path, key):
-    return [item for page in api(path, paginate=True) for item in page[key]]
+def collection(path, key, *, timeout=30):
+    return [item for page in api(path, paginate=True, timeout=timeout) for item in page[key]]
 
 
 def workflow_runs(repo, workflow, head_sha):
@@ -172,10 +172,18 @@ def workflow_runs(repo, workflow, head_sha):
                       f"?head_sha={head_sha}&event=pull_request&per_page=100", "workflow_runs")
 
 
+# Keep the page small: GitHub 502s on every attempt for runs with ~145 jobs at the default page size.
+JOBS_PAGE_SIZE = 30
+# A run with that many jobs needs several of these smaller pages fetched in one `gh api --paginate` call;
+# the fixed 30-second budget for a single request is not enough for the whole paginated fetch, and every
+# retry re-fetches from page one, so give this call enough room to finish even while GitHub is slow.
+JOBS_FETCH_TIMEOUT = 90
+
+
 def with_jobs(repo, run):
-    # Keep the page small: GitHub 502s on every attempt for runs with ~145 jobs at the default page size.
-    return dict(run, jobs=collection(f"repos/{repo}/actions/runs/{run['id']}/jobs?filter=latest&per_page=30",
-                                     "jobs"))
+    return dict(run, jobs=collection(
+        f"repos/{repo}/actions/runs/{run['id']}/jobs?filter=latest&per_page={JOBS_PAGE_SIZE}", "jobs",
+        timeout=JOBS_FETCH_TIMEOUT))
 
 
 def recorded(path):
