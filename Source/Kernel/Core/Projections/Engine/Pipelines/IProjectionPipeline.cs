@@ -71,6 +71,32 @@ public interface IProjectionPipeline
     Task<IEnumerable<FailedPartition>> EndBulk(CancellationToken cancellationToken) => EndBulk();
 
     /// <summary>
+    /// Gets a counter that changes whenever the pipeline does work (handles events, prepares pages, enters replay or bulk).
+    /// </summary>
+    /// <remarks>
+    /// The pipeline manager observes it to tell an idle pipeline from a busy one before releasing the idle one. Defaults to 0 for
+    /// implementations that never report activity.
+    /// </remarks>
+    /// <returns>The activity counter.</returns>
+    long GetActivity() => 0;
+
+    /// <summary>
+    /// Gets whether the pipeline has an open replay or bulk session whose buffered work still has to be flushed or drained.
+    /// </summary>
+    /// <remarks>A pinned pipeline is never released by the idle sweep, however long it has shown no activity.</remarks>
+    /// <returns>True when the pipeline must stay discoverable.</returns>
+    bool IsPinned() => false;
+
+    /// <summary>
+    /// Registers a callback that is invoked, after the session is marked open, whenever a replay or bulk session opens.
+    /// </summary>
+    /// <remarks>The pipeline manager uses it to make a swept pipeline discoverable again before the session's flush or drain looks for it.</remarks>
+    /// <param name="onSessionOpened">The callback.</param>
+    void ObserveSessions(Action onSessionOpened)
+    {
+    }
+
+    /// <summary>
     /// Prepares the pipeline for a page of events that is about to be handled, one partition run at a time.
     /// </summary>
     /// <param name="events">The events of the page, in the order they will be handled.</param>
