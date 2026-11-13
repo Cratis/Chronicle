@@ -83,6 +83,32 @@ test('caller prefixes do not decide the family: only the called job name does', 
     assert.equal(result.ordinary.jobs, 1);
 });
 
+test('jobs carried over from an earlier attempt are excluded instead of failing the report', () => {
+    // A carried-over job has created_at after started_at, which would otherwise be out-of-order timestamps.
+    const carried = job('dotnet-build', [50, 0, 10], { run_attempt: 1 });
+    const result = report([
+        carried,
+        job('specs-other (1)', [100, 100, 130], { run_attempt: 2 }),
+        job('client-integration-specs (a)', [100, 110, 140], { run_attempt: 2 }),
+    ]);
+    assert.equal(result.carriedOverJobsExcluded, 1);
+    assert.equal(result.all.jobs, 2);
+    assert.equal(result.wallSeconds, 40);
+    assert.throws(() => intervals([carried]), /out-of-order/);
+});
+
+test('the peak is reported before and after the first integration job starts', () => {
+    const result = report([
+        job('specs-other (1)', [0, 0, 30]),
+        job('specs-other (2)', [0, 0, 30]),
+        job('specs-sql (1)', [0, 0, 30]),
+        ...Array.from({ length: 5 }, (_, index) => job(`client-integration-specs (${index})`, [0, 20, 60])),
+    ]);
+    assert.equal(result.peakBeforeIntegrationStart, 3);
+    assert.equal(result.peakFromIntegrationStart, 8);
+    assert.equal(result.all.peak, 8);
+});
+
 test('a report over no executed jobs is UNKNOWN', () => {
     assert.throws(() => report([{ name: 's', labels: ['ubuntu-latest'], conclusion: 'skipped' }]), /no executed jobs/);
 });

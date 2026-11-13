@@ -5,7 +5,10 @@
 // `gh api repos/<owner>/<repo>/actions/runs/<id>/jobs --paginate` JSON. It measures the
 // per-run peak the integration slot budget (#4765) bounds; it says nothing about the org-wide queue.
 //
-//   node .github/scripts/run-concurrency-report.mjs jobs-before.json jobs-after.json
+//   gh api "repos/Cratis/Chronicle/actions/runs/<id>/attempts/<N>/jobs?per_page=10" --paginate > jobs.json
+//   node .github/scripts/run-concurrency-report.mjs jobs.json
+//
+// Use per_page=10: the jobs API returns 502 at 20 or more. Only the latest attempt in the file is measured.
 //
 // Exit codes: 0 reported, 2 could not report (UNKNOWN): missing timestamps, truncated
 // pagination, or a runner label that is not recognisably hosted. Unknown is never a pass.
@@ -56,6 +59,18 @@ const time = (job, field) => {
     return value;
 };
 
+/**
+ * A re-run attempt lists jobs carried over from earlier attempts (they keep their old run_attempt and a
+ * created_at later than started_at). They did not run in the latest attempt, so only the latest attempt is measured.
+ */
+export function latestAttempt(jobs) {
+    const attempts = jobs.map(job => job.run_attempt).filter(Number.isInteger);
+    if (attempts.length === 0) return { jobs, carriedOver: 0 };
+    const latest = Math.max(...attempts);
+    const current = jobs.filter(job => !Number.isInteger(job.run_attempt) || job.run_attempt === latest);
+    return { jobs: current, carriedOver: jobs.length - current.length };
+}
+
 /** Skipped jobs never held a slot; every other job needs full timestamps and a hosted runner label. */
 export function intervals(jobs) {
     return jobs.filter(job => job.conclusion !== 'skipped').map(job => {
@@ -98,13 +113,28 @@ export function summarize(items) {
     };
 }
 
-export function report(jobs) {
+/** Peak of the intervals clipped to [from, to): the concurrency that falls inside one phase of the run. */
+export function peakWithin(items, from, to) {
+    const clipped = items
+        .map(item => ({ start: Math.max(item.start, from), end: Math.min(item.end, to) }))
+        .filter(item => item.start < item.end);
+    return peak(clipped);
+}
+
+export function report(allJobs) {
+    const { jobs, carriedOver } = latestAttempt(allJobs);
     const items = intervals(jobs);
     if (items.length === 0) throw new UnknownReport('UNKNOWN: no executed jobs in the input');
     const integration = items.filter(isIntegration);
     const ordinary = items.filter(item => !isIntegration(item));
     const wallSeconds = (Math.max(...items.map(item => item.end)) - Math.min(...items.map(item => item.created))) / 1000;
-    return { all: summarize(items), integration: summarize(integration), ordinary: summarize(ordinary), wallSeconds };
+    const result = { all: summarize(items), integration: summarize(integration), ordinary: summarize(ordinary), wallSeconds, carriedOverJobsExcluded: carriedOver };
+    if (integration.length > 0) {
+        const integrationStart = Math.min(...integration.map(item => item.start));
+        result.peakBeforeIntegrationStart = peakWithin(items, -Infinity, integrationStart);
+        result.peakFromIntegrationStart = peakWithin(items, integrationStart, Infinity);
+    }
+    return result;
 }
 
 export async function main(argv) {

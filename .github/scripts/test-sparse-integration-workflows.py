@@ -471,7 +471,7 @@ class SparseIntegrationWorkflows(unittest.TestCase):
             with self.subTest(job=job_id):
                 job = jobs[job_id]
                 self.assertNotIn("specs", job["needs"])
-                self.assertNotIn("needs.specs", job["if"])
+                self.assertNotIn("needs.specs.result", job["if"])
                 self.assertIn("!cancelled()", job["if"])
                 self.assertIn("needs.dotnet-build.result == 'success'", job["if"])
                 self.assertIn("(github.event_name != 'pull_request' || inputs.integration_requested)", job["if"])
@@ -759,17 +759,21 @@ class SparseIntegrationWorkflows(unittest.TestCase):
 
     def test_integration_requires_selected_output_but_allows_skipped_sibling(self):
         job = self.build["jobs"]["integration"]
+        # Gated on the two spec shard groups, never the `specs` aggregate (it waits for packaging jobs) (#4765).
         self.assertEqual({"dotnet-build", "dotnet-build-development",
-                          "dotnet-build-development-requested"}, set(prerequisites_of(job)))
+                          "dotnet-build-development-requested", "specs-other", "specs-sql"},
+                         set(prerequisites_of(job)))
+        self.assertNotIn("specs", prerequisites_of(job))
         states = ("success", "failure", "cancelled", "skipped")
         for event, requested, specs, development, release, cancelled in product(
                 ("pull_request", "schedule", "workflow_dispatch"), (False, True),
                 states, states, states, (False, True)):
             is_pr = event == "pull_request"
-            results = {"dotnet-build": release, "specs": specs,
+            results = {"dotnet-build": release, "specs-other": specs, "specs-sql": "success",
                        "dotnet-build-development": "skipped" if is_pr else development,
                        "dotnet-build-development-requested": development if is_pr else "skipped"}
             expected = (not cancelled and release == "success" and development == "success"
+                        and specs == "success"
                         and (not is_pr or requested))
             with self.subTest(event=event, requested=requested, results=results, cancelled=cancelled):
                 context = ConditionContext(event, requested, results, cancelled)
@@ -1144,13 +1148,19 @@ class for_parallel_requested_integration(unittest.TestCase):
     def setUpClass(cls):
         cls.jobs = workflow("dotnet-build.yml")["jobs"]
 
-    def test_no_lane_waits_for_specs_even_indirectly(self):
+    def test_no_lane_waits_for_the_specs_aggregate_even_indirectly(self):
+        # The integration lanes wait for the two shard groups (#4765), never the aggregate that also waits for packaging.
         for lane in ("integration", "integration-api", "mongodb", "neo4j"):
             with self.subTest(lane=lane):
                 job = self.jobs[lane]
                 self.assertNotIn("specs", dependency_ancestors(self.jobs, lane))
                 self.assertIn("dotnet-build", prerequisites_of(job))
-                self.assertNotIn("needs.specs", job["if"])
+                self.assertNotIn("needs.specs.result", job["if"])
+
+    def test_only_the_integration_matrix_lane_waits_for_the_spec_shard_groups(self):
+        for lane in ("integration-api", "mongodb", "neo4j"):
+            with self.subTest(lane=lane):
+                self.assertFalse({"specs-other", "specs-sql"} & set(dependency_ancestors(self.jobs, lane)))
 
     def test_small_lanes_require_a_successful_build_and_a_requested_pr(self):
         states = ("success", "failure", "cancelled", "skipped")
@@ -1184,17 +1194,17 @@ class for_parallel_requested_integration(unittest.TestCase):
 
 
 class IntegrationSlotBudgetContract(unittest.TestCase):
-    """One run's integration jobs stay inside a stated share of the org's 20 hosted slots (#4765).
+    """One run's integration jobs stay inside a stated peak-concurrency budget (#4765).
 
-    The caps bound one run only; they do not guarantee any org-wide queue time. The ordinary specs
-    (about 11 jobs) stay uncapped on the critical path, which is why the integration share is 12.
-    An unrecognised matrix or a missing cap is a failure, never a pass.
+    The caps bound one run only; they do not guarantee any org-wide queue time. The budget of 32 is
+    what keeps a requested run within about +20% of the uncapped wall time (a client cap of 5 measured
+    far slower). An unrecognised matrix or a missing cap is a failure, never a pass.
     """
 
-    INTEGRATION_SLOT_BUDGET = 12
+    INTEGRATION_SLOT_BUDGET = 32
     MATRIX_CAPS = {
-        ("integration.yml", "client-integration-specs"): 5,
-        ("integration.yml", "kernel-integration-specs"): 1,
+        ("integration.yml", "client-integration-specs"): 24,
+        ("integration.yml", "kernel-integration-specs"): 2,
         ("integration.yml", "clustering-integration-specs"): 1,
         ("integration.yml", "sql-clustering-integration-specs"): 1,
         ("integration.yml", "sql-clustering-rolling-upgrade"): 1,
@@ -1233,6 +1243,15 @@ class IntegrationSlotBudgetContract(unittest.TestCase):
             with self.subTest(job=name):
                 self.assertNotIn("strategy", jobs[name])
                 self.assertEqual(["already-ran", "dotnet-build"], jobs[name]["needs"])
+
+    def test_integration_waits_for_the_spec_shard_groups_and_requires_their_success(self):
+        job = workflow("dotnet-build.yml")["jobs"]["integration"]
+        for dependency in ("specs-other", "specs-sql"):
+            with self.subTest(dependency=dependency):
+                self.assertIn(dependency, job["needs"])
+                self.assertIn(f"needs.{dependency}.result == 'success'", job["if"])
+        self.assertNotIn("specs", job["needs"], "the aggregate also waits for packaging jobs")
+        self.assertIn("!cancelled()", job["if"])
 
     def test_caps_add_no_ordering_between_integration_lanes(self):
         jobs = workflow("integration.yml")["jobs"]
