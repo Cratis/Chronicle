@@ -599,7 +599,7 @@ public partial class Reducers : IReducers
         var services = _servicesAccessor.Services;
         lock (ReadModelBuilderOwnership.SyncFor(_eventStore, ReadModelOwnershipSync))
         {
-            if (_released || cancellationToken.IsCancellationRequested || !IsCurrent(handler))
+            if (!CanReconnect(handler, cancellationToken))
             {
                 return;
             }
@@ -609,6 +609,9 @@ public partial class Reducers : IReducers
             RegisterReducer(handler, services, cancellationToken);
         }
     }
+
+    bool CanReconnect(IReducerHandler handler, CancellationToken cancellationToken) =>
+        !_released && !cancellationToken.IsCancellationRequested && IsCurrent(handler);
 
     bool IsCurrent(IReducerHandler handler) =>
         (_handlersByType.TryGetValue(handler.ReducerType, out var current) || _handlersByModelType.TryGetValue(handler.ReadModelType, out current)) &&
@@ -625,32 +628,7 @@ public partial class Reducers : IReducers
             handler.Id,
             handler.EventSequenceId);
 
-        var filter = ObserverEventFilter.For(handler.ReducerType, _eventStore.EventSources);
-        var registration = new RegisterReducer
-        {
-            ConnectionId = _eventStore.Connection.Lifecycle.ConnectionId,
-            EventStore = _eventStore.Name,
-            Namespace = _eventStore.Namespace,
-            PageDelivery = ObserverBatchSize.For(handler.ReducerType, handler.Invoker is IBatchReducerInvoker { HasBatchMethod: true }).ToContract(),
-            StateCaching = new() { Enabled = true },
-            Reducer = new ReducerDefinition
-            {
-                GenerationDelivery = (Contracts.Observation.EventGenerationDelivery)GenerationDelivery,
-                ReducerId = handler.Id,
-                EventSequenceId = handler.EventSequenceId,
-                EventTypes = handler.EventTypes.Select(et => new EventTypeWithKeyExpression { EventType = et.ToContract(), Key = WellKnownExpressions.EventSourceId }).ToArray(),
-                ReadModel = handler.ReadModelType.GetReadModelIdentifier(),
-                IsActive = handler.IsActive,
-                Tags = handler.ReducerType.GetTags().ToArray(),
-                Filters = new()
-                {
-                    FilterTags = filter.FilterTags.ToArray(),
-                    EventSourceType = filter.EventSourceType.Value,
-                    EventStreamType = filter.EventStreamType.Value
-                },
-                Hash = GetFingerprint(handler.ReducerType)
-            }
-        };
+        var registration = CreateRegistration(handler);
 
 #pragma warning disable CA2000 // Dispose objects before losing scope
         var messages = new SerializedMessages<ReducerMessage>(new(new(registration)));
@@ -663,39 +641,7 @@ public partial class Reducers : IReducers
         backoff.StreamOpened();
         var operationsToObserve = services.Reducers.Observe(messages.Messages, cancellationToken);
 
-        // Re-establish the observation after the stream ends or fails. The kernel can end a reducer's stream without
-        // an error; without re-subscribing then, the reducer silently stops observing until the whole client
-        // reconnects. Only the reducer's own cancellation stops it, and the delay avoids a hot loop, backing off while
-        // the stream keeps ending.
-        void ScheduleReconnect()
-        {
-            if (cancellationToken.IsCancellationRequested)
-            {
-                _ = scheduler.DrainAndDispose();
-                return;
-            }
-
-            _ = ScheduleReconnectWork(async () =>
-            {
-                try
-                {
-                    await scheduler.DrainAndDispose();
-                    await WaitBeforeReconnect(backoff.NextDelay(), cancellationToken);
-                    if (cancellationToken.IsCancellationRequested)
-                    {
-                        return;
-                    }
-
-                    _logger.ReconnectingReducer(handler.Id);
-                    ReconnectIfCurrent(handler, cancellationToken);
-                }
-                catch (OperationCanceledException) { }
-                catch (Exception ex)
-                {
-                    _logger.ReducerReconnectFailed(handler.Id, ex);
-                }
-            });
-        }
+        void ScheduleReconnect() => ScheduleReducerReconnect(handler, scheduler, backoff, cancellationToken);
 
         // https://github.com/dotnet/reactive/issues/459
         operationsToObserve
@@ -720,37 +666,7 @@ public partial class Reducers : IReducers
                     scheduler.Stop();
                     messages.Dispose();
 
-                    if (cancellationToken.IsCancellationRequested)
-                    {
-                        _logger.ReducerStreamCancelled(handler.Id, ex);
-                        _ = scheduler.DrainAndDispose();
-                        return;
-                    }
-
-                    // Any other error reconnects, whatever its kind: only the reducer's own cancellation stops it.
-                    // A lost kernel connection stays a Warning however long it lasts: a kernel that stays away is
-                    // reported at Error by the connection watchdog on every failed reconnect attempt.
-                    switch (ex.ClassifyStreamError())
-                    {
-                        case KernelConnectionErrorKind.Cancelled:
-                            _logger.ReducerStreamCancelled(handler.Id, ex);
-                            break;
-                        case KernelConnectionErrorKind.ConnectionLost:
-                            _logger.ReducerStreamLostConnection(handler.Id, ex);
-                            break;
-                        case KernelConnectionErrorKind.SessionLost:
-                            // The kernel lost this client's registration: reconnect the whole client, which
-                            // re-registers every reducer with a fresh connection id.
-                            _logger.ReducerStreamLostConnection(handler.Id, ex);
-                            _ = scheduler.DrainAndDispose();
-                            _eventStore.Connection.RequestReconnect();
-                            return;
-                        default:
-                            _logger.ReducerStreamFailed(handler.Id, ex);
-                            break;
-                    }
-
-                    ScheduleReconnect();
+                    HandleStreamError(handler, scheduler, ex, ScheduleReconnect, cancellationToken);
                 },
                 () =>
                 {
@@ -759,6 +675,114 @@ public partial class Reducers : IReducers
                     _logger.ReducerStreamCompleted(handler.Id);
                     ScheduleReconnect();
                 });
+    }
+
+    RegisterReducer CreateRegistration(IReducerHandler handler)
+    {
+        var filter = ObserverEventFilter.For(handler.ReducerType, _eventStore.EventSources);
+        return new RegisterReducer
+        {
+            ConnectionId = _eventStore.Connection.Lifecycle.ConnectionId,
+            EventStore = _eventStore.Name,
+            Namespace = _eventStore.Namespace,
+            PageDelivery = ObserverBatchSize.For(handler.ReducerType, handler.Invoker is IBatchReducerInvoker { HasBatchMethod: true }).ToContract(),
+            StateCaching = new() { Enabled = true },
+            Reducer = new ReducerDefinition
+            {
+                GenerationDelivery = (Contracts.Observation.EventGenerationDelivery)GenerationDelivery,
+                ReducerId = handler.Id,
+                EventSequenceId = handler.EventSequenceId,
+                EventTypes = handler.EventTypes.Select(et => new EventTypeWithKeyExpression { EventType = et.ToContract(), Key = WellKnownExpressions.EventSourceId }).ToArray(),
+                ReadModel = handler.ReadModelType.GetReadModelIdentifier(),
+                IsActive = handler.IsActive,
+                Tags = handler.ReducerType.GetTags().ToArray(),
+                Filters = new()
+                {
+                    FilterTags = filter.FilterTags.ToArray(),
+                    EventSourceType = filter.EventSourceType.Value,
+                    EventStreamType = filter.EventStreamType.Value
+                },
+                Hash = GetFingerprint(handler.ReducerType)
+            }
+        };
+    }
+
+    void ScheduleReducerReconnect(
+        IReducerHandler handler,
+        PartitionedDeliveryScheduler scheduler,
+        ObservationReconnectBackoff backoff,
+        CancellationToken cancellationToken)
+    {
+        // Re-establish the observation after the stream ends or fails. The kernel can end a reducer's stream without
+        // an error; without re-subscribing then, the reducer silently stops observing until the whole client
+        // reconnects. Only the reducer's own cancellation stops it, and the delay avoids a hot loop, backing off while
+        // the stream keeps ending.
+        if (cancellationToken.IsCancellationRequested)
+        {
+            _ = scheduler.DrainAndDispose();
+            return;
+        }
+
+        _ = ScheduleReconnectWork(async () =>
+        {
+            try
+            {
+                await scheduler.DrainAndDispose();
+                await WaitBeforeReconnect(backoff.NextDelay(), cancellationToken);
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    return;
+                }
+
+                _logger.ReconnectingReducer(handler.Id);
+                ReconnectIfCurrent(handler, cancellationToken);
+            }
+            catch (OperationCanceledException) { }
+            catch (Exception ex)
+            {
+                _logger.ReducerReconnectFailed(handler.Id, ex);
+            }
+        });
+    }
+
+    void HandleStreamError(
+        IReducerHandler handler,
+        PartitionedDeliveryScheduler scheduler,
+        Exception exception,
+        Action scheduleReconnect,
+        CancellationToken cancellationToken)
+    {
+        if (cancellationToken.IsCancellationRequested)
+        {
+            _logger.ReducerStreamCancelled(handler.Id, exception);
+            _ = scheduler.DrainAndDispose();
+            return;
+        }
+
+        // Any other error reconnects, whatever its kind: only the reducer's own cancellation stops it.
+        // A lost kernel connection stays a Warning however long it lasts: a kernel that stays away is
+        // reported at Error by the connection watchdog on every failed reconnect attempt.
+        switch (exception.ClassifyStreamError())
+        {
+            case KernelConnectionErrorKind.Cancelled:
+                _logger.ReducerStreamCancelled(handler.Id, exception);
+                break;
+            case KernelConnectionErrorKind.ConnectionLost:
+                _logger.ReducerStreamLostConnection(handler.Id, exception);
+                break;
+            case KernelConnectionErrorKind.SessionLost:
+                // The kernel lost this client's registration: reconnect the whole client, which
+                // re-registers every reducer with a fresh connection id.
+                _logger.ReducerStreamLostConnection(handler.Id, exception);
+                _ = scheduler.DrainAndDispose();
+                _eventStore.Connection.RequestReconnect();
+                return;
+            default:
+                _logger.ReducerStreamFailed(handler.Id, exception);
+                break;
+        }
+
+        scheduleReconnect();
     }
 
     string GetFingerprint(Type reducerType) => ReducerCatalog.IsSelfReducer(reducerType)
