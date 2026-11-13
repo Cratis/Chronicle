@@ -1135,6 +1135,8 @@ jobs:
     needs: [already-ran, dotnet-build]
     strategy:
       fail-fast: false
+      # One of the integration slot caps pinned by test-sparse-integration-workflows.py (see integration.yml, #5875).
+      max-parallel: 1
       matrix:
         include:
           # The Community edition has one database, so every namespace shares it.
@@ -1201,13 +1203,86 @@ jobs:
           path: ./Integration/Neo4j/coverage-results/
           retention-days: 1
 
+  # ReportGenerator over about 170 Cobertura files in one job took 9 minutes and sat alone at the end of the run (#5875).
+  # Each group below merges its own artifacts in parallel into one smaller Cobertura file, and coverage-merge-and-cache merges
+  # those few files. The groups must partition every coverage-results-* artifact exactly once; a spec pins that, because an
+  # artifact no group matches would silently drop a lane from coverage.
+  coverage-partial:
+    # Same condition as coverage-merge-and-cache: never merge, and never cache, incomplete results.
+    if: ${{ needs.already-ran.outputs.skip != 'true' && (!cancelled() && github.event_name != 'pull_request_target' && needs.specs.result == 'success' && needs.integration.result == 'success' && needs.integration-api.result == 'success' && needs.mongodb.result == 'success' && needs.neo4j.result == 'success') }}
+    name: coverage-partial (${{ matrix.group }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    needs: [already-ran, specs, integration, integration-api, mongodb, neo4j]
+    permissions:
+      contents: read
+      actions: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - group: client-mongodb
+            pattern: coverage-results-client-*-mongodb
+          - group: client-sqlite
+            pattern: coverage-results-client-*-sqlite
+          # A pull request without --all-providers has no PostgreSQL or SQL Server client shards; such a group is skipped.
+          - group: client-postgresql
+            pattern: coverage-results-client-*-postgresql
+          - group: client-mssql
+            pattern: coverage-results-client-*-mssql
+          - group: rest
+            pattern: coverage-results-{specs-other,specs-sql,kernel,clustering,integration-api,mongodb,neo4j}*
+
+    steps:
+      - name: Download coverage artifacts of the group
+        uses: actions/download-artifact@v4
+        with:
+          path: ./coverage-input
+          pattern: ${{ matrix.pattern }}
+
+      - name: Find coverage files
+        id: inputs
+        run: |
+          count=$(find ./coverage-input -name "coverage.cobertura.xml" -type f | wc -l)
+          echo "Group ${{ matrix.group }}: $count coverage files"
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+
+      - name: Setup .Net
+        if: steps.inputs.outputs.count != '0'
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Install coverage tools
+        if: steps.inputs.outputs.count != '0'
+        run: dotnet tool install --global dotnet-reportgenerator-globaltool
+
+      - name: Merge the coverage of the group
+        if: steps.inputs.outputs.count != '0'
+        run: |
+          reportgenerator \
+            -reports:"./coverage-input/**/coverage.cobertura.xml" \
+            -targetdir:"./coverage-partial" \
+            -reporttypes:"Cobertura" \
+            -assemblyfilters:"-*.Specs;-xunit*;-NSubstitute*"
+          ls -la ./coverage-partial/
+
+      - name: Upload the merged coverage of the group
+        if: steps.inputs.outputs.count != '0'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-partial-${{ matrix.group }}
+          path: ./coverage-partial/Cobertura.xml
+          if-no-files-found: error
+          retention-days: 1
+
   coverage-merge-and-cache:
     # Override implicit success() so the unused DEVELOPMENT ancestor does not suppress coverage.
     # Require every immediate prerequisite: never cache incomplete results (including ordinary PRs).
-    if: ${{ needs.already-ran.outputs.skip != 'true' && (!cancelled() && github.event_name != 'pull_request_target' && needs.specs.result == 'success' && needs.integration.result == 'success' && needs.integration-api.result == 'success' && needs.mongodb.result == 'success' && needs.neo4j.result == 'success') }}
+    if: ${{ needs.already-ran.outputs.skip != 'true' && (!cancelled() && github.event_name != 'pull_request_target' && needs.specs.result == 'success' && needs.integration.result == 'success' && needs.integration-api.result == 'success' && needs.mongodb.result == 'success' && needs.neo4j.result == 'success' && needs.coverage-partial.result == 'success') }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
-    needs: [already-ran, specs, integration, integration-api, mongodb, neo4j]
+    needs: [already-ran, specs, integration, integration-api, mongodb, neo4j, coverage-partial]
     permissions:
       contents: read
       actions: read
@@ -1226,30 +1301,19 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: Download all coverage artifacts
+      # The per-lane artifacts are merged by the coverage-partial groups; only their merged output is needed here.
+      - name: Download the merged coverage of every group
         uses: actions/download-artifact@v4
         with:
-          path: ./all-coverage-results
-          # Download all coverage artifacts using wildcard pattern
-          pattern: coverage-results-*
+          path: ./coverage-partials
+          pattern: coverage-partial-*
 
-      - name: Merge coverage results
+      - name: List the merged coverage files
         run: |
-          # Create directories for merged coverage
-          mkdir -p ./coverage-results
-          mkdir -p ./coverage-reports
-          
-          # Find all coverage.cobertura.xml files from artifacts and copy them
-          find ./all-coverage-results -name "coverage.cobertura.xml" -type f | while IFS= read -r file; do
-            echo "Found coverage file: $file"
-            # Create unique directory for each coverage file
-            dirname_hash=$(echo "$file" | md5sum | cut -d' ' -f1)
-            mkdir -p "./coverage-results/$dirname_hash"
-            cp "$file" "./coverage-results/$dirname_hash/coverage.cobertura.xml"
-          done
-          
-          echo "Merged coverage results:"
-          find ./coverage-results -name "coverage.cobertura.xml" | head -20
+          count=$(find ./coverage-partials -name "Cobertura.xml" -type f | wc -l)
+          echo "Merging $count partial coverage files"
+          # The rest group always has files, so none at all means a group lost its upload.
+          test "$count" -gt 0
 
       - name: Install coverage tools
         run: dotnet tool install --global dotnet-reportgenerator-globaltool
@@ -1257,7 +1321,7 @@ jobs:
       - name: Generate merged coverage report
         run: |
           reportgenerator \
-            -reports:"./coverage-results/**/coverage.cobertura.xml" \
+            -reports:"./coverage-partials/**/Cobertura.xml" \
             -targetdir:"./coverage-reports" \
             -reporttypes:"Cobertura;JsonSummary" \
             -assemblyfilters:"-*.Specs;-xunit*;-NSubstitute*"

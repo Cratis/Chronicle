@@ -158,6 +158,11 @@ test('failed, cancelled and skipped package verification or analyzers cannot tur
         assert.ok(dependencies('coverage-merge-and-cache').includes(job), `coverage merge waits for ${job}`);
     }
     assert.ok(dependencies('coverage-merge-and-cache').includes('specs'), 'coverage merge still waits for the aggregate');
+    // #5875: the per-group partial merges wait for and require every lane, and the final merge waits for all of them.
+    for (const job of ['specs', 'integration', 'integration-api', 'mongodb', 'neo4j']) {
+        assert.ok(dependencies('coverage-partial').includes(job), `partial coverage merge waits for ${job}`);
+    }
+    assert.ok(dependencies('coverage-merge-and-cache').includes('coverage-partial'), 'final coverage merge waits for the partials');
 });
 
 test('publish-equivalent pack runs independently with the same setup and restore-only cache', () => {

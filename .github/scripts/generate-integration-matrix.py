@@ -86,7 +86,14 @@ SHARD_COUNTS = {
     "for_EventSequence": 4,
     "for_Reactors": 2,
     "for_Reducers": 2,
+    # One class carries most of the time in each, so two shards roughly halve the longest solo jobs (#5875).
+    "for_ReadModels": 2,
+    "for_EventStoreSubscriptions": 2,
 }
+
+# Start order of the client matrix. GitHub starts matrix jobs in include order, so alphabetical order starts the
+# slowest shards last and they become the tail of the run (#5875). The file maps '<namespace>|<shard>' to seconds.
+SHARD_ORDER_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "integration-shard-order.json")
 
 # mode | database | needs-docker. Out-of-process exercises every storage backend
 # through the real Chronicle container; in-process covers MongoDB.
@@ -319,6 +326,24 @@ def _suite_units(suite, batches, namespaces=None):
     return result
 
 
+def _load_shard_seconds():
+    """Read the measured seconds per '<namespace>|<shard>'."""
+    with open(SHARD_ORDER_PATH, encoding="utf-8") as handle:
+        return json.load(handle)["seconds"]
+
+
+def order_longest_first(include, seconds):
+    """Order entries longest first; unlisted entries follow in their original order.
+
+    The sort is stable and never adds, drops or edits an entry, so a stale table only changes start order.
+    """
+    def duration(entry):
+        name = entry["namespace"].removeprefix(NAMESPACE_PREFIX).split("+")[0]
+        return seconds.get(f"{name}|{entry['shard']}", 0)
+
+    return sorted(include, key=lambda entry: -duration(entry))
+
+
 def build_include(suite, databases, batches, namespaces=None):
     """Build the matrix entries for a suite, optionally restricted to the named namespaces.
 
@@ -356,7 +381,7 @@ def build_include(suite, databases, batches, namespaces=None):
         if name == "GraphProjections":
             include.append({**entry, "shard": GRAPH_ENTERPRISE_SHARD, "mode": "inprocess", "database": "mongodb", "needs-docker": True,
                             "neo4j-image": GRAPH_ENTERPRISE_IMAGE, "neo4j-database-mode": "PerNamespace"})
-    return include
+    return order_longest_first(include, _load_shard_seconds()) if suite == "client" else include
 
 
 def main(argv=None):
