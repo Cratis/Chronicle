@@ -34,8 +34,17 @@ public class GraphProjectionPipeline(
     IObjectComparer objectComparer,
     ILogger<GraphProjectionPipeline> logger) : IProjectionPipeline
 {
+    long _activity;
+
     /// <inheritdoc/>
-    public Task BeginReplay(ReplayContext context) => sink.BeginReplay(projection.Identifier, context);
+    public long GetActivity() => Interlocked.Read(ref _activity);
+
+    /// <inheritdoc/>
+    public Task BeginReplay(ReplayContext context)
+    {
+        Interlocked.Increment(ref _activity);
+        return sink.BeginReplay(projection.Identifier, context);
+    }
 
     /// <inheritdoc/>
     public Task ResumeReplay(ReplayContext context) => sink.ResumeReplay(projection.Identifier, context);
@@ -61,6 +70,8 @@ public class GraphProjectionPipeline(
     /// <inheritdoc/>
     public async Task<ProjectionEventContext> Handle(AppendedEvent @event)
     {
+        Interlocked.Increment(ref _activity);
+
         // Operations on one node or edge can come from events of many event sources, so handling is serialized per projection.
         using var handleScope = await handleLock.AcquireCoarse();
         var context = ProjectionEventContext.Empty(objectComparer, @event);

@@ -8,6 +8,32 @@ namespace Cratis.Chronicle.Projections.Engine.Pipelines;
 /// <param name="Pipeline">The pipeline which owns buffered work for that graph.</param>
 public record ProjectionPipelineBinding(IProjection Projection, IProjectionPipeline Pipeline)
 {
+    readonly object _gate = new();
+    long _observedActivity = Pipeline.GetActivity();
+    DateTimeOffset? _idleSince;
+
     /// <summary>Gets the definition fingerprint captured when the pipeline was created.</summary>
     public string Fingerprint { get; } = Projection.DefinitionFingerprint;
+
+    /// <summary>
+    /// Observes the pipeline and reports whether it has shown no activity since the previous observations for at least the timeout.
+    /// </summary>
+    /// <param name="now">The current time.</param>
+    /// <param name="timeout">How long the pipeline must have been inactive.</param>
+    /// <returns>True when the pipeline has been idle for the timeout.</returns>
+    internal bool IsIdle(DateTimeOffset now, TimeSpan timeout)
+    {
+        lock (_gate)
+        {
+            var activity = Pipeline.GetActivity();
+            if (activity != _observedActivity || _idleSince is null)
+            {
+                _observedActivity = activity;
+                _idleSince = now;
+                return false;
+            }
+
+            return now - _idleSince.Value >= timeout;
+        }
+    }
 }

@@ -62,11 +62,17 @@ public partial class ProjectionPipeline(
     /// </remarks>
     readonly ProjectionHandleLock _handleLock = handleLock;
 
+    long _activity;
+
+    /// <inheritdoc/>
+    public long GetActivity() => Interlocked.Read(ref _activity);
+
     ReadModelContainerName ChangesetContainer => generation?.Destination ?? projection.ReadModel.ContainerName;
 
     /// <inheritdoc/>
     public async Task BeginReplay(ReplayContext context)
     {
+        Interlocked.Increment(ref _activity);
         ClearPreparedPage();
         _isReplaying = true;
         replayScopedCache.BeginReplaySession();
@@ -82,6 +88,7 @@ public partial class ProjectionPipeline(
     /// <inheritdoc/>
     public Task ResumeReplay(ReplayContext context)
     {
+        Interlocked.Increment(ref _activity);
         ClearPreparedPage();
         _isReplaying = true;
         replayScopedCache.BeginReplaySession();
@@ -133,10 +140,18 @@ public partial class ProjectionPipeline(
     }
 
     /// <inheritdoc/>
-    public Task BeginBulk() => sink.BeginBulk();
+    public Task BeginBulk()
+    {
+        Interlocked.Increment(ref _activity);
+        return sink.BeginBulk();
+    }
 
     /// <inheritdoc/>
-    public Task ResumeBulk() => sink.ResumeBulk();
+    public Task ResumeBulk()
+    {
+        Interlocked.Increment(ref _activity);
+        return sink.ResumeBulk();
+    }
 
     /// <inheritdoc/>
     public Task<BulkFlushResult> FlushBulk() => sink.FlushBulk();
@@ -158,6 +173,8 @@ public partial class ProjectionPipeline(
     /// <inheritdoc/>
     public async Task<ProjectionEventContext> Handle(AppendedEvent @event)
     {
+        Interlocked.Increment(ref _activity);
+
         // A purely event-source-keyed projection resolves every event's key to its own event source id, so striping
         // on the event source id is striping on the resolved key: same-key handling serializes, different-key
         // handling runs in parallel. Any projection that can collapse partitions keeps the coarse lock.

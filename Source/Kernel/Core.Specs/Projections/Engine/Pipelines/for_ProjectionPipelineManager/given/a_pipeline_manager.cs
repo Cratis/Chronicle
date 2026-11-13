@@ -24,6 +24,7 @@ public class a_pipeline_manager : Specification
     protected IStorage _storage;
     protected ISink _sink;
     protected IGrainFactory _grainFactory;
+    protected ManualTimeProvider _time;
 
     void Establish()
     {
@@ -35,6 +36,7 @@ public class a_pipeline_manager : Specification
         _projection.DefinitionFingerprint.Returns("first");
         _storage.GetEventStore(_store).GetNamespace(_namespace).Sinks.GetFor(_projection.ReadModel).Returns(_sink);
         _grainFactory = Substitute.For<IGrainFactory>();
+        _time = new();
         _manager = new(
             _storage,
             _grainFactory,
@@ -42,6 +44,8 @@ public class a_pipeline_manager : Specification
             Substitute.For<ITypeFormats>(),
             Substitute.For<IReadModelsCompliance>(),
             Options.Create(new ChronicleOptions()),
-            NullLoggerFactory.Instance);
+            NullLoggerFactory.Instance,
+            null,
+            _time);
     }
 }
