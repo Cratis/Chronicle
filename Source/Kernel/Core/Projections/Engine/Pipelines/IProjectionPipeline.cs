@@ -81,6 +81,13 @@ public interface IProjectionPipeline
     long GetActivity() => 0;
 
     /// <summary>
+    /// Gets whether the pipeline has an open replay or bulk session whose buffered work still has to be flushed or drained.
+    /// </summary>
+    /// <remarks>A pinned pipeline is never released by the idle sweep, however long it has shown no activity.</remarks>
+    /// <returns>True when the pipeline must stay discoverable.</returns>
+    bool IsPinned() => false;
+
+    /// <summary>
     /// Prepares the pipeline for a page of events that is about to be handled, one partition run at a time.
     /// </summary>
     /// <param name="events">The events of the page, in the order they will be handled.</param>

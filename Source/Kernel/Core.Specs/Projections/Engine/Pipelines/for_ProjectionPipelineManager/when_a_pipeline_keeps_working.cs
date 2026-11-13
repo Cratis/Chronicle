@@ -19,7 +19,7 @@ public class when_a_pipeline_keeps_working : given.a_pipeline_manager
         for (var i = 0; i < 4; i++)
         {
             _time.Advance(ProjectionPipelineManager.IdleTimeout / 2);
-            await _pipeline.BeginBulk();
+            await _pipeline.PreparePage([]);
             _manager.SweepIdle();
         }
 

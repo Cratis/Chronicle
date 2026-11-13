@@ -211,8 +211,12 @@ public class ProjectionPipelineManager(
         ICollection<KeyValuePair<string, ProjectionPipelineBinding>> entries = _pipelines;
         foreach (var entry in _pipelines.ToArray())
         {
-            if (!entry.Value.IsIdle(now, IdleTimeout)) continue;
-            if (entries.Remove(entry)) entry.Value.Pipeline.ClearPreparedPage();
+            if (entry.Value.Pipeline.IsPinned() || !entry.Value.IsIdle(now, IdleTimeout)) continue;
+            if (!entries.Remove(entry)) continue;
+
+            // A session opened between the check and the removal must stay discoverable for its flush/drain.
+            if (entry.Value.Pipeline.IsPinned()) _pipelines.TryAdd(entry.Key, entry.Value);
+            else entry.Value.Pipeline.ClearPreparedPage();
         }
 
         _handleLocks.Prune();

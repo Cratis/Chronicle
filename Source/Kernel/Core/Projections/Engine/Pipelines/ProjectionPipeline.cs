@@ -63,11 +63,15 @@ public partial class ProjectionPipeline(
     readonly ProjectionHandleLock _handleLock = handleLock;
 
     long _activity;
+    bool _bulkOpen;
+
+    ReadModelContainerName ChangesetContainer => generation?.Destination ?? projection.ReadModel.ContainerName;
 
     /// <inheritdoc/>
     public long GetActivity() => Interlocked.Read(ref _activity);
 
-    ReadModelContainerName ChangesetContainer => generation?.Destination ?? projection.ReadModel.ContainerName;
+    /// <inheritdoc/>
+    public bool IsPinned() => Volatile.Read(ref _isReplaying) || Volatile.Read(ref _bulkOpen);
 
     /// <inheritdoc/>
     public async Task BeginReplay(ReplayContext context)
@@ -143,6 +147,7 @@ public partial class ProjectionPipeline(
     public Task BeginBulk()
     {
         Interlocked.Increment(ref _activity);
+        Volatile.Write(ref _bulkOpen, true);
         return sink.BeginBulk();
     }
 
@@ -150,6 +155,7 @@ public partial class ProjectionPipeline(
     public Task ResumeBulk()
     {
         Interlocked.Increment(ref _activity);
+        Volatile.Write(ref _bulkOpen, true);
         return sink.ResumeBulk();
     }
 
@@ -160,6 +166,7 @@ public partial class ProjectionPipeline(
     public Task<IEnumerable<FailedPartition>> EndBulk()
     {
         ClearPreparedPage();
+        Volatile.Write(ref _bulkOpen, false);
         return sink.EndBulk();
     }
 
@@ -167,6 +174,7 @@ public partial class ProjectionPipeline(
     public Task<IEnumerable<FailedPartition>> EndBulk(CancellationToken cancellationToken)
     {
         ClearPreparedPage();
+        Volatile.Write(ref _bulkOpen, false);
         return sink.EndBulk(cancellationToken);
     }
 

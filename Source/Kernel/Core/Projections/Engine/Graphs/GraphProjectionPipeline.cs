@@ -35,37 +35,69 @@ public class GraphProjectionPipeline(
     ILogger<GraphProjectionPipeline> logger) : IProjectionPipeline
 {
     long _activity;
+    bool _sessionOpen;
 
     /// <inheritdoc/>
     public long GetActivity() => Interlocked.Read(ref _activity);
 
     /// <inheritdoc/>
+    public bool IsPinned() => Volatile.Read(ref _sessionOpen);
+
+    /// <inheritdoc/>
     public Task BeginReplay(ReplayContext context)
     {
         Interlocked.Increment(ref _activity);
+        Volatile.Write(ref _sessionOpen, true);
         return sink.BeginReplay(projection.Identifier, context);
     }
 
     /// <inheritdoc/>
-    public Task ResumeReplay(ReplayContext context) => sink.ResumeReplay(projection.Identifier, context);
+    public Task ResumeReplay(ReplayContext context)
+    {
+        Interlocked.Increment(ref _activity);
+        Volatile.Write(ref _sessionOpen, true);
+        return sink.ResumeReplay(projection.Identifier, context);
+    }
 
     /// <inheritdoc/>
-    public Task<IEnumerable<FailedPartition>> EndReplay(ReplayContext context) => sink.EndReplay(projection.Identifier, context);
+    public Task<IEnumerable<FailedPartition>> EndReplay(ReplayContext context)
+    {
+        Volatile.Write(ref _sessionOpen, false);
+        return sink.EndReplay(projection.Identifier, context);
+    }
 
     /// <inheritdoc/>
-    public Task LeaveReplay() => sink.LeaveReplay(projection.Identifier);
+    public Task LeaveReplay()
+    {
+        Volatile.Write(ref _sessionOpen, false);
+        return sink.LeaveReplay(projection.Identifier);
+    }
 
     /// <inheritdoc/>
-    public Task BeginBulk() => sink.BeginBulk();
+    public Task BeginBulk()
+    {
+        Interlocked.Increment(ref _activity);
+        Volatile.Write(ref _sessionOpen, true);
+        return sink.BeginBulk();
+    }
 
     /// <inheritdoc/>
-    public Task ResumeBulk() => sink.ResumeBulk();
+    public Task ResumeBulk()
+    {
+        Interlocked.Increment(ref _activity);
+        Volatile.Write(ref _sessionOpen, true);
+        return sink.ResumeBulk();
+    }
 
     /// <inheritdoc/>
     public Task<BulkFlushResult> FlushBulk() => sink.FlushBulk();
 
     /// <inheritdoc/>
-    public Task<IEnumerable<FailedPartition>> EndBulk() => sink.EndBulk();
+    public Task<IEnumerable<FailedPartition>> EndBulk()
+    {
+        Volatile.Write(ref _sessionOpen, false);
+        return sink.EndBulk();
+    }
 
     /// <inheritdoc/>
     public async Task<ProjectionEventContext> Handle(AppendedEvent @event)
