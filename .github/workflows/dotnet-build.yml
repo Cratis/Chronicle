@@ -522,29 +522,11 @@ jobs:
       - name: Build with DEVELOPMENT symbol
         run: dotnet build --configuration Release -p:EnableDevelopmentSymbol=true -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
 
-      # Client, Kernel and Clustering shards download only their own project's output (a fraction of the full
-      # artifact below, which the SQL clustering shards still use).
+      # Every integration shard downloads only its own project's output; no full build tarball is produced.
       - name: Pack per-project integration build output
         uses: ./.github/actions/pack-integration-output
         with:
           prefix: build-output-development
-
-      - name: Pack DEVELOPMENT build output
-        run: |
-          set -euo pipefail
-          for project in Integration/Client Integration/Kernel Integration/Clustering Integration/SqlClustering; do
-            test -d "$project/bin/Release/net11.0" || { echo "Missing build output for $project" >&2; exit 1; }
-          done
-          find . -type d -name bin -not -path '*/node_modules/*' -prune -print0 | tar --null -I 'zstd -T0' -cf build-output-development.tar.zst -T -
-
-      - name: Upload DEVELOPMENT build output
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-output-development
-          path: build-output-development.tar.zst
-          retention-days: 1
-          compression-level: 0
-          if-no-files-found: error
 
   # Requested PR path: builds in parallel with the specs, so integration does not wait for
   # specs and then for this build in sequence. The integration job still requires successful
@@ -596,23 +578,6 @@ jobs:
         uses: ./.github/actions/pack-integration-output
         with:
           prefix: build-output-development
-
-      - name: Pack DEVELOPMENT build output
-        run: |
-          set -euo pipefail
-          for project in Integration/Client Integration/Kernel Integration/Clustering Integration/SqlClustering; do
-            test -d "$project/bin/Release/net11.0" || { echo "Missing build output for $project" >&2; exit 1; }
-          done
-          find . -type d -name bin -not -path '*/node_modules/*' -prune -print0 | tar --null -I 'zstd -T0' -cf build-output-development.tar.zst -T -
-
-      - name: Upload DEVELOPMENT build output
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-output-development
-          path: build-output-development.tar.zst
-          retention-days: 1
-          compression-level: 0
-          if-no-files-found: error
 
   # Shared Linux runner acceptance is independent of the built assemblies and shard selection.
   # Keep it off the shard setup path, but require its success through the stable specs gate.
