@@ -2,7 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 export * from './AllEventTypeGenerations';
 export * from './AllEventTypes';
+export * from './CheckEventTypeRegistrations';
+export * from './CheckEventTypeRegistrationsResult';
 export * from './CreateEventType';
+export * from './EventTypeCheckResult';
 export * from './EventTypeDetails';
 export * from './EventTypesWithAnnotations';
 export * from './GetEventTypesWithAnnotations';

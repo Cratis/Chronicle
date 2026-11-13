@@ -20,6 +20,13 @@ internal sealed class EventTypes(
     global::Microsoft.Extensions.Logging.ILogger<global::Cratis.Chronicle.Services.EventTypes.EventTypes> logger) : global::Cratis.Chronicle.Contracts.EventTypes.IEventTypes
 {
     /// <inheritdoc/>
+    public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult<global::Cratis.Chronicle.Contracts.EventTypes.CheckEventTypeRegistrationsResponse>> CheckEventTypeRegistrations(global::Cratis.Chronicle.Contracts.EventTypes.CheckEventTypeRegistrationsRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
+        CommandExecutor.Execute<global::Cratis.Chronicle.EventTypes.CheckEventTypeRegistrationsResult, global::Cratis.Chronicle.Contracts.EventTypes.CheckEventTypeRegistrationsResponse>(
+            commandPipeline,
+            new global::Cratis.Chronicle.EventTypes.CheckEventTypeRegistrations((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, request.Types),
+            response => ToCheckEventTypeRegistrationsResponse(response));
+
+    /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> CreateEventType(global::Cratis.Chronicle.Contracts.EventTypes.CreateEventTypeRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         CommandExecutor.Execute(
             commandPipeline,
@@ -89,6 +96,12 @@ internal sealed class EventTypes(
                 return result.Select(ToEventTypesWithAnnotationsResponse).ToList();
             },
             exception => logger.QueryFailed(exception, "EventTypes", "GetEventTypesWithAnnotations"));
+
+    static global::Cratis.Chronicle.Contracts.EventTypes.CheckEventTypeRegistrationsResponse ToCheckEventTypeRegistrationsResponse(global::Cratis.Chronicle.EventTypes.CheckEventTypeRegistrationsResult source) =>
+        new()
+        {
+            Results = source.Results.Select(element0 => element0.ToContract()).ToList()
+        };
 
     static global::Cratis.Chronicle.Contracts.EventTypes.NormalizeEventTypeSchemasResponse ToNormalizeEventTypeSchemasResponse(global::Cratis.Chronicle.EventTypes.NormalizeEventTypeSchemasResult source) =>
         new()

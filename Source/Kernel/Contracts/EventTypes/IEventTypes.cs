@@ -20,6 +20,14 @@ namespace Cratis.Chronicle.Contracts.EventTypes;
 public interface IEventTypes
 {
     /// <summary>
+    /// Executes the CheckEventTypeRegistrations command.
+    /// </summary>
+    /// <param name = "request">The CheckEventTypeRegistrations request.</param>
+    /// <param name = "callContext">The gRPC call context.</param>
+    /// <returns>The command result.</returns>
+    [Operation]
+    Task<CommandResult<CheckEventTypeRegistrationsResponse>> CheckEventTypeRegistrations(CheckEventTypeRegistrationsRequest request, CallContext callContext = default);
+    /// <summary>
     /// Executes the CreateEventType command.
     /// </summary>
     /// <param name = "request">The CreateEventType request.</param>
@@ -83,6 +91,38 @@ public interface IEventTypes
     /// <returns>The query result.</returns>
     [Operation]
     Task<QueryResult<IEnumerable<EventTypesWithAnnotationsResponse>>> GetEventTypesWithAnnotations(GetEventTypesWithAnnotationsRequest request, CallContext callContext = default);
+}
+
+/// <summary>
+/// Represents the CheckEventTypeRegistrationsRequest message.
+/// </summary>
+[ProtoContract]
+public class CheckEventTypeRegistrationsRequest
+{
+    /// <summary>
+    /// Gets or sets the eventStore.
+    /// </summary>
+    [ProtoMember(1)]
+    public string EventStore { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the types.
+    /// </summary>
+    [ProtoMember(2)]
+    public IEnumerable<global::Cratis.Chronicle.Contracts.Events.EventTypeRegistration> Types { get; set; } = new List<global::Cratis.Chronicle.Contracts.Events.EventTypeRegistration>();
+}
+
+/// <summary>
+/// Represents the CheckEventTypeRegistrationsResponse message.
+/// </summary>
+[ProtoContract]
+public class CheckEventTypeRegistrationsResponse
+{
+    /// <summary>
+    /// Gets or sets the Results.
+    /// </summary>
+    [ProtoMember(1)]
+    public IEnumerable<global::Cratis.Chronicle.Contracts.EventTypes.EventTypeCheckResult> Results { get; set; } = new List<global::Cratis.Chronicle.Contracts.EventTypes.EventTypeCheckResult>();
 }
 
 /// <summary>
