@@ -70,6 +70,17 @@ internal sealed class MetricSet
     internal MetricInstrument<T, GaugeMetricRecorder<T>> Gauge<T>(string name, string? unit, string? description = null, string firstKey = "", string secondKey = "")
         where T : struct => Create<T, GaugeMetricRecorder<T>>(name, unit, description, firstKey, secondKey, metadata => new GaugeMetricRecorder<T>(_meter?.CreateGauge<T>(metadata.Name, metadata.Unit, metadata.Description)));
 
+    /// <summary>Creates a gauge with no legacy name, using convention names and keys in every naming mode.</summary>
+    /// <typeparam name="T">The measurement type.</typeparam>
+    /// <param name="name">The convention name.</param>
+    /// <param name="unit">The convention unit.</param>
+    /// <param name="description">The convention description.</param>
+    /// <returns>The precreated gauge.</returns>
+    internal MetricInstrument<T, GaugeMetricRecorder<T>> ConventionOnlyGauge<T>(string name, string unit, string description)
+        where T : struct => Created(new MetricInstrument<T, GaugeMetricRecorder<T>>(
+            new SingleMetricInstrument<T, GaugeMetricRecorder<T>>(
+                new GaugeMetricRecorder<T>(_meter?.CreateGauge<T>(name, unit, description)), ConventionTags, string.Empty, string.Empty)));
+
     /// <summary>Creates a histogram in the selected naming mode.</summary>
     /// <typeparam name="T">The measurement type.</typeparam>
     /// <param name="name">The convention name.</param>

@@ -10,15 +10,7 @@ public class when_legacy_global_replay_is_cleaned_up : given.a_projection_replay
 {
     Exception _flushError;
 
-    void Establish()
-    {
-        _projection.Scope.Returns(ProjectionScope.Global);
-        _projections.TryGet(_observerDetails.Key.EventStore, _observerDetails.Key.Namespace, _observerDetails.Key.ObserverId, out Arg.Any<Engine.IProjection>()).Returns(call =>
-        {
-            call[3] = _projection;
-            return true;
-        });
-    }
+    void Establish() => _projection.Scope.Returns(ProjectionScope.Global);
 
     async Task Because() => _flushError = await Catch.Exception(() => _handler.FlushReplayFor(_observerDetails));
 

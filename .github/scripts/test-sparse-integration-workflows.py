@@ -713,13 +713,14 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         for key in ("steps", "permissions", "runs-on", "timeout-minutes"):
             self.assertEqual(parallel[key], requested[key], key)
         steps = requested["steps"]
-        self.assertEqual(10, len(steps))
+        self.assertEqual(8, len(steps))
         build = next(step for step in steps if step.get("name") == "Build with DEVELOPMENT symbol")
         self.assertEqual("dotnet build --configuration Release -p:EnableDevelopmentSymbol=true "
                          "-p:DisableProxyGenerator=true -p:DisableDockerBuild=true", build["run"])
-        upload = steps[-1]["with"]
-        self.assertEqual("build-output-development", upload["name"])
-        self.assertEqual("build-output-development.tar.zst", upload["path"])
+        # The full build-output-development tarball had no reader (#5866); only the per-project pack remains.
+        self.assertEqual("Pack per-project integration build output", steps[-1]["name"])
+        self.assertEqual({"prefix": "build-output-development"}, steps[-1]["with"])
+        self.assertFalse([step for step in steps if "DEVELOPMENT build output" in step.get("name", "")])
         self.assertEqual("build-output-development", jobs["integration"]["with"]["build-output-artifact"])
         self.assertEqual("${{ needs.dotnet-build.outputs.chronicle-image }}",
                          jobs["integration"]["with"]["chronicle-image"])
@@ -883,12 +884,7 @@ class IntegrationSingleBuildContracts(unittest.TestCase):
         producers = workflow("dotnet-build.yml")["jobs"]
         for name in ("dotnet-build-development", "dotnet-build-development-requested"):
             steps = producers[name]["steps"]
-            pack = next(step["run"] for step in steps if step["name"] == "Pack DEVELOPMENT build output")
-            self.assertIn("set -euo pipefail", pack)
-            self.assertIn("Integration/Client Integration/Kernel Integration/Clustering Integration/SqlClustering", pack)
-            self.assertIn('test -d "$project/bin/Release/net11.0"', pack)
-            self.assertIn("exit 1", pack)
-            self.assertEqual("error", steps[-1]["with"]["if-no-files-found"])
+            self.assertFalse([step for step in steps if step["name"] in ("Pack DEVELOPMENT build output", "Upload DEVELOPMENT build output")])
             per_project = next(step for step in steps if step["name"] == "Pack per-project integration build output")
             self.assertEqual("./.github/actions/pack-integration-output", per_project["uses"])
             self.assertEqual({"prefix": "build-output-development"}, per_project["with"])
@@ -1181,6 +1177,20 @@ class for_parallel_requested_integration(unittest.TestCase):
         self.assertIn('if [ "$INTEGRATION" != "success" ]; then\n'
                       '  echo "::error::Requested integration did not pass ($INTEGRATION)."\n'
                       '  exit 1', decide["run"])
+
+    def test_client_integration_lanes_keep_crash_minidumps_even_when_a_retry_passes(self):
+        # Cratis/Chronicle#5630: the test host intermittently dies with SIGSEGV and no dump was kept.
+        steps = workflow("integration.yml")["jobs"]["client-integration-specs"]["steps"]
+        run = next(step for step in steps if step.get("name", "").startswith("Run Client integration tests"))
+        env = run["env"]
+        self.assertEqual("1", env["DOTNET_DbgEnableMiniDump"])
+        self.assertEqual("1", env["DOTNET_DbgMiniDumpType"])
+        self.assertTrue(env["DOTNET_DbgMiniDumpName"].startswith("${{ runner.temp }}/crash-dumps/"))
+        self.assertIn('mkdir -p "$RUNNER_TEMP/crash-dumps"', run["run"])
+        upload = next(step for step in steps if step.get("name") == "Upload crash dumps")
+        self.assertEqual("always()", upload["if"])  # a retried crash leaves the job green
+        self.assertEqual("${{ runner.temp }}/crash-dumps/", upload["with"]["path"])
+        self.assertEqual("ignore", upload["with"]["if-no-files-found"])
 
 
 if __name__ == "__main__":

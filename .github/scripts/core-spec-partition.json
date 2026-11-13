@@ -466,6 +466,10 @@
             "weight": 0.0006104732185188725
         },
         {
+            "prefix": "Cratis.Chronicle.Projections.Engine.for_ProjectionDefinitionInitialization.",
+            "weight": 0.0005
+        },
+        {
             "prefix": "Cratis.Chronicle.Projections.Engine.for_ProjectionDefinitionRegistrationFailed.",
             "weight": 0.00032892556436176916
         },
@@ -483,7 +487,7 @@
         },
         {
             "prefix": "Cratis.Chronicle.Projections.Engine.for_ProjectionInitialization.",
-            "weight": 0.0006104732185188725
+            "weight": 0.0001104732185188725
         },
         {
             "prefix": "Cratis.Chronicle.Projections.Engine.for_ProjectionRegistrationError.",

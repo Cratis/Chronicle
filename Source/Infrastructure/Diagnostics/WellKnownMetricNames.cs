@@ -8,6 +8,12 @@ namespace Cratis.Chronicle.Diagnostics;
 /// </summary>
 public static class WellKnownMetricNames
 {
+    /// <summary>Number of compiled projection graphs retained in the engine cache.</summary>
+    public const string ProjectionCachedGraphs = "cratis.chronicle.projection.cached_graphs";
+
+    /// <summary>Unit of <see cref="ProjectionCachedGraphs"/>.</summary>
+    public const string ProjectionCachedGraphsUnit = "{graph}";
+
     /// <summary>Number of successful observations.</summary>
     public const string ObserverSuccessfulObservations = "cratis.chronicle.observer.successful_observations";
 

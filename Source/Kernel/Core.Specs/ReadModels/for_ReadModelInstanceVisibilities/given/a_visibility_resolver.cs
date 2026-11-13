@@ -3,10 +3,12 @@
 
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Projections;
+using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
-using Cratis.Chronicle.Projections.Engine;
+using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.Sinks;
 using EngineProjectionsManager = Cratis.Chronicle.Projections.Engine.IProjectionsManager;
@@ -20,18 +22,32 @@ public class a_visibility_resolver : Specification
     protected static readonly ProjectionId ProjectionId = "the-projection";
 
     protected EngineProjectionsManager _projectionsManager;
-    protected IProjection _projection;
+    protected ProjectionDefinition _projection;
     protected ReadModelInstanceVisibilities _resolver;
     protected ReadModelInstanceVisibility _result;
 
     void Establish()
     {
         _projectionsManager = Substitute.For<EngineProjectionsManager>();
-        _projection = Substitute.For<IProjection>();
-        _projection.HasParent.Returns(false);
-        _projection.SubscribesToAllEvents.Returns(false);
-        _projection.ChildProjections.Returns([Substitute.For<IProjection>()]);
-        _projection.OperationTypes.Returns(new Dictionary<EventType, ProjectionOperationType>());
+        _projection = new(
+            ProjectionOwner.Client,
+            EventSequenceId.Log,
+            ProjectionId,
+            "model",
+            true,
+            true,
+            new(),
+            new Dictionary<EventType, FromDefinition>(),
+            new Dictionary<EventType, JoinDefinition>(),
+            new Dictionary<PropertyPath, ChildrenDefinition>
+            {
+                ["children"] = new("id", new Dictionary<EventType, FromDefinition>(), new Dictionary<EventType, JoinDefinition>(), new Dictionary<PropertyPath, ChildrenDefinition>(), new(new Dictionary<PropertyPath, string>(), false), new Dictionary<EventType, RemovedWithDefinition>(), new Dictionary<EventType, RemovedWithJoinDefinition>())
+            },
+            [],
+            new(new Dictionary<PropertyPath, string>(), false),
+            new Dictionary<EventType, RemovedWithDefinition>(),
+            new Dictionary<EventType, RemovedWithJoinDefinition>(),
+            null);
         _resolver = new(_projectionsManager);
     }
 
@@ -47,10 +63,6 @@ public class a_visibility_resolver : Specification
         new Dictionary<ReadModelGeneration, JsonSchema> { { ReadModelGeneration.First, new JsonSchema() } },
         []);
 
-    protected void ProjectionIsRegistered(IProjection projection) =>
-        _projectionsManager.TryGet(EventStore, Namespace, ProjectionId, out Arg.Any<IProjection?>()).Returns(call =>
-        {
-            call[3] = projection;
-            return true;
-        });
+    protected void ProjectionIsRegistered(ProjectionDefinition projection) =>
+        _projectionsManager.GetDefinition(EventStore, ProjectionId).Returns(projection);
 }
