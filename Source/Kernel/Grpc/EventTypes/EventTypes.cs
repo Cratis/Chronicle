@@ -26,6 +26,13 @@ internal sealed class EventTypes(
             new global::Cratis.Chronicle.EventTypes.CreateEventType((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.Events.EventTypeId)request.Name));
 
     /// <inheritdoc/>
+    public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult<global::Cratis.Chronicle.Contracts.EventTypes.NormalizeEventTypeSchemasResponse>> NormalizeEventTypeSchemas(global::Cratis.Chronicle.Contracts.EventTypes.NormalizeEventTypeSchemasRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
+        CommandExecutor.Execute<global::Cratis.Chronicle.EventTypes.NormalizeEventTypeSchemasResult, global::Cratis.Chronicle.Contracts.EventTypes.NormalizeEventTypeSchemasResponse>(
+            commandPipeline,
+            new global::Cratis.Chronicle.EventTypes.NormalizeEventTypeSchemas((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, request.EventTypeIds?.Select(x => (global::Cratis.Chronicle.Concepts.Events.EventTypeId)x)),
+            response => ToNormalizeEventTypeSchemasResponse(response));
+
+    /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> RegisterEventTypes(global::Cratis.Chronicle.Contracts.EventTypes.RegisterEventTypesRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         CommandExecutor.Execute(
             commandPipeline,
@@ -71,6 +78,24 @@ internal sealed class EventTypes(
                 .Select(_ => (IEnumerable<global::Cratis.Chronicle.Contracts.EventTypes.EventTypeDetailsResponse>)_.Select(ToEventTypeDetailsResponse).ToList()),
             exception => logger.QueryFailed(exception, "EventTypes", "ObserveEventTypes"));
 
+    /// <inheritdoc/>
+    public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.EventTypes.EventTypesWithAnnotationsResponse>>> GetEventTypesWithAnnotations(global::Cratis.Chronicle.Contracts.EventTypes.GetEventTypesWithAnnotationsRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
+        QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.EventTypes.EventTypesWithAnnotationsResponse>>(
+            callContext,
+            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: null),
+            async () =>
+            {
+                var result = await global::Cratis.Chronicle.EventTypes.EventTypesWithAnnotations.GetEventTypesWithAnnotations((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, storage);
+                return result.Select(ToEventTypesWithAnnotationsResponse).ToList();
+            },
+            exception => logger.QueryFailed(exception, "EventTypes", "GetEventTypesWithAnnotations"));
+
+    static global::Cratis.Chronicle.Contracts.EventTypes.NormalizeEventTypeSchemasResponse ToNormalizeEventTypeSchemasResponse(global::Cratis.Chronicle.EventTypes.NormalizeEventTypeSchemasResult source) =>
+        new()
+        {
+            Changed = source.Changed.Select(ToEventTypesWithAnnotationsResponse).ToList()
+        };
+
     static global::Cratis.Chronicle.Contracts.EventTypes.EventTypeDetailsResponse ToEventTypeDetailsResponse(global::Cratis.Chronicle.EventTypes.EventTypeDetails source) =>
         new()
         {
@@ -79,5 +104,13 @@ internal sealed class EventTypes(
             Owner = source.Owner,
             Source = source.Source,
             Schema = source.Schema
+        };
+
+    static global::Cratis.Chronicle.Contracts.EventTypes.EventTypesWithAnnotationsResponse ToEventTypesWithAnnotationsResponse(global::Cratis.Chronicle.EventTypes.EventTypesWithAnnotations source) =>
+        new()
+        {
+            EventTypeId = (string)source.EventTypeId,
+            Generation = (uint)source.Generation,
+            Keywords = source.Keywords
         };
 }

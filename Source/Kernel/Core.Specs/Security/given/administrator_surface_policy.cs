@@ -78,6 +78,7 @@ public static class administrator_surface_policy
         ["EventStores.EventStoreDeployment"] = "read-only deployment diagnostics; generation and artifact fingerprint only",
         ["EventStores.EventStoreNames"] = "read-only store discovery",
         ["EventTypes.EventTypeDetails"] = "read-only event-type inspection",
+        ["EventTypes.EventTypesWithAnnotations"] = "read-only event-type inspection",
         ["ExternalServices.ExternalService"] = "read-only service definitions",
         ["Identities.IdentityDetails"] = "read-only identity inspection",
         ["Imports.ImportProgress"] = "read-only import progress",
