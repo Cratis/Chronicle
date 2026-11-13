@@ -342,6 +342,19 @@ public partial class InMemorySink(
     }
 
     /// <inheritdoc/>
+    public Task<IReadOnlyCollection<Key>> FindKeysHoldingChild(ChildRemovedFromAll childRemoved)
+    {
+        KeyValuePair<object, ExpandoObject>[] snapshot;
+        lock (_collectionLock)
+        {
+            snapshot = [.. Collection];
+        }
+
+        IReadOnlyCollection<Key> keys = [.. snapshot.Where(row => HoldsChild(row.Value, childRemoved)).Select(row => new Key(row.Key, ArrayIndexers.NoIndexers))];
+        return Task.FromResult(keys);
+    }
+
+    /// <inheritdoc/>
     public Task EnsureIndexes() => Task.CompletedTask;
 
     /// <inheritdoc/>

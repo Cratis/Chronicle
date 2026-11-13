@@ -27,6 +27,7 @@ namespace Cratis.Chronicle.Projections.for_ProjectionObserverSubscriber.given;
 
 public class a_subscriber_with_a_cached_pipeline : Specification
 {
+    protected TestKitSilo _silo;
     protected ProjectionObserverSubscriber _subscriber;
     protected IObserver _observer;
     protected IProjectionChangesetNotifier _notifier;
@@ -46,7 +47,7 @@ public class a_subscriber_with_a_cached_pipeline : Specification
 
     async Task Establish()
     {
-        var silo = new TestKitSilo();
+        var silo = _silo = new TestKitSilo();
         _definition = CreateDefinition();
         _stateStorage = Substitute.For<IStorage<ProjectionDefinition>>();
         _stateStorage.State = _definition;

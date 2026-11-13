@@ -11,6 +11,7 @@ using context = Cratis.Chronicle.Kernel.Integration.Projections.for_ProjectionsM
 using KernelChronicleBuilder = Cratis.Chronicle.Configuration.IChronicleBuilder;
 using KernelEventStoreName = Cratis.Chronicle.Concepts.EventStoreName;
 using KernelNamespaceName = Cratis.Chronicle.Concepts.EventStoreNamespaceName;
+using KernelObserverId = Cratis.Chronicle.Concepts.Observation.ObserverId;
 using KernelProjectionId = Cratis.Chronicle.Concepts.Projections.ProjectionId;
 using ProjectionRegistrationError = Cratis.Chronicle.Projections.Engine.ProjectionRegistrationError;
 
@@ -128,5 +129,6 @@ public class when_identical_registrations_arrive_concurrently(context context) :
 
         public Task Unregister(KernelEventStoreName eventStore, KernelProjectionId projectionId) => inner.Unregister(eventStore, projectionId);
         public Task NamespaceAdded(KernelEventStoreName eventStore, KernelNamespaceName @namespace) => inner.NamespaceAdded(eventStore, @namespace);
+        public Task SetWatchState(KernelEventStoreName eventStore, KernelNamespaceName @namespace, KernelObserverId projection, bool isWatched) => inner.SetWatchState(eventStore, @namespace, projection, isWatched);
     }
 }
