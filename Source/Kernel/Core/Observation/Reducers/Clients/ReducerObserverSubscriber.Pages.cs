@@ -93,16 +93,26 @@ public partial class ReducerObserverSubscriber
                 .Select(_ => new ReduceOperation(_.Key, _.Events, _.InitialState) { DeliverWithin = deliverWithin, Origin = context.Origin })
                 .ToArray();
             var completions = operations.ToDictionary(_ => _.Partition, _ => new TaskCompletionSource<ReducerSubscriberResult>(TaskCreationOptions.RunContinuationsAsynchronously));
-            reducerMediator.OnNextPage(_key.ObserverId, client.ConnectionId, _key.EventStore, _key.Namespace, operations, completions);
+            try
+            {
+                reducerMediator.OnNextPage(_key.ObserverId, client.ConnectionId, _key.EventStore, _key.Namespace, operations, completions);
 
-            // The client answers the page as a whole, so the page waits for every partition. One partition the client never
-            // answers holds the page until the delivery's deadline, and the whole page is then abandoned: every partition
-            // fails and is delivered again, the ones the client did answer included, since nothing of the page is written.
-            var answers = await deliveryWait.For(
-                Task.WhenAll(completions.Select(async _ => (_.Key, Result: await _.Value.Task))),
-                StateReportedForPage,
-                context);
-            return answers.ToDictionary(_ => _.Key, _ => _.Result);
+                // The client answers the page as a whole, so the page waits for every partition. One partition the client never
+                // answers holds the page until the delivery's deadline, and the whole page is then abandoned: every partition
+                // fails and is delivered again, the ones the client did answer included, since nothing of the page is written.
+                var answers = await deliveryWait.For(
+                    Task.WhenAll(completions.Select(async _ => (_.Key, Result: await _.Value.Task))),
+                    StateReportedForPage,
+                    context);
+                return answers.ToDictionary(_ => _.Key, _ => _.Result);
+            }
+            finally
+            {
+                foreach (var completion in completions.Values)
+                {
+                    completion.TrySetCanceled();
+                }
+            }
         };
 
     /// <summary>
