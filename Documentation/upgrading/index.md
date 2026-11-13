@@ -74,6 +74,13 @@ column mapping. The migrator does not alter their existing columns in place. See
 [Exact decimal values](../events/schema-representation.mdx#exact-decimal-values) for provider mappings, legacy doubles and the
 SQL Server scale limit.
 
+## Stored schema annotations from .NET 11 clients
+
+Upgrade the kernel before clients that emit different schema annotations. Registration tolerates annotation
+differences but does not clean up annotations already stored. To inspect and explicitly normalize schemas
+written by older clients, follow [Clean up stored schema annotations](../operations/schema-annotation-cleanup.md).
+Cleanup preserves titles, descriptions, constraints, generations, migrations, and event content.
+
 ## Reverse proxies after the forwarded-header security change
 
 Chronicle now trusts `X-Forwarded-For` and `X-Forwarded-Proto` only from loopback or configured
