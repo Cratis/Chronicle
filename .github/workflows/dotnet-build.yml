@@ -194,6 +194,10 @@ jobs:
       # Shared org cache: pull requests restore only; the nightly build and default-branch runs save (Cratis/Workflows#164).
       - name: Cache NuGet packages
         uses: Cratis/Workflows/.github/actions/dotnet-cache@main
+        # Full-solution build: on a key miss, start from an empty package folder so stale versions
+        # from the restore-keys fallback never reach the saved cache (Cratis/Workflows#241).
+        with:
+          prune-on-miss: 'true'
 
       - name: Restore obj cache
         id: restore-obj
@@ -324,6 +328,9 @@ jobs:
 
       - name: Cache NuGet packages
         uses: Cratis/Workflows/.github/actions/dotnet-cache@main
+        # Full-solution build that can save first, so it prunes too (see the dotnet-build job).
+        with:
+          prune-on-miss: 'true'
 
       # No obj cache: dotnet-build saves one built without analyzers, and an up-to-date
       # compilation restored from it must never stand in for an analyzed one.
@@ -502,6 +509,9 @@ jobs:
       # Shared org cache: pull requests restore only; the nightly build and default-branch runs save (Cratis/Workflows#164).
       - name: Cache NuGet packages
         uses: Cratis/Workflows/.github/actions/dotnet-cache@main
+        # Full-solution build that can save first, so it prunes too (see the dotnet-build job).
+        with:
+          prune-on-miss: 'true'
 
       - name: Restore obj cache
         uses: actions/cache@v4
@@ -554,6 +564,9 @@ jobs:
       # Shared org cache: pull requests restore only; the nightly build and default-branch runs save (Cratis/Workflows#164).
       - name: Cache NuGet packages
         uses: Cratis/Workflows/.github/actions/dotnet-cache@main
+        # Pull requests only restore, so this never prunes; it keeps the steps identical to dotnet-build-development.
+        with:
+          prune-on-miss: 'true'
 
       - name: Restore obj cache
         uses: actions/cache@v4
@@ -605,6 +618,9 @@ jobs:
 
       - name: Cache NuGet packages
         uses: Cratis/Workflows/.github/actions/dotnet-cache@main
+        # Full-solution build that can save first, so it prunes too (see the dotnet-build job).
+        with:
+          prune-on-miss: 'true'
 
       # No obj cache: the DEVELOPMENT builds save one built without analyzers, and an up-to-date
       # compilation restored from it must never stand in for an analyzed one.
