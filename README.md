@@ -162,7 +162,7 @@ Start the local kernel below, then follow a [client or host quickstart](https://
 
 ### Prerequisites
 
-- [.NET 8+](https://dotnet.microsoft.com/download)
+- [.NET 10 or higher](https://dotnet.microsoft.com/download)
 - [Docker](https://www.docker.com/) (to run Chronicle)
 
 ### Installation

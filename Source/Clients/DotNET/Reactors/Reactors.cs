@@ -4,6 +4,7 @@
 using System.Collections.Frozen;
 using System.Reactive.Linq;
 using System.Reactive.Threading.Tasks;
+using System.Runtime.CompilerServices;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Contracts;
@@ -26,11 +27,7 @@ namespace Cratis.Chronicle.Reactors;
 /// </summary>
 public partial class Reactors : IReactors, IReactorPartitionRecovery
 {
-#if NET8_0
-    static readonly object _registerLock = new();
-#else
     static readonly Lock _registerLock = new();
-#endif
     readonly IEventStore _eventStore;
     readonly IEventTypes _eventTypes;
     readonly IClientArtifactsProvider _clientArtifactsProvider;
@@ -42,6 +39,7 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
     readonly ReactorDispatcher _dispatcher;
     readonly IChronicleServicesAccessor _servicesAccessor;
     readonly List<(ReactorId Id, Action<IReactorBuilder> Define)> _pendingDefinitions = [];
+    readonly ConditionalWeakTable<ReactorHandler, ObservationReconnectBackoff> _reconnectBackoffs = [];
     IReadOnlyDictionary<ReactorId, ReactorRegistration> _handlers = FrozenDictionary<ReactorId, ReactorRegistration>.Empty;
 
     bool _registered;
@@ -166,9 +164,30 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
     internal int MaxConcurrentPartitions { get; init; } = PartitionedDeliveryScheduler.DefaultMaxConcurrentPartitions;
 
     /// <summary>
-    /// Gets the delay before a reactor re-registers after its observation stream ended.
+    /// Gets the delay before a reactor re-registers after its observation stream ended, once the stream had worked.
     /// </summary>
+    /// <remarks>Streams that end without having worked back off from this, see <see cref="ObservationReconnectBackoff"/>.</remarks>
     internal TimeSpan ReconnectDelay { get; init; } = TimeSpan.FromSeconds(2);
+
+    /// <summary>
+    /// Gets the longest delay before a reactor re-registers, however often its streams end.
+    /// </summary>
+    internal TimeSpan MaxReconnectDelay { get; init; } = ObservationReconnectBackoff.DefaultMaxDelay;
+
+    /// <summary>
+    /// Gets how long an observation stream must stay open to count as having worked.
+    /// </summary>
+    internal TimeSpan HealthyStreamDuration { get; init; } = ObservationReconnectBackoff.DefaultHealthyStreamDuration;
+
+    /// <summary>
+    /// Gets the source of the jitter spreading out reconnecting reactors, a value in [0, 1).
+    /// </summary>
+    internal Func<double> ReconnectJitter { get; init; } = Random.Shared.NextDouble;
+
+    /// <summary>
+    /// Gets how the wait before a reactor re-registers is done. Specs replace this to observe the waits.
+    /// </summary>
+    internal Func<TimeSpan, CancellationToken, Task> WaitBeforeReconnect { get; init; } = Task.Delay;
 
     /// <summary>
     /// Gets how the re-registration work is started. Specs replace this to run the work deterministically.
@@ -619,6 +638,10 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
     {
         var registrations = _handlers.Values.ToArray();
         DisconnectHandlers();
+        foreach (var registration in registrations)
+        {
+            _logger.ReactorDisconnected(registration.Handler.Id);
+        }
         _handlers = registrations.Select(RecreateRegistration).ToFrozenDictionary(_ => _.Handler.Id);
     }
 
@@ -648,6 +671,9 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
     bool IsCurrentHandler(ReactorHandler handler) =>
         _handlers.TryGetValue(handler.Id, out var current) && ReferenceEquals(current.Handler, handler);
 
+    bool IsStaleReconnect(ReactorHandler handler, CancellationToken cancellationToken) =>
+        cancellationToken.IsCancellationRequested || _released || !IsCurrentHandler(handler);
+
     void ReconnectIfCurrent(ReactorRegistration registration, CancellationToken cancellationToken)
     {
         var handler = registration.Handler;
@@ -657,7 +683,7 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
         var services = _servicesAccessor.Services;
         lock (_registerLock)
         {
-            if (cancellationToken.IsCancellationRequested || _released || !IsCurrentHandler(handler))
+            if (IsStaleReconnect(handler, cancellationToken))
             {
                 _logger.SkippingStaleReactorReconnect(handler.Id);
                 return;
@@ -668,23 +694,15 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
         }
     }
 
-    void RegisterReactor(ReactorRegistration registration, IServices services)
+    RegisterReactor BuildRegisterRequest(ReactorRegistration registration)
     {
         var handler = registration.Handler;
-        ThrowIfDeliveredOverHttp(handler);
-        ClientObserverHosting.ThrowIfUnavailable(_eventStore.Connection, "Reactor", () => handler.Id.Value);
-        if (GenerationDelivery == Observation.EventGenerationDelivery.Pinned)
-        {
-            GenerationDeliveryValidation.Validate(handler.EventTypes);
-        }
-
-        _logger.RegisteringReactor(handler.Id);
-        var request = new RegisterReactor
+        return new RegisterReactor
         {
             ConnectionId = _eventStore.Connection.Lifecycle.ConnectionId,
             EventStore = _eventStore.Name,
             Namespace = _eventStore.Namespace,
-            PageDelivery = new() { Enabled = true },
+            PageDelivery = ObserverBatchSize.For(handler.ReactorType).ToContract(),
             Reactor = new ReactorDefinition
             {
                 GenerationDelivery = (Contracts.Observation.EventGenerationDelivery)GenerationDelivery,
@@ -703,6 +721,20 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
                 }
             }
         };
+    }
+
+    void RegisterReactor(ReactorRegistration registration, IServices services)
+    {
+        var handler = registration.Handler;
+        ThrowIfDeliveredOverHttp(handler);
+        ClientObserverHosting.ThrowIfUnavailable(_eventStore.Connection, "Reactor", () => handler.Id.Value);
+        if (GenerationDelivery == Observation.EventGenerationDelivery.Pinned)
+        {
+            GenerationDeliveryValidation.Validate(handler.EventTypes);
+        }
+
+        _logger.RegisteringReactor(handler.Id);
+        var request = BuildRegisterRequest(registration);
 
 #pragma warning disable CA2000 // Dispose objects before losing scope
         var messages = new SerializedMessages<ReactorMessage>(new(new(request)));
@@ -714,6 +746,8 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
 #if CHRONICLE_ROLLING_DIAGNOSTICS
         var diagnostic = ReactorsDeliveryDiagnosticsLogging.Open(_logger);
 #endif
+        var backoff = _reconnectBackoffs.GetValue(handler, _ => new(ReconnectDelay, MaxReconnectDelay, HealthyStreamDuration, TimeProvider.System, ReconnectJitter));
+        backoff.StreamOpened();
         var eventsToObserve = services.Reactors.Observe(messages.Messages, cancellationToken);
 
         // Re-establish the observation after the stream ends. A cross-store
@@ -721,7 +755,7 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
         // forever, so onCompleted fires with no error — without re-subscribing
         // there, the reactor silently goes Disconnected and never recovers until
         // the whole client reconnects (which is why cross-service invite accepts
-        // stranded). The 2s delay avoids a hot loop if the stream keeps ending.
+        // stranded). The delay avoids a hot loop if the stream keeps ending, and backs off while it does.
         void ScheduleReconnect()
         {
             if (cancellationToken.IsCancellationRequested)
@@ -734,7 +768,7 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
                 try
                 {
                     await scheduler.DrainAndDispose();
-                    await Task.Delay(ReconnectDelay, cancellationToken);
+                    await WaitBeforeReconnect(backoff.NextDelay(), cancellationToken);
                     ReconnectIfCurrent(registration, cancellationToken);
                 }
                 catch (OperationCanceledException ex)
@@ -752,6 +786,7 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
         eventsToObserve
             .Select(events =>
             {
+                backoff.StreamDelivered();
 #if CHRONICLE_ROLLING_DIAGNOSTICS
                 var batch = ReactorsDeliveryDiagnosticsLogging.NextBatch(_logger, diagnostic.Stream, ref diagnostic.Batch, events);
 #endif
@@ -823,6 +858,7 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
                     messages.Dispose();
                     ScheduleReconnect();
                 });
+        _logger.ReactorObservationSubscribed(handler.Id);
     }
 
 #if CHRONICLE_ROLLING_DIAGNOSTICS

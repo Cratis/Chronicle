@@ -8,7 +8,7 @@ on:
         value: ${{ jobs.discover.outputs.all-providers }}
     inputs:
       build-output-artifact:
-        description: "Name of the DEVELOPMENT-symbol build output artifact. The Client, Kernel and Clustering lanes download <name>-client, <name>-kernel and <name>-clustering (see .github/actions/pack-integration-output); the SQL clustering lane downloads <name>."
+        description: "Name of the DEVELOPMENT-symbol build output artifact. The Client, Kernel and Clustering lanes download <name>-client, <name>-kernel and <name>-clustering (see .github/actions/pack-integration-output); the SQL clustering lane downloads <name>-sqlclustering, which also carries the stamped client output."
         required: true
         type: string
       chronicle-image:
@@ -117,22 +117,28 @@ jobs:
     if: needs.discover.outputs.client-run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    # Slot budget (#5875): a per-run bound, not an org guarantee. The caps pinned by test-sparse-integration-workflows.py are
+    # client 34, kernel 2, clustering 1, sql-clustering 1, rolling-upgrade 1, plus neo4j 1 in dotnet-build.yml, and the
+    # integration-api and mongodb jobs (one each). That is 42 in theory; the singletons never all run beside a full client
+    # window, and a capped run measured a peak of 38 at client cap 36 (#4765) and 52 at cap 40 (#5875). Without a cap the
+    # all-provider matrix (149 shards) peaks far above 60. The matrix starts its longest shards first (integration-shard-order.json), so the cap costs little wall.
     strategy:
       fail-fast: false
+      max-parallel: 34
       matrix: ${{ fromJson(needs.discover.outputs.client-matrix) }}
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # The integration test projects target net10.0 only (Directory.Build.props),
-      # and these jobs only run already-built net10.0 assemblies, so installing the
-      # 8.0/9.0 SDKs on every matrix shard is pure setup overhead. Multi-targeting
+      # The integration test projects target net11.0 only (Directory.Build.props),
+      # and these jobs only run already-built net11.0 assemblies, so installing the
+      # 10.0 SDK on every matrix shard is pure setup overhead. Multi-targeting
       # only happens during `dotnet pack` in the publish workflows.
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 10.0.x
+          dotnet-version: 11.0.x
 
       - name: Download build output
         uses: actions/download-artifact@v4
@@ -152,11 +158,17 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Restore Client project
-        run: dotnet restore Integration/Client/Client.csproj
-
-      - name: Restore pinned coverage tool
-        run: dotnet tool restore
+      # The project restore and the pinned coverage tool restore are independent, so run them together;
+      # either failing fails the step.
+      - name: Restore Client project and pinned coverage tool
+        run: |
+          set -uo pipefail
+          dotnet tool restore & tool=$!
+          dotnet restore Integration/Client/Client.csproj & proj=$!
+          status=0
+          wait "$tool" || status=1
+          wait "$proj" || status=1
+          exit "$status"
 
       # Pre-pull Docker Hub images once per job so the per-fixture image
       # existence checks in Testcontainers do not race against anonymous
@@ -204,6 +216,11 @@ jobs:
           # The retry script owns --results-directory; point it at ./coverage-results so the
           # collected coverage and TRX files land where the upload step reads them.
           TEST_RESULTS_DIR: ./coverage-results
+          # Keep a mini crash dump when the test host dies with SIGSEGV (Cratis/Chronicle#5630);
+          # createdump does not create the directory, so the run script does.
+          DOTNET_DbgEnableMiniDump: 1
+          DOTNET_DbgMiniDumpType: 1
+          DOTNET_DbgMiniDumpName: ${{ runner.temp }}/crash-dumps/%e.%p.dmp
         # On failure, only the failed tests are re-run (up to TEST_MAX_ATTEMPTS), so a
         # transient pipeline/container flake does not redden the whole job. A systemic
         # failure (many tests failing, e.g. a fixture/container start error) fails fast
@@ -214,6 +231,7 @@ jobs:
         # it directly instead of recompiling the kernel from source. The restore
         # step above still regenerates project.assets.json for the test host.
         run: |
+          mkdir -p "$RUNNER_TEMP/crash-dumps"
           .github/scripts/run-tests-with-retry.sh \
             Integration/Client/Client.csproj \
             "${{ matrix.filter }}" \
@@ -235,6 +253,16 @@ jobs:
           path: ./coverage-results/
           retention-days: 1
 
+      # always(): the retry script can turn a crashed first attempt into a green job, and the dump is still wanted.
+      - name: Upload crash dumps
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: crash-dumps-client-${{ matrix.namespace }}-${{ matrix.shard }}-${{ matrix.mode }}-${{ matrix.database }}
+          path: ${{ runner.temp }}/crash-dumps/
+          if-no-files-found: ignore
+          retention-days: 3
+
   kernel-integration-specs:
     needs: [discover]
     if: needs.discover.outputs.kernel-run == 'true'
@@ -242,20 +270,21 @@ jobs:
     timeout-minutes: 120
     strategy:
       fail-fast: false
+      max-parallel: 2
       matrix: ${{ fromJson(needs.discover.outputs.kernel-matrix) }}
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # The integration test projects target net10.0 only (Directory.Build.props),
-      # and these jobs only run already-built net10.0 assemblies, so installing the
-      # 8.0/9.0 SDKs on every matrix shard is pure setup overhead. Multi-targeting
+      # The integration test projects target net11.0 only (Directory.Build.props),
+      # and these jobs only run already-built net11.0 assemblies, so installing the
+      # 10.0 SDK on every matrix shard is pure setup overhead. Multi-targeting
       # only happens during `dotnet pack` in the publish workflows.
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 10.0.x
+          dotnet-version: 11.0.x
 
       - name: Download build output
         uses: actions/download-artifact@v4
@@ -267,11 +296,17 @@ jobs:
           BUILD_OUTPUT_ARTIFACT: ${{ inputs.build-output-artifact }}
         run: tar -I zstd -xf "${BUILD_OUTPUT_ARTIFACT}-kernel.tar.zst"
 
-      - name: Restore Kernel project
-        run: dotnet restore Integration/Kernel/Kernel.csproj
-
-      - name: Restore pinned coverage tool
-        run: dotnet tool restore
+      # The project restore and the pinned coverage tool restore are independent, so run them together;
+      # either failing fails the step.
+      - name: Restore Kernel project and pinned coverage tool
+        run: |
+          set -uo pipefail
+          dotnet tool restore & tool=$!
+          dotnet restore Integration/Kernel/Kernel.csproj & proj=$!
+          status=0
+          wait "$tool" || status=1
+          wait "$proj" || status=1
+          exit "$status"
 
       # See the equivalent step in client-integration-specs for the rationale.
       - name: Pre-pull Docker Hub images
@@ -320,6 +355,7 @@ jobs:
     timeout-minutes: 120
     strategy:
       fail-fast: false
+      max-parallel: 1
       matrix: ${{ fromJson(needs.discover.outputs.clustering-matrix) }}
 
     steps:
@@ -330,7 +366,7 @@ jobs:
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 10.0.x
+          dotnet-version: 11.0.x
 
       - name: Download build output
         uses: actions/download-artifact@v4
@@ -342,11 +378,17 @@ jobs:
           BUILD_OUTPUT_ARTIFACT: ${{ inputs.build-output-artifact }}
         run: tar -I zstd -xf "${BUILD_OUTPUT_ARTIFACT}-clustering.tar.zst"
 
-      - name: Restore Clustering project
-        run: dotnet restore Integration/Clustering/Clustering.csproj
-
-      - name: Restore pinned coverage tool
-        run: dotnet tool restore
+      # The project restore and the pinned coverage tool restore are independent, so run them together;
+      # either failing fails the step.
+      - name: Restore Clustering project and pinned coverage tool
+        run: |
+          set -uo pipefail
+          dotnet tool restore & tool=$!
+          dotnet restore Integration/Clustering/Clustering.csproj & proj=$!
+          status=0
+          wait "$tool" || status=1
+          wait "$proj" || status=1
+          exit "$status"
 
       - name: Run Clustering integration tests (${{ matrix.namespace }})
         env:
@@ -385,6 +427,7 @@ jobs:
     timeout-minutes: 60
     strategy:
       fail-fast: false
+      max-parallel: 1
       matrix:
         provider: [PostgreSql, SqlServer]
 
@@ -427,28 +470,32 @@ jobs:
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 10.0.x
+          dotnet-version: 11.0.x
 
       - name: Download build output
         uses: actions/download-artifact@v4
         with:
-          name: ${{ inputs.build-output-artifact }}
+          name: ${{ inputs.build-output-artifact }}-sqlclustering
 
       - name: Extract build output
         env:
           BUILD_OUTPUT_ARTIFACT: ${{ inputs.build-output-artifact }}
-        run: tar -I zstd -xf "${BUILD_OUTPUT_ARTIFACT}.tar.zst"
+        run: tar -I zstd -xf "${BUILD_OUTPUT_ARTIFACT}-sqlclustering.tar.zst"
 
       - name: Read the stamped build version
         if: matrix.provider == 'RollingUpgrade'
         run: |
           set -euo pipefail
-          line=$(python3 .github/scripts/derive-build-version.py)
-          echo "$line" >> "$GITHUB_ENV"
-          if ! grep -a -F -q -- "${line#*=}" Source/Clients/DotNET/bin/Release/net10.0/Cratis.Chronicle.dll; then
-            echo "::error::Downloaded client does not contain the stamped build version ${line#*=}."
+          # Read the version the build stamped into the client rather than deriving it again: a release
+          # tagged between the build and this job would change the derived base version.
+          dll=Source/Clients/DotNET/bin/Release/net11.0/Cratis.Chronicle.dll
+          mapfile -t stamped < <(grep -a -o -P "[0-9]+\.[0-9]+\.0-ci-${GITHUB_RUN_NUMBER}(?![0-9])" "$dll" | sort -u)
+          if [ "${#stamped[@]}" -ne 1 ]; then
+            echo "::error::Expected one stamped build version for run ${GITHUB_RUN_NUMBER} in the downloaded client, found ${#stamped[@]}: ${stamped[*]:-none}."
             exit 1
           fi
+          echo "Stamped build version ${stamped[0]}"
+          echo "CRATIS_CHRONICLE_BUILD_VERSION=${stamped[0]}" >> "$GITHUB_ENV"
 
       - name: Login to GitHub Docker Registry
         uses: docker/login-action@v3
@@ -475,7 +522,7 @@ jobs:
             -p:Version="$CRATIS_CHRONICLE_BUILD_VERSION" -p:EnableRollingDeliveryDiagnostics=true \
             --artifacts-path "$RUNNER_TEMP/rolling-delivery-diagnostics"
           dotnet "$RUNNER_TEMP/rolling-il-tool/RollingDeliveryIl.dll" \
-            Source/Clients/DotNET/bin/Release/net10.0/Cratis.Chronicle.dll \
+            Source/Clients/DotNET/bin/Release/net11.0/Cratis.Chronicle.dll \
             --enabled "$RUNNER_TEMP/rolling-delivery-diagnostics/bin/DotNET/release/Cratis.Chronicle.dll"
           grep -a -F -q -- "$CRATIS_CHRONICLE_BUILD_VERSION" "$RUNNER_TEMP/rolling-delivery-diagnostics/bin/DotNET/release/Cratis.Chronicle.dll"
 
@@ -487,7 +534,7 @@ jobs:
         continue-on-error: true
         run: |
           node .github/scripts/measure-rolling-delivery-overhead.mjs \
-            --normal Integration/SqlClustering/bin/Release/net10.0/Cratis.Chronicle.Integration.SqlClustering.dll \
+            --normal Integration/SqlClustering/bin/Release/net11.0/Cratis.Chronicle.Integration.SqlClustering.dll \
             --enabled "$RUNNER_TEMP/rolling-delivery-diagnostics/bin/SqlClustering/release/Cratis.Chronicle.Integration.SqlClustering.dll" \
             --output "$RUNNER_TEMP/rolling-delivery-overhead"
 
@@ -568,6 +615,7 @@ jobs:
     timeout-minutes: 60
     strategy:
       fail-fast: false
+      max-parallel: 1
       matrix:
         # Replace nodes from the latest release one at a time under load on PostgreSQL (#5272).
         provider: [RollingUpgrade]

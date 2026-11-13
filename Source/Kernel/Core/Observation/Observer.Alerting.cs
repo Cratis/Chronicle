@@ -16,7 +16,6 @@ public partial class Observer
     /// Identifies the durable wakeup dedicated to alert reconciliation.
     /// </summary>
     internal const string AlertReminderName = "chronicle-observer:alerts";
-    const string LegacyAlertReminderName = "chronicle-observer-alert-reconciliation";
     readonly SemaphoreSlim _alertMutationLock = new(1, 1);
     readonly SemaphoreSlim _stateWriteLock = new(1, 1);
     readonly Dictionary<IncidentId, AlertClearedReason> _alertEndings = [];
@@ -25,6 +24,7 @@ public partial class Observer
     AlertDisposition _alertDisposition;
     Guid? _quarantineEpisodeId;
     bool _alertReconciliationPending = true;
+    bool _alertReportRequested;
     bool _alertStateNeedsPersistence;
     bool _alertReportScheduled;
     bool _alertReportInProgress;
@@ -57,8 +57,15 @@ public partial class Observer
     /// <summary>
     /// Gets a value indicating whether something is waiting to be reported, which is the only time the reminder is needed.
     /// </summary>
+    /// <remarks>
+    /// Every activation confirms its alert level once, but that confirmation alone does not need a durable wakeup: the
+    /// activation reports it straight away, the watchdog retries it while the activation lives and the next activation
+    /// confirms again. Registering a reminder for it made every activation write one and release it a period later, so a
+    /// cold start of thousands of healthy observers wrote thousands of reminders, and a silo that went down within that
+    /// period left them all overdue for the next start (#5677).
+    /// </remarks>
     bool HasAlertWorkPending =>
-        _alertReconciliationPending ||
+        (_alertReconciliationPending && _alertReportRequested) ||
         _alertStateNeedsPersistence ||
         _alertLifecycleId == Guid.Empty ||
         Failures.HasFailedPartitions ||
@@ -80,22 +87,9 @@ public partial class Observer
     /// </summary>
     internal void ScheduleAlertReport()
     {
-        _alertReconciliationPending = true;
+        _alertReportRequested = true;
         EnsureAlertReminderRegistered();
-        if (_deferAlertReports || _alertReportScheduled || _removed || !_observerExists)
-        {
-            return;
-        }
-
-        _alertReportScheduled = true;
-        this.ScheduleInSeparateTurn(async () =>
-        {
-            _alertReportScheduled = false;
-            if (_alertReconciliationPending)
-            {
-                await ReportAlertState();
-            }
-        });
+        ScheduleAlertReportTurn();
     }
 
     /// <summary>
@@ -219,6 +213,30 @@ public partial class Observer
         }
     }
 
+    /// <summary>
+    /// Confirms the alert level this activation loaded, without the durable wakeup a change needs.
+    /// </summary>
+    void ScheduleActivationAlertReport() => ScheduleAlertReportTurn();
+
+    void ScheduleAlertReportTurn()
+    {
+        _alertReconciliationPending = true;
+        if (_deferAlertReports || _alertReportScheduled || _removed || !_observerExists)
+        {
+            return;
+        }
+
+        _alertReportScheduled = true;
+        this.ScheduleInSeparateTurn(async () =>
+        {
+            _alertReportScheduled = false;
+            if (_alertReconciliationPending)
+            {
+                await ReportAlertState();
+            }
+        });
+    }
+
     void ChangeAlertState()
     {
         _alertRevision++;
@@ -236,16 +254,17 @@ public partial class Observer
         // The state provider supplies an identifier even for missing records. Consult storage rather than
         // treating a management probe (or a shared definition in another namespace) as observer creation.
         var source = await storage.GetEventStore(_observerKey.EventStore).GetNamespace(_observerKey.Namespace).Observers.Get(_observerId);
-        if (!Failures.Partitions.Any(partition => partition.Partition.ToString() == LegacyAlertReminderName))
-        {
-            await UnregisterReminderNamed(LegacyAlertReminderName);
-        }
+
+        // A reminder under the legacy alert name is not looked up here: that is a reminder-table read on every
+        // activation, the cold-start storm #5677 removes. ReceiveReminder unregisters it when it next ticks, unless a
+        // deferred failed partition shares its name.
 
         // An activation under another event sequence than the definition's is not this observer, even though it
         // loads its record. It must neither keep the reminder that reactivates it nor count as existing.
         if (source.Identifier != _observerId || !KeyOwnsDefinition)
         {
             await UnregisterReminderNamed(AlertReminderName);
+            _alertReminderRegistered = false;
             return;
         }
 
@@ -304,8 +323,10 @@ public partial class Observer
         }
         else
         {
+            // Leave the reminder table alone rather than look the reminder up on every activation. One left over from an
+            // earlier activation, or registered by a version that kept one per observer, releases itself on its next tick,
+            // and until then it still wakes the observer should this activation's confirmation not land.
             _alertReminderRegistered = false;
-            await UnregisterReminderNamed(AlertReminderName);
         }
 
         if (_alertLifecycleId == Guid.Empty)

@@ -55,11 +55,29 @@ internal static partial class KernelLogMessages
     [LoggerMessage(LogLevel.Information, "Shutdown was requested while the server was still starting. Stopping gracefully instead of continuing to bind")]
     internal static partial void ServerShutdownDuringStartup(this ILogger<Kernel> logger);
 
+    [LoggerMessage(LogLevel.Information, "Chronicle Server stopped. Exiting with code {ExitCode}")]
+    internal static partial void ServerStopped(this ILogger<Kernel> logger, int exitCode);
+
+    [LoggerMessage(LogLevel.Warning, "Chronicle Server stopped. Exiting with code {ExitCode}, which the server requested")]
+    internal static partial void ServerStoppedWithRequestedExitCode(this ILogger<Kernel> logger, int exitCode);
+
+    [LoggerMessage(LogLevel.Critical, "Chronicle Server did not stop within the host shutdown timeout of {ShutdownTimeout}; the stop took {StopDuration}. Exiting with code {ExitCode}")]
+    internal static partial void ServerStopTimedOut(this ILogger<Kernel> logger, Exception? exception, TimeSpan shutdownTimeout, TimeSpan stopDuration, int exitCode);
+
+    [LoggerMessage(LogLevel.Critical, "Chronicle Server failed while stopping. Exiting with code {ExitCode}")]
+    internal static partial void ServerStopFailed(this ILogger<Kernel> logger, Exception? exception, int exitCode);
+
+    [LoggerMessage(LogLevel.Critical, "Chronicle Server stopped, but releasing its services afterwards failed. Exiting with code {ExitCode}")]
+    internal static partial void ServerDisposeFailed(this ILogger<Kernel> logger, Exception? exception, int exitCode);
+
     [LoggerMessage(LogLevel.Warning, "The Workbench feature is enabled but the Workbench UI was not found - it is neither embedded in this build nor present in the web root '{WebRoot}' - the server runs without serving the Workbench UI")]
     internal static partial void WorkbenchUINotAvailable(this ILogger<Kernel> logger, string webRoot);
 
     [LoggerMessage(LogLevel.Warning, "Localhost clustering is configured while storage points at a non-local host and the single-writer lease is disabled. Another node sharing this storage can silently process the same data. Enable Clustering.SingleWriterLease, or use MongoDB clustering on every node with MongoDB storage for them to join as one cluster")]
     internal static partial void LocalhostClusteringAgainstSharedStorage(this ILogger<Kernel> logger);
+
+    [LoggerMessage(LogLevel.Warning, "Clustering.SingleWriterLease.Standby is set, but this kernel does not use the single-writer lease (it applies to Localhost clustering on persistent storage), so standby has no effect.")]
+    internal static partial void StandbyWithoutSingleWriterLease(this ILogger<Kernel> logger);
 
     [LoggerMessage(LogLevel.Warning, "The experimental Orleans distributed grain directory is enabled (Clustering.DistributedGrainDirectoryEnabled). Every node in the cluster must use the same setting; change it only by stopping and starting the whole cluster, never in a rolling upgrade")]
     internal static partial void DistributedGrainDirectoryEnabled(this ILogger<Kernel> logger);
@@ -72,4 +90,7 @@ internal static partial class KernelLogMessages
 
     [LoggerMessage(LogLevel.Warning, "Unobserved transient task exception occurred and was ignored; owner: {Owner}")]
     internal static partial void UnobservedTransientTaskException(this ILogger<Kernel> logger, Exception exception, string owner);
+
+    [LoggerMessage("{Suppressed} more unobserved {Exception} task exceptions were counted but not written; owner: {Owner}. The first for each owner in each {Seconds} second window is written in full")]
+    internal static partial void UnobservedTaskExceptionsSuppressed(this ILogger<Kernel> logger, LogLevel level, int suppressed, string exception, string owner, int seconds);
 }

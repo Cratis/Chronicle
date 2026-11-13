@@ -118,6 +118,16 @@ public class NamespaceDbContext(DbContextOptions<NamespaceDbContext> options) : 
     public DbSet<InFlightEvents.InFlightEventEntry> InFlightEvents { get; set; } = null!;
 
     /// <summary>
+    /// Gets or sets the import sessions DbSet.
+    /// </summary>
+    public DbSet<Imports.ImportEntity> Imports { get; set; } = null!;
+
+    /// <summary>
+    /// Gets or sets the staged import chunks DbSet.
+    /// </summary>
+    public DbSet<Imports.ImportChunkEntity> ImportChunks { get; set; } = null!;
+
+    /// <summary>
     /// Gets or sets the observer handled counts DbSet.
     /// </summary>
     public DbSet<ObserverHandledCounts.ObserverHandledCountEntry> ObserverHandledCounts { get; set; } = null!;
@@ -157,6 +167,16 @@ public class NamespaceDbContext(DbContextOptions<NamespaceDbContext> options) : 
                 entity.ToTable(WellKnownTableNames.ClosedStreams);
                 entity.HasKey(e => new { e.EventSequenceId, e.StreamType, e.StreamId, e.EventSourceId, e.EventSourceType, e.Owner, e.Dimensions });
                 entity.Property(e => e.SequenceNumber).HasPrecision(20, 0);
+            })
+            .Entity<Imports.ImportEntity>(entity =>
+            {
+                entity.ToTable(WellKnownTableNames.Imports);
+                entity.HasKey(e => e.Id);
+            })
+            .Entity<Imports.ImportChunkEntity>(entity =>
+            {
+                entity.ToTable(WellKnownTableNames.ImportChunks);
+                entity.HasKey(e => new { e.ImportId, e.ChunkIndex });
             })
             .Entity<InFlightEvents.InFlightEventEntry>(entity =>
             {

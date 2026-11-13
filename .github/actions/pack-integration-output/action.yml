@@ -2,11 +2,12 @@ name: Pack integration build output
 description: >-
   Packs the build output of each integration test project into its own artifact, so a shard downloads only the
   project it runs instead of every project's output. The Client, Kernel and Clustering projects each carry a full
-  copy of the kernel in their own bin directory, which is all their shards need once restored.
+  copy of the kernel in their own bin directory, which is all their shards need once restored. The SqlClustering
+  artifact also carries the stamped client output that the RollingUpgrade provider reads.
 
 inputs:
   prefix:
-    description: Artifact name prefix. The artifacts are named <prefix>-client, <prefix>-kernel and <prefix>-clustering.
+    description: Artifact name prefix. The artifacts are named <prefix>-client, <prefix>-kernel, <prefix>-clustering and <prefix>-sqlclustering.
     required: true
 
 runs:
@@ -18,9 +19,15 @@ runs:
         PREFIX: ${{ inputs.prefix }}
       run: |
         set -euo pipefail
-        for project in Client Kernel Clustering; do
-          test -d "Integration/$project/bin/Release/net10.0" || { echo "Missing build output for Integration/$project" >&2; exit 1; }
-          tar -I 'zstd -T0' -cf "${PREFIX}-${project,,}.tar.zst" "Integration/$project/bin"
+        for project in Client Kernel Clustering SqlClustering; do
+          test -d "Integration/$project/bin/Release/net11.0" || { echo "Missing build output for Integration/$project" >&2; exit 1; }
+          paths=("Integration/$project/bin")
+          if [ "$project" = SqlClustering ]; then
+            # The RollingUpgrade provider reads the stamped client DLL from here.
+            test -d "Source/Clients/DotNET/bin/Release/net11.0" || { echo "Missing build output for Source/Clients/DotNET" >&2; exit 1; }
+            paths+=("Source/Clients/DotNET/bin/Release/net11.0")
+          fi
+          tar -I 'zstd -T0' -cf "${PREFIX}-${project,,}.tar.zst" "${paths[@]}"
         done
 
     - name: Upload the Client build output
@@ -46,6 +53,15 @@ runs:
       with:
         name: ${{ inputs.prefix }}-clustering
         path: ${{ inputs.prefix }}-clustering.tar.zst
+        retention-days: 1
+        compression-level: 0
+        if-no-files-found: error
+
+    - name: Upload the SqlClustering build output
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.prefix }}-sqlclustering
+        path: ${{ inputs.prefix }}-sqlclustering.tar.zst
         retention-days: 1
         compression-level: 0
         if-no-files-found: error

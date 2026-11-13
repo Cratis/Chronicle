@@ -47,7 +47,7 @@ internal class ChronicleConnection(
     /// </summary>
     const bool KeepAliveExempt = true;
 
-    readonly object _capabilitiesLock = new();
+    readonly Lock _capabilitiesLock = new();
     IServices? _services;
     ConnectionService? _connectionService;
     string[] _advertised = [];

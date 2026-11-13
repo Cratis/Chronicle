@@ -3,7 +3,6 @@
 
 using System.Globalization;
 using System.Net;
-using System.Net.Http.Json;
 using System.Text.Json;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
@@ -44,11 +43,7 @@ public class WebhookMediator(IWebhookHttpClientFactory webhookHttpClientFactory,
     /// <inheritdoc/>
     public async Task<WebhookDeliveryResult> Deliver(EventStoreName? eventStore, WebhookTarget webhookTarget, Key partition, IEnumerable<AppendedEvent> events, string? accessToken = null, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
     {
-        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        if (timeout is { } duration && duration > TimeSpan.Zero)
-        {
-            deadline.CancelAfter(duration);
-        }
+        using var deadline = CreateDeadline(timeout, cancellationToken);
 
         var batch = events.ToArray();
         try
@@ -69,12 +64,7 @@ public class WebhookMediator(IWebhookHttpClientFactory webhookHttpClientFactory,
         }
         catch (BrokenCircuitException error)
         {
-            var now = DateTimeOffset.UtcNow;
-            var delay = error.RetryAfter ?? TimeSpan.FromSeconds(options?.Value.Webhooks.CircuitBreakerBreakDurationSeconds ?? 15);
-            var authority = WebhookDiagnostics.Authority(webhookTarget.Url);
-            _metrics.CircuitRejected(authority);
-            (logger ?? NullLogger<WebhookMediator>.Instance).TargetUnavailable(authority, now + delay);
-            return new(EventSequenceNumber.Unavailable, WebhookDeliveryErrors.SafeError(webhookTarget, error), new(Guid.NewGuid(), PartitionDeferralReason.CircuitOpen, now, now + delay, batch.FirstOrDefault()?.Context.SequenceNumber ?? EventSequenceNumber.First));
+            return CircuitOpen(webhookTarget, error, batch);
         }
         catch (Exception error)
         {
@@ -107,6 +97,20 @@ public class WebhookMediator(IWebhookHttpClientFactory webhookHttpClientFactory,
         return null;
     }
 
+    static CancellationTokenSource CreateDeadline(TimeSpan? timeout, CancellationToken cancellationToken)
+    {
+        var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        if (timeout is { } duration && duration > TimeSpan.Zero)
+        {
+            deadline.CancelAfter(duration);
+        }
+
+        return deadline;
+    }
+
+    static bool IsConfigurationRejection(HttpStatusCode statusCode) =>
+        (int)statusCode is >= 400 and < 500 && statusCode is not HttpStatusCode.RequestTimeout and not HttpStatusCode.TooManyRequests;
+
     static WebhookTargetRejected? FindTargetRejection(Exception error)
     {
         if (error is WebhookTargetRejected rejection) return rejection;
@@ -118,12 +122,27 @@ public class WebhookMediator(IWebhookHttpClientFactory webhookHttpClientFactory,
         return error.InnerException is { } inner ? FindTargetRejection(inner) : null;
     }
 
+    WebhookDeliveryResult CircuitOpen(WebhookTarget webhookTarget, BrokenCircuitException error, AppendedEvent[] batch)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var delay = error.RetryAfter ?? TimeSpan.FromSeconds(options?.Value.Webhooks.CircuitBreakerBreakDurationSeconds ?? 15);
+        var authority = WebhookDiagnostics.Authority(webhookTarget.Url);
+        _metrics.CircuitRejected(authority);
+        (logger ?? NullLogger<WebhookMediator>.Instance).TargetUnavailable(authority, now + delay);
+        return new(EventSequenceNumber.Unavailable, WebhookDeliveryErrors.SafeError(webhookTarget, error), new(Guid.NewGuid(), PartitionDeferralReason.CircuitOpen, now, now + delay, batch.FirstOrDefault()?.Context.SequenceNumber ?? EventSequenceNumber.First));
+    }
+
+    DateTimeOffset? GetDeferralDeadline(HttpResponseMessage response) =>
+        response.StatusCode is HttpStatusCode.TooManyRequests or HttpStatusCode.ServiceUnavailable
+            ? GetRetryAfter(response, options?.Value.Webhooks.MaximumRetryAfterSeconds ?? 24 * 60 * 60)
+            : null;
+
     WebhookDeliveryResult DeliveryRejected(HttpResponseMessage response, WebhookTarget target, AppendedEvent[] batch)
     {
         var error = WebhookDeliveryErrors.ForResponse(target, response);
         var authority = WebhookDiagnostics.Authority(target.Url);
         var deliveryLogger = logger ?? NullLogger<WebhookMediator>.Instance;
-        if ((response.StatusCode is HttpStatusCode.TooManyRequests or HttpStatusCode.ServiceUnavailable) && GetRetryAfter(response, options?.Value.Webhooks.MaximumRetryAfterSeconds ?? 24 * 60 * 60) is { } until)
+        if (GetDeferralDeadline(response) is { } until)
         {
             var now = DateTimeOffset.UtcNow;
             deliveryLogger.TargetRateLimited(authority, (int)response.StatusCode, until);
@@ -136,7 +155,7 @@ public class WebhookMediator(IWebhookHttpClientFactory webhookHttpClientFactory,
             return new(EventSequenceNumber.Unavailable, error) { FailurePolicy = WebhookDeliveryFailurePolicy.ParkPartition };
         }
 
-        if ((int)response.StatusCode is >= 400 and < 500 && response.StatusCode is not HttpStatusCode.RequestTimeout and not HttpStatusCode.TooManyRequests)
+        if (IsConfigurationRejection(response.StatusCode))
         {
             deliveryLogger.TargetConfigurationRejected(authority, (int)response.StatusCode);
             return new(EventSequenceNumber.Unavailable, error) { FailurePolicy = WebhookDeliveryFailurePolicy.PauseObserver };

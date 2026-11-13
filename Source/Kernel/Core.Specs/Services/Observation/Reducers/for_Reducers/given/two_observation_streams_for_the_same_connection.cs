@@ -73,7 +73,8 @@ public class two_observation_streams_for_the_same_connection : Specification
             AllowingConnectionOwnership.Create(),
             _logger,
             Substitute.For<IObserverRegistrationGate>(),
-            NamespaceCasingContext.Create());
+            NamespaceCasingContext.Create(),
+            NoSiloDepartures.Instance);
 
         _earlierSubscription = _reducers.Observe(_earlierMessages).Subscribe(_earlierDeliveries.Add);
         _earlierMessages.OnNext(Register());
@@ -126,6 +127,15 @@ public class two_observation_streams_for_the_same_connection : Specification
             inner.Subscribe(reducerId, connectionId, eventStore, @namespace, target);
             _subscribed[Interlocked.Increment(ref _subscribeCount) - 1].TrySetResult();
         }
+
+        public void SubscribePages(ReducerId reducerId, ConnectionId connectionId, EventStoreName eventStore, EventStoreNamespaceName @namespace, ReducerPageObserver target, Concepts.Observation.PageDeliveryDefinition? pageDelivery = null) =>
+            inner.SubscribePages(reducerId, connectionId, eventStore, @namespace, target, pageDelivery);
+
+        public Concepts.Observation.PageDeliveryDefinition? GetPageDelivery(ReducerId reducerId, ConnectionId connectionId, EventStoreName eventStore, EventStoreNamespaceName @namespace) =>
+            inner.GetPageDelivery(reducerId, connectionId, eventStore, @namespace);
+
+        public void OnNextPage(ReducerId reducerId, ConnectionId connectionId, EventStoreName eventStore, EventStoreNamespaceName @namespace, IReadOnlyList<ReduceOperation> operations, IReadOnlyDictionary<Key, TaskCompletionSource<ReducerSubscriberResult>> completions) =>
+            inner.OnNextPage(reducerId, connectionId, eventStore, @namespace, operations, completions);
 
         public void SubscribeReplayNotifications(ReducerId reducerId, ConnectionId connectionId, EventStoreName eventStore, EventStoreNamespaceName @namespace, ReducerReplayObserver target) =>
             inner.SubscribeReplayNotifications(reducerId, connectionId, eventStore, @namespace, target);

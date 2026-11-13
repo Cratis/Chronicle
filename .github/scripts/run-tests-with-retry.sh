@@ -117,10 +117,22 @@ run() {
         "${EXTRA_ARGS[@]}"
 }
 
+# A nonempty, enumerated set is required: infrastructure crashes cannot be quarantined.
+finish_failed_attempts() {
+    [ "$#" -gt 0 ] || return 1
+    local remaining
+    remaining=$(printf '%s\n' "$@" | node .github/scripts/quarantine.mjs unquarantined) || return 1
+    [ -z "$remaining" ] || return 1
+    printf '%s\n' "$@" | node .github/scripts/quarantine.mjs record --results-dir "$RESULTS_DIR"
+}
+
 # Stop retrying on an unchanged failure set (bounded retry policy, see the header).
 fail_unchanged_set() {
     local attempt_number="$1"
     shift
+    if finish_failed_attempts "$@"; then
+        exit 0
+    fi
     echo "::error::Attempt ${attempt_number} failed with the identical set of $# test(s) as attempt $((attempt_number - 1)); stopping under the bounded retry policy; cause unknown."
     printf '  - %s\n' "$@"
     exit 1
@@ -205,6 +217,10 @@ done < <(extract_failed "${RESULTS_DIR}/attempt-${attempt}/results.trx")
 
 if [ "$attempt" -ge 2 ] && [ "${#last[@]}" -gt 0 ] && [ "$(printf '%s\n' "${last[@]}")" = "$previous_failed_set" ]; then
     fail_unchanged_set "$attempt" "${last[@]}"
+fi
+
+if finish_failed_attempts "${last[@]}"; then
+    exit 0
 fi
 
 message="Tests still failing after ${MAX_ATTEMPTS} attempts."

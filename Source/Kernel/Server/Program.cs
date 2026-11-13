@@ -28,6 +28,7 @@ using ProtoBuf.Grpc.Configuration;
 using ProtoBuf.Grpc.Server;
 
 ILogger<Kernel>? logger = null;
+ServiceProvider? loggingServices = null;
 
 // Route process-level unhandled exceptions through the logging pipeline so they reach the
 // configured ILogger sinks and the OpenTelemetry exporter - not just the console. Until the
@@ -46,12 +47,14 @@ AppDomain.CurrentDomain.UnhandledException += (_, args) =>
     if (args.IsTerminating)
     {
         // Leave an exit code that says what happened, instead of the runtime's abort code (reported as 139).
+        ReleaseLogging();
         Console.Out.Flush();
         Environment.Exit(BackgroundFaults.UnhandledExceptionExitCode);
     }
 };
 
 var unobservedFailures = new RepeatedFailureLog(RepeatedFailureLog.DefaultWindow, 1, TimeProvider.System);
+await using var unobservedFailuresReport = new Timer(_ => ReportUnobservedFailures(false), null, RepeatedFailureLog.DefaultWindow, RepeatedFailureLog.DefaultWindow);
 TaskScheduler.UnobservedTaskException += (_, args) =>
 {
     args.SetObserved();
@@ -104,11 +107,11 @@ catch (ArgumentException exception)
 var builder = WebApplication.CreateBuilder(encryptionKeyCommand.RemainingArgs);
 
 #pragma warning disable ASP0000 // Do not call 'IServiceCollection.BuildServiceProvider' in 'ConfigureServices'
-logger = builder.Logging.Services
-    .BuildServiceProvider()
+loggingServices = builder.Logging.Services.BuildServiceProvider();
+#pragma warning restore ASP0000 // Do not call 'IServiceCollection.BuildServiceProvider' in 'ConfigureServices'
+logger = loggingServices
     .GetRequiredService<ILoggerFactory>()
     .CreateLogger<Kernel>();
-#pragma warning restore ASP0000 // Do not call 'IServiceCollection.BuildServiceProvider' in 'ConfigureServices'
 builder.Services.Configure<HostOptions>(options => options.ShutdownTimeout = TimeSpan.FromSeconds(10));
 var assembly = Assembly.GetExecutingAssembly();
 logger.ServerStarting(assembly.GetName().Version?.ToString() ?? "unknown");
@@ -143,6 +146,13 @@ try
     }
 
     chronicleOptions = builder.Configuration.GetSection(ChronicleOptions.SectionPath).Get<ChronicleOptions>() ?? new ChronicleOptions();
+    if (string.IsNullOrWhiteSpace(chronicleOptions.Storage.Type) && StorageTypeInference.Infer(chronicleOptions.Storage.ConnectionDetails) is { } inferredStorageType)
+    {
+        builder.Configuration[$"{ChronicleOptions.SectionPath}:Storage:Type"] = inferredStorageType;
+        chronicleOptions = builder.Configuration.GetSection(ChronicleOptions.SectionPath).Get<ChronicleOptions>() ?? new ChronicleOptions();
+        logger.StorageTypeInferred(inferredStorageType);
+    }
+
     if (!Enum.IsDefined(chronicleOptions.Storage.SchemaMode))
     {
         throw new ArgumentException("Storage.SchemaMode is invalid.");
@@ -203,6 +213,8 @@ const bool developmentBuild = true;
 #else
 const bool developmentBuild = false;
 #endif
+
+KernelStartupDiagnostics.ReportIgnoredDevelopmentOnlySettings(builder.Configuration, logger, developmentBuild);
 
 // Kestrel keeps the selected certificate alive for every TLS handshake until process shutdown.
 var certificate = KernelCertificateSelection.Select(chronicleOptions, logger, developmentBuild);
@@ -317,6 +329,11 @@ hostBuilder
        else if (localhostGuard == LocalhostClusteringGuardAction.Warn)
        {
            logger.LocalhostClusteringAgainstSharedStorage();
+       }
+
+       if (chronicleOptions.Clustering.SingleWriterLease.Standby && localhostGuard != LocalhostClusteringGuardAction.Lease)
+       {
+           logger.StandbyWithoutSingleWriterLease();
        }
 
        ClusterEndpointConfiguration.Configure(_, clustering);
@@ -628,7 +645,7 @@ if (serveWorkbench)
 using var cancellationToken = new CancellationTokenSource();
 Console.CancelKeyPress += (sender, eventArgs) =>
 {
-    logger.ServerShuttingDown();
+    logger?.ServerShuttingDown();
     Console.WriteLine("******* SHUTTING DOWN CHRONICLE SERVER *******");
     cancellationToken.Cancel();
     eventArgs.Cancel = true;
@@ -639,21 +656,85 @@ Console.CancelKeyPress += (sender, eventArgs) =>
 // fixtures and orchestrators that gate on this line would then connect to a socket that did not exist yet.
 app.Lifetime.ApplicationStarted.Register(() => logger.ServerStarted(chronicleOptions.Port));
 
-try
+// Report what is still being counted while the logging pipeline is still there, so the counts are not lost at shutdown.
+app.Lifetime.ApplicationStopped.Register(() => ReportUnobservedFailures(true));
+
+// A failure to start is rethrown and reaches the unhandled exception handler above. Everything else is how the run
+// ended, decided from the phase that failed and from whether the stop used up the host shutdown timeout. A shutdown
+// signal (SIGTERM, Ctrl+C) that arrives while the host is still starting - e.g. Kestrel is still binding, or an
+// ILifecycleParticipant is still running - is an orderly, requested stop (#3936).
+var run = await KernelRun.RunAsync(app, cancellationToken.Token);
+var processExitCode = KernelExit.CodeFor(run.Outcome, Environment.ExitCode);
+switch (run.Outcome)
 {
-    await app.RunAsync(cancellationToken.Token);
-}
-catch (OperationCanceledException)
-{
-    // A shutdown signal (SIGTERM, Ctrl+C) that arrives while the host is still starting - e.g. Kestrel is
-    // still binding, or an ILifecycleParticipant is still running - cancels the host's own lifetime token
-    // and surfaces as an OperationCanceledException out of RunAsync instead of RunAsync completing
-    // normally. Left uncaught, that reaches AppDomain.CurrentDomain.UnhandledException and the process
-    // exits as an unhandled crash for what is actually an orderly, requested stop. (#3936)
-    logger.ServerShutdownDuringStartup();
+    case KernelRunOutcome.StopTimedOut:
+        logger.ServerStopTimedOut(run.Failure, run.ShutdownTimeout, run.StopDuration, processExitCode);
+        break;
+    case KernelRunOutcome.StopFailed:
+        logger.ServerStopFailed(run.Failure, processExitCode);
+        break;
+    case KernelRunOutcome.DisposeFailed:
+        logger.ServerDisposeFailed(run.Failure, processExitCode);
+        break;
+    default:
+        if (run.Outcome == KernelRunOutcome.StoppedDuringStartup)
+        {
+            logger.ServerShutdownDuringStartup();
+        }
+
+        if (processExitCode == 0)
+        {
+            logger.ServerStopped(processExitCode);
+        }
+        else
+        {
+            logger.ServerStoppedWithRequestedExitCode(processExitCode);
+        }
+
+        break;
 }
 
-return 0;
+// The console logger writes from a queue on a background thread; releasing the provider drains it, so the line
+// above is not lost when the process ends. Anything logged after this falls back to the console.
+logger = null;
+await loggingServices.DisposeAsync();
+
+return processExitCode;
+
+void ReportUnobservedFailures(bool includeRunningWindows)
+{
+    var seconds = (int)unobservedFailures.Window.TotalSeconds;
+    foreach (var failures in unobservedFailures.TakeEnded(includeRunningWindows))
+    {
+        if (logger is not null)
+        {
+            try
+            {
+                logger.UnobservedTaskExceptionsSuppressed(failures.Level, failures.Suppressed, failures.Exception.Name, failures.Category, seconds);
+                continue;
+            }
+            catch (Exception loggingFailure)
+            {
+                Console.WriteLine(loggingFailure);
+            }
+        }
+
+        Console.WriteLine($"{failures.Suppressed} more unobserved {failures.Exception.Name} task exceptions were counted but not written; owner: {failures.Category}");
+    }
+}
+
+void ReleaseLogging()
+{
+    // Drains the queued log entries before the process ends. A failure here must not hide the crash being reported.
+    try
+    {
+        loggingServices?.Dispose();
+    }
+    catch (Exception releaseFailure)
+    {
+        Console.WriteLine(releaseFailure);
+    }
+}
 
 void LogCrash(Action<ILogger<Kernel>> log, Exception exception)
 {

@@ -8,6 +8,7 @@ using Orleans.Configuration;
 
 namespace Cratis.Chronicle.Storage.Sql.Cluster.for_SqlMembershipTable;
 
+[PerFactSpecificationLifecycle] // Facts run their own asynchronous operations, so each fact gets its own context.
 public class when_using_sqlite : Specification
 {
     SqlMembershipTable _table;

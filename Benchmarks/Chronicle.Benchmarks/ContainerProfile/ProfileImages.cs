@@ -61,7 +61,7 @@ internal static class ProfileImages
         Directory.CreateDirectory(publish);
         var root = ProfileRepository.Root();
         var project = Path.Combine(root, "Source", "Kernel", "Server", "Server.csproj");
-        var arguments = new[] { "publish", project, "-c", "Release", "-f", "net10.0", "-r", $"linux-{context.Architecture}", "--self-contained", "-m:2", "-nodeReuse:false", "-o", publish, $"-p:PublishReadyToRun={variant.ReadyToRun.ToString().ToLowerInvariant()}", "-p:DisableProxyGenerator=true" };
+        var arguments = new[] { "publish", project, "-c", "Release", "-f", "net11.0", "-r", $"linux-{context.Architecture}", "--self-contained", "-m:2", "-nodeReuse:false", "-o", publish, $"-p:PublishReadyToRun={variant.ReadyToRun.ToString().ToLowerInvariant()}", "-p:DisableProxyGenerator=true" };
         (await ProcessRunner.Run("dotnet", arguments, TimeSpan.FromSeconds(1800), cancellationToken)).RequireSuccess("publish kernel");
         var headers = ManagedNativeHeader.Read(publish);
         if (!ManagedNativeHeader.Matches(headers, variant.ReadyToRun))

@@ -13,6 +13,8 @@ Observer configuration controls retry behavior, timeouts, watchdog monitoring, a
     "liveDeliveryBudget": 100,
     "abandonedDeliveryHold": 300,
     "maxEventsPerSubscriberCall": 100,
+    "maxEventsPerPage": 1000,
+    "maxBytesPerSubscriberCall": 4194304,
     "maxRetryAttempts": 10,
     "backoffDelay": 1,
     "exponentialBackoffDelayFactor": 2,
@@ -21,8 +23,10 @@ Observer configuration controls retry behavior, timeouts, watchdog monitoring, a
     "quarantineOnFailedPartitionPercentage": 0.0,
     "definitionEvolution": "Automatic",
     "watchdogInterval": 60,
+    "idleDeactivationAfter": 900,
     "maxConcurrentPartitions": 32,
     "maxConcurrentRegistrations": 0,
+    "maxConcurrentSubscriptions": 0,
     "fanOutStrategy": "round-robin",
     "subscriptionReadyTimeout": 5,
     "statePersistenceBatchInterval": 100,
@@ -42,6 +46,8 @@ The example shows the defaults of a production build. The `-development` image s
 | liveDeliveryBudget | number | 100 | Maximum events delivered inline in one live call. Larger batches are deferred to partition catch-up without advancing the live position. `0` or less disables the limit. Catch-up and replay are unaffected |
 | abandonedDeliveryHold | number | 300 | Maximum additional seconds to hold an abandoned gRPC client delivery. Positive values are at least `subscriberTimeout`. `0` or less disables fencing; a disabled subscriber timeout also disables it. See [Abandoned client deliveries](#abandoned-client-deliveries) |
 | maxEventsPerSubscriberCall | number | 100 | The most events handed to a gRPC client (reactor or reducer) or webhook subscriber in one call during catch-up, replay and partition recovery. `0` or less hands over storage batches as read. See [Bounded subscriber calls](#bounded-subscriber-calls) |
+| maxEventsPerPage | number | 1000 | The most events in one page for a client reactor or reducer that declared page bounds, on every path. Caps the declared bound; never makes a page larger than the path hands over. `0` or less sets no count limit. See [Page bounds](#page-bounds) |
+| maxBytesPerSubscriberCall | number | 4194304 | The most bytes in one page for a client reactor or reducer that declared page bounds, on every path: event content, and for a reducer the states it reduces from. `0` or less sets no size limit. See [Page bounds](#page-bounds) |
 | maxRetryAttempts | number | 10 | Maximum retry attempts for failed partitions (0 = infinite). The limit applies per retry budget: clearing the quarantine of a partition starts a new budget, so it gets this many attempts again. An attempt that fails at a later event than the previous one made progress and also starts a new budget, so only a partition that keeps failing at the same event is quarantined |
 | quarantineOnFailedPartitionCount | number | 0 | Quarantine the observer once this many of its partitions have failed (0 = never) |
 | quarantineOnFailedPartitionPercentage | number | 0.0 | Quarantine the observer once this share of its observed partitions have failed (0.0 = never) |
@@ -51,9 +57,11 @@ The example shows the defaults of a production build. The `-development` image s
 | definitionEvolution | string | Automatic | Controls whether projection and reducer definition changes apply `Automatic`, `PartialOnly`, or `Manual` evolution. See [Definition evolution](#definition-evolution) |
 | replayOnDefinitionChange | boolean | false | Controls automatic replay for reactors and webhooks. Projection and reducer changes use `definitionEvolution` |
 | watchdogInterval | number | 60 | Interval in seconds between watchdog checks; the watchdog verifies connected clients are still active, running jobs (replay and catch-up) are still progressing, and `NextEventSequenceNumber` is up-to-date |
+| idleDeactivationAfter | number | 900 | Seconds an observer with no subscription and no pending work stays in memory before it is released. A subscribed observer always stays in memory. `0` keeps every observer in memory. See [Releasing idle observers](#releasing-idle-observers) |
 | maxCatchupRecoveryAttempts | number | 5 | How many watchdog checks in a row may retry a stuck catch-up preparation, or a recovery that failed after quarantine was cleared, before the watchdog quarantines the observer. `0` or less quarantines on the first retry. See [Ending quarantine](#ending-quarantine) |
 | maxConcurrentPartitions | number | 32 | Upper bound on how many job steps (replay and catch-up work) run in parallel. The effective limit is the smaller of this value and `jobs.maxParallelSteps`. Despite the name it does not limit live event delivery. See [Job throttling](job-throttling.md) |
 | maxConcurrentRegistrations | number | 0 (unlimited) | Maximum gRPC reactor and reducer registrations running concurrently on each silo. When configured above 0, excess registrations wait before any registration grain or read-model lookup. Values below 1 disable the gate. Does not limit event append or observer delivery. See [Registration concurrency](#registration-concurrency) |
+| maxConcurrentSubscriptions | number | 0 (automatic) | Maximum projection subscriptions and failed-partition recovery batches running concurrently on each silo, shared by every event store. `0` or less selects two per processor, at least 4 and at most 16. See [Subscription concurrency](#subscription-concurrency) |
 | fanOutStrategy | string | round-robin | Strategy for distributing events across multiple connected instances of the same client. `round-robin` distributes deterministically by partition key, keeping every partition sticky to one instance and preserving per-partition ordering. `random` picks a random instance per delivery |
 | subscriptionReadyTimeout | number | 5 | Seconds the Kernel waits for an event store subscription to become ready before it returns to the client. The wait keeps events from being missed when the client starts appending right away. When it elapses the subscription can still activate afterwards and the client is not blocked further. Raise it only when clients report subscriptions that are not ready on a slow or busy cluster |
 | statePersistenceBatchInterval | number | 100 | Number of batches that contain nothing the observer subscribes to after which its position (`NextEventSequenceNumber`) is made durable. The watchdog tick and deactivation also flush it. After a crash, catch-up re-scans events the observer already skipped, so nothing is lost or handled twice. A larger value means fewer writes and a longer re-scan after a crash |
@@ -62,13 +70,41 @@ The example shows the defaults of a production build. The `-development` image s
 | deploymentConditionGracePeriod | timespan | `00:01:00` | How long the `Deployment` condition must hold before the generation is promoted. Applies only when `features.projectionGenerations` is enabled |
 | pendingGenerationAlertAfter | timespan | `1.00:00:00` | How long a generation can stay pending before Chronicle raises an alert. Applies only when `features.projectionGenerations` is enabled |
 
+## Releasing idle observers
+
+Every observer, reactor and reducer is an activation in the Kernel's memory, and each one costs roughly 40 KB of heap. A subscribed observer has to stay in memory, because its live subscription to new events exists only there. An observer whose client has disconnected, or one that was only loaded to answer a question, has nothing in memory that is not also in storage.
+
+The watchdog releases such an observer once it has found it idle for `idleDeactivationAfter` seconds. Idle means all of the following:
+
+- It has not been removed, has no subscription and is disconnected.
+- It has no failed partitions and is not quarantined.
+- It is not replaying or catching up, and has no catch-up starting.
+- It has no alert, webhook probe, state write or retry reminder waiting.
+- It holds no request for later, such as a start-at-tail request waiting for its subscription or a partition recovery that an operator asked for.
+
+An observer is not idle while an alert reminder is registered for it. An observer with nothing to report gives the reminder up on its first tick, one to two minutes after it was activated, so an observer that has a reminder when a call activates it is released after about two minutes plus `idleDeactivationAfter`. A call for an observer that does not exist in the namespace has no alerts to report, so that activation only waits for the idle period.
+
+When anything calls a released observer again, for example a client that reconnects, it is activated from storage.
+
+Set `idleDeactivationAfter` to `0` to keep every observer in memory. The release is checked on every watchdog tick, so an idle observer is released between `idleDeactivationAfter` and `idleDeactivationAfter` + `watchdogInterval` seconds after it became idle.
+
 ## Registration concurrency
 
 `maxConcurrentRegistrations` limits registration work from gRPC reactors and reducers together on each silo. It defaults to `0` (unlimited); values below `1` disable the gate. With the gate disabled, no semaphore is created and registration does not wait. Set a positive limit to opt in: excess registrations wait before their first grain or read-model lookup, and waiting ends if the client disconnects.
 
-A permit covers the registration lookups and subscription, not the lifetime of the connection. Once registration succeeds or fails, the permit is released. A disconnect cancels a queued registration; work already in flight retains its permit until it finishes. Reconnecting clients acquire a new permit. Event append, observer delivery and subscription maintenance do not acquire permits. This is a per-silo limit, not a cluster-wide limit, and is independent of `maxConcurrentPartitions`.
+A permit covers the registration lookups and subscription, not the lifetime of the connection. Once registration succeeds or fails, the permit is released. A disconnect cancels a queued registration; work already in flight retains its permit until it finishes. Reconnecting clients acquire a new permit. When subscribing times out because the observer is busy, the registration gives its permit back and queues for a new one before it asks again, so a busy observer does not keep other registrations out for every attempt it makes. Event append, observer delivery and subscription maintenance do not acquire permits. This is a per-silo limit, not a cluster-wide limit, and is independent of `maxConcurrentPartitions`.
 
 Set it through JSON as shown above, or with `Cratis__Chronicle__Observers__MaxConcurrentRegistrations` as an environment variable.
+
+## Subscription concurrency
+
+`maxConcurrentSubscriptions` limits how many projection subscriptions and failed-partition recovery batches run at once on each silo. The limit is shared by every event store on the silo, so a cold start with many event stores does not subscribe and recover more at once than a silo with one.
+
+It defaults to `0`, which selects the limit from the machine: two per processor, at least 4 and at most 16. A 2-core pod gets 4 and a 4-core pod gets 8. Values below `1` select this automatic limit. Raise it only when storage can serve more concurrent work, because extra work beyond what storage can serve waits in its connection pool instead.
+
+Projection subscriptions wait for a free slot. Recovery batches together use at most half of the slots, and always at least one, so the rest stay free for projection subscriptions however long a recovery takes. A recovery batch does not wait for a slot; it tries again after a randomized delay of 0.5 to 1.5 seconds, so recoveries yield to subscriptions while a silo starts and do not all retry at the same moment.
+
+Set it through JSON as shown above, or with `Cratis__Chronicle__Observers__MaxConcurrentSubscriptions` as an environment variable.
 
 ## Per-observer retry overrides
 
@@ -170,6 +206,46 @@ Kernel-owned subscribers, such as projections, keep the storage batches they are
 Every batch sent to a gRPC client also says how long the kernel waits for its result (`DeliverWithinMilliseconds`,
 counted from when the client receives it). A client that only gets to the batch after that time can answer it as
 failed right away instead of doing work the kernel has already given up on.
+
+## Page bounds
+
+A client reactor or reducer that receives pages can declare how big a page may be: the .NET client takes the bounds
+from `[BatchSize]` (see [reactor batches](../../reactors/batches.mdx#page-size) and
+[reducer batches](../../reducers/batches.mdx#page-size-and-concurrency)). The kernel honors them on every path, live,
+catch-up, replay and retry:
+
+| Declared | Kernel maximum | Page bound |
+| --- | --- | --- |
+| Events above `0` | `maxEventsPerPage` | The declared number, capped by the maximum |
+| Events `0` | `maxEventsPerPage` | The maximum |
+| Bytes above `0` | `maxBytesPerSubscriberCall` | The declared number, capped by the maximum |
+| Bytes `0` | `maxBytesPerSubscriberCall` | The maximum |
+
+A maximum of `0` or less means the kernel sets none, so the declared bound applies as it is.
+
+- An event's size is the UTF-8 length of its JSON content. A reducer page also holds the state of each partition in
+  it, so that state counts toward the byte bound once per page, estimated from the size it had when it was last
+  reduced. Only the states of recently reduced partitions count: each silo remembers the sizes of about 10 000
+  partitions across all its reducers and namespaces, and forgets those not reduced for the longest. A state the kernel
+  has not seen since it started, or has forgotten, does not count toward the page that reads it, only toward the pages
+  after it.
+- The byte bound covers content, not the whole message. The envelope around it, event metadata, partition keys and a
+  reducer's states as sent, comes on top. The default of 4 MiB equals the default receive limit of gRPC clients such as
+  grpc-js and grpc-java, so a client that keeps that limit should declare a smaller bound or raise its receive limit.
+- An event larger than the byte bound is sent alone in its own page, so it never stalls its partition.
+- A page larger than the bounds is sent as several pages, one after another. A partition that spans them stops at the
+  first page it fails or is deferred in; its later events are delivered again once the partition is recovered, and
+  events it handled in earlier pages stay handled. A reducer reduces each page from the state the page before it
+  wrote.
+- The pages of one delivery share its `subscriberTimeout`. When it passes part-way, the page answered late is
+  discarded and no later page is sent; what earlier pages handled stays handled, and the rest is delivered again.
+- The kernel never makes a page larger than it would otherwise send: during catch-up, replay and retry that is
+  `maxEventsPerSubscriberCall` events, and live it is what has been appended and waiting, up to `liveDeliveryBudget`.
+  Raise `maxEventsPerSubscriberCall` to let a declared bound above 100 take effect during catch-up, replay and retry.
+- The declared delay (`MaxDelayMilliseconds`) is accepted but not applied yet: a live page holds what is already
+  waiting.
+- A client that does not receive pages is delivered one partition at a time, bounded only by
+  `maxEventsPerSubscriberCall` during catch-up, replay and retry.
 
 ## Abandoned client deliveries
 

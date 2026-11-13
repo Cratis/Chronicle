@@ -19,4 +19,7 @@ internal static class AppendedEventsQueueSpillReasons
 
     /// <summary>The observer's own backlog in the queue exceeded the queue capacity.</summary>
     internal const string LaggingBacklog = "LaggingBacklog";
+
+    /// <summary>The events were committed without live delivery, as an import commits its chunks (decision 0023).</summary>
+    internal const string CommittedOutsideLiveDelivery = "CommittedOutsideLiveDelivery";
 }

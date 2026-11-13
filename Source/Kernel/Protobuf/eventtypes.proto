@@ -9,6 +9,13 @@ message AllEventTypeGenerationsRequest {
 message AllEventTypesRequest {
    string EventStore = 1;
 }
+message CheckEventTypeRegistrationsRequest {
+   string EventStore = 1;
+   repeated EventTypeRegistration Types = 2;
+}
+message CheckEventTypeRegistrationsResponse {
+   repeated EventTypeCheckResult Results = 1;
+}
 message CommandResult {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
    bool IsAuthorized = 2;
@@ -16,6 +23,24 @@ message CommandResult {
    repeated string ExceptionMessages = 4;
    string ExceptionStackTrace = 5;
    string AuthorizationFailureReason = 6;
+}
+message CommandResult_CheckEventTypeRegistrationsResponse {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2;
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   string AuthorizationFailureReason = 6;
+   CheckEventTypeRegistrationsResponse Response = 7;
+}
+message CommandResult_NormalizeEventTypeSchemasResponse {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2;
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   string AuthorizationFailureReason = 6;
+   NormalizeEventTypeSchemasResponse Response = 7;
 }
 message CreateEventTypeRequest {
    string EventStore = 1;
@@ -25,6 +50,14 @@ message EventType {
    string Id = 1;
    uint32 Generation = 2;
    bool Tombstone = 3;
+}
+message EventTypeCheckResult {
+   string EventType = 1;
+   uint32 Generation = 2;
+   bool Accepted = 3;
+   string Reason = 4;
+   string Keyword = 5;
+   string Path = 6;
 }
 message EventTypeDetailsResponse {
    EventType Type = 1;
@@ -71,6 +104,21 @@ enum EventTypeVisibility {
    Private = 1;
    Public = 2;
 }
+message EventTypesWithAnnotationsResponse {
+   string EventTypeId = 1;
+   uint32 Generation = 2;
+   repeated string Keywords = 3;
+}
+message GetEventTypesWithAnnotationsRequest {
+   string EventStore = 1;
+}
+message NormalizeEventTypeSchemasRequest {
+   string EventStore = 1;
+   repeated string EventTypeIds = 2;
+}
+message NormalizeEventTypeSchemasResponse {
+   repeated EventTypesWithAnnotationsResponse Changed = 1;
+}
 message ObserveEventTypesRequest {
    string EventStore = 1;
 }
@@ -81,6 +129,14 @@ message QueryResult_IEnumerable_EventTypeDetailsResponse {
    repeated string ExceptionMessages = 4;
    string ExceptionStackTrace = 5;
    repeated EventTypeDetailsResponse Data = 6;
+}
+message QueryResult_IEnumerable_EventTypesWithAnnotationsResponse {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2;
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   repeated EventTypesWithAnnotationsResponse Data = 6;
 }
 message RegisterEventTypesRequest {
    string EventStore = 1;
@@ -105,7 +161,10 @@ enum ValidationResultSeverity {
 service EventTypes {
    rpc AllEventTypeGenerations (AllEventTypeGenerationsRequest) returns (QueryResult_IEnumerable_EventTypeDetailsResponse);
    rpc AllEventTypes (AllEventTypesRequest) returns (QueryResult_IEnumerable_EventTypeDetailsResponse);
+   rpc CheckEventTypeRegistrations (CheckEventTypeRegistrationsRequest) returns (CommandResult_CheckEventTypeRegistrationsResponse);
    rpc CreateEventType (CreateEventTypeRequest) returns (CommandResult);
+   rpc GetEventTypesWithAnnotations (GetEventTypesWithAnnotationsRequest) returns (QueryResult_IEnumerable_EventTypesWithAnnotationsResponse);
+   rpc NormalizeEventTypeSchemas (NormalizeEventTypeSchemasRequest) returns (CommandResult_NormalizeEventTypeSchemasResponse);
    rpc ObserveEventTypes (ObserveEventTypesRequest) returns (stream QueryResult_IEnumerable_EventTypeDetailsResponse);
    rpc RegisterEventTypes (RegisterEventTypesRequest) returns (CommandResult);
    rpc RegisterSingleEventType (RegisterSingleEventTypeRequest) returns (CommandResult);

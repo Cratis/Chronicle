@@ -40,5 +40,16 @@ public class when_acquiring_coarsely_while_a_stripe_is_held : Specification
     [Fact]
     void should_grant_the_coarse_acquisition_once_the_stripe_is_released() => _coarseAcquiredAfterStripeReleased.ShouldBeTrue();
 
-    static async Task<bool> CompletesWithin(Task task, TimeSpan timeout) => await Task.WhenAny(task, Task.Delay(timeout)) == task;
+    static async Task<bool> CompletesWithin(Task task, TimeSpan timeout)
+    {
+        try
+        {
+            await task.WaitAsync(timeout);
+            return true;
+        }
+        catch (TimeoutException)
+        {
+            return false;
+        }
+    }
 }

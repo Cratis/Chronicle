@@ -1,0 +1,7 @@
+[
+    { "fqn": "Cratis.Chronicle.ChronicleCommandScenario", "reason": "Static factory for command scenarios; no test methods or test base." },
+    { "fqn": "Cratis.Chronicle.ConcurrentCallGate", "reason": "Concurrency synchronization helper; no test methods or test base." },
+    { "fqn": "Cratis.Chronicle.ModuleInitialization", "reason": "Assembly initialization helper; no test methods or test base." },
+    { "fqn": "Cratis.Chronicle.NamespaceCasingContext", "reason": "Namespace service setup helper; no test methods or test base." },
+    { "fqn": "Cratis.Chronicle.OwnGenerationSchemaCache", "reason": "Schema cache fixture implementation; no test methods or test base." }
+]

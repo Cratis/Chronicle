@@ -54,7 +54,7 @@ namespace Cratis.Chronicle.EventSequences;
 /// <param name="eventSources">Optional <see cref="IEventSources"/> for appending through event source definitions.</param>
 /// <param name="telemetry">Optional event source id tracing configuration.</param>
 /// <param name="tagResolver">Optional <see cref="EventTagResolver"/> resolving the named tags of every appended event. Defaults to the built-in enrichers only.</param>
-public class EventSequence(
+public partial class EventSequence(
     EventStoreName eventStoreName,
     EventStoreNamespaceName @namespace,
     EventSequenceId eventSequenceId,

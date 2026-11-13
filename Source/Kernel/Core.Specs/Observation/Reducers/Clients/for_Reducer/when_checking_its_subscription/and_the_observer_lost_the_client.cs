@@ -7,7 +7,7 @@ public class and_the_observer_lost_the_client : given.a_reducer_grain_with_a_sto
 {
     bool _intact;
 
-    void Establish() => _observer.KnowsClient(_client.ConnectionId).Returns(false);
+    void Establish() => _observer.IsClientTarget(_client.ConnectionId).Returns(false);
 
     async Task Because() => _intact = await _grain.IsSubscriptionIntact();
 

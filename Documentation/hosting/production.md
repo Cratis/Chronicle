@@ -162,16 +162,19 @@ While unready, non-health requests receive HTTP 503 with `Retry-After`, or gRPC 
 
 > [!IMPORTANT]
 > Probe Chronicle from outside the container. The production image uses
-> `mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled-extra`, without a shell, `curl`, or `wget`.
+> `mcr.microsoft.com/dotnet/runtime-deps:11.0-resolute-chiseled-extra`, without a shell, `curl`, or `wget`.
 > Docker `HEALTHCHECK` and Compose `healthcheck:` commands run inside the container, so probes that
 > invoke those tools fail even when Chronicle is healthy.
 
-Use your orchestrator's own HTTP probe instead. The default TLS main port may use a self-signed certificate that some probers reject; a private h2c main port requires an HTTP/2-capable prober. Publish a dedicated plaintext HTTP/1.1 health port when either presents a problem:
+Use your orchestrator's own HTTP probe instead. The default TLS main port may use a self-signed certificate that some probers reject; a private h2c main port requires an HTTP/2-capable prober. Publish a dedicated plaintext HTTP/1.1 health port when either presents a problem, and make it exclusive:
 
 ```bash
 Cratis__Chronicle__Health__Port=8080
 Cratis__Chronicle__Health__Tls=false
+Cratis__Chronicle__Health__Exclusive=true
 ```
+
+`Health__Exclusive` makes the dedicated port answer the health endpoint and its `/live` and `/ready` subpaths only; every other path returns 404 there. Without it, the dedicated port is a second way into the Workbench, the REST API and the OAuth flows, in cleartext when `Health__Tls=false`. See [Health Endpoint](configuration/health-endpoint.md#restricting-the-dedicated-port-to-health-only).
 
 Then point the probe at it:
 
@@ -191,11 +194,42 @@ readinessProbe:
     scheme: HTTP
 ```
 
-You can instead use an HTTP startup probe on `/health/live` at port 8080. Do not use a TCP probe for readiness: an open listener does not mean the silo is ready. Raising `failureThreshold` is not the fix for backlog-dependent startup restarts; startup and liveness must probe the listener, not readiness.
+[Run Chronicle on Kubernetes](kubernetes.md) has a complete, tested manifest with these probes, the matching budgets, a PodDisruptionBudget and a NetworkPolicy. You can instead use an HTTP startup probe on `/health/live` at port 8080. Do not use a TCP probe for readiness: an open listener does not mean the silo is ready. Raising `failureThreshold` is not the fix for backlog-dependent startup restarts; startup and liveness must probe the listener, not readiness.
 
-Treat that port as internal — it serves the other HTTP/1.1 endpoints too, so do not expose it publicly.
+With the health port exclusive, serve the Workbench from the main port, 35000. Route your ingress or reverse proxy there with HTTPS when the kernel keeps TLS, or with h2c when `Tls__Enabled=false`, because the main port then accepts cleartext HTTP/2 only. A route that targets the health port stops working as soon as exclusivity is on: the Workbench answers 404 there. [Workbench configuration](configuration/workbench.md#with-an-exclusive-health-port) shows the proxy setup.
 
 > **Note**: The health check endpoint path is configurable. See [Root Properties](configuration/root-properties.md#health-check-endpoint) for details, and [Health Endpoint](configuration/health-endpoint.md) for the dedicated port.
+
+## Crash dumps
+
+The production image carries `createdump` next to the .NET runtime in `/app`, so the kernel can write a dump when it crashes. Dumps are off by default. Turn them on with the .NET runtime's environment variables, and point them at a writable volume, because the image runs as user `1654` and nothing under `/app` is writable for it:
+
+| Variable | Value | Effect |
+| --- | --- | --- |
+| `DOTNET_DbgEnableMiniDump` | `1` | Write a dump when the process crashes. |
+| `DOTNET_DbgMiniDumpType` | `2` | A minidump with the managed heap. `dotnet-dump analyze` opens every type, but its heap commands, such as `dumpheap` and `gcroot`, need `2` or `4`. `4` writes a full dump, `1` a minidump without the heap, and `3` a triage dump: small, with memory contents left out. |
+| `DOTNET_DbgMiniDumpName` | `/dumps/core.%h.%t` | Where the dump is written. `%h` is the host name, `%t` the time of the dump in seconds since the epoch and `%p` the process id. |
+
+Always set `DOTNET_DbgMiniDumpName`. Without it the runtime writes `/tmp/coredump.<pid>`, not to the volume you mounted for dumps, so the dump is lost with the container or fills a small scratch volume.
+
+A heap dump is about as large as the kernel's memory use: a kernel that has only just started, with no clients, wrote 770 MiB. Give the volume room for more than one dump of the kernel's memory limit. Every crash writes another dump, so a kernel that keeps crashing and restarting keeps filling the volume. Copy dumps off promptly and delete them once copied.
+
+Add the volume and the variables to the `docker run` command you already use; the storage, TLS and authentication settings shown earlier on this page stay as they are:
+
+```bash
+mkdir -p dumps && sudo chown 1654:1654 dumps
+```
+
+```text
+-v "$PWD/dumps:/dumps"
+-e DOTNET_DbgEnableMiniDump=1
+-e DOTNET_DbgMiniDumpType=2
+-e DOTNET_DbgMiniDumpName=/dumps/core.%h.%t
+```
+
+The dump lands in `dumps/` on the host and outlives the container. Open it with `dotnet-dump analyze`. Turn dumps off again once you have the one you need.
+
+A dump is a copy of the kernel's memory. It contains the storage connection strings, certificate and signing keys, and event data, including personal data that compliance encryption protects at rest. Treat every dump as a secret that holds personal data: restrict who can take and copy it, keep it encrypted and access-controlled while it is stored and moved, never attach it to a public issue, and delete every copy, on the host and anywhere you copied it, when the analysis is done. Erasing a person's data does not remove it from a dump that was taken earlier, so dumps fall under your data-handling and retention process. On Kubernetes, see [Collect crash dumps](kubernetes.md#collect-crash-dumps).
 
 ## Backup and restore
 
@@ -220,6 +254,8 @@ Keep Chronicle and its storage on private networks, allow only the ports each ca
 
 The .NET client connects over TLS but accepts any server certificate unless the connection string sets `skipTlsValidation=false`. Trust the server's certificate authority on client machines and in application containers, or configure a matching `certificatePath` pin, then enable validation for each production connection. The client warns when validation is skipped for a non-loopback target or DNS SRV lookup; localhost, 127.0.0.0/8, and ::1 are exempt. See [Client TLS](../configuration/tls.mdx) and [Server connection strings](../connection-strings/server.md).
 
+Never publish the dedicated health port while `health.exclusive` is off. That port serves the Workbench, the REST API and the OAuth flows as well as the health endpoint, and often without TLS.
+
 Complete administrator setup before making the service reachable by users. The production image creates the administrator without a password; setup requires the token from server logs or `Authentication:InitialAdminSetupToken`. Protect that token and remove it from configuration after setup. To avoid interactive setup, supply the initial password from your secret store through `Authentication:AdminUser`. See [Authentication](configuration/authentication.md).
 
 If one proxy host serves several instances by path, set `Workbench:BasePath` to the instance's prefix. The [Workbench configuration](configuration/workbench.md) explains how its URLs follow that prefix.
@@ -236,17 +272,31 @@ Allow the silo port (11111) only between trusted nodes and the gateway (30000) o
 > enforces this by default, including on SQL storage. A replacement waits for the old holder to stop or
 > expire; it does not process concurrently. Disabling the lease removes that protection.
 
-For a single-active-node deployment, configure stop-before-start replacement. In Kubernetes use
-`strategy: Recreate`, or `RollingUpdate` with `maxSurge: 0` and `maxUnavailable: 1`. The default one-replica
+For a single-active-node deployment, configure stop-before-start replacement. In Kubernetes use a
+one-replica StatefulSet, which stops the old pod first (see [Run Chronicle on Kubernetes](kubernetes.md#recreate-or-rolling-update)),
+or a Deployment with `strategy: Recreate`, or `RollingUpdate` with `maxSurge: 0` and `maxUnavailable: 1`. A Deployment's default one-replica
 rolling update (`maxSurge: 1`, `maxUnavailable: 0`) cannot converge: the new node waits for the lease while
 the platform waits for it to become ready before stopping the old holder.
 
 **Azure Container Apps single-revision deployments and Cloud Run have the same readiness deadlock.**
-They wait for the replacement to be ready before retiring the active revision. There is currently no
-supported zero-downtime handover for Localhost mode on those platforms. Explicitly stop the old revision
-before starting its replacement (accepting downtime), or use `MongoDB` or `Sql` clustering for multiple active nodes.
-Do not disable the lease to bypass this rollout failure. A replacement waiting for the single-writer
-lease does not report ready.
+They wait for the replacement to be ready before retiring the active revision. On those platforms, and
+for a one-replica Kubernetes rolling update with `maxSurge: 1`, enable standby:
+
+```bash
+Cratis__Chronicle__Clustering__SingleWriterLease__Standby=true
+```
+
+A replacement in standby reports ready (body `Standby`) while it waits for the lease, so the platform
+stops the old instance, which releases the lease. The replacement then takes over. It processes nothing
+before it holds the lease, and refuses requests with HTTP 503 and `Retry-After` or gRPC `Unavailable`
+until it has started, so expect retryable refusals for the whole handover, including the replacement's
+startup and rehydration. This relies on the readiness probe (the startup probe on Cloud Run) targeting
+`/health` or `/health/ready`. Standby gives up readiness as a rollout gate: the old instance is stopped
+before the replacement has shown that it can start, so validate images before rollout and keep a rollback
+path. See
+[Standby for start-before-stop rollouts](configuration/clustering.md#standby-for-start-before-stop-rollouts).
+Do not disable the lease to bypass this rollout failure. Without standby, a replacement waiting for the
+single-writer lease does not report ready. For multiple active nodes, use `MongoDB` or `Sql` clustering.
 
 A lost renewal for half the TTL causes Critical logging and process shutdown with a nonzero exit code;
 a stuck shutdown is force-terminated before another holder can acquire the lease. Configure the restart
@@ -362,4 +412,5 @@ address works. When you instead run multiple nodes directly on one host, set
 ## See also
 
 - [Development and production images](development-and-production-images.md) for the behaviors and defaults that differ between the two images.
+- [Run Chronicle on Kubernetes](kubernetes.md) for a reference manifest with probes, a PodDisruptionBudget and a NetworkPolicy.
 - [Run Chronicle on Azure with Microsoft Entra ID](azure.md) for Azure SQL, Azure Database for PostgreSQL and managed identities.

@@ -13,7 +13,6 @@ public class an_observer_with_metrics : an_observer_with_subscription
     protected const string PartitionsQuarantined = "chronicle-observer-partitions-quarantined";
     protected const string ObserverQuarantined = "chronicle-observer-quarantined";
 
-    protected static readonly string[] _failureInstruments = [PartitionsFailed, PartitionRetryAttempts, PartitionsQuarantined, ObserverQuarantined];
     protected static readonly string[] _observerScopeTags = ["EventStore", "Namespace", "ObserverId", "EventSequenceId"];
 
     /// <summary>

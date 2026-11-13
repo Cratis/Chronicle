@@ -102,12 +102,12 @@ public static class CertificateLoader
 
         return (sender, certificate, chain, sslPolicyErrors) =>
         {
-            if ((sslPolicyErrors & ~SslPolicyErrors.RemoteCertificateChainErrors) != SslPolicyErrors.None || certificate is null)
+            if (HasNonChainErrors(sslPolicyErrors) || certificate is null)
             {
                 return false;
             }
 
-            if (pinnedCertificateHash is not null && certificate.GetCertHashString() == pinnedCertificateHash)
+            if (MatchesPin(certificate, pinnedCertificateHash))
             {
                 return true;
             }
@@ -129,14 +129,19 @@ public static class CertificateLoader
                 return true;
             }
 
-            if (sslPolicyErrors == SslPolicyErrors.RemoteCertificateChainErrors &&
-                pinnedCertificateHash is not null && certificate is not null)
+            if (sslPolicyErrors == SslPolicyErrors.RemoteCertificateChainErrors)
             {
-                return certificate.GetCertHashString() == pinnedCertificateHash;
+                return MatchesPin(certificate, pinnedCertificateHash);
             }
 
             return false;
         };
+
+    static bool HasNonChainErrors(SslPolicyErrors errors) =>
+        (errors & ~SslPolicyErrors.RemoteCertificateChainErrors) != SslPolicyErrors.None;
+
+    static bool MatchesPin(X509Certificate? certificate, string? pinnedCertificateHash) =>
+        pinnedCertificateHash is not null && certificate is not null && certificate.GetCertHashString() == pinnedCertificateHash;
 
     static bool ChainsToCertificateAuthority(X509Certificate certificate, X509Chain? presentedChain, X509Certificate2Collection certificateAuthorities)
     {
@@ -220,11 +225,7 @@ public static class CertificateLoader
 
     static X509Certificate2 LoadDerCertificate(byte[] content)
     {
-#if NET8_0
-        return new X509Certificate2(content);
-#else
         return X509CertificateLoader.LoadCertificate(content);
-#endif
     }
 
     static void ImportPkcs7(X509Certificate2Collection certificateAuthorities, byte[] content)
@@ -243,10 +244,6 @@ public static class CertificateLoader
     static X509Certificate2 LoadCertificateFromPath(string path, string? password)
     {
         // A client certificate needs the private key; read PKCS#12 whether or not a password is configured.
-#if NET8_0
-        return new X509Certificate2(path, password);
-#else
         return X509CertificateLoader.LoadPkcs12FromFile(path, password);
-#endif
     }
 }

@@ -13,7 +13,7 @@ public class and_projection_does_not_exist : given.a_projection_replay_handler
 
     void Establish()
     {
-        _projections.TryGet(
+        _projectionPipelineManager.TryGetFor(
             _observerDetails.Key.EventStore,
             _observerDetails.Key.Namespace,
             (ProjectionId)_observerDetails.Key.ObserverId,

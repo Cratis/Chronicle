@@ -87,6 +87,7 @@ public static class ChronicleServerSiloBuilderExtensions
         builder.Services.TryAddSingleton<IJobTypes, JobTypes>();
         builder.Services.TryAddSingleton<IJobStepThrottle, JobStepThrottle>();
         builder.Services.TryAddSingleton<IObserverRegistrationGate, ObserverRegistrationGate>();
+        builder.Services.TryAddSingleton<ISiloDepartures, SiloDepartures>();
         AddObserverJobAdmission(builder);
 
         // The package's JobsManager/Job/JobStep grains and JobStepThrottle resolve Cratis.Choreography.Jobs.JobsOptions,
@@ -154,6 +155,7 @@ public static class ChronicleServerSiloBuilderExtensions
 
         builder.Services.AddSingleton(sp => sp.GetRequiredService<IStorage>().System.Users);
         builder.Services.AddSingleton(sp => sp.GetRequiredService<IStorage>().System.Applications);
+        builder.Services.TryAddSingleton<IBusySilos, BusySilos>();
         builder.Services.AddSingleton<ILifecycleParticipant<ISiloLifecycle>, ChronicleServerStartupTask>();
         builder.Services.AddSingleton<ILifecycleParticipant<ISiloLifecycle>, Cratis.Chronicle.Compliance.EncryptionKeyFenceProtocol>();
         builder.Services.AddSingleton(sp => new Cratis.Chronicle.Storage.Compliance.EncryptionKeyErasureOptions
@@ -233,8 +235,9 @@ public static class ChronicleServerSiloBuilderExtensions
                     sp.GetRequiredService<IConnectionOwnership>(),
                     sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Observation.Reactors.Reactors>>(),
                     sp.GetRequiredService<IObserverRegistrationGate>(),
-                    sp.GetRequiredService<Cratis.Chronicle.Namespaces.INamespaceCasing>()),
-                new Cratis.Chronicle.Services.Observation.Reducers.Reducers(grainFactory, sp.GetRequiredService<IReducerMediator>(), expandoObjectConverter, jsonSerializerOptions, sp.GetRequiredKeyedService<Cratis.Traces.IActivitySource<Cratis.Chronicle.Services.Observation.Reducers.Reducers>>(Cratis.Chronicle.Concepts.WellKnown.MeterName), sp.GetRequiredService<IOptions<ChronicleOptions>>(), sp.GetRequiredService<IConnectionOwnership>(), sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Observation.Reducers.Reducers>>(), sp.GetRequiredService<IObserverRegistrationGate>(), sp.GetRequiredService<Cratis.Chronicle.Namespaces.INamespaceCasing>()),
+                    sp.GetRequiredService<Cratis.Chronicle.Namespaces.INamespaceCasing>(),
+                    sp.GetRequiredService<ISiloDepartures>()),
+                new Cratis.Chronicle.Services.Observation.Reducers.Reducers(grainFactory, sp.GetRequiredService<IReducerMediator>(), expandoObjectConverter, jsonSerializerOptions, sp.GetRequiredKeyedService<Cratis.Traces.IActivitySource<Cratis.Chronicle.Services.Observation.Reducers.Reducers>>(Cratis.Chronicle.Concepts.WellKnown.MeterName), sp.GetRequiredService<IOptions<ChronicleOptions>>(), sp.GetRequiredService<IConnectionOwnership>(), sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Observation.Reducers.Reducers>>(), sp.GetRequiredService<IObserverRegistrationGate>(), sp.GetRequiredService<Cratis.Chronicle.Namespaces.INamespaceCasing>(), sp.GetRequiredService<ISiloDepartures>()),
                 projections,
                 ActivatorUtilities.CreateInstance<Cratis.Chronicle.Services.Observation.Webhooks.Webhooks>(sp),
                 ActivatorUtilities.CreateInstance<Cratis.Chronicle.Services.ExternalServices.ExternalServices>(sp),
@@ -258,7 +261,10 @@ public static class ChronicleServerSiloBuilderExtensions
                     sp.GetRequiredService<IConnectedClientsVisibility>(),
                     sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Clients.ConnectionService>>(),
                     sp.GetRequiredService<IOptions<ChronicleOptions>>()),
-                ActivatorUtilities.CreateInstance<Cratis.Chronicle.Services.EventSources.EventSources>(sp));
+                ActivatorUtilities.CreateInstance<Cratis.Chronicle.Services.EventSources.EventSources>(sp))
+            {
+                Imports = ActivatorUtilities.CreateInstance<Cratis.Chronicle.Services.Imports.Imports>(sp)
+            };
         });
 
         return builder;

@@ -40,7 +40,7 @@ namespace Cratis.Chronicle.Testing.Reactors;
 /// </para>
 /// </remarks>
 /// <typeparam name="TReactor">The type of reactor under test.</typeparam>
-public class ReactorScenario<TReactor> : IDisposable
+public partial class ReactorScenario<TReactor> : IDisposable
     where TReactor : class
 {
     readonly Defaults _defaults;
@@ -336,6 +336,15 @@ public class ReactorScenario<TReactor> : IDisposable
             RegisteredId = RegisteredObserverMetadata.ReactorIdFor(_defaults.ClientArtifactsProvider, typeof(TReactor)),
             RegisteredEventSequenceId = typeof(TReactor).GetEventSequenceId(_eventTypes, eventStore.Name, _sideEffectHandlers ?? _recordingHandlers, _defaults.ClientArtifactsProvider)
         };
+
+        // Batch methods receive the events of one call as one live page. The per-event methods then get the
+        // events no batch method observes, one at a time, as the client does for a page.
+        if (invoker.Batches.Count > 0)
+        {
+            var page = occurrences.Where(_ => filters.MatchesContext(_.Context)).ToArray();
+            await DeliverToBatchMethods(invoker, page, eventStore);
+            occurrences = page.Where(_ => !invoker.Batches.Any(method => method.Observes(_.Event.GetType())));
+        }
 
         foreach (var occurrence in occurrences)
         {

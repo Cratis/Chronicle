@@ -14,7 +14,7 @@ namespace Cratis.Chronicle.ReadModels;
 /// <param name="source">The stream to subscribe to when the first subscriber arrives.</param>
 public sealed class ReadModelObservation<TReadModel>(IObservable<IEnumerable<TReadModel>> source) : ISubject<IEnumerable<TReadModel>>, IDisposable
 {
-    readonly object _gate = new();
+    readonly Lock _gate = new();
     readonly ReplaySubject<IEnumerable<TReadModel>> _subject = new(1);
     readonly SingleAssignmentDisposable _upstream = new();
     int _subscribers;

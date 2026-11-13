@@ -66,7 +66,7 @@ internal static class DatabaseName
                 break;
             }
 
-            result.Append(rune.ToString());
+            result.Append(rune);
             size += next;
         }
 

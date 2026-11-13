@@ -16,6 +16,9 @@ Chronicle binds the main and configured dedicated health listeners before starti
 | `/health` | Readiness: startup has completed, the host has started, and shutdown has not begun. Existing storage checks must also pass. Returns 503 otherwise. |
 | `/health/ready` | Same checks and status as `/health`. |
 
+The readiness body is the aggregated status: `Healthy`, `Degraded` or `Unhealthy`, or `Standby` while an
+[opted-in standby node](#single-writer-lease-readiness) waits for the single-writer lease.
+
 A different `healthCheckEndpoint` moves all three routes: `/probe` also exposes `/probe/live` and `/probe/ready`. All three remain available on an exclusive health port.
 
 Until ready, the kernel refuses non-health traffic, including the Workbench and static files, with HTTP 503 and `Retry-After`, or gRPC `Unavailable`. Catch-up that continues in the background after startup does not hold readiness back. A startup failure still fails the host.
@@ -78,8 +81,16 @@ With `Localhost` clustering on persistent storage, the default single-writer lea
 lease. Losing ownership or reaching TTL/2 without a confirmed renewal makes it unhealthy and initiates
 shutdown. It is not registered for `MongoDB` clustering, `InMemory` storage or an explicitly disabled lease.
 
-A node still waiting for acquisition has not completed silo startup and is not ready. The lease does not
-bind an early health listener or advertise a ready standby. See [Clustering](clustering.md#single-writer-lease).
+A node still waiting for acquisition has not completed silo startup and is not ready, unless standby is
+enabled. With `clustering.singleWriterLease.standby` set to `true`, `/health` and `/health/ready` return
+**200** with the body `Standby` from the moment the node starts waiting for the lease until its startup
+has completed; the checks involved report `Degraded` with a standby description. In standby the node
+still refuses all non-health traffic with HTTP 503 and `Retry-After`, or gRPC `Unavailable`. Once startup
+completes the body is `Healthy` (or `Degraded` for other reasons, as before). If startup has not completed
+`clustering.singleWriterLease.standbyStartupTimeout` (default 10 minutes) after the node took the lease,
+readiness reports **503** `Unhealthy` instead, so a stuck startup does not look ready. Because the body
+`Standby` is a 200, alert on how long a node stays in standby rather than on the status code alone. See
+[Standby for start-before-stop rollouts](clustering.md#standby-for-start-before-stop-rollouts).
 
 ## Storage authorization
 
@@ -106,6 +117,8 @@ Set `health.exclusive` to `true` to close that off. The port then serves the hea
 The restriction keys on the local port the connection was accepted on, which a client cannot influence. It is not derived from the `Host` header or any `X-Forwarded-*` header, so a request arriving on the main port cannot dress itself up as a health-port request or vice versa. The main port is never restricted, and the option does nothing unless a dedicated `health.port` is configured and differs from the main port.
 
 It defaults to `false` so that enabling a dedicated health port never silently removes endpoints from an existing deployment; turn it on deliberately when the probe port is reachable from somewhere the Workbench and API should not be.
+
+Once it is on, the Workbench is served from the main port only. A reverse proxy or ingress that routes Workbench traffic to the health port gets 404 and has to target the main port instead, over HTTPS or, with `tls.enabled=false`, over h2c. [Workbench configuration](workbench.md#with-an-exclusive-health-port) shows that setup.
 
 ## Why a plaintext health port helps in Kubernetes
 

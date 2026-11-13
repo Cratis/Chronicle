@@ -151,6 +151,11 @@ public partial class ConstraintIndexReplay(
         // Runs the phases that follow each other within one pass. Returns true when the turn must stop.
         if (_phase == Phase.Reading && await ReadPhase(eventLimit, cancellationToken)) return true;
         if (_phase == Phase.Collecting) await CollectPhase(cancellationToken);
+        return await RunReleasingAndClaimingSteps(cancellationToken);
+    }
+
+    async Task<bool> RunReleasingAndClaimingSteps(CancellationToken cancellationToken)
+    {
         if (_phase == Phase.Releasing && CatchUp is not null && await CatchUpPhase(cancellationToken)) return true;
         if (_phase == Phase.Releasing && await ReleasePhase(cancellationToken)) return true;
         return _phase == Phase.Claiming && await ClaimPhase(cancellationToken);

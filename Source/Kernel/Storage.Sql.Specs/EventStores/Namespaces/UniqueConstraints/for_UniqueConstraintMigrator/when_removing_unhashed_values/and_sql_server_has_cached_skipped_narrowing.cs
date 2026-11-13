@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints.for_UniqueConstraintMigrator.when_removing_unhashed_values;
 
+[PerFactSpecificationLifecycle] // Facts run their own asynchronous operations, so each fact gets its own context.
 [Collection(SqlServerCollection.Name)]
 public class and_sql_server_has_cached_skipped_narrowing(SqlServerFixture fixture) : given.a_legacy_server_table
 {

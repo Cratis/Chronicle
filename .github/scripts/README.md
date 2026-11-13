@@ -1,4 +1,122 @@
-# gRPC Contract Compatibility Validation
+# CI Scripts
+
+## Requested-integration reuse and rerun report
+
+`select-integration.py` retains the `skip|selected|full` contract. Reuse is limited to
+same-repository `pull_request` runs of the same PR with an ancestor head, an identical
+recorded tested-base SHA, identical configuration, and a delta containing only the
+existing `integration-selection.json` `ignore` paths. Unknown paths refuse reuse.
+Diffs disable rename detection so moving exercised source into docs cannot hide its deletion.
+
+Hot Core Gate records PR number, head SHA, and tested base in its run-name. The Actions
+API's `pull_requests[].base.sha` can change after a run and is not trusted. Legacy titles
+without the immutable record cannot be reused. The source must be successful, with a
+successful requested gate and at least one successful actual matrix lane; skipped or
+reused matrices cannot chain, and failed/cancelled inner jobs refuse reuse.
+
+The fingerprint hashes committed Git mode/blob/path records for all of `.github/`,
+`global.json`, `Directory.Packages.props`, `Chronicle.slnx`, `specs.runsettings`, root and
+nested `.editorconfig`/`.globalconfig` files, `Directory.Build.*`, `*.props`, `*.targets`,
+case-insensitive NuGet config names, package manifests, and npm/Yarn/pnpm lockfiles.
+Over-inclusion is intentional. Missing Git/API evidence falls back to normal selection,
+never supplies reuse evidence. Reused skips name the source run, head, and fingerprint;
+a wholly ignorable PR instead says no earlier run is needed.
+
+Run the read-only 14-day report with `node .github/scripts/classify-reruns.mjs`.
+Options: `--days 14`, `--repo Cratis/Chronicle`, `--json` (JSON instead of Markdown).
+It examines every rerun attempt of Requested Integration, Hot Core Gate, and
+.NET Build & Integration for runs **created** in the window, including paginated lists.
+A Hot Core Gate attempt triggered by `github-actions[bot]` is `gate-refresh`.
+Failure then success on the same head is a **probable flake**, not proof of a flaky test.
+Human reruns after success/cancellation/skip, or still failing, are `deliberate`.
+Missing attempt data is `unclassified`; unreadable run lists fail the report rather
+than pretending there were no reruns. These actor/conclusion rules are heuristics:
+older runs rerun recently are outside the creation window, and no logs are diagnosed.
+The report performs only GET requests through `gh api`, with no GitHub writes.
+
+## Core spec partitioning
+
+The four ordinary `specs-other` jobs still cover all 25 ordinary projects.
+`Core.Specs.csproj` is planned as two units named
+`Core.Specs.csproj#core-part-K-of-2`; no workflow, artifact, or required-check name changes.
+Other projects retain their existing invocation. An unsharded invocation still runs Core once.
+
+`core-spec-partition.json` contains disjoint namespace/class prefixes and relative weights.
+Parts are assigned by longest-processing-time-first (descending weight, ordinal prefix
+on ties, lowest numbered part on equal totals). The ordinary planner compares normal LPT
+with Core-first placement, keeping the lower predicted critical path. It never forces
+Core spreading when stacking is faster.
+
+Train-8 run `43190307308`, attempt 1, measured Core parts at 80.179 / 119.541 / 103.457 /
+101.729 seconds including validation. The model subtracts 55 seconds fixed overhead from
+each old part, scales its namespace weights to the residual, and conserves 184.906 seconds
+of variable work. Every new part pays 55 seconds; mean per-shard inventory overhead is
+32.308 seconds, separate from project intervals. The original weights came from run
+`43166203967` TRX durations plus 0.003 seconds per test. Train-8 artifacts also contain
+per-test TRX durations, but no per-namespace wall intervals.
+
+Two parts predict 147.454 / 147.452 seconds each, with ordinary coverage steps at
+287.756 / 286.624 / 286.620 seconds (project-only: 255.448 / 254.316 / 254.312).
+Three parts have a perfect-placement lower bound of 305.333 seconds per shard including
+inventory overhead; every additional part increases that bound. Thus two minimizes the
+predicted slowest shard among counts of two or more. These are model predictions, not
+observed savings: train 8 actually took 263 / 388 / 320 seconds; train 7 took 393 / 254 / 224.
+
+For a wall-time refresh, preserve the partition used by the measured run, obtain its jobs
+JSON and every ordinary job log from that run (four since #5859; older runs have three), then
+run (logs in shard order):
+
+```bash
+node .github/scripts/refresh-spec-shard-timings.mjs <run-id> previous-partition.json jobs.json shard-1.log shard-2.log shard-3.log shard-4.log
+```
+
+The refresh rejects incomplete/duplicate measurements, compares part counts with explicit
+fixed overhead, and checks the exact-once partition before writing either timing table.
+It stops if `CORE_PARTS` differs from the model-selected count; update that constant and
+its count-specific regression expectations before refreshing. Always calibrate from the
+partition that produced the logs, not an already recalibrated table.
+
+For source additions, refresh prefixes with a complete, non-overlapping set of Core TRX
+results (one whole run, or every part of a run), not duplicate downloads. This replaces
+wall calibration with TRX weights, so recalibrate against a matching measured run afterward:
+
+```bash
+node .github/scripts/core-spec-partition.mjs --refresh path/to/Core/results.trx
+node .github/scripts/core-spec-partition.mjs --check
+node .github/scripts/spec-shards.mjs --dry-run
+node --test .github/scripts/test-spec-shards.mjs
+```
+
+The refresh groups namespaces by area, recursively splitting groups above one eighth of
+measured weight down to `for_*` boundaries. Direct spec classes receive class-specific terms
+when their child namespaces are split. Units without measurements receive a small positive
+floor. The checked-in weights sum to one; each part must be nonempty.
+
+The guard covers every source class, record, struct, interface and enum, including abstract
+and nested types, regardless of detected tests or inheritance. Nested FQNs use `+`, and generic
+definitions include their arity. Only the five named, test-free helpers in
+`core-spec-exclusions.json` are exempt. Exclusions must exist and remain test-free; test
+attributes, `should_`/`test_` methods, and Specification/Scenario bases on a helper, source
+base or any by-name derivative reject the exclusion. This conservative closure also follows aliases and
+generic/nested base names without relying on exact inheritance resolution.
+
+The guard evaluates actual substring matching against every non-excluded type FQN and rejects
+zero or multiple matching parts, including middle-of-name collisions. Trailing dots prevent
+sibling-name collisions. New types outside the recorded prefixes fail closed with the refresh
+command. Unsupported declaration syntax fails closed rather than silently omitting a type.
+Spec-class discovery is only for reporting; weighting sums TRX durations over guarded types.
+The guard is imported by the existing `test-spec-shards.mjs` CI gate, with synthetic uncovered,
+double-covered, nested/generic inheritance and unsafe/stale exclusion regression cases.
+
+Each part uses the same built executable and the existing ordinary/runsettings exclusions,
+ANDed with its OR-filter. Its TRX and Cobertura files are written under a distinct
+`-core-part-K` directory; unit identities also remain distinct in completion receipts.
+The existing path-based coverage merge retains every part's report and unions production hits.
+Train 8 confirmed the four-part test total of 27,040. All four downloaded Core TRX files
+also match the new two-part filters exactly once. CI must still measure the new two-part
+wall times and confirm coverage union before treating these predictions as achieved savings.
+
+## gRPC Contract Compatibility Validation
 
 This directory contains scripts for validating gRPC API contract compatibility to detect breaking changes.
 

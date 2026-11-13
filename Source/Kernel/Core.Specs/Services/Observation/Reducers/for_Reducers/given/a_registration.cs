@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reactive.Disposables;
+using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Text.Json;
 using Cratis.Chronicle.Concepts.ReadModels;
@@ -33,6 +35,7 @@ public class a_registration : Specification
     readonly List<IDisposable> _connections = [];
     Reducers _reducers;
     protected Subject<ReducerMessage> _messages;
+    protected TaskCompletionSource _messagesReleased;
 
     void Establish()
     {
@@ -70,7 +73,8 @@ public class a_registration : Specification
             AllowingConnectionOwnership.Create(),
             NullLogger<Reducers>.Instance,
             _gate,
-            NamespaceCasingContext.Create());
+            NamespaceCasingContext.Create(),
+            NoSiloDepartures.Instance);
         _grainFactory.ClearReceivedCalls();
         _readModel.ClearReceivedCalls();
         _client.ClearReceivedCalls();
@@ -86,8 +90,18 @@ public class a_registration : Specification
     protected void Connect(string connectionId = "connection", CallContext? callContext = null, CancellationToken cancellationToken = default)
     {
         var messages = _messages = new Subject<ReducerMessage>();
+        var released = _messagesReleased = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        var observed = Observable.Create<ReducerMessage>(observer =>
+        {
+            var subscription = messages.Subscribe(observer);
+            return Disposable.Create(() =>
+            {
+                subscription.Dispose();
+                released.TrySetResult();
+            });
+        });
         _connections.Add(messages);
-        _connections.Add(_reducers.Observe(messages, callContext ?? new CallContext(new CallOptions(cancellationToken: cancellationToken))).Subscribe(_ => { }, error => _error.TrySetResult(error)));
+        _connections.Add(_reducers.Observe(observed, callContext ?? new CallContext(new CallOptions(cancellationToken: cancellationToken))).Subscribe(_ => { }, error => _error.TrySetResult(error)));
         messages.OnNext(new(new(new RegisterReducer
         {
             ConnectionId = connectionId,

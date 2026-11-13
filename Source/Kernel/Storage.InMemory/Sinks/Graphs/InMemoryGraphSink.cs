@@ -20,7 +20,7 @@ namespace Cratis.Chronicle.Storage.InMemory.Sinks.Graphs;
 /// <param name="definition">The <see cref="GraphDefinition"/> of the graph.</param>
 public partial class InMemoryGraphSink(GraphDefinition definition) : IGraphSink
 {
-    readonly object _gate = new();
+    readonly Lock _gate = new();
     readonly Dictionary<InMemoryGraphNodeId, InMemoryGraphElement> _nodes = [];
     readonly Dictionary<InMemoryGraphEdgeId, InMemoryGraphElement> _edges = [];
     readonly Dictionary<ProjectionId, long> _currentGenerations = [];

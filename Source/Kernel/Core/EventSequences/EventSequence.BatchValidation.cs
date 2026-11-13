@@ -52,6 +52,7 @@ public partial class EventSequence
         Occurrences.EffectReceipt? effectReceipt = null,
         ConcurrencyScopes? legacyScopes = null)
     {
+        var started = System.Diagnostics.Stopwatch.GetTimestamp();
         using var span = activitySource.AppendMany();
         span?.Activity?.Tag(_eventSequenceKey.EventStore);
         span?.Activity?.Tag(_eventSequenceKey.Namespace);
@@ -66,6 +67,10 @@ public partial class EventSequence
         {
             span?.Activity?.RecordFailure(ex);
             throw;
+        }
+        finally
+        {
+            _metrics?.AppendDuration(System.Diagnostics.Stopwatch.GetElapsedTime(started), _eventSequenceKey.EventSequenceId);
         }
     }
 
@@ -148,7 +153,7 @@ public partial class EventSequence
         // Prepare every event first, then read the constraint indexes for the whole batch at once, then validate the
         // constraints of each event in order - the order is what lets earlier events' claims in the batch be seen by
         // later ones. Validating each event against storage on its own costs one round trip per event and constraint.
-        var validated = new List<(EventToAppend Event, Result<(ExpandoObject CompliantEvent, JsonObject CompliantContent, ConstraintValidationContext ConstraintValidationContext), AppendResult> Result)>();
+        List<(EventToAppend Event, Result<(ExpandoObject CompliantEvent, JsonObject CompliantContent, ConstraintValidationContext ConstraintValidationContext), AppendResult> Result)> validated = [];
         foreach (var (eventToAppend, index) in events.Select((@event, index) => (@event, index)))
         {
             var resolvedEventSourceType = await EventSourceResolution.Resolve(EventSourcesStorage, eventToAppend.EventSource, eventToAppend.EventSourceType, eventToAppend.eventStreamType, correlationId);

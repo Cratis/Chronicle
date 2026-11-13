@@ -15,8 +15,11 @@ using Cratis.Chronicle.Observation.Webhooks;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventTypes;
+using Cratis.Metrics;
 using Cratis.Monads;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using OneOf.Types;
 
 namespace Cratis.Chronicle.Observation.Jobs;
@@ -37,6 +40,8 @@ namespace Cratis.Chronicle.Observation.Jobs;
 /// <param name="logger">The logger.</param>
 /// <param name="eventGenerationRelease">The pinned generation release boundary.</param>
 /// <param name="timeProvider">The delivery fence clock.</param>
+/// <param name="observerMeter">The <see cref="IMeter{T}"/> the observer metrics are recorded with.</param>
+/// <param name="options">The kernel configuration, selecting the metric names.</param>
 public partial class HandleEventsForPartition(
     [PersistentState(nameof(JobStepState), Cratis.Choreography.WellKnownGrainStorageProviders.JobSteps)]
     IPersistentState<HandleEventsForPartitionState> state,
@@ -48,7 +53,9 @@ public partial class HandleEventsForPartition(
     IObserverServiceClient observerServiceClient,
     ILogger<HandleEventsForPartition> logger,
     IEventGenerationRelease? eventGenerationRelease = null,
-    TimeProvider? timeProvider = null) : JobStep<HandleEventsForPartitionArguments, HandleEventsForPartitionResult, HandleEventsForPartitionState>(state, throttle, logger), IHandleEventsForPartition
+    TimeProvider? timeProvider = null,
+    [FromKeyedServices(WellKnown.MeterName)] IMeter<Observer>? observerMeter = null,
+    IOptions<ChronicleOptions>? options = null) : JobStep<HandleEventsForPartitionArguments, HandleEventsForPartitionResult, HandleEventsForPartitionState>(state, throttle, logger), IHandleEventsForPartition
 {
     const string SubscriberDisconnected = "Subscriber is disconnected";
 
@@ -100,7 +107,7 @@ public partial class HandleEventsForPartition(
         State.EventTypes = EventTypeInterner.Intern(State.EventTypes);
         State.ReaderScope = EventTypeInterner.Intern(State.ReaderScope);
 
-        if (State.IsPrepared)
+        if (State.IsPrepared && State.ObserverKey != ObserverKey.NotSet)
         {
             _observer = GrainFactory.GetGrain<IObserver>(State.ObserverKey);
             var subscription = await _observer.GetSubscription();
@@ -187,7 +194,53 @@ public partial class HandleEventsForPartition(
     }
 
     /// <inheritdoc/>
-    protected override async Task<Catch<JobStepResult>> PerformStep(HandleEventsForPartitionState currentState, CancellationToken cancellationToken)
+    protected override Task<Catch<JobStepResult>> PerformStep(HandleEventsForPartitionState currentState, CancellationToken cancellationToken)
+    {
+        // Legacy truncated state cannot be re-prepared here. Let the normal terminal path notify the owning job.
+        if (currentState.ObserverKey == ObserverKey.NotSet)
+        {
+            logger.MissingObserverKey(currentState.Id.JobId, currentState.Id.JobStepId);
+            return Task.FromResult<Catch<JobStepResult>>(JobStepResult.Failed("The prepared job step state was missing its observer key"));
+        }
+
+        return PerformPreparedStep(currentState, cancellationToken);
+    }
+
+    /// <summary>
+    /// Creates the result for a failure the observer could not be told about. It is handed to the job as transient, so
+    /// the job runs the step again and reports the partition as failed when the attempts run out - a failure is never
+    /// left without a failed partition to retry it.
+    /// </summary>
+    /// <param name="partition">The partition the step was handling.</param>
+    /// <param name="failedAt">The sequence number the partition failed at.</param>
+    /// <param name="lastSuccessfullyHandled">The last successfully handled event sequence number.</param>
+    /// <param name="error">The failure.</param>
+    /// <returns>The <see cref="JobStepResult"/>.</returns>
+    static JobStepResult UnreportedFailure(Key partition, EventSequenceNumber failedAt, EventSequenceNumber lastSuccessfullyHandled, Exception error)
+    {
+        var messages = TransientTimeouts.ShortenForStep(error.GetAllMessages());
+        return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(
+            CreateResult(lastSuccessfullyHandled) with { TransientFailure = new(partition, failedAt, messages) },
+            messages,
+            string.Empty));
+    }
+
+    static HandleEventsForPartitionResult CreateResult(EventSequenceNumber lastSuccessfullyHandled) => new(lastSuccessfullyHandled);
+
+    static EventSequenceNumber GetLastScanned(EventSequenceNumber lastScanned, BoundedEventCursor events)
+    {
+        foreach (var @event in events.Current)
+        {
+            if (!lastScanned.IsActualValue || @event.Context.SequenceNumber > lastScanned)
+            {
+                lastScanned = @event.Context.SequenceNumber;
+            }
+        }
+
+        return lastScanned;
+    }
+
+    async Task<Catch<JobStepResult>> PerformPreparedStep(HandleEventsForPartitionState currentState, CancellationToken cancellationToken)
     {
         var lastSuccessfullyHandledEventSequenceNumber = EventSequenceNumber.Unavailable;
         var subscription = await _observer.GetSubscription();
@@ -311,6 +364,7 @@ public partial class HandleEventsForPartition(
                     switch (eventObserverResult.State)
                     {
                         case ObserverSubscriberState.Ok:
+                            RecordSuccessfulObservation(currentState);
                             lastEventSequenceNumberAttempted = EventSequenceNumber.Unavailable;
                             if (!await ReportFromWork(eventObserverResult.LastSuccessfulObservation))
                             {
@@ -446,7 +500,7 @@ public partial class HandleEventsForPartition(
         {
             logger.FailedPerforming(e, nameof(HandleEventsForPartition));
             var failedAt = lastSuccessfullyHandledEventSequenceNumber.IsActualValue ? lastSuccessfullyHandledEventSequenceNumber.Next() : currentState.StartEventSequenceNumber;
-            if (!await TryReportPartitionFailed(failedAt, e))
+            if (!await TryReportPartitionFailed(currentState, failedAt, e))
             {
                 return UnreportedFailure(currentState.Partition, failedAt, lastSuccessfullyHandledEventSequenceNumber, e);
             }
@@ -461,40 +515,6 @@ public partial class HandleEventsForPartition(
         }
     }
 
-    /// <summary>
-    /// Creates the result for a failure the observer could not be told about. It is handed to the job as transient, so
-    /// the job runs the step again and reports the partition as failed when the attempts run out - a failure is never
-    /// left without a failed partition to retry it.
-    /// </summary>
-    /// <param name="partition">The partition the step was handling.</param>
-    /// <param name="failedAt">The sequence number the partition failed at.</param>
-    /// <param name="lastSuccessfullyHandled">The last successfully handled event sequence number.</param>
-    /// <param name="error">The failure.</param>
-    /// <returns>The <see cref="JobStepResult"/>.</returns>
-    static JobStepResult UnreportedFailure(Key partition, EventSequenceNumber failedAt, EventSequenceNumber lastSuccessfullyHandled, Exception error)
-    {
-        var messages = TransientTimeouts.ShortenForStep(error.GetAllMessages());
-        return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(
-            CreateResult(lastSuccessfullyHandled) with { TransientFailure = new(partition, failedAt, messages) },
-            messages,
-            string.Empty));
-    }
-
-    static HandleEventsForPartitionResult CreateResult(EventSequenceNumber lastSuccessfullyHandled) => new(lastSuccessfullyHandled);
-
-    static EventSequenceNumber GetLastScanned(EventSequenceNumber lastScanned, BoundedEventCursor events)
-    {
-        foreach (var @event in events.Current)
-        {
-            if (!lastScanned.IsActualValue || @event.Context.SequenceNumber > lastScanned)
-            {
-                lastScanned = @event.Context.SequenceNumber;
-            }
-        }
-
-        return lastScanned;
-    }
-
     Task ReportPartitionDeferred(HandleEventsForPartitionState state, PartitionDeferral deferral) =>
         state.ReplayEpoch is { } replayEpoch
             ? _observer.PartitionDeferred(state.Partition, deferral, state.EpisodeId, state.DeferralId, replayEpoch)
@@ -505,11 +525,11 @@ public partial class HandleEventsForPartition(
             ? _observer.PartitionFailed(_eventSourceId, failedAt, messages, stackTrace, kind, state.EpisodeId, state.DeferralId, new PartitionFailureContext(policy, null, replayEpoch))
             : _observer.PartitionFailed(_eventSourceId, failedAt, messages, stackTrace, kind, state.EpisodeId, state.DeferralId, policy);
 
-    async Task<bool> TryReportPartitionFailed(EventSequenceNumber failedAt, Exception error)
+    async Task<bool> TryReportPartitionFailed(HandleEventsForPartitionState state, EventSequenceNumber failedAt, Exception error)
     {
         try
         {
-            await ReportPartitionFailed(State, failedAt, error.GetAllMessages(), error.StackTrace ?? string.Empty, error.ToFailureKind(), WebhookDeliveryFailurePolicy.Retry);
+            await ReportPartitionFailed(state, failedAt, error.GetAllMessages(), error.StackTrace ?? string.Empty, error.ToFailureKind(), WebhookDeliveryFailurePolicy.Retry);
             return true;
         }
         catch (Exception reportError)

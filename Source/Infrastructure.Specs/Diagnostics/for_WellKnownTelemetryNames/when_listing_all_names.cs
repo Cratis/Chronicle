@@ -37,6 +37,8 @@ public partial class when_listing_all_names : given.all_telemetry_names
         ["Attributes.SqlLiveQueryName"] = "cratis.chronicle.sql.live_query.name",
         ["Attributes.SqlLiveQueryFailureKind"] = "cratis.chronicle.sql.live_query.failure_kind",
         ["Attributes.SqlUpsertOperation"] = "cratis.chronicle.sql.upsert.operation",
+        ["Attributes.ObserverState"] = "cratis.chronicle.observer.state",
+        ["Attributes.JobType"] = "cratis.chronicle.job.type",
         ["Metrics.ObserverSuccessfulObservations"] = "cratis.chronicle.observer.successful_observations",
         ["Metrics.ObserverPartitionFailures"] = "cratis.chronicle.observer.partition_failures",
         ["Metrics.ObserverPartitionsQuarantined"] = "cratis.chronicle.observer.partitions_quarantined",
@@ -82,12 +84,21 @@ public partial class when_listing_all_names : given.all_telemetry_names
         ["Metrics.AbandonedDeliveryHoldExpirations"] = "cratis.chronicle.abandoned_delivery.hold_expirations",
         ["Metrics.AbandonedDeliveryFenceDuration"] = "cratis.chronicle.abandoned_delivery.fence_duration",
         ["Metrics.ConnectedClientCount"] = "cratis.chronicle.connected_client.count",
+        ["Metrics.ProjectionCachedGraphs"] = "cratis.chronicle.projection.cached_graphs",
         ["Metrics.SqlSchemaLockWaitDuration"] = "cratis.chronicle.sql.schema_lock.wait_duration",
         ["Metrics.SqlLiveQueryPollFailures"] = "cratis.chronicle.sql.live_query.poll_failures",
         ["Metrics.SqlUpsertRecoveredCollisions"] = "cratis.chronicle.sql.upsert.recovered_collisions",
         ["Metrics.SqlEncryptionKeyIdentifiersRefused"] = "cratis.chronicle.sql.encryption_key.refused_identifiers",
         ["Metrics.SqlCompositeKeyStampFailures"] = "cratis.chronicle.sql.composite_key.stamp_failures",
         ["Metrics.SqlCompositeKeyCollisions"] = "cratis.chronicle.sql.composite_key.collisions",
+        ["Metrics.ObserverFailedPartitions"] = "cratis.chronicle.observer.failed_partitions",
+        ["Metrics.ObserverQuarantinedPartitions"] = "cratis.chronicle.observer.quarantined_partitions",
+        ["Metrics.ObserverRunningState"] = "cratis.chronicle.observer.running_state",
+        ["Metrics.ObserverResident"] = "cratis.chronicle.observer.resident",
+        ["Metrics.JobRunning"] = "cratis.chronicle.job.running",
+        ["Metrics.ObserverJobHandledSteps"] = "cratis.chronicle.observer.job.handled_steps",
+        ["Metrics.ObserverJobTotalSteps"] = "cratis.chronicle.observer.job.total_steps",
+        ["Metrics.EventSequenceAppendDuration"] = "cratis.chronicle.event_sequence.append.duration",
         ["Spans.EventSequenceAppend"] = "cratis.chronicle.event_sequence.append",
         ["Spans.EventSequenceAppendMany"] = "cratis.chronicle.event_sequence.append_many",
         ["Spans.ObserverHandle"] = "cratis.chronicle.observer.handle",
@@ -148,12 +159,21 @@ public partial class when_listing_all_names : given.all_telemetry_names
         ["Metrics.AbandonedDeliveryHoldExpirationsUnit"] = "{delivery}",
         ["Metrics.AbandonedDeliveryFenceDurationUnit"] = "s",
         ["Metrics.ConnectedClientCountUnit"] = "{client}",
+        ["Metrics.ProjectionCachedGraphsUnit"] = "{graph}",
         ["Metrics.SqlSchemaLockWaitDurationUnit"] = "s",
         ["Metrics.SqlLiveQueryPollFailuresUnit"] = "{poll}",
         ["Metrics.SqlUpsertRecoveredCollisionsUnit"] = "{collision}",
         ["Metrics.SqlEncryptionKeyIdentifiersRefusedUnit"] = "{operation}",
         ["Metrics.SqlCompositeKeyStampFailuresUnit"] = "{failure}",
-        ["Metrics.SqlCompositeKeyCollisionsUnit"] = "{collision}"
+        ["Metrics.SqlCompositeKeyCollisionsUnit"] = "{collision}",
+        ["Metrics.ObserverFailedPartitionsUnit"] = "{partition}",
+        ["Metrics.ObserverQuarantinedPartitionsUnit"] = "{partition}",
+        ["Metrics.ObserverRunningStateUnit"] = "1",
+        ["Metrics.ObserverResidentUnit"] = "{observer}",
+        ["Metrics.JobRunningUnit"] = "{job}",
+        ["Metrics.ObserverJobHandledStepsUnit"] = "{step}",
+        ["Metrics.ObserverJobTotalStepsUnit"] = "{step}",
+        ["Metrics.EventSequenceAppendDurationUnit"] = "s"
     };
 
     static string Render(IEnumerable<KeyValuePair<string, string>> names) =>
@@ -190,6 +210,10 @@ public partial class when_listing_all_names : given.all_telemetry_names
     [Fact]
     void should_have_unique_attribute_keys() =>
         In("Attributes").Select(_ => _.Value).Distinct().Count().ShouldEqual(In("Attributes").Count());
+
+    [Fact]
+    void should_not_reuse_a_metric_name_as_an_attribute_key() =>
+        In("Attributes").Select(_ => _.Value).Intersect(In("Metrics").Select(_ => _.Value)).ShouldBeEmpty();
 
     [Fact]
     void should_not_publish_kernel_names_under_the_client_prefix() =>

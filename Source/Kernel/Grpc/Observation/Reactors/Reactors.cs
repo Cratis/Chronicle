@@ -44,6 +44,7 @@ namespace Cratis.Chronicle.Services.Observation.Reactors;
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 /// <param name="registrationGate">The silo-wide gate for observer registrations.</param>
 /// <param name="namespaceCasing">The namespace casing resolver.</param>
+/// <param name="siloDepartures">The <see cref="ISiloDepartures"/> telling when to check client subscriptions early.</param>
 internal sealed class Reactors(
     IGrainFactory grainFactory,
     IReactorMediator reactorMediator,
@@ -54,7 +55,8 @@ internal sealed class Reactors(
     IConnectionOwnership connectionOwnership,
     ILogger<Reactors> logger,
     IObserverRegistrationGate registrationGate,
-    INamespaceCasing namespaceCasing) : IReactors
+    INamespaceCasing namespaceCasing,
+    ISiloDepartures siloDepartures) : IReactors
 {
     /// <inheritdoc/>
     public IObservable<EventsToObserve> Observe(IObservable<ReactorMessage> messages, CallContext context = default)
@@ -190,7 +192,8 @@ internal sealed class Reactors(
                         registration.ConnectionId,
                         registration.EventStore,
                         registration.Namespace,
-                        deliverPage);
+                        deliverPage,
+                        registration.PageDelivery.ToChronicle());
                 }
 
                 reactorMediator.SubscribeReplayNotifications(
@@ -201,7 +204,7 @@ internal sealed class Reactors(
                     replay);
 
                 var definition = registration.Reactor.ToChronicle() with { PageDelivery = registration.PageDelivery.ToChronicle() };
-                using (await registrationGate.Enter(cancellation.Token))
+                using (var gate = await ObserverRegistrationGateLease.Enter(registrationGate, cancellation.Token))
                 {
                     // The parent is the long-lived Observe request, which the server deliberately does not trace.
                     var requestActivity = Activity.Current;
@@ -211,7 +214,12 @@ internal sealed class Reactors(
                         using var span = activitySource.Register();
                         span?.Activity?.Tag(key, ObserverType.Reactor);
                         clientObserver = grainFactory.GetGrain<IReactor>(key);
-                        await clientObserver.SetDefinitionAndSubscribe(definition);
+                        var reactor = clientObserver;
+                        await ObserverRegistrationEstablishment.Establish(
+                            () => reactor.SetDefinitionAndSubscribe(definition),
+                            (attempt, _) => logger.SubscribingTimedOut(registration.Reactor.ReactorId, registration.ConnectionId, attempt),
+                            () => gate.Reenter(cancellation.Token),
+                            cancellation.Token);
                     }
                     finally
                     {
@@ -221,7 +229,9 @@ internal sealed class Reactors(
 
                 await ClientSubscriptionKeeper.KeepWhileConnected(
                     () => ClientSubscriptionKeeper.KeepSubscription(clientObserver.IsSubscriptionIntact, () => clientObserver.KeepSubscription(definition)),
-                    TimeSpan.FromSeconds(options.Value.ConnectedClients.ReviseIntervalSeconds),
+                    SubscriptionCheckSchedule.From(options.Value),
+                    siloDepartures,
+                    TimeProvider.System,
                     registration.ConnectionId,
                     logger,
                     cancellation.Token);

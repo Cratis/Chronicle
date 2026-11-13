@@ -39,6 +39,11 @@ public static class WellKnownServices
     public const string Jobs = "Jobs";
 
     /// <summary>
+    /// The service for explicit constraint index recovery.
+    /// </summary>
+    public const string ConstraintIndexes = "ConstraintIndexes";
+
+    /// <summary>
     /// The name of the Observers service.
     /// </summary>
     public const string Observers = "Observers";
@@ -138,6 +143,11 @@ public static class WellKnownServices
     /// The name of the EventSources service, holding the registered event source definitions.
     /// </summary>
     public const string EventSources = "EventSources";
+
+    /// <summary>
+    /// The name of the Imports service, holding bulk event import sessions.
+    /// </summary>
+    public const string Imports = "Imports";
 
     /// <summary>
     /// The administrative federation service: peer bindings, producer grants and link state.

@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
+using Cratis.Chronicle.Projections.Engine.Pipelines;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.ReadModels;
@@ -35,13 +36,14 @@ public class a_projection_replay_handler_with_projection : a_projection_replay_h
         _projections.GetCurrent(_observerDetails.Key.EventStore, _observerDetails.Key.Namespace, _observerDetails.Key.ObserverId).Returns(_projection);
         _readModelDefinitions.Get(_readModelType.Identifier).Returns(Task.FromResult(_readModel));
 
-        _projections.TryGet(
+        var binding = new ProjectionPipelineBinding(_projection, _projectionPipeline);
+        _projectionPipelineManager.TryGetFor(
             _observerDetails.Key.EventStore,
             _observerDetails.Key.Namespace,
             (ProjectionId)_observerDetails.Key.ObserverId,
             out _).Returns(callInfo =>
             {
-                callInfo[3] = _projection;
+                callInfo[3] = binding;
                 return true;
             });
 

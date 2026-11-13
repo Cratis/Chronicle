@@ -13,7 +13,7 @@ public class EventAppendCollection : IEventAppendCollection
     readonly List<IDisposable> _subscriptions = [];
     readonly List<AppendedEventWithResult> _collected = [];
     readonly SemaphoreSlim _signal = new(0);
-    readonly object _lock = new();
+    readonly Lock _lock = new();
     bool _disposed;
 
     /// <summary>

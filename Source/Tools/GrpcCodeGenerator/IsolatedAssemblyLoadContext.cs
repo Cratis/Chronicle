@@ -56,7 +56,7 @@ sealed class IsolatedAssemblyLoadContext(string assemblyPath) : AssemblyLoadCont
                     foreach (var versionDir in Directory.GetDirectories(packageDir).OrderDescending())
                     {
                         // Probe typical TFM library paths.
-                        foreach (var tfm in new[] { "net10.0", "net9.0", "net8.0", "netstandard2.0" })
+                        foreach (var tfm in new[] { "net11.0", "net10.0", "net9.0", "net8.0", "netstandard2.0" })
                         {
                             var candidate = Path.Combine(versionDir, "lib", tfm, $"{assemblyName.Name}.dll");
                             if (File.Exists(candidate))

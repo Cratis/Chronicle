@@ -49,6 +49,14 @@ Measures the performance of bulk appending events to the event log.
 Parameters:
 - EventCount: 10, 100, 1000 events per batch
 
+### ImportBenchmark
+
+Measures importing a large history through an import session: the client streams the events, the kernel stages and
+validates them, and a job commits them. It prints the staging and the commit throughput separately.
+
+Parameters:
+- EventCount: 300000 events per import
+
 ### StronglyConsistentPerKeyReadBenchmark
 
 Measures a strongly consistent read of one key as its stream grows, for a passive projection (folded in the Kernel
@@ -413,7 +421,7 @@ Run the clustering executable directly (not BenchmarkDotNet):
 
 ```sh
 dotnet build Benchmarks/Chronicle.Benchmarks.Clustering -c Release
-REBUILD_SIZE=small REBUILD_MODE=live dotnet Benchmarks/Chronicle.Benchmarks.Clustering/bin/Release/net10.0/Chronicle.Benchmarks.Clustering.dll --rebuild S3
+REBUILD_SIZE=small REBUILD_MODE=live dotnet Benchmarks/Chronicle.Benchmarks.Clustering/bin/Release/net11.0/Chronicle.Benchmarks.Clustering.dll --rebuild S3
 ```
 
 The existing `--rebuild-live` and `--replay-shape` diagnostics remain separate and unchanged.

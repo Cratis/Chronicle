@@ -33,5 +33,7 @@ internal static class NamespaceJsonStringColumns
         (typeof(Changesets.Changeset), "ChangesetData"),
         (typeof(Seeding.EventSeedsEntity), "ByEventTypeJson"),
         (typeof(Seeding.EventSeedsEntity), "ByEventSourceJson"),
+        (typeof(Imports.ImportEntity), nameof(Imports.ImportEntity.Payload)),
+        (typeof(Imports.ImportChunkEntity), nameof(Imports.ImportChunkEntity.Payload)),
     ];
 }

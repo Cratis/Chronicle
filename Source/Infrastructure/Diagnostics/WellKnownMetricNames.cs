@@ -8,6 +8,12 @@ namespace Cratis.Chronicle.Diagnostics;
 /// </summary>
 public static class WellKnownMetricNames
 {
+    /// <summary>Number of compiled projection graphs retained in the engine cache.</summary>
+    public const string ProjectionCachedGraphs = "cratis.chronicle.projection.cached_graphs";
+
+    /// <summary>Unit of <see cref="ProjectionCachedGraphs"/>.</summary>
+    public const string ProjectionCachedGraphsUnit = "{graph}";
+
     /// <summary>Number of successful observations.</summary>
     public const string ObserverSuccessfulObservations = "cratis.chronicle.observer.successful_observations";
 
@@ -313,4 +319,52 @@ public static class WellKnownMetricNames
 
     /// <summary>Unit of <see cref="SqlCompositeKeyCollisions"/>.</summary>
     public const string SqlCompositeKeyCollisionsUnit = "{collision}";
+
+    /// <summary>Current number of failed partitions of a resident observer, quarantined ones included.</summary>
+    public const string ObserverFailedPartitions = "cratis.chronicle.observer.failed_partitions";
+
+    /// <summary>Unit of <see cref="ObserverFailedPartitions"/>.</summary>
+    public const string ObserverFailedPartitionsUnit = "{partition}";
+
+    /// <summary>Current number of quarantined partitions of a resident observer.</summary>
+    public const string ObserverQuarantinedPartitions = "cratis.chronicle.observer.quarantined_partitions";
+
+    /// <summary>Unit of <see cref="ObserverQuarantinedPartitions"/>.</summary>
+    public const string ObserverQuarantinedPartitionsUnit = "{partition}";
+
+    /// <summary>1 while a resident observer is in the running state named by its state attribute, for states needing attention.</summary>
+    public const string ObserverRunningState = "cratis.chronicle.observer.running_state";
+
+    /// <summary>Unit of <see cref="ObserverRunningState"/>.</summary>
+    public const string ObserverRunningStateUnit = "1";
+
+    /// <summary>Number of observers resident in this process.</summary>
+    public const string ObserverResident = "cratis.chronicle.observer.resident";
+
+    /// <summary>Unit of <see cref="ObserverResident"/>.</summary>
+    public const string ObserverResidentUnit = "{observer}";
+
+    /// <summary>Number of observer jobs running in this process.</summary>
+    public const string JobRunning = "cratis.chronicle.job.running";
+
+    /// <summary>Unit of <see cref="JobRunning"/>.</summary>
+    public const string JobRunningUnit = "{job}";
+
+    /// <summary>Number of handled steps of the running observer jobs of an observer.</summary>
+    public const string ObserverJobHandledSteps = "cratis.chronicle.observer.job.handled_steps";
+
+    /// <summary>Unit of <see cref="ObserverJobHandledSteps"/>.</summary>
+    public const string ObserverJobHandledStepsUnit = "{step}";
+
+    /// <summary>Number of steps of the running observer jobs of an observer.</summary>
+    public const string ObserverJobTotalSteps = "cratis.chronicle.observer.job.total_steps";
+
+    /// <summary>Unit of <see cref="ObserverJobTotalSteps"/>.</summary>
+    public const string ObserverJobTotalStepsUnit = "{step}";
+
+    /// <summary>Duration of an append to an event sequence.</summary>
+    public const string EventSequenceAppendDuration = "cratis.chronicle.event_sequence.append.duration";
+
+    /// <summary>Unit of <see cref="EventSequenceAppendDuration"/>.</summary>
+    public const string EventSequenceAppendDurationUnit = "s";
 }

@@ -60,7 +60,8 @@ public class two_observation_streams_for_the_same_connection : Specification
             AllowingConnectionOwnership.Create(),
             _logger,
             Substitute.For<IObserverRegistrationGate>(),
-            NamespaceCasingContext.Create());
+            NamespaceCasingContext.Create(),
+            NoSiloDepartures.Instance);
 
         _earlierSubscription = _reactors.Observe(_earlierMessages).Subscribe(_earlierDeliveries.Add);
         _earlierMessages.OnNext(Register());
@@ -114,8 +115,11 @@ public class two_observation_streams_for_the_same_connection : Specification
             _subscribed[Interlocked.Increment(ref _subscribeCount) - 1].TrySetResult();
         }
 
-        public void SubscribePages(ReactorId reactorId, ConnectionId connectionId, EventStoreName eventStore, EventStoreNamespaceName @namespace, ReactorPageObserver target) =>
-            inner.SubscribePages(reactorId, connectionId, eventStore, @namespace, target);
+        public void SubscribePages(ReactorId reactorId, ConnectionId connectionId, EventStoreName eventStore, EventStoreNamespaceName @namespace, ReactorPageObserver target, Concepts.Observation.PageDeliveryDefinition? pageDelivery = null) =>
+            inner.SubscribePages(reactorId, connectionId, eventStore, @namespace, target, pageDelivery);
+
+        public Concepts.Observation.PageDeliveryDefinition? GetPageDelivery(ReactorId reactorId, ConnectionId connectionId, EventStoreName eventStore, EventStoreNamespaceName @namespace) =>
+            inner.GetPageDelivery(reactorId, connectionId, eventStore, @namespace);
 
         public void OnNextPage(ReactorId reactorId, ConnectionId connectionId, EventStoreName eventStore, EventStoreNamespaceName @namespace, IReadOnlyList<ObserverPartitionBatch> batches, IReadOnlyDictionary<Key, TaskCompletionSource<ObserverSubscriberResult>> completions, TimeSpan? deliverWithin = null, Concepts.Observation.ObservationOrigin origin = Concepts.Observation.ObservationOrigin.Unknown) =>
             inner.OnNextPage(reactorId, connectionId, eventStore, @namespace, batches, completions, deliverWithin, origin);

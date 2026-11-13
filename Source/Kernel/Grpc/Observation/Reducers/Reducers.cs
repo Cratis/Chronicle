@@ -49,6 +49,7 @@ namespace Cratis.Chronicle.Services.Observation.Reducers;
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 /// <param name="registrationGate">The silo-wide gate for observer registrations.</param>
 /// <param name="namespaceCasing">The namespace casing resolver.</param>
+/// <param name="siloDepartures">The <see cref="ISiloDepartures"/> telling when to check client subscriptions early.</param>
 internal sealed class Reducers(
     IGrainFactory grainFactory,
     IReducerMediator reducerMediator,
@@ -59,7 +60,8 @@ internal sealed class Reducers(
     IConnectionOwnership connectionOwnership,
     ILogger<Reducers> logger,
     IObserverRegistrationGate registrationGate,
-    INamespaceCasing namespaceCasing) : IReducers
+    INamespaceCasing namespaceCasing,
+    ISiloDepartures siloDepartures) : IReducers
 {
     /// <summary>
     /// The size, in characters, of a reducer's serialized state from which each reduce is reported as expensive.
@@ -134,6 +136,7 @@ internal sealed class Reducers(
         IObserver<ReduceOperationMessage>? observableObserver = null;
         var revoked = false;
         (ReducerEventsObserver? deliver, ReducerReplayObserver? replay) = (null, null);
+        ReducerPageObserver? deliverPage = null;
 
         var observable = Observable.Create<ReduceOperationMessage>(
             async (observer, cancellationToken) =>
@@ -149,8 +152,8 @@ internal sealed class Reducers(
                     eventStoreName = registration.EventStore;
                     namespaceName = registration.Namespace;
 
-                    var reducerDefinition = registration.Reducer.ToChronicle();
-                    using (await registrationGate.Enter(cancellation.Token))
+                    var reducerDefinition = registration.Reducer.ToChronicle() with { PageDelivery = registration.PageDelivery.ToChronicle() };
+                    using (var gate = await ObserverRegistrationGateLease.Enter(registrationGate, cancellation.Token))
                     {
                         try
                         {
@@ -180,10 +183,8 @@ internal sealed class Reducers(
 
                         // The state of the next reduce is about as large as that of the last, which sizes its buffer in one go.
                         var lastInitialStateSize = 0;
-                        deliver = (reduceOperation, tcs) =>
+                        ReducerPartition ToPartition(ReduceOperation reduceOperation)
                         {
-                            var deliveryId = pendingDeliveries.Add(reduceOperation.Partition, tcs);
-
                             var partition = reduceOperation.Partition.Value.ToString()!;
 
                             // A state the client already holds is not serialized at all: the client returned it on its previous reduce.
@@ -194,9 +195,22 @@ internal sealed class Reducers(
                             lastInitialStateSize = initialState?.Length ?? lastInitialStateSize;
                             if (initialState?.Length > LargeStateWarningThreshold)
                             {
-                                logger.LargeInitialState(observerId, reduceOperation.Partition.ToString()!, initialState.Length);
+                                logger.LargeInitialState(observerId, partition, initialState.Length);
                             }
-                            var events = reduceOperation.Events.Select(_ => _.ToContract(jsonSerializerOptions)).ToArray();
+
+                            return new ReducerPartition
+                            {
+                                Partition = partition,
+                                InitialState = initialState,
+                                InitialStateUnchanged = initialStateUnchanged,
+                                Events = reduceOperation.Events.Select(_ => _.ToContract(jsonSerializerOptions)).ToArray()
+                            };
+                        }
+
+                        deliver = (reduceOperation, tcs) =>
+                        {
+                            var deliveryId = pendingDeliveries.Add(reduceOperation.Partition, tcs);
+                            var reducerPartition = ToPartition(reduceOperation);
                             var message = new ReduceOperationMessage()
                             {
                                 DeliveryId = deliveryId,
@@ -206,18 +220,33 @@ internal sealed class Reducers(
 
                             if (deliversPages)
                             {
-                                message.Partitions = [new ReducerPartition { Partition = partition, InitialState = initialState, InitialStateUnchanged = initialStateUnchanged, Events = events }];
+                                message.Partitions = [reducerPartition];
                             }
                             else
                             {
-                                message.Partition = partition;
-                                message.InitialState = initialState;
-                                message.InitialStateUnchanged = initialStateUnchanged;
-                                message.Events = events;
+                                message.Partition = reducerPartition.Partition;
+                                message.InitialState = reducerPartition.InitialState;
+                                message.InitialStateUnchanged = reducerPartition.InitialStateUnchanged;
+                                message.Events = reducerPartition.Events;
                             }
 
                             observer.OnNext(message);
                         };
+                        if (deliversPages)
+                        {
+                            deliverPage = (operations, completions) =>
+                            {
+                                var deliveryId = pendingDeliveries.AddPage(completions.ToDictionary(_ => (Concepts.Events.EventSourceId)_.Key, _ => _.Value));
+                                observer.OnNext(new ReduceOperationMessage
+                                {
+                                    DeliveryId = deliveryId,
+                                    DeliverWithinMilliseconds = DeliveryDeadlines.ToMilliseconds(operations[0].DeliverWithin),
+                                    Origin = operations[0].Origin.ToContract(),
+                                    Partitions = [.. operations.Select(ToPartition)]
+                                });
+                            };
+                        }
+
                         replay = (replayState, partition) =>
                         {
                             ForgetState(stateFingerprints, partition);
@@ -230,6 +259,17 @@ internal sealed class Reducers(
                             registration.EventStore,
                             registration.Namespace,
                             deliver);
+
+                        if (deliverPage is not null)
+                        {
+                            reducerMediator.SubscribePages(
+                                registration.Reducer.ReducerId,
+                                registration.ConnectionId,
+                                registration.EventStore,
+                                registration.Namespace,
+                                deliverPage,
+                                registration.PageDelivery.ToChronicle());
+                        }
 
                         reducerMediator.SubscribeReplayNotifications(
                             registration.Reducer.ReducerId,
@@ -247,7 +287,12 @@ internal sealed class Reducers(
                             span?.Activity?.Tag(key, ObserverType.Reducer);
 
                             clientObserver = grainFactory.GetGrain<IReducer>(key);
-                            await clientObserver.SetDefinitionAndSubscribe(reducerDefinition);
+                            var reducer = clientObserver;
+                            await ObserverRegistrationEstablishment.Establish(
+                                () => reducer.SetDefinitionAndSubscribe(reducerDefinition),
+                                (attempt, _) => logger.SubscribingTimedOut(registration.Reducer.ReducerId, registration.ConnectionId, attempt),
+                                () => gate.Reenter(cancellation.Token),
+                                cancellation.Token);
                         }
                         catch (Exception exception)
                         {
@@ -262,8 +307,10 @@ internal sealed class Reducers(
                     await ClientSubscriptionKeeper.KeepWhileConnected(
                         () => reducerDefinition.IsActive
                             ? ClientSubscriptionKeeper.KeepSubscription(clientObserver!.IsSubscriptionIntact, () => clientObserver.KeepSubscription(reducerDefinition))
-                            : clientObserver!.KeepSubscription(reducerDefinition),
-                        TimeSpan.FromSeconds(options.Value.ConnectedClients.ReviseIntervalSeconds),
+                            : KeepInactive(clientObserver!, reducerDefinition),
+                        SubscriptionCheckSchedule.From(options.Value),
+                        siloDepartures,
+                        TimeProvider.System,
                         registration.ConnectionId,
                         logger,
                         cancellation.Token);
@@ -343,6 +390,32 @@ internal sealed class Reducers(
             {
                 registrationTcs.TrySetException(exception);
             }
+        }
+    }
+
+    /// <summary>
+    /// Keeps an inactive reducer: there is no subscription to lose, only a registration a webhook may still hold back.
+    /// </summary>
+    /// <param name="reducer">The client <see cref="IReducer"/>.</param>
+    /// <param name="definition">The definition the client registered.</param>
+    /// <returns>
+    /// False while the registration is still deferred, so the keeper tries to complete it every revise interval; true once
+    /// it is complete, so the keeper checks it at the safety-net interval.
+    /// </returns>
+    /// <remarks>
+    /// A silo of an older version does not know <see cref="IReducer.IsRegistrationDeferred"/>; the failing call counts as
+    /// deferred, which is how it was kept before.
+    /// </remarks>
+    internal static async Task<bool> KeepInactive(IReducer reducer, Concepts.Observation.Reducers.ReducerDefinition definition)
+    {
+        await reducer.KeepSubscription(definition);
+        try
+        {
+            return !await reducer.IsRegistrationDeferred();
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            return false;
         }
     }
 

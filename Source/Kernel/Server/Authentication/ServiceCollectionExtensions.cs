@@ -83,6 +83,11 @@ public static class ServiceCollectionExtensions
             services.AddArcAnonymousAspNetAuthorizationPolicy(WellKnownAuthorizationPolicies.Administrator);
             services.AddArcAnonymousAspNetAuthorizationPolicy(WellKnownAuthorizationPolicies.AdministratorOperations);
 
+            // The sign-in controllers need the Identity stack skipped above, so they are left out of MVC rather
+            // than mapped and failing with a 500 when activated. Their routes answer 404, like the Identity API.
+            services.AddMvcCore().ConfigureApplicationPartManager(manager =>
+                manager.FeatureProviders.Add(new AuthenticationDisabledControllerFeatureProvider()));
+
             return services;
         }
 
@@ -177,7 +182,9 @@ public static class ServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IValidateOptions<Configuration.ChronicleOptions>, ExternalAdministratorClaimValidation>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IValidateOptions<Configuration.ChronicleOptions>, EventStoreAccessConfigurationValidation>());
         services.AddHostedService<AdministratorPolicyStartupWarning>();
-        services.AddHostedService<StoreEntitlementsStartupNotice>();
+
+        // Reads the grants the startup task loaded: given once the silo is active, never from a hosted service (#4040).
+        services.AddSingleton<ILifecycleParticipant<ISiloLifecycle>, StoreEntitlementsStartupNotice>();
     }
 
     static AuthorizationBuilder AddAdministratorPolicies(this AuthorizationBuilder builder, params string[] authenticationSchemes) => builder

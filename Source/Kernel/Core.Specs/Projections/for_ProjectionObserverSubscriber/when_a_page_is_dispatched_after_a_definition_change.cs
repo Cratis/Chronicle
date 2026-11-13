@@ -24,10 +24,10 @@ public class when_a_page_is_dispatched_after_a_definition_change : given.a_subsc
         var refreshed = Substitute.For<Engine.IProjection>();
         refreshed.DefinitionFingerprint.Returns("new");
         refreshed.Accepts(Arg.Any<Concepts.Events.EventType>()).Returns(true);
-        _engineProjections.TryGet(_key.EventStore, _key.Namespace, _key.ObserverId, out Arg.Any<Engine.IProjection?>())
-            .Returns(_ =>
+        _engineProjections.TryGetDefinitionFingerprint(_key.EventStore, _key.ObserverId, out Arg.Any<string?>())
+            .Returns(call =>
             {
-                _[3] = refreshed;
+                call[2] = "new";
                 return true;
             });
         _engineProjections.GetCurrent(_key.EventStore, _key.Namespace, _key.ObserverId).Returns(refreshed);

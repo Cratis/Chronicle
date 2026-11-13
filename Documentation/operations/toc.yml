@@ -2,7 +2,13 @@
   href: index.mdx
 - name: Recovering from failures
   href: recovering-from-failures.md
+- name: Rebuild a constraint index
+  href: rebuild-a-constraint-index.md
 - name: Diagnostics
   href: diagnostics.md
 - name: Recover a failed partition
   href: recover-a-failed-partition.md
+- name: Clean up stored schema annotations
+  href: schema-annotation-cleanup.md
+- name: Check a release against a kernel
+  href: check-a-release-against-a-kernel.md

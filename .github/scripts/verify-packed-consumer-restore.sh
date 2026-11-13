@@ -40,9 +40,9 @@ grep -Fq "<WarningsAsErrors>${PACKED_RESTORE_ERRORS:-NU1605;NU1608}</WarningsAsE
 strict=true
 [ -z "${PACKED_RESTORE_ERRORS+x}" ] || strict=false
 grep -Fq "<TreatWarningsAsErrors>$strict</TreatWarningsAsErrors>" "$2"
-grep -Fq '<TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>' "$2"
+grep -Fq '<TargetFrameworks>net10.0;net11.0</TargetFrameworks>' "$2"
 case "$2|$3" in
-    */Cratis.Chronicle.SelfTest/Consumer.csproj\|-p:TargetFrameworks=net8.0) echo 'error NU1605: planted downgrade'; exit 1 ;;
+    */Cratis.Chronicle.SelfTest/Consumer.csproj\|-p:TargetFrameworks=net10.0) echo 'error NU1605: planted downgrade'; exit 1 ;;
 esac
 DOTNET
     chmod +x "$root/bin/dotnet"
@@ -53,13 +53,11 @@ DOTNET
     fi
     [ "$status" -eq 1 ] || fail "Self-test could not run (exit $status)."
     grep -q 'NU1605: planted downgrade' "$root/result"
-    grep -q 'Cratis.Chronicle.SelfTest | net8.0 | FAIL | 1' "$root/result"
-    grep -q 'Cratis.Chronicle.SelfTest | net9.0 | PASS | 0' "$root/result"
-    grep -q 'Cratis.Chronicle.SelfTest | net10.0 | PASS | 0' "$root/result"
-    grep -q 'Cratis.Chronicle.OtherPackage | net8.0 | PASS | 0' "$root/result"
-    grep -q 'Cratis.Chronicle.OtherPackage | net9.0 | PASS | 0' "$root/result"
+    grep -q 'Cratis.Chronicle.SelfTest | net10.0 | FAIL | 1' "$root/result"
+    grep -q 'Cratis.Chronicle.SelfTest | net11.0 | PASS | 0' "$root/result"
     grep -q 'Cratis.Chronicle.OtherPackage | net10.0 | PASS | 0' "$root/result"
-    echo 'Self-test: detected 1 planted downgrade and checked all 6 package/TFM outcomes.'
+    grep -q 'Cratis.Chronicle.OtherPackage | net11.0 | PASS | 0' "$root/result"
+    echo 'Self-test: detected 1 planted downgrade and checked all 4 package/TFM outcomes.'
 )
 
 if [ "${1:-}" = --self-test ]; then
@@ -127,7 +125,7 @@ for package in "$LOCAL_FEED"/*.nupkg; do
         [ -n "$frameworks" ] || frameworks="$lib_frameworks"
     fi
     applicable_tfms=""
-    for tfm in net8.0 net9.0 net10.0; do
+    for tfm in net10.0 net11.0; do
         applies=0
         # An analyzer-only package applies to all supported frameworks.
         [ -n "$frameworks" ] || applies=1

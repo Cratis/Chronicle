@@ -6,6 +6,7 @@ using Cratis.Chronicle.Storage.EventTypes;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.EventTypes.for_EventTypesStorage;
 
+[PerFactSpecificationLifecycle] // Facts run their own asynchronous operations, so each fact gets its own context.
 public abstract class when_changing_only_metadata : given.a_populated_migration_chain
 {
     protected EventType _after;

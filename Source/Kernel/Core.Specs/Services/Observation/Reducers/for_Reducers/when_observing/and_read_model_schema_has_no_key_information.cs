@@ -54,7 +54,8 @@ public class and_read_model_schema_has_no_key_information : Specification
             AllowingConnectionOwnership.Create(),
             NullLogger<Reducers>.Instance,
             Substitute.For<IObserverRegistrationGate>(),
-            NamespaceCasingContext.Create());
+            NamespaceCasingContext.Create(),
+            NoSiloDepartures.Instance);
 
         _messages = new Subject<ReducerMessage>();
     }

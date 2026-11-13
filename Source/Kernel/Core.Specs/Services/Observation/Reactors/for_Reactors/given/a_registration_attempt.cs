@@ -48,7 +48,7 @@ public class a_registration_attempt : Observation.given.a_connection_held_on_ano
     {
         using var messages = new Subject<ReactorMessage>();
         var reactors = new Reactors(
-            _grainFactory, _mediator, Substitute.For<IStorage>(), new JsonSerializerOptions(), new ActivitySource<Reactors>(), Options.Create(new ChronicleOptions { Clustering = new() { ResponseTimeout = TimeSpan.FromMilliseconds(100) } }), _ownership, NullLogger<Reactors>.Instance, Substitute.For<IObserverRegistrationGate>(), NamespaceCasingContext.Create());
+            _grainFactory, _mediator, Substitute.For<IStorage>(), new JsonSerializerOptions(), new ActivitySource<Reactors>(), Options.Create(new ChronicleOptions { Clustering = new() { ResponseTimeout = TimeSpan.FromMilliseconds(100) } }), _ownership, NullLogger<Reactors>.Instance, Substitute.For<IObserverRegistrationGate>(), NamespaceCasingContext.Create(), NoSiloDepartures.Instance);
         using var cancellation = new CancellationTokenSource();
         var observed = reactors.Observe(messages, context).ToTask(cancellation.Token);
         messages.OnNext(new ReactorMessage(new Contracts.Primitives.OneOf<RegisterReactor, ReactorResult>(new RegisterReactor

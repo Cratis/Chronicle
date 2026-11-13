@@ -49,7 +49,7 @@ public partial class EventTypesStorage(EventStoreName eventStore, IDatabase data
             existingEventType.Owner == owner && existingEventType.Source == source && existingEventType.Tombstone == type.Tombstone &&
             existingEventType.Visibility == visibility && existingEventType.Origin == origin &&
             existingEventType.Schemas.TryGetValue(type.Generation, out var storedSchema) &&
-            JsonSchemaCompatibilityExtensions.EqualsIgnoringTitles(storedSchema, schema.ToJson()))
+            JsonSchemaCompatibilityExtensions.EqualsIgnoringAnnotations(storedSchema, schema.ToJson()))
         {
             return false;
         }
@@ -152,6 +152,27 @@ public partial class EventTypesStorage(EventStoreName eventStore, IDatabase data
                 return _definitionsByType.GetOrAdd(eventTypeId, static (_, document) => document.ToDefinition(), eventType);
             }
         }
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> ReplaceSchema(EventTypeId eventTypeId, EventTypeGeneration generation, JsonSchema schema)
+    {
+        await using var scope = await database.EventStore(eventStore);
+        var id = eventTypeId.Value;
+        var stored = await scope.DbContext.EventTypes.FirstOrDefaultAsync(item => item.Id == id);
+        if (stored is null || !stored.Schemas.TryGetValue(generation.Value, out var previous))
+        {
+            return false;
+        }
+        if (JsonNode.DeepEquals(JsonNode.Parse(previous), schema.Node))
+        {
+            return false;
+        }
+
+        stored.Schemas = new Dictionary<uint, string>(stored.Schemas) { [generation.Value] = schema.ToJson() };
+        await scope.DbContext.SaveChangesAsync();
+        Invalidate(eventTypeId);
+        return true;
     }
 
     /// <inheritdoc/>
@@ -269,9 +290,9 @@ public partial class EventTypesStorage(EventStoreName eventStore, IDatabase data
     {
         var schemas = new Dictionary<uint, string>(stored);
 
-        // Omitted schemas and stored CLR titles survive when the structural schema is unchanged.
+        // Omitted schemas and stored annotations survive when the structural schema is unchanged.
         foreach (var (generation, schema) in incoming.Where(_ => !stored.TryGetValue(_.Key, out var previous) ||
-            !JsonSchemaCompatibilityExtensions.EqualsIgnoringTitles(previous, _.Value)))
+            !JsonSchemaCompatibilityExtensions.EqualsIgnoringAnnotations(previous, _.Value)))
         {
             schemas[generation] = schema;
         }

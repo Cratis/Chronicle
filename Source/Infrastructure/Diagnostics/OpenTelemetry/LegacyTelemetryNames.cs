@@ -95,6 +95,23 @@ internal static class LegacyTelemetryNames
     };
 
     /// <summary>
+    /// Gets the metrics introduced after the shared convention. They have no legacy name, so they are published under
+    /// their convention name and attribute keys in every naming mode.
+    /// </summary>
+    internal static readonly IReadOnlySet<string> ConventionOnlyMetrics = new HashSet<string>
+    {
+        WellKnownMetricNames.ObserverFailedPartitions,
+        WellKnownMetricNames.ObserverQuarantinedPartitions,
+        WellKnownMetricNames.ObserverRunningState,
+        WellKnownMetricNames.ObserverResident,
+        WellKnownMetricNames.JobRunning,
+        WellKnownMetricNames.ObserverJobHandledSteps,
+        WellKnownMetricNames.ObserverJobTotalSteps,
+        WellKnownMetricNames.EventSequenceAppendDuration,
+        WellKnownMetricNames.ProjectionCachedGraphs
+    };
+
+    /// <summary>
     /// Gets the legacy metric attribute keys keyed by the registry attribute key.
     /// </summary>
     internal static readonly IReadOnlyDictionary<string, string> MetricAttributeKeys = new Dictionary<string, string>
@@ -119,6 +136,15 @@ internal static class LegacyTelemetryNames
     };
 
     /// <summary>
+    /// Gets the metric attribute keys added after the shared convention. Legacy series keep their original dimensions,
+    /// so these keys are left out of them and recorded on the convention series only.
+    /// </summary>
+    internal static readonly IReadOnlySet<string> ConventionOnlyMetricAttributeKeys = new HashSet<string>
+    {
+        WellKnownTelemetryAttributes.Replay
+    };
+
+    /// <summary>
     /// Gets the legacy span attribute keys keyed by the registry attribute key.
     /// </summary>
     internal static readonly IReadOnlyDictionary<string, string> SpanAttributeKeys = new Dictionary<string, string>
@@ -136,6 +162,10 @@ internal static class LegacyTelemetryNames
     /// Translates a registry metric attribute key to its legacy key.
     /// </summary>
     /// <param name="key">The registry key.</param>
-    /// <returns>The legacy key, or the key itself when it has no legacy key.</returns>
-    internal static string ToLegacyMetricKey(string key) => MetricAttributeKeys.TryGetValue(key, out var legacy) ? legacy : key;
+    /// <returns>The legacy key, the key itself when it has no legacy key, or empty when legacy series leave it out.</returns>
+    internal static string ToLegacyMetricKey(string key)
+    {
+        if (ConventionOnlyMetricAttributeKeys.Contains(key)) return string.Empty;
+        return MetricAttributeKeys.TryGetValue(key, out var legacy) ? legacy : key;
+    }
 }

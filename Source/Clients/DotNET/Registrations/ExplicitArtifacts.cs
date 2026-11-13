@@ -32,11 +32,7 @@ namespace Cratis.Chronicle.Registrations;
 /// </remarks>
 public partial class ExplicitArtifacts
 {
-#if NET8_0
-    readonly object _lock = new();
-#else
     readonly Lock _lock = new();
-#endif
     readonly List<IExplicitProjection> _projections = [];
     readonly List<(ReactorId Id, Action<IReactorBuilder> Define)> _reactors = [];
     readonly List<EventTypeRegistration> _eventTypes = [];

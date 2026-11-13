@@ -60,13 +60,12 @@ public class ProjectionCatchupHandler(
     /// <inheritdoc/>
     public async Task<BulkFlushResult> FlushFor(ObserverDetails observerDetails)
     {
-        if (!CanHandle(observerDetails) || !projections.TryGet(observerDetails.Key.EventStore, observerDetails.Key.Namespace, observerDetails.Key.ObserverId, out var projection))
+        if (!CanHandle(observerDetails) || !projectionPipelineManager.TryGetFor(observerDetails.Key.EventStore, observerDetails.Key.Namespace, observerDetails.Key.ObserverId, out var binding))
         {
             return new(null, []);
         }
 
-        var pipeline = await projectionPipelineManager.GetFor(observerDetails.Key.EventStore, observerDetails.Key.Namespace, projection);
-        var result = await pipeline.FlushBulk();
+        var result = await binding.Pipeline.FlushBulk();
         await ProjectionBulkFailures.Record(grainFactory, observerDetails, result.FailedPartitions);
         return result;
     }
@@ -74,13 +73,12 @@ public class ProjectionCatchupHandler(
     /// <inheritdoc/>
     public async Task<IEnumerable<Storage.Sinks.FailedPartition>> EndBulkFor(ObserverDetails observerDetails, CancellationToken cancellationToken)
     {
-        if (!CanHandle(observerDetails) || !projections.TryGet(observerDetails.Key.EventStore, observerDetails.Key.Namespace, observerDetails.Key.ObserverId, out var projection))
+        if (!CanHandle(observerDetails) || !projectionPipelineManager.TryGetFor(observerDetails.Key.EventStore, observerDetails.Key.Namespace, observerDetails.Key.ObserverId, out var binding))
         {
             return [];
         }
 
-        var pipeline = await projectionPipelineManager.GetFor(observerDetails.Key.EventStore, observerDetails.Key.Namespace, projection);
-        return await pipeline.EndBulk(cancellationToken);
+        return await binding.Pipeline.EndBulk(cancellationToken);
     }
 
     static bool CanHandle(ObserverDetails observerDetails) => observerDetails.Type == ObserverType.Projection;
@@ -96,15 +94,14 @@ public class ProjectionCatchupHandler(
                 return ICanHandleCatchupForObserver.Error.CannotHandle;
             }
 
-            var projection = await projections.GetCurrent(observerDetails.Key.EventStore, observerDetails.Key.Namespace, observerDetails.Key.ObserverId);
-            if (projection is null)
+            var binding = await ProjectionPipelineLookup.GetFor(projections, projectionPipelineManager, observerDetails.Key);
+            if (binding is null)
             {
                 logger.ProjectionMissing(observerDetails.Key);
                 return ICanHandleCatchupForObserver.Error.Unknown;
             }
 
-            var pipeline = await projectionPipelineManager.GetFor(observerDetails.Key.EventStore, observerDetails.Key.Namespace, projection);
-            return await doWork(pipeline);
+            return await doWork(binding.Pipeline);
         }
         catch (Exception ex)
         {

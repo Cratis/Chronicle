@@ -16,4 +16,10 @@ internal static partial class KernelConfigurationLogging
 
     [LoggerMessage(LogLevel.Warning, "observers.subscriberTimeout is {SubscriberTimeout} seconds, but a call to a subscriber is bounded by its Orleans response timeout of {Ceiling}. The effective subscriber timeout is {Ceiling}")]
     internal static partial void SubscriberTimeoutAboveCeiling(this ILogger<Kernel> logger, int subscriberTimeout, TimeSpan ceiling);
+
+    [LoggerMessage(LogLevel.Warning, "Cratis:Chronicle:Authentication:DefaultAdminPassword is configured but ignored in this build. The default admin password applies only to the development build; configure Cratis:Chronicle:Authentication:AdminUser:Password instead")]
+    internal static partial void DefaultAdminPasswordIgnored(this ILogger<Kernel> logger);
+
+    [LoggerMessage(LogLevel.Information, "Storage type was not configured and has been inferred as {StorageType} from the connection details. Set Cratis:Chronicle:Storage:Type to make it explicit")]
+    internal static partial void StorageTypeInferred(this ILogger<Kernel> logger, string storageType);
 }

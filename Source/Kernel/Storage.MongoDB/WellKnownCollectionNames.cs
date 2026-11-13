@@ -111,6 +111,16 @@ public static class WellKnownCollectionNames
     public const string FailedPartitions = "failed-partitions";
 
     /// <summary>
+    /// The collection that holds import sessions.
+    /// </summary>
+    public const string Imports = "imports";
+
+    /// <summary>
+    /// The collection that holds the staged chunks of import sessions.
+    /// </summary>
+    public const string ImportChunks = "import-chunks";
+
+    /// <summary>
     /// The collection that holds in-flight events being handled by observers.
     /// </summary>
     public const string InFlightEvents = "in-flight-events";

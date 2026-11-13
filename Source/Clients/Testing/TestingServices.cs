@@ -97,6 +97,9 @@ namespace Cratis.Chronicle.Testing;
 /// </remarks>
 internal sealed class TestingServices : IServices
 {
+    /// <summary>The in-process test kernel enforces no store entitlements, so query collaborators resolve nothing extra.</summary>
+    static readonly IServiceProvider _noQueryServices = new ServiceCollection().BuildServiceProvider();
+
     readonly Lazy<IObservers> _observers;
     readonly Lazy<IFailedPartitions> _failedPartitions;
     readonly Lazy<IReactors> _reactors;
@@ -198,7 +201,8 @@ internal sealed class TestingServices : IServices
                 connectionOwnership,
                 NullLogger<KernelReactorsService>.Instance,
                 registrationGate,
-                namespaceCasing));
+                namespaceCasing,
+                KernelGrpc::Cratis.Chronicle.Services.Observation.NoSiloDepartures.Instance));
 
         _reducers = new(() =>
             new KernelReducersService(
@@ -211,7 +215,8 @@ internal sealed class TestingServices : IServices
                 connectionOwnership,
                 NullLogger<KernelReducersService>.Instance,
                 registrationGate,
-                namespaceCasing));
+                namespaceCasing,
+                KernelGrpc::Cratis.Chronicle.Services.Observation.NoSiloDepartures.Instance));
 
         _projections = new(() =>
             new KernelProjectionsService(
@@ -314,7 +319,7 @@ internal sealed class TestingServices : IServices
         _server = new(() => new KernelServerService(null!));
 
         _eventStores = new(() =>
-            new KernelEventStoresService(commandPipeline.Value, grainFactory, storage, new KernelCore::Cratis.Chronicle.EventStores.EventStoreInitialization(storage, grainFactory, NullLogger<KernelCore::Cratis.Chronicle.EventStores.EventStoreInitialization>.Instance), NullLogger<KernelEventStoresService>.Instance));
+            new KernelEventStoresService(commandPipeline.Value, grainFactory, storage, new KernelCore::Cratis.Chronicle.EventStores.EventStoreInitialization(storage, grainFactory, NullLogger<KernelCore::Cratis.Chronicle.EventStores.EventStoreInitialization>.Instance), _noQueryServices, NullLogger<KernelEventStoresService>.Instance));
 
         var readBindings = CreateReadBindings(storage, grainFactory);
         _readModels = new(() =>

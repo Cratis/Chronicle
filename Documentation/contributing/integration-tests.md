@@ -16,11 +16,19 @@ When you provide no runtime arguments, the suite defaults to:
 
 Pull-request pushes affecting the [build paths](https://github.com/Cratis/Chronicle/blob/main/.github/build-affecting-paths.txt) run the Release build, specs, and a local Docker image build from Release binaries without pushing it, **not** the Docker integration suites. Run the relevant integration namespace locally before requesting CI integration. The [hot-core gate](https://github.com/Cratis/Chronicle/blob/main/.github/hot-core-paths.txt) fails on hot-core PRs until Requested Integration passes for the current head commit; its ordinary PR check does not run the matrix. Hot core includes the kernel Core, Concepts, Storage, Storage.InMemory, Storage.MongoDB and Storage.Sql runtime trees, plus Infrastructure/Changes; spec trees are excluded.
 
-Apply the `run-integration` label to a pull request to start the separate Requested Integration workflow, even for a documentation-only PR. It builds the commit and runs specs, API and MongoDB integration, and one client integration matrix: MongoDB and SQLite normally, every backend when the PR touches the hot core. The separately named requested hot-core gate requires that full matrix to pass. The ordinary `hot-core-gate` check turns green automatically when that requested run passes, without a new push. While the label remains applied, each new push or reopening automatically starts integration for the current head commit and cancels any older requested run for that PR. A push invalidates the previous commit’s evidence; there is no need to remove and re-add the label. Other labels do not start integration or replace the ordinary PR check results.
+Apply the `run-integration` label to a pull request to start the separate Requested Integration workflow, even for a documentation-only PR. It builds the commit and runs specs, API and MongoDB integration, and one client integration matrix: MongoDB and SQLite normally, every backend when the PR touches the hot core. The separately named requested hot-core gate requires that full matrix to pass. The ordinary `hot-core-gate` check turns green automatically when that requested run passes, without a new push; for pushes to a PR that already carries the label, the requested run is part of the same Hot Core Gate run, so the check reports its verdict directly. While the label remains applied, each new push or reopening automatically starts integration for the current head commit and cancels any older requested run for that PR. A push invalidates the previous commit’s evidence; there is no need to remove and re-add the label. Other labels do not start integration or replace the ordinary PR check results.
 
 The existing nightly schedule on `main` and manual `workflow_dispatch` run the full client backend matrix. Main-branch pushes do not run integration; nightly coverage handles main. A fork PR cannot push the integration image with its read-only token; labeling it fails the requested gate with an "unavailable" notice instead of running integration, so a fork PR can never satisfy that gate. The ordinary hot-core gate also fails closed for forks. Ask a maintainer to dispatch Hot Core Gate on a trusted branch containing those changes and merge with bypass.
 
 For a labeled event, the image-push guard checks `github.actor`—the account that applied the label, not the PR author. A maintainer-labeled Dependabot PR therefore attempts the image push; if GitHub supplies a read-only token, the requested run fails rather than silently skipping the client matrix.
+
+## How the CI run is shaped
+
+A full run starts about 130 client shards and several other lanes, and the wall clock of that run is what a reviewer waits for. Three things keep it short and its concurrency bounded:
+
+- **Concurrency caps.** Each matrix sets `max-parallel` so a run holds a bounded number of runner slots: 34 for the client shards, 2 for the kernel shards, and 1 each for clustering, SQL clustering, the SQL RollingUpgrade lane and the Neo4j lanes. The MongoDB and API integration jobs are single jobs. `test-sparse-integration-workflows.py` pins the values. The caps are a per-run bound, not a guarantee about other work in the organization.
+- **Longest shards first.** GitHub starts matrix jobs in the order of the generated matrix, so `generate-integration-matrix.py` orders the client matrix by the measured job time in `.github/scripts/integration-shard-order.json`, slowest first. The order never changes which shards run, so a stale table only costs wall time. Refresh it from a recent all-provider run when shard times move; a shard the table does not list starts after the listed ones. `for_ReadModels` and `for_EventStoreSubscriptions` run as two shards each because one job of each was the longest in a run.
+- **Parallel coverage merge.** Merging the Cobertura files of one run in a single job took about nine minutes after the last lane finished. The `coverage-partial` job merges them in six groups at once (client MongoDB in-process, client MongoDB out-of-process, SQLite, PostgreSQL and SQL Server shards, and everything else), and `coverage-merge-and-cache` merges the six results. The groups together match every `coverage-results-*` artifact exactly once, which a spec checks; an artifact no group names would drop that lane from coverage without failing the run. A group with no artifacts, such as the PostgreSQL group on a pull request run, is skipped. Both jobs still require every spec and lane to succeed.
 
 ## Prerequisites
 
@@ -118,7 +126,7 @@ Run the suite with `dotnet test` from the repository root. `--configuration Rele
 dotnet test Integration/Client/Client.csproj \
     --logger "console;verbosity=normal" \
     --configuration Release \
-    --framework net10.0 \
+    --framework net11.0 \
     -- inprocess mongodb
 ```
 
@@ -210,7 +218,7 @@ You can run the same configurations from VS Code by creating a dedicated test la
     "test",
     "${workspaceFolder}/Integration/Client/Client.csproj",
     "--framework",
-    "net10.0",
+    "net11.0",
     "--configuration",
     "Debug",
     "--",
@@ -256,10 +264,10 @@ CHRONICLE_BACKUP_ENABLED=true dotnet test Integration/Client/Client.csproj \
 
 ### Where backups are stored
 
-Backups are written to a `backups/` directory that sits alongside the compiled test binary. For a Debug build targeting `net10.0`, that path is:
+Backups are written to a `backups/` directory that sits alongside the compiled test binary. For a Debug build targeting `net11.0`, that path is:
 
 ```bash
-Integration/Client/bin/Debug/net10.0/backups/
+Integration/Client/bin/Debug/net11.0/backups/
 ```
 
 The directory is created automatically during fixture initialization — you do not need to create it yourself.
