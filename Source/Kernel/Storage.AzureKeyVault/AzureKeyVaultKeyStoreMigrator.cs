@@ -108,9 +108,9 @@ internal class AzureKeyVaultKeyStoreMigrator(
 
     async Task Execute(MigrationRun run, bool removeVerifiedLegacy, CancellationToken cancellationToken)
     {
-        var entries = await Collect(run, cancellationToken);
+        var known = await CrossCheckCatalog(run);
+        var entries = await Collect(run, known, cancellationToken);
         CheckEveryScopeHasASource(run, entries);
-        await CrossCheckCatalog(run);
 
         var deleted = await vault.ListDeleted(cancellationToken);
         foreach (var address in entries.GroupBy(_ => (_.Name.EventStore, _.Name.EventStoreNamespace, _.Name.Identifier)))
@@ -125,13 +125,15 @@ internal class AzureKeyVaultKeyStoreMigrator(
         }
     }
 
-    async Task<List<LegacyEntry>> Collect(MigrationRun run, CancellationToken cancellationToken)
+    async Task<List<LegacyEntry>> Collect(MigrationRun run, IReadOnlyList<LegacyScope> known, CancellationToken cancellationToken)
     {
+        // Scopes the catalog knows count as rivals, so a name two stores could share is never tied to one of them.
+        var candidates = scopes.Union(known).ToList();
         var entries = new List<LegacyEntry>();
         foreach (var secret in (await vault.ListLive(cancellationToken)).Where(_ => LegacySecretName.IsEarlier(_.Name)))
         {
             run.Scanned++;
-            if (LegacySecretName.Resolve(secret.Name, scopes) is { } resolved)
+            if (LegacySecretName.Resolve(secret.Name, scopes) is { } resolved && resolved == LegacySecretName.Resolve(secret.Name, candidates))
             {
                 entries.Add(new(resolved, secret.Name));
             }
@@ -155,25 +157,28 @@ internal class AzureKeyVaultKeyStoreMigrator(
         }
     }
 
-    async Task CrossCheckCatalog(MigrationRun run)
+    async Task<IReadOnlyList<LegacyScope>> CrossCheckCatalog(MigrationRun run)
     {
         if (catalog is null)
         {
-            return;
+            return [];
         }
 
         try
         {
-            var known = await catalog.GetScopes();
+            var known = (await catalog.GetScopes()).ToList();
             run.ScopesMissingFromList = known.Count(scope => !scopes.Contains(scope));
             if (run.ScopesMissingFromList > 0)
             {
                 _logger.ScopesNotListed(run.ScopesMissingFromList);
             }
+
+            return known;
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
-            // The catalog is a cross-check only; nothing depends on it.
+            // An unreadable catalog adds no candidates and cannot veto removal.
+            return [];
         }
     }
 
