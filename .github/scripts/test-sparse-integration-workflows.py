@@ -635,7 +635,7 @@ class SparseIntegrationWorkflows(unittest.TestCase):
     def test_stable_specs_check_requires_every_shard_to_succeed(self):
         aggregate = self.build["jobs"]["specs"]
         self.assertEqual("${{ needs.already-ran.outputs.skip != 'true' && (always()) }}", aggregate["if"])
-        self.assertEqual(["wire-compatibility", "grain-compatibility", "package-verification", "package-pack-check", "analyzers", "spec-runner-checks", "specs-other", "specs-sql", "specs-net10"],
+        self.assertEqual(["wire-compatibility", "grain-compatibility", "package-verification", "package-pack-check", "analyzers", "analyzers-development", "spec-runner-checks", "specs-other", "specs-sql", "specs-net10"],
                          prerequisites_of(aggregate))
         self.assertEqual({"contents": "read", "actions": "read"}, aggregate["permissions"])
         self.assertEqual("Checkout shard contract", aggregate["steps"][1]["name"])
@@ -667,6 +667,7 @@ class SparseIntegrationWorkflows(unittest.TestCase):
                                              "OTHER_RESULT": ordinary, "SQL_RESULT": sql,
                                              "NET10_RESULT": net10, "PACKAGE_RESULT": "success", "RUNNER_RESULT": "success",
                                              "ANALYZER_RESULT": "success", "PACK_RESULT": "success",
+                                             "DEV_ANALYZER_RESULT": "success", "INTEGRATION_REQUESTED": "true",
                                              "EVENT_NAME": "pull_request"}, check=False)
                 self.assertEqual(wire == grain == ordinary == sql == net10 == "success",
                                  result.returncode == 0)
@@ -678,6 +679,7 @@ class SparseIntegrationWorkflows(unittest.TestCase):
                                              "OTHER_RESULT": "success", "SQL_RESULT": "success",
                                              "NET10_RESULT": "success", "PACKAGE_RESULT": package, "RUNNER_RESULT": "success",
                                              "ANALYZER_RESULT": "success", "PACK_RESULT": "success",
+                                             "DEV_ANALYZER_RESULT": "success", "INTEGRATION_REQUESTED": "true",
                                              "EVENT_NAME": "pull_request"}, check=False)
                 self.assertNotEqual(0, result.returncode)
         self.assertEqual("${{ needs.analyzers.result }}", step["env"]["ANALYZER_RESULT"])
@@ -688,8 +690,32 @@ class SparseIntegrationWorkflows(unittest.TestCase):
                                              "OTHER_RESULT": "success", "SQL_RESULT": "success",
                                              "NET10_RESULT": "success", "PACKAGE_RESULT": "success", "RUNNER_RESULT": "success",
                                              "ANALYZER_RESULT": analyzers, "PACK_RESULT": "success",
+                                             "DEV_ANALYZER_RESULT": "success", "INTEGRATION_REQUESTED": "true",
                                              "EVENT_NAME": "pull_request"}, check=False)
                 self.assertEqual(analyzers == "success", result.returncode == 0)
+        self.assertEqual("${{ needs.analyzers-development.result }}", step["env"]["DEV_ANALYZER_RESULT"])
+        self.assertEqual("${{ inputs.integration_requested }}", step["env"]["INTEGRATION_REQUESTED"])
+        # The DEVELOPMENT analysis must pass when it ran; it may be skipped only on a pull request that did not
+        # request integration (the same coverage as the DEVELOPMENT builds), never on a push or schedule.
+        for dev, event, requested in product(("success", "failure", "cancelled", "skipped", ""),
+                                             ("pull_request", "push", "schedule"), ("true", "false", "")):
+            with self.subTest(dev=dev, event=event, requested=requested):
+                result = subprocess.run(["bash", "-c", step["run"]],
+                                        env={"WIRE_RESULT": "success", "GRAIN_RESULT": "success",
+                                             "OTHER_RESULT": "success", "SQL_RESULT": "success",
+                                             "NET10_RESULT": "success", "PACKAGE_RESULT": "success", "RUNNER_RESULT": "success",
+                                             "ANALYZER_RESULT": "success", "PACK_RESULT": "success",
+                                             "DEV_ANALYZER_RESULT": dev, "INTEGRATION_REQUESTED": requested,
+                                             "EVENT_NAME": event}, check=False)
+                expected = dev == "success" or (dev == "skipped" and event == "pull_request" and requested != "true")
+                self.assertEqual(expected, result.returncode == 0)
+
+    def test_integration_does_not_wait_for_the_development_analysis(self):
+        jobs = self.build["jobs"]
+        for job_id in ("integration", "integration-api", "mongodb", "neo4j", "dotnet-build-development",
+                       "dotnet-build-development-requested"):
+            with self.subTest(job=job_id):
+                self.assertNotIn("analyzers-development", prerequisites_of(jobs[job_id]))
 
     def test_development_paths_preserve_steps_permissions_and_artifact(self):
         jobs = self.build["jobs"]
@@ -705,7 +731,7 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         self.assertEqual([], prerequisites_of(parallel))
         # The requested PR build and its integration consumers run in parallel with the specs.
         self.assertEqual([], prerequisites_of(requested))
-        self.assertEqual(["wire-compatibility", "grain-compatibility", "package-verification", "package-pack-check", "analyzers", "spec-runner-checks", "specs-other", "specs-sql", "specs-net10"],
+        self.assertEqual(["wire-compatibility", "grain-compatibility", "package-verification", "package-pack-check", "analyzers", "analyzers-development", "spec-runner-checks", "specs-other", "specs-sql", "specs-net10"],
                          prerequisites_of(jobs["specs"]))
         for job_id in ("specs-other", "specs-sql"):
             self.assertEqual(["dotnet-build"], prerequisites_of(jobs[job_id]))
@@ -716,7 +742,7 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         self.assertEqual(8, len(steps))
         build = next(step for step in steps if step.get("name") == "Build with DEVELOPMENT symbol")
         self.assertEqual("dotnet build --configuration Release -p:EnableDevelopmentSymbol=true "
-                         "-p:DisableProxyGenerator=true -p:DisableDockerBuild=true", build["run"])
+                         "-p:DisableProxyGenerator=true -p:DisableDockerBuild=true -p:RunAnalyzers=false", build["run"])
         # The full build-output-development tarball had no reader (#5866); only the per-project pack remains.
         self.assertEqual("Pack per-project integration build output", steps[-1]["name"])
         self.assertEqual({"prefix": "build-output-development"}, steps[-1]["with"])
