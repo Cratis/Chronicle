@@ -1196,14 +1196,14 @@ class for_parallel_requested_integration(unittest.TestCase):
 class IntegrationSlotBudgetContract(unittest.TestCase):
     """One run's integration jobs stay inside a stated peak-concurrency budget (#4765).
 
-    The caps bound one run only; they do not guarantee any org-wide queue time. The budget of 32 is
-    what keeps a requested run within about +20% of the uncapped wall time (a client cap of 5 measured
-    far slower). An unrecognised matrix or a missing cap is a failure, never a pass.
+    The caps bound one run only; they do not guarantee any org-wide queue time. The budget of 44 is
+    meant to keep a requested run near the uncapped wall time while holding the peak below 45 (client
+    caps of 5 and 24 measured far slower). An unrecognised matrix or a missing cap is a failure, never a pass.
     """
 
-    INTEGRATION_SLOT_BUDGET = 32
+    INTEGRATION_SLOT_BUDGET = 44
     MATRIX_CAPS = {
-        ("integration.yml", "client-integration-specs"): 24,
+        ("integration.yml", "client-integration-specs"): 36,
         ("integration.yml", "kernel-integration-specs"): 2,
         ("integration.yml", "clustering-integration-specs"): 1,
         ("integration.yml", "sql-clustering-integration-specs"): 1,
