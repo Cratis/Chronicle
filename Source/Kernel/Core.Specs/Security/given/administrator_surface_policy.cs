@@ -30,6 +30,7 @@ public static class administrator_surface_policy
         ["Cratis.Chronicle.Security.ChangeApplicationSecret"] = WellKnownAuthorizationPolicies.AdministratorOperations,
         ["Cratis.Chronicle.Jobs.StopJob"] = WellKnownAuthorizationPolicies.AdministratorOperations,
         ["Cratis.Chronicle.Events.Constraints.Operator.ReindexConstraints"] = WellKnownAuthorizationPolicies.AdministratorOperations,
+        ["Cratis.Chronicle.Events.Constraints.Operator.ConstraintReindexCapability"] = WellKnownAuthorizationPolicies.AdministratorOperations,
         ["Cratis.Chronicle.Jobs.StopJobWithResult"] = WellKnownAuthorizationPolicies.AdministratorOperations,
         ["Cratis.Chronicle.Jobs.ResumeJob"] = WellKnownAuthorizationPolicies.AdministratorOperations,
         ["Cratis.Chronicle.Jobs.ResumeJobWithResult"] = WellKnownAuthorizationPolicies.AdministratorOperations,
