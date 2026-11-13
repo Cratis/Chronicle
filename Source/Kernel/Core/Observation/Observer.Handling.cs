@@ -401,11 +401,9 @@ public partial class Observer
         }
     }
 
-    async Task HandleEventsForPartition(Key partition, IEnumerable<AppendedEvent> incomingEvents, Activity? activity)
+    async Task HandleEventsForPartition(Key partition, IEnumerable<AppendedEvent> events, Activity? activity)
     {
-        // Enumerate the partition run once, the checks below all read the same events.
-        var events = incomingEvents as IReadOnlyList<AppendedEvent> ?? incomingEvents.ToArray();
-        var observedTailEventSequenceNumber = events[^1].Context.SequenceNumber;
+        var observedTailEventSequenceNumber = events.Last().Context.SequenceNumber;
 
         // An observer subscribed to all events has no fixed event type list to match against - every event is
         // of interest to it by definition, so this "none of these events are ones we're subscribed to" fast
@@ -422,7 +420,7 @@ public partial class Observer
             return;
         }
 
-        if (ExcludedByFilters(events))
+        if (ExcludedByFilters([.. events]))
         {
             State = State with
             {
