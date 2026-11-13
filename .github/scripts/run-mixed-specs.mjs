@@ -105,17 +105,28 @@ export function selectProducerArtifacts(jobPages, artifactPages, context) {
     if (ordinaryArtifacts.length !== ORDINARY_SHARDS) fail(`Expected exactly ${ORDINARY_SHARDS} producer artifacts`);
     return { context, producers: ordinaryShardIds().map(shard => producerArtifact(ordinaryArtifacts, producerJob(jobs, shard, context), shard, context)) };
 }
-async function producerApiPages(endpoint, context, env, execute) {
-    const result = await execute('gh', ['api', '--paginate', '--slurp', `repos/${env.GITHUB_REPOSITORY}/actions/runs/${context.runId}/${endpoint}`], { capture: true, timeout: 60000 });
-    if (result.code !== 0) fail(`Producer evidence API failed (${result.code})`);
-    return JSON.parse(result.stdout);
+// Large pages of a run with reruns can make the jobs listing return 5xx, and the reason is only in gh's stderr (#5871).
+const PRODUCER_PAGE_SIZE = 30;
+const PRODUCER_API_ATTEMPTS = 3;
+const pause = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
+async function producerApiPages(endpoint, context, env, execute, wait) {
+    const args = ['api', '--paginate', '--slurp', `repos/${env.GITHUB_REPOSITORY}/actions/runs/${context.runId}/${endpoint}`];
+    for (let attempt = 1; ; attempt++) {
+        const result = await execute('gh', args, { capture: true, timeout: 60000 });
+        if (result.code === 0) return JSON.parse(result.stdout);
+        const response = (result.stderr ?? '').trim();
+        if (attempt >= PRODUCER_API_ATTEMPTS || !/HTTP 5\d\d/.test(response)) {
+            fail(`Producer evidence API failed (${result.code}): ${response.slice(-2000) || 'no output'}`);
+        }
+        await wait(attempt * 5000);
+    }
 }
-export async function loadProducerEvidence(context, { env = process.env, execute = runProcess } = {}) {
+export async function loadProducerEvidence(context, { env = process.env, execute = runProcess, wait = pause } = {}) {
     if (!/^[\w.-]+\/[\w.-]+$/.test(env.GITHUB_REPOSITORY ?? '')) fail('Missing/invalid producer repository');
     if (!/^[1-9]\d*$/.test(context.runId) || !/^[1-9]\d*$/.test(context.runAttempt)) fail('Invalid producer run/attempt');
     const pages = [];
-    for (const endpoint of ['jobs?filter=all&per_page=100', 'artifacts?per_page=100']) {
-        pages.push(await producerApiPages(endpoint, context, env, execute));
+    for (const endpoint of [`jobs?filter=all&per_page=${PRODUCER_PAGE_SIZE}`, `artifacts?per_page=${PRODUCER_PAGE_SIZE}`]) {
+        pages.push(await producerApiPages(endpoint, context, env, execute, wait));
     }
     return selectProducerArtifacts(...pages, context);
 }

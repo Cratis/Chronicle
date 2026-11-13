@@ -307,13 +307,35 @@ test('producer API acquisition paginates all attempts and propagates unavailable
     const options = { env: { GITHUB_REPOSITORY: 'Cratis/Chronicle' }, execute: async (command, args) => {
         assert.equal(command, 'gh');
         assert.deepEqual(args.slice(0, 3), ['api', '--paginate', '--slurp']);
-        if (calls === 0) assert.ok(args[3].endsWith('/123/jobs?filter=all&per_page=100'));
+        if (calls === 0) assert.ok(args[3].endsWith('/123/jobs?filter=all&per_page=30'));
         return { code: 0, stdout: JSON.stringify(pages[calls++]) };
     } };
     assert.equal((await loadProducerEvidence(retryContext, options)).producers[1].runAttempt, '2');
     assert.equal(calls, 2);
     await assert.rejects(loadProducerEvidence(retryContext, { ...options, execute: async () => ({ code: 1 }) }), /API failed/);
     await assert.rejects(loadProducerEvidence(retryContext, { ...options, execute: async () => ({ code: 0, stdout: '{}' }) }), /pages/);
+});
+test('producer API retries a server error on a page, then reports the captured response', async () => {
+    const pages = producerFixture([1, 2, 1, 1]);
+    const serverError = { code: 1, stdout: '', stderr: 'gh: Server Error (HTTP 502)' };
+    const env = { GITHUB_REPOSITORY: 'Cratis/Chronicle' };
+    let calls = 0;
+    const waits = [];
+    const wait = async milliseconds => { waits.push(milliseconds); };
+    const recovering = async () => (calls++ === 0 ? serverError : { code: 0, stdout: JSON.stringify(pages[calls - 2]) });
+    assert.equal((await loadProducerEvidence(retryContext, { env, wait, execute: recovering })).producers[1].runAttempt, '2');
+    assert.equal(calls, 3);
+    assert.deepEqual(waits, [5000]);
+
+    let failing = 0;
+    await assert.rejects(loadProducerEvidence(retryContext, { env, wait, execute: async () => { failing++; return serverError; } }),
+        /API failed \(1\): gh: Server Error \(HTTP 502\)/);
+    assert.equal(failing, 3);
+
+    let forbidden = 0;
+    await assert.rejects(loadProducerEvidence(retryContext, { env, wait, execute: async () => { forbidden++; return { code: 1, stderr: 'gh: Forbidden (HTTP 403)' }; } }),
+        /API failed \(1\): gh: Forbidden \(HTTP 403\)/);
+    assert.equal(forbidden, 1);
 });
 
 async function ordinaryDispatch(mode) {
