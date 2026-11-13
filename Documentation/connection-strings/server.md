@@ -104,7 +104,8 @@ so credentials always go to a fixed destination. Credentials are only sent over 
 Short-lived clients, such as command line tools, can cache tokens between runs with
 `FileSystemCachingTokenProvider`, which stores them in a file at a path the host application chooses (keep
 it in the user's own profile). The file is created readable and writable by the current user only (mode `0600` on Unix, in a
-directory with mode `0700`) and replaced atomically. A cached token is reused until the expiry the issuer
+directory with mode `0700`) and replaced atomically. On Windows no permission bits are set; the file inherits
+the access control list of its directory, so keep it under the user's profile. A cached token is reused until the expiry the issuer
 put in the token (its `exp` claim) less a short safety margin, or for 55 minutes when the token carries no
 expiry. Delete the file to force a new token request.
 
