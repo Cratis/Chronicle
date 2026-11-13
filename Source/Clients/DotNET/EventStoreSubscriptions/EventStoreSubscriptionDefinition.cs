@@ -31,4 +31,9 @@ public record EventStoreSubscriptionDefinition(
     /// Gets the named-tag filter. Empty means every event of the subscribed types.
     /// </summary>
     public IEnumerable<NamedTag> NamedTags { get; init; } = [];
+
+    /// <summary>
+    /// Gets the source namespaces to observe. Empty means every namespace.
+    /// </summary>
+    public IEnumerable<string> SourceNamespaces { get; init; } = [];
 }
