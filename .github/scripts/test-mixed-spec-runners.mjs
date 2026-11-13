@@ -328,9 +328,23 @@ test('producer API retries a server error on a page, then reports the captured r
     assert.deepEqual(waits, [5000]);
 
     let failing = 0;
+    waits.length = 0;
     await assert.rejects(loadProducerEvidence(retryContext, { env, wait, execute: async () => { failing++; return serverError; } }),
         /API failed \(1\): gh: Server Error \(HTTP 502\)/);
     assert.equal(failing, 3);
+    assert.deepEqual(waits, [5000, 10000]);
+
+    const long = `gh: Server Error (HTTP 503) ${'x'.repeat(3000)}`;
+    await assert.rejects(loadProducerEvidence(retryContext, { env, wait, execute: async () => ({ code: 1, stderr: long }) }),
+        error => error.message.endsWith(long.slice(-2000)) && !error.message.includes('HTTP 503'));
+
+    let clock = 0;
+    const timeouts = [];
+    let slow = 0;
+    const slowServer = async (command, args, options) => { slow++; timeouts.push(options.timeout); clock += 145000; return serverError; };
+    await assert.rejects(loadProducerEvidence(retryContext, { env, wait, now: () => clock, execute: slowServer }), /HTTP 502/);
+    assert.equal(slow, 1, 'no retry once the shared acquisition budget is spent');
+    assert.deepEqual(timeouts, [60000]);
 
     let forbidden = 0;
     await assert.rejects(loadProducerEvidence(retryContext, { env, wait, execute: async () => { forbidden++; return { code: 1, stderr: 'gh: Forbidden (HTTP 403)' }; } }),
