@@ -169,6 +169,11 @@ public sealed class EventTypeRegistrar(IGrainFactory grainFactory)
         {
             return EventTypeCheckResult.Reject(id, generation, ex.Message);
         }
+        catch (Exception ex)
+        {
+            // A schema or migration that cannot even be read must not abort the check for the other registrations.
+            return EventTypeCheckResult.Reject(id, generation, $"The event type could not be processed: {ex.Message}");
+        }
 
         return EventTypeCheckResult.Accept(id, generation);
     }

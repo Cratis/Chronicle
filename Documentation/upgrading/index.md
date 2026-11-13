@@ -20,7 +20,7 @@ See [Client TLS configuration](../configuration/tls) before updating shared conn
 
 ## Check a release before you deploy it
 
-Before deploying a client release, you can check it against the kernel it will connect to, including whether its event type schemas would be accepted. See [Check a release against a kernel](../operations/check-a-release-against-a-kernel.md).
+Before deploying a client release, you can ask the kernel it will connect to whether it would accept the release's event type registrations. See [Check a release against a kernel](../operations/check-a-release-against-a-kernel.md).
 
 ## Guides
 
