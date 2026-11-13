@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Integration.for_EventStoreSubscriptions.given;
 using Cratis.Chronicle.Namespaces;
 using context = Cratis.Chronicle.Integration.for_EventStoreSubscriptions.when_restricting_source_namespaces.to_one_of_two_target_namespaces.context;
 
