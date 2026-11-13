@@ -134,7 +134,7 @@ jobs:
 
       - name: Spec executable runner contracts and forbid test-host dispatch
         run: |
-          node --test .github/scripts/test-mixed-spec-runners.mjs .github/scripts/test-spec-shards.mjs .github/scripts/spec-shard-workflow.test.mjs .github/scripts/test-spec-wall-timings.mjs
+          node --test .github/scripts/test-run-concurrency-report.mjs .github/scripts/test-mixed-spec-runners.mjs .github/scripts/test-spec-shards.mjs .github/scripts/spec-shard-workflow.test.mjs .github/scripts/test-spec-wall-timings.mjs
           node .github/scripts/spec-shards.mjs --dry-run
 
       - name: Spec coverage statistics honesty (missing input never advances the measurement date)
@@ -933,12 +933,12 @@ jobs:
   # Dependabot's read-only token cannot push the image these shards pull. A bump needing
   # the full matrix must be reopened as an ordinary PR, where the token can push.
   integration:
-    # Requested lanes start after their builds, in parallel with ordinary specs (#5865, supersedes #5050).
-    # A red spec still fails the run through the specs aggregate and the requested verdict; coverage-merge-and-cache
-    # requires specs and all lanes to succeed. The trade-off is wasted lane minutes when specs are red.
+    # Requested lanes start once their builds and the two spec shard groups are green (#4765), so the ordinary specs
+    # and the lanes do not overlap. Gated on specs-other and specs-sql, not the specs aggregate, which also waits for
+    # packaging jobs. A red spec skips the lanes; the requested verdict still fails closed on a skipped integration.
     # !cancelled() overrides implicit success(): the unused DEVELOPMENT sibling is skipped.
-    if: ${{ needs.already-ran.outputs.skip != 'true' && (!cancelled() && needs.dotnet-build.result == 'success' && ((github.event_name != 'pull_request' && needs.dotnet-build-development.result == 'success') || (github.event_name == 'pull_request' && needs.dotnet-build-development-requested.result == 'success')) && (github.event_name != 'pull_request' || inputs.integration_requested) && github.actor != 'dependabot[bot]') }}
-    needs: [already-ran, dotnet-build, dotnet-build-development, dotnet-build-development-requested]
+    if: ${{ needs.already-ran.outputs.skip != 'true' && (!cancelled() && needs.dotnet-build.result == 'success' && needs.specs-other.result == 'success' && needs.specs-sql.result == 'success' && ((github.event_name != 'pull_request' && needs.dotnet-build-development.result == 'success') || (github.event_name == 'pull_request' && needs.dotnet-build-development-requested.result == 'success')) && (github.event_name != 'pull_request' || inputs.integration_requested) && github.actor != 'dependabot[bot]') }}
+    needs: [already-ran, dotnet-build, dotnet-build-development, dotnet-build-development-requested, specs-other, specs-sql]
     permissions:
       contents: read
       packages: read
@@ -1170,6 +1170,8 @@ jobs:
     needs: [already-ran, dotnet-build]
     strategy:
       fail-fast: false
+      # One of the integration slot budget caps (#4765); see integration.yml and test-sparse-integration-workflows.py.
+      max-parallel: 1
       matrix:
         include:
           # The Community edition has one database, so every namespace shares it.
