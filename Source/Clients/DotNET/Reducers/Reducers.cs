@@ -583,10 +583,38 @@ public partial class Reducers : IReducers
     {
         ThrowIfDeliveredOverHttp(handler);
         ClientObserverHosting.ThrowIfUnavailable(_eventStore.Connection, "Reducer", () => handler.Id.Value);
-        RegisterReducer(handler);
+
+        // Resolving services can reconnect the client and dispose this handler before a stream has been opened.
+        var cancellationToken = handler.CancellationToken;
+        var services = _servicesAccessor.Services;
+        if (!cancellationToken.IsCancellationRequested)
+        {
+            RegisterReducer(handler, services, cancellationToken);
+        }
     }
 
-    void RegisterReducer(IReducerHandler handler)
+    void ReconnectIfCurrent(IReducerHandler handler, CancellationToken cancellationToken)
+    {
+        // Resolve outside the ownership lock: connecting can wait for lifecycle work that needs that lock.
+        var services = _servicesAccessor.Services;
+        lock (ReadModelBuilderOwnership.SyncFor(_eventStore, ReadModelOwnershipSync))
+        {
+            if (_released || cancellationToken.IsCancellationRequested || !IsCurrent(handler))
+            {
+                return;
+            }
+
+            ThrowIfDeliveredOverHttp(handler);
+            ClientObserverHosting.ThrowIfUnavailable(_eventStore.Connection, "Reducer", () => handler.Id.Value);
+            RegisterReducer(handler, services, cancellationToken);
+        }
+    }
+
+    bool IsCurrent(IReducerHandler handler) =>
+        (_handlersByType.TryGetValue(handler.ReducerType, out var current) || _handlersByModelType.TryGetValue(handler.ReadModelType, out current)) &&
+        ReferenceEquals(current, handler);
+
+    void RegisterReducer(IReducerHandler handler, IServices services, CancellationToken cancellationToken)
     {
         if (GenerationDelivery == Observation.EventGenerationDelivery.Pinned)
         {
@@ -633,7 +661,7 @@ public partial class Reducers : IReducers
 #pragma warning restore CA2000 // Dispose objects before losing scope
         var backoff = _reconnectBackoffs.GetValue(handler, _ => new(ReconnectDelay, MaxReconnectDelay, HealthyStreamDuration, TimeProvider.System, ReconnectJitter));
         backoff.StreamOpened();
-        var operationsToObserve = _servicesAccessor.Services.Reducers.Observe(messages.Messages, handler.CancellationToken);
+        var operationsToObserve = services.Reducers.Observe(messages.Messages, cancellationToken);
 
         // Re-establish the observation after the stream ends or fails. The kernel can end a reducer's stream without
         // an error; without re-subscribing then, the reducer silently stops observing until the whole client
@@ -641,7 +669,7 @@ public partial class Reducers : IReducers
         // the stream keeps ending.
         void ScheduleReconnect()
         {
-            if (handler.CancellationToken.IsCancellationRequested)
+            if (cancellationToken.IsCancellationRequested)
             {
                 _ = scheduler.DrainAndDispose();
                 return;
@@ -652,9 +680,14 @@ public partial class Reducers : IReducers
                 try
                 {
                     await scheduler.DrainAndDispose();
-                    await WaitBeforeReconnect(backoff.NextDelay(), handler.CancellationToken);
+                    await WaitBeforeReconnect(backoff.NextDelay(), cancellationToken);
+                    if (cancellationToken.IsCancellationRequested)
+                    {
+                        return;
+                    }
+
                     _logger.ReconnectingReducer(handler.Id);
-                    RegisterReducerWhenHostable(handler);
+                    ReconnectIfCurrent(handler, cancellationToken);
                 }
                 catch (OperationCanceledException) { }
                 catch (Exception ex)
@@ -687,7 +720,7 @@ public partial class Reducers : IReducers
                     scheduler.Stop();
                     messages.Dispose();
 
-                    if (handler.CancellationToken.IsCancellationRequested)
+                    if (cancellationToken.IsCancellationRequested)
                     {
                         _logger.ReducerStreamCancelled(handler.Id, ex);
                         _ = scheduler.DrainAndDispose();
