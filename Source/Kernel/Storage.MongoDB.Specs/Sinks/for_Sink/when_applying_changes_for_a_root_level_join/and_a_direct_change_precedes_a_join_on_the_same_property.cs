@@ -9,7 +9,7 @@ public class and_a_direct_change_precedes_a_join_on_the_same_property : given.a_
 
     async Task Because() => await Apply();
 
-    [Fact] void should_write_the_direct_change_and_then_the_join() => _writes.Select(_ => _.Kind).ShouldEqual(["one", "many"]);
-    [Fact] void should_write_the_direct_value_first() => _writes[0].Update["$set"]["count"].AsInt64.ShouldEqual(1);
-    [Fact] void should_write_the_joined_value_last() => _writes[1].Update["$set"]["count"].AsInt64.ShouldEqual(2);
+    [Fact] void should_keep_the_single_pass_of_the_join_and_then_the_direct_change() => _writes.Select(_ => _.Kind).ShouldEqual(["many", "one"]);
+    [Fact] void should_write_the_joined_value_first() => _writes[0].Update["$set"]["count"].AsInt64.ShouldEqual(2);
+    [Fact] void should_write_the_direct_value_last() => _writes[1].Update["$set"]["count"].AsInt64.ShouldEqual(1);
 }

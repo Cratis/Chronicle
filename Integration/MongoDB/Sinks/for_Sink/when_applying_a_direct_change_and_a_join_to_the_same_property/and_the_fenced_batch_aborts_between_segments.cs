@@ -39,10 +39,10 @@ public class and_the_fenced_batch_aborts_between_segments(ChronicleInProcessFixt
         using var writes = new FencedSinkWrites(new FixedFenceTokenSource(token), new FencedBatchExecutor(new MongoFenceStore(_database), FenceRetryPolicy.Default, probe));
         using var sink = CreateSink(writes);
         Change[] changes = [Direct(("count", 1)), Join(true, ("count", 2))];
-        _error = await Catch.Exception(() => sink.ApplyChanges(RootKey, ChangesetOf(changes), 20UL, SinkWriteMode.Always));
+        _error = await Catch.Exception(() => sink.ApplyChanges(RootKey, ChangesetOf(EventOf("own", "root", 20UL), changes), 20UL, SinkWriteMode.OncePerSourceEvent));
         _rootAfterTheAbort = await Read("root");
         _otherAfterTheAbort = await Read("other");
-        await sink.ApplyChanges(RootKey, ChangesetOf(changes), 20UL, SinkWriteMode.Always);
+        await sink.ApplyChanges(RootKey, ChangesetOf(EventOf("own", "root", 20UL), changes), 20UL, SinkWriteMode.OncePerSourceEvent);
         _root = await Read("root");
         _other = await Read("other");
     }

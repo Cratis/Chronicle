@@ -15,13 +15,14 @@ public class and_the_direct_change_precedes_the_join(ChronicleInProcessFixture f
 
     async Task Because()
     {
+        // An unmarked write keeps the single pass: the join is written before the direct changes, so the direct value wins.
         using var sink = CreateSink(UnfencedSinkWrites.Instance);
         await sink.ApplyChanges(RootKey, ChangesetOf(Direct(("count", 1), ("x", 1)), Join(true, ("count", 2))), 20UL, SinkWriteMode.Always);
         _root = await Read("root");
         _other = await Read("other");
     }
 
-    [Fact] void should_end_with_the_joined_value_on_the_root() => _root["count"].ToInt32().ShouldEqual(2);
+    [Fact] void should_end_with_the_direct_value_on_the_root() => _root["count"].ToInt32().ShouldEqual(1);
     [Fact] void should_keep_the_other_direct_property() => _root["x"].ToInt32().ShouldEqual(1);
     [Fact] void should_leave_unrelated_properties_untouched() => _root["retained"].AsString.ShouldEqual("untouched");
     [Fact] void should_write_the_joined_value_to_the_other_row() => _other["count"].ToInt32().ShouldEqual(2);

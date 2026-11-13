@@ -19,13 +19,13 @@ public class and_a_write_fails_between_segments(ChronicleInProcessFixture fixtur
 
     async Task Because()
     {
-        // Without a fence the segments are separate writes, so the first can be visible, with its watermark, when the second fails.
-        // That window is the same class as the one a join-before-direct order always had. The redelivery must still be admitted.
+        // Only marked writes are segmented. Without a fence the segments are separate writes, so the first can be visible, with its
+        // watermark and marker, when the second fails. The redelivery must still be admitted for the segment that was not written.
         using var sink = CreateSink(new FailingFirstJoinWrites());
         Change[] changes = [Direct(("count", 1)), Join(true, ("count", 2))];
-        _error = await Catch.Exception(() => sink.ApplyChanges(RootKey, ChangesetOf(changes), 20UL, SinkWriteMode.Always));
+        _error = await Catch.Exception(() => sink.ApplyChanges(RootKey, ChangesetOf(EventOf("own", "root", 20UL), changes), 20UL, SinkWriteMode.OncePerSourceEvent));
         _rootAfterTheFailure = await Read("root");
-        await sink.ApplyChanges(RootKey, ChangesetOf(changes), 20UL, SinkWriteMode.Always);
+        await sink.ApplyChanges(RootKey, ChangesetOf(EventOf("own", "root", 20UL), changes), 20UL, SinkWriteMode.OncePerSourceEvent);
         _root = await Read("root");
         _other = await Read("other");
     }

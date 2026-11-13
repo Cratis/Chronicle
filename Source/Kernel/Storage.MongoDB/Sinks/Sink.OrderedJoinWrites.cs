@@ -14,15 +14,15 @@ public partial class Sink
     static bool IsWrittenThroughJoinTargets(WritePlan plan) => plan.UsesJoinTargetsOnlyFilter || plan.ShouldSuppressRootUpdateAfterRootLevelJoin;
 
     /// <summary>
-    /// Writes a changeset whose keyed From and root join change the same property in changeset order.
+    /// Writes a marked changeset whose keyed From and root join change the same property in changeset order.
     /// </summary>
     /// <remarks>
+    /// Only marked writes (<see cref="SinkWriteMode.OncePerSourceEvent"/>) are segmented; every other write keeps the single pass.
     /// Each segment is its own write. With a fence they share one transaction unless the batch is split because it is too
     /// large, and then they are committed separately, so this does not promise atomicity. Without a fence a failure between
     /// segments leaves the earlier ones written; the redelivered changeset is unguarded and rewrites every segment, so it converges.
     /// Watermark-guarded writes keep the single pass, because a stamped watermark would make a redelivery skip the later segments.
-    /// Marked writes (applied event markers) are segmented like any other: every segment records a marker slot of its own,
-    /// so a redelivery skips exactly the segments that were written and repeats none, and the order of the changeset holds.
+    /// Every segment of a marked write records a marker slot of its own, so a redelivery skips exactly the segments that were written and repeats none, and the order of the changeset holds.
     /// </remarks>
     /// <param name="changeset">The changeset to write.</param>
     /// <param name="eventSequenceNumber">The event sequence number of the write.</param>
@@ -35,7 +35,7 @@ public partial class Sink
         WritePlan plan,
         SinkWriteOptions options)
     {
-        return IsGuardedWrite(options.Mode, plan, eventSequenceNumber) || !IsOrderedByConverter(plan)
+        return options.Mode != SinkWriteMode.OncePerSourceEvent || IsGuardedWrite(options.Mode, plan, eventSequenceNumber) || !IsOrderedByConverter(plan)
             ? null
             : ChangesetWriteOrder.SegmentsFor(changeset.Changes);
     }
