@@ -18,16 +18,17 @@ export class ConstraintsViewModel {
     jobId?: string;
     feedback = '';
     isReindexing = false;
+    isReindexDenied = false;
 
     constructor(private readonly _reindex: ReindexConstraints, private readonly _dialogs: IDialogs) {
     }
 
     canReindex(authorization: Pick<QueryResult<ConstraintReindexCapability>, 'isReady' | 'isSuccess' | 'isAuthorized' | 'data'>): boolean {
-        return authorization.isReady && authorization.isSuccess && authorization.isAuthorized && authorization.data?.canReindex === true;
+        return !this.isReindexDenied && authorization.isReady && authorization.isSuccess && authorization.isAuthorized && authorization.data?.canReindex === true;
     }
 
     async reindex(eventStore: string, namespace: string) {
-        if (this.isReindexing) return;
+        if (this.isReindexing || this.isReindexDenied) return;
 
         this.isReindexing = true;
         this.jobId = undefined;
@@ -41,14 +42,15 @@ export class ConstraintsViewModel {
             this._reindex.eventSequenceId = 'event-log';
             this._reindex.constraintNames = [];
             this.reportResult(await this._reindex.execute());
-        } catch (error) {
-            this.feedback = error instanceof Error ? error.message : messages.failed;
+        } catch {
+            this.feedback = messages.failed;
         } finally {
             this.isReindexing = false;
         }
     }
 
     private reportResult(result: CommandResult<Guid>) {
+        this.isReindexDenied = !result.isAuthorized;
         const failure = this.failureMessage(result);
         if (failure) {
             this.feedback = failure;

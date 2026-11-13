@@ -21,6 +21,7 @@ export class a_view_model {
             this.viewModel.jobId = undefined;
             this.viewModel.feedback = '';
             this.viewModel.isReindexing = false;
+            this.viewModel.isReindexDenied = false;
             this.dialogs.showConfirmation.reset();
             this.dialogs.showConfirmation.resolves(DialogResult.Yes);
             this.execute.reset();

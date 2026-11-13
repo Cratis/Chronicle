@@ -15,7 +15,7 @@ const messages = strings.eventStore.namespaces.constraints;
 
 export const Constraints = withViewModel(ConstraintsViewModel, ({ viewModel }) => {
     const params = useParams<EventStoreAndNamespaceParams>();
-    const [authorization] = CanReindexConstraints.use();
+    const [authorization] = CanReindexConstraints.use({ eventStore: params.eventStore! });
 
     return <Page title={messages.title}>
         <div className='flex flex-col items-start gap-4 p-4'>

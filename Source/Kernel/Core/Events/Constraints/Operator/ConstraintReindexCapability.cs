@@ -3,6 +3,7 @@
 
 using Cratis.Arc.Authorization;
 using Cratis.Arc.Queries.ModelBound;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Security;
 
 namespace Cratis.Chronicle.Events.Constraints.Operator;
@@ -18,6 +19,11 @@ public record ConstraintReindexCapability(bool CanReindex)
     /// <summary>
     /// Checks whether the caller may request a constraint index rebuild.
     /// </summary>
-    /// <returns>A capability allowing reindexing after the query authorization policy succeeds.</returns>
-    public static ConstraintReindexCapability CanReindexConstraints() => new(true);
+    /// <param name="eventStore">The event store whose constraint indexes would be rebuilt.</param>
+    /// <returns>A UI-visibility hint after the query authorization policy succeeds.</returns>
+    public static ConstraintReindexCapability CanReindexConstraints(EventStoreName eventStore)
+    {
+        // This is a UI-visibility hint only; the command enforces authorization server-side.
+        return new(true);
+    }
 }

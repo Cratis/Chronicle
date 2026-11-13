@@ -4,6 +4,7 @@
 import { CommandResult } from '@cratis/arc/commands';
 import { ValidationResult, ValidationResultSeverity } from '@cratis/arc/validation';
 import { given } from 'given';
+import strings from 'Strings';
 import { a_view_model } from '../given/a_view_model';
 
 const unauthorized = new CommandResult({ ...CommandResult.empty, correlationId: CommandResult.empty.correlationId.toString(), isSuccess: false, isAuthorized: false, response: undefined }, Object, false);
@@ -35,7 +36,8 @@ describe('when reindexing and the request throws', given(a_view_model, context =
         await context.request();
     });
 
-    it('should report the failure', () => context.viewModel.feedback.should.contain('Network unavailable'));
+    it('should report the localized failure', () => context.viewModel.feedback.should.equal(strings.eventStore.namespaces.constraints.failed));
+    it('should not expose exception details', () => context.viewModel.feedback.should.not.contain('Network unavailable'));
     it('should not offer a job link', () => (context.viewModel.jobId === undefined).should.be.true);
     it('should release the pending state', () => context.viewModel.isReindexing.should.be.false);
 }));
