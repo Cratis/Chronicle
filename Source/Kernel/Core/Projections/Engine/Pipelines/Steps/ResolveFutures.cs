@@ -126,6 +126,9 @@ public class ResolveFutures : ICanPerformProjectionPipelineStep
         var resolvedAny = true;
         var latestResolvedEvent = context.Event;
         var queuedFutures = new HashSet<ProjectionFutureId>();
+
+        // Every queued future targets this context's root key. Carry its successor state only within this turn.
+        var futureState = context.Changeset.CurrentState;
         while (resolvedAny)
         {
             resolvedAny = false;
@@ -205,7 +208,7 @@ public class ResolveFutures : ICanPerformProjectionPipelineStep
                     var futureChangeset = new Changeset<AppendedEvent, ExpandoObject>(
                         _objectComparer,
                         future.Event,
-                        context.Changeset.CurrentState);
+                        futureState.Clone());
 
                     var futureContext = context with
                     {
@@ -224,6 +227,7 @@ public class ResolveFutures : ICanPerformProjectionPipelineStep
                     await ProtectFutureChangeset(projection, futureContext);
 
                     await QueueFutureSave(context, new PendingFutureSave(key, futureChangeset) { FutureId = future.Id }, queuedFutures);
+                    futureState = futureChangeset.CurrentState;
                     _failedFutures.Remove(future.Id);
                     _logger.ResolvedFuture(future.Id, future.ProjectionId);
                     resolvedAny = true;
