@@ -23,7 +23,9 @@ public record ConstraintReindexCapability(bool CanReindex)
     /// <returns>A UI-visibility hint after the query authorization policy succeeds.</returns>
     public static ConstraintReindexCapability CanReindexConstraints(EventStoreName eventStore)
     {
+        // The event store only routes the query, so authorization is scoped to that store; the result does not depend on it.
         // This is a UI-visibility hint only; the command enforces authorization server-side.
+        _ = eventStore;
         return new(true);
     }
 }
