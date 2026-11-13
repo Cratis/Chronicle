@@ -18,6 +18,10 @@ This minor release makes TLS validation configuration explicit without changing 
 
 See [Client TLS configuration](../configuration/tls) before updating shared connection settings.
 
+## Check a release before you deploy it
+
+Before deploying a client release, you can ask the kernel it will connect to whether it would accept the release's event type registrations. See [Check a release against a kernel](../operations/check-a-release-against-a-kernel.md).
+
 ## Guides
 
 Start with [Every major version](major-versions.md) and read each row between your current

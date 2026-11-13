@@ -145,7 +145,7 @@ public partial class EventSequence
         _catchUpExcludedThrough ??= State.ConstraintIndexCatchUpBelow;
         if (_catchUpExcludedThrough! >= State.SequenceNumber) return 0;
         var definitions = CatchUpDefinitions().ToArray();
-        var types = definitions.SelectMany(definition => definition.EventDefinitions.Select(item => item.EventTypeId).Concat(definition.RemovedWith)).Distinct().Select(id => new EventType(id, EventTypeGeneration.First)).ToArray();
+        var types = ConstraintEventTypes.For(definitions);
         if (types.Length == 0)
         {
             _catchUpExcludedThrough = State.SequenceNumber;

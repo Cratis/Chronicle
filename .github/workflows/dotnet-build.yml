@@ -174,6 +174,7 @@ jobs:
           python3 -m pip install PyYAML==6.0.3
           python3 .github/scripts/test-pr-artifact-handoff.py
           python3 .github/scripts/test-sparse-integration-workflows.py
+          python3 .github/scripts/test-integration-wall-workflows.py
 
 
       - name: Spec the analyzer ownership map
@@ -519,8 +520,10 @@ jobs:
       - name: Stamp the build version
         run: python3 .github/scripts/derive-build-version.py >> "$GITHUB_ENV"
 
+      # Analyzers take most of this build's time, so it skips them and the integration shards start sooner.
+      # The analyzers-development job owns them in parallel; the specs aggregate requires it.
       - name: Build with DEVELOPMENT symbol
-        run: dotnet build --configuration Release -p:EnableDevelopmentSymbol=true -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
+        run: dotnet build --configuration Release -p:EnableDevelopmentSymbol=true -p:DisableProxyGenerator=true -p:DisableDockerBuild=true -p:RunAnalyzers=false
 
       # Every integration shard downloads only its own project's output; no full build tarball is produced.
       - name: Pack per-project integration build output
@@ -569,8 +572,10 @@ jobs:
       - name: Stamp the build version
         run: python3 .github/scripts/derive-build-version.py >> "$GITHUB_ENV"
 
+      # Analyzers take most of this build's time, so it skips them and the integration shards start sooner.
+      # The analyzers-development job owns them in parallel; the specs aggregate requires it.
       - name: Build with DEVELOPMENT symbol
-        run: dotnet build --configuration Release -p:EnableDevelopmentSymbol=true -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
+        run: dotnet build --configuration Release -p:EnableDevelopmentSymbol=true -p:DisableProxyGenerator=true -p:DisableDockerBuild=true -p:RunAnalyzers=false
 
       # Client, Kernel and Clustering shards download only their own project's output (a fraction of the full
       # artifact below, which the SQL clustering shards still use).
@@ -578,6 +583,41 @@ jobs:
         uses: ./.github/actions/pack-integration-output
         with:
           prefix: build-output-development
+
+  # The analyzer-owning build of the DEVELOPMENT symbol (`#if DEVELOPMENT` code is compiled only here), beside
+  # the lanes rather than in front of them. Same coverage as the DEVELOPMENT builds; the specs aggregate requires it.
+  analyzers-development:
+    needs: [already-ran]
+    if: needs.already-ran.outputs.skip != 'true' && (github.event_name != 'pull_request' || inputs.integration_requested)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .Net
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Cache NuGet packages
+        uses: Cratis/Workflows/.github/actions/dotnet-cache@main
+
+      # No obj cache: the DEVELOPMENT builds save one built without analyzers, and an up-to-date
+      # compilation restored from it must never stand in for an analyzed one.
+      - name: Add GitHub Package Registry to NuGet
+        run: |
+          dotnet nuget update source github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text || \
+          dotnet nuget add source --name github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text https://nuget.pkg.github.com/cratis/index.json
+
+      - name: Stamp the build version
+        run: python3 .github/scripts/derive-build-version.py >> "$GITHUB_ENV"
+
+      - name: Build the DEVELOPMENT symbol with analyzers
+        run: dotnet build --configuration Release -p:EnableDevelopmentSymbol=true -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
 
   # Shared Linux runner acceptance is independent of the built assemblies and shard selection.
   # Keep it off the shard setup path, but require its success through the stable specs gate.
@@ -853,7 +893,7 @@ jobs:
   # A failed, skipped or cancelled shard must never turn this aggregate green.
   specs:
     if: ${{ needs.already-ran.outputs.skip != 'true' && (always()) }}
-    needs: [already-ran, wire-compatibility, grain-compatibility, package-verification, package-pack-check, analyzers, spec-runner-checks, specs-other, specs-sql, specs-net10]
+    needs: [already-ran, wire-compatibility, grain-compatibility, package-verification, package-pack-check, analyzers, analyzers-development, spec-runner-checks, specs-other, specs-sql, specs-net10]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -872,7 +912,9 @@ jobs:
           PACK_RESULT: ${{ needs.package-pack-check.result }}
           EVENT_NAME: ${{ github.event_name }}
           ANALYZER_RESULT: ${{ needs.analyzers.result }}
-        run: test "$WIRE_RESULT" = success && test "$GRAIN_RESULT" = success && test "$RUNNER_RESULT" = success && test "$OTHER_RESULT" = success && test "$SQL_RESULT" = success && test "$NET10_RESULT" = success && test "$PACKAGE_RESULT" = success && test "$ANALYZER_RESULT" = success && { test "$PACK_RESULT" = success || { test "$EVENT_NAME" != pull_request && test "$PACK_RESULT" = skipped; }; }
+          DEV_ANALYZER_RESULT: ${{ needs.analyzers-development.result }}
+          INTEGRATION_REQUESTED: ${{ inputs.integration_requested }}
+        run: test "$WIRE_RESULT" = success && test "$GRAIN_RESULT" = success && test "$RUNNER_RESULT" = success && test "$OTHER_RESULT" = success && test "$SQL_RESULT" = success && test "$NET10_RESULT" = success && test "$PACKAGE_RESULT" = success && test "$ANALYZER_RESULT" = success && { test "$DEV_ANALYZER_RESULT" = success || { test "$EVENT_NAME" = pull_request && test "$INTEGRATION_REQUESTED" != true && test "$DEV_ANALYZER_RESULT" = skipped; }; } && { test "$PACK_RESULT" = success || { test "$EVENT_NAME" != pull_request && test "$PACK_RESULT" = skipped; }; }
 
       - name: Checkout shard contract
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -1135,6 +1177,8 @@ jobs:
     needs: [already-ran, dotnet-build]
     strategy:
       fail-fast: false
+      # One of the integration slot caps pinned by test-sparse-integration-workflows.py (see integration.yml, #5875).
+      max-parallel: 1
       matrix:
         include:
           # The Community edition has one database, so every namespace shares it.
@@ -1201,13 +1245,89 @@ jobs:
           path: ./Integration/Neo4j/coverage-results/
           retention-days: 1
 
+  # ReportGenerator over about 170 Cobertura files in one job took 9 minutes and sat alone at the end of the run (#5875).
+  # Each group below merges its own artifacts in parallel into one smaller Cobertura file, and coverage-merge-and-cache merges
+  # those few files. The groups must partition every coverage-results-* artifact exactly once; a spec pins that, because an
+  # artifact no group matches would silently drop a lane from coverage.
+  coverage-partial:
+    # Same condition as coverage-merge-and-cache: never merge, and never cache, incomplete results.
+    if: ${{ needs.already-ran.outputs.skip != 'true' && (!cancelled() && github.event_name != 'pull_request_target' && needs.specs.result == 'success' && needs.integration.result == 'success' && needs.integration-api.result == 'success' && needs.mongodb.result == 'success' && needs.neo4j.result == 'success') }}
+    name: coverage-partial (${{ matrix.group }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    needs: [already-ran, specs, integration, integration-api, mongodb, neo4j]
+    permissions:
+      contents: read
+      actions: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # The MongoDB client artifacts are the largest set, so they split in two by mode: in-process, then out-of-process.
+          - group: client-mongodb-inprocess
+            pattern: coverage-results-client-*-inprocess-mongodb
+          - group: client-mongodb-outofprocess
+            pattern: coverage-results-client-*-outofprocess-mongodb
+          - group: client-sqlite
+            pattern: coverage-results-client-*-sqlite
+          # A pull request without --all-providers has no PostgreSQL or SQL Server client shards; such a group is skipped.
+          - group: client-postgresql
+            pattern: coverage-results-client-*-postgresql
+          - group: client-mssql
+            pattern: coverage-results-client-*-mssql
+          - group: rest
+            pattern: coverage-results-{specs-other,specs-sql,kernel,clustering,integration-api,mongodb,neo4j}*
+
+    steps:
+      - name: Download coverage artifacts of the group
+        uses: actions/download-artifact@v4
+        with:
+          path: ./coverage-input
+          pattern: ${{ matrix.pattern }}
+
+      - name: Find coverage files
+        id: inputs
+        run: |
+          count=$(find ./coverage-input -name "coverage.cobertura.xml" -type f | wc -l)
+          echo "Group ${{ matrix.group }}: $count coverage files"
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+
+      - name: Setup .Net
+        if: steps.inputs.outputs.count != '0'
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Install coverage tools
+        if: steps.inputs.outputs.count != '0'
+        run: dotnet tool install --global dotnet-reportgenerator-globaltool
+
+      - name: Merge the coverage of the group
+        if: steps.inputs.outputs.count != '0'
+        run: |
+          reportgenerator \
+            -reports:"./coverage-input/**/coverage.cobertura.xml" \
+            -targetdir:"./coverage-partial" \
+            -reporttypes:"Cobertura" \
+            -assemblyfilters:"-*.Specs;-xunit*;-NSubstitute*"
+          ls -la ./coverage-partial/
+
+      - name: Upload the merged coverage of the group
+        if: steps.inputs.outputs.count != '0'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-partial-${{ matrix.group }}
+          path: ./coverage-partial/Cobertura.xml
+          if-no-files-found: error
+          retention-days: 1
+
   coverage-merge-and-cache:
     # Override implicit success() so the unused DEVELOPMENT ancestor does not suppress coverage.
     # Require every immediate prerequisite: never cache incomplete results (including ordinary PRs).
-    if: ${{ needs.already-ran.outputs.skip != 'true' && (!cancelled() && github.event_name != 'pull_request_target' && needs.specs.result == 'success' && needs.integration.result == 'success' && needs.integration-api.result == 'success' && needs.mongodb.result == 'success' && needs.neo4j.result == 'success') }}
+    if: ${{ needs.already-ran.outputs.skip != 'true' && (!cancelled() && github.event_name != 'pull_request_target' && needs.specs.result == 'success' && needs.integration.result == 'success' && needs.integration-api.result == 'success' && needs.mongodb.result == 'success' && needs.neo4j.result == 'success' && needs.coverage-partial.result == 'success') }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
-    needs: [already-ran, specs, integration, integration-api, mongodb, neo4j]
+    needs: [already-ran, specs, integration, integration-api, mongodb, neo4j, coverage-partial]
     permissions:
       contents: read
       actions: read
@@ -1226,30 +1346,19 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: Download all coverage artifacts
+      # The per-lane artifacts are merged by the coverage-partial groups; only their merged output is needed here.
+      - name: Download the merged coverage of every group
         uses: actions/download-artifact@v4
         with:
-          path: ./all-coverage-results
-          # Download all coverage artifacts using wildcard pattern
-          pattern: coverage-results-*
+          path: ./coverage-partials
+          pattern: coverage-partial-*
 
-      - name: Merge coverage results
+      - name: List the merged coverage files
         run: |
-          # Create directories for merged coverage
-          mkdir -p ./coverage-results
-          mkdir -p ./coverage-reports
-          
-          # Find all coverage.cobertura.xml files from artifacts and copy them
-          find ./all-coverage-results -name "coverage.cobertura.xml" -type f | while IFS= read -r file; do
-            echo "Found coverage file: $file"
-            # Create unique directory for each coverage file
-            dirname_hash=$(echo "$file" | md5sum | cut -d' ' -f1)
-            mkdir -p "./coverage-results/$dirname_hash"
-            cp "$file" "./coverage-results/$dirname_hash/coverage.cobertura.xml"
-          done
-          
-          echo "Merged coverage results:"
-          find ./coverage-results -name "coverage.cobertura.xml" | head -20
+          count=$(find ./coverage-partials -name "Cobertura.xml" -type f | wc -l)
+          echo "Merging $count partial coverage files"
+          # The rest group always has files, so none at all means a group lost its upload.
+          test "$count" -gt 0
 
       - name: Install coverage tools
         run: dotnet tool install --global dotnet-reportgenerator-globaltool
@@ -1257,7 +1366,7 @@ jobs:
       - name: Generate merged coverage report
         run: |
           reportgenerator \
-            -reports:"./coverage-results/**/coverage.cobertura.xml" \
+            -reports:"./coverage-partials/**/Cobertura.xml" \
             -targetdir:"./coverage-reports" \
             -reporttypes:"Cobertura;JsonSummary" \
             -assemblyfilters:"-*.Specs;-xunit*;-NSubstitute*"

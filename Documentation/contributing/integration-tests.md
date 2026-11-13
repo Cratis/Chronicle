@@ -22,6 +22,14 @@ The existing nightly schedule on `main` and manual `workflow_dispatch` run the f
 
 For a labeled event, the image-push guard checks `github.actor`—the account that applied the label, not the PR author. A maintainer-labeled Dependabot PR therefore attempts the image push; if GitHub supplies a read-only token, the requested run fails rather than silently skipping the client matrix.
 
+## How the CI run is shaped
+
+A full run starts about 130 client shards and several other lanes, and the wall clock of that run is what a reviewer waits for. Three things keep it short and its concurrency bounded:
+
+- **Concurrency caps.** Each matrix sets `max-parallel` so a run holds a bounded number of runner slots: 34 for the client shards, 2 for the kernel shards, and 1 each for clustering, SQL clustering, the SQL RollingUpgrade lane and the Neo4j lanes. The MongoDB and API integration jobs are single jobs. `test-sparse-integration-workflows.py` pins the values. The caps are a per-run bound, not a guarantee about other work in the organization.
+- **Longest shards first.** GitHub starts matrix jobs in the order of the generated matrix, so `generate-integration-matrix.py` orders the client matrix by the measured job time in `.github/scripts/integration-shard-order.json`, slowest first. The order never changes which shards run, so a stale table only costs wall time. Refresh it from a recent all-provider run when shard times move; a shard the table does not list starts after the listed ones. `for_ReadModels` and `for_EventStoreSubscriptions` run as two shards each because one job of each was the longest in a run.
+- **Parallel coverage merge.** Merging the Cobertura files of one run in a single job took about nine minutes after the last lane finished. The `coverage-partial` job merges them in six groups at once (client MongoDB in-process, client MongoDB out-of-process, SQLite, PostgreSQL and SQL Server shards, and everything else), and `coverage-merge-and-cache` merges the six results. The groups together match every `coverage-results-*` artifact exactly once, which a spec checks; an artifact no group names would drop that lane from coverage without failing the run. A group with no artifacts, such as the PostgreSQL group on a pull request run, is skipped. Both jobs still require every spec and lane to succeed.
+
 ## Prerequisites
 
 - Docker running locally

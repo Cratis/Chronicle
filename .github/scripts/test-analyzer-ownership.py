@@ -41,8 +41,7 @@ class AnalyzerOwnership(unittest.TestCase):
         owners = [
             ("analyzers", "Build with analyzers"),
             ("package-verification", "Build client packages for every shipped framework"),
-            ("dotnet-build-development", "Build with DEVELOPMENT symbol"),
-            ("dotnet-build-development-requested", "Build with DEVELOPMENT symbol"),
+            ("analyzers-development", "Build the DEVELOPMENT symbol with analyzers"),
         ]
         for job, name in owners:
             with self.subTest(job=job, step=name):
@@ -62,6 +61,28 @@ class AnalyzerOwnership(unittest.TestCase):
         self.assertFalse(any("continue-on-error" in step for step in job["steps"]))
         # An obj cache saved by the analyzer-free build must never stand in for an analyzed compilation.
         self.assertFalse(any("actions/cache" in step.get("uses", "") for step in job["steps"]))
+
+    def test_development_builds_skip_analyzers_the_development_analysis_owns(self):
+        owner = step_run(self.build, "analyzers-development", "Build the DEVELOPMENT symbol with analyzers")
+        for job in ("dotnet-build-development", "dotnet-build-development-requested"):
+            with self.subTest(job=job):
+                run = step_run(self.build, job, "Build with DEVELOPMENT symbol")
+                self.assertIn(f"-p:{SKIP}", run)
+                # The same DEVELOPMENT build, so the owner analyzes exactly what the artifact compiles.
+                self.assertEqual(run.replace(f" -p:{SKIP}", ""), owner)
+        job = self.build["jobs"]["analyzers-development"]
+        self.assertEqual(["already-ran"], job["needs"])
+        self.assertEqual("needs.already-ran.outputs.skip != 'true' && (github.event_name != 'pull_request' || inputs.integration_requested)",
+                         job["if"])
+        self.assertFalse(any("continue-on-error" in step for step in job["steps"]))
+        self.assertFalse(any("actions/cache" in step.get("uses", "") for step in job["steps"]))
+
+    def test_specs_aggregate_requires_the_development_analysis(self):
+        aggregate = self.build["jobs"]["specs"]
+        self.assertIn("analyzers-development", aggregate["needs"])
+        step = aggregate["steps"][0]
+        self.assertEqual("${{ needs.analyzers-development.result }}", step["env"]["DEV_ANALYZER_RESULT"])
+        self.assertIn('test "$DEV_ANALYZER_RESULT" = success', step["run"])
 
     def test_specs_aggregate_requires_the_analyzers(self):
         aggregate = self.build["jobs"]["specs"]

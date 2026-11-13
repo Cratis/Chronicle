@@ -136,7 +136,7 @@ test('failed, cancelled and skipped package verification or analyzers cannot tur
     for (const result of ['success', 'failure', 'cancelled', 'skipped', '']) {
         const child = spawnSync('bash', ['-c', command], { env: {
             WIRE_RESULT: 'success', GRAIN_RESULT: 'success', OTHER_RESULT: 'success',
-            SQL_RESULT: 'success', NET10_RESULT: 'success', PACKAGE_RESULT: result, ANALYZER_RESULT: 'success', RUNNER_RESULT: 'success', PACK_RESULT: 'success', EVENT_NAME: 'pull_request'
+            SQL_RESULT: 'success', NET10_RESULT: 'success', PACKAGE_RESULT: result, ANALYZER_RESULT: 'success', DEV_ANALYZER_RESULT: 'success', RUNNER_RESULT: 'success', PACK_RESULT: 'success', EVENT_NAME: 'pull_request'
         } });
         assert.equal(child.status, result === 'success' ? 0 : 1, `Package result: ${result}`);
     }
@@ -146,7 +146,7 @@ test('failed, cancelled and skipped package verification or analyzers cannot tur
     for (const result of ['success', 'failure', 'cancelled', 'skipped', '']) {
         const child = spawnSync('bash', ['-c', command], { env: {
             WIRE_RESULT: 'success', GRAIN_RESULT: 'success', OTHER_RESULT: 'success',
-            SQL_RESULT: 'success', NET10_RESULT: 'success', PACKAGE_RESULT: 'success', ANALYZER_RESULT: result, RUNNER_RESULT: 'success', PACK_RESULT: 'success', EVENT_NAME: 'pull_request'
+            SQL_RESULT: 'success', NET10_RESULT: 'success', PACKAGE_RESULT: 'success', ANALYZER_RESULT: result, DEV_ANALYZER_RESULT: 'success', RUNNER_RESULT: 'success', PACK_RESULT: 'success', EVENT_NAME: 'pull_request'
         } });
         assert.equal(child.status, result === 'success' ? 0 : 1, `Analyzer result: ${result}`);
     }
@@ -158,6 +158,11 @@ test('failed, cancelled and skipped package verification or analyzers cannot tur
         assert.ok(dependencies('coverage-merge-and-cache').includes(job), `coverage merge waits for ${job}`);
     }
     assert.ok(dependencies('coverage-merge-and-cache').includes('specs'), 'coverage merge still waits for the aggregate');
+    // #5875: the per-group partial merges wait for and require every lane, and the final merge waits for all of them.
+    for (const job of ['specs', 'integration', 'integration-api', 'mongodb', 'neo4j']) {
+        assert.ok(dependencies('coverage-partial').includes(job), `partial coverage merge waits for ${job}`);
+    }
+    assert.ok(dependencies('coverage-merge-and-cache').includes('coverage-partial'), 'final coverage merge waits for the partials');
 });
 
 test('publish-equivalent pack runs independently with the same setup and restore-only cache', () => {
@@ -179,7 +184,7 @@ test('pack result fails closed, permitting skipped only outside pull requests', 
         for (const result of ['success', 'failure', 'cancelled', 'skipped', '']) {
             const child = spawnSync('bash', ['-c', command], { env: {
                 WIRE_RESULT: 'success', GRAIN_RESULT: 'success', OTHER_RESULT: 'success', SQL_RESULT: 'success',
-                NET10_RESULT: 'success', PACKAGE_RESULT: 'success', ANALYZER_RESULT: 'success', RUNNER_RESULT: 'success', PACK_RESULT: result, EVENT_NAME: event
+                NET10_RESULT: 'success', PACKAGE_RESULT: 'success', ANALYZER_RESULT: 'success', DEV_ANALYZER_RESULT: 'success', RUNNER_RESULT: 'success', PACK_RESULT: result, EVENT_NAME: event
             } });
             const accepted = result === 'success' || (event !== 'pull_request' && result === 'skipped');
             assert.equal(child.status, accepted ? 0 : 1, `${event}: ${result}`);
