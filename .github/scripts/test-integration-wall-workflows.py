@@ -30,7 +30,7 @@ LANE_PREREQUISITES = {"specs", "integration", "integration-api", "mongodb", "neo
 
 # Slot budget (#5875): the client cap plus the capped lanes.
 INTEGRATION_CAPS = {
-    "client-integration-specs": 40,
+    "client-integration-specs": 34,
     "kernel-integration-specs": 2,
     "clustering-integration-specs": 1,
     "sql-clustering-integration-specs": 1,

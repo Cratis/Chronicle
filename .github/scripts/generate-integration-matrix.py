@@ -82,8 +82,10 @@ GRAPH_ENTERPRISE_IMAGE = "neo4j:5-enterprise"
 # the critical path of the whole run, and the others have a slow out-of-process
 # SQLite configuration whose contention eases when fewer tests share one job.
 SHARD_COUNTS = {
-    "Projections": 4,
-    "for_EventSequence": 4,
+    # Five shards each: the measured slowest quarters ran 565-657 s, so the larger count shortens them again (#5875).
+    "Projections": 5,
+    "for_EventSequence": 5,
+    "for_Imports": 2,
     "for_Reactors": 2,
     "for_Reducers": 2,
     # One class carries most of the time in each, so two shards roughly halve the longest solo jobs (#5875).

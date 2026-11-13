@@ -1222,8 +1222,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - group: client-mongodb
-            pattern: coverage-results-client-*-mongodb
+          # The MongoDB client artifacts are the largest set, so they split in two by mode: in-process, then out-of-process.
+          - group: client-mongodb-inprocess
+            pattern: coverage-results-client-*-inprocess-mongodb
+          - group: client-mongodb-outofprocess
+            pattern: coverage-results-client-*-outofprocess-mongodb
           - group: client-sqlite
             pattern: coverage-results-client-*-sqlite
           # A pull request without --all-providers has no PostgreSQL or SQL Server client shards; such a group is skipped.

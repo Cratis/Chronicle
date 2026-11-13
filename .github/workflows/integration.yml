@@ -118,13 +118,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 120
     # Slot budget (#5875): a per-run bound, not an org guarantee. The caps pinned by test-sparse-integration-workflows.py are
-    # client 40, kernel 2, clustering 1, sql-clustering 1, rolling-upgrade 1, plus neo4j 1 in dotnet-build.yml, and the
-    # integration-api and mongodb jobs (one each). That is 48 in theory; the singletons never all run beside a full client
-    # window, and a capped run measured a peak of 38 at client cap 36 (#4765). Without a cap the all-provider matrix (134 shards)
-    # peaks far above 60. The matrix starts its longest shards first (integration-shard-order.json), so the cap costs little wall.
+    # client 34, kernel 2, clustering 1, sql-clustering 1, rolling-upgrade 1, plus neo4j 1 in dotnet-build.yml, and the
+    # integration-api and mongodb jobs (one each). That is 42 in theory; the singletons never all run beside a full client
+    # window, and a capped run measured a peak of 38 at client cap 36 (#4765) and 52 at cap 40 (#5875). Without a cap the
+    # all-provider matrix (149 shards) peaks far above 60. The matrix starts its longest shards first (integration-shard-order.json), so the cap costs little wall.
     strategy:
       fail-fast: false
-      max-parallel: 40
+      max-parallel: 34
       matrix: ${{ fromJson(needs.discover.outputs.client-matrix) }}
 
     steps:

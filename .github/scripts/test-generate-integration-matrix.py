@@ -382,8 +382,9 @@ class for_sharded_namespaces(unittest.TestCase):
             terms = [test_filter.split("|") for _, test_filter in shards]
             cls.namespaces[namespace] = (count, groups, shards, terms)
 
-    def test_event_sequence_has_four_shards(self):
-        self.assertEqual(4, matrix.SHARD_COUNTS["for_EventSequence"])
+    def test_the_slowest_split_namespaces_have_the_measured_shard_counts(self):
+        self.assertEqual({"for_EventSequence": 5, "Projections": 5, "for_Imports": 2},
+                         {name: matrix.SHARD_COUNTS[name] for name in ("for_EventSequence", "Projections", "for_Imports")})
 
     def test_the_two_slowest_solo_namespaces_have_two_shards_with_no_empty_shard(self):
         for namespace in ("for_ReadModels", "for_EventStoreSubscriptions"):
