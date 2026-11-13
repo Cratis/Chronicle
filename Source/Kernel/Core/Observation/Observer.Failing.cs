@@ -247,6 +247,7 @@ public partial class Observer
     async Task RecordPartitionFailure(PartitionFailure request)
     {
         var (partition, sequenceNumber, _, _, kind, episodeId, deferralId, context) = request;
+
         // An activation that does not own the definition is not the observer that failed; it records nothing.
         if (CannotRecordPartitionFailure())
         {
@@ -254,7 +255,7 @@ public partial class Observer
         }
 
         var quarantineObserver = false;
-        TimeSpan? retryDelayToRegister = null;
+        TimeSpan? retryDelayToRegister;
         await _alertMutationLock.WaitAsync();
         try
         {

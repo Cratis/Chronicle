@@ -11,34 +11,6 @@ namespace Cratis.Chronicle.Observation;
 public partial class Observer
 {
     /// <summary>
-    /// Identifies a failed delivery, its recovery attempt and its delivery context.
-    /// </summary>
-    /// <param name="Partition">The failed partition.</param>
-    /// <param name="SequenceNumber">The failed event.</param>
-    /// <param name="ExceptionMessages">The failure messages.</param>
-    /// <param name="ExceptionStackTrace">The failure stack trace.</param>
-    /// <param name="Kind">The failure kind.</param>
-    /// <param name="EpisodeId">The recovery episode.</param>
-    /// <param name="DeferralId">The recovery deferral.</param>
-    /// <param name="Context">The delivery context.</param>
-    readonly record struct PartitionFailure(
-        Key Partition,
-        EventSequenceNumber SequenceNumber,
-        IEnumerable<string> ExceptionMessages,
-        string ExceptionStackTrace,
-        FailureKind Kind,
-        FailedPartitionId? EpisodeId,
-        Guid? DeferralId,
-        PartitionFailureContext Context);
-
-    /// <summary>
-    /// The quarantine and retry decisions for a recorded failure.
-    /// </summary>
-    /// <param name="QuarantineObserver">Whether the observer must be quarantined.</param>
-    /// <param name="RetryDelay">The retry delay, if any.</param>
-    readonly record struct PartitionFailureOutcome(bool QuarantineObserver, TimeSpan? RetryDelay);
-
-    /// <summary>
     /// Registers and logs an attempt without changing its delivery fence or failure count.
     /// </summary>
     /// <param name="request">The failed delivery.</param>
@@ -112,10 +84,8 @@ public partial class Observer
         {
             return webhook ? SetWebhookRetryBackoff(failure, config, request.SequenceNumber) : GetNextRetryDelay(failure, config);
         }
-        else
-        {
-            QuarantinePartition(request.Partition);
-        }
+
+        QuarantinePartition(request.Partition);
         return null;
     }
 
@@ -177,4 +147,32 @@ public partial class Observer
             await WriteFailedPartitions();
         }
     }
+
+    /// <summary>
+    /// Identifies a failed delivery, its recovery attempt and its delivery context.
+    /// </summary>
+    /// <param name="Partition">The failed partition.</param>
+    /// <param name="SequenceNumber">The failed event.</param>
+    /// <param name="ExceptionMessages">The failure messages.</param>
+    /// <param name="ExceptionStackTrace">The failure stack trace.</param>
+    /// <param name="Kind">The failure kind.</param>
+    /// <param name="EpisodeId">The recovery episode.</param>
+    /// <param name="DeferralId">The recovery deferral.</param>
+    /// <param name="Context">The delivery context.</param>
+    readonly record struct PartitionFailure(
+        Key Partition,
+        EventSequenceNumber SequenceNumber,
+        IEnumerable<string> ExceptionMessages,
+        string ExceptionStackTrace,
+        FailureKind Kind,
+        FailedPartitionId? EpisodeId,
+        Guid? DeferralId,
+        PartitionFailureContext Context);
+
+    /// <summary>
+    /// The quarantine and retry decisions for a recorded failure.
+    /// </summary>
+    /// <param name="QuarantineObserver">Whether the observer must be quarantined.</param>
+    /// <param name="RetryDelay">The retry delay, if any.</param>
+    readonly record struct PartitionFailureOutcome(bool QuarantineObserver, TimeSpan? RetryDelay);
 }

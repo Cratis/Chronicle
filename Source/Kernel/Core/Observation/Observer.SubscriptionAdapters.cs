@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
-using Orleans.Runtime;
 
 namespace Cratis.Chronicle.Observation;
 

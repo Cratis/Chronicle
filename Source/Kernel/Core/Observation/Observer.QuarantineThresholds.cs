@@ -10,6 +10,15 @@ namespace Cratis.Chronicle.Observation;
 public partial class Observer
 {
     /// <summary>
+    /// Selects failures counted by the subscription's quarantine policy.
+    /// </summary>
+    /// <param name="failure">The failed partition.</param>
+    /// <param name="webhook">Whether the subscription is a webhook.</param>
+    /// <returns>Whether this failure counts toward the thresholds.</returns>
+    static bool CountsTowardQuarantine(FailedPartition failure, bool webhook) =>
+        webhook ? failure.IsQuarantined : failure.Attempts.Any() && failure.LastAttempt.Kind != FailureKind.Timeout;
+
+    /// <summary>
     /// Check whether the observer's failures have reached a threshold that takes it out of service.
     /// </summary>
     /// <param name="config">The <see cref="Observers"/> configuration holding the thresholds.</param>
@@ -28,15 +37,6 @@ public partial class Observer
         if (QuarantineCountThresholdReached(failedPartitionCount, config)) return true;
         return QuarantinePercentageThresholdReached(failedPartitionCount, config, webhook);
     }
-
-    /// <summary>
-    /// Selects failures counted by the subscription's quarantine policy.
-    /// </summary>
-    /// <param name="failure">The failed partition.</param>
-    /// <param name="webhook">Whether the subscription is a webhook.</param>
-    /// <returns>Whether this failure counts toward the thresholds.</returns>
-    static bool CountsTowardQuarantine(FailedPartition failure, bool webhook) =>
-        webhook ? failure.IsQuarantined : failure.Attempts.Any() && failure.LastAttempt.Kind != FailureKind.Timeout;
 
     /// <summary>
     /// Checks and logs the absolute failure threshold.
