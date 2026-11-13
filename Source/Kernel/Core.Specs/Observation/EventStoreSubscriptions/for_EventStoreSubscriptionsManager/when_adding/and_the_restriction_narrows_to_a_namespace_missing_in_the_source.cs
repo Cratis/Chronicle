@@ -8,7 +8,7 @@ public class and_the_restriction_narrows_to_a_namespace_missing_in_the_source : 
     async Task Establish()
     {
         _observersAreSubscribed = true;
-        _sourceHasNamespaces = false;
+        _sourceHas.Clear();
         await _manager.Add(DefinitionFor());
         _requestedKeys.Clear();
     }

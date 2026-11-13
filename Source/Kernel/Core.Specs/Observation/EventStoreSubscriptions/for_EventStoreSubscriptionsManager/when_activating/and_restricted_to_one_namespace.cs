@@ -8,6 +8,6 @@ public class and_restricted_to_one_namespace : given.a_manager_over_several_name
     async Task Establish() => await _manager.Add(DefinitionFor("default"));
     async Task Because() => await _manager.OnActivateAsync(CancellationToken.None);
 
-    [Fact] void should_only_resolve_the_observer_of_the_listed_namespace() => RequestedKeys.ShouldContainOnly(KeyFor("Default"));
+    [Fact] void should_not_subscribe_a_namespace_outside_the_list() => WasSubscribed("Tenant1").ShouldBeFalse();
     [Fact] void should_subscribe_the_listed_namespace() => WasSubscribed("Default").ShouldBeTrue();
 }

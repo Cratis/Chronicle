@@ -56,10 +56,12 @@ public class EventStoreSubscriptionsManager(
 
         await ScheduleSubscriptionReminder(definition.Identifier);
 
-        // The state is written first, so a concurrent reminder already filters by the new restriction.
+        // The state is written first, so a concurrent reminder already filters by the new restriction. A revocation that
+        // fails here is retried by every reminder, which derives it from the observers the source holds.
         if (previous is not null)
         {
-            await UnsubscribeNoLongerObserved(previous, definition);
+            var targetNamespaces = await GrainFactory.GetGrain<INamespaces>(_targetEventStoreName).GetAll();
+            await RevokeUnobserved(definition, targetNamespaces);
         }
     }
 
@@ -81,6 +83,7 @@ public class EventStoreSubscriptionsManager(
 
         var namespaces = await GrainFactory.GetGrain<INamespaces>(_targetEventStoreName).GetAll();
         await Unsubscribe(namespaces, definition);
+        await RevokeUnobserved(definition, namespaces);
     }
 
     /// <inheritdoc/>
@@ -177,6 +180,7 @@ public class EventStoreSubscriptionsManager(
         try
         {
             var namespaces = await GrainFactory.GetGrain<INamespaces>(_targetEventStoreName).GetAll();
+            await RevokeUnobserved(definition, namespaces);
             namespaces = await CanonicalNamespaces(definition, namespaces);
             var healthCheckTasks = namespaces.Select(ns => HealthCheckSubscription(definition, ns));
             var healthCheckResults = await Task.WhenAll(healthCheckTasks);
@@ -259,6 +263,7 @@ public class EventStoreSubscriptionsManager(
     async Task EnsureSubscriptionOnActivation(EventStoreSubscriptionDefinition definition, IEnumerable<EventStoreNamespaceName> namespaces)
     {
         await ScheduleSubscriptionReminder(definition.Identifier);
+        await RevokeUnobserved(definition, namespaces);
         await RefreshSubscription(definition, namespaces);
     }
 
@@ -408,7 +413,11 @@ public class EventStoreSubscriptionsManager(
 
     async Task UnsubscribeIfSubscribed(EventStoreSubscriptionDefinition definition, EventStoreNamespaceName namespaceName)
     {
-        var observer = await GetObserver(definition, namespaceName);
+        await UnsubscribeIfSubscribed(definition, await GetObserver(definition, namespaceName), namespaceName);
+    }
+
+    async Task UnsubscribeIfSubscribed(EventStoreSubscriptionDefinition definition, IObserver observer, EventStoreNamespaceName namespaceName)
+    {
         var subscribed = await observer.IsSubscribed();
 
         if (subscribed)
@@ -428,33 +437,35 @@ public class EventStoreSubscriptionsManager(
         return canonical.Distinct().ToArray();
     }
 
-    async Task UnsubscribeNoLongerObserved(EventStoreSubscriptionDefinition previous, EventStoreSubscriptionDefinition current)
+    /// <summary>
+    /// Unsubscribes every observer the source holds for a namespace this subscription does not observe.
+    /// </summary>
+    /// <param name="definition">The <see cref="EventStoreSubscriptionDefinition"/>.</param>
+    /// <param name="namespaces">The namespaces of the target event store.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// Revocation is derived from the observers that exist, never from what was observed before, so it survives a
+    /// failed attempt, a restart and a legacy observer for a name that can no longer be observed (a comma). Only a
+    /// namespace the source already has is looked at: resolving an observer for any other would create it there.
+    /// A failure is logged and left for the next reminder.
+    /// </remarks>
+    async Task RevokeUnobserved(EventStoreSubscriptionDefinition definition, IEnumerable<EventStoreNamespaceName> namespaces)
     {
-        if (previous.SourceEventStore != current.SourceEventStore)
+        var sourceNamespaces = GrainFactory.GetGrain<INamespaces>(definition.SourceEventStore);
+        foreach (var name in namespaces.Where(name => !SubscriptionObservation.Observes(definition, name)))
         {
-            return;
-        }
-
-        try
-        {
-            var targetNamespaces = await GrainFactory.GetGrain<INamespaces>(_targetEventStoreName).GetAll();
-            var sourceNamespaces = GrainFactory.GetGrain<INamespaces>(previous.SourceEventStore);
-            var noLongerObserved = targetNamespaces.Where(name =>
-                SubscriptionObservation.Observes(previous, name) && !SubscriptionObservation.Observes(current, name));
-
-            foreach (var name in noLongerObserved)
+            try
             {
-                // Only a namespace that already exists in the source: resolving an observer for any other creates it there.
                 var canonical = await sourceNamespaces.GetCanonical(name);
                 if (canonical is not null)
                 {
-                    await UnsubscribeIfSubscribed(previous, canonical);
+                    await UnsubscribeIfSubscribed(definition, ObserverFor(definition, canonical), canonical);
                 }
             }
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            logger.ErrorUnsubscribingNarrowedNamespaces(ex, current.Identifier);
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                logger.ErrorRevokingNamespace(ex, definition.Identifier, name);
+            }
         }
     }
 
@@ -467,8 +478,11 @@ public class EventStoreSubscriptionsManager(
             throw new InvalidOperationException($"Subscription '{definition.Identifier}' does not observe namespace '{namespaceName}'.");
         }
 
-        namespaceName = await namespaceCasing.Canonicalize(definition.SourceEventStore, namespaceName);
+        return ObserverFor(definition, await namespaceCasing.Canonicalize(definition.SourceEventStore, namespaceName));
+    }
 
+    IObserver ObserverFor(EventStoreSubscriptionDefinition definition, EventStoreNamespaceName namespaceName)
+    {
         // The observer id must be unique per (source, target) event store. The subscription Identifier is only
         // the source store, so without the target here two target stores subscribing to the same source's
         // outbox would collide on one shared observer grain — the first-subscribed target wins and the second

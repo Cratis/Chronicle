@@ -27,7 +27,8 @@ public class a_manager_over_several_namespaces : Specification
     protected readonly Dictionary<string, IObserver> _observers = [];
     protected readonly List<string> _sourceNamespacesRequested = [];
     protected bool _observersAreSubscribed;
-    protected bool _sourceHasNamespaces = true;
+    protected readonly HashSet<string> _sourceHas = new(StringComparer.OrdinalIgnoreCase) { "Default", "Tenant1", "Tenant2" };
+    protected readonly Dictionary<string, int> _unsubscribeFailures = [];
     protected Func<NamespaceAdded, Task> _onNamespaceAdded;
 
     async Task Establish()
@@ -43,7 +44,7 @@ public class a_manager_over_several_namespaces : Specification
         {
             var name = call.Arg<EventStoreNamespaceName>();
             _sourceNamespacesRequested.Add(name.Value);
-            return Task.FromResult<EventStoreNamespaceName?>(_sourceHasNamespaces ? name : null);
+            return Task.FromResult<EventStoreNamespaceName?>(_sourceHas.Contains(name.Value) ? name : null);
         });
         _silo.AddProbe<INamespaces>(identity => identity.ToString().Contains("Target") ? target : source);
         _silo.AddProbe<IObserver>(identity =>
@@ -54,6 +55,17 @@ public class a_manager_over_several_namespaces : Specification
             {
                 observer = Substitute.For<IObserver>();
                 observer.IsSubscribed().Returns(_ => _observersAreSubscribed);
+                var observerKey = key;
+                observer.Unsubscribe().Returns(_ =>
+                {
+                    if (_unsubscribeFailures.TryGetValue(observerKey, out var left) && left > 0)
+                    {
+                        _unsubscribeFailures[observerKey] = left - 1;
+                        throw new InvalidOperationException("The unsubscribe failed.");
+                    }
+
+                    return Task.CompletedTask;
+                });
                 _observers[key] = observer;
             }
 

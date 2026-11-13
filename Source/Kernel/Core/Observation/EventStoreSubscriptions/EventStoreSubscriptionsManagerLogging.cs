@@ -60,6 +60,6 @@ internal static partial class EventStoreSubscriptionsManagerLogging
     [LoggerMessage(LogLevel.Error, "Error processing subscription reminder for subscription")]
     internal static partial void ErrorProcessingSubscriptionReminder(this ILogger<EventStoreSubscriptionsManager> logger, Exception exception, EventStoreSubscriptionId subscriptionId);
 
-    [LoggerMessage(LogLevel.Error, "Error unsubscribing namespaces no longer observed by subscription '{SubscriptionId}'")]
-    internal static partial void ErrorUnsubscribingNarrowedNamespaces(this ILogger<EventStoreSubscriptionsManager> logger, Exception exception, EventStoreSubscriptionId subscriptionId);
+    [LoggerMessage(LogLevel.Error, "Error unsubscribing the observer of namespace '{Namespace}' that subscription '{SubscriptionId}' does not observe; it is retried by the next reminder")]
+    internal static partial void ErrorRevokingNamespace(this ILogger<EventStoreSubscriptionsManager> logger, Exception exception, EventStoreSubscriptionId subscriptionId, EventStoreNamespaceName @namespace);
 }

@@ -88,9 +88,10 @@ public class EventStoreSubscriptionObserverSubscriber(
             var copiedSubjects = new HashSet<Subject>();
             foreach (var incoming in events)
             {
-                if (definition is not null && !EventStoreSubscriptionTagFilter.Matches(definition.NamedTags, incoming.Context.NamedTags))
+                if (definition is not null && !(SubscriptionObservation.Observes(definition, _key.Namespace) && EventStoreSubscriptionTagFilter.Matches(definition.NamedTags, incoming.Context.NamedTags)))
                 {
-                    // Filtered out before forwarding: never copied into the target inbox, but processed so the observer moves past it.
+                    // Not for this subscription - a source namespace it does not list (defense in depth behind the manager revoking
+                    // the observer) or a tag filter mismatch. Never copied into the target inbox, but processed so the observer moves past it.
                     lastSuccessfullyForwardedSequenceNumber = incoming.Context.SequenceNumber;
                     continue;
                 }

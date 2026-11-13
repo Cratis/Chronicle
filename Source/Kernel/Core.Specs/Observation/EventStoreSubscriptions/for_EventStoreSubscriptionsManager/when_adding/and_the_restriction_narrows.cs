@@ -15,7 +15,7 @@ public class and_the_restriction_narrows : given.a_manager_over_several_namespac
     async Task Because() => await _manager.Add(DefinitionFor("Default"));
 
     [Fact] void should_only_resolve_observers_of_namespaces_no_longer_observed_that_exist_in_the_source() => RequestedKeys.ShouldContainOnly(KeyFor("Tenant1"), KeyFor("Tenant2"));
-    [Fact] void should_not_look_at_the_malformed_namespace() => _sourceNamespacesRequested.ShouldNotContain(Malformed);
+    [Fact] void should_not_resolve_an_observer_for_the_malformed_namespace_the_source_lacks() => _requestedKeys.ShouldNotContain(KeyFor(Malformed));
     [Fact] void should_unsubscribe_a_namespace_no_longer_observed() => _observers[KeyFor("Tenant1")].Received(1).Unsubscribe();
     [Fact] void should_keep_the_observed_namespace() => _requestedKeys.ShouldNotContain(KeyFor("Default"));
 }
