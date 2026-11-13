@@ -239,17 +239,24 @@ public partial class ReducerObserverSubscriber(
                 throw new AbandonedDeliveryDiscarded();
             }
             var reducerSubscriberResultTCS = new TaskCompletionSource<ReducerSubscriberResult>(TaskCreationOptions.RunContinuationsAsynchronously);
-            reducerMediator.OnNext(
-                _key.ObserverId,
-                client.ConnectionId,
-                _key.EventStore,
-                _key.Namespace,
-                new(reduction.Key, events, initialState) { DeliverWithin = context.RemainingDeliveryTime(_clock), Origin = context.Origin },
-                reducerSubscriberResultTCS);
+            try
+            {
+                reducerMediator.OnNext(
+                    _key.ObserverId,
+                    client.ConnectionId,
+                    _key.EventStore,
+                    _key.Namespace,
+                    new(reduction.Key, events, initialState) { DeliverWithin = context.RemainingDeliveryTime(_clock), Origin = context.Origin },
+                    reducerSubscriberResultTCS);
 
-            var result = await deliveryWait.For(reducerSubscriberResultTCS.Task, result => result.ObserverResult, context);
-            completion.SetResult(AsHandledByThePipeline(result.ObserverResult, events));
-            return result;
+                var result = await deliveryWait.For(reducerSubscriberResultTCS.Task, result => result.ObserverResult, context);
+                completion.SetResult(AsHandledByThePipeline(result.ObserverResult, events));
+                return result;
+            }
+            finally
+            {
+                reducerSubscriberResultTCS.TrySetCanceled();
+            }
         };
 
     /// <summary>
