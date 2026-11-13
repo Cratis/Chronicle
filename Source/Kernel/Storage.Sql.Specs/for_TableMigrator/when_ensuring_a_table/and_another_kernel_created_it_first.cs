@@ -5,6 +5,7 @@ using Cratis.Chronicle.Storage.Sql.Sinks;
 
 namespace Cratis.Chronicle.Storage.Sql.for_TableMigrator.when_ensuring_a_table;
 
+[PerFactSpecificationLifecycle] // Facts run their own asynchronous operations, so each fact gets its own context.
 [Collection(PostgreSqlCollection.Name)]
 public class and_another_kernel_created_it_first(PostgreSqlFixture fixture) : given.a_postgresql_table_migrator(fixture)
 {

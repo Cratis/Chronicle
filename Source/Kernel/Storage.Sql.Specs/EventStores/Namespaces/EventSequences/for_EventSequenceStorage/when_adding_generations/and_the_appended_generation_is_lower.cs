@@ -6,6 +6,7 @@ using Cratis.Chronicle.Storage.EventSequences;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences.for_EventSequenceStorage.when_adding_generations;
 
+[PerFactSpecificationLifecycle] // Facts run their own asynchronous operations, so each fact gets its own context.
 public class and_the_appended_generation_is_lower : given.a_storage_with_stored_generations
 {
     bool _added;

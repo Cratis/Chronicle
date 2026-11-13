@@ -6,10 +6,13 @@ import assert from 'node:assert/strict';
 import { mkdir, mkdtemp, writeFile, readFile, unlink } from 'node:fs/promises';
 import path from 'node:path';
 import { v3Projects, shippingProjects, ordinaryProjects, validateSourceProjects } from './mixed-specs-selection.mjs';
-import { planShards, parseShardArgs, validateTimings, sourcePlan, verifyReceipts, verifyResults, receiptFor } from './spec-shards.mjs';
+import { coreSpecFixture, expandedProjects } from './core-spec-fixture.mjs';
+import './core-spec-partition.contracts.mjs';
+import './core-spec-type-coverage.contracts.mjs';
+import { ORDINARY_SHARDS, ordinaryShardIds, planShards, parseShardArgs, validateTimings, sourcePlan, verifyReceipts, verifyResults, receiptFor } from './spec-shards.mjs';
 
 const ordinary = ordinaryProjects(v3Projects.map(project => ({ project }))).map(x => x.project);
-const weights = { version: 1, defaultSeconds: 60, measurements: [] };
+const weights = { version: 1, defaultSeconds: 60, measurements: [], core: { fixedSeconds: 55, variableSeconds: 60 } };
 const context = { sha: 'head', runId: '123', runAttempt: '1' };
 async function fixture() {
     const scratch = path.resolve('.ai-work/5501/fixtures');
@@ -19,24 +22,31 @@ async function fixture() {
         await mkdir(path.dirname(path.join(root, project)), { recursive: true });
         await writeFile(path.join(root, project), '<Project/>');
     }
+    await coreSpecFixture(root);
     await writeFile(path.join(root, 'Chronicle.slnx'), `<Solution>${v3Projects.filter(p => !p.startsWith('Benchmarks/')).map(p => `<Project Path="${p}"/>`).join('')}</Solution>`);
     return root;
 }
 
 test('LPT is deterministic, ordinal on ties, nonempty and exactly once, with positive defaults', () => {
+    const ordinary = ordinaryProjects(v3Projects.map(project => ({ project }))).map(x => x.project).filter(project => !project.includes('/Core.Specs/'));
     const plan = planShards(ordinary, weights);
     assert.deepEqual(plan, planShards([...ordinary].reverse(), weights));
     assert.deepEqual(plan.flatMap(s => s.projects).sort(), [...ordinary].sort());
     assert.ok(plan.every(s => s.projects.length > 0));
     assert.equal(plan[0].projects[0], [...ordinary].sort()[0]);
+    assert.equal(plan.length, ORDINARY_SHARDS);
     assert.equal(plan[1].projects[0], [...ordinary].sort()[1]);
+    assert.equal(plan[2].projects[0], [...ordinary].sort()[2]);
+    assert.equal(plan[3].projects[0], [...ordinary].sort()[3]);
+    const six = ordinary.slice(0, 6).sort();
+    assert.deepEqual(planShards(six, weights).map(s => s.projects),
+        [[six[0], six[4]], [six[1], six[5]], [six[2]], [six[3]]]);
     assert.ok(plan.every(s => s.seconds === s.projects.length * 60));
     assert.deepEqual(plan.flatMap(s => s.defaulted).sort(), [...ordinary].sort());
     const future = 'Source/Future.Specs/Future.Specs.csproj';
     assert.equal(planShards([...ordinary, future], weights).flatMap(s => s.projects).filter(p => p === future).length, 1);
     assert.throws(() => planShards([...ordinary, ordinary[0]], weights), /duplicate/i);
-    assert.throws(() => planShards([], weights), /two nonempty/i);
-    assert.throws(() => planShards([ordinary[0]], weights), /two nonempty/i);
+    for (const count of [0, 1, 2, 3]) assert.throws(() => planShards(ordinary.slice(0, count), weights), new RegExp(`${ORDINARY_SHARDS} nonempty`, 'i'));
 });
 
 test('timings reject bad schema, duplicate, stale, nonpositive and nonfinite weights', () => {
@@ -53,11 +63,12 @@ test('timings reject bad schema, duplicate, stale, nonpositive and nonfinite wei
     }
 });
 
-test('only strict paired two-shard arguments are admitted; no arguments stays compatible', () => {
+test('only strict paired ordinary-shard-count arguments are admitted; no arguments stays compatible', () => {
     assert.equal(parseShardArgs([]), null);
-    assert.equal(parseShardArgs(['--shard', '1', '--shards', '2']), 1);
-    assert.equal(parseShardArgs(['--shards', '2', '--shard', '2']), 2);
-    for (const args of [['--shard', '1'], ['--shards', '2'], ['--shard', '0', '--shards', '2'], ['--shard', '3', '--shards', '2'], ['--shard', '1.0', '--shards', '2'], ['--shard', '1', '--shards', '3'], ['--shard', '1', '--shard', '2'], ['--other', '1', '--shards', '2'], ['--shard', '01', '--shards', '2']]) {
+    const total = String(ORDINARY_SHARDS);
+    for (const shard of ordinaryShardIds()) assert.equal(parseShardArgs(['--shard', String(shard), '--shards', total]), shard);
+    assert.equal(parseShardArgs(['--shards', total, '--shard', total]), ORDINARY_SHARDS);
+    for (const args of [['--shard', '1'], ['--shards', total], ['--shard', '0', '--shards', total], ['--shard', String(ORDINARY_SHARDS + 1), '--shards', total], ['--shard', '1.0', '--shards', total], ['--shard', '1', '--shards', String(ORDINARY_SHARDS - 1)], ['--shard', '1', '--shard', '2'], ['--other', '1', '--shards', total], ['--shard', '01', '--shards', total]]) {
         assert.throws(() => parseShardArgs(args), /shard|Usage/);
     }
 });
@@ -71,7 +82,7 @@ test('source proof covers actual source including Benchmarks, not just the regis
     assert.equal(discovered.sql.length, 1);
     assert.equal(discovered.shipping.length, 3);
     const plan = await sourcePlan(root, weights);
-    assert.deepEqual(plan.flatMap(s => s.projects).sort(), [...ordinary].sort());
+    assert.deepEqual(plan.flatMap(s => s.projects).sort(), expandedProjects(ordinary).sort());
     for (const project of ['Source/New.Specs/New.Specs.csproj', 'Benchmarks/New.Specs/New.Specs.csproj', 'Integration/New/New.csproj']) {
         await mkdir(path.dirname(path.join(root, project)), { recursive: true });
         await writeFile(path.join(root, project), '<Project/>');
@@ -107,7 +118,14 @@ test('completed receipts prove each shard and the global multiset, not merely to
     reject(r => r.pop());
     reject(r => r.push(r[0]));
     reject(r => { r[1].shard = 1; });
-    reject(r => { r[0].shards = 3; });
+    reject(r => { r[0].shards = 2; });
+    reject(r => { r[2].shard = 4; });
+    reject(r => { r[2].completed = []; });
+    reject(r => { r[2].completed[0] = 'Integration/Api/Api.csproj'; });
+    assert.throws(() => receiptFor({ shard: 3, projects: [] }, [], context), /empty receipt/);
+    const emptyPlan = structuredClone(plan);
+    emptyPlan[2].projects = [];
+    assert.throws(() => verifyReceipts(receipts, emptyPlan, context), /empty plan/);
     reject(r => { r[0].version = 0; });
     reject(r => { r[0].context.sha = 'stale'; });
     reject(r => { r[0].context.runId = 'another-run'; });
@@ -121,27 +139,29 @@ test('completed receipts prove each shard and the global multiset, not merely to
     reject(r => { r[0] = null; });
 });
 
-test('SQL-only failed-jobs retry retains both successful attempt-1 ordinary receipts', () => {
+test('SQL-only failed-jobs retry retains all three successful attempt-1 ordinary receipts', () => {
     const plan = planShards(ordinary, weights);
     const receipts = plan.map(s => receiptFor(s, s.projects, context));
     const retry = { ...context, runAttempt: '2' };
     // SQL failed in attempt 1; only SQL and the aggregate rerun in attempt 2.
-    const producers = [1, 2].map(shard => ({ shard, runAttempt: '1' }));
+    const producers = ordinaryShardIds().map(shard => ({ shard, runAttempt: '1' }));
     assert.doesNotThrow(() => verifyReceipts(receipts, plan, retry, producers));
 });
 
 test('mixed producer attempts keep exact receipt freshness and complete unique execution', () => {
     const plan = planShards(ordinary, weights);
-    const retry = { ...context, runAttempt: '2' };
-    const producers = [{ shard: 1, runAttempt: '1' }, { shard: 2, runAttempt: '2' }];
+    const retry = { ...context, runAttempt: '3' };
+    const producers = ordinaryShardIds().map(shard => ({ shard, runAttempt: String(Math.min(shard, 3)) }));
+    const last = producers.length - 1;
     const receipts = plan.map(s => receiptFor(s, s.projects, { ...context, runAttempt: producers[s.shard - 1].runAttempt }));
     assert.doesNotThrow(() => verifyReceipts(receipts, plan, retry, producers));
     for (const field of ['runAttempt', 'runId', 'sha']) {
         const bad = structuredClone(receipts);
-        bad[1].context[field] = 'stale';
+        bad[last].context[field] = 'stale';
         assert.throws(() => verifyReceipts(bad, plan, retry, producers), /context/);
     }
-    for (const bad of [[], [producers[0], producers[0]], [{ shard: 1, runAttempt: '3' }, producers[1]]]) {
+    for (const bad of [[], producers.slice(0, last), [...producers, producers[last]], [...producers.slice(0, last), producers[last - 1]],
+        [{ shard: 1, runAttempt: '4' }, ...producers.slice(1)], [...producers.slice(0, last), { shard: ORDINARY_SHARDS + 1, runAttempt: '1' }]]) {
         assert.throws(() => verifyReceipts(receipts, plan, retry, bad), /producer/i);
     }
     const incomplete = structuredClone(receipts);
@@ -161,6 +181,11 @@ test('result-directory verifier rejects absent, extra and malformed receipt file
         await writeFile(path.join(directory, 'shard-receipt.json'), JSON.stringify(receiptFor(shard, shard.projects, context)));
     }
     await verifyResults(results, plan, context);
+    const thirdReceipt = path.join(results, 'coverage-results-specs-other-3', 'shard-receipt.json');
+    const thirdContent = await readFile(thirdReceipt, 'utf8');
+    await unlink(thirdReceipt);
+    await assert.rejects(verifyResults(results, plan, context), new RegExp(`exactly ${ORDINARY_SHARDS}`));
+    await writeFile(thirdReceipt, thirdContent);
     const retry = { ...context, runAttempt: '2' };
     const evidence = { context: retry, producers: plan.map(s => ({ shard: s.shard, runAttempt: '1', artifactName: `coverage-results-specs-other-${s.shard}` })) };
     await verifyResults(results, plan, retry, evidence);

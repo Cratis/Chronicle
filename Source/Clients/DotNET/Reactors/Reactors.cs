@@ -638,6 +638,10 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
     {
         var registrations = _handlers.Values.ToArray();
         DisconnectHandlers();
+        foreach (var registration in registrations)
+        {
+            _logger.ReactorDisconnected(registration.Handler.Id);
+        }
         _handlers = registrations.Select(RecreateRegistration).ToFrozenDictionary(_ => _.Handler.Id);
     }
 
@@ -667,6 +671,9 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
     bool IsCurrentHandler(ReactorHandler handler) =>
         _handlers.TryGetValue(handler.Id, out var current) && ReferenceEquals(current.Handler, handler);
 
+    bool IsStaleReconnect(ReactorHandler handler, CancellationToken cancellationToken) =>
+        cancellationToken.IsCancellationRequested || _released || !IsCurrentHandler(handler);
+
     void ReconnectIfCurrent(ReactorRegistration registration, CancellationToken cancellationToken)
     {
         var handler = registration.Handler;
@@ -676,7 +683,7 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
         var services = _servicesAccessor.Services;
         lock (_registerLock)
         {
-            if (cancellationToken.IsCancellationRequested || _released || !IsCurrentHandler(handler))
+            if (IsStaleReconnect(handler, cancellationToken))
             {
                 _logger.SkippingStaleReactorReconnect(handler.Id);
                 return;
@@ -687,18 +694,10 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
         }
     }
 
-    void RegisterReactor(ReactorRegistration registration, IServices services)
+    RegisterReactor BuildRegisterRequest(ReactorRegistration registration)
     {
         var handler = registration.Handler;
-        ThrowIfDeliveredOverHttp(handler);
-        ClientObserverHosting.ThrowIfUnavailable(_eventStore.Connection, "Reactor", () => handler.Id.Value);
-        if (GenerationDelivery == Observation.EventGenerationDelivery.Pinned)
-        {
-            GenerationDeliveryValidation.Validate(handler.EventTypes);
-        }
-
-        _logger.RegisteringReactor(handler.Id);
-        var request = new RegisterReactor
+        return new RegisterReactor
         {
             ConnectionId = _eventStore.Connection.Lifecycle.ConnectionId,
             EventStore = _eventStore.Name,
@@ -722,6 +721,20 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
                 }
             }
         };
+    }
+
+    void RegisterReactor(ReactorRegistration registration, IServices services)
+    {
+        var handler = registration.Handler;
+        ThrowIfDeliveredOverHttp(handler);
+        ClientObserverHosting.ThrowIfUnavailable(_eventStore.Connection, "Reactor", () => handler.Id.Value);
+        if (GenerationDelivery == Observation.EventGenerationDelivery.Pinned)
+        {
+            GenerationDeliveryValidation.Validate(handler.EventTypes);
+        }
+
+        _logger.RegisteringReactor(handler.Id);
+        var request = BuildRegisterRequest(registration);
 
 #pragma warning disable CA2000 // Dispose objects before losing scope
         var messages = new SerializedMessages<ReactorMessage>(new(new(request)));
@@ -845,6 +858,7 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
                     messages.Dispose();
                     ScheduleReconnect();
                 });
+        _logger.ReactorObservationSubscribed(handler.Id);
     }
 
 #if CHRONICLE_ROLLING_DIAGNOSTICS

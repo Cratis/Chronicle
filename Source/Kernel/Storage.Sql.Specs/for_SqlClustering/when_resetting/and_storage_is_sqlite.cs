@@ -12,6 +12,7 @@ using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.Storage.Sql.for_SqlClustering.when_resetting;
 
+[PerFactSpecificationLifecycle] // Facts run their own asynchronous operations, so each fact gets its own context.
 public class and_storage_is_sqlite : Specification
 {
     IDatabase _database;

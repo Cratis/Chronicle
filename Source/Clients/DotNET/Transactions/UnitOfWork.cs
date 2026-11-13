@@ -35,7 +35,7 @@ public partial class UnitOfWork : IUnitOfWork
     readonly ILogger<UnitOfWork>? _logger;
     readonly List<StagedEvents> _stagedEvents = [];
     readonly HashSet<EventSequenceId> _legacyEventSequenceIds = [];
-    readonly object _decisionLock = new();
+    readonly Lock _decisionLock = new();
     readonly Dictionary<EventSourceId, ConcurrencyScope> _decisionScopes = [];
     readonly Dictionary<EventSourceId, List<DecisionConflict>> _decisionConflicts = [];
     Dictionary<EventSourceId, List<ConcurrencyScope>> _concurrencyScopes = [];

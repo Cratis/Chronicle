@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Runtime.ExceptionServices;
 using Cratis.Chronicle.Services;
 using Grpc.Core;
 using Grpc.Core.Interceptors;
@@ -9,7 +8,7 @@ using Grpc.Core.Interceptors;
 namespace Cratis.Chronicle.Server;
 
 /// <summary>
-/// Represents an <see cref="Interceptor"/> that ends calls with a request stream cleanly.
+/// Represents an <see cref="Interceptor"/> that ends streaming calls with their recorded failure.
 /// </summary>
 /// <remarks>
 /// It stops reading the request stream before the call ends - see <see cref="StoppableRequestStreamReader{T}"/> for why -
@@ -35,8 +34,19 @@ internal sealed class StreamingCallInterceptor : Interceptor
             await reader.Stop();
         }
 
-        ThrowRecordedFailure(context);
+        context.ThrowRecordedFailure();
         return response;
+    }
+
+    /// <inheritdoc/>
+    public override async Task ServerStreamingServerHandler<TRequest, TResponse>(
+        TRequest request,
+        IServerStreamWriter<TResponse> responseStream,
+        ServerCallContext context,
+        ServerStreamingServerMethod<TRequest, TResponse> continuation)
+    {
+        await continuation(request, new GuardedResponseStreamWriter<TResponse>(responseStream, context), context);
+        context.ThrowRecordedFailure();
     }
 
     /// <inheritdoc/>
@@ -49,21 +59,13 @@ internal sealed class StreamingCallInterceptor : Interceptor
         using var reader = new StoppableRequestStreamReader<TRequest>(requestStream);
         try
         {
-            await continuation(reader, responseStream, context);
+            await continuation(reader, new GuardedResponseStreamWriter<TResponse>(responseStream, context), context);
         }
         finally
         {
             await reader.Stop();
         }
 
-        ThrowRecordedFailure(context);
-    }
-
-    static void ThrowRecordedFailure(ServerCallContext context)
-    {
-        if (context.GetRecordedFailure() is { } failure)
-        {
-            ExceptionDispatchInfo.Throw(failure);
-        }
+        context.ThrowRecordedFailure();
     }
 }

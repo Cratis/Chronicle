@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Observation;
 /// </summary>
 internal class ObserverServiceDrain
 {
-    readonly object _lock = new();
+    readonly Lock _lock = new();
     readonly HashSet<(ObserverDetails Observer, bool Replay)> _windows = [];
     readonly HashSet<Task> _inFlight = [];
     bool _stopping;

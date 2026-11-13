@@ -139,14 +139,16 @@ public class Reducer(
     public async Task<bool> IsSubscriptionIntact()
     {
         // Anything that needs the definition - a registration waiting for a webhook to leave, an observer served by a
-        // webhook, a client the observer has lost - answers false, and the full check handles it.
+        // webhook, a client the observer has lost - answers false, and the full check handles it. So does a client the
+        // observer only knows as a superseded registration: it is not receiving anything, and a promotion that fails
+        // when the client that replaced it leaves would otherwise go unnoticed until the safety net.
         if (_deferredDefinition is not null || _observerKey is null)
         {
             return false;
         }
 
         _observer ??= GrainFactory.GetGrain<IObserver>(new ObserverKey(_observerKey.ObserverId, _observerKey.EventStore, _observerKey.Namespace, _observerKey.EventSequenceId));
-        if (!await _observer.KnowsClient(_observerKey.ConnectionId))
+        if (!await _observer.IsClientTarget(_observerKey.ConnectionId))
         {
             return false;
         }
@@ -154,6 +156,9 @@ public class Reducer(
         _subscribed = true;
         return true;
     }
+
+    /// <inheritdoc/>
+    public Task<bool> IsRegistrationDeferred() => Task.FromResult(_deferredDefinition is not null);
 
     /// <inheritdoc/>
     public async Task KeepSubscription(ReducerDefinition definition)

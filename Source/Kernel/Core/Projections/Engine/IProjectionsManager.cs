@@ -35,14 +35,33 @@ public interface IProjectionsManager
     Task AddNamespace(EventStoreName eventStore, EventStoreNamespaceName @namespace, IEnumerable<ReadModelDefinition> readModelDefinitions);
 
     /// <summary>
-    /// Try to get a <see cref="IProjection"/> by <see cref="ProjectionId"/>.
+    /// Try to get a cached <see cref="IProjection"/> by <see cref="ProjectionId"/>.
     /// </summary>
+    /// <remarks>
+    /// This is only a bounded cache probe. A miss does not mean no live pipeline owns the graph.
+    /// Resolve buffered work through <see cref="Pipelines.IProjectionPipelineManager.TryGetFor"/> instead.
+    /// </remarks>
     /// <param name="eventStore"><see cref="EventStoreName"/> the projection is for.</param>
     /// <param name="namespace"><see cref="EventStoreNamespaceName"/> the projection is for.</param>
     /// <param name="id"><see cref="ProjectionId"/> of the projection.</param>
     /// <param name="projection">The <see cref="IProjection"/> if it was found, null if not.</param>
     /// <returns>True if it was found, false if not.</returns>
     bool TryGet(EventStoreName eventStore, EventStoreNamespaceName @namespace, ProjectionId id, [NotNullWhen(true)] out IProjection? projection);
+
+    /// <summary>
+    /// Gets registered or stored definition metadata without compiling a namespace graph.
+    /// </summary>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="id">The projection identifier.</param>
+    /// <returns>The definition, or null if it does not exist.</returns>
+    Task<ProjectionDefinition?> GetDefinition(EventStoreName eventStore, ProjectionId id);
+
+    /// <summary>Tries to get a registered fingerprint independently of compiled graph retention.</summary>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="id">The projection identifier.</param>
+    /// <param name="fingerprint">The registered fingerprint, if present.</param>
+    /// <returns>Whether a definition has been registered on this silo.</returns>
+    bool TryGetDefinitionFingerprint(EventStoreName eventStore, ProjectionId id, [NotNullWhen(true)] out string? fingerprint);
 
     /// <summary>
     /// Gets a projection validated against the shared stored definition, rebuilding stale or missing entries.

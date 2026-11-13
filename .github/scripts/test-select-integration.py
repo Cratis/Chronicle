@@ -3,6 +3,8 @@
 """Specifications for the integration selection: when a push runs everything, some lanes, or nothing."""
 import importlib.util
 import os
+import subprocess
+import tempfile
 from pathlib import Path
 import unittest
 from unittest.mock import patch
@@ -100,7 +102,7 @@ class DecisionSpecs(unittest.TestCase):
         return lambda base, head: mapping.get((base, head))
 
     def decide(self, mapping, **kwargs):
-        defaults = dict(entries=ENTRIES, base="B", head="H", touched=False, green_head=None)
+        defaults = dict(entries=ENTRIES, base="B", head="H", touched=False, green=None)
         defaults.update(kwargs)
         return select.decide(files_between=self.files(mapping), **defaults)
 
@@ -113,54 +115,107 @@ class DecisionSpecs(unittest.TestCase):
 
     def test_only_ignorable_files_since_the_last_green_run_skips_the_matrix(self):
         mapping = {("G", "H"): ["Documentation/a.md", "Source/Kernel/Core.Specs/a.cs"], ("B", "H"): ["Source/Kernel/Core/Observation/a.cs"]}
-        mode, _, reasons = self.decide(mapping, touched=True, green_head="G")
+        mode, _, reasons = self.decide(mapping, touched=True, green=dict(head_sha="G", run_id=123, fingerprint="config"))
         self.assertEqual("skip", mode)
-        self.assertIn("G", reasons[0])
+        for evidence in ("Reused", "123", "G", "config"):
+            self.assertIn(evidence, reasons[0])
 
     def test_a_relevant_file_since_the_last_green_run_does_not_skip(self):
         mapping = {("G", "H"): ["Documentation/a.md", "Source/Kernel/Core/a.cs"], ("B", "H"): ["Source/Kernel/Core/a.cs"]}
-        mode, _, _ = self.decide(mapping, touched=True, green_head="G")
+        mode, _, _ = self.decide(mapping, touched=True, green=dict(head_sha="G", run_id=123, fingerprint="config"))
         self.assertEqual("full", mode)
 
     def test_an_unreadable_diff_since_the_last_green_run_does_not_skip(self):
-        mode, _, _ = self.decide({("B", "H"): ["Documentation/a.md", "Integration/Client/for_Webhooks/a.cs"]}, green_head="G")
+        mode, _, _ = self.decide({("B", "H"): ["Documentation/a.md", "Integration/Client/for_Webhooks/a.cs"]}, green=dict(head_sha="G", run_id=123, fingerprint="config"))
         self.assertEqual("selected", mode)
 
     def test_a_whole_pull_request_of_ignorable_files_skips_without_any_earlier_run(self):
         self.assertEqual("skip", self.decide({("B", "H"): ["Documentation/a.md"]})[0])
 
+    def test_an_ignorable_pull_request_does_not_report_an_unproven_green_run_as_reused(self):
+        mapping = {("G", "H"): ["Source/Kernel/Core/a.cs"], ("B", "H"): ["Documentation/a.md"]}
+        green = dict(head_sha="G", run_id=123, fingerprint="config")
+        mode, _, reasons = self.decide(mapping, green=green)
+        self.assertEqual("skip", mode)
+        self.assertNotIn("Reused", reasons[0])
+        self.assertIsNone(select.proven_reuse(green, "H", ENTRIES, self.files(mapping)))
+
+
+class RenameSpecs(unittest.TestCase):
+    def test_rename_from_exercised_source_into_docs_keeps_the_deleted_source_path(self):
+        with tempfile.TemporaryDirectory() as directory:
+            def run(*args):
+                result = subprocess.run(args, cwd=directory, capture_output=True, text=True, check=False)
+                return result.returncode, result.stdout, result.stderr
+            root = Path(directory)
+            run("git", "init", "-q")
+            source = root / "Source/Clients/DotNET/Reducers/a.cs"
+            source.parent.mkdir(parents=True)
+            source.write_text("identical contents for git rename detection")
+            run("git", "add", ".")
+            old = run("git", "write-tree")[1].strip()
+            docs = root / "Documentation/a.md"
+            docs.parent.mkdir()
+            source.rename(docs)
+            run("git", "add", "-A")
+            head = run("git", "write-tree")[1].strip()
+            with patch.object(select, "run", side_effect=run):
+                files = select.changed_files(old, head)
+            self.assertIn("Source/Clients/DotNET/Reducers/a.cs", files)
+            self.assertNotEqual("skip", select.classify(files, ENTRIES)[0])
+
 
 class LastGreenSpecs(unittest.TestCase):
-    RUNS = "\n".join(["aaa\t2026-01-01T00:00:00Z\t7", "bbb\t2026-01-02T00:00:00Z\t7", "ccc\t2026-01-03T00:00:00Z\t8", "hhh\t2026-01-04T00:00:00Z\t7"])
+    HEAD, OLD, BASE = "a" * 40, "b" * 40, "c" * 40
 
-    def fake_run(self, ancestors, present=("aaa", "bbb", "ccc")):
-        def run(*arguments):
-            if arguments[0] == "gh":
-                return 0, self.RUNS, ""
-            if arguments[1] == "cat-file":
-                return (0 if arguments[3].split("^")[0] in present else 1), "", ""
-            return (0 if arguments[3] in ancestors else 1), "", ""
-        return run
+    def candidate(self, **changes):
+        return dict(id=123, head_sha=self.OLD, event="pull_request", conclusion="success",
+                    path=".github/workflows/hot-core-gate.yml", head_repository={"full_name": "o/r"},
+                    display_title=f"Hot Core Gate - PR #7 @ {self.OLD} base {self.BASE}") | changes
 
-    def test_takes_the_newest_green_head_of_this_pull_request_that_is_an_ancestor(self):
-        with patch.object(select, "run", self.fake_run(ancestors={"aaa", "bbb"})):
-            self.assertEqual("bbb", select.last_green_head("o/r", 7, "hhh"))
+    def green(self, *, candidates=None, executed=True, fingerprint="config", ancestor=True):
+        current = dict(repo="o/r", head_repo="o/r", pull_request="7", head=self.HEAD, base=self.BASE, event="pull_request")
+        runs = [self.candidate()] if candidates is None else candidates
+        with patch.object(select, "candidate_runs", side_effect=[[], runs]), \
+             patch.object(select, "nested_pass", return_value=executed), \
+             patch.object(select, "config_fingerprint", return_value=fingerprint), \
+             patch.object(select, "changed_files", return_value=["Documentation/a.md"]), \
+             patch.object(select, "is_ancestor", return_value=ancestor):
+            return select.last_green_run(current, ENTRIES)
 
-    def test_ignores_other_pull_requests_and_the_current_head(self):
-        with patch.object(select, "run", self.fake_run(ancestors={"ccc", "hhh"})):
-            self.assertIsNone(select.last_green_head("o/r", 7, "hhh"))
+    def test_gate_nested_executed_pass_is_evidence(self):
+        self.assertEqual(self.OLD, self.green()["head_sha"])
 
-    def test_a_force_pushed_head_that_is_no_ancestor_is_not_reused(self):
-        with patch.object(select, "run", self.fake_run(ancestors=set())):
-            self.assertIsNone(select.last_green_head("o/r", 7, "hhh"))
+    def test_standalone_requires_metadata_and_execution_too(self):
+        candidate = self.candidate(path=".github/workflows/requested-integration.yml",
+                                   display_title=f"Requested Integration - PR #7 @ {self.OLD} base {self.BASE}")
+        self.assertEqual(self.OLD, self.green(candidates=[candidate])["head_sha"])
 
-    def test_a_head_missing_from_the_clone_is_not_reused(self):
-        with patch.object(select, "run", self.fake_run(ancestors={"aaa", "bbb"}, present=())):
-            self.assertIsNone(select.last_green_head("o/r", 7, "hhh"))
+    def test_gate_overall_green_without_matrix_is_not_evidence(self):
+        self.assertIsNone(self.green(executed=False))
 
-    def test_an_api_failure_reuses_nothing(self):
-        with patch.object(select, "run", lambda *a: (1, "", "boom")):
-            self.assertIsNone(select.last_green_head("o/r", 7, "hhh"))
+    def test_other_pr_current_head_and_legacy_unknown_base_are_not_evidence(self):
+        for changes in [dict(head_sha=self.HEAD), dict(display_title="Hot Core Gate"),
+                        dict(display_title=f"Hot Core Gate - PR #8 @ {self.OLD} base {self.BASE}")]:
+            self.assertIsNone(self.green(candidates=[self.candidate(**changes)]))
+
+    def test_non_ancestor_and_unknown_config_are_not_evidence(self):
+        self.assertIsNone(self.green(ancestor=False))
+        self.assertIsNone(self.green(fingerprint=None))
+
+    def test_no_candidates_are_no_evidence(self):
+        self.assertIsNone(self.green(candidates=[]))
+
+    def test_api_errors_and_malformed_json_add_no_evidence(self):
+        for response in [(1, "", "rate limited"), (0, "not JSON", ""), (0, "[{}]", "")]:
+            with patch.object(select, "run", return_value=response):
+                self.assertIsNone(select.candidate_runs("o/r", "hot-core-gate.yml"))
+                self.assertFalse(select.nested_pass("o/r", 123))
+
+    def test_non_pr_event_does_not_query_candidates(self):
+        with patch.object(select, "candidate_runs") as query:
+            self.assertIsNone(select.last_green_run(dict(event="push"), ENTRIES))
+            query.assert_not_called()
 
 
 if __name__ == "__main__":

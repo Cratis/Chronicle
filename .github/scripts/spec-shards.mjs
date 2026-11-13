@@ -2,15 +2,21 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { readFile, readdir, mkdir, writeFile, appendFile } from 'node:fs/promises';
+import { readFileSync } from 'node:fs';
+import { CORE_PROJECT, CORE_PARTS, coreUnitId, loadPartition, checkPartition, partitionUnits } from './core-spec-partition.mjs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { validateSourceProjects } from './mixed-specs-selection.mjs';
+import { balanceJobs } from './spec-shard-balancing.mjs';
 
+export const ORDINARY_SHARDS = 4;
+export const ordinaryShardIds = () => Array.from({ length: ORDINARY_SHARDS }, (_, index) => index + 1);
+const validShard = shard => ordinaryShardIds().includes(shard);
 const fail = message => { throw new Error(message); };
-const ordinal = (a, b) => a < b ? -1 : a > b ? 1 : 0;
 const positive = value => typeof value === 'number' && Number.isFinite(value) && value > 0;
 function projectIdentity(project) {
     if (typeof project !== 'string') return false;
+    if (Array.from({ length: CORE_PARTS }, (_, index) => coreUnitId(index + 1)).includes(project)) return true;
     return /^(Source|Integration|Benchmarks)\/(?:[\w.-]+\/)*[\w.-]+\.csproj$/.test(project) && !project.split('/').includes('..');
 }
 function unique(projects, label) {
@@ -43,26 +49,40 @@ export function validateTimings(data, projects) {
     }
     return weights;
 }
-export function planShards(projects, timings) {
-    unique(projects, 'Ordinary selection');
-    if (projects.length < 2) fail('Expected two nonempty ordinary shards');
+export function expandCore(projects, timings, parts) {
     const weights = validateTimings(timings, projects);
-    const weight = p => weights.get(p) ?? timings.defaultSeconds;
-    const sorted = [...projects].sort((a, b) => weight(b) - weight(a) || ordinal(a, b));
-    const shards = [1, 2].map(shard => ({ shard, projects: [], seconds: 0, defaulted: [] }));
-    for (const project of sorted) {
-        const shard = shards[0].seconds <= shards[1].seconds ? shards[0] : shards[1];
-        shard.projects.push(project);
-        shard.seconds += weight(project);
-        if (!weights.has(project)) shard.defaulted.push(project);
+    const expanded = projects.flatMap(project => project === CORE_PROJECT ? parts.map(part => coreUnitId(part.part)) : [project]);
+    const defaults = new Set(projects.filter(project => project !== CORE_PROJECT && !weights.has(project)));
+    if (projects.includes(CORE_PROJECT)) {
+        if (!positive(timings.core?.fixedSeconds) || !positive(timings.core?.variableSeconds)) fail('Missing/invalid Core wall-time model');
+        const total = parts.reduce((sum, part) => sum + part.weight, 0);
+        for (const part of parts) {
+            weights.set(coreUnitId(part.part), timings.core.fixedSeconds + timings.core.variableSeconds * part.weight / total);
+        }
     }
+    return { projects: expanded, weights, defaults };
+}
+export function planShards(projects, timings, parts = partitionUnits(JSON.parse(readFileSync(new URL('./core-spec-partition.json', import.meta.url), 'utf8')).units)) {
+    unique(projects, 'Ordinary selection');
+    if (projects.length < ORDINARY_SHARDS) fail(`Expected ${ORDINARY_SHARDS} nonempty ordinary shards`);
+    const expanded = expandCore(projects, timings, parts);
+    projects = expanded.projects;
+    const { weights, defaults } = expanded;
+    const weight = p => weights.get(p) ?? timings.defaultSeconds;
+    const overhead = timings.shardOverheadSeconds ?? 0;
+    if (!Number.isFinite(overhead) || overhead < 0) fail('Invalid shard overhead');
+    const jobs = projects.map(project => ({ project, seconds: weight(project), core: project.includes('#core-part-') }));
+    const shards = balanceJobs(jobs, ORDINARY_SHARDS).map(shard => ({ ...shard,
+        seconds: shard.seconds + overhead, defaulted: shard.projects.filter(project => defaults.has(project))
+    }));
     sameProjects(shards.flatMap(s => s.projects), projects, 'Shard union');
-    if (shards.some(s => !s.projects.length)) fail('Expected two nonempty ordinary shards');
+    if (shards.some(s => !s.projects.length)) fail(`Expected ${ORDINARY_SHARDS} nonempty ordinary shards`);
     return shards;
 }
 export async function sourcePlan(root, timings) {
     const source = await validateSourceProjects(root);
-    return planShards(source.ordinary, timings ?? JSON.parse(await readFile(new URL('./spec-shard-timings.json', import.meta.url), 'utf8')));
+    const parts = await checkPartition(root, await loadPartition());
+    return planShards(source.ordinary, timings ?? JSON.parse(await readFile(new URL('./spec-shard-timings.json', import.meta.url), 'utf8')), parts);
 }
 export function parseShardArgs(args) {
     if (!args.length) return null;
@@ -70,11 +90,13 @@ export function parseShardArgs(args) {
     for (let i = 0; i < args.length; i += 2) {
         const key = args[i];
         const validPair = [['--shard', '--shards'].includes(key), !values.has(key), Boolean(args[i + 1])].every(Boolean);
-        if (!validPair) fail('Usage: --shard N --shards 2');
+        if (!validPair) fail(`Usage: --shard N --shards ${ORDINARY_SHARDS}`);
         values.set(key, args[i + 1]);
     }
-    const validSelection = [values.size === 2, values.get('--shards') === '2', /^[12]$/.test(values.get('--shard') ?? '')].every(Boolean);
-    if (!validSelection) fail('Expected --shard 1 or 2 and --shards 2');
+    const shard = values.get('--shard');
+    const validSelection = [values.size === 2, values.get('--shards') === String(ORDINARY_SHARDS),
+        ordinaryShardIds().some(id => String(id) === shard)].every(Boolean);
+    if (!validSelection) fail(`Expected --shard 1..${ORDINARY_SHARDS} and --shards ${ORDINARY_SHARDS}`);
     return Number(values.get('--shard'));
 }
 export function receiptContext(env = process.env) {
@@ -83,15 +105,16 @@ export function receiptContext(env = process.env) {
     return { sha: env.GITHUB_SHA ?? 'local', runId: env.GITHUB_RUN_ID ?? 'local', runAttempt: env.GITHUB_RUN_ATTEMPT ?? 'local' };
 }
 export function receiptFor(shard, completed, context = receiptContext()) {
+    if (!validShard(shard.shard) || !shard.projects.length) fail('Invalid/empty receipt shard');
     sameProjects(completed, shard.projects, `Shard ${shard.shard} completion`);
-    return { version: 1, shard: shard.shard, shards: 2, context, projects: [...shard.projects], completed: [...completed] };
+    return { version: 1, shard: shard.shard, shards: ORDINARY_SHARDS, context, projects: [...shard.projects], completed: [...completed] };
 }
 function contextMatches(actual, expected) {
     if (!actual) return false;
     return ['sha', 'runId', 'runAttempt'].every(key => [typeof actual[key] === 'string', Boolean(actual[key]), actual[key] === expected[key]].every(Boolean));
 }
 function verifyReceipt(receipt, plan, context) {
-    const validIdentity = [receipt?.version === 1, receipt?.shards === 2, [1, 2].includes(receipt?.shard)].every(Boolean);
+    const validIdentity = [receipt?.version === 1, receipt?.shards === ORDINARY_SHARDS, validShard(receipt?.shard)].every(Boolean);
     if (!validIdentity) fail('Invalid shard receipt version/identity/count');
     if (!contextMatches(receipt.context, context)) fail(`Shard ${receipt.shard}: stale receipt context`);
     const expected = plan.find(s => s.shard === receipt.shard).projects;
@@ -99,18 +122,27 @@ function verifyReceipt(receipt, plan, context) {
     sameProjects(receipt.completed, expected, `Shard ${receipt.shard} receipt completion`);
 }
 function producerContexts(producers, context) {
-    if (!Array.isArray(producers) || producers.length !== 2) fail('Expected two successful producer attempts');
-    if (new Set(producers.map(p => p?.shard)).size !== 2) fail('Duplicate producer shard');
+    if (!Array.isArray(producers) || producers.length !== ORDINARY_SHARDS) fail(`Expected ${ORDINARY_SHARDS} successful producer attempts`);
+    if (new Set(producers.map(p => p?.shard)).size !== ORDINARY_SHARDS) fail('Duplicate producer shard');
     return producers.map(producer => {
-        const valid = [[1, 2].includes(producer?.shard), /^[1-9]\d*$/.test(producer?.runAttempt ?? ''),
+        const valid = [validShard(producer?.shard), /^[1-9]\d*$/.test(producer?.runAttempt ?? ''),
             Number(producer?.runAttempt) <= Number(context.runAttempt)].every(Boolean);
         if (!valid) fail('Invalid/stale producer attempt');
         return { shard: producer.shard, ...context, runAttempt: producer.runAttempt };
     });
 }
+const hasOneEntryPerShard = list => Array.isArray(list) && list.length === ORDINARY_SHARDS;
+const validPlanShard = shard => [validShard(shard?.shard), Boolean(shard?.projects?.length)].every(Boolean);
+function validatePlan(plan) {
+    if (!hasOneEntryPerShard(plan)) fail('Invalid shard plan count');
+    if (new Set(plan.map(s => s?.shard)).size !== ORDINARY_SHARDS) fail('Duplicate plan shard');
+    if (!plan.every(validPlanShard)) fail('Invalid/empty plan shard');
+    unique(plan.flatMap(s => s.projects), 'Shard plan');
+}
 export function verifyReceipts(receipts, plan, context = receiptContext(), producers) {
-    if (!Array.isArray(receipts) || receipts.length !== 2) fail('Expected exactly two shard receipts');
-    const contexts = producers ? producerContexts(producers, context) : [1, 2].map(shard => ({ shard, ...context }));
+    validatePlan(plan);
+    if (!Array.isArray(receipts) || receipts.length !== ORDINARY_SHARDS) fail(`Expected exactly ${ORDINARY_SHARDS} shard receipts`);
+    const contexts = producers ? producerContexts(producers, context) : ordinaryShardIds().map(shard => ({ shard, ...context }));
     const seen = new Set();
     for (const receipt of receipts) {
         verifyReceipt(receipt, plan, contexts.find(c => c.shard === receipt?.shard) ?? context);
@@ -137,11 +169,11 @@ function verifyEvidencePaths(evidence, context, directory, files) {
 }
 export async function verifyResults(directory, plan, context = receiptContext(), evidence) {
     const files = await receiptFiles(directory);
-    if (files.length !== 2) fail(`Expected exactly two shard receipt files; found ${files.length}`);
+    if (files.length !== ORDINARY_SHARDS) fail(`Expected exactly ${ORDINARY_SHARDS} shard receipt files; found ${files.length}`);
     if (evidence !== undefined) verifyEvidencePaths(evidence, context, directory, files);
     const receipts = await Promise.all(files.map(async file => JSON.parse(await readFile(file, 'utf8'))));
     verifyReceipts(receipts, plan, context, evidence?.producers);
-    console.log(`Verified 2 completed shard receipts: ${receipts.flatMap(r => r.completed).length} ordinary projects exactly once`);
+    console.log(`Verified ${ORDINARY_SHARDS} completed shard receipts: ${receipts.flatMap(r => r.completed).length} ordinary projects exactly once`);
 }
 async function selectArtifacts(file, context) {
     // API evidence is fetched afresh by the aggregate, never accepted from worker artifacts.
@@ -175,7 +207,7 @@ export async function main(args = process.argv.slice(2), { root = process.cwd() 
         for (const project of shard.projects) console.log(`  ${project}`);
         console.log(`  Defaulted weights (60 seconds): ${shard.defaulted.join(', ') || 'none'}`);
     }
-    console.log(`Exact-once partition validated: ${source.ordinary.length} ordinary projects, 2 nonempty shards`);
+    console.log(`Exact-once partition validated: ${source.ordinary.length} ordinary projects, ${ORDINARY_SHARDS} nonempty shards`);
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
     main().catch(error => { console.error(error.message); process.exitCode = 1; });

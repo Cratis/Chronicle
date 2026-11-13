@@ -39,16 +39,57 @@ class AnalyzerOwnership(unittest.TestCase):
 
     def test_owners_keep_analyzers(self):
         owners = [
-            ("dotnet-build", "Build"),
-            ("dotnet-build", "Build client packages for every shipped framework"),
-            ("dotnet-build-development", "Build with DEVELOPMENT symbol"),
-            ("dotnet-build-development-requested", "Build with DEVELOPMENT symbol"),
+            ("analyzers", "Build with analyzers"),
+            ("package-verification", "Build client packages for every shipped framework"),
+            ("analyzers-development", "Build the DEVELOPMENT symbol with analyzers"),
         ]
         for job, name in owners:
             with self.subTest(job=job, step=name):
                 run = step_run(self.build, job, name)
                 self.assertIn("dotnet build", run)
                 self.assertNotIn(SKIP, run)
+
+    def test_spec_build_skips_analyzers_the_analyzers_job_owns(self):
+        run = step_run(self.build, "dotnet-build", "Build")
+        self.assertIn("dotnet build --configuration Release", run)
+        self.assertIn(f"-p:{SKIP}", run)
+        owner = step_run(self.build, "analyzers", "Build with analyzers")
+        # The same solution build, so the owner analyzes exactly what the spec build compiles.
+        self.assertEqual(run.replace(f" -p:{SKIP}", ""), owner)
+        job = self.build["jobs"]["analyzers"]
+        self.assertEqual(["already-ran"], job["needs"])
+        self.assertFalse(any("continue-on-error" in step for step in job["steps"]))
+        # An obj cache saved by the analyzer-free build must never stand in for an analyzed compilation.
+        self.assertFalse(any("actions/cache" in step.get("uses", "") for step in job["steps"]))
+
+    def test_development_builds_skip_analyzers_the_development_analysis_owns(self):
+        owner = step_run(self.build, "analyzers-development", "Build the DEVELOPMENT symbol with analyzers")
+        for job in ("dotnet-build-development", "dotnet-build-development-requested"):
+            with self.subTest(job=job):
+                run = step_run(self.build, job, "Build with DEVELOPMENT symbol")
+                self.assertIn(f"-p:{SKIP}", run)
+                # The same DEVELOPMENT build, so the owner analyzes exactly what the artifact compiles.
+                self.assertEqual(run.replace(f" -p:{SKIP}", ""), owner)
+        job = self.build["jobs"]["analyzers-development"]
+        self.assertEqual(["already-ran"], job["needs"])
+        self.assertEqual("needs.already-ran.outputs.skip != 'true' && (github.event_name != 'pull_request' || inputs.integration_requested)",
+                         job["if"])
+        self.assertFalse(any("continue-on-error" in step for step in job["steps"]))
+        self.assertFalse(any("actions/cache" in step.get("uses", "") for step in job["steps"]))
+
+    def test_specs_aggregate_requires_the_development_analysis(self):
+        aggregate = self.build["jobs"]["specs"]
+        self.assertIn("analyzers-development", aggregate["needs"])
+        step = aggregate["steps"][0]
+        self.assertEqual("${{ needs.analyzers-development.result }}", step["env"]["DEV_ANALYZER_RESULT"])
+        self.assertIn('test "$DEV_ANALYZER_RESULT" = success', step["run"])
+
+    def test_specs_aggregate_requires_the_analyzers(self):
+        aggregate = self.build["jobs"]["specs"]
+        self.assertIn("analyzers", aggregate["needs"])
+        step = aggregate["steps"][0]
+        self.assertEqual("${{ needs.analyzers.result }}", step["env"]["ANALYZER_RESULT"])
+        self.assertIn('test "$ANALYZER_RESULT" = success', step["run"])
 
     def test_debug_publish_skips_analyzers(self):
         run = step_run(self.build, "dotnet-build", "Build development Docker image")
@@ -63,13 +104,13 @@ class AnalyzerOwnership(unittest.TestCase):
             self.assertRegex(run, rf"Benchmarks/{re.escape(project)}/{re.escape(project)}\.csproj[^\n]*\n[^\n]*/p:AnalyzeOnlyProject={re.escape(project)} ")
 
     def test_benchmark_projects_are_only_analyzed_by_the_benchmark_build(self):
-        # Not in the solution, so the Release Build cannot own them; their references must be in it.
+        # Not in the solution, so the analyzers job cannot own them; their references must be in it.
         solution = (ROOT / "Chronicle.slnx").read_text(encoding="utf-8")
         for project in ("Chronicle.Benchmarks", "Chronicle.Benchmarks.Clustering"):
             path = ROOT / "Benchmarks" / project / f"{project}.csproj"
             self.assertNotIn(f"Benchmarks/{project}/{project}.csproj", solution)
             for reference in re.findall(r'<ProjectReference Include="\.\./\.\./([^"]+)"', path.read_text(encoding="utf-8")):
-                self.assertIn(reference, solution, f"{project} references {reference}, which the Release Build does not analyze")
+                self.assertIn(reference, solution, f"{project} references {reference}, which the analyzers job does not analyze")
 
     def test_analyze_only_project_skips_every_other_project(self):
         targets = (ROOT / "Directory.Build.targets").read_text(encoding="utf-8")
@@ -84,9 +125,9 @@ class AnalyzerOwnership(unittest.TestCase):
         self.assertIn(f"-p:{SKIP}", run)
 
     def test_packaging_build_skips_analyzers_only_for_the_owned_framework(self):
-        run = without_comments(step_run(self.build, "dotnet-build", "Build client packages for every shipped framework"))
-        self.assertEqual(2, run.count("dotnet build"))
-        self.assertEqual(2, run.count("-p:SkipAnalyzersForTargetFramework=net11.0"))
+        run = without_comments(step_run(self.build, "package-verification", "Build client packages for every shipped framework"))
+        self.assertEqual(1, run.count("dotnet build"))
+        self.assertEqual(1, run.count("-p:SkipAnalyzersForTargetFramework=net11.0"))
 
     def test_framework_skip_is_scoped_to_that_framework(self):
         targets = (ROOT / "Directory.Build.targets").read_text(encoding="utf-8")

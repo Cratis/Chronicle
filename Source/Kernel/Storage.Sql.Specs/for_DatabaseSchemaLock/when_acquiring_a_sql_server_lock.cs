@@ -3,6 +3,7 @@
 
 namespace Cratis.Chronicle.Storage.Sql.for_DatabaseSchemaLock;
 
+[PerFactSpecificationLifecycle] // The cancellation fact reconfigures the substituted command for its own acquire call.
 public class when_acquiring_a_sql_server_lock : given.a_command_result
 {
     [Theory]

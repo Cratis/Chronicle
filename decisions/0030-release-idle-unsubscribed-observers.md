@@ -1,13 +1,13 @@
 ---
 id: 0030-release-idle-unsubscribed-observers
 title: Keep subscribed observers resident and release observers that have no subscription and no pending work after an idle period
-status: proposed
+status: accepted
 stage: none
 class: contract
 reversibility: reversible
 proposed: 2026-11-10
-decided: —
-decider: einari (to accept)
+decided: 2026-11-11
+decider: einari
 applies-to:
   - Source/Kernel/Core/Observation/Observer*.cs
   - Source/Kernel/Core/Configuration/Observers.cs
@@ -51,6 +51,15 @@ Something must call `Subscribe` again:
 | Client reactor or reducer | `ClientSubscriptionKeeper` in the gRPC service, every `connectedClients.reviseIntervalSeconds` (default 2 s): `IReactor.IsSubscriptionIntact` calls `IObserver.KnowsClient` and restores a lost subscription | Live delivery stops for up to 2 s, then the restore runs a catch-up. No memory saved: the keeper calls the observer every 2 s, so it is activated again at once |
 | Projection | `ProjectionsManager` on registration or kernel start only | Live delivery stops until the client registers its projections again |
 | Kernel reactor, webhook, event store subscription | Their managers on start or registration only | The same |
+
+> **Correction (2026-11-11):** the subscription keeper no longer calls every connected observer every
+> `reviseIntervalSeconds` (#5816). It checks a subscription confirmed intact once per jittered safety-net wait of at
+> most `connectedClients.subscriptionCheckIntervalSeconds` (default 60 s), and every `reviseIntervalSeconds` only while
+> a subscription is not confirmed intact and for `connectedClients.subscriptionSettleSeconds` (default 30 s) after a
+> silo starts leaving or is declared dead. Where this record says the keeper calls every `reviseIntervalSeconds` -
+> the row above, Decision point 1, Options considered and Consequences - it describes the keeper before that change.
+> Releasing a subscribed client observer would now stop its live delivery for up to the safety-net interval instead of
+> about 2 s. The decision itself is unchanged.
 
 ### What an activation retains
 

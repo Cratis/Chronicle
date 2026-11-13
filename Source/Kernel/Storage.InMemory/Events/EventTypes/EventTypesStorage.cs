@@ -130,6 +130,34 @@ public partial class EventTypesStorage : IEventTypesStorage, IDisposable
     }
 
     /// <inheritdoc/>
+    public Task<bool> ReplaceSchema(EventTypeId eventTypeId, EventTypeGeneration generation, JsonSchema schema)
+    {
+        lock (_publishing)
+        {
+            if (!_definitions.TryGetValue(eventTypeId, out var definition))
+            {
+                return Task.FromResult(false);
+            }
+            if (Generation(definition, generation) is not { } stored)
+            {
+                return Task.FromResult(false);
+            }
+            if (JsonNode.DeepEquals(JsonNode.Parse(stored.Schema.ToJson()), JsonNode.Parse(schema.ToJson())))
+            {
+                return Task.FromResult(false);
+            }
+
+            _definitions[eventTypeId] = definition with
+            {
+                Generations = definition.Generations.Select(item => item.Generation == generation
+                    ? item with { Schema = new JsonSchema((JsonObject)JsonNode.Parse(schema.ToJson())!) } : item).ToList()
+            };
+            PublishIfChanged(true);
+        }
+        return Task.FromResult(true);
+    }
+
+    /// <inheritdoc/>
     public Task<IEnumerable<EventTypeDefinition>> GetAllDefinitions() =>
         Task.FromResult<IEnumerable<EventTypeDefinition>>([.. _definitions.Values]);
 
@@ -203,7 +231,7 @@ public partial class EventTypesStorage : IEventTypesStorage, IDisposable
                 {
                     var stored = existing.Generations.FirstOrDefault(_ => _.Generation == generation.Generation);
                     return stored is not null &&
-                        JsonSchemaCompatibilityExtensions.EqualsIgnoringTitles(stored.Schema.ToJson(), generation.Schema.ToJson())
+                        JsonSchemaCompatibilityExtensions.EqualsIgnoringAnnotations(stored.Schema.ToJson(), generation.Schema.ToJson())
                         ? stored : generation;
                 }))
                 .ToList(),

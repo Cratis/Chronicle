@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Events.Constraints;
 internal sealed class ConstraintIndexCatchUpSlots
 {
     static readonly ConditionalWeakTable<IStorage, ConstraintIndexCatchUpSlots> _silos = new();
-    readonly object _gate = new();
+    readonly Lock _gate = new();
     readonly HashSet<object> _memoryOwners = [];
     readonly HashSet<object> _turnOwners = [];
     readonly int _limit;

@@ -1124,7 +1124,8 @@ public partial class Observer(
         if (reconcile && CannotReconcileSubscription(typeof(Webhooks.IWebhookObserverSubscriber).IsAssignableFrom(typeof(TObserverSubscriber)))) return;
         var owner = GetOwner<TObserverSubscriber>();
         logger.Subscribing();
-        logger.SubscribingWithEventTypes(eventTypes.Count(), string.Join(", ", eventTypes.Select(et => et.Id)));
+        var eventTypeIds = eventTypes.Select(et => et.Id).ToArray();
+        logger.SubscribingWithEventTypes(eventTypeIds.Length, string.Join(", ", eventTypeIds));
 
         observerDefinition.State = observerDefinition.State with
         {

@@ -200,6 +200,37 @@ With the health port exclusive, serve the Workbench from the main port, 35000. R
 
 > **Note**: The health check endpoint path is configurable. See [Root Properties](configuration/root-properties.md#health-check-endpoint) for details, and [Health Endpoint](configuration/health-endpoint.md) for the dedicated port.
 
+## Crash dumps
+
+The production image carries `createdump` next to the .NET runtime in `/app`, so the kernel can write a dump when it crashes. Dumps are off by default. Turn them on with the .NET runtime's environment variables, and point them at a writable volume, because the image runs as user `1654` and nothing under `/app` is writable for it:
+
+| Variable | Value | Effect |
+| --- | --- | --- |
+| `DOTNET_DbgEnableMiniDump` | `1` | Write a dump when the process crashes. |
+| `DOTNET_DbgMiniDumpType` | `2` | A minidump with the managed heap. `dotnet-dump analyze` opens every type, but its heap commands, such as `dumpheap` and `gcroot`, need `2` or `4`. `4` writes a full dump, `1` a minidump without the heap, and `3` a triage dump: small, with memory contents left out. |
+| `DOTNET_DbgMiniDumpName` | `/dumps/core.%h.%t` | Where the dump is written. `%h` is the host name, `%t` the time of the dump in seconds since the epoch and `%p` the process id. |
+
+Always set `DOTNET_DbgMiniDumpName`. Without it the runtime writes `/tmp/coredump.<pid>`, not to the volume you mounted for dumps, so the dump is lost with the container or fills a small scratch volume.
+
+A heap dump is about as large as the kernel's memory use: a kernel that has only just started, with no clients, wrote 770 MiB. Give the volume room for more than one dump of the kernel's memory limit. Every crash writes another dump, so a kernel that keeps crashing and restarting keeps filling the volume. Copy dumps off promptly and delete them once copied.
+
+Add the volume and the variables to the `docker run` command you already use; the storage, TLS and authentication settings shown earlier on this page stay as they are:
+
+```bash
+mkdir -p dumps && sudo chown 1654:1654 dumps
+```
+
+```text
+-v "$PWD/dumps:/dumps"
+-e DOTNET_DbgEnableMiniDump=1
+-e DOTNET_DbgMiniDumpType=2
+-e DOTNET_DbgMiniDumpName=/dumps/core.%h.%t
+```
+
+The dump lands in `dumps/` on the host and outlives the container. Open it with `dotnet-dump analyze`. Turn dumps off again once you have the one you need.
+
+A dump is a copy of the kernel's memory. It contains the storage connection strings, certificate and signing keys, and event data, including personal data that compliance encryption protects at rest. Treat every dump as a secret that holds personal data: restrict who can take and copy it, keep it encrypted and access-controlled while it is stored and moved, never attach it to a public issue, and delete every copy, on the host and anywhere you copied it, when the analysis is done. Erasing a person's data does not remove it from a dump that was taken earlier, so dumps fall under your data-handling and retention process. On Kubernetes, see [Collect crash dumps](kubernetes.md#collect-crash-dumps).
+
 ## Backup and restore
 
 Back up the encryption certificates alongside the database: the database contains protected keys and credentials, not the private keys needed to read them. If you use a separate compliance key store for personal data, include that too. Restore in this order before serving traffic:

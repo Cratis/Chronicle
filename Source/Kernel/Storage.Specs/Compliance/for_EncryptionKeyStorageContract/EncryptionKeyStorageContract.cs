@@ -68,6 +68,23 @@ public abstract class EncryptionKeyStorageContract : Specification
         throw new EncryptionKeyFenceWriteOutcomeUnknown(_identifier, new TimeoutException());
     }
 
+    /// <summary>
+    /// Append pending requests named request-1 through request-count to an existing fence.
+    /// Persistent harnesses may override this to write the equivalent stored state once.
+    /// </summary>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="eventStoreNamespace">The namespace.</param>
+    /// <param name="identifier">The subject whose fence already exists.</param>
+    /// <param name="count">The number of additional requests.</param>
+    /// <returns>The asynchronous seeding operation.</returns>
+    protected virtual async Task SeedRequests(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, int count)
+    {
+        for (var index = 1; index <= count; index++)
+        {
+            await _storage.RecordErasureFor(eventStore, eventStoreNamespace, identifier, new($"request-{index}"));
+        }
+    }
+
     void Establish() => _storage = CreateStorage();
 
     [Fact]
@@ -261,16 +278,31 @@ public abstract class EncryptionKeyStorageContract : Specification
     {
         await Raise("old");
         await Confirm("old");
-        for (var index = 1; index < 1024; index++)
-        {
-            await Raise($"request-{index}");
-        }
+        await SeedRequests(_eventStore, _namespace, _identifier, 1023);
 
         var beforeRetry = await Fence();
         await Raise("old");
         AssertFence(await Fence(), beforeRetry);
         await Assert.ThrowsAsync<EncryptionKeyRequestLogFull>(() => Raise("overflow"));
         (await Fence()).Requests.Count.ShouldEqual(1024);
+    }
+
+    [Fact]
+    public async Task should_seed_the_same_fence_as_recording_each_request()
+    {
+        EncryptionKeyIdentifier seeded = "seeded";
+        await PrepareRequestSeed(_identifier);
+        await PrepareRequestSeed(seeded);
+        await SeedRequests(_eventStore, _namespace, seeded, 8);
+        for (var index = 1; index <= 8; index++)
+        {
+            await Raise($"request-{index}");
+        }
+
+        AssertFence((await _storage.GetFenceFor(_eventStore, _namespace, seeded))!, await Fence());
+        await Raise("subsequent");
+        await _storage.RecordErasureFor(_eventStore, _namespace, seeded, new("subsequent"));
+        AssertFence((await _storage.GetFenceFor(_eventStore, _namespace, seeded))!, await Fence());
     }
 
     [Fact]
@@ -416,6 +448,17 @@ public abstract class EncryptionKeyStorageContract : Specification
         {
             AssertRequest(requests[index], expectedRequests[index]);
         }
+    }
+
+    async Task PrepareRequestSeed(EncryptionKeyIdentifier identifier)
+    {
+        await _storage.SaveFor(_eventStore, _namespace, identifier, _original, 7u);
+        await _storage.RecordErasureFor(_eventStore, _namespace, identifier, new("old"));
+        await _storage.DeleteThroughFor(_eventStore, _namespace, identifier, "old");
+        await _storage.ConfirmErasureFor(_eventStore, _namespace, identifier, "old");
+        var fence = (await _storage.GetFenceFor(_eventStore, _namespace, identifier))!;
+        await _storage.AllowNewKeyFor(_eventStore, _namespace, identifier, fence.Version, fence.Lifecycle);
+        await _storage.SaveFor(_eventStore, _namespace, identifier, _successor, 11u);
     }
 
     Task Save(EncryptionKey key, EncryptionKeyRevision? revision = null) => _storage.SaveFor(_eventStore, _namespace, _identifier, key, revision);

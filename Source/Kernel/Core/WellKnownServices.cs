@@ -39,6 +39,11 @@ public static class WellKnownServices
     public const string Jobs = "Jobs";
 
     /// <summary>
+    /// The service for explicit constraint index recovery.
+    /// </summary>
+    public const string ConstraintIndexes = "ConstraintIndexes";
+
+    /// <summary>
     /// The name of the Observers service.
     /// </summary>
     public const string Observers = "Observers";

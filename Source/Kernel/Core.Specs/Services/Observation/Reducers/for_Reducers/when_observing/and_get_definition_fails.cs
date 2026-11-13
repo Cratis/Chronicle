@@ -41,7 +41,8 @@ public class and_get_definition_fails : Specification
             AllowingConnectionOwnership.Create(),
             NullLogger<Reducers>.Instance,
             Substitute.For<IObserverRegistrationGate>(),
-            NamespaceCasingContext.Create());
+            NamespaceCasingContext.Create(),
+            NoSiloDepartures.Instance);
 
         _messages = new Subject<ReducerMessage>();
     }

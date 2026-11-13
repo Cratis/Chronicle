@@ -14,6 +14,7 @@ using Key = Cratis.Chronicle.Storage.Compliance.EncryptionKey;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.Encryption.for_EncryptionKeyFenceRollout;
 
+[PerFactSpecificationLifecycle] // Facts run their own asynchronous operations, so each fact gets its own context.
 public abstract class when_rolling_out(KeyStoreHarness harness) : a_key_store(harness)
 {
     static readonly EventStoreName _store = EventStoreName.NotSet;

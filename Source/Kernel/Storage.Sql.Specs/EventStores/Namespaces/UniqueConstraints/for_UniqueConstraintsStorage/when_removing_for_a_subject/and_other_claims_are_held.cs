@@ -5,6 +5,7 @@ using Cratis.Chronicle.Concepts.Events;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints.for_UniqueConstraintsStorage.when_removing_for_a_subject;
 
+[PerFactSpecificationLifecycle] // Facts run their own asynchronous operations, so each fact gets its own context.
 public class and_other_claims_are_held : given.a_unique_constraints_storage
 {
     static readonly EventSourceId _erased = "erased-source";

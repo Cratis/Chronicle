@@ -31,7 +31,7 @@ internal static class ObserverSequenceCache
             .Select(pair => (pair.Key, registry.GetDescriptorFor(pair.Value).EventStore)).ToArray();
         readonly FrozenSet<string> _declaredStores = registry.Descriptors.Values.Select(descriptor => descriptor.EventStore).OfType<string>().ToFrozenSet(StringComparer.Ordinal);
         readonly Dictionary<(Type Observer, string? Store), Entry> _sequences = [];
-        readonly object _lock = new();
+        readonly Lock _lock = new();
 
         internal EventSequenceId Infer(Type observer, EventStoreName store, IEnumerable<EventType> handled)
         {

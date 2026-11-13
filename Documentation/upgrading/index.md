@@ -18,6 +18,10 @@ This minor release makes TLS validation configuration explicit without changing 
 
 See [Client TLS configuration](../configuration/tls) before updating shared connection settings.
 
+## Check a release before you deploy it
+
+Before deploying a client release, you can ask the kernel it will connect to whether it would accept the release's event type registrations. See [Check a release against a kernel](../operations/check-a-release-against-a-kernel.md).
+
 ## Guides
 
 Start with [Every major version](major-versions.md) and read each row between your current
@@ -73,6 +77,13 @@ Replay existing SQL read models that carry decimal properties before relying on 
 column mapping. The migrator does not alter their existing columns in place. See
 [Exact decimal values](../events/schema-representation.mdx#exact-decimal-values) for provider mappings, legacy doubles and the
 SQL Server scale limit.
+
+## Stored schema annotations from .NET 11 clients
+
+Upgrade the kernel before clients that emit different schema annotations. Registration tolerates annotation
+differences but does not clean up annotations already stored. To inspect and explicitly normalize schemas
+written by older clients, follow [Clean up stored schema annotations](../operations/schema-annotation-cleanup.md).
+Cleanup preserves titles, descriptions, constraints, generations, migrations, and event content.
 
 ## Reverse proxies after the forwarded-header security change
 

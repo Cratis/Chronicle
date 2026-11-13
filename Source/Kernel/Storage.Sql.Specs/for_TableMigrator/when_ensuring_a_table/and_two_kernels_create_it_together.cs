@@ -7,6 +7,7 @@ using Npgsql;
 
 namespace Cratis.Chronicle.Storage.Sql.for_TableMigrator.when_ensuring_a_table;
 
+[PerFactSpecificationLifecycle] // Facts run their own asynchronous operations, so each fact gets its own context.
 [Collection(PostgreSqlCollection.Name)]
 public class and_two_kernels_create_it_together(PostgreSqlFixture fixture) : given.a_postgresql_table_migrator(fixture)
 {
