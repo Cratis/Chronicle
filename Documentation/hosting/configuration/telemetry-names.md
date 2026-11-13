@@ -95,6 +95,9 @@ These instruments were added after the convention. They have no legacy name and 
 | `observer.job.handled_steps` | `{step}` |
 | `observer.job.total_steps` | `{step}` |
 | `event_sequence.append.duration` | `s` |
+| `projection.cached_graphs` | `{graph}` |
+
+`cratis.chronicle.projection.cached_graphs` reports the number of compiled root projection graphs retained in the engine cache on each silo, without per-namespace attributes. The cache retains at most 256 graphs across all event stores and namespaces. Evicted graphs are rebuilt when needed; graphs still held by active pipelines are not included in this count.
 
 `observer.successful_observations` now also counts catch-up, replay and retry deliveries, in every mode. Its convention series carry `cratis.replay`. Its legacy series keep their original tags. [OpenTelemetry](open-telemetry.md#successful-observations-include-recovery-work) describes the change.
 
