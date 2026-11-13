@@ -8,6 +8,7 @@ import { DialogButtons, DialogResult } from '@cratis/arc.react/dialogs';
 import { IDialogs } from '@cratis/arc.react.mvvm/dialogs';
 import { Guid } from '@cratis/fundamentals';
 import { ReindexConstraints } from 'Features/Events/Constraints/Operator/ReindexConstraints';
+import { type ConstraintReindexCapability } from 'Features/Events/Constraints/Operator/ConstraintReindexCapability';
 import strings from 'Strings';
 
 const messages = strings.eventStore.namespaces.constraints;
@@ -21,8 +22,8 @@ export class ConstraintsViewModel {
     constructor(private readonly _reindex: ReindexConstraints, private readonly _dialogs: IDialogs) {
     }
 
-    canReindex(authorization: Pick<QueryResult<boolean>, 'isReady' | 'isSuccess' | 'isAuthorized' | 'data'>): boolean {
-        return authorization.isReady && authorization.isSuccess && authorization.isAuthorized && authorization.data === true;
+    canReindex(authorization: Pick<QueryResult<ConstraintReindexCapability>, 'isReady' | 'isSuccess' | 'isAuthorized' | 'data'>): boolean {
+        return authorization.isReady && authorization.isSuccess && authorization.isAuthorized && authorization.data?.canReindex === true;
     }
 
     async reindex(eventStore: string, namespace: string) {
@@ -54,7 +55,7 @@ export class ConstraintsViewModel {
             return;
         }
         const jobId = result.response;
-        if (!result.isSuccess || !jobId || jobId.equals(Guid.empty)) {
+        if (!jobId || jobId.equals(Guid.empty)) {
             this.feedback = messages.failed;
             return;
         }
@@ -66,6 +67,7 @@ export class ConstraintsViewModel {
         if (!result.isAuthorized) return messages.unauthorized;
         if (!result.isValid) return result.validationResults.map(validation => validation.message).join(' ') || messages.invalid;
         if (result.hasExceptions) return result.exceptionMessages.join(' ') || messages.failed;
+        if (!result.isSuccess) return messages.failed;
         return undefined;
     }
 }

@@ -5,11 +5,11 @@ import { given } from 'given';
 import { a_view_model } from './given/a_view_model';
 
 for (const [name, authorization, available] of [
-    ['authorized', { isReady: true, isSuccess: true, isAuthorized: true, data: true }, true],
-    ['unauthorized', { isReady: true, isSuccess: false, isAuthorized: false, data: true }, false],
-    ['loading', { isReady: false, isSuccess: true, isAuthorized: true, data: true }, false],
-    ['failed', { isReady: true, isSuccess: false, isAuthorized: true, data: true }, false],
-    ['unavailable', { isReady: true, isSuccess: true, isAuthorized: true, data: false }, false]
+    ['authorized', { isReady: true, isSuccess: true, isAuthorized: true, data: { canReindex: true } }, true],
+    ['unauthorized', { isReady: true, isSuccess: true, isAuthorized: false, data: { canReindex: true } }, false],
+    ['loading', { isReady: false, isSuccess: true, isAuthorized: true, data: { canReindex: true } }, false],
+    ['failed', { isReady: true, isSuccess: false, isAuthorized: true, data: { canReindex: true } }, false],
+    ['unavailable', { isReady: true, isSuccess: true, isAuthorized: true, data: { canReindex: false } }, false]
 ] as const) {
     describe(`when checking authorization and ${name}`, given(a_view_model, context => {
         it('should only offer the action after authorization succeeds', () => context.viewModel.canReindex(authorization).should.equal(available));
