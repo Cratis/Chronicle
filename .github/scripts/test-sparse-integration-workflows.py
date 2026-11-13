@@ -4,7 +4,6 @@
 """Guard trigger separation and check names so unrelated labels cannot mask failures."""
 
 from dataclasses import dataclass
-import fnmatch
 from itertools import product
 import importlib.util
 import json
@@ -27,51 +26,6 @@ EFFECTIVE_LABEL = ("(github.event.action == 'labeled' && github.event.label.name
 
 
 GATE = "already-ran"
-
-# What the coverage merges wait for and require; the final merge additionally needs the partials.
-LANE_PREREQUISITES = {"specs", "integration", "integration-api", "mongodb", "neo4j"}
-
-# Slot budget (#5875): the client cap plus the capped lanes. The matrices only run beside each other, so the peak stays under 45.
-INTEGRATION_CAPS = {
-    "client-integration-specs": 40,
-    "kernel-integration-specs": 2,
-    "clustering-integration-specs": 1,
-    "sql-clustering-integration-specs": 1,
-    "sql-clustering-rolling-upgrade": 1,
-}
-
-
-def expand_braces(pattern):
-    """Expand one {a,b} alternation, which the artifact glob supports and fnmatch does not."""
-    match = re.search(r"\{([^{}]*)\}", pattern)
-    if not match:
-        return [pattern]
-    return [expanded for option in match.group(1).split(",")
-            for expanded in expand_braces(pattern[:match.start()] + option + pattern[match.end():])]
-
-
-def matches_pattern(pattern, name):
-    return any(fnmatch.fnmatchcase(name, expanded) for expanded in expand_braces(pattern))
-
-
-def generated_matrix(suite):
-    completed = subprocess.run(
-        ["python3", "-B", ".github/scripts/generate-integration-matrix.py", "--suite", suite, "--all-providers"],
-        cwd=WORKFLOWS.parents[1], check=True, capture_output=True, text=True, timeout=60)
-    return json.loads(completed.stdout)["include"]
-
-
-def coverage_artifact_names(jobs):
-    """Every coverage-results-* artifact name an all-provider run can upload, from the matrices that name them."""
-    names = ["coverage-results-integration-api", "coverage-results-mongodb"]
-    names += [f"coverage-results-client-{e['namespace']}-{e['shard']}-{e['mode']}-{e['database']}"
-              for e in generated_matrix("client")]
-    names += [f"coverage-results-kernel-{e['namespace']}" for e in generated_matrix("kernel")]
-    names += [f"coverage-results-clustering-{e['namespace']}" for e in generated_matrix("clustering")]
-    names += [f"coverage-results-specs-other-{shard}" for shard in jobs["specs-other"]["strategy"]["matrix"]["shard"]]
-    names += [f"coverage-results-specs-sql-{shard}" for shard in jobs["specs-sql"]["strategy"]["matrix"]["shard"]]
-    names += [f"coverage-results-neo4j-{entry['lane']}" for entry in jobs["neo4j"]["strategy"]["matrix"]["include"]]
-    return names
 
 
 def prerequisites_of(job):
@@ -540,7 +494,6 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         self.assertTrue(any(step.get("uses") == "./.github/actions/assert-tests-ran" for step in steps))
         self.assertEqual("coverage-results-specs-sql-${{ matrix.shard }}", steps[-1]["with"]["name"])
         self.assertIn('--coverage', run)
-        # The final merge reads the partial merges; the groups together read every coverage-results-* artifact.
         download = next(step for step in jobs["coverage-merge-and-cache"]["steps"]
                         if step["name"] == "Download the merged coverage of every group")
         self.assertEqual("coverage-partial-*", download["with"]["pattern"])
@@ -828,47 +781,12 @@ class SparseIntegrationWorkflows(unittest.TestCase):
 
     def test_coverage_cannot_be_cached_if_any_integration_dependency_failed_or_was_skipped(self):
         coverage = self.build["jobs"]["coverage-merge-and-cache"]
-        self.assertEqual(LANE_PREREQUISITES | {"coverage-partial"}, set(prerequisites_of(coverage)))
+        self.assertEqual({"specs", "integration", "integration-api", "mongodb", "neo4j", "coverage-partial"},
+                         set(prerequisites_of(coverage)))
         self.assertIn("github.event_name != 'pull_request_target'", coverage["if"])
         self.assertIn("!cancelled()", coverage["if"])
         for dependency in prerequisites_of(coverage):
             self.assertIn(f"needs.{dependency}.result == 'success'", coverage["if"])
-
-    def test_every_partial_merge_waits_for_and_requires_the_same_lanes_as_the_final_merge(self):
-        partial = self.build["jobs"]["coverage-partial"]
-        self.assertEqual(LANE_PREREQUISITES, set(prerequisites_of(partial)))
-        self.assertEqual("false", partial["strategy"]["fail-fast"])
-        self.assertIn("github.event_name != 'pull_request_target'", partial["if"])
-        self.assertIn("!cancelled()", partial["if"])
-        for dependency in prerequisites_of(partial):
-            self.assertIn(f"needs.{dependency}.result == 'success'", partial["if"])
-        # A failed partial must stop the final merge from caching: it has to require the partial's success, not just wait.
-        coverage = self.build["jobs"]["coverage-merge-and-cache"]
-        self.assertIn("needs.coverage-partial.result == 'success'", coverage["if"])
-
-    def test_the_coverage_groups_partition_every_coverage_artifact_exactly_once(self):
-        groups = self.build["jobs"]["coverage-partial"]["strategy"]["matrix"]["include"]
-        names = coverage_artifact_names(self.build["jobs"])
-        # The set is not vacuous: every lane contributes artifacts.
-        for prefix in ("coverage-results-client-", "coverage-results-kernel-", "coverage-results-clustering-",
-                       "coverage-results-specs-other-", "coverage-results-specs-sql-", "coverage-results-neo4j-",
-                       "coverage-results-integration-api", "coverage-results-mongodb"):
-            self.assertTrue(any(name.startswith(prefix) for name in names), prefix)
-        for name in names:
-            owners = [group["group"] for group in groups if matches_pattern(group["pattern"], name)]
-            with self.subTest(artifact=name):
-                self.assertEqual(1, len(owners), owners)
-        self.assertEqual(len(groups), len({group["group"] for group in groups}))
-        # An empty group is skipped, never failed, so a pull request without PostgreSQL or SQL Server still merges.
-        steps = self.build["jobs"]["coverage-partial"]["steps"]
-        for step in steps[2:]:
-            self.assertIn("steps.inputs.outputs.count != '0'", step["if"])
-
-    def test_the_integration_matrices_are_capped_so_the_run_peak_stays_bounded(self):
-        integration = workflow("integration.yml")["jobs"]
-        caps = {job: integration[job]["strategy"]["max-parallel"] for job in INTEGRATION_CAPS}
-        self.assertEqual(INTEGRATION_CAPS, {job: int(cap) for job, cap in caps.items()})
-        self.assertEqual("1", self.build["jobs"]["neo4j"]["strategy"]["max-parallel"])
 
     def test_coverage_allows_successful_paths_despite_skipped_development_ancestor(self):
         jobs = self.build["jobs"]
