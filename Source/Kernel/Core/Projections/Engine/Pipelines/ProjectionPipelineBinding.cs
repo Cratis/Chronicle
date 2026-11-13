@@ -15,6 +15,9 @@ public record ProjectionPipelineBinding(IProjection Projection, IProjectionPipel
     /// <summary>Gets the definition fingerprint captured when the pipeline was created.</summary>
     public string Fingerprint { get; } = Projection.DefinitionFingerprint;
 
+    /// <summary>Gets or sets whether the idle sweep released this binding.</summary>
+    internal bool Swept { get; set; }
+
     /// <summary>
     /// Observes the pipeline and reports whether it has shown no activity since the previous observations for at least the timeout.
     /// </summary>

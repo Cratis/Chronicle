@@ -36,6 +36,7 @@ public class GraphProjectionPipeline(
 {
     long _activity;
     bool _sessionOpen;
+    Action? _sessionOpened;
 
     /// <inheritdoc/>
     public long GetActivity() => Interlocked.Read(ref _activity);
@@ -44,10 +45,13 @@ public class GraphProjectionPipeline(
     public bool IsPinned() => Volatile.Read(ref _sessionOpen);
 
     /// <inheritdoc/>
+    public void ObserveSessions(Action onSessionOpened) => _sessionOpened = onSessionOpened;
+
+    /// <inheritdoc/>
     public Task BeginReplay(ReplayContext context)
     {
         Interlocked.Increment(ref _activity);
-        Volatile.Write(ref _sessionOpen, true);
+        OpenSession();
         return sink.BeginReplay(projection.Identifier, context);
     }
 
@@ -55,7 +59,7 @@ public class GraphProjectionPipeline(
     public Task ResumeReplay(ReplayContext context)
     {
         Interlocked.Increment(ref _activity);
-        Volatile.Write(ref _sessionOpen, true);
+        OpenSession();
         return sink.ResumeReplay(projection.Identifier, context);
     }
 
@@ -77,7 +81,7 @@ public class GraphProjectionPipeline(
     public Task BeginBulk()
     {
         Interlocked.Increment(ref _activity);
-        Volatile.Write(ref _sessionOpen, true);
+        OpenSession();
         return sink.BeginBulk();
     }
 
@@ -85,7 +89,7 @@ public class GraphProjectionPipeline(
     public Task ResumeBulk()
     {
         Interlocked.Increment(ref _activity);
-        Volatile.Write(ref _sessionOpen, true);
+        OpenSession();
         return sink.ResumeBulk();
     }
 
@@ -121,5 +125,11 @@ public class GraphProjectionPipeline(
 
         logger.AppliedOperations(changeset.Operations.Count, @event.Context.SequenceNumber);
         return context;
+    }
+
+    void OpenSession()
+    {
+        Volatile.Write(ref _sessionOpen, true);
+        _sessionOpened?.Invoke();
     }
 }

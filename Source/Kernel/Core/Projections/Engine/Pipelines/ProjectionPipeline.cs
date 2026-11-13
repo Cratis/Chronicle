@@ -64,6 +64,7 @@ public partial class ProjectionPipeline(
 
     long _activity;
     bool _bulkOpen;
+    Action? _sessionOpened;
 
     ReadModelContainerName ChangesetContainer => generation?.Destination ?? projection.ReadModel.ContainerName;
 
@@ -74,11 +75,15 @@ public partial class ProjectionPipeline(
     public bool IsPinned() => Volatile.Read(ref _isReplaying) || Volatile.Read(ref _bulkOpen);
 
     /// <inheritdoc/>
+    public void ObserveSessions(Action onSessionOpened) => _sessionOpened = onSessionOpened;
+
+    /// <inheritdoc/>
     public async Task BeginReplay(ReplayContext context)
     {
         Interlocked.Increment(ref _activity);
         ClearPreparedPage();
         _isReplaying = true;
+        _sessionOpened?.Invoke();
         replayScopedCache.BeginReplaySession();
         if (generation is not null)
         {
@@ -95,6 +100,7 @@ public partial class ProjectionPipeline(
         Interlocked.Increment(ref _activity);
         ClearPreparedPage();
         _isReplaying = true;
+        _sessionOpened?.Invoke();
         replayScopedCache.BeginReplaySession();
         return generation is null ? sink.ResumeReplay(context) : Task.CompletedTask;
     }
@@ -148,6 +154,7 @@ public partial class ProjectionPipeline(
     {
         Interlocked.Increment(ref _activity);
         Volatile.Write(ref _bulkOpen, true);
+        _sessionOpened?.Invoke();
         return sink.BeginBulk();
     }
 
@@ -156,6 +163,7 @@ public partial class ProjectionPipeline(
     {
         Interlocked.Increment(ref _activity);
         Volatile.Write(ref _bulkOpen, true);
+        _sessionOpened?.Invoke();
         return sink.ResumeBulk();
     }
 

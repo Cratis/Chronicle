@@ -65,6 +65,7 @@ public class ProjectionPipelineManager(
     readonly TimeProvider _time = timeProvider ?? TimeProvider.System;
     readonly ProjectionPipelineManagerMetrics _metrics = new(meter, options.Value.Telemetry.MetricNames);
     readonly object _sweepGate = new();
+    readonly object _registryGate = new();
 
     /// <summary>
     /// Per-projection handle lock keyed by (eventStore, namespace, projectionId).
@@ -209,14 +210,15 @@ public class ProjectionPipelineManager(
     {
         var now = _time.GetUtcNow();
         ICollection<KeyValuePair<string, ProjectionPipelineBinding>> entries = _pipelines;
-        foreach (var entry in _pipelines.ToArray())
+        lock (_registryGate)
         {
-            if (entry.Value.Pipeline.IsPinned() || !entry.Value.IsIdle(now, IdleTimeout)) continue;
-            if (!entries.Remove(entry)) continue;
-
-            // A session opened between the check and the removal must stay discoverable for its flush/drain.
-            if (entry.Value.Pipeline.IsPinned()) _pipelines.TryAdd(entry.Key, entry.Value);
-            else entry.Value.Pipeline.ClearPreparedPage();
+            foreach (var entry in _pipelines.ToArray())
+            {
+                if (entry.Value.Pipeline.IsPinned() || !entry.Value.IsIdle(now, IdleTimeout)) continue;
+                if (!entries.Remove(entry)) continue;
+                entry.Value.Swept = true;
+                entry.Value.Pipeline.ClearPreparedPage();
+            }
         }
 
         _handleLocks.Prune();
@@ -248,9 +250,28 @@ public class ProjectionPipelineManager(
 
     void Bind(string key, EngineProjection projection, IProjectionPipeline pipeline)
     {
-        _pipelines[key] = new(projection, pipeline);
+        var binding = new ProjectionPipelineBinding(projection, pipeline);
+        _pipelines[key] = binding;
+        pipeline.ObserveSessions(() => Rebind(key, binding));
         _metrics.Pipelines(_pipelines.Count);
         SweepWhenDue();
+    }
+
+    /// <summary>
+    /// Makes a binding the idle sweep released discoverable again because a replay or bulk session opened on its pipeline.
+    /// Runs under the same gate as the sweep, so the session's flush/drain never looks for a pipeline the sweep is removing.
+    /// </summary>
+    /// <param name="key">The binding key.</param>
+    /// <param name="binding">The binding.</param>
+    void Rebind(string key, ProjectionPipelineBinding binding)
+    {
+        lock (_registryGate)
+        {
+            if (!binding.Swept) return;
+            if (_pipelines.TryAdd(key, binding)) binding.Swept = false;
+        }
+
+        _metrics.Pipelines(_pipelines.Count);
     }
 
     void SweepWhenDue()

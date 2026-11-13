@@ -88,6 +88,15 @@ public interface IProjectionPipeline
     bool IsPinned() => false;
 
     /// <summary>
+    /// Registers a callback that is invoked, after the session is marked open, whenever a replay or bulk session opens.
+    /// </summary>
+    /// <remarks>The pipeline manager uses it to make a swept pipeline discoverable again before the session's flush or drain looks for it.</remarks>
+    /// <param name="onSessionOpened">The callback.</param>
+    void ObserveSessions(Action onSessionOpened)
+    {
+    }
+
+    /// <summary>
     /// Prepares the pipeline for a page of events that is about to be handled, one partition run at a time.
     /// </summary>
     /// <param name="events">The events of the page, in the order they will be handled.</param>
