@@ -117,12 +117,8 @@ jobs:
     if: needs.discover.outputs.client-run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 120
-    # Slot budget (#4765): per-run bound, not an org guarantee. Caps sum with the singletons to INTEGRATION_SLOT_BUDGET = 12,
-    # pinned by test-sparse-integration-workflows.py: client 5, kernel 1, clustering 1, sql-clustering 1, rolling-upgrade 1,
-    # neo4j 1 (dotnet-build.yml), integration-api 1, mongodb 1. The ordinary specs stay uncapped on the critical path.
     strategy:
       fail-fast: false
-      max-parallel: 5
       matrix: ${{ fromJson(needs.discover.outputs.client-matrix) }}
 
     steps:
@@ -252,7 +248,6 @@ jobs:
     timeout-minutes: 120
     strategy:
       fail-fast: false
-      max-parallel: 1
       matrix: ${{ fromJson(needs.discover.outputs.kernel-matrix) }}
 
     steps:
@@ -337,7 +332,6 @@ jobs:
     timeout-minutes: 120
     strategy:
       fail-fast: false
-      max-parallel: 1
       matrix: ${{ fromJson(needs.discover.outputs.clustering-matrix) }}
 
     steps:
@@ -409,7 +403,6 @@ jobs:
     timeout-minutes: 60
     strategy:
       fail-fast: false
-      max-parallel: 1
       matrix:
         provider: [PostgreSql, SqlServer]
 
@@ -597,7 +590,6 @@ jobs:
     timeout-minutes: 60
     strategy:
       fail-fast: false
-      max-parallel: 1
       matrix:
         # Replace nodes from the latest release one at a time under load on PostgreSQL (#5272).
         provider: [RollingUpgrade]

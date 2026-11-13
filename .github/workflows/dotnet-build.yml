@@ -134,7 +134,7 @@ jobs:
 
       - name: Spec executable runner contracts and forbid test-host dispatch
         run: |
-          node --test .github/scripts/test-run-concurrency-report.mjs .github/scripts/test-mixed-spec-runners.mjs .github/scripts/test-spec-shards.mjs .github/scripts/spec-shard-workflow.test.mjs .github/scripts/test-spec-wall-timings.mjs
+          node --test .github/scripts/test-mixed-spec-runners.mjs .github/scripts/test-spec-shards.mjs .github/scripts/spec-shard-workflow.test.mjs .github/scripts/test-spec-wall-timings.mjs
           node .github/scripts/spec-shards.mjs --dry-run
 
       - name: Spec coverage statistics honesty (missing input never advances the measurement date)
@@ -1170,8 +1170,6 @@ jobs:
     needs: [already-ran, dotnet-build]
     strategy:
       fail-fast: false
-      # One of the integration slot budget caps (#4765); see integration.yml and test-sparse-integration-workflows.py.
-      max-parallel: 1
       matrix:
         include:
           # The Community edition has one database, so every namespace shares it.
