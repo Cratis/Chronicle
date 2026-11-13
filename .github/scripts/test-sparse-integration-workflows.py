@@ -1182,7 +1182,7 @@ class for_parallel_requested_integration(unittest.TestCase):
                       '  echo "::error::Requested integration did not pass ($INTEGRATION)."\n'
                       '  exit 1', decide["run"])
 
-    def test_client_integration_lanes_keep_crash_minidumps_for_failed_jobs(self):
+    def test_client_integration_lanes_keep_crash_minidumps_even_when_a_retry_passes(self):
         # Cratis/Chronicle#5630: the test host intermittently dies with SIGSEGV and no dump was kept.
         steps = workflow("integration.yml")["jobs"]["client-integration-specs"]["steps"]
         run = next(step for step in steps if step.get("name", "").startswith("Run Client integration tests"))
@@ -1192,7 +1192,7 @@ class for_parallel_requested_integration(unittest.TestCase):
         self.assertTrue(env["DOTNET_DbgMiniDumpName"].startswith("${{ runner.temp }}/crash-dumps/"))
         self.assertIn('mkdir -p "$RUNNER_TEMP/crash-dumps"', run["run"])
         upload = next(step for step in steps if step.get("name") == "Upload crash dumps")
-        self.assertEqual("failure()", upload["if"])
+        self.assertEqual("always()", upload["if"])  # a retried crash leaves the job green
         self.assertEqual("${{ runner.temp }}/crash-dumps/", upload["with"]["path"])
         self.assertEqual("ignore", upload["with"]["if-no-files-found"])
 
