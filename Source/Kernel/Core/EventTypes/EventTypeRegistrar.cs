@@ -139,6 +139,19 @@ public sealed class EventTypeRegistrar(IGrainFactory grainFactory)
 
     static async Task<EventTypeCheckResult> CheckRegistration(EventTypeRegistration eventType, EventTypeDefinition? storedDefinition)
     {
+        try
+        {
+            return await CheckReadableRegistration(eventType, storedDefinition);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // A schema or migration that cannot even be read must not abort the check for the other registrations.
+            return EventTypeCheckResult.Reject(eventType.Type.Id, eventType.Type.Generation, $"The event type could not be processed: {ex.Message}");
+        }
+    }
+
+    static async Task<EventTypeCheckResult> CheckReadableRegistration(EventTypeRegistration eventType, EventTypeDefinition? storedDefinition)
+    {
         var id = eventType.Type.Id;
         var generation = eventType.Type.Generation;
 
@@ -168,11 +181,6 @@ public sealed class EventTypeRegistrar(IGrainFactory grainFactory)
         catch (InvalidMigrationPropertyForEventType ex)
         {
             return EventTypeCheckResult.Reject(id, generation, ex.Message);
-        }
-        catch (Exception ex)
-        {
-            // A schema or migration that cannot even be read must not abort the check for the other registrations.
-            return EventTypeCheckResult.Reject(id, generation, $"The event type could not be processed: {ex.Message}");
         }
 
         return EventTypeCheckResult.Accept(id, generation);
