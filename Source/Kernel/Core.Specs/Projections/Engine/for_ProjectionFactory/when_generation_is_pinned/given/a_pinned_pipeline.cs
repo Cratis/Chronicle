@@ -47,7 +47,7 @@ public class a_pinned_pipeline : a_projection_with_generations
             new ResolveKey(_sequence, _sink, new TypeFormats(), NullLogger<ResolveKey>.Instance),
             new SetInitialState(_sink, NullLogger<SetInitialState>.Instance),
             new HandleEvent(_sequence, _sink, NullLogger<HandleEvent>.Instance),
-            new SaveChanges(_sink, changes, true, NullLogger<SaveChanges>.Instance)
+            new SaveChanges(_sink, changes, true, false, NullLogger<SaveChanges>.Instance)
         };
         return new(_projection, _sink, changes, new ObjectComparer(), steps, new ProjectionHandleLock(), Substitute.For<IReplayScopedCache>(), NullLogger<ProjectionPipeline>.Instance);
     }

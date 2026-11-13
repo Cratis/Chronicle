@@ -32,6 +32,11 @@ public static class WellKnownProperties
     public const string Subjects = "__subjects";
 
     /// <summary>
+    /// The property name for the applied event markers a sink keeps for <see cref="Sinks.SinkWriteMode.OncePerSourceEvent"/>.
+    /// </summary>
+    public const string AppliedEventMarkers = "__applied";
+
+    /// <summary>
     /// All the kernel bookkeeping property names.
     /// </summary>
     /// <remarks>
@@ -40,5 +45,5 @@ public static class WellKnownProperties
     /// declare them unless it deliberately exposes one. Every name declared above belongs in here; leaving one
     /// out is how such a walk ends up rejecting a property the kernel put there.
     /// </remarks>
-    public static readonly ImmutableArray<string> All = [LastHandledEventSequenceNumber, ReadModelInstanceInitialized, Subject, Subjects];
+    public static readonly ImmutableArray<string> All = [LastHandledEventSequenceNumber, ReadModelInstanceInitialized, Subject, Subjects, AppliedEventMarkers];
 }

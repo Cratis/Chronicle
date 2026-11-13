@@ -165,7 +165,7 @@ internal sealed class ReadModels(
             schema,
             instances);
 
-        var instancesAsJson = releasedInstances.Select(instance => JsonSerializer.Serialize(instance.WithoutInitializationState(schema))).ToList();
+        var instancesAsJson = releasedInstances.Select(instance => JsonSerializer.Serialize(instance.WithoutSinkBookkeeping(schema))).ToList();
         return new()
         {
             Instances = instancesAsJson,
@@ -608,7 +608,7 @@ internal sealed class ReadModels(
         }
 
         var schema = definition.GetSchemaForLatestGeneration();
-        var jsonObject = expandoObjectConverter.ToJsonObject(instance.WithoutInitializationState(schema), schema);
+        var jsonObject = expandoObjectConverter.ToJsonObject(instance.WithoutSinkBookkeeping(schema), schema);
 
         return new GetInstanceByKeyResponse
         {
@@ -632,7 +632,7 @@ internal sealed class ReadModels(
 
     string SerializeInstance(ExpandoObject instance, JsonSchema schema)
     {
-        var jsonObject = expandoObjectConverter.ToJsonObject(instance.WithoutInitializationState(schema), schema);
+        var jsonObject = expandoObjectConverter.ToJsonObject(instance.WithoutSinkBookkeeping(schema), schema);
 
         // ToJsonObject drops the last handled event sequence number when the schema does not describe it, so
         // put it back — clients mirror it onto the instance to tell how far it has been brought up to date.
