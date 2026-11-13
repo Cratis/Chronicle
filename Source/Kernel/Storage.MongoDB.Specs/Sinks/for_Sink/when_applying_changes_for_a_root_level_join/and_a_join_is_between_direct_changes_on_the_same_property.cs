@@ -19,6 +19,6 @@ public class and_a_join_is_between_direct_changes_on_the_same_property : given.a
 
     [Fact] void should_write_the_first_direct_change_the_join_and_the_last_direct_change() => _writes.Select(_ => _.Kind).ShouldEqual(["one", "many", "one"]);
     [Fact] void should_write_the_other_property_first() => _writes[0].Update.ToString().ShouldContain("\"x\"");
-    [Fact] void should_write_the_joined_value_second() => _writes[1].Update.ToString().ShouldContain("\"count\" : NumberLong(2)");
-    [Fact] void should_write_the_last_direct_value_last() => _writes[2].Update.ToString().ShouldContain("\"count\" : NumberLong(3)");
+    [Fact] void should_write_the_joined_value_second() => _writes[1].Update["$set"]["count"].ToInt64().ShouldEqual(2);
+    [Fact] void should_write_the_last_direct_value_last() => _writes[2].Update.ToString().ShouldContain("{ \"$literal\" : 3 }");
 }
