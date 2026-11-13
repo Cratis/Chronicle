@@ -19,6 +19,7 @@ public static class system_store_command_policy
         "Cratis.Chronicle.EventStores.RegisterDeployment",
         "Cratis.Chronicle.EventTypes.CheckEventTypeRegistrations",
         "Cratis.Chronicle.EventTypes.CreateEventType",
+        "Cratis.Chronicle.EventTypes.NormalizeEventTypeSchemas",
         "Cratis.Chronicle.EventTypes.RegisterEventTypes",
         "Cratis.Chronicle.EventTypes.RegisterSingleEventType",
         "Cratis.Chronicle.ExternalServices.AddExternalService",

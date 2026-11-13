@@ -150,13 +150,7 @@ public static class JsonSchemaCompatibilityExtensions
     /// Strips annotation-only keywords from schema declarations, without visiting arbitrary default payloads or property maps.
     /// </summary>
     /// <param name="node">The schema node.</param>
-    internal static void StripAnnotations(JsonNode? node) => DefaultOnlyPropertyRefinement.Normalize(node, schema =>
-    {
-        foreach (var keyword in _annotationKeywords)
-        {
-            schema.Remove(keyword);
-        }
-    });
+    internal static void StripAnnotations(JsonNode? node) => JsonSchemaAnnotations.RemoveKeywords(node, _annotationKeywords);
 
     /// <summary>
     /// Strips the free-text details from compliance and security metadata; the metadata type and scope remain.

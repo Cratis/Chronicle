@@ -155,6 +155,27 @@ public partial class EventTypesStorage(EventStoreName eventStore, IDatabase data
     }
 
     /// <inheritdoc/>
+    public async Task<bool> ReplaceSchema(EventTypeId eventTypeId, EventTypeGeneration generation, JsonSchema schema)
+    {
+        await using var scope = await database.EventStore(eventStore);
+        var id = eventTypeId.Value;
+        var stored = await scope.DbContext.EventTypes.FirstOrDefaultAsync(item => item.Id == id);
+        if (stored is null || !stored.Schemas.TryGetValue(generation.Value, out var previous))
+        {
+            return false;
+        }
+        if (JsonNode.DeepEquals(JsonNode.Parse(previous), schema.Node))
+        {
+            return false;
+        }
+
+        stored.Schemas = new Dictionary<uint, string>(stored.Schemas) { [generation.Value] = schema.ToJson() };
+        await scope.DbContext.SaveChangesAsync();
+        Invalidate(eventTypeId);
+        return true;
+    }
+
+    /// <inheritdoc/>
     public async Task<IEnumerable<EventTypeSchema>> GetLatestForAllEventTypes()
     {
         await using var scope = await database.EventStore(eventStore);

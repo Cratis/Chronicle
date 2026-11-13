@@ -93,6 +93,16 @@ public partial class EventTypesStorage(
     }
 
     /// <inheritdoc/>
+    public async Task<bool> ReplaceSchema(EventTypeId eventTypeId, EventTypeGeneration generation, JsonSchema schema)
+    {
+        var path = $"{nameof(EventType.Schemas).ToCamelCase()}.{generation}";
+        var filter = Builders<EventType>.Filter.Eq(_ => _.Id, eventTypeId) & Builders<EventType>.Filter.Exists(path);
+        var update = Builders<EventType>.Update.Set(path, BsonDocument.Parse(schema.ToJson()));
+        var result = await GetCollection().UpdateOneAsync(filter, update).ConfigureAwait(false);
+        return InvalidateIfMutated(eventTypeId, result.ModifiedCount > 0);
+    }
+
+    /// <inheritdoc/>
     public async Task<IEnumerable<EventTypeSchema>> GetLatestForAllEventTypes()
     {
         using var result = await GetCollection().FindAsync(_ => true).ConfigureAwait(false);
