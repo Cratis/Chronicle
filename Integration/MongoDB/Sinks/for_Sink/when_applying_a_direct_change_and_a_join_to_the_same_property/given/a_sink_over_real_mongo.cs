@@ -38,7 +38,7 @@ public class a_sink_over_real_mongo(ChronicleInProcessFixture fixture) : Integra
             new BsonDocument { ["_id"] = "other", ["joinId"] = "root", ["count"] = 0 }
         ]);
         var schema = await JsonSchema.FromJsonAsync("""
-            {"type":"object","properties":{"joinId":{"type":"string"},"count":{"type":"integer"},"x":{"type":"integer"},"retained":{"type":"string"}}}
+            {"type":"object","properties":{"joinId":{"type":"string"},"count":{"type":"integer"},"x":{"type":"integer"},"retained":{"type":"string"},"ref":{"type":"integer","format":"int32"}}}
             """);
         _readModel = new ReadModelDefinition("model", "models", "Model", ReadModelOwner.Client, ReadModelSource.Code, ReadModelObserverType.Projection, ReadModelObserverIdentifier.Unspecified, SinkDefinition.None, new Dictionary<ReadModelGeneration, JsonSchema> { { ReadModelGeneration.First, schema } }, []);
     }

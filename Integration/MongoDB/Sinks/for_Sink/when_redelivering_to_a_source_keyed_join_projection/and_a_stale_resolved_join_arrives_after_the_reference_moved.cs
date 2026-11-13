@@ -17,7 +17,7 @@ public class and_a_stale_resolved_join_arrives_after_the_reference_moved(Chronic
         using var sink = CreateSink(UnfencedSinkWrites.Instance);
         await Apply(sink, OwnEvent(30UL), DirectText(("joinId", "b2")));
         _before = await Read("root");
-        await Apply(sink, OwnEvent(20UL), Direct(("x", 1)), ResolvedFor(JoinedStream, JoinEvent(5UL), ("count", 99)));
+        await Apply(sink, OwnEvent(20UL), Direct(("x", 1)), ResolvedOf(JoinEvent(5UL), ("count", 99)));
         _after = await Read("root");
     }
 

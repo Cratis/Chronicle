@@ -15,8 +15,8 @@ public class and_the_reference_returns_to_an_earlier_join_target(ChronicleInProc
     {
         using var sink = CreateSink(UnfencedSinkWrites.Instance);
         await Apply(sink, JoinEvent(20UL), JoinOf(("count", 20)));
-        await Apply(sink, OwnEvent(30UL), DirectText(("joinId", "b2")), ResolvedFor("b2", EventOf("joined", "b2", 7UL), ("count", 7)));
-        await Apply(sink, OwnEvent(40UL), DirectText(("joinId", JoinedStream)), ResolvedFor(JoinedStream, JoinEvent(20UL), ("count", 20)));
+        await Apply(sink, OwnEvent(30UL), DirectText(("joinId", "b2")), ResolvedOf(EventOf("joined", "b2", 7UL), ("count", 7)));
+        await Apply(sink, OwnEvent(40UL), DirectText(("joinId", JoinedStream)), ResolvedOf(JoinEvent(20UL), ("count", 20)));
         _root = await Read("root");
     }
 

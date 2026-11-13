@@ -30,7 +30,7 @@ public class and_the_reference_is_stored_as_another_bson_type(ChronicleInProcess
         using var sink = CreateSink(UnfencedSinkWrites.Instance);
         foreach (var id in new[] { "int32", "int64", "text", "missing" })
         {
-            var resolved = new ResolvedJoin(new System.Dynamic.ExpandoObject(), 5, new PropertyPath("ref"), ArrayIndexers.NoIndexers, [Direct(("count", 9))], JoinEvent(3UL));
+            var resolved = new ResolvedJoin(new System.Dynamic.ExpandoObject(), id, new PropertyPath("ref"), ArrayIndexers.NoIndexers, [Direct(("count", 9))], EventOf("joined", "5", 3UL));
             await sink.ApplyChanges(new Key(id, ArrayIndexers.NoIndexers), ChangesetOf(OwnEvent(10UL, id), Direct(("count", 1)), resolved), 10UL, SinkWriteMode.OncePerSourceEvent);
         }
 

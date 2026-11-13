@@ -27,14 +27,12 @@ public class a_source_keyed_join_projection(ChronicleInProcessFixture fixture) :
     protected static Joined JoinOf(params (string Property, int Value)[] values) =>
         new(new ExpandoObject(), JoinedStream, new PropertyPath("joinId"), ArrayIndexers.NoIndexers, [Direct(values)]);
 
+    // The engine resolves a join with the key of the read model being written; the join event names the joined instance.
     protected static ResolvedJoin ResolvedOf(AppendedEvent source, params (string Property, int Value)[] values) =>
-        new(new ExpandoObject(), JoinedStream, new PropertyPath("joinId"), ArrayIndexers.NoIndexers, [Direct(values)], source);
+        new(new ExpandoObject(), RootKey.Value, new PropertyPath("joinId"), ArrayIndexers.NoIndexers, [Direct(values)], source);
 
     protected static PropertiesChanged<ExpandoObject> DirectText(params (string Property, string Value)[] values) =>
         new(new ExpandoObject(), values.Select(_ => new PropertyDifference(new PropertyPath(_.Property), null, _.Value)).ToArray());
-
-    protected static ResolvedJoin ResolvedFor(string key, AppendedEvent source, params (string Property, int Value)[] values) =>
-        new(new ExpandoObject(), key, new PropertyPath("joinId"), ArrayIndexers.NoIndexers, [Direct(values)], source);
 
     protected static BsonDocument SlotOf(BsonDocument document) => document[Applied]["j"].AsBsonDocument.Single().Value.AsBsonDocument;
 

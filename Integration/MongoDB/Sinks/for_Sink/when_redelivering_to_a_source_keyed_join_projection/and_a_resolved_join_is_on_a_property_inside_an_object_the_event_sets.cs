@@ -21,7 +21,7 @@ public class and_a_resolved_join_is_on_a_property_inside_an_object_the_event_set
         using var sink = CreateSink(UnfencedSinkWrites.Instance);
         var customer = new ExpandoObject();
         ((IDictionary<string, object?>)customer)["id"] = "A";
-        var resolved = new ResolvedJoin(new ExpandoObject(), "A", new PropertyPath("customer.id"), ArrayIndexers.NoIndexers, [Direct(("count", 9))], JoinEvent(3UL));
+        var resolved = new ResolvedJoin(new ExpandoObject(), "fresh-customer", new PropertyPath("customer.id"), ArrayIndexers.NoIndexers, [Direct(("count", 9))], EventOf("joined", "A", 3UL));
         var wholeObject = new PropertiesChanged<ExpandoObject>(new ExpandoObject(), [new PropertyDifference(new PropertyPath("customer"), null, customer)]);
         await sink.ApplyChanges(new Key("fresh-customer", ArrayIndexers.NoIndexers), ChangesetOf(OwnEvent(10UL, "fresh-customer"), wholeObject, resolved), 10UL, SinkWriteMode.OncePerSourceEvent);
         _created = await Read("fresh-customer");
