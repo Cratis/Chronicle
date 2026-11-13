@@ -241,3 +241,13 @@ test('three-shard workflow matches the planner and refreshed timing samples', as
         assert.deepEqual(shards, shards.map((_, index) => index + 1));
     }
 });
+
+test('the unused full build-output-development tarball is no longer packed or uploaded (#5866)', () => {
+    for (const name of ['dotnet-build-development', 'dotnet-build-development-requested']) {
+        const job = jobs.get(name);
+        assert.ok(job, name);
+        assert.doesNotMatch(job, /Pack DEVELOPMENT build output|Upload DEVELOPMENT build output|build-output-development\.tar\.zst/);
+        assert.match(step(job, 'Pack per-project integration build output'), /prefix: build-output-development/);
+    }
+    assert.match(jobs.get('integration'), /build-output-artifact: build-output-development/);
+});
