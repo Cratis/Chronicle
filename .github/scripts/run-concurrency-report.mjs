@@ -8,7 +8,7 @@
 //   gh api "repos/Cratis/Chronicle/actions/runs/<id>/attempts/<N>/jobs?per_page=10" --paginate > jobs.json
 //   node .github/scripts/run-concurrency-report.mjs jobs.json
 //
-// Use per_page=10: the jobs API returns 502 at 20 or more. Only the latest attempt in the file is measured.
+// Use per_page=10: the jobs API returns 502 at 20 or more. Jobs carried over from earlier attempts are excluded.
 //
 // Exit codes: 0 reported, 2 could not report (UNKNOWN): missing timestamps, truncated
 // pagination, or a runner label that is not recognisably hosted. Unknown is never a pass.
@@ -60,16 +60,19 @@ const time = (job, field) => {
 };
 
 /**
- * A re-run attempt lists jobs carried over from earlier attempts (they keep their old run_attempt and a
- * created_at later than started_at). They did not run in the latest attempt, so only the latest attempt is measured.
+ * A re-run attempt lists jobs carried over from earlier attempts. The attempts/N/jobs API gives them the same
+ * run_attempt as the rest, but their created_at is later than started_at. They did not run in this attempt, so
+ * they are excluded and counted.
  */
-export function latestAttempt(jobs) {
-    const attempts = jobs.map(job => job.run_attempt).filter(Number.isInteger);
-    if (attempts.length === 0) return { jobs, carriedOver: 0 };
-    const latest = Math.max(...attempts);
-    const current = jobs.filter(job => !Number.isInteger(job.run_attempt) || job.run_attempt === latest);
+export function excludeCarriedOver(jobs) {
+    const isCarriedOver = job => Date.parse(job.created_at) > Date.parse(job.started_at);
+    const current = jobs.filter(job => !isCarriedOver(job));
     return { jobs: current, carriedOver: jobs.length - current.length };
 }
+
+/** The lanes called from integration.yml; detection, discover, verdict and aggregate jobs do not start the integration phase. */
+const INTEGRATION_LANE = /^(client|kernel|clustering|sql-clustering)-integration-specs|^SQL clustering|rolling/i;
+export const isIntegrationLane = item => INTEGRATION_LANE.test(item.name.split(' / ').at(-1));
 
 /** Skipped jobs never held a slot; every other job needs full timestamps and a hosted runner label. */
 export function intervals(jobs) {
@@ -122,15 +125,16 @@ export function peakWithin(items, from, to) {
 }
 
 export function report(allJobs) {
-    const { jobs, carriedOver } = latestAttempt(allJobs);
+    const { jobs, carriedOver } = excludeCarriedOver(allJobs);
     const items = intervals(jobs);
     if (items.length === 0) throw new UnknownReport('UNKNOWN: no executed jobs in the input');
     const integration = items.filter(isIntegration);
     const ordinary = items.filter(item => !isIntegration(item));
     const wallSeconds = (Math.max(...items.map(item => item.end)) - Math.min(...items.map(item => item.created))) / 1000;
     const result = { all: summarize(items), integration: summarize(integration), ordinary: summarize(ordinary), wallSeconds, carriedOverJobsExcluded: carriedOver };
-    if (integration.length > 0) {
-        const integrationStart = Math.min(...integration.map(item => item.start));
+    const lanes = items.filter(isIntegrationLane);
+    if (lanes.length > 0) {
+        const integrationStart = Math.min(...lanes.map(item => item.start));
         result.peakBeforeIntegrationStart = peakWithin(items, -Infinity, integrationStart);
         result.peakFromIntegrationStart = peakWithin(items, integrationStart, Infinity);
     }

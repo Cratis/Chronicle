@@ -85,7 +85,8 @@ test('caller prefixes do not decide the family: only the called job name does', 
 
 test('jobs carried over from an earlier attempt are excluded instead of failing the report', () => {
     // A carried-over job has created_at after started_at, which would otherwise be out-of-order timestamps.
-    const carried = job('dotnet-build', [50, 0, 10], { run_attempt: 1 });
+    // The attempts/N/jobs API reports the same run_attempt for them, so they are told apart by the timestamps.
+    const carried = job('dotnet-build', [50, 0, 10], { run_attempt: 2 });
     const result = report([
         carried,
         job('specs-other (1)', [100, 100, 130], { run_attempt: 2 }),
@@ -95,6 +96,21 @@ test('jobs carried over from an earlier attempt are excluded instead of failing 
     assert.equal(result.all.jobs, 2);
     assert.equal(result.wallSeconds, 40);
     assert.throws(() => intervals([carried]), /out-of-order/);
+});
+
+test('the phase boundary is the first integration lane, not the detection or discover job', () => {
+    const prefix = 'requested-integration-run-integration / ';
+    const result = report([
+        job('requested-detect-hot-core-run-integration', [0, 0, 10]),
+        job(`${prefix}specs-other (1)`, [0, 0, 30]),
+        job(`${prefix}integration-api`, [0, 5, 30]),
+        job(`${prefix}integration / discover`, [0, 20, 22]),
+        job(`${prefix}integration / client-integration-specs (a)`, [0, 25, 60]),
+        job(`${prefix}integration / client-integration-specs (b)`, [0, 25, 60]),
+        job('hot-core-gate-requested-run-integration', [0, 60, 61]),
+    ]);
+    assert.equal(result.peakBeforeIntegrationStart, 3);
+    assert.equal(result.peakFromIntegrationStart, 4);
 });
 
 test('the peak is reported before and after the first integration job starts', () => {
