@@ -564,6 +564,9 @@ jobs:
       # Shared org cache: pull requests restore only; the nightly build and default-branch runs save (Cratis/Workflows#164).
       - name: Cache NuGet packages
         uses: Cratis/Workflows/.github/actions/dotnet-cache@main
+        # Pull requests only restore, so this never prunes; it keeps the steps identical to dotnet-build-development.
+        with:
+          prune-on-miss: 'true'
 
       - name: Restore obj cache
         uses: actions/cache@v4
