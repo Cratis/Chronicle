@@ -63,7 +63,7 @@ public class InMemoryVaultSecretStore : IVaultSecretStore
     async Task<bool> IVaultSecretStore.RemoveVersionIfUnchanged(string path, VaultSecret expected, Func<Task<bool>> canRemove)
     {
         BeforeRemove?.Invoke(path);
-        if (await ((IVaultSecretStore)this).Read(path) is not { } current || current.Version != expected.Version || !VaultLegacyLayout.SameContent(expected, current) || !await canRemove())
+        if (!await IsUnchanged(path, expected) || !await canRemove())
         {
             return false;
         }
@@ -73,6 +73,9 @@ public class InMemoryVaultSecretStore : IVaultSecretStore
         _secrets.Remove(path);
         return true;
     }
+
+    async Task<bool> IsUnchanged(string path, VaultSecret expected) =>
+        await ((IVaultSecretStore)this).Read(path) is { } current && current.Version == expected.Version && VaultLegacyLayout.SameContent(expected, current);
 
     Task<IReadOnlyList<string>> IVaultSecretStore.List(string path)
     {

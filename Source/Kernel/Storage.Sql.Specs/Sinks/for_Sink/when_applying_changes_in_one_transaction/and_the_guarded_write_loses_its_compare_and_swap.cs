@@ -9,6 +9,7 @@ namespace Cratis.Chronicle.Storage.Sql.Sinks.for_Sink.when_applying_changes_in_o
 /// A competing write moves the watermark between the cycle's read and its guarded update: the cycle reruns whole, applying the join once and the recomputed direct changes.
 /// </summary>
 /// <typeparam name="THarness">The database.</typeparam>
+[PerFactSpecificationLifecycle] // Facts run their own asynchronous operations, so each fact gets its own context.
 public abstract class and_the_guarded_write_loses_its_compare_and_swap<THarness> : given.a_cycle_with_failure_injection<THarness>
     where THarness : ISqlSinkHarness
 {

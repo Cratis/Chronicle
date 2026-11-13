@@ -18,6 +18,7 @@ import argparse
 import importlib.util
 import json
 import os
+from statistics import median
 import subprocess
 import sys
 import unittest
@@ -368,6 +369,128 @@ class for_a_namespace_selection(unittest.TestCase):
         completed = self._failing("--namespaces", "for_Reducers,for_Typo")
         self.assertNotEqual(0, completed.returncode)
         self.assertIn("for_Typo", completed.stderr)
+
+
+class for_sharded_namespaces(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.namespaces = {}
+        for namespace, count in matrix.SHARD_COUNTS.items():
+            groups = matrix._group_by_ancestor(
+                matrix._test_class_counts(os.path.join(matrix.CLIENT_ROOT, namespace)))
+            shards = matrix._shards_for(namespace)
+            terms = [test_filter.split("|") for _, test_filter in shards]
+            cls.namespaces[namespace] = (count, groups, shards, terms)
+
+    def test_the_slowest_split_namespaces_have_the_measured_shard_counts(self):
+        self.assertEqual({"for_EventSequence": 5, "Projections": 5, "for_Imports": 2},
+                         {name: matrix.SHARD_COUNTS[name] for name in ("for_EventSequence", "Projections", "for_Imports")})
+
+    def test_the_two_slowest_solo_namespaces_have_two_shards_with_no_empty_shard(self):
+        for namespace in ("for_ReadModels", "for_EventStoreSubscriptions"):
+            with self.subTest(namespace=namespace):
+                self.assertEqual(2, matrix.SHARD_COUNTS[namespace])
+                _, _, shards, terms = self.namespaces[namespace]
+                self.assertEqual(["1of2", "2of2"], [label for label, _ in shards])
+                self.assertTrue(all(terms))
+
+    def test_labels_cover_every_configured_shard(self):
+        for namespace, (count, _, shards, _) in self.namespaces.items():
+            with self.subTest(namespace=namespace):
+                self.assertEqual([f"{index}of{count}" for index in range(1, count + 1)],
+                                 [label for label, _ in shards])
+
+    def test_shards_cover_every_group_exactly_once(self):
+        for namespace, (_, groups, _, terms) in self.namespaces.items():
+            with self.subTest(namespace=namespace):
+                expected = {f"FullyQualifiedName~{name}." for name in groups}
+                self.assertEqual(expected, set().union(*terms))
+                self.assertEqual(len(expected), sum(len(shard) for shard in terms))
+
+    def test_no_filter_owns_a_subtree_in_another_shard(self):
+        for namespace, (_, _, _, terms) in self.namespaces.items():
+            ownership = [(term, index) for index, shard in enumerate(terms) for term in shard]
+            with self.subTest(namespace=namespace):
+                self.assertFalse(any(other.startswith(term) for term, owner in ownership
+                                     for other, sibling in ownership if owner != sibling))
+
+    def test_fact_counts_are_conserved_and_balanced(self):
+        for namespace, (_, groups, _, terms) in self.namespaces.items():
+            counts = {f"FullyQualifiedName~{name}.": facts for name, facts in groups.items()}
+            loads = [sum(counts[term] for term in shard) for shard in terms]
+            with self.subTest(namespace=namespace, loads=loads):
+                total_facts = sum(matrix._test_class_counts(os.path.join(matrix.CLIENT_ROOT, namespace)).values())
+                self.assertEqual(total_facts, sum(loads))
+                self.assertLessEqual(max(loads), 1.5 * median(loads))
+
+    def test_event_sequence_keeps_the_old_two_shard_filter_union(self):
+        _, groups, _, terms = self.namespaces["for_EventSequence"]
+        old_terms = {f"FullyQualifiedName~{name}." for bucket in matrix._pack(groups, 2) for name in bucket}
+        self.assertEqual(old_terms, set().union(*terms))
+
+
+class for_the_client_start_order(unittest.TestCase):
+    """GitHub starts matrix jobs in include order, so the slowest shards must come first (#5875)."""
+
+    @staticmethod
+    def _client(*arguments):
+        return _run(*arguments)
+
+    @staticmethod
+    def _key(entry):
+        return json.dumps(entry, sort_keys=True)
+
+    def test_the_ordering_never_changes_the_set_of_entries(self):
+        ordered = matrix.build_include("client", matrix.ALL_DATABASES, matrix.BATCHES)
+        original = matrix.order_longest_first(ordered, {})
+        self.assertEqual(sorted(map(self._key, original)), sorted(map(self._key, ordered)))
+        self.assertEqual(len(ordered), len(set(map(self._key, ordered))))
+
+    def test_an_empty_table_keeps_the_original_order(self):
+        entries = [{"namespace": f"Cratis.Chronicle.Integration.{name}", "shard": "all"} for name in ("b", "a", "c")]
+        self.assertEqual(entries, matrix.order_longest_first(entries, {}))
+
+    def test_listed_entries_come_longest_first_and_unlisted_ones_follow_in_order(self):
+        prefix = matrix.NAMESPACE_PREFIX
+        entries = [{"namespace": prefix + name, "shard": shard} for name, shard in
+                   (("x", "all"), ("fast", "all"), ("y", "all"), ("slow", "1of2"), ("fast", "all"))]
+        ordered = matrix.order_longest_first(entries, {"slow|1of2": 900, "fast|all": 100})
+        self.assertEqual(["slow", "fast", "fast", "x", "y"], [e["namespace"][len(prefix):] for e in ordered])
+
+    def test_a_batch_is_ordered_by_its_first_member(self):
+        prefix = matrix.NAMESPACE_PREFIX
+        entries = [{"namespace": prefix + "a", "shard": "all"}, {"namespace": prefix + "b+c", "shard": "all"}]
+        ordered = matrix.order_longest_first(entries, {"b|all": 50})
+        self.assertEqual(prefix + "b+c", ordered[0]["namespace"])
+
+    def test_the_generated_client_matrix_starts_listed_shards_longest_first(self):
+        seconds = matrix._load_shard_seconds()
+        include = self._client("--all-providers")
+        durations = [seconds.get(f"{e['namespace'].removeprefix(matrix.NAMESPACE_PREFIX).split('+')[0]}|{e['shard']}", 0)
+                     for e in include]
+        self.assertEqual(sorted(durations, reverse=True), durations)
+        self.assertGreater(durations[0], 0)
+
+    def test_every_shard_the_table_names_is_a_shard_the_generator_emits(self):
+        seconds = matrix._load_shard_seconds()
+        emitted = {f"{e['namespace'].removeprefix(matrix.NAMESPACE_PREFIX)}|{e['shard']}"
+                   for e in self._client("--all-providers")}
+        self.assertEqual([], sorted(set(seconds) - emitted))
+
+    def test_every_client_configuration_is_still_generated_with_the_split(self):
+        # The split changes shards, never the configurations a namespace runs in.
+        include = self._client("--all-providers")
+        for namespace in ("for_ReadModels", "for_EventStoreSubscriptions"):
+            with self.subTest(namespace=namespace):
+                entries = [e for e in include if e["namespace"].endswith("." + namespace)]
+                self.assertEqual(2 * len(matrix.INFRA_CONFIGS), len(entries))
+
+    def test_other_suites_keep_their_declared_order(self):
+        for suite in ("kernel", "clustering"):
+            with self.subTest(suite=suite):
+                names = [e["namespace"] for e in self._client("--suite", suite)]
+                declared = [unit[0] for unit in matrix._suite_units(suite, matrix.BATCHES)]
+                self.assertEqual(declared, names)
 
 
 if __name__ == "__main__":

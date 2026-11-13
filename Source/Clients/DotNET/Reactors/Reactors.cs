@@ -638,6 +638,10 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
     {
         var registrations = _handlers.Values.ToArray();
         DisconnectHandlers();
+        foreach (var registration in registrations)
+        {
+            _logger.ReactorDisconnected(registration.Handler.Id);
+        }
         _handlers = registrations.Select(RecreateRegistration).ToFrozenDictionary(_ => _.Handler.Id);
     }
 
@@ -854,6 +858,7 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
                     messages.Dispose();
                     ScheduleReconnect();
                 });
+        _logger.ReactorObservationSubscribed(handler.Id);
     }
 
 #if CHRONICLE_ROLLING_DIAGNOSTICS

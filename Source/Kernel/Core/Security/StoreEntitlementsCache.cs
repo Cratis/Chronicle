@@ -18,7 +18,7 @@ public sealed class StoreEntitlementsCache(IGrainFactory grains, ILogger<StoreEn
     static readonly TimeSpan _pollInterval = TimeSpan.FromSeconds(30);
     static readonly TimeSpan _lease = TimeSpan.FromMinutes(5);
     readonly Subject<Unit> _changes = new();
-    readonly object _sync = new();
+    readonly Lock _sync = new();
     volatile Published _current = new(StoreEntitlementsSnapshot.Empty, null);
     ITimer? _timer;
 

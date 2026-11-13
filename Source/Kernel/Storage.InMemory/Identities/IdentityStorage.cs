@@ -17,7 +17,7 @@ namespace Cratis.Chronicle.Storage.InMemory.Identities;
 /// </remarks>
 public class IdentityStorage : IIdentityStorage
 {
-    readonly object _lock = new();
+    readonly Lock _lock = new();
     readonly Dictionary<IdentityId, Identity> _identitiesByIdentityId = [];
     readonly Dictionary<string, IdentityId> _identityIdsBySubject = [];
     readonly Dictionary<string, IdentityId> _identityIdsByUserName = [];

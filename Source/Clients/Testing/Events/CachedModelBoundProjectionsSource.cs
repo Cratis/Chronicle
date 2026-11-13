@@ -18,7 +18,7 @@ namespace Cratis.Chronicle.Testing.Events;
 /// </remarks>
 internal sealed class CachedModelBoundProjectionsSource : IModelBoundProjectionsSource
 {
-    readonly object _sync = new();
+    readonly Lock _sync = new();
     Dictionary<Type, byte[]>? _definitions;
     Dictionary<Type, Exception>? _failures;
 

@@ -96,6 +96,8 @@ Downgrading does not undo the deletion. To roll back, stop the kernels and resto
 
 ## Rebuilding an index
 
+To rebuild an existing declaration without changing it, use the operator [Rebuild a constraint index](../../operations/rebuild-a-constraint-index.md) command. Select its registered name, namespace, and event sequence, then follow the returned job identifier.
+
 When a change to a property constraint requires reindexing, Chronicle rebuilds its index from the event sequence in log order. It clears all claims in each scope before replaying that scope's first event, so stale claims do not block historical values.
 
 While an index rebuild is running, Chronicle refuses appends governed by that index with `ConstraintIndexUnavailable` in the append result's errors. Nothing is stored, so retry the unchanged append after a delay. Appends not governed by a rebuilding index continue normally. Governed appends resume once the rebuild handover and any pending repair finish.

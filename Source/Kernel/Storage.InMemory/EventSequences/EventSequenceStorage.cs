@@ -38,7 +38,7 @@ public partial class EventSequenceStorage(
     readonly Dictionary<EventSequenceNumber, IdentityId[]> _originalCausedByChains = [];
     readonly Dictionary<EventSequenceNumber, StoredEventMetadata> _metadata = [];
     readonly Dictionary<EventSequenceNumber, uint> _appendedGenerations = [];
-    readonly object _lock = new();
+    readonly Lock _lock = new();
     EventSequenceNumber? _constraintIndexWatermark;
     EventSequenceNumber? _constraintIndexCatchUpBelow;
     Concepts.Events.Constraints.ConstraintName[]? _constraintIndexCatchUpRefusing;

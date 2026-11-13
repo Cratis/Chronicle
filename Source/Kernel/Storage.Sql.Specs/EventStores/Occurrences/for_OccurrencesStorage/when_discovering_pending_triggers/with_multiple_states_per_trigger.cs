@@ -5,6 +5,7 @@ using Cratis.Chronicle.Storage.Occurrences;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Occurrences.for_OccurrencesStorage.when_discovering_pending_triggers;
 
+[PerFactSpecificationLifecycle] // Facts run their own asynchronous operations, so each fact gets its own context.
 public class with_multiple_states_per_trigger : given.an_occurrence_storage
 {
     readonly TriggerId _leasedTrigger = new(Guid.NewGuid().ToString("N"));

@@ -5,6 +5,7 @@ using Cratis.Chronicle.Storage.Sql.Sinks;
 
 namespace Cratis.Chronicle.Storage.Sql.Generations.for_GenerationInitializationStorage.when_receipts_race;
 
+[PerFactSpecificationLifecycle] // Facts run their own asynchronous operations, so each fact gets its own context.
 [Collection(SqlServerCollection.Name)]
 public class on_sqlserver(SqlServerFixture fixture) : given.a_sqlserver_initialization_storage(fixture)
 {

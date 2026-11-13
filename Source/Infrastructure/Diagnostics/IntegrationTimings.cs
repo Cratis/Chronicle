@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Diagnostics;
 internal sealed class IntegrationTimings
 {
     static readonly AsyncLocal<Phase?> _current = new();
-    static readonly object _outputLock = new();
+    static readonly Lock _outputLock = new();
     static readonly string _clockDomain = Guid.NewGuid().ToString("N");
     readonly Action<string>? _write;
     readonly Func<long> _clock;

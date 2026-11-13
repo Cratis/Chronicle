@@ -22,8 +22,12 @@ import re
 import subprocess
 import sys
 
+from requested_reuse import ReuseEvidence, config_fingerprint, matrix_executed, reuse_decision, source_run_refusal
+
 CONTRACT = ".github/integration-selection.json"
 REQUESTED_WORKFLOW = "requested-integration.yml"
+# Hot Core Gate also runs Requested Integration as a called workflow; its nested job is the proof (see nested_pass).
+GATE_WORKFLOW = "hot-core-gate.yml"
 LANES = ("client", "kernel", "clustering", "sql")
 
 
@@ -120,43 +124,76 @@ def run(*arguments):
 
 def changed_files(base, head):
     """Files changed between two commits, or None when git cannot say (never an empty guess)."""
-    code, out, _ = run("git", "diff", "--name-only", f"{base}...{head}")
+    code, out, _ = run("git", "diff", "--name-only", "--no-renames", base, head)
     return [line for line in out.splitlines() if line] if code == 0 else None
 
 
-def last_green_head(repo, pull_request, current_head):
-    """The newest head that passed the requested gate for this pull request, if it is an ancestor of the current one."""
-    code, out, _ = run(
-        "gh", "api", "--paginate",
-        f"repos/{repo}/actions/workflows/{REQUESTED_WORKFLOW}/runs?event=pull_request&status=success&per_page=100",
-        "--jq", ".workflow_runs[] | [.head_sha, .created_at, ([.pull_requests[].number] | join(\",\"))] | @tsv")
-    if code != 0:
+def api_items(endpoint, key):
+    """Read all pages; missing or malformed data adds no evidence."""
+    code, out, _ = run("gh", "api", "--paginate", "--slurp", endpoint)
+    if code:
+        return None
+    try:
+        return [item for page in json.loads(out) for item in page[key]]
+    except (ValueError, KeyError, TypeError):
+        return None
+
+
+def candidate_runs(repo, workflow):
+    return api_items(f"repos/{repo}/actions/workflows/{workflow}/runs?event=pull_request&status=success&per_page=100", "workflow_runs")
+
+
+def nested_pass(repo, run_id):
+    jobs = api_items(f"repos/{repo}/actions/runs/{run_id}/jobs?filter=latest&per_page=100", "jobs")
+    return jobs is not None and matrix_executed(jobs)
+
+
+def is_ancestor(old, head):
+    return run("git", "merge-base", "--is-ancestor", old, head)[0] == 0
+
+
+def last_green_run(current, entries):
+    """Newest independently proven run; skipped/reused sources cannot chain."""
+    if current.get("event") != "pull_request":
         return None
     candidates = []
-    for line in out.splitlines():
-        fields = line.split("\t")
-        if len(fields) == 3 and str(pull_request) in fields[2].split(",") and fields[0] != current_head:
-            candidates.append((fields[1], fields[0]))
-    for _, sha in sorted(candidates, reverse=True):
-        if run("git", "cat-file", "-e", f"{sha}^{{commit}}")[0] == 0 and run("git", "merge-base", "--is-ancestor", sha, current_head)[0] == 0:
-            return sha
+    for workflow in (REQUESTED_WORKFLOW, GATE_WORKFLOW):
+        candidates.extend(candidate_runs(current["repo"], workflow) or [])
+    for candidate in sorted(candidates, key=lambda item: item.get("created_at", ""), reverse=True):
+        # Check immutable metadata before paying for jobs/history. Matrix proof is checked next.
+        if source_run_refusal(candidate | dict(has_matrix_job=True), current):
+            continue
+        candidate = candidate | dict(has_matrix_job=nested_pass(current["repo"], candidate["id"]))
+        evidence = ReuseEvidence(fingerprint=lambda sha: config_fingerprint(sha, run), files_between=changed_files,
+                                 classify_delta=lambda files: classify(files, entries)[0], ancestor=is_ancestor)
+        decision = reuse_decision(candidate, current, evidence)
+        if decision["state"] == "reused":
+            return decision
     return None
 
 
-def decide(*, entries, base, head, touched, green_head=None, files_between=changed_files):
+def proven_reuse(green, head, entries, files_between=changed_files):
+    """The earlier green run, only when nothing a lane exercises changed since its head."""
+    if not green:
+        return None
+    since = files_between(green["head_sha"], head)
+    return green if since is not None and classify(since, entries)[0] == "skip" else None
+
+
+def decide(*, entries, base, head, touched, green=None, files_between=changed_files):
     """Applies the rules in order of how much they can save, widest answer on any doubt. Returns `(mode, selection, reasons)`."""
-    if green_head:
-        since = files_between(green_head, head)
-        if since is not None:
-            mode, _, reasons = classify(since, entries)
-            if mode == "skip":
-                return "skip", None, [f"Nothing integration-relevant changed since {green_head}, which passed requested integration."]
+    if proven_reuse(green, head, entries, files_between):
+        return "skip", None, [f"Reused run {green['run_id']} (head {green['head_sha']}): same base, "
+                              f"same config fingerprint {green['fingerprint']}, only files no lane exercises changed."]
     if touched:
         return "full", None, ["This pull request touches the hot core, so the whole matrix runs."]
     files = files_between(base, head) if base else None
     if files is None:
         return "full", None, ["The changed files could not be determined, so the whole matrix runs."]
-    return classify(files, entries)
+    mode, selection, reasons = classify(files, entries)
+    if mode == "skip":
+        reasons.append("The whole PR is ignorable; no earlier run needed.")
+    return mode, selection, reasons
 
 
 def emit(name, value):
@@ -189,13 +226,22 @@ def main():
     parser.add_argument("--touched", default="false", help="true when the pull request touches the hot core.")
     parser.add_argument("--repo", help="owner/name; with --pull-request enables reuse of an earlier green run.")
     parser.add_argument("--pull-request", help="Pull request number.")
+    parser.add_argument("--event", default="", help="Reuse is enabled only for pull_request events.")
+    parser.add_argument("--head-repo", default="", help="PR head repository; unknown/fork heads cannot reuse.")
     args = parser.parse_args()
     entries = load_entries()
-    green = last_green_head(args.repo, args.pull_request, args.head) if args.repo and args.pull_request else None
+    current = dict(repo=args.repo, pull_request=args.pull_request, head=args.head, base=args.base,
+                   event=args.event, head_repo=args.head_repo)
+    green = last_green_run(current, entries) if args.repo and args.pull_request else None
     mode, selection, reasons = decide(entries=entries, base=args.base, head=args.head,
-                                      touched=args.touched == "true", green_head=green)
+                                      touched=args.touched == "true", green=green)
     summarize(mode, selection, reasons)
     emit("mode", mode)
+    # A skip of a wholly ignorable PR is not a reuse; only report a run that decided the outcome.
+    reused = proven_reuse(green, args.head, entries) if mode == "skip" else None
+    emit("reused_run", reused["run_id"] if reused else "")
+    emit("reused_head", reused["head_sha"] if reused else "")
+    emit("config_fingerprint", reused["fingerprint"] if reused else "")
     emit("selection", json.dumps(selection, separators=(",", ":")) if selection else "")
 
 

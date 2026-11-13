@@ -133,19 +133,18 @@ public class ProjectionReplayHandler(
                 return ICanHandleReplayForObserver.Error.CannotHandle;
             }
 
-            if (!projections.TryGet(observerDetails.Key.EventStore, observerDetails.Key.Namespace, observerDetails.Key.ObserverId, out var projection))
+            if (!projectionPipelineManager.TryGetFor(observerDetails.Key.EventStore, observerDetails.Key.Namespace, observerDetails.Key.ObserverId, out var binding))
             {
                 logger.ProjectionMissing(observerDetails.Key);
                 return ICanHandleReplayForObserver.Error.Unknown;
             }
 
-            if (projection.Scope == ProjectionScope.Global)
+            if (binding.Projection.Scope == ProjectionScope.Global)
             {
                 throw new GlobalProjectionReplayNotSupported();
             }
 
-            var pipeline = await projectionPipelineManager.GetFor(observerDetails.Key.EventStore, observerDetails.Key.Namespace, projection);
-            var failedPartitions = (await pipeline.EndBulk()).ToArray();
+            var failedPartitions = (await binding.Pipeline.EndBulk()).ToArray();
             await ProjectionBulkFailures.Record(grainFactory, observerDetails, failedPartitions);
             return failedPartitions.Length > 0
                 ? ICanHandleReplayForObserver.Error.Unknown
@@ -169,13 +168,12 @@ public class ProjectionReplayHandler(
     /// <inheritdoc/>
     public async Task<BulkFlushResult> FlushFor(ObserverDetails observerDetails)
     {
-        if (!CanHandle(observerDetails) || !projections.TryGet(observerDetails.Key.EventStore, observerDetails.Key.Namespace, observerDetails.Key.ObserverId, out var projection))
+        if (!CanHandle(observerDetails) || !projectionPipelineManager.TryGetFor(observerDetails.Key.EventStore, observerDetails.Key.Namespace, observerDetails.Key.ObserverId, out var binding))
         {
             return new(null, []);
         }
 
-        var pipeline = await projectionPipelineManager.GetFor(observerDetails.Key.EventStore, observerDetails.Key.Namespace, projection);
-        var result = await pipeline.FlushBulk();
+        var result = await binding.Pipeline.FlushBulk();
         await ProjectionBulkFailures.Record(grainFactory, observerDetails, result.FailedPartitions);
         return result;
     }
@@ -183,14 +181,13 @@ public class ProjectionReplayHandler(
     /// <inheritdoc/>
     public async Task<IEnumerable<Storage.Sinks.FailedPartition>> EndBulkFor(ObserverDetails observerDetails, CancellationToken cancellationToken)
     {
-        if (!CanHandle(observerDetails) || !projections.TryGet(observerDetails.Key.EventStore, observerDetails.Key.Namespace, observerDetails.Key.ObserverId, out var projection))
+        if (!CanHandle(observerDetails) || !projectionPipelineManager.TryGetFor(observerDetails.Key.EventStore, observerDetails.Key.Namespace, observerDetails.Key.ObserverId, out var binding))
         {
             return [];
         }
 
         // Unlike replay finalization, shutdown must retain the sink and must not promote its container.
-        var pipeline = await projectionPipelineManager.GetFor(observerDetails.Key.EventStore, observerDetails.Key.Namespace, projection);
-        return await pipeline.EndBulk(cancellationToken);
+        return await binding.Pipeline.EndBulk(cancellationToken);
     }
 
     static bool CanHandle(ObserverDetails observerDetails) => observerDetails.Type == ObserverType.Projection;
@@ -229,7 +226,9 @@ public class ProjectionReplayHandler(
             return Result.Failed(ICanHandleReplayForObserver.Error.CannotHandle);
         }
 
-        var projection = await projections.GetCurrent(observerDetails.Key.EventStore, observerDetails.Key.Namespace, observerDetails.Key.ObserverId);
+        var projection = projectionPipelineManager.TryGetFor(observerDetails.Key.EventStore, observerDetails.Key.Namespace, observerDetails.Key.ObserverId, out var binding)
+            ? binding.Projection
+            : await projections.GetCurrent(observerDetails.Key.EventStore, observerDetails.Key.Namespace, observerDetails.Key.ObserverId);
         if (projection is null)
         {
             return Result.Failed(ICanHandleReplayForObserver.Error.Unknown);
@@ -256,20 +255,21 @@ public class ProjectionReplayHandler(
                 return ICanHandleReplayForObserver.Error.CannotHandle;
             }
 
-            var projection = await projections.GetCurrent(observerDetails.Key.EventStore, observerDetails.Key.Namespace, observerDetails.Key.ObserverId);
-            if (projection is null)
+            var binding = await ProjectionPipelineLookup.GetFor(projections, projectionPipelineManager, observerDetails.Key);
+            if (binding is null)
             {
                 logger.ProjectionMissing(observerDetails.Key);
                 return ICanHandleReplayForObserver.Error.ProjectionNotFound;
             }
 
+            var projection = binding.Projection;
+            var pipeline = binding.Pipeline;
             if (projection.Scope == ProjectionScope.Global)
             {
                 throw new GlobalProjectionReplayNotSupported();
             }
 
             var getReplayContext = await getContext(projection);
-            var pipeline = await projectionPipelineManager.GetFor(observerDetails.Key.EventStore, observerDetails.Key.Namespace, projection);
             if (getReplayContext.TryPickT1(out _, out var replayContext))
             {
                 if (onMissingContext is not null)

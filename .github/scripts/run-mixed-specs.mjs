@@ -10,7 +10,8 @@ import { pathToFileURL } from 'node:url';
 import { runProcess } from './mixed-specs-process.mjs';
 import { decode, validateTrx, validateCoverage, coverageFiles } from './mixed-specs-results.mjs';
 import { ordinaryProjects, ordinaryFilter, inventory } from './mixed-specs-selection.mjs';
-import { parseShardArgs, sourcePlan, sameProjects, receiptFor } from './spec-shards.mjs';
+import { ORDINARY_SHARDS, ordinaryShardIds, parseShardArgs, sourcePlan, sameProjects, receiptFor } from './spec-shards.mjs';
+import { CORE_PROJECT, coreUnitId, checkPartition, loadPartition, partFilter } from './core-spec-partition.mjs';
 
 // Preserve the existing import surface for contract consumers.
 export { runProcess } from './mixed-specs-process.mjs';
@@ -100,7 +101,9 @@ function producerArtifact(artifacts, job, shard, context) {
 export function selectProducerArtifacts(jobPages, artifactPages, context) {
     const jobs = apiRecords(jobPages, 'jobs');
     const artifacts = apiRecords(artifactPages, 'artifacts');
-    return { context, producers: [1, 2].map(shard => producerArtifact(artifacts, producerJob(jobs, shard, context), shard, context)) };
+    const ordinaryArtifacts = artifacts.filter(artifact => artifact.name?.startsWith('coverage-results-specs-other-'));
+    if (ordinaryArtifacts.length !== ORDINARY_SHARDS) fail(`Expected exactly ${ORDINARY_SHARDS} producer artifacts`);
+    return { context, producers: ordinaryShardIds().map(shard => producerArtifact(ordinaryArtifacts, producerJob(jobs, shard, context), shard, context)) };
 }
 async function producerApiPages(endpoint, context, env, execute) {
     const result = await execute('gh', ['api', '--paginate', '--slurp', `repos/${env.GITHUB_REPOSITORY}/actions/runs/${context.runId}/${endpoint}`], { capture: true, timeout: 60000 });
@@ -116,6 +119,16 @@ export async function loadProducerEvidence(context, { env = process.env, execute
     }
     return selectProducerArtifacts(...pages, context);
 }
+export function unitInfos(ids, ordinary, parts) {
+    return ids.map(id => {
+        const project = ordinary.find(info => info.project === id);
+        if (project) return project;
+        const part = parts.find(candidate => coreUnitId(candidate.part) === id);
+        const core = ordinary.find(info => info.project === CORE_PROJECT);
+        if (!part || !core) fail(`Unknown ordinary spec unit ${id}`);
+        return { ...core, unitId: id, corePart: part.part, partFilter: partFilter(part.units.map(unit => unit.prefix)) };
+    });
+}
 export async function main(args = process.argv.slice(2), { root = process.cwd(), execute = runProcess } = {}) {
     const shardId = parseShardArgs(args);
     const receiptPath = path.join(root, 'coverage-results', 'shard-receipt.json');
@@ -130,16 +143,20 @@ export async function main(args = process.argv.slice(2), { root = process.cwd(),
     const output = await mkdtemp(path.join(root, 'coverage-results', 'mixed-'));
     const ordinary = ordinaryProjects(infos);
     const shard = shardId ? (await sourcePlan(root)).find(s => s.shard === shardId) : null;
-    const selected = shard ? shard.projects.map(project => ordinary.find(info => info.project === project)) : ordinary;
-    if (shard) sameProjects(selected.map(info => info?.project), shard.projects, 'Evaluated shard');
+    const parts = shard ? await checkPartition(root, await loadPartition()) : [];
+    const selected = shard ? unitInfos(shard.projects, ordinary, parts) : ordinary;
+    if (shard) sameProjects(selected.map(info => info.unitId ?? info.project), shard.projects, 'Evaluated shard');
     const completed = [];
     for (const info of selected) {
-        const directory = path.join(output, `${info.assemblyName}-${info.tfm}`);
+        const suffix = info.corePart ? `-core-part-${info.corePart}` : '';
+        const directory = path.join(output, `${info.assemblyName}-${info.tfm}${suffix}`);
         await mkdir(directory); // No reuse, caching or duplicate output assembly identities.
         const started = performance.now();
-        await runProject(info, { root, directory, filter, timeout: Number(timeouts[0][1]) }, execute);
-        completed.push(info.project);
-        console.log(`Spec project completed: ${info.project}; ${((performance.now() - started) / 1000).toFixed(3)} seconds including validation`);
+        const unitFilter = info.partFilter ? `${filter}&${info.partFilter}` : filter;
+        await runProject(info, { root, directory, filter: unitFilter, timeout: Number(timeouts[0][1]) }, execute);
+        const id = info.unitId ?? info.project;
+        completed.push(id);
+        console.log(`Spec project completed: ${id}; ${((performance.now() - started) / 1000).toFixed(3)} seconds including validation`);
     }
     if (shard) await writeFile(receiptPath, JSON.stringify(receiptFor(shard, completed), null, 2) + '\n', { flag: 'wx' });
 }
