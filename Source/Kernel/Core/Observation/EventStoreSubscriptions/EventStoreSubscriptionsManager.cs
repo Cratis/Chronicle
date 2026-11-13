@@ -47,6 +47,7 @@ public class EventStoreSubscriptionsManager(
     /// <inheritdoc/>
     public async Task Add(EventStoreSubscriptionDefinition definition)
     {
+        var previous = State.Subscriptions.FirstOrDefault(s => s.Identifier == definition.Identifier);
         var subscriptions = State.Subscriptions.ToList();
         subscriptions.RemoveAll(s => s.Identifier == definition.Identifier);
         subscriptions.Add(definition);
@@ -54,6 +55,12 @@ public class EventStoreSubscriptionsManager(
         await WriteStateAsync();
 
         await ScheduleSubscriptionReminder(definition.Identifier);
+
+        // The state is written first, so a concurrent reminder already filters by the new restriction.
+        if (previous is not null)
+        {
+            await UnsubscribeNoLongerObserved(previous, definition);
+        }
     }
 
     /// <inheritdoc/>
@@ -364,6 +371,11 @@ public class EventStoreSubscriptionsManager(
 
     async Task SubscribeIfNotSubscribed(EventStoreSubscriptionDefinition definition, EventStoreNamespaceName namespaceName)
     {
+        if (!SubscriptionObservation.Observes(definition, namespaceName))
+        {
+            return;
+        }
+
         var observer = await GetObserver(definition, namespaceName);
         logger.Subscribing(definition.Identifier, namespaceName);
         await Subscribe(observer, definition);
@@ -411,12 +423,50 @@ public class EventStoreSubscriptionsManager(
 
     async Task<IEnumerable<EventStoreNamespaceName>> CanonicalNamespaces(EventStoreSubscriptionDefinition definition, IEnumerable<EventStoreNamespaceName> namespaces)
     {
-        var canonical = await Task.WhenAll(namespaces.Select(async name => await namespaceCasing.Canonicalize(definition.SourceEventStore, name)));
+        var observed = namespaces.Where(name => SubscriptionObservation.Observes(definition, name));
+        var canonical = await Task.WhenAll(observed.Select(async name => await namespaceCasing.Canonicalize(definition.SourceEventStore, name)));
         return canonical.Distinct().ToArray();
+    }
+
+    async Task UnsubscribeNoLongerObserved(EventStoreSubscriptionDefinition previous, EventStoreSubscriptionDefinition current)
+    {
+        if (previous.SourceEventStore != current.SourceEventStore)
+        {
+            return;
+        }
+
+        try
+        {
+            var targetNamespaces = await GrainFactory.GetGrain<INamespaces>(_targetEventStoreName).GetAll();
+            var sourceNamespaces = GrainFactory.GetGrain<INamespaces>(previous.SourceEventStore);
+            var noLongerObserved = targetNamespaces.Where(name =>
+                SubscriptionObservation.Observes(previous, name) && !SubscriptionObservation.Observes(current, name));
+
+            foreach (var name in noLongerObserved)
+            {
+                // Only a namespace that already exists in the source: resolving an observer for any other creates it there.
+                var canonical = await sourceNamespaces.GetCanonical(name);
+                if (canonical is not null)
+                {
+                    await UnsubscribeIfSubscribed(previous, canonical);
+                }
+            }
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.ErrorUnsubscribingNarrowedNamespaces(ex, current.Identifier);
+        }
     }
 
     async Task<IObserver> GetObserver(EventStoreSubscriptionDefinition definition, EventStoreNamespaceName namespaceName)
     {
+        // The single place an observer on the source event store is resolved, and resolving one creates the namespace
+        // there. A namespace the definition does not observe must never get this far.
+        if (!SubscriptionObservation.Observes(definition, namespaceName))
+        {
+            throw new InvalidOperationException($"Subscription '{definition.Identifier}' does not observe namespace '{namespaceName}'.");
+        }
+
         namespaceName = await namespaceCasing.Canonicalize(definition.SourceEventStore, namespaceName);
 
         // The observer id must be unique per (source, target) event store. The subscription Identifier is only
