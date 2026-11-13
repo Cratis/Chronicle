@@ -223,7 +223,10 @@ public class ProjectionPipelineManager(
             encryptChangeset,
             new StoreFutures(futuresTracker, projectionFutures, loggerFactory.CreateLogger<StoreFutures>()),
             resolveFuturesStep,
-            new SaveChanges(projectionFutures, sink, changesetStorage, options.Value.ReadModels.GuardSinkWritesOnWatermark, loggerFactory.CreateLogger<SaveChanges>(), generation?.Destination, watchGates?.GateFor(new ProjectionChangesetNotifierKey(projection.Identifier.Value, eventStore, @namespace)) ?? ProjectionWatchGate.Closed)
+            new SaveChanges(projectionFutures, sink, changesetStorage, options.Value.ReadModels.GuardSinkWritesOnWatermark, loggerFactory.CreateLogger<SaveChanges>(), generation?.Destination)
+            {
+                WatchGate = watchGates?.GateFor(new ProjectionChangesetNotifierKey(projection.Identifier.Value, eventStore, @namespace)) ?? ProjectionWatchGate.Closed
+            }
         ];
 
         var handleLock = _handleLocks.GetOrAdd(key, _ => new ProjectionHandleLock());

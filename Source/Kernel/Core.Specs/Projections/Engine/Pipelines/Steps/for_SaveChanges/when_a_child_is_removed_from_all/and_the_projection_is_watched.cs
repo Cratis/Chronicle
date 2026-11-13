@@ -12,7 +12,7 @@ public class and_the_projection_is_watched : given.a_changeset_removing_a_child_
     {
         var gate = new ProjectionWatchGate(TimeProvider.System);
         gate.Open(TimeSpan.FromMinutes(1));
-        await new SaveChanges(_writingSink, Substitute.For<IChangesetStorage>(), true, Substitute.For<ILogger<SaveChanges>>(), watchGate: gate).Perform(_projection, _context);
+        await new SaveChanges(_writingSink, Substitute.For<IChangesetStorage>(), true, Substitute.For<ILogger<SaveChanges>>()) { WatchGate = gate }.Perform(_projection, _context);
     }
 
     [Fact] void should_look_up_the_parents_before_writing() => _operations.ShouldEqual(["lookup", "write"]);

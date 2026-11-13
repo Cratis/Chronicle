@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Projections.Engine.Pipelines.Steps.for_SaveChanges.wh
 
 public class and_the_projection_is_not_watched : given.a_changeset_removing_a_child_from_all
 {
-    async Task Because() => await new SaveChanges(_writingSink, Substitute.For<IChangesetStorage>(), true, Substitute.For<ILogger<SaveChanges>>(), watchGate: ProjectionWatchGate.Closed).Perform(_projection, _context);
+    async Task Because() => await new SaveChanges(_writingSink, Substitute.For<IChangesetStorage>(), true, Substitute.For<ILogger<SaveChanges>>()) { WatchGate = ProjectionWatchGate.Closed }.Perform(_projection, _context);
 
     [Fact] void should_not_look_up_the_parents() => _writingSink.DidNotReceive().FindKeysHoldingChild(Arg.Any<ChildRemovedFromAll>());
     [Fact] void should_not_record_any_affected_parents() => _context.AffectedParentKeys.ShouldBeEmpty();

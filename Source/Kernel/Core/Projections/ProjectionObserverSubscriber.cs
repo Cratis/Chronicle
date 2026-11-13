@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Diagnostics.CodeAnalysis;
 using System.Dynamic;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Changes;
@@ -283,7 +282,7 @@ public class ProjectionObserverSubscriber(
             {
                 if (CanNotify(state))
                 {
-                    notifications.Add(CreateNotification(key.ToString(), state, ReadModelChangeType.Modified, parents[key], schema));
+                    notifications.Add(CreateNotification(key.ToString(), state, ChangeContextFor(ReadModelChangeType.Modified, parents[key]), schema));
                 }
             }
 
@@ -306,29 +305,82 @@ public class ProjectionObserverSubscriber(
             (false, true) => ReadModelChangeType.Added,
             _ => ReadModelChangeType.Modified
         };
-        return CreateNotification(partition, changeset.CurrentState, changeType, lastEvent, _schema!);
+        return CreateNotification(partition, changeset.CurrentState, ChangeContextFor(changeType, lastEvent), _schema!);
     }
 
-    ReadModelChangeNotification CreateNotification(string partition, ExpandoObject state, ReadModelChangeType changeType, AppendedEvent lastEvent, JsonSchema schema)
+    ReadModelChangeNotification CreateNotification(string partition, ExpandoObject state, ReadModelChangeContext change, JsonSchema schema)
     {
         var model = expandoObjectConverter.ToJsonObject(state, schema);
         if (ReadModelChangeBookkeeping.DeclaresProperty(schema, WellKnownProperties.LastHandledEventSequenceNumber))
         {
-            model[WellKnownProperties.LastHandledEventSequenceNumber] = JsonValue.Create(lastEvent.Context.SequenceNumber.Value);
+            model[WellKnownProperties.LastHandledEventSequenceNumber] = JsonValue.Create(change.EventSequenceNumber.Value);
         }
 
         ReadModelChangeBookkeeping.CopyLegacySubjectLineage(state, model);
         var (subject, subjects) = ReadModelChangeBookkeeping.LineageOf(state);
-        var change = new ReadModelChangeContext(changeType, lastEvent.Context.SequenceNumber, lastEvent.Context.Occurred, lastEvent.Context.CorrelationId)
-        {
-            Subject = subject,
-            Subjects = subjects
-        };
-        return new(partition, model, change);
+        return new(partition, model, change with { Subject = subject, Subjects = subjects });
     }
 
-    bool ChangesOwnInstance([NotNullWhen(true)] IChangeset<AppendedEvent, ExpandoObject>? changeset) =>
+    ReadModelChangeContext ChangeContextFor(ReadModelChangeType changeType, AppendedEvent lastEvent) =>
+        new(changeType, lastEvent.Context.SequenceNumber, lastEvent.Context.Occurred, lastEvent.Context.CorrelationId);
+
+    ReadModelChangeNotification? NotificationForOwnInstance(Key partition, IChangeset<AppendedEvent, ExpandoObject>? changeset, bool isNewInstance, AppendedEvent lastEvent)
+    {
+        // We don't want to send changesets if the projection is not active.
+        // A run that only removes children from every parent changes no instance of its own: the parents are notified
+        // with their own state instead, so the removal event's partition never gets an empty model.
+        if (!ChangesOwnInstance(changeset) || !CanNotify(changeset!.CurrentState))
+        {
+            return null;
+        }
+
+        return CreateNotification(partition.ToString(), changeset, isNewInstance, lastEvent);
+    }
+
+    bool ChangesOwnInstance(IChangeset<AppendedEvent, ExpandoObject>? changeset) =>
         changeset?.HasChanges == true && !ChangesetChildRemovals.OnlyRemovesChildrenFromAll(changeset);
+
+    async Task<ObserverSubscriberResult?> RefreshWhenEventIsNotAccepted(AppendedEvent @event, AppendedEvent? lastSuccessfullyObservedEvent) =>
+        _projection?.Accepts(@event.Context.EventType) == false
+            ? await RefreshFromStoredDefinition(lastSuccessfullyObservedEvent)
+            : null;
+
+    EventType? PinFor(AppendedEvent @event) =>
+        _projection?.GenerationDelivery == EventGenerationDelivery.Pinned
+            ? _projection.EventTypes.FirstOrDefault(_ => _.Id == @event.Context.EventType.Id)
+            : null;
+
+    async Task<ObserverSubscriberResult?> HandleBulkFailuresOf(ProjectionEventContext context, Key partition, IEnumerable<AppendedEvent> events) =>
+        context.FailedPartitions.Any()
+            ? await HandleBulkFailures(partition, events, context.FailedPartitions)
+            : null;
+
+    void TrackAffectedParents(ProjectionEventContext context, AppendedEvent @event)
+    {
+        if (context.AffectedParentKeys.Count > 0)
+        {
+            RecordAffectedParents(context.AffectedParentKeys, @event);
+        }
+    }
+
+    (ObserverSubscriberResult Result, ReadModelChangeNotification? Notification) PipelineUnavailable()
+    {
+        if (_pipelineBuildFailure is not null)
+        {
+            return (new(
+                ObserverSubscriberState.Failed,
+                EventSequenceNumber.Unavailable,
+                _pipelineBuildFailure.GetAllMessages(),
+                _pipelineBuildFailure.StackTrace ?? string.Empty), null);
+        }
+
+        logger.PipelineNotReady(_key);
+        return (new(
+            ObserverSubscriberState.Failed,
+            EventSequenceNumber.Unavailable,
+            ["Projection pipeline is not yet ready — will be retried."],
+            string.Empty), null);
+    }
 
     bool CanNotify(ExpandoObject state) =>
         _definition.IsActive &&
@@ -343,27 +395,12 @@ public class ProjectionObserverSubscriber(
 
         if (_pipeline is null)
         {
-            if (_pipelineBuildFailure is not null)
-            {
-                return (new(
-                    ObserverSubscriberState.Failed,
-                    EventSequenceNumber.Unavailable,
-                    _pipelineBuildFailure.GetAllMessages(),
-                    _pipelineBuildFailure.StackTrace ?? string.Empty), null);
-            }
-
-            logger.PipelineNotReady(_key);
-            return (new(
-                ObserverSubscriberState.Failed,
-                EventSequenceNumber.Unavailable,
-                ["Projection pipeline is not yet ready — will be retried."],
-                string.Empty), null);
+            return PipelineUnavailable();
         }
 
         AppendedEvent? lastSuccessfullyObservedEvent = default;
         try
         {
-            ReadModelChangeNotification? notification = null;
             IChangeset<AppendedEvent, ExpandoObject>? changeset = null;
             var isNewInstance = false;
 
@@ -379,18 +416,13 @@ public class ProjectionObserverSubscriber(
 
                 // Definition notifications precede the subscription rebind, so a handled type can still arrive
                 // in the old pin. Only an unhandled type may be skipped; a generation mismatch must be processed.
-                if (_projection?.Accepts(@event.Context.EventType) == false)
+                var refreshFailure = await RefreshWhenEventIsNotAccepted(@event, lastSuccessfullyObservedEvent);
+                if (refreshFailure is not null)
                 {
-                    var failure = await RefreshFromStoredDefinition(lastSuccessfullyObservedEvent);
-                    if (failure is not null)
-                    {
-                        return (failure, null);
-                    }
+                    return (refreshFailure, null);
                 }
 
-                var pin = _projection?.GenerationDelivery == EventGenerationDelivery.Pinned
-                    ? _projection.EventTypes.FirstOrDefault(_ => _.Id == @event.Context.EventType.Id)
-                    : null;
+                var pin = PinFor(@event);
                 if (pin is null && _projection?.Accepts(@event.Context.EventType) == false)
                 {
                     lastSuccessfullyObservedEvent = @event;
@@ -405,10 +437,7 @@ public class ProjectionObserverSubscriber(
                     : @event;
                 var pipelineContext = await _pipeline.Handle(eventToHandle);
                 changeset = pipelineContext.Changeset;
-                if (pipelineContext.AffectedParentKeys.Count > 0)
-                {
-                    RecordAffectedParents(pipelineContext.AffectedParentKeys, @event);
-                }
+                TrackAffectedParents(pipelineContext, @event);
 
                 // Accumulate across the batch: a single OnNext delivers all events for one partition
                 // (e.g. AppendMany, or an observer draining a backlog on catch-up). If the instance was
@@ -418,27 +447,17 @@ public class ProjectionObserverSubscriber(
                 isNewInstance |= pipelineContext.IsNewInstance;
 
                 // Check if there are any failed partitions from bulk operations
-                if (pipelineContext.FailedPartitions.Any())
+                var bulkFailure = await HandleBulkFailuresOf(pipelineContext, partition, events);
+                if (bulkFailure is not null)
                 {
-                    var failure = await HandleBulkFailures(partition, events, pipelineContext.FailedPartitions);
-                    if (failure is not null)
-                    {
-                        return (failure, null);
-                    }
+                    return (bulkFailure, null);
                 }
 
                 lastSuccessfullyObservedEvent = @event;
                 logger.SuccessfullyHandledEvent(sequenceNumber, _key);
             }
 
-            // Note: We don't want to send changesets if the projection is not active
-            // A run that only removes children from every parent changes no instance of its own: the parents are notified
-            // with their own state instead, so the removal event's partition never gets an empty model.
-            if (ChangesOwnInstance(changeset) && CanNotify(changeset.CurrentState))
-            {
-                notification = CreateNotification(partition.ToString(), changeset, isNewInstance, lastSuccessfullyObservedEvent!);
-            }
-
+            var notification = NotificationForOwnInstance(partition, changeset, isNewInstance, lastSuccessfullyObservedEvent!);
             return (ObserverSubscriberResult.Ok(lastSuccessfullyObservedEvent!.Context.SequenceNumber), notification);
         }
         catch (Exception ex)
