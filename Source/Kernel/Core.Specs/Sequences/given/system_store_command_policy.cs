@@ -75,6 +75,7 @@ public static class system_store_command_policy
     {
         ["Cratis.Chronicle.Captures.ValidateCaptureDeclaration"] = "read-only declaration compilation and validation",
         ["Cratis.Chronicle.DevelopmentTools.ResetKernelState"] = "explicit development-only kernel reset without a store selector",
+        ["Cratis.Chronicle.Events.Constraints.Operator.ReindexConstraints"] = "explicit operational rebuild of existing indexes; administrator operations and destructive-operation enforcement protect System scope",
         ["Cratis.Chronicle.Jobs.DeleteJob"] = JobRecoveryReason,
         ["Cratis.Chronicle.Jobs.ResumeJob"] = JobRecoveryReason,
         ["Cratis.Chronicle.Jobs.ResumeJobWithResult"] = JobRecoveryReason,
