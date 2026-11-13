@@ -22,6 +22,7 @@ public class and_an_updated_definition_is_rejected : given.a_projections_manager
             [_firstReadModelDefinition],
             [_namespace]);
         _manager.TryGet(_eventStore, _namespace, _firstDefinition.Identifier, out _projectionBeforeUpdate);
+        _firstDefinition = _firstDefinition with { IsRewindable = !_firstDefinition.IsRewindable };
 
         _projectionFactory
             .Create(

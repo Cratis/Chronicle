@@ -420,8 +420,9 @@ public class ProjectionObserverSubscriber(
         // The definition notification from the Projection grain is best effort (the grain may have been
         // deactivated or re-placed, losing its registrations). The engine on this silo is registered with a
         // changed definition before any replay starts, so its fingerprint is the cheap, authoritative signal.
-        if (!engineProjectionsManager.TryGet(_key.EventStore, _key.Namespace, _key.ObserverId, out var current) ||
-            current.DefinitionFingerprint == _projection?.DefinitionFingerprint)
+        // Definition metadata survives LRU eviction of the compiled graph.
+        if (!engineProjectionsManager.TryGetDefinitionFingerprint(_key.EventStore, _key.ObserverId, out var fingerprint) ||
+            fingerprint == _projection?.DefinitionFingerprint)
         {
             return null;
         }
