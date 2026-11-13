@@ -135,9 +135,16 @@ public class ChangesetConverter(
         return new(property, ToFilterValue(key, onProperty));
     }
 
-    // A resolved join's key is the read model's own key, not the joined instance: the engine resolves it for the
-    // read model being written. A marked join is keyed by the event source id of the join event, so that event's
-    // source is what the stored reference holds, and what the guard compares it against.
+    /// <summary>
+    /// Gets the join event of a marked resolved join, whose event source id the stored reference holds.
+    /// </summary>
+    /// <remarks>
+    /// A resolved join's key is the read model's own key, not the joined instance: the engine resolves it for the
+    /// read model being written. A marked join is keyed by the event source id of the join event, so that event's
+    /// source is what the stored reference holds, and what the guard compares it against.
+    /// </remarks>
+    /// <param name="resolvedJoined">The <see cref="ResolvedJoin"/>.</param>
+    /// <returns>The join event, or null when the join is not a root join.</returns>
     static AppendedEvent? MarkedSourceOf(ResolvedJoin resolvedJoined) =>
         resolvedJoined.ArrayIndexers.IsEmpty ? resolvedJoined.Source as AppendedEvent : null;
 
