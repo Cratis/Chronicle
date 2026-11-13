@@ -495,8 +495,8 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         self.assertEqual("coverage-results-specs-sql-${{ matrix.shard }}", steps[-1]["with"]["name"])
         self.assertIn('--coverage', run)
         download = next(step for step in jobs["coverage-merge-and-cache"]["steps"]
-                        if step["name"] == "Download all coverage artifacts")
-        self.assertEqual("coverage-results-*", download["with"]["pattern"])
+                        if step["name"] == "Download the merged coverage of every group")
+        self.assertEqual("coverage-partial-*", download["with"]["pattern"])
 
     def test_ordinary_shards_keep_runtime_guards_and_unique_artifacts(self):
         jobs = self.build["jobs"]
@@ -781,7 +781,8 @@ class SparseIntegrationWorkflows(unittest.TestCase):
 
     def test_coverage_cannot_be_cached_if_any_integration_dependency_failed_or_was_skipped(self):
         coverage = self.build["jobs"]["coverage-merge-and-cache"]
-        self.assertEqual({"specs", "integration", "integration-api", "mongodb", "neo4j"}, set(prerequisites_of(coverage)))
+        self.assertEqual({"specs", "integration", "integration-api", "mongodb", "neo4j", "coverage-partial"},
+                         set(prerequisites_of(coverage)))
         self.assertIn("github.event_name != 'pull_request_target'", coverage["if"])
         self.assertIn("!cancelled()", coverage["if"])
         for dependency in prerequisites_of(coverage):
