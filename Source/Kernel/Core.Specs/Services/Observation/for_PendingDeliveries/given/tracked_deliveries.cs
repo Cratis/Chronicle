@@ -10,9 +10,9 @@ namespace Cratis.Chronicle.Services.Observation.for_PendingDeliveries.given;
 public class tracked_deliveries : Specification
 {
     private protected readonly PendingDeliveries<ObserverSubscriberResult> _pending = new();
-    protected readonly TaskCompletionSource<ObserverSubscriberResult> _completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    protected readonly TaskCompletionSource<ObserverSubscriberResult> _completion = new();
 
-    protected bool WaitForEntryCount(string field, int count) => SpinWait.SpinUntil(() => EntryCount(field) == count, TimeSpan.FromSeconds(5));
+    protected bool HasEntryCount(string field, int count) => EntryCount(field) == count;
 
     int EntryCount(string field)
     {

@@ -18,7 +18,7 @@ public class when_a_wait_is_cancelled : given.tracked_deliveries
     void Because()
     {
         _completion.SetCanceled();
-        _removed = WaitForEntryCount("_byId", 0) && WaitForEntryCount("_byPartition", 0);
+        _removed = HasEntryCount("_byId", 0) && HasEntryCount("_byPartition", 0);
         _pending.Add("partition", _retry);
         _acceptedLateAnswer = _pending.TryComplete(_id, "partition", ObserverSubscriberResult.Ok(1));
         _acceptedLegacyAnswer = _pending.TryComplete(0, "partition", ObserverSubscriberResult.Ok(2));

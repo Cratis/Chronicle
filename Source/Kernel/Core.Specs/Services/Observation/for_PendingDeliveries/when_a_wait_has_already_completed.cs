@@ -17,8 +17,8 @@ public class when_a_wait_has_already_completed : given.tracked_deliveries
     {
         _pending.Add("partition", _completion);
         _pending.AddPage(new Dictionary<EventSourceId, TaskCompletionSource<ObserverSubscriberResult>> { ["partition"] = _completion });
-        _singleRemoved = WaitForEntryCount("_byId", 0) && WaitForEntryCount("_byPartition", 0);
-        _pageRemoved = WaitForEntryCount("_pages", 0);
+        _singleRemoved = HasEntryCount("_byId", 0) && HasEntryCount("_byPartition", 0);
+        _pageRemoved = HasEntryCount("_pages", 0);
     }
 
     [Fact] void should_not_retain_the_single_delivery() => _singleRemoved.ShouldBeTrue();

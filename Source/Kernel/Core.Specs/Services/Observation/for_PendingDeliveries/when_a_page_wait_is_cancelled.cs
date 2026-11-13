@@ -24,7 +24,7 @@ public class when_a_page_wait_is_cancelled : given.tracked_deliveries
     {
         _completion.SetCanceled();
         _retainedOther = _pending.TryComplete(_id, "second", ObserverSubscriberResult.Ok(2));
-        _removed = WaitForEntryCount("_pages", 0);
+        _removed = HasEntryCount("_pages", 0);
         _acceptedLateAnswer = _pending.TryComplete(_id, "first", ObserverSubscriberResult.Ok(1));
     }
 
