@@ -42,7 +42,7 @@ jobs:
       # The full history is what makes the diff against the base commit possible; the default
       # shallow fetch does not contain it.
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -87,15 +87,15 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup .Net
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Cache NuGet packages
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.nuget/packages
           key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', '**/Directory.*.props', '**/Directory.*.targets') }}
@@ -103,7 +103,7 @@ jobs:
             nuget-${{ runner.os }}-
 
       - name: Restore obj cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           # Package-aware key, as in `.NET Build & Integration`: a dependency bump must not restore
           # an obj cache built against a different package set.
@@ -113,7 +113,7 @@ jobs:
             hot-core-obj-cache-${{ hashFiles('**/*.csproj', '**/Directory.*.props', '**/Directory.*.targets') }}-
 
       - name: Login to GitHub Docker Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -157,7 +157,7 @@ jobs:
           find . -type d -name bin -not -path '*/node_modules/*' -prune -print0 | tar --null -I 'zstd -T0' -cf hot-core-build-output.tar.zst -T -
 
       - name: Upload hot-core build output
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: hot-core-build-output
           path: hot-core-build-output.tar.zst
@@ -211,7 +211,7 @@ jobs:
     steps:
       # Re-run-failed-jobs reuses detect's outputs and re-evaluates evidence in this job.
       - name: Checkout gate script
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           sparse-checkout: .github/scripts
       - name: Decide

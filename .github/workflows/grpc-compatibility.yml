@@ -45,7 +45,7 @@ jobs:
 
     steps:
       - name: Checkout current code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           path: current
 
@@ -54,13 +54,13 @@ jobs:
       # triggering ref -- making the baseline identical to the current tree and
       # the comparison below unable to report a breaking change.
       - name: Checkout base code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.base-ref || github.event.pull_request.base.ref || 'main' }}
           path: baseline
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
@@ -99,7 +99,7 @@ jobs:
 
       - name: Upload schemas for reference
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           retention-days: 7
           name: grpc-schemas

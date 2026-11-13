@@ -31,7 +31,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           # Tags are what say which majors were released, and the upgrade-guide check needs them.
           # It falls back to the GitHub API and reports could-not-run rather than passing when it
@@ -39,12 +39,12 @@ jobs:
           fetch-depth: 0
 
       - name: Lint Markdown and MDX files
-        uses: DavidAnson/markdownlint-cli2-action@v18
+        uses: DavidAnson/markdownlint-cli2-action@v25
         with:
           globs: 'Documentation/**/*.{md,mdx}'
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 24.x
 

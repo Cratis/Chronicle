@@ -43,7 +43,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # The generator decides what every run actually verifies, so a silent
       # change in its selection is a silent change in coverage. Its specs cost a
@@ -129,19 +129,19 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # The integration test projects target net11.0 only (Directory.Build.props),
       # and these jobs only run already-built net11.0 assemblies, so installing the
       # 10.0 SDK on every matrix shard is pure setup overhead. Multi-targeting
       # only happens during `dotnet pack` in the publish workflows.
       - name: Setup .Net
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 11.0.x
 
       - name: Download build output
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ${{ inputs.build-output-artifact }}-client
 
@@ -152,7 +152,7 @@ jobs:
 
       - name: Login to GitHub Docker Registry
         if: matrix.needs-docker == true
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -176,7 +176,7 @@ jobs:
       # images (mssql) and locally built images (cratis/chronicle) do not
       # need pre-pulling.
       - name: Pre-pull Docker Hub images
-        uses: nick-fields/retry@v3
+        uses: nick-fields/retry@v4
         with:
           timeout_minutes: 5
           max_attempts: 5
@@ -247,7 +247,7 @@ jobs:
 
       - name: Upload coverage results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-results-client-${{ matrix.namespace }}-${{ matrix.shard }}-${{ matrix.mode }}-${{ matrix.database }}
           path: ./coverage-results/
@@ -256,7 +256,7 @@ jobs:
       # always(): the retry script can turn a crashed first attempt into a green job, and the dump is still wanted.
       - name: Upload crash dumps
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: crash-dumps-client-${{ matrix.namespace }}-${{ matrix.shard }}-${{ matrix.mode }}-${{ matrix.database }}
           path: ${{ runner.temp }}/crash-dumps/
@@ -275,19 +275,19 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # The integration test projects target net11.0 only (Directory.Build.props),
       # and these jobs only run already-built net11.0 assemblies, so installing the
       # 10.0 SDK on every matrix shard is pure setup overhead. Multi-targeting
       # only happens during `dotnet pack` in the publish workflows.
       - name: Setup .Net
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 11.0.x
 
       - name: Download build output
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ${{ inputs.build-output-artifact }}-kernel
 
@@ -310,7 +310,7 @@ jobs:
 
       # See the equivalent step in client-integration-specs for the rationale.
       - name: Pre-pull Docker Hub images
-        uses: nick-fields/retry@v3
+        uses: nick-fields/retry@v4
         with:
           timeout_minutes: 5
           max_attempts: 5
@@ -342,7 +342,7 @@ jobs:
 
       - name: Upload coverage results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-results-kernel-${{ matrix.namespace }}
           path: ./coverage-results/
@@ -360,16 +360,16 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # See client-integration-specs for the single-SDK rationale.
       - name: Setup .Net
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 11.0.x
 
       - name: Download build output
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ${{ inputs.build-output-artifact }}-clustering
 
@@ -414,7 +414,7 @@ jobs:
 
       - name: Upload coverage results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-results-clustering-${{ matrix.namespace }}
           path: ./coverage-results/
@@ -434,7 +434,7 @@ jobs:
     # Shared verbatim with the separately gated RollingUpgrade lane below.
     steps: &sql-clustering-steps
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: ${{ matrix.provider == 'RollingUpgrade' && '0' || '1' }}
 
@@ -468,12 +468,12 @@ jobs:
 
       # See client-integration-specs for the single-SDK rationale.
       - name: Setup .Net
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 11.0.x
 
       - name: Download build output
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ${{ inputs.build-output-artifact }}-sqlclustering
 
@@ -498,7 +498,7 @@ jobs:
           echo "CRATIS_CHRONICLE_BUILD_VERSION=${stamped[0]}" >> "$GITHUB_ENV"
 
       - name: Login to GitHub Docker Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -541,14 +541,14 @@ jobs:
       - name: Upload rolling delivery overhead evidence immediately
         if: always()
         continue-on-error: true
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: rolling-delivery-overhead
           path: ${{ runner.temp }}/rolling-delivery-overhead/
           retention-days: 7
 
       - name: Pre-pull images
-        uses: nick-fields/retry@v3
+        uses: nick-fields/retry@v4
         with:
           timeout_minutes: 5
           max_attempts: 5
@@ -591,7 +591,7 @@ jobs:
 
       - name: Upload rolling delivery diagnostics evidence
         if: always() && matrix.provider == 'RollingUpgrade'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: rolling-delivery-diagnostics
           path: ${{ runner.temp }}/rolling-delivery-overhead/
@@ -599,7 +599,7 @@ jobs:
 
       - name: Upload SQL clustering results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: sql-clustering-${{ matrix.provider }}-results
           path: coverage-results/

@@ -29,7 +29,7 @@ jobs:
     steps:
       # SECURITY: workflow_run has a write token. Check out only the default branch (no ref:),
       # never the PR head; nothing from the PR is executed.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           sparse-checkout: .github/scripts
           persist-credentials: false

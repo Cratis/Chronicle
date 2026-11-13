@@ -116,7 +116,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # Needs nothing but the checkout, so it runs first and costs a second. A hole in the `paths:` filter
       # above is invisible by construction - the run that would have caught the change never starts - so
@@ -181,7 +181,7 @@ jobs:
         run: python3 .github/scripts/test-analyzer-ownership.py
 
       - name: Setup .Net
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
@@ -201,7 +201,7 @@ jobs:
 
       - name: Restore obj cache
         id: restore-obj
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: ./**/obj
           # Key on the package manifests so a dependency version change never restores a stale obj
@@ -214,7 +214,7 @@ jobs:
 
       - name: Login to GitHub Docker Registry
         if: github.event_name != 'pull_request' || inputs.integration_requested
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -268,7 +268,7 @@ jobs:
           find . -type d -name bin -not -path '*/node_modules/*' -prune -print0 | tar --null -I 'zstd -T0 --long=30' -cf build-output-release.tar.zst -T -
 
       - name: Upload Release build output
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: build-output-release
           path: build-output-release.tar.zst
@@ -302,7 +302,7 @@ jobs:
 
       - name: Save obj cache
         if: github.event_name != 'pull_request' && steps.restore-obj.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: ./**/obj
           key: ${{ steps.restore-obj.outputs.cache-primary-key }}
@@ -319,10 +319,10 @@ jobs:
       packages: read
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup .Net
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
@@ -354,10 +354,10 @@ jobs:
       packages: read
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup .Net
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
@@ -367,7 +367,7 @@ jobs:
       # Reuse the build's evaluated inputs when available; package builds still restore
       # normally on a miss. Only dotnet-build saves this cache, avoiding competing writers.
       - name: Restore obj cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: ./**/obj
           key: dotnet-obj-cache-${{ hashFiles('**/*.csproj', '**/Directory.*.props', '**/Directory.*.targets') }}-${{ github.sha }}
@@ -388,7 +388,7 @@ jobs:
           echo "CRATIS_CHRONICLE_BUILD_VERSION=$BUILD_VERSION" >> "$GITHUB_ENV"
 
       - name: Download Release build output
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: build-output-release
 
@@ -458,10 +458,10 @@ jobs:
       packages: read
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup .Net
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
@@ -470,7 +470,7 @@ jobs:
 
       # Restore only: dotnet-build remains the sole writer of this optional cache.
       - name: Restore obj cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: ./**/obj
           key: dotnet-obj-cache-${{ hashFiles('**/*.csproj', '**/Directory.*.props', '**/Directory.*.targets') }}-${{ github.sha }}
@@ -499,10 +499,10 @@ jobs:
       packages: read
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup .Net
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
@@ -514,7 +514,7 @@ jobs:
           prune-on-miss: 'true'
 
       - name: Restore obj cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ./**/obj
           # Package-aware key (see the dotnet-build job) so a dependency bump busts the stale obj cache.
@@ -554,10 +554,10 @@ jobs:
       packages: read
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup .Net
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
@@ -569,7 +569,7 @@ jobs:
           prune-on-miss: 'true'
 
       - name: Restore obj cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ./**/obj
           # Package-aware key (see the dotnet-build job) so a dependency bump busts the stale obj cache.
@@ -609,10 +609,10 @@ jobs:
       packages: read
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup .Net
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
@@ -646,15 +646,15 @@ jobs:
       contents: read
     steps:
       - name: Checkout code
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup .Net
-        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
+        uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Cache pinned coverage tool
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.nuget/packages/dotnet-coverage
           key: dotnet-coverage-${{ runner.os }}-${{ hashFiles('.config/dotnet-tools.json', 'global.json') }}
@@ -686,15 +686,15 @@ jobs:
         shard: [1, 2, 3, 4]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup .Net
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Download Release build output
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: build-output-release
 
@@ -705,7 +705,7 @@ jobs:
       # on every hit or miss, refreshing stale inputs and fetching any missing packages.
       # Read only: dotnet-build remains the sole writer of the Release obj cache.
       - name: Restore obj cache
-        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ./**/obj
           key: dotnet-obj-cache-${{ hashFiles('**/*.csproj', '**/Directory.*.props', '**/Directory.*.targets') }}-${{ github.sha }}
@@ -736,7 +736,7 @@ jobs:
           fi
 
       - name: Cache pinned coverage tool
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.nuget/packages/dotnet-coverage
           key: dotnet-coverage-${{ runner.os }}-${{ hashFiles('.config/dotnet-tools.json', 'global.json') }}
@@ -768,7 +768,7 @@ jobs:
 
       - name: Upload coverage results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-results-specs-other-${{ matrix.shard }}
           # A retried worker replaces its prior upload; retained successful workers do not run.
@@ -789,15 +789,15 @@ jobs:
         shard: [postgresql, sqlserver-1, sqlserver-2, sqlserver-3, sqlserver-4, remaining]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup .Net
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Download Release build output
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: build-output-release
 
@@ -807,7 +807,7 @@ jobs:
       # Reuse evaluated inputs without adding the full NuGet cache's extraction cost.
       # Read only: dotnet-build remains the sole writer of the Release obj cache.
       - name: Restore obj cache
-        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ./**/obj
           key: dotnet-obj-cache-${{ hashFiles('**/*.csproj', '**/Directory.*.props', '**/Directory.*.targets') }}-${{ github.sha }}
@@ -818,7 +818,7 @@ jobs:
         run: dotnet restore Source/Kernel/Storage.Sql.Specs/Storage.Sql.Specs.csproj
 
       - name: Cache pinned coverage tool
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.nuget/packages/dotnet-coverage
           key: dotnet-coverage-${{ runner.os }}-${{ hashFiles('.config/dotnet-tools.json', 'global.json') }}
@@ -840,7 +840,7 @@ jobs:
 
       - name: Upload coverage results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-results-specs-sql-${{ matrix.shard }}
           path: ./coverage-results/
@@ -858,10 +858,10 @@ jobs:
       ChronicleTfm: net10.0
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup .Net
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
@@ -933,7 +933,7 @@ jobs:
         run: test "$WIRE_RESULT" = success && test "$GRAIN_RESULT" = success && test "$RUNNER_RESULT" = success && test "$OTHER_RESULT" = success && test "$SQL_RESULT" = success && test "$NET10_RESULT" = success && test "$PACKAGE_RESULT" = success && test "$ANALYZER_RESULT" = success && { test "$DEV_ANALYZER_RESULT" = success || { test "$EVENT_NAME" = pull_request && test "$INTEGRATION_REQUESTED" != true && test "$DEV_ANALYZER_RESULT" = skipped; }; } && { test "$PACK_RESULT" = success || { test "$EVENT_NAME" != pull_request && test "$PACK_RESULT" = skipped; }; }
 
       - name: Checkout shard contract
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -944,7 +944,7 @@ jobs:
         run: node .github/scripts/spec-shards.mjs --select-producers .ai-work/5501/producers.json
 
       - name: Download ordinary shard receipts
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           artifact-ids: ${{ steps.producers.outputs.artifact_ids }}
           path: .ai-work/5501/spec-shard-receipts
@@ -985,15 +985,15 @@ jobs:
     needs: [already-ran, dotnet-build]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup .Net
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Download Release build output
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: build-output-release
 
@@ -1001,7 +1001,7 @@ jobs:
         run: tar -I 'zstd -d --long=30' -xf build-output-release.tar.zst
 
       - name: Login to GitHub Docker Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -1031,7 +1031,7 @@ jobs:
 
       - name: Upload coverage results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-results-integration-api
           path: ./Integration/Api/coverage-results/
@@ -1045,15 +1045,15 @@ jobs:
     needs: [already-ran, dotnet-build]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup .Net
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Download Release build output
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: build-output-release
 
@@ -1061,7 +1061,7 @@ jobs:
         run: tar -I 'zstd -d --long=30' -xf build-output-release.tar.zst
 
       - name: Login to GitHub Docker Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -1175,7 +1175,7 @@ jobs:
 
       - name: Upload coverage results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-results-mongodb
           path: |
@@ -1208,15 +1208,15 @@ jobs:
             database-mode: PerNamespace
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup .Net
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Download Release build output
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: build-output-release
 
@@ -1225,7 +1225,7 @@ jobs:
 
       # Pre-pull once per job so the Testcontainers image check does not race anonymous Docker Hub rate limits.
       - name: Pre-pull Neo4j image
-        uses: nick-fields/retry@v3
+        uses: nick-fields/retry@v4
         with:
           timeout_minutes: 5
           max_attempts: 5
@@ -1255,7 +1255,7 @@ jobs:
 
       - name: Upload coverage results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-results-neo4j-${{ matrix.lane }}
           path: ./Integration/Neo4j/coverage-results/
@@ -1296,7 +1296,7 @@ jobs:
 
     steps:
       - name: Download coverage artifacts of the group
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: ./coverage-input
           pattern: ${{ matrix.pattern }}
@@ -1310,7 +1310,7 @@ jobs:
 
       - name: Setup .Net
         if: steps.inputs.outputs.count != '0'
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
@@ -1330,7 +1330,7 @@ jobs:
 
       - name: Upload the merged coverage of the group
         if: steps.inputs.outputs.count != '0'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-partial-${{ matrix.group }}
           path: ./coverage-partial/Cobertura.xml
@@ -1352,19 +1352,19 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           ref: ${{ github.sha }}
 
       - name: Setup .Net
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       # The per-lane artifacts are merged by the coverage-partial groups; only their merged output is needed here.
       - name: Download the merged coverage of every group
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: ./coverage-partials
           pattern: coverage-partial-*
@@ -1403,7 +1403,7 @@ jobs:
 
       - name: Upload nightly coverage feed
         if: github.repository == 'Cratis/Chronicle' && github.event_name == 'schedule' && github.ref == 'refs/heads/main'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: coverage-nightly-v1-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
@@ -1415,7 +1415,7 @@ jobs:
           overwrite: false
 
       - name: Cache merged coverage
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ./coverage-reports
           key: coverage-cache-${{ github.sha }}
@@ -1453,15 +1453,15 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup .Net
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Download Release build output
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: build-output-release
 

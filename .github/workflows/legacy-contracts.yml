@@ -32,10 +32,10 @@ jobs:
         shell: bash
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 11.0.x
 
@@ -73,7 +73,7 @@ jobs:
 
       # Keep artifacts in separate directories: projects and SQL shards reuse TRX filenames.
       - name: Download existing specs results
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: coverage-results-specs*
           path: legacy-contract-inputs/trx
