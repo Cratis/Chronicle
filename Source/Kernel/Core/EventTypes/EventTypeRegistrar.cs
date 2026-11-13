@@ -110,6 +110,70 @@ public sealed class EventTypeRegistrar(IGrainFactory grainFactory)
     }
 
     /// <summary>
+    /// Checks whether registrations would be accepted by <see cref="Register"/>, without writing anything.
+    /// </summary>
+    /// <param name="eventStore">The event store to check against.</param>
+    /// <param name="types">The registrations to check.</param>
+    /// <param name="storage">The <see cref="IStorage"/> holding the event types.</param>
+    /// <returns>One result per registration, in the order given.</returns>
+    /// <remarks>
+    /// Applies exactly the checks <see cref="Register"/> applies with validation on, against what is stored, and only reads:
+    /// no event type is written, no system event is appended and no cache is evicted.
+    /// </remarks>
+    public async Task<IReadOnlyList<EventTypeCheckResult>> Check(
+        EventStoreName eventStore,
+        IEnumerable<EventTypeRegistration> types,
+        IStorage storage)
+    {
+        var typesList = types.ToList();
+        var stored = (await storage.GetEventStore(eventStore).EventTypes.GetAllDefinitions()).ToDictionary(_ => _.Id);
+        var results = new List<EventTypeCheckResult>();
+
+        foreach (var eventType in typesList)
+        {
+            results.Add(await CheckRegistration(eventType, StoredFor(stored, eventType)));
+        }
+
+        return results;
+    }
+
+    static async Task<EventTypeCheckResult> CheckRegistration(EventTypeRegistration eventType, EventTypeDefinition? storedDefinition)
+    {
+        var id = eventType.Type.Id;
+        var generation = eventType.Type.Generation;
+
+        if (FindMigrationChainProblem(id, generation, eventType.Migrations) is { } chainProblem)
+        {
+            return EventTypeCheckResult.Reject(id, generation, chainProblem.Message);
+        }
+
+        if (await FindSchemaProblem(eventType, storedDefinition) is { } schemaProblem)
+        {
+            return EventTypeCheckResult.Reject(
+                id,
+                schemaProblem.Generation,
+                new EventTypeSchemaChanged(id, schemaProblem.Generation).Message,
+                schemaProblem.Difference.Keyword,
+                schemaProblem.Difference.Path);
+        }
+
+        try
+        {
+            await CreateEventTypeToRegister(eventType, false, storedDefinition);
+        }
+        catch (EventTypeSchemaChanged ex)
+        {
+            return EventTypeCheckResult.Reject(id, generation, ex.Message, "protection", "$");
+        }
+        catch (InvalidMigrationPropertyForEventType ex)
+        {
+            return EventTypeCheckResult.Reject(id, generation, ex.Message);
+        }
+
+        return EventTypeCheckResult.Accept(id, generation);
+    }
+
+    /// <summary>
     /// Re-subscribes pattern capture when a registration actually introduced something new.
     /// </summary>
     /// <param name="patternCapture">The <see cref="IPatternCapture"/> to subscribe with.</param>
@@ -233,22 +297,32 @@ public sealed class EventTypeRegistrar(IGrainFactory grainFactory)
 
     static void ValidateMigrationChain(string eventTypeId, uint currentGeneration, IList<Contracts.Events.EventTypeMigrationDefinition> migrations)
     {
+        if (FindMigrationChainProblem(eventTypeId, currentGeneration, migrations) is { } problem)
+        {
+            throw problem;
+        }
+    }
+
+    static Exception? FindMigrationChainProblem(string eventTypeId, uint currentGeneration, IList<Contracts.Events.EventTypeMigrationDefinition> migrations)
+    {
         if (currentGeneration <= 1)
-            return;
+            return null;
 
         var effectiveMigrations = migrations.Where(m => m.FromGeneration != m.ToGeneration).ToList();
 
         if (effectiveMigrations.Count == 0)
-            throw new MissingEventTypeMigrators(eventTypeId, currentGeneration);
+            return new MissingEventTypeMigrators(eventTypeId, currentGeneration);
 
         if (!effectiveMigrations.Exists(m => m.FromGeneration == 1))
-            throw new MissingFirstGenerationForEventType(eventTypeId, currentGeneration);
+            return new MissingFirstGenerationForEventType(eventTypeId, currentGeneration);
 
         for (uint from = 1; from < currentGeneration; from++)
         {
             if (!effectiveMigrations.Exists(m => m.FromGeneration == from))
-                throw new MissingMigrationForEventTypeGeneration(eventTypeId, currentGeneration, from);
+                return new MissingMigrationForEventTypeGeneration(eventTypeId, currentGeneration, from);
         }
+
+        return null;
     }
 
     static void ValidateMigrationProperties(
@@ -417,9 +491,17 @@ public sealed class EventTypeRegistrar(IGrainFactory grainFactory)
 
     static async Task ValidateSchemaNotChanged(EventTypeRegistration eventType, EventTypeDefinition? storedDefinition)
     {
+        if (await FindSchemaProblem(eventType, storedDefinition) is { } problem)
+        {
+            throw new EventTypeSchemaChanged(eventType.Type.Id, problem.Generation);
+        }
+    }
+
+    static async Task<SchemaProblem?> FindSchemaProblem(EventTypeRegistration eventType, EventTypeDefinition? storedDefinition)
+    {
         if (storedDefinition is null)
         {
-            return;
+            return null;
         }
 
         var definitions = eventType.Generations.Count > 0 ? eventType.Generations :
@@ -447,11 +529,13 @@ public sealed class EventTypeRegistrar(IGrainFactory grainFactory)
             // underlying value a stored payload carries. Everything else, including a member that disappeared or
             // was renumbered, still needs a new generation.
             var refined = existingGeneration.Schema.MorePrecise(newSchema);
-            if (!existingGeneration.Schema.IsCompatibleWith(refined))
+            if (existingGeneration.Schema.DifferingKeywords(refined) is { } difference)
             {
-                throw new EventTypeSchemaChanged(eventType.Type.Id, genDef.Generation);
+                return new SchemaProblem(genDef.Generation, difference);
             }
         }
+
+        return null;
     }
 
     void LogAddedProtectionMetadata(IEnumerable<EventTypeToRegister> registrations, Dictionary<EventTypeId, EventTypeDefinition> stored)
@@ -506,6 +590,13 @@ public sealed class EventTypeRegistrar(IGrainFactory grainFactory)
             }
         }
     }
+
+    /// <summary>
+    /// Represents a stored generation whose schema the registration would change.
+    /// </summary>
+    /// <param name="Generation">The generation whose schema differs.</param>
+    /// <param name="Difference">The first difference that is not tolerated.</param>
+    sealed record SchemaProblem(uint Generation, SchemaDifference Difference);
 
     /// <summary>
     /// Represents the generations of an event type that are not yet stored, and whether the event type itself is

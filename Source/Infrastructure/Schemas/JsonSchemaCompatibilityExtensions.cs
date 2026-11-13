@@ -31,7 +31,19 @@ public static class JsonSchemaCompatibilityExtensions
     /// Protection metadata may be added, but existing metadata may not be removed or changed.
     /// Other changes require a new generation. Default-only refinements work in both directions for rolling upgrades.
     /// </remarks>
-    public static bool IsCompatibleWith(this JsonSchema stored, JsonSchema generated)
+    public static bool IsCompatibleWith(this JsonSchema stored, JsonSchema generated) => stored.DifferingKeywords(generated) is null;
+
+    /// <summary>
+    /// Finds the first difference a generated schema has that is not tolerated when compared with the stored one.
+    /// </summary>
+    /// <param name="stored">The stored schema.</param>
+    /// <param name="generated">The incoming schema.</param>
+    /// <returns>The JSON path and keyword of the first non-tolerated difference, or <see langword="null"/> when the schemas are compatible.</returns>
+    /// <remarks>
+    /// This is the one definition of what is tolerated; <see cref="IsCompatibleWith"/> is defined in terms of it,
+    /// so a schema reported as compatible here is accepted by registration and the other way around.
+    /// </remarks>
+    public static SchemaDifference? DifferingKeywords(this JsonSchema stored, JsonSchema generated)
     {
         var storedNode = JsonNode.Parse(stored.ToJson());
         var generatedNode = JsonNode.Parse(stored.MorePrecise(generated).ToJson());
@@ -41,9 +53,16 @@ public static class JsonSchemaCompatibilityExtensions
         StripAnnotations(generatedNode);
         StripProtectionDetails(storedNode);
         StripProtectionDetails(generatedNode);
-        return DefaultOnlyPropertyRefinement.EraseCompatibleDifferences(storedNode, generatedNode) &&
-            TryEraseCompatibleEnumerations(storedNode, generatedNode) &&
-            JsonNode.DeepEquals(storedNode, generatedNode);
+        var tolerated = DefaultOnlyPropertyRefinement.EraseCompatibleDifferences(storedNode, generatedNode) &&
+            TryEraseCompatibleEnumerations(storedNode, generatedNode);
+        if (tolerated && JsonNode.DeepEquals(storedNode, generatedNode))
+        {
+            return null;
+        }
+
+        return storedNode is JsonObject previous && generatedNode is JsonObject incoming
+            ? Locate(previous, incoming, "$")
+            : new SchemaDifference("$", "schema");
     }
 
     /// <summary>
@@ -165,6 +184,20 @@ public static class JsonSchemaCompatibilityExtensions
             schema[FormatKey] = format[..^1];
         }
     });
+
+    static SchemaDifference Locate(JsonObject stored, JsonObject generated, string path)
+    {
+        var key = stored.Select(_ => _.Key).Union(generated.Select(_ => _.Key))
+            .FirstOrDefault(_ => !JsonNode.DeepEquals(stored[_], generated[_]));
+        if (key is null)
+        {
+            return new(path, "schema");
+        }
+
+        return stored[key] is JsonObject previousChild && generated[key] is JsonObject incomingChild
+            ? Locate(previousChild, incomingChild, $"{path}/{key.Replace("~", "~0").Replace("/", "~1")}")
+            : new(path, key);
+    }
 
     static bool TryEraseCompatibleEnumerations(JsonNode? stored, JsonNode? generated)
     {
