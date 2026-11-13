@@ -16,12 +16,16 @@ public class and_an_earlier_delivery_fence_write_threw : given.an_observer
         var calls = 0;
         _configurationProvider.GetFor(Arg.Any<string>()).Returns(_ => ++calls == 1 ? _observersConfig : throw _failure);
         _error = await Catch.Exception(() => _observer.PartitionFailedWithDeliveryFence(
-            "first", 42UL, ["timeout"], string.Empty, FailureKind.Timeout,
+            "first",
+            42UL,
+            ["timeout"],
+            string.Empty,
+            FailureKind.Timeout,
             context: new(DeliveryFence: new(DateTimeOffset.UtcNow.AddMinutes(5), []))));
         _configurationProvider.Configure().GetFor(Arg.Any<string>()).Returns(_observersConfig);
     }
 
-    async Task Because() => await _observer.PartitionFailed("next", 43UL, ["Failure"], "Stack").WaitAsync(TimeSpan.FromSeconds(5));
+    async Task Because() => await _observer.PartitionFailed("next", 43UL, ["Failure"], "Stack").WaitAsync(TimeSpan.FromSeconds(5), _timeProvider);
 
     [Fact] void should_have_propagated_the_original_exception() => _error.ShouldBeSame(_failure);
     [Fact] void should_release_the_mutation_lock_for_the_next_failure() => _failedPartitionsState.Partitions.Any(_ => _.Partition == "next").ShouldBeTrue();

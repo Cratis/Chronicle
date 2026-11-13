@@ -20,7 +20,7 @@ public class and_another_write_is_in_flight : given.an_observer_with_interceptab
             await _release.Task;
         };
         _firstWrite = _observer.SetHandledStats(42UL);
-        await _started.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await _started.Task.WaitAsync(TimeSpan.FromSeconds(5), _timeProvider);
     }
 
     async Task Because()
@@ -28,10 +28,10 @@ public class and_another_write_is_in_flight : given.an_observer_with_interceptab
         var secondWrite = _observer.SetHandledStats(43UL);
         _writesBeforeRelease = _interceptedState.Writes.Count;
         _release.SetResult();
-        await Task.WhenAll(_firstWrite, secondWrite).WaitAsync(TimeSpan.FromSeconds(5));
+        await Task.WhenAll(_firstWrite, secondWrite).WaitAsync(TimeSpan.FromSeconds(5), _timeProvider);
     }
 
     [Fact] void should_serialize_the_storage_writes() => _writesBeforeRelease.ShouldEqual(1);
     [Fact] void should_write_both_snapshots() => _interceptedState.Writes.Count.ShouldEqual(2);
-    [Fact] void should_write_the_latest_progress_last() => _interceptedState.Writes.Last().LastHandledEventSequenceNumber.ShouldEqual((EventSequenceNumber)43UL);
+    [Fact] void should_write_the_latest_progress_last() => _interceptedState.Writes[^1].LastHandledEventSequenceNumber.ShouldEqual((EventSequenceNumber)43UL);
 }

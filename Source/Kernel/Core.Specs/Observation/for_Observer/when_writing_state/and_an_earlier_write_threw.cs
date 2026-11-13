@@ -17,9 +17,9 @@ public class and_an_earlier_write_threw : given.an_observer_with_interceptable_s
         _interceptedState.OnWrite = () => Task.CompletedTask;
     }
 
-    async Task Because() => await _observer.SetHandledStats(43UL).WaitAsync(TimeSpan.FromSeconds(5));
+    async Task Because() => await _observer.SetHandledStats(43UL).WaitAsync(TimeSpan.FromSeconds(5), _timeProvider);
 
     [Fact] void should_have_propagated_the_original_exception() => _error.ShouldBeSame(_failure);
     [Fact] void should_release_the_write_lock_for_the_next_write() => _storageStats.Writes.ShouldEqual(1);
-    [Fact] void should_persist_the_next_progress() => _interceptedState.Writes.Last().LastHandledEventSequenceNumber.ShouldEqual((EventSequenceNumber)43UL);
+    [Fact] void should_persist_the_next_progress() => _interceptedState.Writes[^1].LastHandledEventSequenceNumber.ShouldEqual((EventSequenceNumber)43UL);
 }
