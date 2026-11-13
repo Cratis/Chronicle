@@ -90,6 +90,24 @@ chronicle+srv://cluster.example.com
 For the example above, the client queries the SRV records for
 `_chronicle._tcp.cluster.example.com`.
 
+### Credentials and SRV targets
+
+With client credentials and no external token endpoint, the client requests its token from the server it
+connects to: `https://<target>:<port>/connect/token`. With SRV discovery, `<target>` is the host the SRV
+record returned, so the client id and secret are sent to whichever host DNS names. Whoever controls the
+SRV records for the domain therefore controls where the credentials go. Only use `chronicle+srv://` with
+a domain whose DNS you trust, ideally DNSSEC-protected, or configure an explicit external token endpoint
+so credentials always go to a fixed destination. Credentials are only sent over TLS.
+
+### Token cache
+
+Short-lived clients, such as command line tools, can cache tokens between runs with
+`FileSystemCachingTokenProvider`, which stores them in a file at a path the host application chooses (keep
+it in the user's own profile). The file is created readable and writable by the current user only (mode `0600` on Unix, in a
+directory with mode `0700`) and replaced atomically. A cached token is reused until the expiry the issuer
+put in the token (its `exp` claim) less a short safety margin, or for 55 minutes when the token carries no
+expiry. Delete the file to force a new token request.
+
 ## Authentication modes
 
 Chronicle supports multiple authentication modes. The mode is determined by the credentials present in the connection string:
