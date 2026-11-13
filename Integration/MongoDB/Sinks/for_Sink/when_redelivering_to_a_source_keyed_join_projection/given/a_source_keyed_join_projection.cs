@@ -27,7 +27,12 @@ public class a_source_keyed_join_projection(ChronicleInProcessFixture fixture) :
     protected static Joined JoinOf(params (string Property, int Value)[] values) =>
         new(new ExpandoObject(), JoinedStream, new PropertyPath("joinId"), ArrayIndexers.NoIndexers, [Direct(values)]);
 
-    // The engine resolves a join with the key of the read model being written; the join event names the joined instance.
+    /// <summary>
+    /// Creates a resolved join the way the engine does: keyed by the read model being written, with the join event naming the joined instance.
+    /// </summary>
+    /// <param name="source">The join event.</param>
+    /// <param name="values">The joined values.</param>
+    /// <returns>The <see cref="ResolvedJoin"/>.</returns>
     protected static ResolvedJoin ResolvedOf(AppendedEvent source, params (string Property, int Value)[] values) =>
         new(new ExpandoObject(), RootKey.Value, new PropertyPath("joinId"), ArrayIndexers.NoIndexers, [Direct(values)], source);
 
