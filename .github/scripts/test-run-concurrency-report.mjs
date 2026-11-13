@@ -73,6 +73,16 @@ test('the report splits integration from ordinary jobs and measures created-to-s
     assert.equal(result.wallSeconds, 100);
 });
 
+test('caller prefixes do not decide the family: only the called job name does', () => {
+    const caller = 'requested-integration-run-integration / ';
+    const result = report([
+        job(`${caller}specs-other (1)`, [0, 1, 10]),
+        job(`${caller}client-integration-specs (a)`, [0, 1, 10]),
+    ]);
+    assert.equal(result.integration.jobs, 1);
+    assert.equal(result.ordinary.jobs, 1);
+});
+
 test('a report over no executed jobs is UNKNOWN', () => {
     assert.throws(() => report([{ name: 's', labels: ['ubuntu-latest'], conclusion: 'skipped' }]), /no executed jobs/);
 });

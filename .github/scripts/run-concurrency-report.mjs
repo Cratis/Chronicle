@@ -14,6 +14,8 @@ import { readFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 
 export const INTEGRATION_FAMILY = /integration|mongodb|neo4j|clustering/i;
+/** Called-workflow jobs are named `<caller job> / <job>`; classify on the leaf so a caller named for integration does not claim its ordinary jobs. */
+export const isIntegration = item => INTEGRATION_FAMILY.test(item.name.split(' / ').at(-1));
 const HOSTED_LABEL = /^(ubuntu|windows|macos)-/;
 
 export class UnknownReport extends Error {}
@@ -99,8 +101,8 @@ export function summarize(items) {
 export function report(jobs) {
     const items = intervals(jobs);
     if (items.length === 0) throw new UnknownReport('UNKNOWN: no executed jobs in the input');
-    const integration = items.filter(item => INTEGRATION_FAMILY.test(item.name));
-    const ordinary = items.filter(item => !INTEGRATION_FAMILY.test(item.name));
+    const integration = items.filter(isIntegration);
+    const ordinary = items.filter(item => !isIntegration(item));
     const wallSeconds = (Math.max(...items.map(item => item.end)) - Math.min(...items.map(item => item.created))) / 1000;
     return { all: summarize(items), integration: summarize(integration), ordinary: summarize(ordinary), wallSeconds };
 }
