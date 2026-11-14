@@ -98,6 +98,15 @@ internal sealed class FederationEnrollmentWorker(
         if (code.Length > 0)
         {
             await enrollment.Redeem(code, cancellationToken);
+            RemoveRedeemedCode(path);
+        }
+    }
+
+    void RemoveRedeemedCode(string path)
+    {
+        if (!RedeemedEnrollmentCodeFile.TryRemove(path))
+        {
+            logger.RedeemedCodeCouldNotBeRemoved();
         }
     }
 }
