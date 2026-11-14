@@ -222,6 +222,7 @@ A certificate says who a peer is. A policy says what that peer may do. The polic
 | `SetFederationPolicy(Subject, Direction, EventStore, Namespace, AllPublic, EventTypes)` | Creates the policy of a subject, or changes what it may do in one direction. |
 | `SuspendFederationPolicy(Subject)` | Refuses the subject's links until it is resumed. |
 | `ResumeFederationPolicy(Subject)` | Admits a suspended subject again. |
+| `RevokeFederationPolicyDirection(Subject, Direction)` | Refuses one direction of the subject's links at once and leaves the other running. Set the direction again to allow it again. |
 | `RevokeFederationPolicy(Subject)` | Refuses the subject's links for good. A revoked subject cannot be set again; enroll a new subject instead. |
 
 `AllPolicies` lists them. Every change is an event with the identity that acted, and takes effect on the subject's links at once without affecting any other subject.
@@ -239,9 +240,52 @@ The target comes from the policy alone, never from the certificate or the reques
 
 Pinned grants and bindings are unaffected. A client certificate that matches a pinned grant is served by that grant only and is never widened by a policy. A certificate with no pinned grant is the only one considered for hosted admission.
 
+### One connection for both directions
+
+A kernel behind a firewall dials out, and one connection carries events both ways. The existing `Pull` call is unchanged. The dialer opens a second call, `Serve`, on the same HTTP/2 connection: the accepting kernel sends pull requests as frames, and the dialer answers each with a batch read from its own outbox. The accepting kernel appends what arrives to the inbox its policy names, with the same guarantees as a pull link:
+
+- Delivery is at least once, duplicates are dropped per origin, and an event whose origin is the accepting kernel's own store is rejected so two stores that serve each other cannot loop.
+- The cursor is the tail of the inbox that was appended to, so a reconnect through any silo resumes from the last event that really arrived. The session is owned by a grain keyed by the subject; a newer connection supersedes an older one.
+- Backpressure is the request/answer rhythm itself: the dialer is only asked for the next page when the previous one was appended. The per-link rate limits apply to each direction on its own.
+- Each direction is decided by its own policy entry, read again before every request. From the accepting kernel's point of view, what the dialer produces is the `AcceptorInbound` entry and what the dialer consumes is the `AcceptorOutbound` entry. Revoking one with `RevokeFederationPolicyDirection` ends that direction while the other keeps running on the same connection; revoking the certificate or the subject ends both.
+
+The dialer reconnects with backoff when the connection is lost and resumes both directions from their cursors. When it renews its certificate it reconnects once so the new certificate is presented.
+
+#### Dial-only mode
+
+`Federation:Enabled` starts both the listener and the consumer, as it always did. To run only the dialer, leave it off and configure `Federation:Dial` instead. The kernel then opens no listener, needs no listener certificate and no open port. It presents the certificate it obtained by [enrolling](#enroll-a-customer), trusts the authority root that came with the enrollment rather than the system trust store, and keeps its connection up through renewals.
+
+```json
+{
+  "Chronicle": {
+    "Federation": {
+      "Enrollment": { "CodePath": "/run/secrets/chronicle-enrollment-code" },
+      "Dial": {
+        "Enabled": true,
+        "EventStore": "customer",
+        "Namespace": "Default",
+        "LogicalSource": "hosted",
+        "Serve": true,
+        "ServeEventTypes": []
+      }
+    }
+  }
+}
+```
+
+| Setting | Meaning |
+| --- | --- |
+| `Enabled` | Dials the authority this kernel enrolled with. Off by default. |
+| `EventStore`, `Namespace` | The local event store whose inbox receives the authority's events and whose outbox is served to it. Dialing needs an event store. |
+| `LogicalSource` | The source name your event store subscriptions use for the authority. Defaults to `hosted`. |
+| `Serve` | Also produces this kernel's public outbox to the authority over the same connection. Off by default; the authority still needs an `AcceptorInbound` entry for this kernel. |
+| `ServeEventTypes` | Limits what is served. Empty serves every public event type. |
+
+Because the authority decides the target from the policy, the dialer names no event store or namespace on the authority.
+
 ### Audit trail
 
-Every step is an event in the system event log: `FederationAuthorityCreated`, `FederationEnrollmentCreated`, `FederationEnrollmentRevoked`, `FederationCertificateIssued` (subject, serial number, expiry, why, and who acted) and `FederationCertificateRevoked`, `FederationPolicySet`, `FederationPolicySuspended`, `FederationPolicyResumed` and `FederationPolicyRevoked` for the policies, and on an enrolled kernel `FederationIdentityInstalled`. The `FederationCertificateIssued` events are the registry of every certificate the authority issued. Events never contain the token secret, the enrollment code or a private key. The private key of an enrolled kernel is recorded only encrypted with a secret held by the key custody.
+Every step is an event in the system event log: `FederationAuthorityCreated`, `FederationEnrollmentCreated`, `FederationEnrollmentRevoked`, `FederationCertificateIssued` (subject, serial number, expiry, why, and who acted) and `FederationCertificateRevoked`, `FederationPolicySet`, `FederationPolicySuspended`, `FederationPolicyResumed`, `FederationPolicyDirectionRevoked` and `FederationPolicyRevoked` for the policies, and on an enrolled kernel `FederationIdentityInstalled`. The `FederationCertificateIssued` events are the registry of every certificate the authority issued. Events never contain the token secret, the enrollment code or a private key. The private key of an enrolled kernel is recorded only encrypted with a secret held by the key custody.
 
 ## Rotating a certificate
 
