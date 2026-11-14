@@ -73,6 +73,9 @@ internal static partial class ProjectionsManagerLogging
     [LoggerMessage(LogLevel.Warning, "Ignoring the registration of projection '{Identifier}' from client version {IncomingVersion}, since it is older than version {StoredVersion} it was last registered with. The stored definition is kept")]
     internal static partial void IgnoringOlderRegistration(this ILogger<ProjectionsManager> logger, ProjectionId identifier, string incomingVersion, string storedVersion);
 
+    [LoggerMessage(LogLevel.Warning, "Could not recommend looking at {Count} ignored projection registration(s) in event store {EventStore}; the registration itself is not affected")]
+    internal static partial void FailedToRecommendIgnoredRegistrations(this ILogger<ProjectionsManager> logger, Exception exception, EventStoreName eventStore, int count);
+
     [LoggerMessage(LogLevel.Warning, "The full set of projections for owner '{Owner}' registered by client version {IncomingVersion} is older than what is stored - not retiring any projections")]
     internal static partial void NotRetiringForOlderRegistration(this ILogger<ProjectionsManager> logger, ProjectionOwner owner, string incomingVersion);
 
