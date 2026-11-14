@@ -403,7 +403,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
                 case StringScalar.Guid when reader.TryGetGuid(out var guid):
                     return guid;
                 case StringScalar.DateTime when reader.TryGetDateTime(out var dateTime):
-                    return dateTime;
+                    return reader.TryGetDateTimeOffset(out var dateTimeOffset) ? OriginalOffsets.Remember(dateTime, dateTimeOffset) : dateTime;
             }
         }
 
@@ -955,7 +955,10 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
                 return decimalValue;
             }
         }
-        return jsonNode.AsValue().ToTargetTypeValue(targetType);
+        var converted = jsonNode.AsValue().ToTargetTypeValue(targetType);
+        return converted is DateTime dateTime && jsonNode.AsValue().TryGetValue<string>(out var text)
+            ? OriginalOffsets.Remember(text, dateTime)
+            : converted;
     }
 
     JsonValue? ConvertToJsonValueBasedOnSchemaType(object? input, JsonSchema schemaProperty)
@@ -963,6 +966,11 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
         if (input is null)
         {
             return null;
+        }
+
+        if (OriginalOffsets.TryCreateJsonValue(input, out var offsetValue))
+        {
+            return offsetValue;
         }
 
         var targetType = typeFormats.GetTypeForFormat(schemaProperty.Format ?? schemaProperty.ActualTypeSchema.Format!);
