@@ -27,7 +27,7 @@ public class when_the_connection_is_lost : given.a_hosted_federation_link
         Add(_operatorOutbox, 2, 3);
         Add(_customerOutbox, 2, 3);
         _after = await Drive(() => Count(_customerInbox) >= 4 && Count(_operatorInbox) >= 4);
-        await Settle(TimeSpan.FromMilliseconds(300));
+        await Quiesce();
     }
 
     [Tls13Fact] void should_have_delivered_in_both_directions_before_the_loss() => _before.ShouldBeTrue();

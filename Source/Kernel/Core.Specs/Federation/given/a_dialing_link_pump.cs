@@ -56,13 +56,4 @@ public class a_dialing_link_pump : a_link_pump
         _dialPump.Dispose();
         _serveClient.Dispose();
     }
-
-    protected static async Task Eventually(Func<bool> condition)
-    {
-        var deadline = DateTime.UtcNow.AddSeconds(10);
-        while (!condition() && DateTime.UtcNow < deadline)
-        {
-            await Task.Delay(10);
-        }
-    }
 }

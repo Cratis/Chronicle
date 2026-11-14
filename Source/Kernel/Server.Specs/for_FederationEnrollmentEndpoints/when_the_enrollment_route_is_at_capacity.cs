@@ -23,17 +23,19 @@ public class when_the_enrollment_route_is_at_capacity : given.a_listening_author
         }
 
         var gate = new TaskCompletionSource<FederationIssuance>();
-        _grain.Redeem("known", "secret", Arg.Any<byte[]>()).Returns(_ => gate.Task);
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _grain.Redeem("known", "secret", Arg.Any<byte[]>()).Returns(_ =>
+        {
+            entered.TrySetResult();
+            return gate.Task;
+        });
 
         var client = CreateClient();
         var url = new Uri(_endpoint, FederationEnrollmentRoutes.Redeem);
         var firstRequest = client.PostAsJsonAsync(url, new FederationRedeemRequest("known", "secret", Convert.ToBase64String(NewCsr())));
 
         // The first request is now inside the route, waiting for the grain.
-        while (!_grain.ReceivedCalls().Any(_ => _.GetMethodInfo().Name == nameof(IFederationAuthority.Redeem)))
-        {
-            await Task.Delay(10);
-        }
+        await entered.Task.WaitAsync(TimeSpan.FromSeconds(10), TimeProvider.System);
 
         _overTheCap = (await client.PostAsJsonAsync(url, new FederationRedeemRequest("unknown", "secret", Convert.ToBase64String(NewCsr())))).StatusCode;
 

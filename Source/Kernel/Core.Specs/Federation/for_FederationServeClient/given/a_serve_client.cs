@@ -20,6 +20,7 @@ public class a_serve_client : Specification
         TimeSpan.FromMilliseconds(30),
         TimeSpan.FromSeconds(2));
 
+    protected TimerClock _clock;
     protected FakeServe _serve;
     protected FakeDialClients _connections;
     protected IFederationPullService _pullService;
@@ -32,6 +33,7 @@ public class a_serve_client : Specification
     async Task Establish()
     {
         _reads = [];
+        _clock = new();
         _serve = new();
         _connections = new(new FakePull(), _serve);
         _pullService = Substitute.For<IFederationPullService>();
@@ -60,16 +62,7 @@ public class a_serve_client : Specification
                 Dial = new FederationDialOptions { Enabled = true, EventStore = "local", Namespace = "ns", Serve = _serving, ServeEventTypes = _serveEventTypes }
             }
         });
-        _client = new(_pullService, options, NullLogger<FederationServeClient>.Instance, Timing);
+        _client = new(_pullService, options, NullLogger<FederationServeClient>.Instance, Timing, _clock);
         _client.Start(_connection);
-    }
-
-    protected static async Task Eventually(Func<bool> condition)
-    {
-        var deadline = DateTime.UtcNow.AddSeconds(10);
-        while (!condition() && DateTime.UtcNow < deadline)
-        {
-            await Task.Delay(10);
-        }
     }
 }

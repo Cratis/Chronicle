@@ -12,7 +12,7 @@ public class when_the_acceptor_asks_for_events : given.a_serve_client
         _serve.Script.Add(new ServePullRequest { RequestId = 7, FromSequenceNumber = 5, Limit = 50, EventTypes = ["type-a"] });
         _serve.Script.Add(new ServePullRequest { RequestId = 8, FromSequenceNumber = 9, Limit = 50, EventTypes = ["type-a", "type-b"] });
         Start();
-        await Eventually(() => _serve.Received.Count == 2);
+        await _serve.WhenReceived(2);
     }
 
     [Fact] void should_answer_each_request_with_its_own_id() => _serve.Received.Select(_ => _.RequestId).ToArray().ShouldEqual([7UL, 8UL]);

@@ -82,6 +82,9 @@ public class a_hosted_federation_link : Specification
     ECDsa _customerKey;
     WebApplication _app;
     CancellationTokenSource _cancellation;
+    readonly PullTally _pullTally = new();
+    IFederationStatus _pumpStatus;
+    int _customerEmptyReads;
 
     protected static bool Skip => !for_FederationEnrollmentEndpoints.given.Tls13.Supported;
 
@@ -153,6 +156,7 @@ public class a_hosted_federation_link : Specification
         builder.Services.AddSingleton<IFederationCaller, HttpFederationCaller>();
         builder.Services.AddSingleton<IFederationPullService>(provider => CreateOperatorPullService(operatorOptions, admission, meterFactory, provider.GetRequiredService<IFederationCaller>()));
         builder.Services.AddSingleton<IFederationServeService>(provider => CreateOperatorServeService(operatorOptions, admission, meterFactory, provider.GetRequiredService<IFederationCaller>()));
+        builder.Services.AddSingleton(_pullTally);
         builder.Services.AddSingleton<TestFederationPull>();
         builder.Services.AddSingleton<Cratis.Chronicle.Services.Federation.FederationServe>();
         builder.Services.AddSingleton(Substitute.For<IFederationStatus>());
@@ -255,7 +259,21 @@ public class a_hosted_federation_link : Specification
     }
 
     /// <summary>
-    /// Drives the dialer's link, the way the consumer grain's timer does, until the condition holds or the time is up.
+    /// Gets a value indicating whether the dialer's link has been refused or has failed a step, which the pump reports as a denial or a backoff.
+    /// </summary>
+    protected bool LinkFailed => _pumpStatus.ReceivedCalls().Any(_ =>
+        _.GetMethodInfo().Name == nameof(IFederationStatus.SetBinding) &&
+        _.GetArguments()[1] is FederationBindingStatus status &&
+        (status.State == FederationBindingStates.Backoff || status.State == FederationBindingStates.Denied));
+
+    /// <summary>
+    /// Gets how many times the acceptor refused the serve direction of the dialer.
+    /// </summary>
+    protected int ServeRefusals => _serveClient.Refusals;
+
+    /// <summary>
+    /// Drives the dialer's link, one step after the other, until the condition holds. The steps are real round trips over the connection,
+    /// so what the link waits for is the answers and not a duration.
     /// </summary>
     /// <param name="condition">What to wait for.</param>
     /// <param name="timeout">How long to wait at most.</param>
@@ -265,19 +283,41 @@ public class a_hosted_federation_link : Specification
         var deadline = DateTime.UtcNow + (timeout ?? TimeSpan.FromSeconds(30));
         while (!condition() && DateTime.UtcNow < deadline)
         {
-            var delay = await _pump.Step(_cancellation.Token) ?? TimeSpan.FromMilliseconds(50);
-            await Task.Delay(delay > TimeSpan.FromMilliseconds(50) ? TimeSpan.FromMilliseconds(50) : delay, _cancellation.Token);
+            await _pump.Step(_cancellation.Token);
         }
 
         return condition();
     }
 
     /// <summary>
-    /// Drives the dialer's link for a while, to show that nothing more arrives.
+    /// Drives the dialer's link until both directions have asked for more and been told there is nothing, twice.
+    /// Nothing is in flight at that point, so what has arrived is everything that will.
     /// </summary>
-    /// <param name="time">How long to drive it.</param>
+    /// <param name="towardsTheAcceptor">Whether to wait for the acceptor to find the outbox of the dialer drained.</param>
+    /// <param name="towardsTheDialer">Whether to wait for the dialer to find the outbox of the acceptor drained.</param>
     /// <returns>Awaitable task.</returns>
-    protected Task Settle(TimeSpan time) => Drive(() => false, time);
+    protected async Task Quiesce(bool towardsTheAcceptor = true, bool towardsTheDialer = true)
+    {
+        var customerReads = Volatile.Read(ref _customerEmptyReads);
+        var operatorPulls = _pullTally.Empty;
+        await DriveUntil(() =>
+            (!towardsTheAcceptor || Volatile.Read(ref _customerEmptyReads) >= customerReads + 2) &&
+            (!towardsTheDialer || _pullTally.Empty >= operatorPulls + 2));
+    }
+
+    /// <summary>
+    /// Drives the dialer's link until the condition holds, and fails when it never does.
+    /// </summary>
+    /// <param name="condition">What to wait for.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <exception cref="TimeoutException">Thrown when the condition never held.</exception>
+    protected async Task DriveUntil(Func<bool> condition)
+    {
+        if (!await Drive(condition))
+        {
+            throw new TimeoutException("The link did not reach the state the specification waits for.");
+        }
+    }
 
     protected int Count(List<(string Origin, ulong SequenceNumber, string Content)> inbox)
     {
@@ -476,15 +516,21 @@ public class a_hosted_federation_link : Specification
                     events = [.. _customerOutbox.Where(e => e.SequenceNumber >= from).OrderBy(e => e.SequenceNumber).Take(call.ArgAt<int>(4))];
                 }
 
+                if (events.Length == 0)
+                {
+                    Interlocked.Increment(ref _customerEmptyReads);
+                }
+
                 var tail = events.Length == 0 ? from : events[^1].SequenceNumber;
                 return Task.FromResult(new FederatedEventBatch(FederatedEventBatchStatus.Ok, CustomerStore, events, events.Length == 0 ? from : tail + 1, tail));
             });
 
         _serveClient = new(outboxReader, customerOptions, NullLogger<FederationServeClient>.Instance, Timing);
+        _pumpStatus = Substitute.For<IFederationStatus>();
         _pump = new(
             binding.Id,
             registry,
-            Substitute.For<IFederationStatus>(),
+            _pumpStatus,
             Substitute.For<IFederationPullClientFactory>(),
             inbox,
             subscriptions,
@@ -500,12 +546,18 @@ public class a_hosted_federation_link : Specification
     /// The pull service as the kernel exposes it, over the pull service of the operator kernel.
     /// </summary>
     /// <param name="service">The pull service.</param>
-    public sealed class TestFederationPull(IFederationPullService service) : IFederationPull
+    /// <param name="tally">The tally of the pulls that found nothing.</param>
+    public sealed class TestFederationPull(IFederationPullService service, PullTally tally) : IFederationPull
     {
         /// <inheritdoc/>
         public async Task<QueryResult<FederatedEventBatchResponse>> Pull(PullRequest request, CallContext callContext = default)
         {
             var batch = await service.Pull(request.EventStore, request.Namespace, request.FromSequenceNumber, request.Limit, request.EventTypes);
+            if (!batch.Events.Any())
+            {
+                tally.RecordEmpty();
+            }
+
             return QueryResult<FederatedEventBatchResponse>.Success(Guid.NewGuid(), new FederatedEventBatchResponse
             {
                 Status = batch.Status,
@@ -515,5 +567,23 @@ public class a_hosted_federation_link : Specification
                 TailSequenceNumber = batch.TailSequenceNumber
             });
         }
+    }
+
+    /// <summary>
+    /// Counts the pulls of the dialer that found the outbox of the acceptor drained.
+    /// </summary>
+    public sealed class PullTally
+    {
+        int _empty;
+
+        /// <summary>
+        /// Gets how many pulls found nothing.
+        /// </summary>
+        public int Empty => Volatile.Read(ref _empty);
+
+        /// <summary>
+        /// Record a pull that found nothing.
+        /// </summary>
+        public void RecordEmpty() => Interlocked.Increment(ref _empty);
     }
 }

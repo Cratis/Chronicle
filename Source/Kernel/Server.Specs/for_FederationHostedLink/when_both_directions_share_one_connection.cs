@@ -19,7 +19,7 @@ public class when_both_directions_share_one_connection : given.a_hosted_federati
         Add(_operatorOutbox, 0, 1, 2);
         Add(_customerOutbox, 0, 1);
         _delivered = await Drive(() => Count(_customerInbox) >= 3 && Count(_operatorInbox) >= 2);
-        await Settle(TimeSpan.FromMilliseconds(300));
+        await Quiesce();
     }
 
     [Tls13Fact] void should_deliver_in_both_directions() => _delivered.ShouldBeTrue();

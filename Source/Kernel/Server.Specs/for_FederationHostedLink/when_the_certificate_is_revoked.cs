@@ -23,7 +23,7 @@ public class when_the_certificate_is_revoked : given.a_hosted_federation_link
         _certificateRevoked = true;
         Add(_operatorOutbox, 1, 2);
         Add(_customerOutbox, 1, 2);
-        await Settle(TimeSpan.FromSeconds(1));
+        await DriveUntil(() => LinkFailed);
     }
 
     [Tls13Fact] void should_have_delivered_in_both_directions_before() => _before.ShouldBeTrue();

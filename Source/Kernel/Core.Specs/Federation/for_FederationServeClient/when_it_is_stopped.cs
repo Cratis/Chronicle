@@ -9,19 +9,22 @@ public class when_it_is_stopped : given.a_serve_client
 {
     int _callsAtStop;
     int _callsLater;
+    int _pendingAfterStop;
 
     async Task Because()
     {
         _serve.Script.Add(new ServePullRequest { Status = FederatedEventBatchStatus.Denied });
         Start();
-        await Eventually(() => _serve.Calls >= 1);
+        await _serve.WhenCalls(1);
+        await _clock.WaitForPendingTimer();
         _client.Stop();
-        await Task.Delay(50);
         _callsAtStop = _serve.Calls;
-        await Task.Delay(150);
+        _pendingAfterStop = _clock.PendingTimers;
+        _clock.Advance(Timing.DeniedBackoff);
         _callsLater = _serve.Calls;
     }
 
     [Fact] void should_stop_opening_calls() => _callsLater.ShouldEqual(_callsAtStop);
+    [Fact] void should_not_wait_to_open_another_call() => _pendingAfterStop.ShouldEqual(0);
     [Fact] void should_not_be_serving() => _client.IsServing.ShouldBeFalse();
 }

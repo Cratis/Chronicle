@@ -18,7 +18,7 @@ public class when_a_dialer_only_serves : given.a_dialing_link_pump
     async Task Because()
     {
         _delay = await _dialPump.Step(CancellationToken.None);
-        await Eventually(() => _serve.Received.Count > 0);
+        await _serve.WhenReceived(1);
     }
 
     [Fact] void should_still_connect() => _dialClients.Created.ShouldEqual(1);

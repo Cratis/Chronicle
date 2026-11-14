@@ -8,11 +8,11 @@ public class when_the_dialer_renews_its_certificate : given.a_dialing_link_pump
     async Task Because()
     {
         await _dialPump.Step(CancellationToken.None);
-        await Eventually(() => _serve.Calls >= 1);
+        await _serve.WhenCalls(1);
         _dialClients.Serial = "serial-2";
         await _dialPump.Step(CancellationToken.None);
         await _dialPump.Step(CancellationToken.None);
-        await Eventually(() => _serve.Calls >= 2);
+        await _serve.WhenCalls(2);
     }
 
     [Fact] void should_reconnect_once_with_the_new_certificate() => _dialClients.Created.ShouldEqual(2);

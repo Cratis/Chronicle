@@ -12,7 +12,7 @@ public class when_only_some_event_types_are_served : given.a_serve_client
         _serveEventTypes = ["type-a"];
         _serve.Script.Add(new ServePullRequest { RequestId = 1, FromSequenceNumber = 0, Limit = 10, EventTypes = ["type-a", "type-b"] });
         Start();
-        await Eventually(() => _serve.Received.Count == 1);
+        await _serve.WhenReceived(1);
     }
 
     [Fact] void should_grant_only_the_listed_types() => _reads.Single().Grants.Single().AllPublic.ShouldBeFalse();

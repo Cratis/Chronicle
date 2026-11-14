@@ -31,12 +31,35 @@ public class FakeServe : IFederationServe
     /// </summary>
     public int Calls => _calls;
 
+    readonly object _gate = new();
+    readonly List<(Func<bool> Condition, TaskCompletionSource Source)> _waiters = [];
     int _calls;
+
+    /// <summary>
+    /// Waits until the given number of calls were opened.
+    /// </summary>
+    /// <param name="calls">The number of calls.</param>
+    /// <returns>A task that completes when that many calls were opened.</returns>
+    public Task WhenCalls(int calls) => When(() => _calls >= calls);
+
+    /// <summary>
+    /// Waits until the given number of answers were received.
+    /// </summary>
+    /// <param name="answers">The number of answers.</param>
+    /// <returns>A task that completes when that many answers were received.</returns>
+    public Task WhenReceived(int answers) => When(() =>
+    {
+        lock (Received)
+        {
+            return Received.Count >= answers;
+        }
+    });
 
     /// <inheritdoc/>
     public async IAsyncEnumerable<ServePullRequest> Serve(IAsyncEnumerable<ServeBatch> batches, CallContext callContext = default)
     {
         Interlocked.Increment(ref _calls);
+        Notify();
         var cancellationToken = callContext.CancellationToken;
         await using var answers = batches.GetAsyncEnumerator(cancellationToken);
         foreach (var request in Script.ToArray())
@@ -56,11 +79,42 @@ public class FakeServe : IFederationServe
             {
                 Received.Add(answers.Current);
             }
+
+            Notify();
         }
 
         if (!EndAfterScript)
         {
-            await Task.Delay(Timeout.Infinite, cancellationToken);
+            var cancelled = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            await using var registration = cancellationToken.Register(() => cancelled.TrySetCanceled(cancellationToken));
+            await cancelled.Task;
+        }
+    }
+
+    Task When(Func<bool> condition)
+    {
+        lock (_gate)
+        {
+            if (condition())
+            {
+                return Task.CompletedTask;
+            }
+
+            var source = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            _waiters.Add((condition, source));
+            return source.Task.WaitAsync(TimeSpan.FromSeconds(10), TimeProvider.System);
+        }
+    }
+
+    void Notify()
+    {
+        lock (_gate)
+        {
+            foreach (var waiter in _waiters.Where(_ => _.Condition()).ToArray())
+            {
+                waiter.Source.TrySetResult();
+                _waiters.Remove(waiter);
+            }
         }
     }
 }

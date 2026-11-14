@@ -18,7 +18,7 @@ public class when_the_authority_denies_the_pull_direction_of_a_dialer : given.a_
     async Task Because()
     {
         _delay = await _dialPump.Step(CancellationToken.None);
-        await Eventually(() => _serve.Received.Count > 0);
+        await _serve.WhenReceived(1);
     }
 
     [Fact] void should_wait_before_pulling_again() => _delay.ShouldEqual(_timing.DeniedBackoff);

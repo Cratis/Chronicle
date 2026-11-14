@@ -27,7 +27,8 @@ public class when_one_direction_is_revoked : given.a_hosted_federation_link
         Add(_customerOutbox, 1, 2);
         Add(_operatorOutbox, 1, 2);
         _afterRevocation = await Drive(() => Count(_customerInbox) >= 3);
-        await Settle(TimeSpan.FromMilliseconds(500));
+        await Quiesce(towardsTheAcceptor: false);
+        await DriveUntil(() => ServeRefusals >= 2);
     }
 
     [Tls13Fact] void should_have_delivered_in_both_directions_before() => _before.ShouldBeTrue();

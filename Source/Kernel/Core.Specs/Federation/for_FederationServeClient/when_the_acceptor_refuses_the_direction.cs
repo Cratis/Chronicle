@@ -11,7 +11,10 @@ public class when_the_acceptor_refuses_the_direction : given.a_serve_client
     {
         _serve.Script.Add(new ServePullRequest { Status = FederatedEventBatchStatus.Denied });
         Start();
-        await Eventually(() => _serve.Calls >= 2);
+        await _serve.WhenCalls(1);
+        await _clock.WaitForPendingTimer();
+        _clock.Advance(Timing.DeniedBackoff);
+        await _serve.WhenCalls(2);
     }
 
     [Fact] void should_try_again_on_the_same_connection() => _serve.Calls.ShouldBeGreaterThanOrEqual(2);
