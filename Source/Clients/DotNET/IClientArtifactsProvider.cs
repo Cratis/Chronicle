@@ -36,6 +36,15 @@ public interface IClientArtifactsProvider
     IEnumerable<Type> GraphProjections => [];
 
     /// <summary>
+    /// Gets all the types that are views over a property graph, declared with the view attribute.
+    /// </summary>
+    /// <remarks>
+    /// Defaults to an empty set so an existing <see cref="IClientArtifactsProvider"/> implementation compiles and behaves
+    /// unchanged without knowing this member exists.
+    /// </remarks>
+    IEnumerable<Type> GraphViews => [];
+
+    /// <summary>
     /// Gets all the available Reactor types.
     /// </summary>
     IEnumerable<Type> Reactors { get; }

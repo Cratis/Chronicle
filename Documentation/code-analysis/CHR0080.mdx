@@ -1,0 +1,20 @@
+---
+title: "CHR0080: A relation of a graph view must lead to a view"
+description: "CHR0080 reports a graph view relation whose member type is not a view, and shows how to declare the target as a view."
+---
+
+## Rule description
+
+A relation member holds the view at the far end of the edge, or a collection of it. The rule reports a member marked with `Follows<TEdge>` whose type, or the item type of its collection, is not marked with `ViewOf<TNode>`. A node type is not a view.
+
+## Severity
+
+Error
+
+## How to fix
+
+Declare a view for the far end of the relation, with `ViewOf<TNode>` naming the node at that end, and give the member that view type. Declare one view per place it is used, so each holds only what its consumer reads.
+
+## Related topics
+
+- [Graph projections](../projections/graph-projections.mdx)

@@ -1,0 +1,20 @@
+---
+title: "CHR0081: A graph view cannot be a node or an edge"
+description: "CHR0081 reports a type that is both a graph view and a node or an edge, and shows how to keep the view separate."
+---
+
+## Rule description
+
+A node or an edge is what a graph projection writes; a view only reads the graph. The rule reports a type marked with `ViewOf<TNode>` that is also marked with `[Node]` or `[Edge]`.
+
+## Severity
+
+Error
+
+## How to fix
+
+Declare the view as its own type and keep the node or edge as it is. A view type never takes part in a projection.
+
+## Related topics
+
+- [Graph projections](../projections/graph-projections.mdx)

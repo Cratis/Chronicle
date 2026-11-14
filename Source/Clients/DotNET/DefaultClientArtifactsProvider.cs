@@ -7,6 +7,7 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.Events.Migrations;
 using Cratis.Chronicle.EventSources;
+using Cratis.Chronicle.Graphs;
 using Cratis.Chronicle.Occurrences;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Projections.Graphs;
@@ -49,6 +50,7 @@ public class DefaultClientArtifactsProvider(ICanProvideAssembliesForDiscovery as
     IEnumerable<Type> _modelBoundProjections = [];
     IEnumerable<Type> _graphElements = [];
     IEnumerable<Type> _graphProjections = [];
+    IEnumerable<Type> _graphViews = [];
     IEnumerable<Type> _reactors = [];
     IEnumerable<Type> _readModelReactors = [];
     IEnumerable<Type> _reducers = [];
@@ -136,6 +138,16 @@ public class DefaultClientArtifactsProvider(ICanProvideAssembliesForDiscovery as
         {
             EnsureInitialized();
             return _graphProjections;
+        }
+    }
+
+    /// <inheritdoc/>
+    public virtual IEnumerable<Type> GraphViews
+    {
+        get
+        {
+            EnsureInitialized();
+            return _graphViews;
         }
     }
 
@@ -379,6 +391,7 @@ public class DefaultClientArtifactsProvider(ICanProvideAssembliesForDiscovery as
         _modelBoundProjections = assembliesProvider.DefinedTypes.Where(_ => _.HasModelBoundProjectionAttributes()).ToArray();
         _graphElements = assembliesProvider.DefinedTypes.Where(_ => _.IsDefined(typeof(NodeAttribute), false) || _.IsDefined(typeof(EdgeAttribute), false)).ToArray();
         _graphProjections = assembliesProvider.DefinedTypes.Where(_ => _ != typeof(IGraphProjection) && !_.IsAbstract && !_.IsInterface && _.HasInterface<IGraphProjection>()).ToArray();
+        _graphViews = assembliesProvider.DefinedTypes.Where(_ => !_.IsAbstract && !_.IsGenericTypeDefinition && _.GetCustomAttributes(false).OfType<IGraphViewAttribute>().Any()).ToArray();
     }
 
     void DiscoverReactorsAndReducers()

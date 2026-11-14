@@ -83,6 +83,10 @@ Rule IDs are not a continuous sequence. The table includes the retired CHR0047 r
 | [CHR0075](CHR0075) | A reducer with a batch method has no other reduce methods | Error | A reducer has two batch methods, or a batch method and per-event reduce methods |
 | [CHR0076](CHR0076) | Batch method has a signature Chronicle cannot call | Error | A batch method's parameters or result are not ones Chronicle can supply or read |
 | [CHR0077](CHR0077) | Batch method matches an event type it does not observe | Warning | A pattern in a batch method names an event type outside its `[Observes<T>]` list, so it never matches |
+| [CHR0078](CHR0078) | A graph view must be anchored at a node | Error | The type given to `ViewOf<TNode>` is not a node |
+| [CHR0079](CHR0079) | A relation of a graph view must follow an edge | Error | The type given to `Follows<TEdge>` is not an edge |
+| [CHR0080](CHR0080) | A relation of a graph view must lead to a view | Error | A relation member's type, or the item type of its collection, is not a view |
+| [CHR0081](CHR0081) | A graph view cannot be a node or an edge | Error | A type is both a view and a node or an edge |
 
 ## Explicit registration evidence
 

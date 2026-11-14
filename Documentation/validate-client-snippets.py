@@ -146,6 +146,7 @@ GRAPH_PREFIX = "projections/graph/"
 GRAPH_NAMESPACE_ROOT = "Cratis.Chronicle.Docs.GraphProjections"
 GRAPH_USINGS = """
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Graphs;
 using Cratis.Chronicle.Keys;
 using Cratis.Chronicle.Projections.Graphs;
 using Cratis.Chronicle.Projections.ModelBound;
@@ -167,6 +168,10 @@ GRAPH_MODEL = """
 [Graph("Organization")] [Edge("MEMBER_OF")] [EdgeFrom<MemberAdded>(sourceKey: nameof(MemberAdded.PersonId), targetKey: nameof(MemberAdded.GroupId))]
 public record MemberOf([Source<Person>] Guid PersonId, [Target<Group>] Guid GroupId, DateTimeOffset Since);
 """.strip()
+GRAPH_VIEWS = """
+[ViewOf<Person>] public record PersonWithGroups([Key] Guid Id, string Name, [Follows<MemberOf>] IReadOnlyList<GroupMembership> Groups);
+[ViewOf<Group>] public record GroupMembership(Guid Id, string Name, [FromEdge] DateTimeOffset Since);
+""".strip()
 GRAPH_STAND_INS = {
     "projections/graph/model-bound": "",
     "projections/graph/counters": "",
@@ -177,12 +182,22 @@ GRAPH_STAND_INS = {
 """.strip(),
     "projections/graph/sink": "",
     "projections/graph/testing": GRAPH_MODEL,
+    "projections/graph/views": GRAPH_MODEL,
+    "projections/graph/views-query": GRAPH_MODEL + "\n" + GRAPH_VIEWS,
+    "projections/graph/views-testing": GRAPH_MODEL + "\n" + GRAPH_VIEWS,
 }
 GRAPH_BODY_SNIPPETS = {
     "projections/graph/sink": """
         IServiceCollection services = new ServiceCollection();
     """,
     "projections/graph/testing": """
+        var personId = Guid.NewGuid();
+        var groupId = Guid.NewGuid();
+    """,
+    "projections/graph/views-query": """
+        IGraph graph = default!;
+    """,
+    "projections/graph/views-testing": """
         var personId = Guid.NewGuid();
         var groupId = Guid.NewGuid();
     """,
