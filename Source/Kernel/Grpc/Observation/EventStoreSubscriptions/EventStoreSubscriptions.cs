@@ -8,6 +8,7 @@ using Cratis.Chronicle.Concepts.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Storage;
@@ -42,6 +43,7 @@ internal sealed class EventStoreSubscriptions(
         {
             EnsureNotReserved(subscription.SourceEventStore);
             await SystemStoreGuard.Ensure(context, new(subscription.SourceEventStore), StoreAccess.Read, namespaceAddressed: false);
+            EnsureValidSourceNamespaces(subscription.SourceNamespaces);
         }
 
         await SystemStoreGuard.Ensure(context, new(request.TargetEventStore), StoreAccess.Append | StoreAccess.Manage, namespaceAddressed: false);
@@ -69,7 +71,8 @@ internal sealed class EventStoreSubscriptions(
                 subscription.EventTypes.Select(et => new EventType(et.Id, et.Generation)).ToArray())
             {
                 GenerationDelivery = (EventGenerationDelivery)subscription.GenerationDelivery,
-                NamedTags = (subscription.NamedTags ?? []).Select(_ => new NamedTag(new TagName(_.Name), _.Value)).ToArray()
+                NamedTags = (subscription.NamedTags ?? []).Select(_ => new NamedTag(new TagName(_.Name), _.Value)).ToArray(),
+                SourceNamespaces = (subscription.SourceNamespaces ?? []).Select(_ => new EventStoreNamespaceName(_)).ToArray()
             };
 
             var existingSubscriptions = await subscriptionsManager.GetSubscriptionDefinitions();
@@ -86,7 +89,8 @@ internal sealed class EventStoreSubscriptions(
                     definition.EventTypes)
                 {
                     GenerationDelivery = definition.GenerationDelivery,
-                    NamedTags = definition.NamedTags.Select(_ => new EventStoreSubscriptionTag(_.Name.Value, _.Value)).ToArray()
+                    NamedTags = definition.NamedTags.Select(_ => new EventStoreSubscriptionTag(_.Name.Value, _.Value)).ToArray(),
+                    SourceNamespaces = definition.SourceNamespaces.ToArray()
                 });
             }
 
@@ -136,8 +140,30 @@ internal sealed class EventStoreSubscriptions(
             SourceEventStore = definition.SourceEventStore.Value,
             EventTypes = definition.EventTypes.Select(et => new Contracts.Events.EventType { Id = et.Id, Generation = et.Generation }).ToList(),
             GenerationDelivery = (Contracts.Observation.EventGenerationDelivery)definition.GenerationDelivery,
-            NamedTags = definition.NamedTags.Select(tag => new Contracts.Events.NamedTag { Name = tag.Name.Value, Value = tag.Value }).ToList()
+            NamedTags = definition.NamedTags.Select(tag => new Contracts.Events.NamedTag { Name = tag.Name.Value, Value = tag.Value }).ToList(),
+            SourceNamespaces = definition.SourceNamespaces.Select(_ => _.Value).ToList()
         });
+    }
+
+    static void EnsureValidSourceNamespaces(IEnumerable<string>? sourceNamespaces)
+    {
+        foreach (var name in sourceNamespaces ?? [])
+        {
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                throw new RpcException(new Status(StatusCode.InvalidArgument, "A source namespace name must not be empty."));
+            }
+
+            if (NamespaceNameRules.ContainsComma(name))
+            {
+                throw new RpcException(new Status(StatusCode.InvalidArgument, NamespaceNameRules.CommaMessage));
+            }
+
+            if (name.Contains('+'))
+            {
+                throw new RpcException(new Status(StatusCode.InvalidArgument, "The source namespace name is not allowed."));
+            }
+        }
     }
 
     static void EnsureNotReserved(string eventStore)
@@ -158,6 +184,8 @@ internal sealed class EventStoreSubscriptions(
 
         var existingEventTypes = existing.EventTypes.ToHashSet();
         var incomingEventTypes = incoming.EventTypes.ToHashSet();
-        return existingEventTypes.SetEquals(incomingEventTypes) && existing.NamedTags.ToHashSet().SetEquals(incoming.NamedTags);
+        return existingEventTypes.SetEquals(incomingEventTypes) && existing.NamedTags.ToHashSet().SetEquals(incoming.NamedTags)
+            && existing.SourceNamespaces.Select(_ => _.Value).ToHashSet(StringComparer.OrdinalIgnoreCase)
+                .SetEquals(incoming.SourceNamespaces.Select(_ => _.Value));
     }
 }

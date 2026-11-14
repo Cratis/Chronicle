@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.Events;
-
 namespace Cratis.Chronicle.Observation.EventStoreSubscriptions.for_EventStoreSubscriptionObserverSubscriber.when_forwarding_events;
 
 public class without_a_linked_definition : given.a_pinned_subscriber
@@ -11,7 +9,6 @@ public class without_a_linked_definition : given.a_pinned_subscriber
 
     async Task Because() => _result = await Forward();
 
-    [Fact] void should_preserve_the_existing_unlinked_delivery_behavior() => ForwardedType().ShouldEqual(new EventType("event-type-1", 2));
-    [Fact] void should_not_infer_the_missing_pinned_policy() => AppendCalls().ShouldEqual(1);
-    [Fact] void should_acknowledge_success() => _result.State.ShouldEqual(ObserverSubscriberState.Ok);
+    [Fact] void should_fail_closed_and_not_forward() => AppendCalls().ShouldEqual(0);
+    [Fact] void should_acknowledge_and_move_past_the_events() => _result.State.ShouldEqual(ObserverSubscriberState.Ok);
 }

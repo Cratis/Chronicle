@@ -41,6 +41,36 @@ public interface IEventStoreSubscriptionBuilder
     IEventStoreSubscriptionBuilder ForAudience(string audience) => WithNamedTag(WellKnownTags.Audience, audience);
 
     /// <summary>
+    /// Only observe the named namespace of the source event store. Without any, every namespace is observed.
+    /// A namespace outside the list is neither observed nor created in the source event store. Names are compared
+    /// case-insensitively, and a name containing a comma is refused.
+    /// </summary>
+    /// <param name="namespace">The source namespace name.</param>
+    /// <returns>The builder for continuation.</returns>
+    /// <exception cref="EventStoreSubscriptionSourceNamespacesNotSupported">The builder does not support restricting source namespaces.</exception>
+    /// <exception cref="ArgumentException">The name is empty, whitespace or contains a comma.</exception>
+    IEventStoreSubscriptionBuilder WithSourceNamespace(string @namespace) =>
+        throw new EventStoreSubscriptionSourceNamespacesNotSupported();
+
+    /// <summary>
+    /// Only observe the named namespaces of the source event store. See <see cref="WithSourceNamespace"/>.
+    /// </summary>
+    /// <param name="namespaces">The source namespace names.</param>
+    /// <returns>The builder for continuation.</returns>
+    /// <exception cref="EventStoreSubscriptionSourceNamespacesNotSupported">The builder does not support restricting source namespaces.</exception>
+    /// <exception cref="ArgumentException">A name is empty, whitespace or contains a comma.</exception>
+    IEventStoreSubscriptionBuilder WithSourceNamespaces(params string[] namespaces)
+    {
+        var builder = this;
+        foreach (var @namespace in namespaces)
+        {
+            builder = builder.WithSourceNamespace(@namespace);
+        }
+
+        return builder;
+    }
+
+    /// <summary>
     /// Specify the event types to subscribe to. If not specified, all events are subscribed.
     /// </summary>
     /// <typeparam name="TEvent">The event type to include.</typeparam>

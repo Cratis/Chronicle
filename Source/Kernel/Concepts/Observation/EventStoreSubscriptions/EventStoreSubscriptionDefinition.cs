@@ -26,4 +26,10 @@ public record EventStoreSubscriptionDefinition(
     /// and untagged events never match a non-empty filter. An empty filter matches every event.
     /// </summary>
     public IEnumerable<NamedTag> NamedTags { get; init; } = [];
+
+    /// <summary>
+    /// Gets the source namespaces the subscription observes. Empty means every namespace. Names are compared case-insensitively
+    /// and a namespace outside a non-empty list is neither observed nor created in the source event store.
+    /// </summary>
+    public IEnumerable<EventStoreNamespaceName> SourceNamespaces { get; init; } = [];
 }
