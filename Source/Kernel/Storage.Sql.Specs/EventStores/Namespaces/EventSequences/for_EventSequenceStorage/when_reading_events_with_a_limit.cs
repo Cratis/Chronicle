@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.RegularExpressions;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Storage.EventSequences;
@@ -45,7 +46,7 @@ public class when_reading_events_with_a_limit : Specification
     void should_order_by_sequence_number_before_taking_the_limit()
     {
         var orderBy = _select.IndexOf("ORDER BY", StringComparison.OrdinalIgnoreCase);
-        var limit = _select.IndexOf("LIMIT", StringComparison.OrdinalIgnoreCase);
+        var limit = Regex.Matches(_select, @"\bLIMIT\b", RegexOptions.IgnoreCase).Select(match => match.Index).DefaultIfEmpty(-1).Last();
         var sequenceNumber = _select.IndexOf("\"SequenceNumber\"", Math.Max(0, orderBy), StringComparison.OrdinalIgnoreCase);
         (orderBy >= 0 && sequenceNumber > orderBy && sequenceNumber < limit).ShouldBeTrue();
     }
