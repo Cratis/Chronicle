@@ -1,0 +1,201 @@
+diff --git a/Source/Kernel/Core.Specs/Observation/Reactors/Clients/for_ReactorObserverSubscriber/given/a_subscriber.cs b/Source/Kernel/Core.Specs/Observation/Reactors/Clients/for_ReactorObserverSubscriber/given/a_subscriber.cs
+index fdc8637287..048510bc27 100644
+--- a/Source/Kernel/Core.Specs/Observation/Reactors/Clients/for_ReactorObserverSubscriber/given/a_subscriber.cs
++++ b/Source/Kernel/Core.Specs/Observation/Reactors/Clients/for_ReactorObserverSubscriber/given/a_subscriber.cs
+@@ -7,6 +7,7 @@
+ using Cratis.Chronicle.Concepts.Keys;
+ using Cratis.Chronicle.Concepts.Observation.Reactors;
+ using Cratis.Chronicle.Observation.given;
++using Microsoft.Extensions.Logging;
+ using Microsoft.Extensions.Logging.Abstractions;
+ 
+ namespace Cratis.Chronicle.Observation.Reactors.Clients.for_ReactorObserverSubscriber.given;
+@@ -19,12 +20,14 @@ public class a_subscriber : Specification
+     protected ObserverSubscriberContext _context;
+     protected TaskCompletionSource<ObserverSubscriberResult> _completion;
+ 
++    protected virtual ILogger<ReactorObserverSubscriber> CreateLogger() => NullLogger<ReactorObserverSubscriber>.Instance;
++
+     void Establish()
+     {
+         _mediator = Substitute.For<IReactorMediator>();
+         _mediator.When(mediator => mediator.OnNext(Arg.Any<ReactorId>(), Arg.Any<ConnectionId>(), Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<Key>(), Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<TaskCompletionSource<ObserverSubscriberResult>>()))
+             .Do(call => _completion = call.Arg<TaskCompletionSource<ObserverSubscriberResult>>());
+-        _subscriber = new(_mediator, NullLogger<ReactorObserverSubscriber>.Instance, _clock);
++        _subscriber = new(_mediator, CreateLogger(), _clock);
+         _context = new ObserverSubscriberContext(new ConnectedClient { ConnectionId = "A" }).WithDeadlines(TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(300), _clock);
+     }
+ }
+diff --git a/Source/Kernel/Core.Specs/Observation/Reducers/for_ReducerObserverSubscriber/when_a_reduce_fails_after_a_successful_prefix.cs b/Source/Kernel/Core.Specs/Observation/Reducers/for_ReducerObserverSubscriber/when_a_reduce_fails_after_a_successful_prefix.cs
+index b55c7f66ad..e3639d48fb 100644
+--- a/Source/Kernel/Core.Specs/Observation/Reducers/for_ReducerObserverSubscriber/when_a_reduce_fails_after_a_successful_prefix.cs
++++ b/Source/Kernel/Core.Specs/Observation/Reducers/for_ReducerObserverSubscriber/when_a_reduce_fails_after_a_successful_prefix.cs
+@@ -10,6 +10,7 @@
+ using Cratis.Chronicle.ReadModels;
+ using Cratis.Chronicle.Schemas;
+ using Cratis.Chronicle.Storage.Sinks;
++using Microsoft.Extensions.Logging;
+ using NSubstitute.ClearExtensions;
+ 
+ namespace Cratis.Chronicle.Observation.Reducers.Clients.for_ReducerObserverSubscriber;
+@@ -29,6 +30,7 @@ public class when_a_reduce_fails_after_a_successful_prefix : given.a_subscriber_
+ 
+     void Establish()
+     {
++        _logger.IsEnabled(Arg.Any<LogLevel>()).Returns(true);
+         _sink = new RecordingSink { Existing = null };
+         var pipeline = new ReducerPipeline(
+             CreateReadModelDefinition(),
+@@ -63,6 +65,9 @@ void Establish()
+ 
+     async Task Because() => _result = await _subscriber.OnNext("the-partition", _events, new ObserverSubscriberContext(new Cratis.Chronicle.Concepts.Clients.ConnectedClient()));
+ 
++    [Fact] void should_log_one_batch_warning() => _logger.ReceivedCalls().Count(_ => _.GetMethodInfo().Name == "Log" && (LogLevel)_.GetArguments()[0]! == LogLevel.Warning).ShouldEqual(1);
++    [Fact] void should_log_the_batch_count() => _logger.ReceivedCalls().Single(_ => _.GetMethodInfo().Name == "Log" && (LogLevel)_.GetArguments()[0]! == LogLevel.Warning).GetArguments()[2].ToString().Contains("batch of 3", StringComparison.Ordinal).ShouldBeTrue();
++    [Fact] void should_not_log_each_received_event() => _logger.ReceivedCalls().Any(_ => _.GetMethodInfo().Name == "Log" && _.GetArguments()[2]!.ToString()!.Contains("Received event", StringComparison.Ordinal)).ShouldBeFalse();
+     [Fact] void should_have_failed() => _result.State.ShouldEqual(ObserverSubscriberState.Failed);
+     [Fact] void should_not_report_events_as_handled_that_the_read_model_does_not_hold() => (_result.HandledAnyEvents && _sink.WriteModes.Count == 0).ShouldBeFalse();
+     [Fact] void should_not_write_the_read_model() => _sink.WriteModes.ShouldBeEmpty();
+diff --git a/Source/Kernel/Core/Observation/ClientObserverSubscriberLogging.cs b/Source/Kernel/Core/Observation/ClientObserverSubscriberLogging.cs
+index 5706f48826..070c74beba 100644
+--- a/Source/Kernel/Core/Observation/ClientObserverSubscriberLogging.cs
++++ b/Source/Kernel/Core/Observation/ClientObserverSubscriberLogging.cs
+@@ -1,6 +1,7 @@
+ // Copyright (c) Cratis. All rights reserved.
+ // Licensed under the MIT license. See LICENSE file in the project root for full license information.
+ 
++using Cratis.Chronicle.Concepts.Events;
+ using Cratis.Chronicle.Concepts.Keys;
+ using Cratis.Chronicle.Concepts.Observation;
+ using Microsoft.Extensions.Logging;
+@@ -12,6 +13,38 @@ namespace Cratis.Chronicle.Observation;
+ /// </summary>
+ internal static partial class ClientObserverSubscriberLogging
+ {
++    /// <summary>
++    /// Logs one summary when a batch failed, leaving the subscriber result unchanged.
++    /// </summary>
++    /// <param name="result">The completed delivery result.</param>
++    /// <param name="logger">The subscriber logger.</param>
++    /// <param name="observerId">The observer handling the batch.</param>
++    /// <param name="events">The delivered events.</param>
++    /// <returns>The original delivery result.</returns>
++    internal static ObserverSubscriberResult WithBatchFailureLogged(this ObserverSubscriberResult result, ILogger logger, ObserverId observerId, IEnumerable<AppendedEvent> events)
++    {
++        if (result.State != ObserverSubscriberState.Failed) return result;
++
++        var batch = events as AppendedEvent[] ?? events.ToArray();
++        if (batch.Length > 0)
++        {
++            logger.BatchFailed(observerId, batch.Length, batch[0].Context.EventType.Id, batch[0].Context.SequenceNumber, batch[^1].Context.SequenceNumber);
++        }
++        return result;
++    }
++
++    /// <summary>
++    /// Logs a failed batch without logging individual events or exception details.
++    /// </summary>
++    /// <param name="logger">The subscriber logger.</param>
++    /// <param name="observerId">The observer handling the batch.</param>
++    /// <param name="count">The number of delivered events.</param>
++    /// <param name="firstEventTypeId">The type of the first event.</param>
++    /// <param name="firstSequenceNumber">The start of the delivered range.</param>
++    /// <param name="lastSequenceNumber">The end of the delivered range.</param>
++    [LoggerMessage(LogLevel.Warning, "Observer {ObserverId} failed batch of {Count} events, first type {FirstEventTypeId}, sequence range {FirstSequenceNumber}-{LastSequenceNumber}")]
++    internal static partial void BatchFailed(this ILogger logger, ObserverId observerId, int count, EventTypeId firstEventTypeId, EventSequenceNumber firstSequenceNumber, EventSequenceNumber lastSequenceNumber);
++
+     [LoggerMessage(LogLevel.Warning, "Delivery expired before dispatch for {Observer} partition {Partition}")]
+     internal static partial void DeliveryExpiredBeforeDispatch(this ILogger logger, ObserverKey observer, Key partition);
+ 
+diff --git a/Source/Kernel/Core/Observation/Reactors/Clients/ReactorObserverSubscriber.cs b/Source/Kernel/Core/Observation/Reactors/Clients/ReactorObserverSubscriber.cs
+index 8c6f0f266e..e314b5ddd4 100644
+--- a/Source/Kernel/Core/Observation/Reactors/Clients/ReactorObserverSubscriber.cs
++++ b/Source/Kernel/Core/Observation/Reactors/Clients/ReactorObserverSubscriber.cs
+@@ -47,18 +47,7 @@ public async Task<ObserverSubscriberResult> OnNext(Key partition, IEnumerable<Ap
+         var deliveryWait = new ClientDeliveryWait(_clock, logger, _key, partition);
+         if (deliveryWait.Expired(context))
+         {
+-            return ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, "Delivery expired before dispatch");
+-        }
+-
+-        foreach (var @event in events)
+-        {
+-            logger.EventReceived(
+-                _key.ObserverId,
+-                _key.EventStore,
+-                _key.Namespace,
+-                @event.Context.EventType.Id,
+-                _key.EventSequenceId,
+-                @event.Context.SequenceNumber);
++            return ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, "Delivery expired before dispatch").WithBatchFailureLogged(logger, _key.ObserverId, events);
+         }
+ 
+         if (context.Metadata is not ConnectedClient connectedClient)
+@@ -69,16 +58,16 @@ public async Task<ObserverSubscriberResult> OnNext(Key partition, IEnumerable<Ap
+         try
+         {
+             reactorMediator.OnNext(_key.ObserverId, connectedClient.ConnectionId, _key.EventStore, _key.Namespace, partition, events, tcs);
+-            return await deliveryWait.For(tcs.Task, result => result, context);
++            return (await deliveryWait.For(tcs.Task, result => result, context)).WithBatchFailureLogged(logger, _key.ObserverId, events);
+         }
+         catch (AbandonedDeliveryDiscarded)
+         {
+-            return ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, "Abandoned delivery result discarded");
++            return ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, "Abandoned delivery result discarded").WithBatchFailureLogged(logger, _key.ObserverId, events);
+         }
+         catch (TaskCanceledException taskCanceledException)
+         {
+             logger.OnNextException(taskCanceledException, _key.ObserverId, _key.EventStore, _key.Namespace);
+-            return ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, "Task was cancelled");
++            return ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, "Task was cancelled").WithBatchFailureLogged(logger, _key.ObserverId, events);
+         }
+     }
+ }
+diff --git a/Source/Kernel/Core/Observation/Reducers/Clients/ReducerObserverSubscriber.cs b/Source/Kernel/Core/Observation/Reducers/Clients/ReducerObserverSubscriber.cs
+index 9d275287c0..caaadd9b91 100644
+--- a/Source/Kernel/Core/Observation/Reducers/Clients/ReducerObserverSubscriber.cs
++++ b/Source/Kernel/Core/Observation/Reducers/Clients/ReducerObserverSubscriber.cs
+@@ -77,18 +77,7 @@ public async Task<ObserverSubscriberResult> OnNext(Key partition, IEnumerable<Ap
+         var deliveryWait = new ClientDeliveryWait(_clock, logger, _key, partition);
+         if (!await PrepareDelivery(deliveryWait, context))
+         {
+-            return ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, "Delivery expired before dispatch");
+-        }
+-
+-        foreach (var @event in events)
+-        {
+-            logger.EventReceived(
+-                _key.ObserverId,
+-                _key.EventStore,
+-                _key.Namespace,
+-                @event.Context.EventType.Id,
+-                _key.EventSequenceId,
+-                @event.Context.SequenceNumber);
++            return ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, "Delivery expired before dispatch").WithBatchFailureLogged(logger, _key.ObserverId, events);
+         }
+ 
+         if (context.Metadata is not ConnectedClient connectedClient)
+@@ -104,19 +93,19 @@ public async Task<ObserverSubscriberResult> OnNext(Key partition, IEnumerable<Ap
+                 partition);
+ 
+             var notification = _pipeline is null ? null : await _pipeline.Reduce(reducerContext, CreateReducerDelegate(reducerContext, connectedClient, context, tcs));
+-            return await NotifyChange(await tcs.Task, notification);
++            return (await NotifyChange(await tcs.Task, notification)).WithBatchFailureLogged(logger, _key.ObserverId, events);
+         }
+         catch (AbandonedDeliveryDiscarded)
+         {
+-            return ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, "Abandoned delivery result discarded");
++            return ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, "Abandoned delivery result discarded").WithBatchFailureLogged(logger, _key.ObserverId, events);
+         }
+         catch (TaskCanceledException)
+         {
+-            return ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, "Task was cancelled");
++            return ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, "Task was cancelled").WithBatchFailureLogged(logger, _key.ObserverId, events);
+         }
+         catch (ReducerSinkWriteFailed failed)
+         {
+-            return await RecordSinkWriteFailures(partition, failed, tcs.Task);
++            return (await RecordSinkWriteFailures(partition, failed, tcs.Task)).WithBatchFailureLogged(logger, _key.ObserverId, events);
+         }
+     }
+ 

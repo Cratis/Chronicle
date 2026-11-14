@@ -1,0 +1,1129 @@
+diff --git a/Directory.Packages.props b/Directory.Packages.props
+index a167e36b90..2249348e4d 100644
+--- a/Directory.Packages.props
++++ b/Directory.Packages.props
+@@ -49,6 +49,7 @@
+     <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="10.0.13" />
+     <PackageVersion Include="Microsoft.Extensions.Options.DataAnnotations" Version="10.0.13" />
+     <PackageVersion Include="Microsoft.Extensions.Resilience" Version="10.10.0" />
++    <PackageVersion Include="Microsoft.Extensions.Telemetry" Version="10.10.0" />
+     <PackageVersion Include="Microsoft.Extensions.Telemetry.Abstractions" Version="10.10.0" />
+     <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.13" />
+     <PackageVersion Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.23.0" />
+diff --git a/Source/Kernel/Core.Specs/EventSequences/for_EventSequence/given/an_event_sequence.cs b/Source/Kernel/Core.Specs/EventSequences/for_EventSequence/given/an_event_sequence.cs
+index cc430dd458..7e7afc10a0 100644
+--- a/Source/Kernel/Core.Specs/EventSequences/for_EventSequence/given/an_event_sequence.cs
++++ b/Source/Kernel/Core.Specs/EventSequences/for_EventSequence/given/an_event_sequence.cs
+@@ -70,6 +70,7 @@ public class an_event_sequence : Specification
+     protected List<IConstraintDefinition> _registeredConstraints;
+     protected ILogger<EventSequence> _eventSequenceLogger = NullLogger<EventSequence>.Instance;
+ 
++    protected virtual Telemetry Telemetry => new();
+     protected virtual EventSequenceId SequenceId => EventSequenceId.Log;
+     protected virtual int StatePersistenceInterval => 1000;
+     protected virtual CausationPropertyRetention CausationPropertyRetention => CausationPropertyRetention.Retain;
+@@ -207,6 +208,7 @@ protected void ConfigureSilo()
+         _silo.AddService(_eventHashCalculator);
+         _silo.AddService<IOptions<ChronicleOptions>>(Options.Create(new ChronicleOptions
+         {
++            Telemetry = Telemetry,
+             Events = new Configuration.Events
+             {
+                 StatePersistenceInterval = StatePersistenceInterval,
+diff --git a/Source/Kernel/Core.Specs/Observation/for_Observer/when_projection_catch_up_round_completes/and_the_step_delivered_but_reported_a_lower_position.cs b/Source/Kernel/Core.Specs/Observation/for_Observer/when_projection_catch_up_round_completes/and_the_step_delivered_but_reported_a_lower_position.cs
+index f98b68fcbd..c624138c22 100644
+--- a/Source/Kernel/Core.Specs/Observation/for_Observer/when_projection_catch_up_round_completes/and_the_step_delivered_but_reported_a_lower_position.cs
++++ b/Source/Kernel/Core.Specs/Observation/for_Observer/when_projection_catch_up_round_completes/and_the_step_delivered_but_reported_a_lower_position.cs
+@@ -36,5 +36,5 @@ async Task Because()
+ 
+     [Fact] void should_measure_exactly_one_suspected_skip() => _metrics.For(EventsSuspectedSkipped).Select(_ => _.Value).SequenceEqual([1]).ShouldBeTrue();
+     [Fact] void should_warn_once_that_it_is_only_a_suspicion() => _recordedLogs.SuspectedSkipWarnings.Single().ShouldContain("suspicion, not proof");
+-    [Fact] void should_name_the_partition_and_the_sequence_number() => _recordedLogs.SuspectedSkipWarnings.Single().ShouldContain("partition A, first at sequence number 10");
++    [Fact] void should_name_the_sequence_number() => _recordedLogs.SuspectedSkipWarnings.Single().ShouldContain("first at sequence number 10");
+ }
+diff --git a/Source/Kernel/Core/Configuration/ChronicleOptions.cs b/Source/Kernel/Core/Configuration/ChronicleOptions.cs
+index 00ab2d0bb9..c9b7aeee96 100644
+--- a/Source/Kernel/Core/Configuration/ChronicleOptions.cs
++++ b/Source/Kernel/Core/Configuration/ChronicleOptions.cs
+@@ -2,6 +2,7 @@
+ // Licensed under the MIT license. See LICENSE file in the project root for full license information.
+ 
+ using System.ComponentModel.DataAnnotations;
++using Cratis.Chronicle.Diagnostics;
+ using Microsoft.Extensions.Configuration;
+ using Microsoft.Extensions.DependencyInjection;
+ 
+@@ -105,6 +106,11 @@ public class ChronicleOptions : IValidatableObject
+     /// </summary>
+     public Compliance Compliance { get; init; } = new Compliance();
+ 
++    /// <summary>
++    /// Gets the telemetry configuration.
++    /// </summary>
++    public Telemetry Telemetry { get; init; } = new();
++
+     /// <summary>
+     /// Gets the observers configuration.
+     /// </summary>
+@@ -221,6 +227,14 @@ public static void AddConfiguration(IServiceCollection services, IConfiguration
+     /// <inheritdoc/>
+     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+     {
++        if ((Telemetry.EventSourceIdsInSpans == IdentifierExposure.Hashed || Telemetry.EventSourceIdsInLogs == IdentifierExposure.Hashed) &&
++            (string.IsNullOrEmpty(Telemetry.IdentifierHashKey) || Telemetry.IdentifierHashKey.Length < IdentifierHasher.MinimumKeyLength))
++        {
++            yield return new ValidationResult(
++                "Telemetry:IdentifierHashKey must be at least 32 characters when Hashed is used",
++                [$"{nameof(Telemetry)}.{nameof(Telemetry.IdentifierHashKey)}"]);
++        }
++
+         if (ReadModels.MaxBatchSize <= 0)
+         {
+             yield return new ValidationResult(
+diff --git a/Source/Kernel/Core/Core.csproj b/Source/Kernel/Core/Core.csproj
+index ea6db4a51e..636eae5041 100644
+--- a/Source/Kernel/Core/Core.csproj
++++ b/Source/Kernel/Core/Core.csproj
+@@ -113,6 +113,7 @@
+         <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" />
+         <PackageReference Include="Microsoft.Extensions.Resilience" />
+         <PackageReference Include="Microsoft.Extensions.Http.Resilience" />
++        <PackageReference Include="Microsoft.Extensions.Telemetry" />
+         <PackageReference Include="Microsoft.Extensions.Telemetry.Abstractions" />
+         <PackageReference Include="Microsoft.Orleans.BroadcastChannel" />
+         <PackageReference Include="Microsoft.Orleans.Sdk" />
+diff --git a/Source/Kernel/Core/Diagnostics/OpenTelemetry/OpenTelemetryConfigurationExtensions.cs b/Source/Kernel/Core/Diagnostics/OpenTelemetry/OpenTelemetryConfigurationExtensions.cs
+index f6e7c6f213..4eaf22a002 100644
+--- a/Source/Kernel/Core/Diagnostics/OpenTelemetry/OpenTelemetryConfigurationExtensions.cs
++++ b/Source/Kernel/Core/Diagnostics/OpenTelemetry/OpenTelemetryConfigurationExtensions.cs
+@@ -2,9 +2,12 @@
+ // Licensed under the MIT license. See LICENSE file in the project root for full license information.
+ 
+ using Cratis.Chronicle.Concepts;
++using Cratis.Chronicle.Configuration;
++using Cratis.Chronicle.Diagnostics.Identifiers;
+ using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
+ using Microsoft.Extensions.Configuration;
+ using Microsoft.Extensions.DependencyInjection;
++using Microsoft.Extensions.Options;
+ using OpenTelemetry.Exporter;
+ using OpenTelemetry.Logs;
+ using OpenTelemetry.Metrics;
+@@ -68,6 +71,7 @@ public static IServiceCollection AddChronicleTelemetry(this IServiceCollection s
+             {
+                 tracing
+                     .AddChronicleInstrumentation()
++                    .AddProcessor(sp => new IdentifierSpanProcessor(sp.GetRequiredService<IOptions<ChronicleOptions>>()))
+                     .AddHttpClientInstrumentation()
+                     .AddAspNetCoreInstrumentation()
+                     .AddGrpcClientInstrumentation()
+diff --git a/Source/Kernel/Core/Diagnostics/OpenTelemetry/Tracing/TagExtensions.cs b/Source/Kernel/Core/Diagnostics/OpenTelemetry/Tracing/TagExtensions.cs
+index 0d655fea96..e301635dd0 100644
+--- a/Source/Kernel/Core/Diagnostics/OpenTelemetry/Tracing/TagExtensions.cs
++++ b/Source/Kernel/Core/Diagnostics/OpenTelemetry/Tracing/TagExtensions.cs
+@@ -7,6 +7,7 @@
+ using Cratis.Chronicle.Concepts.Events;
+ using Cratis.Chronicle.Concepts.EventSequences;
+ using Cratis.Chronicle.Concepts.Observation;
++using Cratis.Chronicle.Diagnostics.Identifiers;
+ 
+ namespace Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
+ 
+@@ -26,17 +27,27 @@ public static class TagExtensions
+     const string EventTypeId = "cratis.eventtype.id";
+ 
+     /// <summary>
+-    /// Tag <see cref="EventSourceId"/>.
++    /// Tag <see cref="EventSourceType"/>.
+     /// </summary>
+     /// <param name="activity">The <see cref="Activity"/>.</param>
+     /// <param name="eventSourceType">The <see cref="EventSourceType"/>.</param>
++    /// <returns>The <see cref="Activity"/> with the tag.</returns>
++    public static Activity Tag(this Activity activity, EventSourceType eventSourceType)
++    {
++        activity.SetTag(EventSourceType, eventSourceType.Value);
++        return activity;
++    }
++
++    /// <summary>
++    /// Tag <see cref="EventSourceId"/> according to the identifier exposure configuration.
++    /// </summary>
++    /// <param name="activity">The <see cref="Activity"/>.</param>
+     /// <param name="eventSourceId">The <see cref="EventSourceId"/>.</param>
++    /// <param name="identifiers">The identifier exposure policy.</param>
+     /// <returns>The <see cref="Activity"/> with the tag.</returns>
+-    public static Activity Tag(this Activity activity, EventSourceType eventSourceType, EventSourceId eventSourceId)
++    public static Activity Tag(this Activity activity, EventSourceId eventSourceId, IdentifierTelemetry identifiers)
+     {
+-        activity
+-            .SetTag(EventSourceType, eventSourceType.Value)
+-            .SetTag(EventSourceId, eventSourceId.Value);
++        if (identifiers.ForSpan(eventSourceId.Value) is { } value) activity.SetTag(EventSourceId, value);
+         return activity;
+     }
+ 
+diff --git a/Source/Kernel/Core/EventSequences/AppendedEventsQueueLogging.cs b/Source/Kernel/Core/EventSequences/AppendedEventsQueueLogging.cs
+index acedb6b404..0c15fb7969 100644
+--- a/Source/Kernel/Core/EventSequences/AppendedEventsQueueLogging.cs
++++ b/Source/Kernel/Core/EventSequences/AppendedEventsQueueLogging.cs
+@@ -4,6 +4,7 @@
+ using Cratis.Chronicle.Concepts.Events;
+ using Cratis.Chronicle.Concepts.EventSequences;
+ using Cratis.Chronicle.Concepts.Observation;
++using Cratis.Chronicle.Diagnostics.Identifiers;
+ using Microsoft.Extensions.Logging;
+ 
+ namespace Cratis.Chronicle.EventSequences;
+@@ -21,7 +22,7 @@ internal static partial class AppendedEventsQueueLogMessages
+     internal static partial void NotifyingObserversFailed(this ILogger<AppendedEventsQueue> logger, Exception exception);
+ 
+     [LoggerMessage(LogLevel.Warning, "Dispatching {Count} event(s) {FirstEventSequenceNumber}-{LastEventSequenceNumber} of partition {Partition} to observer {ObserverKey} failed; they may not have been delivered")]
+-    internal static partial void SuspectedUndeliveredEvents(this ILogger<AppendedEventsQueue> logger, int count, EventSequenceNumber firstEventSequenceNumber, EventSequenceNumber lastEventSequenceNumber, EventSourceId partition, ObserverKey observerKey);
++    internal static partial void SuspectedUndeliveredEvents(this ILogger<AppendedEventsQueue> logger, int count, EventSequenceNumber firstEventSequenceNumber, EventSequenceNumber lastEventSequenceNumber, [EventSourceIdentifier] EventSourceId partition, ObserverKey observerKey);
+ 
+     [LoggerMessage(LogLevel.Warning, "{Count} further suspected-undelivered warnings were not logged in the last {Seconds} seconds")]
+     internal static partial void SuspectedUndeliveredWarningsSuppressed(this ILogger<AppendedEventsQueue> logger, int count, int seconds);
+diff --git a/Source/Kernel/Core/EventSequences/Concurrency/ConcurrencyValidatorLogging.cs b/Source/Kernel/Core/EventSequences/Concurrency/ConcurrencyValidatorLogging.cs
+index e7030c3eeb..fe86e14618 100644
+--- a/Source/Kernel/Core/EventSequences/Concurrency/ConcurrencyValidatorLogging.cs
++++ b/Source/Kernel/Core/EventSequences/Concurrency/ConcurrencyValidatorLogging.cs
+@@ -2,6 +2,7 @@
+ // Licensed under the MIT license. See LICENSE file in the project root for full license information.
+ 
+ using Cratis.Chronicle.Concepts.Events;
++using Cratis.Chronicle.Diagnostics.Identifiers;
+ using Microsoft.Extensions.Logging;
+ namespace Cratis.Chronicle.EventSequences.Concurrency;
+ 
+@@ -12,8 +13,8 @@ namespace Cratis.Chronicle.EventSequences.Concurrency;
+ internal static partial class ConcurrencyValidatorLogging
+ {
+     [LoggerMessage(LogLevel.Debug, "Skipping the concurrency check for event source '{EventSourceId}' - the append declared a concurrency scope that carries no expected sequence number, so there is nothing to compare against and the append proceeds unchecked")]
+-    internal static partial void SkippingIncompleteConcurrencyScope(this ILogger<ConcurrencyValidator> logger, EventSourceId eventSourceId);
++    internal static partial void SkippingIncompleteConcurrencyScope(this ILogger<ConcurrencyValidator> logger, [EventSourceIdentifier] EventSourceId eventSourceId);
+ 
+     [LoggerMessage(LogLevel.Warning, "Could not read the first conflicting event for the concurrency violation on event source '{EventSourceId}' - the violation is reported without it")]
+-    internal static partial void CouldNotReadConflictingEvent(this ILogger<ConcurrencyValidator> logger, EventSourceId eventSourceId, Exception exception);
++    internal static partial void CouldNotReadConflictingEvent(this ILogger<ConcurrencyValidator> logger, [EventSourceIdentifier] EventSourceId eventSourceId, Exception exception);
+ }
+diff --git a/Source/Kernel/Core/EventSequences/EventSequence.Validation.cs b/Source/Kernel/Core/EventSequences/EventSequence.Validation.cs
+index f0d820b3a4..3495409815 100644
+--- a/Source/Kernel/Core/EventSequences/EventSequence.Validation.cs
++++ b/Source/Kernel/Core/EventSequences/EventSequence.Validation.cs
+@@ -48,7 +48,8 @@ async Task<AppendResult> AppendValidated(
+         span?.Activity?.Tag(_eventSequenceKey.EventStore);
+         span?.Activity?.Tag(_eventSequenceKey.Namespace);
+         span?.Activity?.Tag(_eventSequenceKey.EventSequenceId);
+-        span?.Activity?.Tag(eventSourceType, eventSourceId);
++        span?.Activity?.Tag(eventSourceType);
++        span?.Activity?.Tag(eventSourceId, _spanIdentifiers);
+         span?.Activity?.Tag(eventType);
+         try
+         {
+diff --git a/Source/Kernel/Core/EventSequences/EventSequence.cs b/Source/Kernel/Core/EventSequences/EventSequence.cs
+index b50c713d79..890ade3f28 100644
+--- a/Source/Kernel/Core/EventSequences/EventSequence.cs
++++ b/Source/Kernel/Core/EventSequences/EventSequence.cs
+@@ -16,6 +16,7 @@
+ using Cratis.Chronicle.Concepts.Identities;
+ using Cratis.Chronicle.Concepts.Observation;
+ using Cratis.Chronicle.Configuration;
++using Cratis.Chronicle.Diagnostics.Identifiers;
+ using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
+ using Cratis.Chronicle.Events.Constraints;
+ using Cratis.Chronicle.EventSequences.Concurrency;
+@@ -85,6 +86,7 @@ public partial class EventSequence(
+     ILogger<ConstraintIndexReplay>? constraintIndexReplayLogger = null,
+     IEncryptionKeyStorage? encryptionKeyStorage = null) : Grain<EventSequenceState>, IEventSequence, IOnBroadcastChannelSubscribed
+ {
++    readonly IdentifierTelemetry _spanIdentifiers = new(options.Value.Telemetry);
+     readonly HashSet<EventTypeId> _unspecifiedVisibilityWarned = [];
+     IEventSequenceStorage? _eventSequenceStorage;
+     IEventTypesStorage? _eventTypesStorage;
+diff --git a/Source/Kernel/Core/EventSequences/EventSequenceLogMessages.cs b/Source/Kernel/Core/EventSequences/EventSequenceLogMessages.cs
+index b69d095715..0b0390369a 100644
+--- a/Source/Kernel/Core/EventSequences/EventSequenceLogMessages.cs
++++ b/Source/Kernel/Core/EventSequences/EventSequenceLogMessages.cs
+@@ -4,6 +4,7 @@
+ using Cratis.Chronicle.Concepts;
+ using Cratis.Chronicle.Concepts.Events;
+ using Cratis.Chronicle.Concepts.EventSequences;
++using Cratis.Chronicle.Diagnostics.Identifiers;
+ using Microsoft.Extensions.Logging;
+ 
+ namespace Cratis.Chronicle.EventSequences;
+@@ -29,22 +30,22 @@ internal static partial class EventSequenceLogMessages
+     internal static partial void FailedReconcilingPatternCapture(this ILogger<EventSequence> logger, Exception exception, EventStoreName eventStore, EventStoreNamespaceName @namespace);
+ 
+     [LoggerMessage(LogLevel.Debug, "Appending '{EventType}' for EventSourceId {EventSourceId} with sequence number {SequenceNumber} to event sequence '{EventSequenceId} for event store {EventStore} on namespace {Namespace}")]
+-    internal static partial void Appending(this ILogger<EventSequence> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, EventType eventType, EventSourceId eventSourceId, EventSequenceNumber sequenceNumber);
++    internal static partial void Appending(this ILogger<EventSequence> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, EventType eventType, [EventSourceIdentifier] EventSourceId eventSourceId, EventSequenceNumber sequenceNumber);
+ 
+     [LoggerMessage(LogLevel.Debug, "Duplicate  '{EventType}' for EventSourceId {EventSourceId} with sequence number {SequenceNumber} to event sequence '{EventSequenceId} for event store {EventStore} on namespace {Namespace}")]
+-    internal static partial void DuplicateEvent(this ILogger<EventSequence> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, EventType eventType, EventSourceId eventSourceId, EventSequenceNumber sequenceNumber);
++    internal static partial void DuplicateEvent(this ILogger<EventSequence> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, EventType eventType, [EventSourceIdentifier] EventSourceId eventSourceId, EventSequenceNumber sequenceNumber);
+ 
+     [LoggerMessage(LogLevel.Debug, "Revising event @ {SequenceNumber} in event sequence {EventSequenceId} - event type '{EventType}' for event store '{EventStore}' on namespace {Namespace}")]
+     internal static partial void Revising(this ILogger<EventSequence> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventType eventType, EventSequenceId eventSequenceId, EventSequenceNumber sequenceNumber);
+ 
+     [LoggerMessage(LogLevel.Error, "Failed appending event type '{EventType}' at sequence {SequenceNumber} for event source type {EventSourceType} and event source id {EventSourceId} to stream {EventSequenceId} for event store '{EventStore}' on namespace {Namespace}")]
+-    internal static partial void ErrorAppending(this ILogger<EventSequence> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventType eventType, EventSequenceId eventSequenceId, EventSourceType eventSourceType, EventSourceId eventSourceId, EventSequenceNumber sequenceNumber, Exception exception);
++    internal static partial void ErrorAppending(this ILogger<EventSequence> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventType eventType, EventSequenceId eventSequenceId, EventSourceType eventSourceType, [EventSourceIdentifier] EventSourceId eventSourceId, EventSequenceNumber sequenceNumber, Exception exception);
+ 
+     [LoggerMessage(LogLevel.Information, "Redacting event @ {SequenceNumber} in event sequence {EventSequenceId} for event store '{EventStore}' on namespace {Namespace}")]
+     internal static partial void Redacting(this ILogger<EventSequence> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, EventSequenceNumber sequenceNumber);
+ 
+     [LoggerMessage(LogLevel.Information, "Redacting events with event source id {EventSourceId} and event types {EventTypes} in event sequence {EventSequenceId} for event store '{EventStore}' on namespace {Namespace}")]
+-    internal static partial void RedactingMultiple(this ILogger<EventSequence> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, EventSourceId eventSourceId, IEnumerable<EventType> eventTypes);
++    internal static partial void RedactingMultiple(this ILogger<EventSequence> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, [EventSourceIdentifier] EventSourceId eventSourceId, IEnumerable<EventType> eventTypes);
+ 
+     [LoggerMessage(LogLevel.Critical, "A critical error occurred while appending many events after successfully validating all event constraints. One or more events was committed while they should have been rolled back and not been written to the event store")]
+     internal static partial void FailedDuringAppendingManyEvents(this ILogger<EventSequence> logger);
+diff --git a/Source/Kernel/Core/EventSequences/EventSequencesReactorLogging.cs b/Source/Kernel/Core/EventSequences/EventSequencesReactorLogging.cs
+index c075cec819..0bcec5e7d9 100644
+--- a/Source/Kernel/Core/EventSequences/EventSequencesReactorLogging.cs
++++ b/Source/Kernel/Core/EventSequences/EventSequencesReactorLogging.cs
+@@ -4,6 +4,7 @@
+ using Cratis.Chronicle.Concepts;
+ using Cratis.Chronicle.Concepts.Events;
+ using Cratis.Chronicle.Concepts.EventSequences;
++using Cratis.Chronicle.Diagnostics.Identifiers;
+ using Microsoft.Extensions.Logging;
+ 
+ namespace Cratis.Chronicle.EventSequences;
+@@ -14,7 +15,7 @@ internal static partial class EventSequencesReactorLogging
+     internal static partial void Redacting(this ILogger<EventSequencesReactor> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, EventSequenceNumber sequenceNumber);
+ 
+     [LoggerMessage(LogLevel.Information, "Redacting events for event source {EventSourceId} and event types {EventTypes} in event sequence '{EventSequenceId}' for event store '{EventStore}' on namespace '{Namespace}'")]
+-    internal static partial void RedactingForEventSource(this ILogger<EventSequencesReactor> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, EventSourceId eventSourceId, IEnumerable<EventType> eventTypes);
++    internal static partial void RedactingForEventSource(this ILogger<EventSequencesReactor> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, [EventSourceIdentifier] EventSourceId eventSourceId, IEnumerable<EventType> eventTypes);
+ 
+     [LoggerMessage(LogLevel.Information, "Revising event @ {SequenceNumber} in event sequence '{EventSequenceId}' with event type '{EventType}' for event store '{EventStore}' on namespace '{Namespace}'")]
+     internal static partial void Revising(this ILogger<EventSequencesReactor> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, EventSequenceNumber sequenceNumber, EventType eventType);
+diff --git a/Source/Kernel/Core/Events/Constraints/ReindexConstraintsStepLogMessages.cs b/Source/Kernel/Core/Events/Constraints/ReindexConstraintsStepLogMessages.cs
+index b61ba6926b..21e37002a3 100644
+--- a/Source/Kernel/Core/Events/Constraints/ReindexConstraintsStepLogMessages.cs
++++ b/Source/Kernel/Core/Events/Constraints/ReindexConstraintsStepLogMessages.cs
+@@ -3,6 +3,7 @@
+ 
+ using Cratis.Chronicle.Concepts.Events;
+ using Cratis.Chronicle.Concepts.Events.Constraints;
++using Cratis.Chronicle.Diagnostics.Identifiers;
+ using Microsoft.Extensions.Logging;
+ 
+ namespace Cratis.Chronicle.Events.Constraints;
+@@ -34,7 +35,7 @@ internal static partial class ReindexConstraintsStepLogMessages
+     /// <param name="sequenceNumber">The rejected claim's event position.</param>
+     /// <param name="error">The duplicate claim diagnostic.</param>
+     [LoggerMessage(LogLevel.Warning, "Skipping duplicate claim for unique constraint {ConstraintName} from event source {EventSourceId} at sequence number {SequenceNumber} during reindex. The existing claim is preserved.")]
+-    internal static partial void SkippingDuplicateUniqueConstraintClaim(this ILogger<ReindexConstraintsStep> logger, ConstraintName constraintName, EventSourceId eventSourceId, EventSequenceNumber sequenceNumber, Exception error);
++    internal static partial void SkippingDuplicateUniqueConstraintClaim(this ILogger<ReindexConstraintsStep> logger, ConstraintName constraintName, [EventSourceIdentifier] EventSourceId eventSourceId, EventSequenceNumber sequenceNumber, Exception error);
+ 
+     /// <summary>
+     /// Warn that an owner's existing facts are preserved because redaction removed an unrecoverable scope.
+diff --git a/Source/Kernel/Core/Observation/ClientObserverSubscriberLogging.cs b/Source/Kernel/Core/Observation/ClientObserverSubscriberLogging.cs
+index 5706f48826..b99947c212 100644
+--- a/Source/Kernel/Core/Observation/ClientObserverSubscriberLogging.cs
++++ b/Source/Kernel/Core/Observation/ClientObserverSubscriberLogging.cs
+@@ -3,6 +3,7 @@
+ 
+ using Cratis.Chronicle.Concepts.Keys;
+ using Cratis.Chronicle.Concepts.Observation;
++using Cratis.Chronicle.Diagnostics.Identifiers;
+ using Microsoft.Extensions.Logging;
+ 
+ namespace Cratis.Chronicle.Observation;
+@@ -13,17 +14,17 @@ namespace Cratis.Chronicle.Observation;
+ internal static partial class ClientObserverSubscriberLogging
+ {
+     [LoggerMessage(LogLevel.Warning, "Delivery expired before dispatch for {Observer} partition {Partition}")]
+-    internal static partial void DeliveryExpiredBeforeDispatch(this ILogger logger, ObserverKey observer, Key partition);
++    internal static partial void DeliveryExpiredBeforeDispatch(this ILogger logger, ObserverKey observer, [EventSourceIdentifier] Key partition);
+ 
+     [LoggerMessage(LogLevel.Information, "Late result for abandoned delivery for {Observer} partition {Partition}: {State}, late by {LateBy}")]
+-    internal static partial void LateResultForAbandonedDelivery(this ILogger logger, ObserverKey observer, Key partition, ObserverSubscriberState state, TimeSpan lateBy);
++    internal static partial void LateResultForAbandonedDelivery(this ILogger logger, ObserverKey observer, [EventSourceIdentifier] Key partition, ObserverSubscriberState state, TimeSpan lateBy);
+ 
+     [LoggerMessage(LogLevel.Warning, "Abandoned delivery hold expired for {Observer} partition {Partition}")]
+-    internal static partial void AbandonedDeliveryHoldExpired(this ILogger logger, ObserverKey observer, Key partition);
++    internal static partial void AbandonedDeliveryHoldExpired(this ILogger logger, ObserverKey observer, [EventSourceIdentifier] Key partition);
+ 
+     [LoggerMessage(LogLevel.Warning, "Fence released by maximum hold for partition {Partition}; remote client work may still be running")]
+-    internal static partial void FenceReleasedByMaximumHold(this ILogger logger, Key partition);
++    internal static partial void FenceReleasedByMaximumHold(this ILogger logger, [EventSourceIdentifier] Key partition);
+ 
+     [LoggerMessage(LogLevel.Warning, "Could not drain original delivery target {SubscriberKey}; retaining fence until {ReleaseBy}")]
+-    internal static partial void OriginalDeliveryDrainFailed(this ILogger logger, Exception exception, string subscriberKey, DateTimeOffset releaseBy);
++    internal static partial void OriginalDeliveryDrainFailed(this ILogger logger, Exception exception, [EventSourceIdentifier] string subscriberKey, DateTimeOffset releaseBy);
+ }
+diff --git a/Source/Kernel/Core/Observation/EventStoreSubscriptions/EventStoreSubscriptionsReactorLogging.cs b/Source/Kernel/Core/Observation/EventStoreSubscriptions/EventStoreSubscriptionsReactorLogging.cs
+index 177bdccfdf..1bbe18afb2 100644
+--- a/Source/Kernel/Core/Observation/EventStoreSubscriptions/EventStoreSubscriptionsReactorLogging.cs
++++ b/Source/Kernel/Core/Observation/EventStoreSubscriptions/EventStoreSubscriptionsReactorLogging.cs
+@@ -3,6 +3,7 @@
+ 
+ using Cratis.Chronicle.Concepts;
+ using Cratis.Chronicle.Concepts.Events;
++using Cratis.Chronicle.Diagnostics.Identifiers;
+ using Microsoft.Extensions.Logging;
+ 
+ namespace Cratis.Chronicle.Observation.EventStoreSubscriptions;
+@@ -13,16 +14,16 @@ namespace Cratis.Chronicle.Observation.EventStoreSubscriptions;
+ internal static partial class EventStoreSubscriptionsReactorLogging
+ {
+     [LoggerMessage(LogLevel.Information, "Adding event store subscription for event source '{EventSourceId}'")]
+-    internal static partial void AddingSubscription(this ILogger<EventStoreSubscriptionsReactor> logger, EventSourceId eventSourceId);
++    internal static partial void AddingSubscription(this ILogger<EventStoreSubscriptionsReactor> logger, [EventSourceIdentifier] EventSourceId eventSourceId);
+ 
+     [LoggerMessage(LogLevel.Information, "Event store subscription '{SubscriptionId}' added for event source '{EventSourceId}'")]
+-    internal static partial void SubscriptionAdded(this ILogger<EventStoreSubscriptionsReactor> logger, EventSourceId eventSourceId, Concepts.Observation.EventStoreSubscriptions.EventStoreSubscriptionId subscriptionId);
++    internal static partial void SubscriptionAdded(this ILogger<EventStoreSubscriptionsReactor> logger, [EventSourceIdentifier] EventSourceId eventSourceId, Concepts.Observation.EventStoreSubscriptions.EventStoreSubscriptionId subscriptionId);
+ 
+     [LoggerMessage(LogLevel.Information, "Removing event store subscription for event source '{EventSourceId}'")]
+-    internal static partial void RemovingSubscription(this ILogger<EventStoreSubscriptionsReactor> logger, EventSourceId eventSourceId);
++    internal static partial void RemovingSubscription(this ILogger<EventStoreSubscriptionsReactor> logger, [EventSourceIdentifier] EventSourceId eventSourceId);
+ 
+     [LoggerMessage(LogLevel.Information, "Event store subscription removed for event source '{EventSourceId}'")]
+-    internal static partial void SubscriptionRemoved(this ILogger<EventStoreSubscriptionsReactor> logger, EventSourceId eventSourceId);
++    internal static partial void SubscriptionRemoved(this ILogger<EventStoreSubscriptionsReactor> logger, [EventSourceIdentifier] EventSourceId eventSourceId);
+ 
+     [LoggerMessage(LogLevel.Information, "Source event store '{SourceEventStore}' was added; checking pending subscriptions across {TargetEventStoreCount} event stores")]
+     internal static partial void SourceEventStoreAdded(this ILogger<EventStoreSubscriptionsReactor> logger, EventStoreName sourceEventStore, int targetEventStoreCount);
+diff --git a/Source/Kernel/Core/Observation/Jobs/HandleEventsForObserverLogging.cs b/Source/Kernel/Core/Observation/Jobs/HandleEventsForObserverLogging.cs
+index 415ecde441..e440b212dd 100644
+--- a/Source/Kernel/Core/Observation/Jobs/HandleEventsForObserverLogging.cs
++++ b/Source/Kernel/Core/Observation/Jobs/HandleEventsForObserverLogging.cs
+@@ -3,6 +3,7 @@
+ 
+ using Cratis.Chronicle.Concepts.Events;
+ using Cratis.Chronicle.Concepts.Keys;
++using Cratis.Chronicle.Diagnostics.Identifiers;
+ using Cratis.Orleans.Jobs;
+ using Microsoft.Extensions.Logging;
+ 
+@@ -27,10 +28,10 @@ internal static partial class HandleEventsForObserverLogging
+     internal static partial void PerformingStoppedUnsubscribed(this ILogger<HandleEventsForObserver> logger);
+ 
+     [LoggerMessage(LogLevel.Warning, "HandleEventsForObserver job step successfully handled {EventCount} events for partition {Partition}, but failed handling event at event sequence number {FailedEventSequenceNumber}. Last successfully handled event sequence number is {LastHandledEventSequenceNumber}")]
+-    internal static partial void FailedHandlingEvents(this ILogger<HandleEventsForObserver> logger, Key partition, EventCount eventCount, EventSequenceNumber failedEventSequenceNumber, EventSequenceNumber lastHandledEventSequenceNumber);
++    internal static partial void FailedHandlingEvents(this ILogger<HandleEventsForObserver> logger, [EventSourceIdentifier] Key partition, EventCount eventCount, EventSequenceNumber failedEventSequenceNumber, EventSequenceNumber lastHandledEventSequenceNumber);
+ 
+     [LoggerMessage(LogLevel.Warning, "HandleEventsForObserver job step failed handling events for partition {Partition} due to disconnection. Last successfully handled event sequence number is {LastHandledEventSequenceNumber}")]
+-    internal static partial void EventHandlerDisconnected(this ILogger<HandleEventsForObserver> logger, Key partition, EventSequenceNumber lastHandledEventSequenceNumber);
++    internal static partial void EventHandlerDisconnected(this ILogger<HandleEventsForObserver> logger, [EventSourceIdentifier] Key partition, EventSequenceNumber lastHandledEventSequenceNumber);
+ 
+     [LoggerMessage(LogLevel.Debug, "HandleEventsForObserver job step completed successfully all events. Last successfully handled event sequence number is {LastHandledEventSequenceNumber}")]
+     internal static partial void HandledAllEvents(this ILogger<HandleEventsForObserver> logger, EventSequenceNumber lastHandledEventSequenceNumber);
+@@ -39,10 +40,10 @@ internal static partial class HandleEventsForObserverLogging
+     internal static partial void HandledNoEvents(this ILogger<HandleEventsForObserver> logger);
+ 
+     [LoggerMessage(LogLevel.Debug, "HandleEventsForObserver job step skipped partition {Partition} because it is already recorded as failed and is owned by its retry job")]
+-    internal static partial void SkippingFailedPartition(this ILogger<HandleEventsForObserver> logger, Key partition);
++    internal static partial void SkippingFailedPartition(this ILogger<HandleEventsForObserver> logger, [EventSourceIdentifier] Key partition);
+ 
+     [LoggerMessage(LogLevel.Warning, "An error occurred for HandleEventsForObserver job step for partition {Partition}")]
+-    internal static partial void ErrorHandling(this ILogger<HandleEventsForObserver> logger, Exception error, Key partition);
++    internal static partial void ErrorHandling(this ILogger<HandleEventsForObserver> logger, Exception error, [EventSourceIdentifier] Key partition);
+ 
+     [LoggerMessage(LogLevel.Warning, "HandleEventsForObserver job step was cancelled before handling any events")]
+     internal static partial void CancelledBeforeHandlingAnyEvents(this ILogger<HandleEventsForObserver> logger);
+diff --git a/Source/Kernel/Core/Observation/Jobs/HandleEventsForPartitionLogging.cs b/Source/Kernel/Core/Observation/Jobs/HandleEventsForPartitionLogging.cs
+index 97b2d20883..314edc076e 100644
+--- a/Source/Kernel/Core/Observation/Jobs/HandleEventsForPartitionLogging.cs
++++ b/Source/Kernel/Core/Observation/Jobs/HandleEventsForPartitionLogging.cs
+@@ -3,6 +3,7 @@
+ 
+ using Cratis.Chronicle.Concepts.Events;
+ using Cratis.Chronicle.Concepts.Keys;
++using Cratis.Chronicle.Diagnostics.Identifiers;
+ using Cratis.Orleans.Jobs;
+ using Microsoft.Extensions.Logging;
+ 
+@@ -15,43 +16,43 @@ namespace Cratis.Chronicle.Observation.Jobs;
+ internal static partial class HandleEventsForPartitionLogging
+ {
+     [LoggerMessage(LogLevel.Debug, "Preparing HandleEventsForPartition job step handling events for partition {Partition} from sequence number {FromSequenceNumber} to sequence number {ToSequenceNumber}")]
+-    internal static partial void Preparing(this ILogger<HandleEventsForPartition> logger, Key partition, EventSequenceNumber fromSequenceNumber, EventSequenceNumber toSequenceNumber);
++    internal static partial void Preparing(this ILogger<HandleEventsForPartition> logger, [EventSourceIdentifier] Key partition, EventSequenceNumber fromSequenceNumber, EventSequenceNumber toSequenceNumber);
+ 
+     [LoggerMessage(LogLevel.Warning, "Preparing of HandleEventsForPartition job step for partition {Partition} stopped due to the observer subscriber being disconnected")]
+-    internal static partial void PreparingStoppedUnsubscribed(this ILogger<HandleEventsForPartition> logger, Key partition);
++    internal static partial void PreparingStoppedUnsubscribed(this ILogger<HandleEventsForPartition> logger, [EventSourceIdentifier] Key partition);
+ 
+     [LoggerMessage(LogLevel.Debug, "HandleEventsForPartition job step for partition {Partition} successfully prepared")]
+-    internal static partial void SuccessfullyPrepared(this ILogger<HandleEventsForPartition> logger, Key partition);
++    internal static partial void SuccessfullyPrepared(this ILogger<HandleEventsForPartition> logger, [EventSourceIdentifier] Key partition);
+ 
+     [LoggerMessage(LogLevel.Warning, "Performing HandleEventsForPartition job step for partition {Partition} stopped due to the observer subscriber being disconnected")]
+-    internal static partial void PerformingStoppedUnsubscribed(this ILogger<HandleEventsForPartition> logger, Key partition);
++    internal static partial void PerformingStoppedUnsubscribed(this ILogger<HandleEventsForPartition> logger, [EventSourceIdentifier] Key partition);
+ 
+     [LoggerMessage(LogLevel.Debug, "HandleEventsForPartition job step started handling events for partition {Partition} from sequence number {FromSequenceNumber} to sequence number {ToSequenceNumber}")]
+-    internal static partial void StartHandling(this ILogger<HandleEventsForPartition> logger, Key partition, EventSequenceNumber fromSequenceNumber, EventSequenceNumber toSequenceNumber);
++    internal static partial void StartHandling(this ILogger<HandleEventsForPartition> logger, [EventSourceIdentifier] Key partition, EventSequenceNumber fromSequenceNumber, EventSequenceNumber toSequenceNumber);
+ 
+     [LoggerMessage(LogLevel.Debug, "HandleEventsForPartition job step for partition {Partition} has no more events to handle between sequence number {FromSequenceNumber} and sequence number {ToSequenceNumber}")]
+-    internal static partial void NoMoreEventsToHandle(this ILogger<HandleEventsForPartition> logger, Key partition, EventSequenceNumber fromSequenceNumber, EventSequenceNumber toSequenceNumber);
++    internal static partial void NoMoreEventsToHandle(this ILogger<HandleEventsForPartition> logger, [EventSourceIdentifier] Key partition, EventSequenceNumber fromSequenceNumber, EventSequenceNumber toSequenceNumber);
+ 
+     [LoggerMessage(LogLevel.Warning, "HandleEventsForPartition job step for partition {Partition} successfully handled {EventCount} events, but failed handling event at event sequence number {FailedEventSequenceNumber}. Last successfully handled event sequence number is {LastHandledEventSequenceNumber}")]
+-    internal static partial void FailedHandlingEvents(this ILogger<HandleEventsForPartition> logger, Key partition, EventCount eventCount, EventSequenceNumber failedEventSequenceNumber, EventSequenceNumber lastHandledEventSequenceNumber);
++    internal static partial void FailedHandlingEvents(this ILogger<HandleEventsForPartition> logger, [EventSourceIdentifier] Key partition, EventCount eventCount, EventSequenceNumber failedEventSequenceNumber, EventSequenceNumber lastHandledEventSequenceNumber);
+ 
+     [LoggerMessage(LogLevel.Warning, "HandleEventsForPartition job step for partition {Partition} failed handling events due to disconnection. Last successfully handled event sequence number is {LastHandledEventSequenceNumber}")]
+-    internal static partial void EventHandlerDisconnected(this ILogger<HandleEventsForPartition> logger, Key partition, EventSequenceNumber lastHandledEventSequenceNumber);
++    internal static partial void EventHandlerDisconnected(this ILogger<HandleEventsForPartition> logger, [EventSourceIdentifier] Key partition, EventSequenceNumber lastHandledEventSequenceNumber);
+ 
+     [LoggerMessage(LogLevel.Debug, "HandleEventsForPartition job step for partition {Partition} completed successfully all events. Last successfully handled event sequence number is {LastHandledEventSequenceNumber}")]
+-    internal static partial void HandledAllEvents(this ILogger<HandleEventsForPartition> logger, Key partition, EventSequenceNumber lastHandledEventSequenceNumber);
++    internal static partial void HandledAllEvents(this ILogger<HandleEventsForPartition> logger, [EventSourceIdentifier] Key partition, EventSequenceNumber lastHandledEventSequenceNumber);
+ 
+     [LoggerMessage(LogLevel.Warning, "HandleEventsForPartition job step for partition {Partition} completed handling no events")]
+-    internal static partial void HandledNoEvents(this ILogger<HandleEventsForPartition> logger, Key partition);
++    internal static partial void HandledNoEvents(this ILogger<HandleEventsForPartition> logger, [EventSourceIdentifier] Key partition);
+ 
+     [LoggerMessage(LogLevel.Warning, "An error occurred for HandleEventsForPartition job step for partition {Partition}")]
+-    internal static partial void ErrorHandling(this ILogger<HandleEventsForPartition> logger, Exception error, Key partition);
++    internal static partial void ErrorHandling(this ILogger<HandleEventsForPartition> logger, Exception error, [EventSourceIdentifier] Key partition);
+ 
+     [LoggerMessage(LogLevel.Warning, "HandleEventsForPartition job step for partition {Partition} was cancelled before handling any events")]
+-    internal static partial void CancelledBeforeHandlingAnyEvents(this ILogger<HandleEventsForPartition> logger, Key partition);
++    internal static partial void CancelledBeforeHandlingAnyEvents(this ILogger<HandleEventsForPartition> logger, [EventSourceIdentifier] Key partition);
+ 
+     [LoggerMessage(LogLevel.Warning, "HandleEventsForPartition job step for partition {Partition} was cancelled and the last handled event sequence number is {LastHandledEventSequenceNumber}")]
+-    internal static partial void CancelledAfterHandlingEvents(this ILogger<HandleEventsForPartition> logger, Key partition, EventSequenceNumber lastHandledEventSequenceNumber);
++    internal static partial void CancelledAfterHandlingEvents(this ILogger<HandleEventsForPartition> logger, [EventSourceIdentifier] Key partition, EventSequenceNumber lastHandledEventSequenceNumber);
+ 
+     [LoggerMessage(LogLevel.Warning, "HandleEventsForPartition job step failed to persist state about successfully handling event with sequence number {LastHandledEventSequenceNumber}")]
+     internal static partial void FailedToPersistSuccessfullyHandledEvent(this ILogger<HandleEventsForPartition> logger, Exception error, EventSequenceNumber lastHandledEventSequenceNumber);
+@@ -60,8 +61,8 @@ internal static partial class HandleEventsForPartitionLogging
+     internal static partial void FailedWithPartialSuccess(this ILogger<HandleEventsForPartition> logger, Exception error, EventSequenceNumber lastHandledEventSequenceNumber);
+ 
+     [LoggerMessage(LogLevel.Warning, "HandleEventsForPartition job step for partition {Partition} stopped checkpointing because its run no longer admits callbacks ({Reason}). Progress to event sequence number {EventSequenceNumber} was not recorded; the next run resumes from the last persisted checkpoint")]
+-    internal static partial void CheckpointCallbackRejected(this ILogger<HandleEventsForPartition> logger, Key partition, ActivationCallbackRejected reason, EventSequenceNumber eventSequenceNumber);
++    internal static partial void CheckpointCallbackRejected(this ILogger<HandleEventsForPartition> logger, [EventSourceIdentifier] Key partition, ActivationCallbackRejected reason, EventSequenceNumber eventSequenceNumber);
+ 
+     [LoggerMessage(LogLevel.Warning, "HandleEventsForPartition job step could not report partition {Partition} as failed at event sequence number {FailedAt}; the job runs the step again and reports it when the attempts run out")]
+-    internal static partial void FailedReportingPartitionFailed(this ILogger<HandleEventsForPartition> logger, Exception error, Key partition, EventSequenceNumber failedAt);
++    internal static partial void FailedReportingPartitionFailed(this ILogger<HandleEventsForPartition> logger, Exception error, [EventSourceIdentifier] Key partition, EventSequenceNumber failedAt);
+ }
+diff --git a/Source/Kernel/Core/Observation/Jobs/ObservationJobLogMessages.cs b/Source/Kernel/Core/Observation/Jobs/ObservationJobLogMessages.cs
+index 8d6082300b..55396de2b7 100644
+--- a/Source/Kernel/Core/Observation/Jobs/ObservationJobLogMessages.cs
++++ b/Source/Kernel/Core/Observation/Jobs/ObservationJobLogMessages.cs
+@@ -4,6 +4,7 @@
+ using Cratis.Chronicle.Concepts.Events;
+ using Cratis.Chronicle.Concepts.Keys;
+ using Cratis.Chronicle.Concepts.Observation;
++using Cratis.Chronicle.Diagnostics.Identifiers;
+ using Cratis.Orleans.Jobs;
+ using Microsoft.Extensions.Logging;
+ namespace Cratis.Chronicle.Observation.Jobs;
+@@ -36,14 +37,14 @@ internal static partial class ObservationJobLogMessages
+     internal static partial void NoJobStepsPrepared(this ILogger<IJob> logger, string jobName);
+ 
+     [LoggerMessage(LogLevel.Warning, "Recovery of failed partition '{Partition}' handled no events but there are still events from sequence number {FromSequenceNumber} to handle. Keeping the partition failed rather than clearing it without running the handler")]
+-    internal static partial void NotClearingFailedPartitionWithEventsLeftToHandle(this ILogger<IJob> logger, Key partition, EventSequenceNumber fromSequenceNumber);
++    internal static partial void NotClearingFailedPartitionWithEventsLeftToHandle(this ILogger<IJob> logger, [EventSourceIdentifier] Key partition, EventSequenceNumber fromSequenceNumber);
+ 
+     [LoggerMessage(LogLevel.Warning, "Clearing failed partition '{Partition}' without running the handler - there is no event from sequence number {FromSequenceNumber} left to handle, so the failure record is stale")]
+-    internal static partial void ClearingFailedPartitionWithNothingLeftToHandle(this ILogger<IJob> logger, Key partition, EventSequenceNumber fromSequenceNumber);
++    internal static partial void ClearingFailedPartitionWithNothingLeftToHandle(this ILogger<IJob> logger, [EventSourceIdentifier] Key partition, EventSequenceNumber fromSequenceNumber);
+ 
+     [LoggerMessage(LogLevel.Warning, "Could not check whether failed partition '{Partition}' has events from sequence number {FromSequenceNumber} left to handle. Keeping the partition failed")]
+-    internal static partial void FailedCheckingForEventsLeftToHandle(this ILogger<IJob> logger, Exception exception, Key partition, EventSequenceNumber fromSequenceNumber);
++    internal static partial void FailedCheckingForEventsLeftToHandle(this ILogger<IJob> logger, Exception exception, [EventSourceIdentifier] Key partition, EventSequenceNumber fromSequenceNumber);
+ 
+     [LoggerMessage(LogLevel.Information, "Clearing failed partition '{Partition}' - every event up to sequence number {LastScannedEventSequenceNumber} is excluded by the observer's filters, so there is nothing for the handler up to there")]
+-    internal static partial void ClearingFailedPartitionWithOnlyExcludedEvents(this ILogger<IJob> logger, Key partition, EventSequenceNumber lastScannedEventSequenceNumber);
++    internal static partial void ClearingFailedPartitionWithOnlyExcludedEvents(this ILogger<IJob> logger, [EventSourceIdentifier] Key partition, EventSequenceNumber lastScannedEventSequenceNumber);
+ }
+diff --git a/Source/Kernel/Core/Observation/Jobs/TransientTimeoutsLogging.cs b/Source/Kernel/Core/Observation/Jobs/TransientTimeoutsLogging.cs
+index 57ca4d8bb0..0a3310c65f 100644
+--- a/Source/Kernel/Core/Observation/Jobs/TransientTimeoutsLogging.cs
++++ b/Source/Kernel/Core/Observation/Jobs/TransientTimeoutsLogging.cs
+@@ -3,6 +3,7 @@
+ 
+ using Cratis.Chronicle.Concepts.Events;
+ using Cratis.Chronicle.Concepts.Keys;
++using Cratis.Chronicle.Diagnostics.Identifiers;
+ using Microsoft.Extensions.Logging;
+ 
+ namespace Cratis.Chronicle.Observation.Jobs;
+@@ -12,13 +13,13 @@ namespace Cratis.Chronicle.Observation.Jobs;
+ internal static partial class TransientTimeoutsLogging
+ {
+     [LoggerMessage(LogLevel.Warning, "The observer did not take the handled event counts for partition {Partition} (attempt {Attempt}) and they are sent again: {Reason}")]
+-    internal static partial void RetryingHandledCountsReport(this ILogger logger, Key partition, int attempt, string reason);
++    internal static partial void RetryingHandledCountsReport(this ILogger logger, [EventSourceIdentifier] Key partition, int attempt, string reason);
+ 
+     [LoggerMessage(LogLevel.Error, "The handled event counts for partition {Partition} up to event sequence number {HandledUpTo} could not be reported to the observer and are missing from its statistics. The events themselves were handled: {Reason}")]
+-    internal static partial void HandledCountsReportAbandoned(this ILogger logger, Key partition, EventSequenceNumber handledUpTo, string reason);
++    internal static partial void HandledCountsReportAbandoned(this ILogger logger, [EventSourceIdentifier] Key partition, EventSequenceNumber handledUpTo, string reason);
+ 
+     [LoggerMessage(LogLevel.Warning, "Handling events for partition {Partition} timed out and is tried once more: {Reason}")]
+-    internal static partial void RetryingAfterTimeout(this ILogger logger, Key partition, string reason);
++    internal static partial void RetryingAfterTimeout(this ILogger logger, [EventSourceIdentifier] Key partition, string reason);
+ 
+     [LoggerMessage(LogLevel.Warning, "Job step timed out and is recorded as failed without reporting the partition as failed: {Reason}")]
+     internal static partial void StepTimedOut(this ILogger logger, string reason);
+diff --git a/Source/Kernel/Core/Observation/ObserverLogging.cs b/Source/Kernel/Core/Observation/ObserverLogging.cs
+index a41a355576..4d615c3eec 100644
+--- a/Source/Kernel/Core/Observation/ObserverLogging.cs
++++ b/Source/Kernel/Core/Observation/ObserverLogging.cs
+@@ -5,6 +5,7 @@
+ using Cratis.Chronicle.Concepts.Events;
+ using Cratis.Chronicle.Concepts.Keys;
+ using Cratis.Chronicle.Concepts.Observation;
++using Cratis.Chronicle.Diagnostics.Identifiers;
+ using Cratis.Chronicle.EventSequences;
+ using Cratis.Orleans.Jobs;
+ using Microsoft.Extensions.Logging;
+@@ -24,7 +25,7 @@ internal static partial class ObserverLogMessages
+     internal static partial void StoredWebhookTargetRejected(this ILogger<Observer> logger, string reason);
+ 
+     [LoggerMessage(LogLevel.Warning, "Observer may have skipped {Count} event(s) of partition {Partition}, first at sequence number {EventSequenceNumber} ({Reason}); its position is {NextEventSequenceNumber}. This is a suspicion, not proof: investigate and consider replaying the partition")]
+-    internal static partial void SuspectedSkippedEvents(this ILogger<Observer> logger, int count, Key partition, EventSequenceNumber eventSequenceNumber, SuspectedSkipReason reason, EventSequenceNumber nextEventSequenceNumber);
++    internal static partial void SuspectedSkippedEvents(this ILogger<Observer> logger, int count, [EventSourceIdentifier] Key partition, EventSequenceNumber eventSequenceNumber, SuspectedSkipReason reason, EventSequenceNumber nextEventSequenceNumber);
+ 
+     [LoggerMessage(LogLevel.Warning, "{Count} further suspected-skip warnings were not logged in the last {Seconds} seconds")]
+     internal static partial void SuspectedSkipWarningsSuppressed(this ILogger<Observer> logger, int count, int seconds);
+@@ -42,31 +43,31 @@ internal static partial class ObserverLogMessages
+     internal static partial void SubscribingToAllEvents(this ILogger<Observer> logger);
+ 
+     [LoggerMessage(LogLevel.Warning, "Partition {Partition} failed for event with sequence number {EventSequenceNumber}. Error: {ExceptionMessages}. StackTrace: {StackTrace}")]
+-    internal static partial void PartitionFailed(this ILogger<Observer> logger, Key partition, EventSequenceNumber eventSequenceNumber, IEnumerable<string> exceptionMessages, string stackTrace);
++    internal static partial void PartitionFailed(this ILogger<Observer> logger, [EventSourceIdentifier] Key partition, EventSequenceNumber eventSequenceNumber, IEnumerable<string> exceptionMessages, string stackTrace);
+ 
+     [LoggerMessage(LogLevel.Information, "Manual retry overrides deferral for partition {Partition}: {Reason} until {Deadline}")]
+-    internal static partial void PartitionDeferralOverridden(this ILogger<Observer> logger, Key partition, PartitionDeferralReason reason, DateTimeOffset deadline);
++    internal static partial void PartitionDeferralOverridden(this ILogger<Observer> logger, [EventSourceIdentifier] Key partition, PartitionDeferralReason reason, DateTimeOffset deadline);
+ 
+     [LoggerMessage(LogLevel.Information, "Webhook partition {Partition} attempt {Attempt} failed: RetryBackoff until {Deadline}")]
+-    internal static partial void WebhookRetryScheduled(this ILogger<Observer> logger, Key partition, int attempt, DateTimeOffset deadline);
++    internal static partial void WebhookRetryScheduled(this ILogger<Observer> logger, [EventSourceIdentifier] Key partition, int attempt, DateTimeOffset deadline);
+ 
+     [LoggerMessage(LogLevel.Warning, "Webhook partition {Partition} parked after exhausting its retry budget of {Budget}")]
+-    internal static partial void WebhookRetryBudgetExhausted(this ILogger<Observer> logger, Key partition, TimeSpan budget);
++    internal static partial void WebhookRetryBudgetExhausted(this ILogger<Observer> logger, [EventSourceIdentifier] Key partition, TimeSpan budget);
+ 
+     [LoggerMessage(LogLevel.Debug, "Trying to recover partition {Partition}")]
+-    internal static partial void TryingToRecoverFailedPartition(this ILogger<Observer> logger, Key partition);
++    internal static partial void TryingToRecoverFailedPartition(this ILogger<Observer> logger, [EventSourceIdentifier] Key partition);
+ 
+     [LoggerMessage(LogLevel.Warning, "Giving up on trying to recover failed partition {Partition} automatically after {AttemptCount} attempts (max {MaxRetryAttempts})")]
+-    internal static partial void GivingUpOnRecoveringFailedPartition(this ILogger<Observer> logger, Key partition, int attemptCount, int maxRetryAttempts);
++    internal static partial void GivingUpOnRecoveringFailedPartition(this ILogger<Observer> logger, [EventSourceIdentifier] Key partition, int attemptCount, int maxRetryAttempts);
+ 
+     [LoggerMessage(LogLevel.Warning, "Skipping recovery of partition {Partition} — already exceeded max retry attempts ({AttemptCount}/{MaxRetryAttempts}). Partition requires manual intervention or server restart to retry")]
+-    internal static partial void SkippingRecoveryMaxAttemptsExceeded(this ILogger<Observer> logger, Key partition, int attemptCount, int maxRetryAttempts);
++    internal static partial void SkippingRecoveryMaxAttemptsExceeded(this ILogger<Observer> logger, [EventSourceIdentifier] Key partition, int attemptCount, int maxRetryAttempts);
+ 
+     [LoggerMessage(LogLevel.Warning, "Starting recovery for partition {Partition} which has already failed {AttemptCount} times (max {MaxRetryAttempts}). This is a startup retry — the subscriber may be stuck")]
+-    internal static partial void StartingRecoveryWithExistingAttempts(this ILogger<Observer> logger, Key partition, int attemptCount, int maxRetryAttempts);
++    internal static partial void StartingRecoveryWithExistingAttempts(this ILogger<Observer> logger, [EventSourceIdentifier] Key partition, int attemptCount, int maxRetryAttempts);
+ 
+     [LoggerMessage(LogLevel.Warning, "Partition {Partition} has exceeded maximum retry attempts and is being quarantined. Manual intervention required to resume processing.")]
+-    internal static partial void QuarantiningFailedPartition(this ILogger<Observer> logger, Key partition);
++    internal static partial void QuarantiningFailedPartition(this ILogger<Observer> logger, [EventSourceIdentifier] Key partition);
+ 
+     [LoggerMessage(LogLevel.Warning, "Observer is quarantined. Automatic retries and catch-up are paused until quarantine is cleared.")]
+     internal static partial void ObserverQuarantined(this ILogger logger);
+@@ -102,28 +103,28 @@ internal static partial class ObserverLogMessages
+     internal static partial void SkippingPartitionReplayBecauseObserverIsReplaying(this ILogger<Observer> logger);
+ 
+     [LoggerMessage(LogLevel.Debug, "Attempting to replay partition {Partition} to event sequence number {ToEventSequenceNumber}")]
+-    internal static partial void AttemptReplayPartition(this ILogger<Observer> logger, Key partition, EventSequenceNumber toEventSequenceNumber);
++    internal static partial void AttemptReplayPartition(this ILogger<Observer> logger, [EventSourceIdentifier] Key partition, EventSequenceNumber toEventSequenceNumber);
+ 
+     [LoggerMessage(LogLevel.Warning, "Could not read failed event {SequenceNumber} for partition {Partition} while completing replay; keeping the partition failed")]
+-    internal static partial void FailedLookingUpReplayFailure(this ILogger<Observer> logger, Exception exception, Key partition, EventSequenceNumber sequenceNumber);
++    internal static partial void FailedLookingUpReplayFailure(this ILogger<Observer> logger, Exception exception, [EventSourceIdentifier] Key partition, EventSequenceNumber sequenceNumber);
+ 
+     [LoggerMessage(LogLevel.Debug, "Finished replay for partition {Partition}")]
+-    internal static partial void FinishedReplayForPartition(this ILogger<Observer> logger, Key partition);
++    internal static partial void FinishedReplayForPartition(this ILogger<Observer> logger, [EventSourceIdentifier] Key partition);
+ 
+     [LoggerMessage(LogLevel.Debug, "Failing partition {Partition} has successfully recovered")]
+-    internal static partial void FailingPartitionRecovered(this ILogger<Observer> logger, Key partition);
++    internal static partial void FailingPartitionRecovered(this ILogger<Observer> logger, [EventSourceIdentifier] Key partition);
+ 
+     [LoggerMessage(LogLevel.Debug, "Failing partition {Partition} was not recovered. Scheduling another retry")]
+-    internal static partial void FailingPartitionNotRecovered(this ILogger<Observer> logger, Key partition);
++    internal static partial void FailingPartitionNotRecovered(this ILogger<Observer> logger, [EventSourceIdentifier] Key partition);
+ 
+     [LoggerMessage(LogLevel.Debug, "Failing partition {Partition} has partially recovered. Last successfully handled event was {LastEventSequenceNumber}")]
+-    internal static partial void FailingPartitionPartiallyRecovered(this ILogger<Observer> logger, Key partition, EventSequenceNumber lastEventSequenceNumber);
++    internal static partial void FailingPartitionPartiallyRecovered(this ILogger<Observer> logger, [EventSourceIdentifier] Key partition, EventSequenceNumber lastEventSequenceNumber);
+ 
+     [LoggerMessage(LogLevel.Debug, "Partition {Partition} successfully caught up to event sequence number {EventSequenceNumber}")]
+-    internal static partial void PartitionCaughtUp(this ILogger<Observer> logger, Key partition, EventSequenceNumber eventSequenceNumber);
++    internal static partial void PartitionCaughtUp(this ILogger<Observer> logger, [EventSourceIdentifier] Key partition, EventSequenceNumber eventSequenceNumber);
+ 
+     [LoggerMessage(LogLevel.Debug, "Resuming catchup for partition {Partition} starting from event sequence number {EventSequenceNumber}")]
+-    internal static partial void StartingCatchUpForPartition(this ILogger<Observer> logger, Key partition, EventSequenceNumber eventSequenceNumber);
++    internal static partial void StartingCatchUpForPartition(this ILogger<Observer> logger, [EventSourceIdentifier] Key partition, EventSequenceNumber eventSequenceNumber);
+ 
+     [LoggerMessage(LogLevel.Debug, "Observer is not subscribed, ignoring handling of event")]
+     internal static partial void ObserverIsNotSubscribed(this ILogger<Observer> logger);
+@@ -132,22 +133,22 @@ internal static partial class ObserverLogMessages
+     internal static partial void ObserverIsNotActive(this ILogger<Observer> logger);
+ 
+     [LoggerMessage(LogLevel.Debug, "Partition '{Partition}' is in a failed state, ignoring handling of event")]
+-    internal static partial void PartitionIsFailed(this ILogger<Observer> logger, Key partition);
++    internal static partial void PartitionIsFailed(this ILogger<Observer> logger, [EventSourceIdentifier] Key partition);
+ 
+     [LoggerMessage(LogLevel.Debug, "Observer is preparing catchup, ignoring handling of event")]
+     internal static partial void ObserverIsPreparingCatchup(this ILogger<Observer> logger);
+ 
+     [LoggerMessage(LogLevel.Debug, "Partition {Partition} is replaying events and cannot accept new events to handle")]
+-    internal static partial void PartitionReplayingCannotHandleNewEvents(this ILogger<Observer> logger, Key partition);
++    internal static partial void PartitionReplayingCannotHandleNewEvents(this ILogger<Observer> logger, [EventSourceIdentifier] Key partition);
+ 
+     [LoggerMessage(LogLevel.Debug, "Partition {Partition} is catching up events and cannot accept new events to handle")]
+-    internal static partial void PartitionCatchingUpCannotHandleNewEvents(this ILogger<Observer> logger, Key partition);
++    internal static partial void PartitionCatchingUpCannotHandleNewEvents(this ILogger<Observer> logger, [EventSourceIdentifier] Key partition);
+ 
+     [LoggerMessage(LogLevel.Debug, "Partition {Partition} is not starting catch up job because it is a failing partition")]
+-    internal static partial void PartitionToCatchUpIsFailing(this ILogger<Observer> logger, Key partition);
++    internal static partial void PartitionToCatchUpIsFailing(this ILogger<Observer> logger, [EventSourceIdentifier] Key partition);
+ 
+     [LoggerMessage(LogLevel.Warning, "While evaluating whether Partition {Partition} needs catchup the last handled event was unavailable. This could indicate that the event sequence is in a broken state")]
+-    internal static partial void LastHandledEventForPartitionUnavailable(this ILogger<Observer> logger, Key partition);
++    internal static partial void LastHandledEventForPartitionUnavailable(this ILogger<Observer> logger, [EventSourceIdentifier] Key partition);
+ 
+     [LoggerMessage(LogLevel.Debug, "Last handled event reported is not an actual value")]
+     internal static partial void LastHandledEventIsNotActualValue(this ILogger<Observer> logger);
+@@ -200,7 +201,7 @@ internal static partial class ObserverLogMessages
+     internal static partial void PromotingSupersededClientFailed(this ILogger<Observer> logger, ConnectionId connectionId, Exception exception);
+ 
+     [LoggerMessage(LogLevel.Warning, "Client instance {ConnectionId} reported disconnected while handling partition {Partition}. Retrying with the remaining instances.")]
+-    internal static partial void ClientInstanceDisconnectedRetryingWithRemaining(this ILogger<Observer> logger, ConnectionId connectionId, Key partition);
++    internal static partial void ClientInstanceDisconnectedRetryingWithRemaining(this ILogger<Observer> logger, ConnectionId connectionId, [EventSourceIdentifier] Key partition);
+ 
+     [LoggerMessage(LogLevel.Warning, "Watchdog detected that the replay job is missing while observer is in replaying state. Re-routing observer.")]
+     internal static partial void WatchdogReplayJobMissing(this ILogger<Observer> logger);
+@@ -233,19 +234,19 @@ internal static partial class ObserverLogMessages
+     internal static partial void GivingUpOnRecoveryAfterQuarantine(this ILogger<Observer> logger, int attempts, int maxAttempts);
+ 
+     [LoggerMessage(LogLevel.Debug, "Skipping failed partition recovery for partition {Partition} because it could not be found among the observer's failed partitions")]
+-    internal static partial void SkippingFailedPartitionRecoveryBecausePartitionNotFound(this ILogger<Observer> logger, Key partition);
++    internal static partial void SkippingFailedPartitionRecoveryBecausePartitionNotFound(this ILogger<Observer> logger, [EventSourceIdentifier] Key partition);
+ 
+     [LoggerMessage(LogLevel.Debug, "Skipping failed partition recovery for partition {Partition} because the partition itself is quarantined")]
+-    internal static partial void SkippingFailedPartitionRecoveryBecausePartitionIsQuarantined(this ILogger<Observer> logger, Key partition);
++    internal static partial void SkippingFailedPartitionRecoveryBecausePartitionIsQuarantined(this ILogger<Observer> logger, [EventSourceIdentifier] Key partition);
+ 
+     [LoggerMessage(LogLevel.Information, "Clearing quarantine of partition {Partition} and resetting its retry budget by operator request")]
+-    internal static partial void ClearingPartitionQuarantine(this ILogger<Observer> logger, Key partition);
++    internal static partial void ClearingPartitionQuarantine(this ILogger<Observer> logger, [EventSourceIdentifier] Key partition);
+ 
+     [LoggerMessage(LogLevel.Debug, "Not clearing quarantine of partition {Partition} because it is not a failed partition")]
+-    internal static partial void SkippingClearPartitionQuarantineBecausePartitionNotFound(this ILogger<Observer> logger, Key partition);
++    internal static partial void SkippingClearPartitionQuarantineBecausePartitionNotFound(this ILogger<Observer> logger, [EventSourceIdentifier] Key partition);
+ 
+     [LoggerMessage(LogLevel.Debug, "Not clearing quarantine of partition {Partition} because it is not quarantined")]
+-    internal static partial void SkippingClearPartitionQuarantineBecausePartitionNotQuarantined(this ILogger<Observer> logger, Key partition);
++    internal static partial void SkippingClearPartitionQuarantineBecausePartitionNotQuarantined(this ILogger<Observer> logger, [EventSourceIdentifier] Key partition);
+ 
+     [LoggerMessage(LogLevel.Information, "Clearing {Count} failed partition(s) for observer by operator request")]
+     internal static partial void ClearingFailedPartitions(this ILogger<Observer> logger, int count);
+diff --git a/Source/Kernel/Core/Observation/ObserverServiceLogging.cs b/Source/Kernel/Core/Observation/ObserverServiceLogging.cs
+index 8141404fe5..341678bd05 100644
+--- a/Source/Kernel/Core/Observation/ObserverServiceLogging.cs
++++ b/Source/Kernel/Core/Observation/ObserverServiceLogging.cs
+@@ -4,6 +4,7 @@
+ using Cratis.Chronicle.Concepts.Events;
+ using Cratis.Chronicle.Concepts.Keys;
+ using Cratis.Chronicle.Concepts.Observation;
++using Cratis.Chronicle.Diagnostics.Identifiers;
+ using Microsoft.Extensions.Logging;
+ 
+ namespace Cratis.Chronicle.Observation;
+@@ -30,7 +31,7 @@ internal static partial class ObserverServiceLogging
+     /// <param name="sequenceNumber">The earliest unconfirmed event.</param>
+     /// <param name="reason">The failure reason.</param>
+     [LoggerMessage(LogLevel.Error, "Shutdown bulk outcome failed or unknown for observer {Observer}, partition {Partition}, sequence number {SequenceNumber}: {Reason}")]
+-    internal static partial void DrainPartitionFailed(this ILogger<ObserverService> logger, ObserverKey observer, Key partition, EventSequenceNumber sequenceNumber, string reason);
++    internal static partial void DrainPartitionFailed(this ILogger<ObserverService> logger, ObserverKey observer, [EventSourceIdentifier] Key partition, EventSequenceNumber sequenceNumber, string reason);
+ 
+     /// <summary>
+     /// Logs a drain or failure-recording error without blocking shutdown.
+diff --git a/Source/Kernel/Core/Observation/States/CatchingUpInFlightLogging.cs b/Source/Kernel/Core/Observation/States/CatchingUpInFlightLogging.cs
+index 68080fb9f4..0d69dc71c3 100644
+--- a/Source/Kernel/Core/Observation/States/CatchingUpInFlightLogging.cs
++++ b/Source/Kernel/Core/Observation/States/CatchingUpInFlightLogging.cs
+@@ -4,6 +4,7 @@
+ using Cratis.Chronicle.Concepts.Events;
+ using Cratis.Chronicle.Concepts.Keys;
+ using Cratis.Chronicle.Concepts.Observation;
++using Cratis.Chronicle.Diagnostics.Identifiers;
+ using Cratis.Orleans.Jobs;
+ using Microsoft.Extensions.Logging;
+ 
+@@ -19,10 +20,10 @@ internal static partial class CatchingUpInFlightLogMessages
+     internal static partial void RecoveringInFlightPartitions(this ILogger<CatchingUpInFlight> logger, int count);
+ 
+     [LoggerMessage(LogLevel.Information, "Starting in-flight catch-up for partition {Partition} from event sequence number {FromSequenceNumber}")]
+-    internal static partial void StartingInFlightCatchUpForPartition(this ILogger<CatchingUpInFlight> logger, Key partition, EventSequenceNumber fromSequenceNumber);
++    internal static partial void StartingInFlightCatchUpForPartition(this ILogger<CatchingUpInFlight> logger, [EventSourceIdentifier] Key partition, EventSequenceNumber fromSequenceNumber);
+ 
+     [LoggerMessage(LogLevel.Error, "Could not start in-flight catch-up for partition {Partition}: {Error}; transitioning observer to quarantine")]
+-    internal static partial void CouldNotStartInFlightCatchUpForPartition(this ILogger<CatchingUpInFlight> logger, Key partition, StartJobError error);
++    internal static partial void CouldNotStartInFlightCatchUpForPartition(this ILogger<CatchingUpInFlight> logger, [EventSourceIdentifier] Key partition, StartJobError error);
+ 
+     [LoggerMessage(LogLevel.Error, "Failed to enqueue in-flight catch-up for one or more partitions; transitioning observer to quarantine")]
+     internal static partial void FailedToCatchUpInFlightPartitions(this ILogger<CatchingUpInFlight> logger, Exception exception);
+diff --git a/Source/Kernel/Core/Observation/Webhooks/WebhookReactorLogging.cs b/Source/Kernel/Core/Observation/Webhooks/WebhookReactorLogging.cs
+index 1cc2fd697a..e8cebb92c1 100644
+--- a/Source/Kernel/Core/Observation/Webhooks/WebhookReactorLogging.cs
++++ b/Source/Kernel/Core/Observation/Webhooks/WebhookReactorLogging.cs
+@@ -3,6 +3,7 @@
+ 
+ using Cratis.Chronicle.Concepts.Events;
+ using Cratis.Chronicle.Concepts.Observation.Webhooks;
++using Cratis.Chronicle.Diagnostics.Identifiers;
+ using Microsoft.Extensions.Logging;
+ 
+ namespace Cratis.Chronicle.Observation.Webhooks;
+@@ -10,10 +11,10 @@ namespace Cratis.Chronicle.Observation.Webhooks;
+ internal static partial class WebhookReactorLogging
+ {
+     [LoggerMessage(LogLevel.Debug, "Adding webhook {EventSourceId} with identifier {Identifier}")]
+-    internal static partial void AddingWebhook(this ILogger<WebhookReactor> logger, EventSourceId eventSourceId, WebhookId identifier);
++    internal static partial void AddingWebhook(this ILogger<WebhookReactor> logger, [EventSourceIdentifier] EventSourceId eventSourceId, WebhookId identifier);
+ 
+     [LoggerMessage(LogLevel.Debug, "Webhook {EventSourceId} with identifier {Identifier} added")]
+-    internal static partial void WebhookAdded(this ILogger<WebhookReactor> logger, EventSourceId eventSourceId, WebhookId identifier);
++    internal static partial void WebhookAdded(this ILogger<WebhookReactor> logger, [EventSourceIdentifier] EventSourceId eventSourceId, WebhookId identifier);
+ 
+     [LoggerMessage(LogLevel.Debug, "Setting basic authorization for webhook {WebhookId}")]
+     internal static partial void SettingBasicAuthorizationForWebhook(this ILogger<WebhookReactor> logger, WebhookId webhookId);
+@@ -34,8 +35,8 @@ internal static partial class WebhookReactorLogging
+     internal static partial void SettingTargetHeadersForWebhook(this ILogger<WebhookReactor> logger, WebhookId webhookId);
+ 
+     [LoggerMessage(LogLevel.Debug, "Removing webhook {EventSourceId}")]
+-    internal static partial void RemovingWebhook(this ILogger<WebhookReactor> logger, EventSourceId eventSourceId);
++    internal static partial void RemovingWebhook(this ILogger<WebhookReactor> logger, [EventSourceIdentifier] EventSourceId eventSourceId);
+ 
+     [LoggerMessage(LogLevel.Debug, "Webhook {EventSourceId} removed")]
+-    internal static partial void WebhookRemoved(this ILogger<WebhookReactor> logger, EventSourceId eventSourceId);
++    internal static partial void WebhookRemoved(this ILogger<WebhookReactor> logger, [EventSourceIdentifier] EventSourceId eventSourceId);
+ }
+diff --git a/Source/Kernel/Core/Projections/Engine/KeyResolversLogMessages.cs b/Source/Kernel/Core/Projections/Engine/KeyResolversLogMessages.cs
+index 06848f6678..ecb8fbdd6c 100644
+--- a/Source/Kernel/Core/Projections/Engine/KeyResolversLogMessages.cs
++++ b/Source/Kernel/Core/Projections/Engine/KeyResolversLogMessages.cs
+@@ -1,6 +1,7 @@
+ // Copyright (c) Cratis. All rights reserved.
+ // Licensed under the MIT license. See LICENSE file in the project root for full license information.
+ 
++using Cratis.Chronicle.Diagnostics.Identifiers;
+ using Microsoft.Extensions.Logging;
+ 
+ namespace Cratis.Chronicle.Projections.Engine;
+@@ -17,7 +18,7 @@ internal static partial class KeyResolversLogMessages
+     internal static partial void ErrorResolving(this ILogger<KeyResolvers> logger, Exception ex, string keyResolverName);
+ 
+     [LoggerMessage(LogLevel.Debug, "FromParentHierarchy: ENTRY - eventType='{EventType}', eventSourceId='{EventSourceId}', sequenceNumber={SequenceNumber}")]
+-    internal static partial void FromParentHierarchyEntry(this ILogger<KeyResolvers> logger, string eventType, string eventSourceId, ulong sequenceNumber);
++    internal static partial void FromParentHierarchyEntry(this ILogger<KeyResolvers> logger, string eventType, [EventSourceIdentifier] string eventSourceId, ulong sequenceNumber);
+ 
+     [LoggerMessage(LogLevel.Debug, "FromParentHierarchy: projection path '{Path}', hasParent={HasParent}, parentKey='{ParentKey}'")]
+     internal static partial void FromParentHierarchyStart(this ILogger<KeyResolvers> logger, string path, bool hasParent, object? parentKey);
+@@ -89,13 +90,13 @@ internal static partial class KeyResolversLogMessages
+     internal static partial void FromParentHierarchySkippingDeferredParentEvent(this ILogger<KeyResolvers> logger, ulong sequenceNumber);
+ 
+     [LoggerMessage(LogLevel.Debug, "FromParentHierarchy: FindParentEvent START - eventType='{EventType}', eventSourceId='{EventSourceId}', parentKey='{ParentKey}'")]
+-    internal static partial void FromParentHierarchyFindParentEventStart(this ILogger<KeyResolvers> logger, string eventType, string eventSourceId, string parentKey);
++    internal static partial void FromParentHierarchyFindParentEventStart(this ILogger<KeyResolvers> logger, string eventType, [EventSourceIdentifier] string eventSourceId, string parentKey);
+ 
+     [LoggerMessage(LogLevel.Debug, "FromParentHierarchy: event type '{EventType}' matches parent type, using current event")]
+     internal static partial void FromParentHierarchyEventIsParentType(this ILogger<KeyResolvers> logger, string eventType);
+ 
+     [LoggerMessage(LogLevel.Debug, "FromParentHierarchy: TryGetLastInstanceOfAny with eventSourceId='{EventSourceId}', eventTypes=[{EventTypes}]")]
+-    internal static partial void FromParentHierarchyTryGetLastInstance(this ILogger<KeyResolvers> logger, string eventSourceId, string eventTypes);
++    internal static partial void FromParentHierarchyTryGetLastInstance(this ILogger<KeyResolvers> logger, [EventSourceIdentifier] string eventSourceId, string eventTypes);
+ 
+     [LoggerMessage(LogLevel.Debug, "FromParentHierarchy: TryGetLastInstanceOfAny returned no event")]
+     internal static partial void FromParentHierarchyNoEventFoundByTryGetLast(this ILogger<KeyResolvers> logger);
+@@ -128,7 +129,7 @@ internal static partial class KeyResolversLogMessages
+     internal static partial void FromParentHierarchySinkDidNotFindRoot(this ILogger<KeyResolvers> logger, string childPropertyPath, string parentKeyValue);
+ 
+     [LoggerMessage(LogLevel.Debug, "FromParentHierarchy: parent event not found by parent key, attempting resolution via child's creation event for eventSource='{EventSourceId}'")]
+-    internal static partial void FromParentHierarchyAttemptingViaChildCreationEvent(this ILogger<KeyResolvers> logger, string eventSourceId);
++    internal static partial void FromParentHierarchyAttemptingViaChildCreationEvent(this ILogger<KeyResolvers> logger, [EventSourceIdentifier] string eventSourceId);
+ 
+     [LoggerMessage(LogLevel.Debug, "FromParentHierarchy: resolved key via child's creation event type='{EventType}', key='{Key}'")]
+     internal static partial void FromParentHierarchyResolvedViaChildCreationEvent(this ILogger<KeyResolvers> logger, string eventType, string key);
+diff --git a/Source/Kernel/Core/Projections/Engine/Pipelines/Steps/ResolveFuturesLogging.cs b/Source/Kernel/Core/Projections/Engine/Pipelines/Steps/ResolveFuturesLogging.cs
+index d38bf49449..30a9acfc45 100644
+--- a/Source/Kernel/Core/Projections/Engine/Pipelines/Steps/ResolveFuturesLogging.cs
++++ b/Source/Kernel/Core/Projections/Engine/Pipelines/Steps/ResolveFuturesLogging.cs
+@@ -3,6 +3,7 @@
+ 
+ using Cratis.Chronicle.Concepts.Keys;
+ using Cratis.Chronicle.Concepts.Projections;
++using Cratis.Chronicle.Diagnostics.Identifiers;
+ using Microsoft.Extensions.Logging;
+ 
+ namespace Cratis.Chronicle.Projections.Engine.Pipelines.Steps;
+@@ -37,7 +38,7 @@ internal static partial class ResolveFuturesLogging
+     internal static partial void KeyResolutionDeferred(this ILogger<ResolveFutures> logger, ProjectionFutureId futureId);
+ 
+     [LoggerMessage(LogLevel.Debug, "Resolved key {Key} for future {FutureId}, calling OnNext")]
+-    internal static partial void ResolvedKeyCallingOnNext(this ILogger<ResolveFutures> logger, Key key, ProjectionFutureId futureId);
++    internal static partial void ResolvedKeyCallingOnNext(this ILogger<ResolveFutures> logger, [EventSourceIdentifier] Key key, ProjectionFutureId futureId);
+ 
+     [LoggerMessage(LogLevel.Debug, "Found child projection at path {ProjectionPath} for future {FutureId}")]
+     internal static partial void FoundChildProjection(this ILogger<ResolveFutures> logger, string projectionPath, ProjectionFutureId futureId);
+diff --git a/Source/Kernel/Core/Projections/ProjectionChangesetNotifierLogMessages.cs b/Source/Kernel/Core/Projections/ProjectionChangesetNotifierLogMessages.cs
+index 4576f398c6..134a055a3c 100644
+--- a/Source/Kernel/Core/Projections/ProjectionChangesetNotifierLogMessages.cs
++++ b/Source/Kernel/Core/Projections/ProjectionChangesetNotifierLogMessages.cs
+@@ -3,6 +3,7 @@
+ 
+ using Cratis.Chronicle.Concepts;
+ using Cratis.Chronicle.Concepts.ReadModels;
++using Cratis.Chronicle.Diagnostics.Identifiers;
+ using Microsoft.Extensions.Logging;
+ 
+ namespace Cratis.Chronicle.Projections;
+@@ -23,5 +24,5 @@ internal static partial class ProjectionChangesetNotifierLogMessages
+     internal static partial void Subscribed(this ILogger<ProjectionChangesetNotifier> logger, string notifier, int observerCount);
+ 
+     [LoggerMessage(LogLevel.Debug, "Changeset notifier {Notifier} notifying {ObserverCount} observer(s) for namespace {Namespace} key {ReadModelKey}")]
+-    internal static partial void Notifying(this ILogger<ProjectionChangesetNotifier> logger, string notifier, int observerCount, EventStoreNamespaceName @namespace, ReadModelKey readModelKey);
++    internal static partial void Notifying(this ILogger<ProjectionChangesetNotifier> logger, string notifier, int observerCount, EventStoreNamespaceName @namespace, [EventSourceIdentifier] ReadModelKey readModelKey);
+ }
+diff --git a/Source/Kernel/Core/Projections/ProjectionObserverSubscriberLogging.cs b/Source/Kernel/Core/Projections/ProjectionObserverSubscriberLogging.cs
+index 78fbe74c63..0293b2dcd3 100644
+--- a/Source/Kernel/Core/Projections/ProjectionObserverSubscriberLogging.cs
++++ b/Source/Kernel/Core/Projections/ProjectionObserverSubscriberLogging.cs
+@@ -3,6 +3,7 @@
+ 
+ using Cratis.Chronicle.Concepts.Events;
+ using Cratis.Chronicle.Concepts.Observation;
++using Cratis.Chronicle.Diagnostics.Identifiers;
+ using Microsoft.Extensions.Logging;
+ 
+ namespace Cratis.Chronicle.Projections;
+@@ -13,29 +14,29 @@ namespace Cratis.Chronicle.Projections;
+ internal static partial class ProjectionObserverSubscriberLogging
+ {
+     [LoggerMessage(LogLevel.Warning, "Projection pipeline for key {Key} is not yet ready — event will be retried as a failed partition")]
+-    internal static partial void PipelineNotReady(this ILogger<ProjectionObserverSubscriber> logger, ObserverSubscriberKey key);
++    internal static partial void PipelineNotReady(this ILogger<ProjectionObserverSubscriber> logger, [EventSourceIdentifier] ObserverSubscriberKey key);
+ 
+     [LoggerMessage(LogLevel.Error, "Failed building the projection pipeline for key {Key} — events will fail their partition with this cause until the projection definition is corrected")]
+-    internal static partial void FailedBuildingPipeline(this ILogger<ProjectionObserverSubscriber> logger, Exception ex, ObserverSubscriberKey key);
++    internal static partial void FailedBuildingPipeline(this ILogger<ProjectionObserverSubscriber> logger, Exception ex, [EventSourceIdentifier] ObserverSubscriberKey key);
+ 
+     [LoggerMessage(LogLevel.Warning, "An error occurred while handling to projection pipeline for key {Key}. Last successfully observed event was {LastObservedEventSequenceNumber}")]
+-    internal static partial void ErrorHandling(this ILogger<ProjectionObserverSubscriber> logger, Exception ex, ObserverSubscriberKey key, ulong lastObservedEventSequenceNumber);
++    internal static partial void ErrorHandling(this ILogger<ProjectionObserverSubscriber> logger, Exception ex, [EventSourceIdentifier] ObserverSubscriberKey key, ulong lastObservedEventSequenceNumber);
+ 
+     [LoggerMessage(LogLevel.Trace, "Successfully handled event {EventSequenceNumber} for projection pipeline for key {Key}")]
+-    internal static partial void SuccessfullyHandledEvent(this ILogger<ProjectionObserverSubscriber> logger, ulong eventSequenceNumber, ObserverSubscriberKey key);
++    internal static partial void SuccessfullyHandledEvent(this ILogger<ProjectionObserverSubscriber> logger, ulong eventSequenceNumber, [EventSourceIdentifier] ObserverSubscriberKey key);
+ 
+     [LoggerMessage(LogLevel.Warning, "Preparing a page of events for projection pipeline for key {Key} failed — the page is handled without preparation")]
+-    internal static partial void FailedPreparingPage(this ILogger<ProjectionObserverSubscriber> logger, Exception ex, ObserverSubscriberKey key);
++    internal static partial void FailedPreparingPage(this ILogger<ProjectionObserverSubscriber> logger, Exception ex, [EventSourceIdentifier] ObserverSubscriberKey key);
+ 
+     [LoggerMessage(LogLevel.Trace, "Successfully handled all events for projection pipeline for key {Key}")]
+-    internal static partial void SuccessfullyHandledAllEvents(this ILogger<ProjectionObserverSubscriber> logger, ObserverSubscriberKey key);
++    internal static partial void SuccessfullyHandledAllEvents(this ILogger<ProjectionObserverSubscriber> logger, [EventSourceIdentifier] ObserverSubscriberKey key);
+ 
+     [LoggerMessage(LogLevel.Information, "Skipping event {EventType} at {EventSequenceNumber} for key {Key} - the current projection definition does not take part in it")]
+-    internal static partial void SkippedEventNotInProjection(this ILogger<ProjectionObserverSubscriber> logger, EventType eventType, ulong eventSequenceNumber, ObserverSubscriberKey key);
++    internal static partial void SkippedEventNotInProjection(this ILogger<ProjectionObserverSubscriber> logger, EventType eventType, ulong eventSequenceNumber, [EventSourceIdentifier] ObserverSubscriberKey key);
+ 
+     [LoggerMessage(LogLevel.Information, "Refreshing stale projection pipeline for key {Key} - the engine holds a newer definition than the cached one")]
+-    internal static partial void RefreshingStalePipeline(this ILogger<ProjectionObserverSubscriber> logger, ObserverSubscriberKey key);
++    internal static partial void RefreshingStalePipeline(this ILogger<ProjectionObserverSubscriber> logger, [EventSourceIdentifier] ObserverSubscriberKey key);
+ 
+     [LoggerMessage(LogLevel.Debug, "Silo is shutting down; skipping definition change unsubscribe for key {Key}")]
+-    internal static partial void SkippingDefinitionUnsubscribeDuringShutdown(this ILogger<ProjectionObserverSubscriber> logger, ObserverSubscriberKey key);
++    internal static partial void SkippingDefinitionUnsubscribeDuringShutdown(this ILogger<ProjectionObserverSubscriber> logger, [EventSourceIdentifier] ObserverSubscriberKey key);
+ }
+diff --git a/Source/Kernel/Core/Security/UsersReactorLogging.cs b/Source/Kernel/Core/Security/UsersReactorLogging.cs
+index e8b6bfb359..62ff31c27a 100644
+--- a/Source/Kernel/Core/Security/UsersReactorLogging.cs
++++ b/Source/Kernel/Core/Security/UsersReactorLogging.cs
+@@ -2,6 +2,7 @@
+ // Licensed under the MIT license. See LICENSE file in the project root for full license information.
+ 
+ using Cratis.Chronicle.Concepts.Events;
++using Cratis.Chronicle.Diagnostics.Identifiers;
+ using Microsoft.Extensions.Logging;
+ 
+ namespace Cratis.Chronicle.Security;
+@@ -9,38 +10,38 @@ namespace Cratis.Chronicle.Security;
+ internal static partial class UsersReactorLogging
+ {
+     [LoggerMessage(LogLevel.Trace, "Adding user with EventSourceId: {EventSourceId}, Username: {Username}")]
+-    internal static partial void AddingUser(this ILogger<UsersReactor> logger, EventSourceId eventSourceId, string username);
++    internal static partial void AddingUser(this ILogger<UsersReactor> logger, [EventSourceIdentifier] EventSourceId eventSourceId, string username);
+ 
+     [LoggerMessage(LogLevel.Debug, "User added with EventSourceId: {EventSourceId}")]
+-    internal static partial void UserAdded(this ILogger<UsersReactor> logger, EventSourceId eventSourceId);
++    internal static partial void UserAdded(this ILogger<UsersReactor> logger, [EventSourceIdentifier] EventSourceId eventSourceId);
+ 
+     [LoggerMessage(LogLevel.Trace, "Adding initial admin user with EventSourceId: {EventSourceId}, Username: {Username}")]
+-    internal static partial void AddingInitialAdminUser(this ILogger<UsersReactor> logger, EventSourceId eventSourceId, string username);
++    internal static partial void AddingInitialAdminUser(this ILogger<UsersReactor> logger, [EventSourceIdentifier] EventSourceId eventSourceId, string username);
+ 
+     [LoggerMessage(LogLevel.Debug, "Initial admin user added with EventSourceId: {EventSourceId}")]
+-    internal static partial void InitialAdminUserAdded(this ILogger<UsersReactor> logger, EventSourceId eventSourceId);
++    internal static partial void InitialAdminUserAdded(this ILogger<UsersReactor> logger, [EventSourceIdentifier] EventSourceId eventSourceId);
+ 
+     [LoggerMessage(LogLevel.Debug, "Removing user with EventSourceId: {EventSourceId}")]
+-    internal static partial void RemovingUser(this ILogger<UsersReactor> logger, EventSourceId eventSourceId);
++    internal static partial void RemovingUser(this ILogger<UsersReactor> logger, [EventSourceIdentifier] EventSourceId eventSourceId);
+ 
+     [LoggerMessage(LogLevel.Debug, "User removed with EventSourceId: {EventSourceId}")]
+-    internal static partial void UserRemoved(this ILogger<UsersReactor> logger, EventSourceId eventSourceId);
++    internal static partial void UserRemoved(this ILogger<UsersReactor> logger, [EventSourceIdentifier] EventSourceId eventSourceId);
+ 
+     [LoggerMessage(LogLevel.Debug, "Changing password for user with EventSourceId: {EventSourceId}")]
+-    internal static partial void ChangingPassword(this ILogger<UsersReactor> logger, EventSourceId eventSourceId);
++    internal static partial void ChangingPassword(this ILogger<UsersReactor> logger, [EventSourceIdentifier] EventSourceId eventSourceId);
+ 
+     [LoggerMessage(LogLevel.Debug, "Password changed for user with EventSourceId: {EventSourceId}")]
+-    internal static partial void PasswordChanged(this ILogger<UsersReactor> logger, EventSourceId eventSourceId);
++    internal static partial void PasswordChanged(this ILogger<UsersReactor> logger, [EventSourceIdentifier] EventSourceId eventSourceId);
+ 
+     [LoggerMessage(LogLevel.Warning, "User not found when changing password for EventSourceId: {EventSourceId}")]
+-    internal static partial void UserNotFoundWhenChangingPassword(this ILogger<UsersReactor> logger, EventSourceId eventSourceId);
++    internal static partial void UserNotFoundWhenChangingPassword(this ILogger<UsersReactor> logger, [EventSourceIdentifier] EventSourceId eventSourceId);
+ 
+     [LoggerMessage(LogLevel.Debug, "Setting password change requirement for user with EventSourceId: {EventSourceId}")]
+-    internal static partial void SettingPasswordChangeRequirement(this ILogger<UsersReactor> logger, EventSourceId eventSourceId);
++    internal static partial void SettingPasswordChangeRequirement(this ILogger<UsersReactor> logger, [EventSourceIdentifier] EventSourceId eventSourceId);
+ 
+     [LoggerMessage(LogLevel.Debug, "Password change requirement set for user with EventSourceId: {EventSourceId}")]
+-    internal static partial void PasswordChangeRequirementSet(this ILogger<UsersReactor> logger, EventSourceId eventSourceId);
++    internal static partial void PasswordChangeRequirementSet(this ILogger<UsersReactor> logger, [EventSourceIdentifier] EventSourceId eventSourceId);
+ 
+     [LoggerMessage(LogLevel.Warning, "User not found when setting password change requirement for EventSourceId: {EventSourceId}")]
+-    internal static partial void UserNotFoundWhenSettingPasswordChangeRequirement(this ILogger<UsersReactor> logger, EventSourceId eventSourceId);
++    internal static partial void UserNotFoundWhenSettingPasswordChangeRequirement(this ILogger<UsersReactor> logger, [EventSourceIdentifier] EventSourceId eventSourceId);
+ }
+diff --git a/Source/Kernel/Grpc/Observation/Reactors/ReactorsLogging.cs b/Source/Kernel/Grpc/Observation/Reactors/ReactorsLogging.cs
+index 26f0c3f6e6..c303acddd4 100644
+--- a/Source/Kernel/Grpc/Observation/Reactors/ReactorsLogging.cs
++++ b/Source/Kernel/Grpc/Observation/Reactors/ReactorsLogging.cs
+@@ -5,6 +5,7 @@
+ using Cratis.Chronicle.Concepts.EventSequences;
+ using Cratis.Chronicle.Concepts.Observation;
+ using Cratis.Chronicle.Concepts.Observation.Reactors;
++using Cratis.Chronicle.Diagnostics.Identifiers;
+ using Microsoft.Extensions.Logging;
+ 
+ namespace Cratis.Chronicle.Services.Observation.Reactors;
+@@ -16,7 +17,7 @@ namespace Cratis.Chronicle.Services.Observation.Reactors;
+ internal static partial class ReactorsLogMessages
+ {
+     [LoggerMessage(LogLevel.Warning, "Ignoring unknown or completed reactor delivery {DeliveryId} for partition {Partition}")]
+-    internal static partial void UnknownDeliveryResult(this ILogger<Reactors> logger, ulong deliveryId, string partition);
++    internal static partial void UnknownDeliveryResult(this ILogger<Reactors> logger, ulong deliveryId, [EventSourceIdentifier] string partition);
+ 
+     [LoggerMessage(LogLevel.Debug, "Reactor observe method invoked")]
+     internal static partial void Observe(this ILogger<Reactors> logger);
+diff --git a/Source/Kernel/Grpc/Observation/Reducers/ReducersLogging.cs b/Source/Kernel/Grpc/Observation/Reducers/ReducersLogging.cs
+index 4b7075aba3..81ba175df9 100644
+--- a/Source/Kernel/Grpc/Observation/Reducers/ReducersLogging.cs
++++ b/Source/Kernel/Grpc/Observation/Reducers/ReducersLogging.cs
+@@ -5,6 +5,7 @@
+ using Cratis.Chronicle.Concepts.EventSequences;
+ using Cratis.Chronicle.Concepts.Observation;
+ using Cratis.Chronicle.Concepts.Observation.Reducers;
++using Cratis.Chronicle.Diagnostics.Identifiers;
+ using Microsoft.Extensions.Logging;
+ 
+ namespace Cratis.Chronicle.Services.Observation.Reducers;
+@@ -16,7 +17,7 @@ namespace Cratis.Chronicle.Services.Observation.Reducers;
+ internal static partial class ReducersLogMessages
+ {
+     [LoggerMessage(LogLevel.Warning, "Ignoring unknown or completed reducer delivery {DeliveryId} for partition {Partition}")]
+-    internal static partial void UnknownDeliveryResult(this ILogger<Reducers> logger, ulong deliveryId, string partition);
++    internal static partial void UnknownDeliveryResult(this ILogger<Reducers> logger, ulong deliveryId, [EventSourceIdentifier] string partition);
+ 
+     [LoggerMessage(LogLevel.Debug, "Reducer observe method invoked")]
+     internal static partial void Observe(this ILogger<Reducers> logger);
+diff --git a/Source/Kernel/Server/Program.cs b/Source/Kernel/Server/Program.cs
+index 21b650f062..c588bf1866 100644
+--- a/Source/Kernel/Server/Program.cs
++++ b/Source/Kernel/Server/Program.cs
+@@ -7,6 +7,7 @@
+ using Cratis.Arc.MongoDB;
+ using Cratis.Chronicle.Clients;
+ using Cratis.Chronicle.Configuration;
++using Cratis.Chronicle.Diagnostics.Identifiers;
+ using Cratis.Chronicle.Diagnostics.OpenTelemetry;
+ using Cratis.Chronicle.Observation.Webhooks;
+ using Cratis.Chronicle.Server;
+@@ -76,6 +77,7 @@
+ var env = Environment.GetEnvironmentVariables();
+ 
+ ChronicleOptions.AddConfiguration(builder.Services, builder.Configuration);
++builder.Logging.AddChronicleLogRedaction();
+ ChronicleOptions chronicleOptions;
+ SchemaAction schemaAction;
+ try
+diff --git a/Source/Kernel/Storage.MongoDB/EventSequences/EventSequenceStorageLogMessages.cs b/Source/Kernel/Storage.MongoDB/EventSequences/EventSequenceStorageLogMessages.cs
+index f472d538cb..f4b0b1841e 100644
+--- a/Source/Kernel/Storage.MongoDB/EventSequences/EventSequenceStorageLogMessages.cs
++++ b/Source/Kernel/Storage.MongoDB/EventSequences/EventSequenceStorageLogMessages.cs
+@@ -3,6 +3,7 @@
+ 
+ using Cratis.Chronicle.Concepts.Events;
+ using Cratis.Chronicle.Concepts.EventSequences;
++using Cratis.Chronicle.Diagnostics.Identifiers;
+ using Microsoft.Extensions.Logging;
+ 
+ namespace Cratis.Chronicle.Storage.MongoDB.EventSequences;
+@@ -22,10 +23,10 @@ internal static partial class EventSequenceStorageLogMessages
+     internal static partial void GettingTailSequenceNumber(this ILogger<EventSequenceStorage> logger, EventSequenceId eventSequenceId);
+ 
+     [LoggerMessage(LogLevel.Debug, "Getting last instance of event of type '{EventTypeId}' and event source id '{EventSourceId}' in event sequence {EventSequenceId}")]
+-    internal static partial void GettingLastInstanceFor(this ILogger<EventSequenceStorage> logger, EventSequenceId eventSequenceId, EventTypeId eventTypeId, EventSourceId eventSourceId);
++    internal static partial void GettingLastInstanceFor(this ILogger<EventSequenceStorage> logger, EventSequenceId eventSequenceId, EventTypeId eventTypeId, [EventSourceIdentifier] EventSourceId eventSourceId);
+ 
+     [LoggerMessage(LogLevel.Debug, "Getting last instance of event of types ['{EventTypes}'] and event source id '{EventSourceId}' in event sequence {EventSequenceId}")]
+-    internal static partial void GettingLastInstanceOfAny(this ILogger<EventSequenceStorage> logger, EventSequenceId eventSequenceId, EventSourceId eventSourceId, IEnumerable<EventTypeId> eventTypes);
++    internal static partial void GettingLastInstanceOfAny(this ILogger<EventSequenceStorage> logger, EventSequenceId eventSequenceId, [EventSourceIdentifier] EventSourceId eventSourceId, IEnumerable<EventTypeId> eventTypes);
+ 
+     [LoggerMessage(LogLevel.Debug, "Getting events from sequence number {From} in event sequence {EventSequenceId}")]
+     internal static partial void GettingFromSequenceNumber(this ILogger<EventSequenceStorage> logger, EventSequenceId eventSequenceId, EventSequenceNumber from);
+@@ -40,7 +41,7 @@ internal static partial class EventSequenceStorageLogMessages
+     internal static partial void Redacting(this ILogger<EventSequenceStorage> logger, EventSequenceId eventSequenceId, EventSequenceNumber eventSequenceNumber);
+ 
+     [LoggerMessage(LogLevel.Information, "Redacting events with event source id {EventSourceId} and event types {EventTypes} from sequence {EventSequenceId}")]
+-    internal static partial void RedactingMultiple(this ILogger<EventSequenceStorage> logger, EventSequenceId eventSequenceId, EventSourceId eventSourceId, IEnumerable<EventType> eventTypes);
++    internal static partial void RedactingMultiple(this ILogger<EventSequenceStorage> logger, EventSequenceId eventSequenceId, [EventSourceIdentifier] EventSourceId eventSourceId, IEnumerable<EventType> eventTypes);
+ 
+     [LoggerMessage(LogLevel.Debug, "Getting instance of event at sequence number {EventSequenceNumber} in event sequence {EventSequenceId}")]
+     internal static partial void GettingEventAtSequenceNumber(this ILogger<EventSequenceStorage> logger, EventSequenceId eventSequenceId, EventSequenceNumber eventSequenceNumber);
+diff --git a/Source/Kernel/Storage.MongoDB/Sinks/SinkLogging.cs b/Source/Kernel/Storage.MongoDB/Sinks/SinkLogging.cs
+index 5914eeaedd..61dedb2672 100644
+--- a/Source/Kernel/Storage.MongoDB/Sinks/SinkLogging.cs
++++ b/Source/Kernel/Storage.MongoDB/Sinks/SinkLogging.cs
+@@ -2,6 +2,7 @@
+ // Licensed under the MIT license. See LICENSE file in the project root for full license information.
+ 
+ using Cratis.Chronicle.Concepts.ReadModels;
++using Cratis.Chronicle.Diagnostics.Identifiers;
+ using Microsoft.Extensions.Logging;
+ using MongoDB.Driver;
+ 
+@@ -20,7 +21,7 @@ internal static partial class SinkLogging
+     internal static partial void CompositeKeyCollectionScan(this ILogger<Sink> logger, string collection, int partCount);
+ 
+     [LoggerMessage(LogLevel.Error, "Bulk write to collection '{Collection}' for read model '{ReadModel}' failed for partition '{Partition}' at operation {OperationIndex}: error {Code} ({Category}): {ErrorMessage}")]
+-    internal static partial void BulkWriteErrorOccurred(this ILogger<Sink> logger, string collection, ReadModelIdentifier readModel, string partition, int operationIndex, int code, ServerErrorCategory category, string errorMessage);
++    internal static partial void BulkWriteErrorOccurred(this ILogger<Sink> logger, string collection, ReadModelIdentifier readModel, [EventSourceIdentifier] string partition, int operationIndex, int code, ServerErrorCategory category, string errorMessage);
+ 
+     [LoggerMessage(LogLevel.Error, "Bulk write to collection '{Collection}' for read model '{ReadModel}' reported a write concern error {Code} ({CodeName}): {ErrorMessage} - the outcome of {OperationCount} operations is unknown")]
+     internal static partial void BulkWriteConcernErrorOccurred(this ILogger<Sink> logger, string collection, ReadModelIdentifier readModel, int code, string codeName, string errorMessage, int operationCount);
