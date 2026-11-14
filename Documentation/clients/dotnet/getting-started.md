@@ -11,6 +11,7 @@ Have the Chronicle kernel running locally and add the `Cratis.Chronicle` package
 
 ```csharp
 using Cratis.Chronicle;
+using Cratis.Chronicle.Connections;
 
 using var client = new ChronicleClient(ChronicleConnectionString.Development);
 var eventStore = await client.GetEventStore("Quickstart");
@@ -45,6 +46,18 @@ var result = await eventStore.EventLog.Append(
 if (!result.IsSuccess)
 {
     // Decide whether to retry or surface the append failure to the caller.
+}
+```
+
+`eventStore.EventLog` is an `IEventLog` from the `Cratis.Chronicle.EventSequences` namespace. In a hosted application, inject `IEventLog` directly instead of reaching it through the event store:
+
+```csharp
+using Cratis.Chronicle.EventSequences;
+
+public class BookService(IEventLog eventLog)
+{
+    public Task AddBook(string bookId, string title, string isbn) =>
+        eventLog.Append(bookId, new BookAdded(title, isbn));
 }
 ```
 

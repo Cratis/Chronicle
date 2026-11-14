@@ -130,7 +130,7 @@ Intended for short-lived processes such as command line tools, functions and job
 
 ### RegistrationMode
 
-Controls what the client registers when it connects: `Inline` (everything discovered, the default), `EventTypesOnly` or `AtDeployment` (nothing). Only has an effect when `AutoDiscoverAndRegister` is enabled. See [Short-lived processes](../clients/dotnet/short-lived-processes.md).
+Controls what the client registers when it connects: `Inline` (everything discovered, the default), `EventTypesOnly` or `AtDeployment` (nothing). Applies to automatic registration and to an explicit `RegisterAll()` call. See [Short-lived processes](../clients/dotnet/short-lived-processes.md).
 
 ### Serverless
 

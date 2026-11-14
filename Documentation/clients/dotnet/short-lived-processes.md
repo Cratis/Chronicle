@@ -34,7 +34,8 @@ Without keep-alive, the kernel has no live connection on which to deliver events
 The client therefore:
 
 - opens no keep-alive stream and no watchdog
-- does not register reactors, reducers, read model reactors or occurrences, and does not subscribe to external event stores
+- does not register client-hosted observers: reactors, reducers, read model reactors or occurrences
+- in the default `Inline` mode, still registers the subscriptions to other event stores that server-hosted projections need; `AtDeployment` and `EventTypesOnly` return earlier and register none
 - throws `ClientObserversRequireKeepAlive` if you register a reactor or reducer explicitly, or nominate one through `ExplicitArtifacts`
 
 You can still append and read events. Host reactors and reducers in a long-running service that
@@ -53,7 +54,7 @@ keeps keep-alive enabled; they cannot receive events through this short-lived cl
 Choose `EventTypesOnly` when the process needs to register its events but should not register
 projections, constraints, and read models on every start. Choose `AtDeployment` when another process
 has already registered the definitions; [register definitions as a deployment step](./explicit-artifacts#register-definitions-as-a-deployment-step)
-explains that workflow. `RegistrationMode` only has an effect when `AutoDiscoverAndRegister` is enabled.
+explains that workflow. `AutoDiscoverAndRegister` controls whether registration runs automatically; `RegistrationMode` also governs an explicit `RegisterAll()` call, which honors the mode even when auto-registration is off.
 
 For functions and other scaled-to-zero hosts, see [Serverless mode](./serverless-mode.md), which builds on this preset.
 
