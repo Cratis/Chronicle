@@ -135,6 +135,8 @@ public class a_hosted_federation_link : Specification
         registry.GetAuthority().Returns(_ => Task.FromResult<FederationAuthorityCreated?>(new("fingerprint", "example", DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddYears(1))));
         registry.FindIssuedCertificate(serial).Returns(_ => Task.FromResult<FederationIssuedCertificateState?>(
             new(serial, "enrollment", Subject, "prod", identity, DateTimeOffset.UtcNow.AddMinutes(-5), DateTimeOffset.UtcNow.AddDays(14), FederationIssuanceReasons.Enrollment, _certificateRevoked)));
+        registry.FindEnrollment("enrollment").Returns(_ => Task.FromResult<FederationEnrollmentState?>(
+            new("enrollment", Subject, "prod", string.Empty, DateTimeOffset.UtcNow.AddMinutes(-10), DateTimeOffset.UtcNow.AddMinutes(10), "operator", true, false)));
         registry.FindPolicy(Subject).Returns(_ => Task.FromResult<FederationPolicyState?>(_policy));
 
         var listenerCertificate = new FederationListenerCertificate(keys, operatorOptions, TimeProvider.System);
