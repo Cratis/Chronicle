@@ -1,0 +1,1484 @@
+diff --git a/Documentation/compliance/index.md b/Documentation/compliance/index.md
+index 9c8fb5dc96..3675e322e6 100644
+--- a/Documentation/compliance/index.md
++++ b/Documentation/compliance/index.md
+@@ -3,32 +3,52 @@ title: Compliance
+ description: Protect personally identifiable information in an immutable event log with encryption, erasure, and redaction.
+ ---
+ 
+-Modern applications collect and store personal data. Regulations such as the General Data Protection Regulation (GDPR) require that this data be protected, identifiable, and erasable on demand. Chronicle provides first-class support for compliance requirements directly in the event sourcing model, so that protection is applied consistently and automatically rather than scattered across application code.
++Cratis Chronicle protects personally identifiable information (PII) in events with encryption tied to the
++person the data belongs to. Use it when you need to retain event history while making that person's
++protected values unreadable after erasure. You declare which values are PII; Chronicle encrypts
++them as they enter the event log.
++
++These mechanisms support work such as General Data Protection Regulation (GDPR) erasure requests;
++they do not determine whether an application meets a regulation. [Regulatory responsibilities](regulatory-responsibilities.md)
++separates Chronicle's mechanisms from the configuration and policies you own, including HIPAA,
++SEC/PCAOB, PCI DSS, and cross-border transfers.
+ 
+ ## Why compliance belongs in the event store
+ 
+-Event-sourced systems have a structural challenge: the event log is append-only and immutable. Once an event is written, it cannot be changed. This property is what makes event sourcing reliable for audit trails and replays — but it conflicts directly with regulations that grant individuals the right to have their personal data erased.
++Replaying an event log depends on retaining the facts that led to the current state. Personal data
++has a different requirement: you may need to erase it without losing the rest of that history.
++Chronicle separates the event's place in the log from the protected values it carries.
+ 
+ :::note[Not every secret is PII]
+ A value can need encryption at rest without being personal data — an API key, a webhook signing secret. Marking it `[PII]` enrolls it in GDPR right-to-erasure, which is the wrong lifecycle for a secret with no data subject. See [Security](/chronicle/security/) for `[Encrypted]`, the deliberately separate mechanism for that case.
+ :::
+ 
+-Chronicle solves this by separating the *structure* of the event log (which remains immutable) from the *content* of values that must be protectable. Two mechanisms work together:
++Encryption protects individual PII values at rest. Their key belongs to the person identified as
++the event's subject; erasing that key makes the protected values unreadable without removing the
++event from the log.
+ 
+-- **Encryption at rest** — Values marked as personally identifiable information (PII) are encrypted when written to the event log. The encryption key is tied to the identity of the person the data belongs to. Revoking the key — which happens during erasure — makes the data permanently unreadable without altering the event log itself.
+-- **Event redaction** — For cases where the entire event payload must be removed (for example, to comply with a specific erasure request), Chronicle can replace the event's content with a redaction marker that preserves the sequence number and audit metadata without retaining the personal data.
++[Event redaction](../events/redaction) is the other option when the entire payload must be removed.
++It replaces the content with a redaction marker while preserving the sequence number and audit
++metadata. Choose the mechanism according to what must be erased, rather than treating erasure as
++deleting the event's place in history.
+ 
+ ## How encryption works
+ 
+-When an event is appended to the event log, Chronicle inspects the event's schema for properties marked as PII. For each such property, the kernel:
++When an event is appended, the Chronicle server (the kernel) inspects the event's schema for PII
++properties. For each one, it:
+ 
+ 1. Looks up the encryption key for the event's [subject](../concepts/subject.mdx) — the event source identifier, unless the append names a different subject. If no key exists yet, a new one is generated and stored.
+ 2. Encrypts the property value using that key.
+ 3. Stores the ciphertext in place of the plaintext value.
+ 
+-When a projection or observer reads the event, Chronicle performs the reverse: it retrieves the key, decrypts each PII property, and delivers the plaintext value to the consumer. If the key has been deleted (because an erasure was requested), decryption fails gracefully and the value is returned as an empty string, `0`, `false` or `null` depending on the property's type, as described in [Erasing a subject](erasing-a-subject) — the data is gone, but the event slot and all non-PII fields remain intact.
++When a projection or observer reads the event, Chronicle retrieves the key and decrypts the PII
++properties for that consumer. After erasure, those properties return an empty string, `0`, `false`,
++or `null`, depending on their type, as described in [Erasing a subject](erasing-a-subject). The
++event's position and non-PII fields remain intact, so consumers must handle those erased values.
+ 
+-Encryption keys are managed by the `IPIIManager` grain in the Chronicle kernel. Keys are stored and retrieved by subject, so every individual whose data lives in the event store has their own key. Deleting a key is the Chronicle equivalent of GDPR erasure.
++The kernel's `IPIIManager` manages keys by subject, giving each person a separate key.
++Erasure removes that key; it does not remove copies of plaintext that an application has already
++sent elsewhere.
+ 
+ A key belongs to one event store and one namespace, and an event store subscription copies a subject's key into the event store it forwards to. An erasure therefore covers every event store in the namespace it is issued in, and records itself there so that nothing provisions or copies a key for that subject afterwards. [Erasing a subject](erasing-a-subject) walks through the call and what it reaches; [The encryption key lifecycle](key-lifecycle) explains the mechanism and its limits.
+ 
+@@ -41,9 +61,15 @@ Chronicle supports two complementary approaches for marking data as personally i
+ | `[PII]` on an event property | The property is a primitive type or an untyped value that holds personal data in a specific event. |
+ | `[PII]` on a `ConceptAs<T>` type | The concept itself is inherently personal — any use of this type anywhere in any event is PII by definition. |
+ 
+-The `ConceptAs<T>` approach is the preferred one. It is declared once and applies everywhere the type is used, so there is no risk of forgetting to mark a property in a future event. See [Declaring PII on a concept](pii-with-concepts) for details.
++Prefer the concept-level marker when the value itself is personal. In the
++[.NET concept example](pii-with-concepts), `PiiConceptsPersonName` wraps a string with
++`ConceptAs<string>` and carries `[PII]`. An event property using that type inherits its
++classification, rather than needing a repeated marker on every property. Use a property-level
++marker when the classification belongs to that use of the value instead.
+ 
+-For a full description of the `[PII]` marker and its rules, see [Marking data as PII](pii).
++Adding a marker later does not encrypt earlier stored values. Before changing an existing event
++contract, follow [Adding PII to an existing event type](pii#adding-pii-to-an-existing-event-type).
++[Marking data as PII](pii) covers the marker's rules and supported declaration paths.
+ 
+ ## Event source identifiers cannot be encrypted
+ 
+@@ -60,5 +86,6 @@ If the identifier itself is sensitive, use a non-sensitive surrogate key as the
+ | [Working with compliance from the client](client) | How to annotate events and ConceptAs types in your .NET client code |
+ | [Read models and PII](read-models) | How PII encryption affects projections, reducers, and read model queries |
+ | [Erasing a subject](erasing-a-subject) | What one erasure reaches, and how to erase across every event store |
++| [Regulatory responsibilities](regulatory-responsibilities.md) | What Chronicle provides, what you configure, and which regulatory obligations stay with your application |
+ | [Compliance in Arc applications](arc.md) | Using read models and queries with compliance in Arc |
+ | [Event Redaction](../events/redaction) | Removing event content for GDPR right-to-erasure requests |
+diff --git a/Documentation/concepts/consistency.md b/Documentation/concepts/consistency.md
+index 2002804687..f0682e2f1d 100644
+--- a/Documentation/concepts/consistency.md
++++ b/Documentation/concepts/consistency.md
+@@ -1,13 +1,17 @@
+ ---
+ title: "Deep dive: consistency"
+-description: Eventual and on-demand read consistency, the Dynamic Consistency Boundary, and how to choose — the model that trips people up most, explained.
++description: Choose between eventual reads, passive read models, and waiting for observers, then protect write-side rules with constraints or decision reads.
+ ---
+ 
+-Consistency is where event sourcing feels different from CRUD, and where most early confusion lives. The short version: **writes are validated immediately; reads are usually eventual.** This page unpacks that and shows how to choose the right tool for each decision.
++An append can succeed before a query shows its result. Cratis Chronicle commits the event to the log,
++then projections update materialized (stored) read models asynchronously. When a workflow needs fresher data,
++choose how that caller reads; when a business rule must hold while writers race, protect the
++append itself. Those are different decisions.
+ 
+ ## The two sides
+ 
+-In a CRUD system, you write a row and read it straight back — one place, one consistency model. Event sourcing splits the write side from the read side, and they have different guarantees:
++Event sourcing separates the recorded change from the view built from it. A successful write
++therefore does not mean every view has caught up:
+ 
+ ```mermaid
+ flowchart LR
+@@ -16,33 +20,60 @@ flowchart LR
+     RM -->|query, may briefly lag| UI[Reader]
+ ```
+ 
+-- **The write side is consistent now.** When you append an event, it's committed and ordered immediately. Invariants enforced at append time (constraints, the boundary below) hold the moment the command returns.
+-- **The read side is eventual.** A [projection](./projection.md) updates the read model *after* the append. The window is usually milliseconds, but a read taken instantly after a write may not reflect it yet.
++A successful append commits and orders the event. Rules enforced by configured constraints or
++concurrency checks are checked as part of that append. A [projection](./projection.md) updates its
++materialized read model afterwards, so a read immediately after the write may still return the
++previous state. Do not rely on a fixed delay to decide that the view is ready.
+ 
+ ## Why not just make reads immediate?
+ 
+-Because eventual reads are what make the model scale and stay simple: projections run independently, read models specialize per use case, and the write path doesn't wait on every view being updated. The cost is the small lag — and most UIs handle it naturally, especially with [observable queries](../scenarios/real-time-query) that update the moment the projection catches up.
++Keeping projections off the write path lets them update independently. A new dashboard does not
++make every append wait for that dashboard's model. The trade-off is that readers can see older
++state while it catches up. [Observable queries](../scenarios/real-time-query) let a UI receive the
++updated result without repeatedly fetching it.
+ 
+-When you genuinely need read-after-write for a specific case, you have two tools. A **passive** read model is never stored: Chronicle computes it from its events when you read it, so it always includes the latest append, at the price of replaying the instance's history — for a read model keyed by its event source id, since only that event source's events are replayed. Or keep the read model materialized and have the one caller that needs its own write back **wait for the append's observers** before reading. Neither makes other writers wait. See [Read model consistency](../read-models/consistency.md).
++For read-after-write, a passive read model computes state from events on demand instead of
++persisting a view. It replays the requested event source's history, so use it for a model keyed by
++that event source id, not one that joins other sources or uses a key from event content. The amount
++of history that must be replayed determines the read cost.
++
++Alternatively, keep the model materialized and wait for the append's observers before reading it.
++In the .NET client, check that the append succeeded, then call `WaitForCompletion()` on its result
++and handle any failed partitions it reports. That adds the catch-up wait to this caller without
++making other writers wait. [Read model consistency](../read-models/consistency.md) covers both
++choices and the client/server differences in which observers are included in the wait.
+ 
+ ## Protecting invariants: don't read, constrain
+ 
+-The classic mistake is enforcing a rule by reading a model first: "is this email taken? no → append." Because the read is eventual, two commands can race and both pass. Enforce invariants on the **write side** instead:
++In the [plain-read race example](../dynamic-consistency-boundary/choosing.mdx), a command reads
++`SeatAvailability`, checks `seat.Claims > 0`, and appends `SeatClaimed` if the seat looks free.
++Two callers can both read zero claims before either appends. Even a fresh passive read leaves
++that gap between reading and writing.
+ 
+-- A [constraint](../constraints/) rejects an append that would violate a rule (uniqueness, for example) — evaluated against authoritative state at append time.
+-- A **Dynamic Consistency Boundary** scopes a decision to exactly the events it depends on. Chronicle supports this style through [decision reads](../read-models/decision-reads.mdx): a decision read notes the log position, folds the state of one event source, and rejects the append if a relevant event arrived in between, without loading a whole aggregate. Chronicle is not a DCB event store: each event has one event source and tags take no part in consistency.
++A [constraint](../constraints/) checks a rule such as uniqueness at append time. A
++[decision read](../read-models/decision-reads.mdx) instead records the log position used to build
++one event source's state and guards the subsequent append against relevant intervening events.
++Use these write-side mechanisms when the rule must hold despite concurrent writers.
+ 
+ ## The Dynamic Consistency Boundary
+ 
+-Traditional event sourcing draws the consistency boundary around a fixed **aggregate** — you load all of an entity's events to make any decision about it. That's rigid: real decisions often span more or less than one entity.
++An aggregate groups domain state behind a fixed consistency boundary: decisions load its events
++and protect that group from conflicting changes. A [Dynamic Consistency Boundary](../dynamic-consistency-boundary/)
++(DCB) lets the decision select the events it depends on instead, including events concerning
++different entities.
+ 
+-A [Dynamic Consistency Boundary](../dynamic-consistency-boundary/) lets the *decision* define the boundary. In DCB proper, you query exactly the events that matter, whatever entities they concern, and the store rejects an append when one of them changed after you read it. Chronicle gives you that for the events of one event source, optionally narrowed to one stream and to the event types the decision reads. A rule across two entities takes one read and one event per entity in one atomic append. [Dynamic Consistency Boundary in Chronicle](../dynamic-consistency-boundary/chronicle.md) says what maps and what does not. A plain read of a read model, even a fresh one, is not part of this: it guards nothing. [Choosing how a rule holds](../dynamic-consistency-boundary/choosing.mdx) shows which mechanism fits which rule.
++Chronicle supports decision guards for one event source, optionally narrowed to a stream and the
++event types the decision reads. It is not a DCB event store: each event has one event source, and
++tags do not participate in consistency. A rule across two entities takes one read and one event
++per entity in one atomic append. [Dynamic Consistency Boundary in Chronicle](../dynamic-consistency-boundary/chronicle.md)
++explains what maps and what does not. For a concrete rule to implement next, follow
++[Choosing how a rule holds](../dynamic-consistency-boundary/choosing.mdx).
+ 
+ ## How to choose
+ 
+ | You need… | Use |
+ |---|---|
+-| A view to read and render | A normal [projection](./projection.md) — embrace eventual consistency |
++| A view to read and render | A materialized [projection](./projection.md) when the view can lag behind appends |
+ | The UI to update as data changes | An [observable query](../scenarios/real-time-query) |
+ | A unique value, or something created once | A [constraint](../constraints/) |
+ | A rule over state that must hold while writers race | A [decision read](../read-models/decision-reads.mdx), see [DCB](../dynamic-consistency-boundary/) |
+diff --git a/Documentation/concepts/event-source.md b/Documentation/concepts/event-source.md
+index 85a9ed8c9d..d1e316e71c 100644
+--- a/Documentation/concepts/event-source.md
++++ b/Documentation/concepts/event-source.md
+@@ -1,13 +1,20 @@
+ ---
+ title: Event source
+-description: What an event source is, how the event source id, the event source type, event streams and event source definitions relate, and which of them take part in concurrency.
++description: Identify related Chronicle events with an event source id, organize them into streams, and choose which values participate in concurrency checks.
+ ---
+ 
+-An event source is one entity or process in your domain: a person, an account, an order, a transfer. All the state changes of that entity are events, and the **event source id** (`EventSourceId`) is what binds them together. It is comparable to the primary key of a row in a database.
++An event source in Cratis Chronicle is an entity or process whose changes you record as events: a person, an account,
++an order, or a transfer. Its **event source id** (`EventSourceId`) ties those events together,
++much as a primary key identifies a database row. Use the same id when recording later changes to
++the same entity.
+ 
+-For instance, take the notion of a person. What identifies the person uniquely is in many systems the social security number assigned by the government. All state changes relevant for an instance of a person are identified by that one value, which is the event source id.
++Choose a non-sensitive identifier, such as a randomly generated `Guid`, when the entity represents
++a person. Event source identifiers cannot be marked as personally identifiable information (PII)
++and encrypted; keep sensitive identifiers in [PII-marked event properties](../compliance/index.md#event-source-identifiers-cannot-be-encrypted)
++instead.
+ 
+-The diagram shows two event sources, two people, each with its own ordered story of events, all sharing the same event source id throughout:
++Here, `person-123` and `person-456` have separate histories. Each person's events retain that
++person's id throughout:
+ 
+ ```mermaid
+ flowchart LR
+@@ -21,7 +28,8 @@ flowchart LR
+     end
+ ```
+ 
+-When you append an event, the first argument is the event source id. Every event has exactly one.
++When you append an event, the first argument is the event source id. Every event has exactly one;
++adding streams or a definition does not change that.
+ 
+ ## Four values that describe where an event belongs
+ 
+@@ -34,7 +42,10 @@ Every stored event carries four routing values. Two identify the entity and two
+ | `EventStreamType` | Which named part of the story? | `Transactions` |
+ | `EventStreamId` | Which instance of that part? | `2026-04` |
+ 
+-The last three are optional. An event appended with only an event source id has the default event source type and the default stream, and that is how Chronicle has always worked. All four are indexed, filterable, and the dimensions a [concurrency scope](../events/concurrency.mdx) can narrow to.
++Only the event source id is required. An append without the other three values uses the default
++event source type and stream. Start there when you do not need named subdivisions. All four
++values are indexed and filterable, and a [concurrency scope](../events/concurrency.mdx) can narrow
++to them.
+ 
+ A **stream** is a named part of an event source, such as the transactions of one month, or the onboarding of an account. It is not a separate entity: its events belong to the same event source and share its event source id. The stream type names the part, and the stream id picks one instance of it.
+ 
+@@ -49,9 +60,17 @@ You can leave the type and stream values as strings you pass on each append. Or
+ public class AccountEventSource : IEventSource;
+ ```
+ 
+-That type is an **event source definition**. Its name becomes the event source type of events appended through it. Each stream's name becomes an event stream type. The definition also declares which of the four values take part in the concurrency check of an append, per event source and per stream.
++This .NET **event source definition** names the source type `Account` and declares `Onboarding`
++and `Transactions` as stream types. One account can have many transaction streams, each selected
++by a stream id such as `2026-04`. The definition also declares which routing values take part in
++an append's concurrency check, per event source and per stream.
+ 
+-A definition does not list event types, is never instantiated, and does not replace the event source id: one definition serves every instance. The client discovers definitions, registers them with the kernel, and both sides check appends against them. Everything about them, from declaring one to how Chronicle uses it, is in [Event sources and streams](../event-sources/index.mdx).
++A definition does not list event types and is never instantiated. `AccountEventSource` describes
++the kind of source; an event source id such as `account-42` still selects the account. The client
++discovers definitions, registers them with the Chronicle server (the kernel), and both sides check
++appends against them.
++Follow [Event sources and streams](../event-sources/index.mdx) to declare a definition and append
++through it.
+ 
+ ## What takes part in consistency
+ 
+@@ -64,7 +83,14 @@ A definition does not list event types, is never instantiated, and does not repl
+ | Event types | Yes | Yes. The event types of the read model |
+ | [Tags](./tagging.mdx) | No | No |
+ 
+-The first four values are the stream metadata, and they play the role that tags play in DCB. [Tags](./tagging.mdx) are labels you can filter and categorize by. They do not take part in consistency. An event has one event source, so a fact that concerns two entities is written as two events, one per event source, in one atomic append. [Dynamic Consistency Boundary in Chronicle](../dynamic-consistency-boundary/chronicle.md) explains what that means for DCB.
++In a Dynamic Consistency Boundary (DCB), the events used for a decision determine what must remain
++unchanged until the append. Chronicle uses the first four routing values above as stream metadata
++to scope that check. [Tags](./tagging.mdx) remain labels for filtering and categorization; they do
++not take part in consistency.
++
++Because an event has one event source, a fact concerning two entities is written as two events,
++one per event source, in one atomic append. [Dynamic Consistency Boundary in Chronicle](../dynamic-consistency-boundary/chronicle.md)
++explains how that differs from DCB event stores.
+ 
+ ## Related
+ 
+diff --git a/Documentation/concepts/event.md b/Documentation/concepts/event.md
+index 9ee039032d..51158a3caf 100644
+--- a/Documentation/concepts/event.md
++++ b/Documentation/concepts/event.md
+@@ -1,13 +1,18 @@
+-# Event
++---
++title: Event
++description: Design Chronicle domain events as past-tense facts, with focused properties that explain a business change and remain useful to future consumers.
++---
+ 
+-Chronicle is optimized for the scenario of [domain events](https://www.martinfowler.com/eaaDev/DomainEvent.html).
+-Figuring out the correct name of an [event type](./event-type.md) and what properties it should have can be hard.
+-This page walks through some general guidance on how to do so. Recommend also reading the [Microsoft guide](https://docs.microsoft.com/en-us/dotnet/architecture/microservices/microservice-ddd-cqrs-patterns/domain-events-design-implementation) on this.
++<a id="event"></a>
+ 
+-> Note: Read more about the relationship to [event source](./event-source.md)
++An event records something that happened in your domain, such as a person registering or changing
++an address. Cratis Chronicle stores these [domain events](https://www.martinfowler.com/eaaDev/DomainEvent.html)
++so you can derive current state from the changes that led to it. When designing an
++[event type](./event-type.md), start with the business change you need to remember, then choose the
++properties that describe it.
+ 
+-A well-designed event is a single, immutable, past-tense fact. Captured well, the lifecycle
+-of one thing in your domain reads as a sequence of these facts in the order they happened:
++Each event belongs to an [event source](./event-source.md), the entity or process whose history it
++records. For one person, that history might look like this:
+ 
+ ```mermaid
+ flowchart LR
+@@ -19,7 +24,7 @@ flowchart LR
+ 
+ ## Past tense
+ 
+-All events should be named as past tense, something that has happened:
++Name an event in the past tense. The name should describe a fact, not a request to do something:
+ 
+ - ItemAddedToCart
+ - UserRegistered
+@@ -27,43 +32,39 @@ All events should be named as past tense, something that has happened:
+ 
+ ## Singular purpose
+ 
+-An event should never be ambiguous. It should have a clear meaning and purpose.
+-It should not be holding information for multiple purposes. For instance holding properties that are empty and only used
+-for specific purposes. Doing so makes the event unclear to reason about and requires logic in all observers and consumers
+-of the event.
++Give each event one meaning. If a property is only populated for one of several unrelated changes,
++consumers have to inspect the payload to discover what happened. Separate event types make that
++distinction explicit and keep each consumer from having to reconstruct it.
+ 
+ ## Immutable
+ 
+-In an event sourced system, events are considered immutable because they represent facts that have occurred in the past.
+-Once an event is recorded, it should not be altered, as doing so would compromise the integrity and reliability of the event log.
+-Immutability ensures that the history of changes is preserved accurately, allowing the system to reconstruct past states and understand the sequence of events that led to the current state.
+-This immutability is crucial for debugging, auditing, and maintaining a consistent and trustworthy system.
++Treat a recorded event as an immutable fact. Replacing its values would change the history that
++projections replay and that you inspect when investigating a problem. Record a later business
++change as another event so the earlier state and the change remain distinguishable.
+ 
+-## Avoid nullables / empty values
++Personal data needs a separate policy: immutability is not a reason to retain it indefinitely.
++Chronicle's [compliance mechanisms](../compliance/index.md) cover encryption, erasure, and redaction.
+ 
+-An event has happened, and it should not represent unclear states.
+-As with singular purpose, nullable properties are open for interpretation and require extra logic
+-for every observer and consumer of the event.
++## Avoid nullables / empty values
+ 
+-Chronicle supports nullable properties on event types when needed.
+-However, consider this a design smell and prefer introducing a new event type when the meaning differs.
+-The .NET analyzer rule [CHR0012](../code-analysis/CHR0012) warns when nullable event properties are used so you can review the design choice.
++A missing value should have a clear meaning. Chronicle supports nullable event properties, but
++using null to distinguish different kinds of change leaves every consumer to interpret that
++choice. Prefer a separate event type when the meaning differs. The .NET analyzer rule
++[CHR0012](../code-analysis/CHR0012) warns about nullable event properties so you can review the design.
+ 
+-> Note: There are conditions where it makes sense to allow null, typical data collection scenario might be the case.
+-> For instance, a person might not have a middle name.
++Null can still be appropriate in data collection: a person might not have a middle name. That is
++different from leaving the name empty because the event actually describes an address change.
+ 
+ ## Cohesion
+ 
+-Figuring out how "big" an event should be can be even harder.
+-The things that needs to go together to represent a meaningful change in the system should constitute the boundaries.
+-If we take a system that holds personal details, the name and social security numbers would be separate from
+-the address.
+-
+-Below are some samples of events.
++Keep together the values needed to describe one meaningful change. Registration may capture a
++person's name and address at once; changing either later does not need to repeat the other.
++The following payloads illustrate that boundary. In an application, classify the personal values
++using [PII markers](../compliance/pii) before storing them.
+ 
+ ### PersonRegistered
+ 
+-During registration, it might be necessary to capture all the details about a person as below:
++Registration can capture the person's initial details:
+ 
+ ```json
+ {
+@@ -80,7 +81,7 @@ During registration, it might be necessary to capture all the details about a pe
+ 
+ ### NameChangedForPerson
+ 
+-Once registered, changing the name could then only be:
++A later name change carries the name, without repeating the address or social security number:
+ 
+ ```json
+ {
+@@ -92,7 +93,7 @@ Once registered, changing the name could then only be:
+ 
+ ### AddressChangedForPerson
+ 
+-Similar for address:
++An address change carries the address fields together:
+ 
+ ```json
+ {
+@@ -105,11 +106,17 @@ Similar for address:
+ 
+ ## Integrations
+ 
+-When integrating with systems that are non event sourced you would need to deduct the event types from the data structure.
+-The same approach applies for defining the events as described in this document.
++When a source system gives you current-state records rather than events, identify which business
++change the data represents before defining an event type. Apply the same naming and cohesion
++rules; a record's structure alone does not tell a consumer why it changed.
+ 
+ ## Event discovery
+ 
+-There are a couple of well known approaches to discovering events in your domain; [Event Storming](https://www.eventstorming.com)
+-and [Event Modelling](https://eventmodeling.org). We tend to favor the latter as it has more focused building blocks. It gives a good
+-overview of a an entire system and the flows in it.
++[Event Storming](https://www.eventstorming.com) and [Event Modelling](https://eventmodeling.org) can
++help you discover events before choosing their payloads. Event Modeling's building blocks help
++connect those facts to the flows through the system. The
++[Microsoft domain events guide](https://docs.microsoft.com/en-us/dotnet/architecture/microservices/microservice-ddd-cqrs-patterns/domain-events-design-implementation)
++provides further background.
++
++Once the business meaning is clear, read [Event type](./event-type.md) to give that contract an
++identity in Chronicle, then [Modeling events](./modeling-events.mdx) for the implementation guidance.
+diff --git a/Documentation/concepts/index.md b/Documentation/concepts/index.md
+deleted file mode 100644
+index 1b788cb5d5..0000000000
+--- a/Documentation/concepts/index.md
++++ /dev/null
+@@ -1,41 +0,0 @@
+----
+-title: Concepts
+-description: Understand Chronicle's core event-sourcing concepts, terminology, and consistency model.
+----
+-
+-This area contains explanations and guidance on the concepts in Cratis.
+-
+-| Topic | Description |
+-| ------- | ----------- |
+-| [Event](./event.md) | What constitutes an event |
+-| [Event Type](./event-type.md) | What is an event type |
+-| [Modeling events well](./modeling-events) | How to design events that are clear today and still make sense in five years |
+-| [Event Type Migrations](./event-type-migrations) | How event schemas evolve without breaking existing events |
+-| [Event Source](./event-source.md) | What is an event source |
+-| [Subject](./subject) | The identity an event is *about* — used to key compliance concerns |
+-| [Event Store](./event-store.md) | Where your events live — durably persisted in a database |
+-| [Namespaces](./namespaces.md) | What are namespaces within an event store |
+-| [Event Sequence](./event-sequence.md) | What is an event sequence |
+-| [Observer](./observers.mdx) | What is an observer |
+-| [Projections, reducers, and reactors](./observer-patterns.md) | The three observer patterns side by side — deriving state from events vs causing side effects |
+-| [Projection](./projection.md) | How a projection declaratively maps events onto a read model instance |
+-| [Designing read models](./designing-read-models) | Specialize each read model for the query it serves, not for reuse |
+-| [Deep dive: consistency](./consistency.md) | Immediate vs eventual consistency, and how to choose |
+-| [Constraints](./constraints.md) | What are constraints |
+-| [Event Metadata Tags](./event-metadata-tags.md) | Metadata tags attached to events |
+-| [Tagging](./tagging) | How to tag events for organization and filtering |
+-| [Tagging Reactors](./tagging-reactors) | How to use tags with reactors |
+-| [Geospatial Types](./geospatial) | Built-in geospatial types for events and read models |
+-| [When to use event sourcing](./when-to-use-event-sourcing.md) | An honest look at where event sourcing pays off — and where it doesn't |
+-| [Glossary](./glossary.md) | One definition for each core Chronicle term |
+-
+-> [!NOTE]
+-> Where these pages say *database*, you have a choice: Chronicle can persist the
+-> [event store](./event-store.md) and its read models in MongoDB, PostgreSQL,
+-> Microsoft SQL Server, or SQLite.
+-
+-One nuance worth carrying with you: [projections and reducers](./observer-patterns.md) are not only
+-factories for materialized, queryable views. The state they derive from events can be stored in a
+-database for fast queries — or, for a passive read model, computed on demand with strong consistency, for anything that must
+-trust the current state: validation rules, command handlers, or
+-[aggregate roots in Arc](/arc/backend/csharp/chronicle/aggregates/defining-an-aggregate-root/).
+diff --git a/Documentation/concepts/projection.md b/Documentation/concepts/projection.md
+index 273c98e303..0b6b26b672 100644
+--- a/Documentation/concepts/projection.md
++++ b/Documentation/concepts/projection.md
+@@ -1,12 +1,26 @@
+-# Projection
++---
++title: Projection
++description: A Chronicle projection declares how events become a read model. Understand mapping, keys, relationships, and when a separate view is worth maintaining.
++---
+ 
+-A projection in Chronicle is a specialized observer. It is a declarative approach to describing
+-events you're interested in and how you want Chronicle to project it into something that you can
+-display in your application or provide as data for an API. Every projection can be very specialized
+-for the purpose it is being used in, in fact it is encouraged to create specialized projections
+-rather than reuse a projection for multiple scenarios. The reason for this is that you then don't
+-run the risk of serving multiple conflicting scenarios, which could for instance impact performance
+-and also general maintainability of your code.
++<a id="projection"></a>
++
++A projection declares how Cratis Chronicle turns events into a read model: the state a screen displays or
++an API returns. It is an [observer](./observers.mdx), meaning it processes events as they arrive.
++Use a projection when the view you need can be described as mappings, relationships, or calculations
++over those events.
++
++For example, the [.NET model-bound example](../projections/model-bound/index.mdx#basic-example)
++uses `[FromEvent<MbIndexAccountOpened>]` on `MbIndexAccountInfo`. The event's `Name` maps to the
++same-named read model property. `[SetFrom<MbIndexAccountOpened>(nameof(MbIndexAccountOpened.InitialBalance))]`
++maps `InitialBalance` into `Balance`. The event remains a record of opening the account; the read
++model holds the values the application wants to query.
++
++## Shape the view for its reader
++
++The same events can feed several projections. Give a screen or API its own focused view when its
++needs differ from other consumers. A shared model means every change must account for all those
++consumers; separate models cost more definitions to maintain, but let their shapes evolve separately.
+ 
+ ```mermaid
+ flowchart LR
+@@ -16,12 +30,22 @@ flowchart LR
+     P --> RM["Read model instance keyed by the event source"]
+ ```
+ 
+-Chronicle projections support relationships, one-to-one and one-to-many. It also supports functions that
+-allow you to count, add or subtract values. The identifier of the projected instance can also be
+-configured. By default it will use the [event source identifier](./event-source.md), but you can
+-point it to any other property or create a composite of multiple properties.
++Chronicle supports one-to-one and one-to-many relationships between events, plus functions that
++count, add, or subtract values. Projections join events, not other read models, so each view derives
++from the event history rather than another view's update schedule.
++
++## Choose what identifies an instance
++
++By default, the [event source identifier](./event-source.md) identifies a projected instance. You
++can instead use an event property or a composite of several properties. Event metadata can also
++contribute to a key: grouping by the `occurred` date/time value lets a projection count or sum
++values into histogram buckets.
++
++That choice affects how you read the result. A materialized projection stores the derived view
++and updates it asynchronously. An on-demand, passive read folds one event source's history; it is
++not a substitute for a materialized view that joins other sources or uses an event-content key.
++[Read model consistency](../read-models/consistency.md) explains the retrieval trade-off.
+ 
+-Projections support using the metadata properties of an event as well. This lets you create
+-composite keys that could for instance leverage the `occurred` date/time value and effectively
+-create group by scenarios. This would effectively give you an easy way to do simple histograms,
+-with count, add and/or subtract of values in the histogram.
++To implement the view, follow [Choose how to build a read model](../projections/choosing-a-read-model-style.mdx).
++Start with model-bound attributes for straightforward mappings, and compare the fluent API or
++reducer code when the definition needs more structure.
+diff --git a/Documentation/concepts/toc.yml b/Documentation/concepts/toc.yml
+index c2b5327c08..bc9f4b447b 100644
+--- a/Documentation/concepts/toc.yml
++++ b/Documentation/concepts/toc.yml
+@@ -1,5 +1,5 @@
+ - name: Overview
+-  href: index.md
++  href: index.mdx
+ - name: Event
+   href: event.md
+ - name: Event Type
+@@ -14,10 +14,12 @@
+   href: subject.mdx
+ - name: Event Store
+   href: event-store.md
+-- name: Namespaces
++- name: Namespaces and data isolation
+   href: namespaces.md
+ - name: Event Sequence
+   href: event-sequence.md
++- name: Effect receipts
++  href: effect-receipts.md
+ - name: Observers
+   href: observers.mdx
+ - name: Projections, reducers, and reactors
+@@ -28,7 +30,7 @@
+   href: designing-read-models.mdx
+ - name: "Deep dive: consistency"
+   href: consistency.md
+-- name: Constraints
++- name: Constraints at append time
+   href: constraints.md
+ - name: Event Metadata Tags
+   href: event-metadata-tags.md
+diff --git a/Documentation/get-started/index.mdx b/Documentation/get-started/index.mdx
+index e9da08377c..d70241d11b 100644
+--- a/Documentation/get-started/index.mdx
++++ b/Documentation/get-started/index.mdx
+@@ -1,25 +1,25 @@
+ ---
+-title: Get started
+-description: Start the Chronicle kernel, choose a client SDK, and see the same event-sourcing loop across C#, Kotlin, Java, Elixir, and TypeScript.
++title: Get started with Cratis Chronicle
++description: Run Cratis Chronicle locally with Docker, connect a client, and append your first event. Learn how projections and reactors consume recorded facts.
+ ---
+ 
+-import { Aside } from '@astrojs/starlight/components';
++import { Aside, Steps } from '@astrojs/starlight/components';
+ 
+-The fastest way to understand Chronicle is to watch one fact travel through it. Chronicle stores the fact as an event, projections fold it into read models, and reactors respond to it. That loop is the same no matter which client SDK you use.
++To start with Cratis Chronicle, run its kernel locally, connect a client, and append an event: a fact your application records. Chronicle can turn that history into read models you query and deliver events to application code for actions such as notifications. This guide starts the kernel and explains how those pieces fit together.
+ 
+-This page is the shared Chronicle starting point. It explains the common model and shows the same examples in every supported client. Use the client-specific setup guides for package installation, project scaffolding, host integration, and runtime idioms.
++You need Docker for the local server and the language tools required by your chosen client. After the health check succeeds, follow that client's setup guide to create an application. The shared examples below explain the model; they do not form a runnable application on their own.
+ 
+ <Aside type="note" title="Never done event sourcing?">
+-You don't need any event-sourcing background to follow the loop below. If you'd rather understand the *why* before the *how*, read [Why Event Sourcing](/chronicle/why-event-sourcing/) first, then come back. Either order is fine.
++An event records a meaningful change, such as a book being added, instead of replacing the book's current row. You can follow the setup without prior event-sourcing experience. For the reasoning behind that choice, read [Why Event Sourcing](/chronicle/why-event-sourcing/).
+ </Aside>
+ 
+ ## Pick a client
+ 
+-Start with the client that matches the application you are building. The setup guide owns the language-specific details; the rest of this page owns the Chronicle concepts.
++Choose the client that matches your application and keep its guide open while you start the kernel. For a new C# project, the host quickstarts include project creation and package installation; the .NET client guide covers connection and configuration details. The clients share a server protocol, not identical APIs or capabilities.
+ 
+ | Client | Setup guide |
+ | --- | --- |
+-| .NET | [.NET client](/chronicle/clients/dotnet/getting-started/) |
++| .NET | [Console app](./console), [ASP.NET Core app](./aspnetcore), or [Worker Service](./worker); [.NET client configuration](/chronicle/clients/dotnet/getting-started/) |
+ | Kotlin | [Kotlin client](/chronicle/clients/kotlin/get-started/) |
+ | Java | [Kotlin/JVM client](/chronicle/clients/kotlin/get-started/) |
+ | Elixir | [Elixir client](/chronicle/clients/elixir/get-started/) |
+@@ -31,30 +31,38 @@ Java examples are owned by the Kotlin/JVM client repo. Use the JVM setup guide,
+ 
+ ## Start Chronicle
+ 
+-Chronicle application code connects to a running Chronicle kernel. For local development, the fastest path is the development image. It bundles MongoDB, so Docker is the only prerequisite:
++<Steps>
+ 
+-```shell
+-docker run -d --name chronicle \
+-  -p 127.0.0.1:35000:35000 \
+-  -p 127.0.0.1:27017:27017 \
+-  cratis/chronicle:latest-development
+-```
++1. Chronicle application code connects to a running Chronicle kernel. For local development, use the development image. It bundles MongoDB, so Docker is the only prerequisite:
+ 
+-The `127.0.0.1:` prefixes publish both ports on this machine only. The development image's workbench accepts well-known credentials and its MongoDB has no authentication, so keep both off shared networks.
++   ```shell title="Start Chronicle"
++   docker run -d --name chronicle \
++     -p 127.0.0.1:35000:35000 \
++     -p 127.0.0.1:27017:27017 \
++     cratis/chronicle:latest-development
++   ```
+ 
+-The kernel listens on `chronicle://localhost:35000`, and the workbench runs on `https://localhost:35000`, the same TLS-secured port. The bundled MongoDB on port `27017` stores the materialized read models; the guides below query it directly. Startup takes a few seconds. This command waits until the kernel reports itself ready and prints `Healthy`:
++   The `127.0.0.1:` prefixes publish both ports on this machine only. The development image's workbench accepts well-known credentials and its MongoDB has no authentication, so keep both off shared networks.
+ 
+-```shell
+-curl --insecure --fail --retry 30 --retry-all-errors --retry-delay 1 https://localhost:35000/health
+-```
++2. The kernel listens on `chronicle://localhost:35000`, and the workbench runs on `https://localhost:35000`, the same TLS-secured port. The bundled MongoDB on port `27017` stores the materialized read models; the guides below query it directly. Wait for startup to complete. This command retries the health check and prints `Healthy` when the kernel reports itself ready:
++
++   ```shell title="Wait for readiness"
++   curl --insecure --fail --retry 30 --retry-all-errors --retry-delay 1 https://localhost:35000/health
++   ```
++
++   `--insecure` is there because the development image serves a self-signed certificate.
+ 
+-`--insecure` is there because the development image serves a self-signed certificate. Remove the container with `docker rm -f chronicle` when you are done; its data goes with it.
++</Steps>
++
++:::caution
++Remove the container with `docker rm -f chronicle` when you are done. With this setup, removing the container also removes the events and read models stored inside it.
++:::
+ 
+ If you need Docker Compose, Aspire, a separate database, or production-style hosting, use [Choose an application host model](./choose-hosting-model).
+ 
+ ## The Chronicle loop
+ 
+-One event-sourced interaction has three parts:
++After setup, follow one fact through the system: append it to the event log, derive a view with a projection, and handle it with a reactor. The projection and reactor consume the event independently; a reactor does not wait for the projection to finish.
+ 
+ ```mermaid
+ flowchart LR
+@@ -82,39 +90,40 @@ tf 02 rmo Demo.TestProjection ->> 01
+ tf 03 pcr Demo.TestReactor
+ ```
+ 
+-Each client has its own syntax, but the Chronicle shape is the same: create a client, choose an event store, and append a fact to the event log.
++First, connect a client and choose an **event store**, the named home for your application's events. An **append** adds a fact to its event log. The client-flow example records a `TestEvent` carrying a message:
+ 
+ <ChronicleClientTabs snippet="get-started/client-flow" />
+ 
+-Reading top to bottom: the client connects to the kernel, asks for an **event store** by name, and **appends** a `TestEvent` to its event log. That append is the only operation that changes the event store. Everything else reacts to the recorded fact.
++The append records the fact before projections or reactors consume it. To use the example in your application, you also need the event declaration and the registration described in your client's setup guide.
+ 
+-The event itself is just a record marked as a fact:
++The event declaration defines the data you record. Here, `TestEvent` carries a message; each client expresses that same fact in its own syntax:
+ 
+ <ChronicleClientTabs snippet="get-started/test-event" />
+ 
+-A **projection** folds that event into a read model: state you can query, rebuild, and store in a sink:
++Next, a **projection** maps that event onto a **read model**, state shaped for a query. This example copies the message into `TestProjection`. Chronicle writes materialized read models to a **sink**, its configured read-model storage:
+ 
+ <ChronicleClientTabs snippet="get-started/test-projection" />
+ 
+-A **reactor** does something when the event arrives:
++A **reactor** runs application code when the event arrives. `TestReactor` handles the same `TestEvent`; use this pattern when a recorded fact should trigger a notification or another action:
+ 
+ <ChronicleClientTabs snippet="get-started/test-reactor" />
+ 
+-Discovery and registration are client-specific. Some hosts discover annotated artifacts; others register modules, classes, or functions explicitly. The invariant is the same: events are facts, projections derive read models, and reactors observe events to produce side effects.
++The C# handler prints `Received event with message: Hello world!` when it receives the event from the client-flow example. That output confirms the reaction ran; it does not tell you whether the projection has caught up.
++
++Follow your client's registration instructions before running the example. Some hosts discover annotated types; others require you to register modules, classes, or functions explicitly. Declaring a projection or reactor alone is not enough in every host.
+ 
+-<Aside type="tip" title="That's the whole model">
+-Append a fact → a projection builds state from it → a reactor acts on it. **Append → project → react.** Every Chronicle application, however large, repeats that loop.
++<Aside type="tip" title="Choose the consumers you need">
++Append → project → react describes the roles, not a required chain of execution. This example uses all three parts; an application need not have a reactor for every event. Materialized read models update after the append, so [read model consistency](/chronicle/read-models/consistency/) explains how to read your own write when that matters.
+ </Aside>
+ 
+ ## Inspect it in the workbench
+ 
+-The development image includes the **Chronicle workbench** — a web UI for inspecting event stores. Open [https://localhost:35000](https://localhost:35000) and log in with the development credentials: username `Admin`, password `ChangeMeNow!`. In development the port uses a self-signed certificate, so accept your browser's certificate warning the first time.
++The development image includes the **Chronicle workbench** — a web UI for inspecting event stores. Open [https://localhost:35000](https://localhost:35000) and log in with the development credentials: username `admin`, password `ChangeMeNow!`. In development the port uses a self-signed certificate, so accept your browser's certificate warning the first time.
+ 
+-After you run one of the client setup guides or the example flow above, choose the event store your client used and open **Sequences**. The `TestEvent` is permanent and ordered in the event log. Append more events and watch the sequence grow. That log is the source of truth your projections and reactors read from.
++After you complete a client or host quickstart, choose the event store that guide uses and open **Sequences** to inspect its events. Append more events and watch the sequence grow. That log is the source of truth your projections and reactors read from.
+ 
+ ## Where to go next
+ 
+-- **Pick your client** — start with [.NET](/chronicle/clients/dotnet/getting-started/), [Kotlin/JVM](/chronicle/clients/kotlin/get-started/), [Elixir](/chronicle/clients/elixir/get-started/), or [TypeScript](/chronicle/clients/typescript/getting-started/).
+-- **Build something real, step by step** — the [tutorial](/chronicle/tutorial/) builds a small library system one concept at a time.
+-- **Run Chronicle your way** — [choose an application host model and run the kernel](./choose-hosting-model).
+-- **Understand the model** — [Why Event Sourcing](/chronicle/why-event-sourcing/) makes the case, and the [Concepts](/chronicle/concepts/) section defines every term you just met.
++If you have only started the kernel, continue with the [console](./console), [ASP.NET Core](./aspnetcore), or [Worker Service](./worker) quickstart to create a C# application. For another language, use the [Kotlin/JVM](/chronicle/clients/kotlin/get-started/), [Elixir](/chronicle/clients/elixir/get-started/), or [TypeScript](/chronicle/clients/typescript/getting-started/) setup guide.
++
++Once your application connects, the [library tutorial](/chronicle/tutorial/) walks through defining events, deriving a catalog, and reacting to a returned book. If you need a different deployment setup first, [choose an application host model](./choose-hosting-model). For terminology or design decisions, return to [Concepts](/chronicle/concepts/) or [Why Event Sourcing](/chronicle/why-event-sourcing/).
+diff --git a/Documentation/index.mdx b/Documentation/index.mdx
+index 1770205d13..1b27c2c333 100644
+--- a/Documentation/index.mdx
++++ b/Documentation/index.mdx
+@@ -1,45 +1,66 @@
+ ---
+-title: Chronicle
+-description: Kernel, protocol, storage, subscription, and local inspection boundaries for Chronicle.
++title: "Cratis Chronicle: event-sourcing database"
++description: Cratis Chronicle is an event-sourcing database and runtime that stores application changes as events, builds read models, and runs reactions.
+ ---
+ 
+-import { CardGrid, Steps } from '@astrojs/starlight/components';
+-import SimpleCard from '@components/SimpleCard.astro';
++import { Card, CardGrid, LinkCard, Steps } from '@astrojs/starlight/components';
+ import TopicHero from '@components/TopicHero.astro';
+ 
+-<TopicHero icon="seti:db" eyebrow="Chronicle" title="Event sourcing, the productive way">
+-For information systems, this is the default architecture we recommend: store **every meaningful change as an immutable event** — the complete history of what happened — and turn those events into exactly the read models, reactions, and projections your application needs. Chronicle gives that event log a gRPC boundary, database-agnostic storage — MongoDB, PostgreSQL, Microsoft SQL Server, or SQLite — and tools you can actually operate. [Get started →](/chronicle/get-started/) · [Architecture →](/chronicle/architecture/)
++Cratis Chronicle is an open-source event-sourcing database and runtime that keeps the changes your application records, builds queryable views from them, and runs reactions when events arrive. Use it when you need to explain how an order reached its current state or build a new view from its history, rather than keep only the latest row.
++
++<TopicHero icon="seti:db" eyebrow="Cratis Chronicle" title="Store events. Declare read models.">
++
++Record a fact such as `OrderPlaced`, then declare how it changes the views your application reads. Chronicle processes the events and updates those views for you. [Start with a local kernel and your client](/chronicle/get-started/).
++
+ </TopicHero>
+ 
++## What Chronicle takes care of
++
++An event log answers what happened. To show an order summary or a list of outstanding orders, you also need a **read model**: data shaped for a particular query. Chronicle's [declarative projections](/chronicle/projections/) describe how events map onto those models. You define the mapping; the kernel processes events and writes the resulting changes to read-model storage. The same events can feed several views without duplicating the recorded history.
++
++When a recorded change should send a notification or call another service, use a [reactor](/chronicle/reactors/). A reactor runs application code in response to events. It consumes the history alongside projections; it does not have to wait for a view to update.
++
++:::note[Read model consistency]
++Materialized read models update **after** an event is appended, not inside the append. A query immediately after a write can therefore lag behind it. See [read model consistency](/chronicle/read-models/consistency/) for when to wait for a materialized view or compute state on demand.
++:::
++
++## How do you handle personal data in event history?
++
++Keeping history also means planning for personal data. Chronicle can encrypt fields marked as **personally identifiable information (PII)** with a key tied to the person the data concerns. Erasing that key makes the encrypted values unreadable without removing the event's place in the log. Start with [compliance and PII](/chronicle/compliance/) before modeling personal data, and use [regulatory responsibilities](/chronicle/compliance/regulatory-responsibilities/) to separate these mechanisms from the obligations your application and deployment must meet.
++
++## Which clients and storage providers can you use?
++
++Chronicle's .NET kernel, built on Microsoft Orleans, connects through gRPC, a language-neutral remote-call protocol, to clients for .NET, TypeScript, Kotlin, Java, and Elixir. It offers storage providers for MongoDB, PostgreSQL, Microsoft SQL Server, and SQLite. [Architecture](/chronicle/architecture/) explains those boundaries. Client capabilities and provider behavior are not interchangeable; follow the setup and capability guidance for the client and storage you choose.
++
+ ## Start here
+ 
++Begin with [Get started](/chronicle/get-started/) to run a local kernel, choose a client setup guide, and append your first event. If you are still deciding whether to adopt event sourcing, read [when event sourcing pays off — and when it does not](/chronicle/concepts/when-to-use-event-sourcing/).
++
+ <CardGrid>
+-  <SimpleCard title="Get started" icon="rocket" link="/chronicle/get-started/">
+-    Start the kernel, pick a client, and follow one event through the Chronicle loop.
+-  </SimpleCard>
+-  <SimpleCard title="Tutorial" icon="list-format" link="/chronicle/tutorial/">
+-    Build a small event-sourced library one concept at a time.
+-  </SimpleCard>
+-  <SimpleCard title="Why Event Sourcing" icon="puzzle" link="/chronicle/why-event-sourcing/">
+-    Understand why Chronicle keeps meaningful changes instead of only current state.
+-  </SimpleCard>
+-  <SimpleCard title="Run Chronicle locally" icon="rocket" link="#run-chronicle-locally">
+-    Start the development image, wait for readiness, and clean it up.
+-  </SimpleCard>
+-  <SimpleCard title="Understand the architecture" icon="puzzle" link="/chronicle/architecture/">
+-    Locate the protocol surfaces, kernel, runtime scopes, and persistent subscriptions.
+-  </SimpleCard>
+-  <SimpleCard title="Inspect with Workbench" icon="laptop" link="/chronicle/workbench/">
+-    Use the bundled local browser inspection and projection-preview boundary.
+-  </SimpleCard>
++  <LinkCard title="Get started" href="/chronicle/get-started/" />
++  <LinkCard title="When event sourcing pays off — and when it does not" href="/chronicle/concepts/when-to-use-event-sourcing/" />
++</CardGrid>
++
++For a guided example, follow the library tutorial. The architecture and workbench guides help when you need to understand or inspect the running system.
++
++<CardGrid>
++  <Card title="Tutorial" icon="list-format">
++    [Build a small event-sourced library one concept at a time](/chronicle/tutorial/).
++  </Card>
++  <Card title="Why Event Sourcing" icon="puzzle">
++    [Understand why Chronicle keeps meaningful changes instead of only current state](/chronicle/why-event-sourcing/).
++  </Card>
++  <Card title="Understand the architecture" icon="puzzle">
++    [Locate the protocol surfaces, kernel, runtime scopes, and persistent subscriptions](/chronicle/architecture/).
++  </Card>
++  <Card title="Inspect with Workbench" icon="laptop">
++    [Browse runtime state and try supported projection mappings in the bundled workbench](/chronicle/workbench/).
++  </Card>
+ </CardGrid>
+ 
+ ## Run Chronicle locally
+ 
+-For the shortest local path, use `latest-development`. It bundles Chronicle and
+-MongoDB and tracks the newest published development image. When repeatability
+-matters, pin a released version in your application or deployment configuration
+-rather than copying an image digest into a getting-started command.
++With Docker installed, you can start the kernel before writing application code. Use `latest-development` for this local evaluation: it bundles Chronicle and MongoDB and tracks the newest published development image. For a repeatable setup, pin a released version in your application or deployment configuration rather than copying an image digest into a getting-started command.
+ 
+ This command exposes only the kernel port, `35000`; the bundled MongoDB stays
+ inside the container. For a setup that also exposes MongoDB on port `27017` so
+@@ -64,8 +85,7 @@ local database tools can connect, see the [two-port host quickstart](/chronicle/
+      https://localhost:35000/health
+    ```
+ 
+-   A successful response prints `Healthy`. At that point the kernel is ready for
+-   the next local evaluation step.
++   A successful response prints `Healthy`. You can now [connect an application](/chronicle/get-started/#pick-a-client) or open the workbench at `https://localhost:35000`.
+ 
+ 1. Stop and remove it when the evaluation is complete.
+ 
+@@ -75,44 +95,36 @@ local database tools can connect, see the [two-port host quickstart](/chronicle/
+ 
+ </Steps>
+ 
+-:::caution[What this local start proves]
+-A `Healthy` response proves that this local development container started. It
+-does not establish production suitability, support, scale, security, durability,
+-compatibility, a managed service, client/provider parity, or support for every
+-topology.
++:::caution[Keep the development setup local]
++The development image uses well-known credentials and a self-signed certificate. Keep it on this machine. `Healthy` tells you that the container started; it does not validate security, durability, scale, compatibility, or suitability for your production topology. Client and provider capabilities still need to match your application. Self-hosting does not include a managed service or a support commitment.
+ :::
+ 
+ ## Independent-use boundary
+ 
+-The self-hosted Chronicle kernel and bundled Workbench can be started without
+-Arc or Components. Applications and clients still need compatible packages,
+-protocols, and configuration for the Chronicle server they connect to.
++You can run Chronicle and its bundled workbench without Studio, Arc, or Components. Start the kernel, connect your chosen client, and use the workbench to inspect it. Your application still needs packages, protocols, and configuration compatible with that Chronicle server.
+ 
+ ## Inspection surfaces
+ 
+-Chronicle Workbench provides a bundled local browser surface for authorized
+-inspection of Chronicle runtime state and preview of supported projection
+-behavior.
+-
+-The Cratis CLI provides terminal workflows for inspecting and diagnosing
+-Chronicle.
++Open [Chronicle Workbench](/chronicle/workbench/) to inspect the event stores and namespaces you are authorized to access, check observer state, or try the projection behavior supported by your running image. This browser tool is bundled with Chronicle; you do not need Studio to use it. For terminal inspection and diagnosis, use the [Cratis CLI](/cli/).
+ 
+-Inspection capability does not imply complete administration, production-ready
+-mutation, client parity, federation, managed service, support, or an SLA.
++Permission to inspect does not grant permission to append, revise, redact, replay, or recover data. These tools do not promise complete administration or governed production mutations, nor do they establish client parity or federation. Self-hosted inspection is separate from a managed service, support, or a service-level agreement (SLA).
+ 
+ ## Continue
+ 
+ <CardGrid>
+-  <SimpleCard title="Architecture" icon="puzzle" link="/chronicle/architecture/">
+-    Understand the kernel, protocol, store, namespace, and subscription boundaries.
+-  </SimpleCard>
+-  <SimpleCard title="Workbench" icon="laptop" link="/chronicle/workbench/">
+-    Inspect Chronicle from the bundled local browser application.
+-  </SimpleCard>
+-  <SimpleCard title="Cratis CLI" icon="rocket" link="/cli/">
+-    Terminal inspection and diagnosis for Chronicle.
+-  </SimpleCard>
+-  <SimpleCard title="Chronicle source" icon="seti:folder" link="https://github.com/Cratis/Chronicle/tree/main/Source">
+-    Owning kernel, client, Workbench, and package source.
+-  </SimpleCard>
++  <Card title="Architecture" icon="puzzle">
++    [Understand the kernel, protocol, store, namespace, and subscription boundaries](/chronicle/architecture/).
++  </Card>
++  <Card title="Workbench" icon="laptop">
++    [Inspect Chronicle from the bundled local browser application](/chronicle/workbench/).
++  </Card>
++  <Card title="Cratis CLI" icon="rocket">
++    [Terminal inspection and diagnosis for Chronicle](/cli/).
++  </Card>
++  <Card title="Operating Chronicle" icon="setting">
++    [Diagnose failures and recover observers and partitions](/chronicle/operations/).
++  </Card>
++  <Card title="Chronicle source" icon="seti:folder">
++    [Owning kernel, client, Workbench, and package source](https://github.com/Cratis/Chronicle/tree/main/Source).
++  </Card>
+ </CardGrid>
+diff --git a/Documentation/projections/index.md b/Documentation/projections/index.md
+index 8eff7eba04..4710ac9924 100644
+--- a/Documentation/projections/index.md
++++ b/Documentation/projections/index.md
+@@ -3,15 +3,14 @@ title: Projections
+ description: Build specialized, queryable read models from events and choose the right projection style and consistency model.
+ ---
+ 
+-Your events are the source of truth, but events are a poor thing to *read* — nobody wants to replay a
+-thousand `MoneyDeposited` facts to show an account balance. A **projection** does that folding for you:
+-it watches a stream of events and continuously builds a **read model** — a shaped, queryable view that's
+-ready to serve to a UI.
++A Cratis Chronicle projection declares how events build a **read model**, the view your application
++queries. An account screen, for example, needs a balance rather than a list of deposit events.
++By default, Chronicle stores that view and updates it as events arrive, so each query does not have
++to rebuild it.
+ 
+-The win is specialization. The same events can feed *many* projections, each tailored to one screen or
+-question: a balance, a transaction list, a monthly summary. You never reuse one bloated model across
+-conflicting needs — you build a focused read model per view, and each stays simple, fast, and
+-independent.
++Use separate projections when readers need different shapes: an account balance and a transaction
++list can derive from the same events without sharing a model. That means more definitions to
++maintain, but a change to one view does not have to accommodate every other consumer.
+ 
+ ```mermaid
+ flowchart LR
+@@ -24,30 +23,42 @@ flowchart LR
+ 
+ ## How you'll define one
+ 
+-Start with model-bound attributes, move to fluent `IProjectionFor<T>` when the mapping needs structure,
+-and use a reducer when the logic reads better as state transitions; a self-reducing model is the default
+-for new reducer code. [Choose how to build a read model](choosing-a-read-model-style.mdx) compares the
+-forms on the same event history and explains when separation or dependency injection warrants an
+-`IReducerFor<T>`, when to nominate a plain class, and when tooling-authored PDL fits.
++Start with model-bound attributes for straightforward mappings. In the
++[.NET account example](model-bound/index.mdx#basic-example),
++`[FromEvent<MbIndexAccountOpened>]` builds `MbIndexAccountInfo` from an account-opening event.
++`Name` maps by convention because it has the same name on both types; `[SetFrom<MbIndexAccountOpened>(nameof(MbIndexAccountOpened.InitialBalance))]`
++maps the event's initial balance into the view's `Balance` property.
+ 
+-Projections join **events** (never other read models). Fluent mappings use AutoMap by default;
++Move to fluent `IProjectionFor<T>` when the mapping needs structure. Choose a reducer when ordinary
++state-transition code expresses the logic more clearly; a self-reducing model is the default for new
++reducer code. [Choose how to build a read model](choosing-a-read-model-style.mdx) compares these forms
++on the same event history. It also covers when separation or dependency injection warrants an
++`IReducerFor<T>`, when to nominate a plain class, and when tooling-authored Projection Definition
++Language (PDL) fits.
++
++Projections join events, never other read models. Fluent mappings use AutoMap by default;
+ model-bound projections opt into event mappings with attributes such as `[FromEvent<T>]`.
+ 
+ ## Choose your consistency
+ 
+-The one decision worth making up front is *when* the read model has to be correct:
++Decide whether readers can use the stored view while it catches up or need state computed from the
++event log for this read:
+ 
+ | | [Materialized (eventual)](eventual-consistency) | [Passive (on demand)](declarative/passive.mdx) |
+ | --- | --- | --- |
+-| **When it updates** | Shortly after the event is appended (the default) | Computed on demand, without a persistent sink |
+-| **Cost** | Cheap reads, scales freely | First read folds the history; cached projection state can apply only newer events |
+-| **Use it for** | Almost everything — lists, dashboards, history | A value you must read back correctly *right now*, such as state a command decides on |
++| **When it updates** | Shortly after the event is appended (the default) | Computed on demand, without persistent storage |
++| **Cost** | Reads use the stored result; projection work happens in the background | Every read folds the matching event history from the beginning, starting with fresh state |
++| **Use it for** | Frequently read lists, dashboards, and history | Current state for an event-source-keyed instance, where the replay cost is acceptable |
++
++Start materialized when readers can tolerate that gap. A passive instance read replays one event
++source's history, so keep views that join other sources or use event-content keys materialized.
++When one caller occasionally needs its own write back, it can
++[wait for the append's observers](../read-models/consistency.md#read-after-write--waiting-for-a-materialized-read-model)
++before reading, rather than changing the model for every reader.
+ 
+-Start materialized. Make a read model passive only when a workflow genuinely can't tolerate it being a
+-moment behind. When one caller occasionally needs its own write back, it can instead
+-[wait for the append's observers](../read-models/consistency.md#read-after-write--waiting-for-a-materialized-read-model).
+-No projection updates synchronously inside the append, and a read cannot enforce uniqueness — use a
+-[constraint](../constraints/index.md) for that.
++No projection updates synchronously inside the append. A fresh read also cannot enforce a rule
++against concurrent writers: use a [constraint](../constraints/index.md) for uniqueness, or a
++[decision read](../read-models/decision-reads.mdx) to guard a state-based decision.
+ 
+ ## Topics
+ 
+@@ -63,5 +74,5 @@ No projection updates synchronously inside the append, and a read cannot enforce
+ | [Tagging Projections](tagging-projections) | Organize and tag projections |
+ | [Appended event metadata filters](../events/filtering/index.md) | How tags and metadata correlate reducers and reactors that run alongside projections |
+ 
+-Once your read model exists, expose it to the frontend with a [query](../read-models/index.md) — or see
+-the whole loop in [Build a full-stack feature](/build-a-full-app/).
++Once the projection is defined, [retrieve its read model](../read-models/index.md) for your application.
++[Build a full-stack feature](/build-a-full-app/) follows that handoff through to a frontend.
+diff --git a/Documentation/read-models/index.md b/Documentation/read-models/index.md
+index 27e7adf16b..e50805d961 100644
+--- a/Documentation/read-models/index.md
++++ b/Documentation/read-models/index.md
+@@ -3,10 +3,14 @@ title: Read models
+ description: Build specialized, queryable views from events and choose how to retrieve and observe them.
+ ---
+ 
+-Your events are the truth of *what happened*, but they're a terrible thing to query — to show an
+-account balance you'd have to replay every deposit and withdrawal. A **read model** is the answer to
+-that: a shaped, queryable view of your data, built from events and kept up to date for you. It's the
+-"read side" of CQRS — the events are the write side.
++A read model in Cratis Chronicle is the view your application queries, built from events by a
++projection or reducer. An account screen, for example, needs a name and balance rather than the
++history of every deposit and withdrawal. Chronicle can store that derived state and keep it up to
++date as events arrive.
++
++This separates commands that record changes from queries that read the result, a pattern called
++Command Query Responsibility Segregation (CQRS). The event log remains the source of truth; the
++read model gives one reader the shape it needs.
+ 
+ ```mermaid
+ flowchart LR
+@@ -14,22 +18,43 @@ flowchart LR
+     RM -->|query| UI[Your app]
+ ```
+ 
+-The power is specialization: one event log can feed *many* read models, each tailored to a single
+-screen or question. You don't reuse one model across conflicting needs — you build a focused one per
+-view, so each stays small, fast, and independent.
++One event log can feed several read models. An account summary and a transaction list need not
++share a schema just because they use the same events. Separate models let each view change without
++adding fields for unrelated readers, at the cost of maintaining another definition.
+ 
+ ## How a read model gets built
+ 
+-You don't write to a read model directly — an [observer](../concepts/observers/) keeps it in sync with
+-the events:
++Write changes as events rather than updating the read model directly. An
++[observer](../concepts/observers/) processes those events: a [projection](../projections/) declares
++how values map into the model, while a [reducer](../reducers/) applies state-transition code.
++
++Start with model-bound attributes for straightforward mappings, move to fluent mappings when the
++definition needs structure, and choose reducer code when transitions are clearer. A self-reducing
++model is the default for new reducers. [Choose how to build a read model](../projections/choosing-a-read-model-style.mdx)
++compares the same view across these forms and explains the cost of switching later.
++
++## Read an instance
++
++In the [.NET retrieval example](./getting-single-instance),
++`eventStore.ReadModels.GetInstanceById<AccountInfo>(accountId)` returns an `AccountInfo` instance or
++null. The caller checks for null before displaying its `Name` and `Balance`. The account id selects
++the instance; you do not replay the events in your application to answer that query.
++
++For a materialized model, this reads the stored result, which can lag behind a successful append.
++A passive model computes its state on demand instead. Choose between those behaviors in
++[Consistency models](./consistency.md); a fresh read alone does not guard a later write against
++another caller's changes.
++
++## When an instance becomes visible
+ 
+-- A [projection](../projections/) maps events into the model declaratively — the usual choice.
+-- A [reducer](../reducers/) folds events into the model as state-transition code.
++A projection may receive child or joined data before the event that creates its root instance.
++Chronicle retains that data in an internal placeholder, but excludes roots explicitly marked
++`__initialized: false` from public keyed reads, collection pages and their total counts,
++all-instance reads, previews, and live observations. The earlier data is still available when
++the creating event arrives.
+ 
+-Start with model-bound attributes, move to fluent mappings when the definition needs structure, and
+-choose reducer code when transitions are clearer; a self-reducing model is the default for new
+-reducers. **[Choose how to build a read model](../projections/choosing-a-read-model-style.mdx)** gives you
+-one decision path with scenarios, the same view four ways, and the cost of switching later.
++Projections with only child clauses never hide their roots. Initialized roots and older stored
++roots without the marker also remain visible.
+ 
+ ## What to read next
+ 
+@@ -40,12 +65,13 @@ one decision path with scenarios, the same view four ways, and the cost of switc
+ | [Decision-consistent reads](./decision-reads) | Guard a .NET command against a projection changing after it was read. |
+ | [Choosing how a rule holds](../dynamic-consistency-boundary/choosing.mdx) | Which mechanism makes a write-side rule hold, and why a plain read of a read model does not. |
+ | [Empty child collections](./empty-child-collections) | Why a child collection with no children is absent rather than `[]`, and how to say what that means. |
++| [Read models scoped to one event stream](./per-stream.mdx) | Read one stream without mixing in other streams, and choose whether to guard a decision. |
+ | [Getting a single instance](./getting-single-instance) | Retrieve one read model instance by its key. |
+ | [Getting a collection](./getting-collection-instances) | Retrieve all instances of a read model. |
+ | [Getting snapshots](./getting-snapshots) | Retrieve historical snapshots of a read model's state. |
+ | [Watching read models](./watching-read-models) | Observe a read model and react to changes in real time. |
+-| [Releasing PII](./releasing-pii) | Decrypt PII in a read model instance you already have, and how the subject is resolved. |
++| [Releasing PII](./releasing-pii) | Decrypt personally identifiable information (PII) in a read model instance you already have, and how the subject is resolved. |
+ | [Indexing read models](./indexing) | Declare indexes with `[Index]` so they are recreated whenever the container is — including after a replay. |
+ 
+-To expose a read model to a React frontend, pair it with an [Arc query](/arc/backend/csharp/queries/) — or see
+-the whole loop in [Build a full-stack feature](/build-a-full-app/).
++To expose the result to a React frontend, pair it with an [Arc query](/arc/backend/csharp/queries/).
++[Build a full-stack feature](/build-a-full-app/) follows the events-to-screen workflow.
+diff --git a/Documentation/tutorial/first-event.mdx b/Documentation/tutorial/first-event.mdx
+index 100d92bb16..243d575d54 100644
+--- a/Documentation/tutorial/first-event.mdx
++++ b/Documentation/tutorial/first-event.mdx
+@@ -1,49 +1,48 @@
+ ---
+ title: "1. Your first event"
+-description: Record the fact that a book arrived at the library, and meet Chronicle's event log.
++description: Define BookAdded, give the book an event-source ID, and append your first event to Cratis Chronicle. Then inspect it in the workbench.
+ ---
+ 
+-Every library starts the same way: a book shows up. So that's where we'll start too — by recording that fact. By the end of this chapter you'll have written your first event to Chronicle and understood why we reach for an *event* instead of a database row.
++To record a book arriving in Cratis Chronicle, define a `BookAdded` event, give the book an identity, and append the event to the log. By the end of this chapter you will have one recorded fact to inspect, ready to feed the catalog in the next chapter.
++
++Before writing code, make sure your [kernel is running and your project has a connected client](/chronicle/get-started/). The C# append example takes an `IEventStore`; use the event-store handle from that setup. The other client tabs use their corresponding connection and registration instructions.
+ 
+ ## Think in facts, not rows
+ 
+-Your instinct, coming from most databases, is probably to create a `Book` row and `INSERT` it. Hold that thought — because it throws away the most interesting thing: *that the book arrived, and when*. In event sourcing we record what **happened**. The book arriving is a fact, and facts have a few properties: they're immutable (it happened; you can't un-happen it), and they're named in the past tense.
++A `Book` row can describe a book you have now. Here we also want to retain the fact that it was added, so we record that change as an event. Name events in the past tense: `BookAdded` describes something that happened, not a request that might still fail.
+ 
+-So let's name it. A `BookAdded` event, as a `record` marked with `[EventType]`:
++In C#, define the event as a record marked with `[EventType]`. It carries the title and ISBN:
+ 
+ <ChronicleClientTabs snippet="tutorial/first-event/book-added" />
+ 
+-A couple of things worth noticing here:
++With no explicit name on `[EventType]`, Chronicle uses `BookAdded` as the event type's stored identity. Keep that identity when you later rename a class: changing the default name does not rename existing history. [Event types](../concepts/event-type.md) explains how to preserve it.
+ 
+-- `[EventType]` carries **no name** — Chronicle uses the type's name (`BookAdded`) as the event's identity. That's a small thing now, but it's why you'll never hand-maintain a string registry of event names.
+-- The properties aren't nullable. An event states what *was* true the moment it happened. If you ever find yourself reaching for a nullable property, that's Chronicle nudging you: you probably have a *second* fact hiding in there, and it deserves its own event.
++The title and ISBN are required here because this fact says both were known when the book arrived. For other events, decide what was actually known at that moment. Missing information may belong in a later event rather than in a partially filled record.
+ 
+ ## Give the book an identity
+ 
+-Every event is about *something* — here, a specific book. Chronicle calls that the **event source**, and the events that share a source form that book's own little stream of history. In C#, we'll identify a book with a strongly-typed id rather than a bare `Guid`, so the compiler stops us from ever mixing a book's id up with, say, a member's:
++The **event source** identifies which book this event belongs to. Later borrow and return events use that same identity, keeping the book's history together. In C#, use a `BookId` rather than passing an untyped `Guid` throughout your application; code that expects a `BookId` can then distinguish it from a member's ID:
+ 
+ <ChronicleClientTabs snippet="tutorial/first-event/book-id" />
+ 
+-By inheriting from `EventSourceId<Guid>`, `BookId` becomes a specialized concept — a `ConceptAs<>` targeting `EventSourceId` — so it converts to and from the stream key automatically: you hand a `BookId` straight to Chronicle, no ceremony. And because the *type itself* says "I am an event source id", conventions elsewhere in the stack pick it up — [Arc](/arc/), for instance, recognizes an `EventSourceId`-derived parameter on a command and resolves which stream to write to without any wiring from you. One small record, and the whole stack knows what a book's identity is. The [event source concept](../concepts/event-source.md) goes deeper on how these per-thing streams of facts work.
++`EventSourceId<Guid>` wraps a `Guid` as a domain-specific value using `ConceptAs<T>`, with conversions to Chronicle's untyped event-source key. That lets the append example pass a `BookId` directly. [Arc](/arc/) also recognizes event-source ID types when resolving where a command appends events; you do not need Arc for this tutorial. The [event source concept](../concepts/event-source.md) explains how events are grouped.
+ 
+-Kotlin, Java, Elixir, and TypeScript don't currently have an equivalent typed-id wrapper — event source ids in those clients are plain strings, so the compiler can't stop you from mixing up a book's id and a member's the way it can in C#.
++Kotlin, Java, and TypeScript use plain strings for event-source IDs rather than this C# typed wrapper. Elixir can mark a `Chronicle.Concept` with `event_source_id: true`; its client tab shows a `BookId` concept. Those are different client conventions, not the same type-safety guarantee.
+ 
+ ## Append it
+ 
+-Now the moment itself. With a `ChronicleClient` connected to your event store, append the event against the book's id (in C#, the strongly-typed `BookId`; in the other clients, a plain string you generate yourself):
++Use your connected event store to append `BookAdded` under the book's ID. The C# helper creates a `BookId`, appends the title and ISBN, and returns the ID so you can use it for later events:
+ 
+ <ChronicleClientTabs snippet="tutorial/first-event/append" />
+ 
+-Run it. Nothing dramatic appears on screen — and that's exactly right. Behind that one line, Chronicle validated the event against its registered schema, assigned it the next sequence number, and committed it to the **event log** — permanently, and in order. The fact is now part of your system's history; nothing will ever quietly overwrite it.
++In C#, call `TutorialFirstEventAppend.AddBook` with your `IEventStore` and await the result. For another client, run its append example after the setup has registered the event type. A successful append validates the event against its registered schema, assigns a sequence number, and stores it in the **event log**, the ordered history from which observers read.
++
++To see the result, open the [workbench](/chronicle/workbench/) at `https://localhost:35000`, select the event store and namespace your client used, and browse its event log. Find `BookAdded` with the title `The Pragmatic Programmer` and ISBN `978-0135957059`. Running the helper again creates a new book ID and another event; it does not update the first book.
+ 
+ :::note[Where did it go?]
+-The event log is the source of truth — an append-only sequence of everything that has happened. You just wrote position `0`. Every projection, reducer, and reactor you build from here on is, in the end, just a different way of *reading* this log.
++The event log is the source of truth for the facts your application appends. This is position `0` only if the log was empty. Other setup examples or earlier runs may already have written events. Projections, reducers, and reactors consume that recorded history.
+ :::
+ 
+ ## What you did
+ 
+-- Modeled a real-world moment as an **immutable event** (`BookAdded`) instead of a row to be updated later.
+-- Gave the book a **strongly-typed event source id** so its events form one stream.
+-- **Appended** that event to the log — your first permanent fact.
+-
+-A fact you can't query, though, isn't much use yet — right now the book exists only as history. In the [next chapter](./read-model) we'll fix that: we'll teach Chronicle to fold this stream of events into a `Books` read model you can actually query, and watch it update itself as more events arrive. [Onward →](./read-model)
++You defined `BookAdded`, associated it with a book ID, and appended it to the log. You can inspect the recorded fact, but you have not built a queryable catalog yet. In [Building a read model](./read-model), you will map these events onto the book view the librarian needs.
+diff --git a/Documentation/tutorial/index.md b/Documentation/tutorial/index.md
+index 679370e1c4..0408ee16fc 100644
+--- a/Documentation/tutorial/index.md
++++ b/Documentation/tutorial/index.md
+@@ -1,13 +1,13 @@
+ ---
+-title: "Tutorial: Build a library"
+-description: Build a small event-sourced library with Chronicle, one concept at a time — and finish understanding events, read models, and reactions from the inside out.
++title: Build an event-sourced library with Cratis Chronicle
++description: "Build an event-sourced library with Cratis Chronicle: record books, project a catalog, and react to returns using a running kernel and connected client."
+ ---
+ 
+-Imagine you're building the system for a small town library. Books arrive, members borrow them, and eventually bring them back — and when a popular title comes back, the next person on the waitlist should hear about it. It's a small domain, but it has everything event sourcing is good at: things *happen*, in order, over time, and you care about the history, not just the latest state.
++This Cratis Chronicle tutorial builds a small library system to teach event sourcing one task at a time. You will record a book arriving, derive a catalog you can query, and react when a borrowed book comes back. Each chapter adds one part to the same model, so you can see how storing a fact differs from updating a row.
+ 
+-Over the next three short chapters we'll build it together with Chronicle. We won't rush to the finish — at each step we'll stop to look at what just happened and why, so that by the end you don't just have working code, you understand the model well enough to build your own.
++The library needs both a history of changes and a current view: which books arrived, which are on loan, and who should hear when a title returns. We will record those changes as events, then use them to build the catalog and notify the next member waiting for a book.
+ 
+-Here's the whole system we're heading toward, drawn as an **[event model](/event-modeling/)** — read it left to right like a comic strip: facts happen over time, get folded into a read model you can query, and trigger a reaction. Don't worry if the pieces aren't familiar yet; we'll meet each one in turn.
++The diagram shows the flow we will build. `BookAdded`, `BookBorrowed`, and `BookReturned` feed the `Book` read model. `WaitlistNotifier` represents the code that acts on a return. You can follow the tutorial without knowing the diagram notation; [the event-modeling guide](/event-modeling/) explains it if you want to use it for your own designs.
+ 
+ ```mermaid
+ eventmodeling
+@@ -19,14 +19,15 @@ tf 04 readmodel Library.Book ->> 01 ->> 02 ->> 03
+ tf 05 processor Library.WaitlistNotifier
+ ```
+ 
+-Every block is a real Chronicle primitive — which is what makes an event model such a good plan. The three **events** become `[EventType]` records, the **read model** becomes a queryable `Book` projected from all three of them, and the **processor** becomes a **reactor** — an `IReactor` that acts when something happens. You'll build them in that order. There's no screen or command here because Chronicle appends events directly — put a UI and commands on top with [Arc](/arc/) and the model gains those blocks too, as [the full-stack capstone](/build-a-full-app/) shows.
++In C#, the events become records marked with `[EventType]`. The **read model** is a queryable `Book`, derived from the events by a projection. The **reactor** implements `IReactor` and runs application code when a matching event arrives. The chapters introduce those APIs as you need them.
++
++This tutorial calls Chronicle directly rather than building screens and commands. For that application layer, [Arc](/arc/) builds on Chronicle; [the full-stack capstone](/build-a-full-app/) shows how the pieces connect.
+ 
+ ## What you'll need
+ 
+-Start the Chronicle kernel and pick a client. The worked narrative follows C#, while the client tabs show the supported equivalents for the other Chronicle clients.
++You need a [locally running kernel](/chronicle/get-started/#start-chronicle) and a project connected to a Chronicle client. For C#, [choose an application host model](/chronicle/get-started/choose-hosting-model/) and follow its console, worker, or ASP.NET Core quickstart. For another language, use the [client choices in Get started](/chronicle/get-started/#pick-a-client) to find the setup guide.
+ 
+-- [Get started](/chronicle/get-started/) walks through starting the kernel.
+-- [Choose an application host model](/chronicle/get-started/choose-hosting-model/) picks the level your code runs at — console, worker, or ASP.NET Core.
++The narrative follows C#. The snippets also show Kotlin, Elixir, and TypeScript; Kotlin and Java use the same JVM client, with Kotlin syntax shown here. Select your language on a snippet and follow its registration instructions from setup. Client capabilities differ, and the chapters name missing operations where they affect an example.
+ 
+ ## The tour
+ 
+@@ -34,6 +35,6 @@ Start the Chronicle kernel and pick a client. The worked narrative follows C#, w
+ 2. **[Building a read model](./read-model)** — turn that stream of facts into something you can actually query.
+ 3. **[Reacting to events](./reacting)** — do something useful when a book comes back.
+ 
+-By the end you'll have built the loop at the heart of every Chronicle app — *append a fact, project it into state, react to it* — and you'll know it well enough to leave the library behind and model your own domain. After the tour, use the [Scenarios](../scenarios/) recipes when you need to solve a focused Chronicle task.
++Start with [your first event](./first-event). That chapter records a book but does not yet produce a queryable catalog. The read-model chapter adds the catalog; the reactor chapter then adds the notification. Each step explains what changed and what is still missing.
+ 
+-Ready? [Let's record the first thing that happens →](./first-event)
++After the tour, use the [Scenarios](../scenarios/) recipes for focused Chronicle tasks.
+diff --git a/Documentation/why-event-sourcing.md b/Documentation/why-event-sourcing.md
+index ca5bba5c7f..068a3004f0 100644
+--- a/Documentation/why-event-sourcing.md
++++ b/Documentation/why-event-sourcing.md
+@@ -1,20 +1,17 @@
+-# Why Event Sourcing
++---
++title: Why use event sourcing with Cratis Chronicle?
++description: Event sourcing records meaningful changes instead of only current state. Cratis Chronicle stores those events and projects queryable read models.
++---
+ 
+-Event sourcing optimizes for understanding change, not just storing the latest value. Instead of asking "what does the row look like now?", you ask "what happened, in what order, and why?"
++Event sourcing records meaningful changes as events rather than keeping only the latest state. Cratis Chronicle stores those events and derives queryable read models through projections. This preserves the changes your application records, so you can inspect how state evolved instead of trying to reconstruct it from the current row.
+ 
+-At Cratis, we see event sourcing as the default architecture for information systems. Not because every table deserves an event stream, but because most real systems are driven by processes, decisions, and handoffs over time — and those facts become more valuable the longer the system lives. Chronicle models those changes as [events](./concepts/event.md) in an [event store](./concepts/event-store.md), grouped by [event source](./concepts/event-source.md), and then turns them into queryable views through [projections](./concepts/projection.md).
++Consider an order marked as shipped. The current row tells you its status, but not necessarily which changes led there or what happened before payment completed. If those questions matter, the history belongs in the model rather than in a separate collection of diagnostic logs.
+ 
+-This page explains why we choose event sourcing as the starting point for information systems and how Chronicle supports both classic aggregate-root thinking and Dynamic Consistency Boundary.
++That is why Cratis recommends event sourcing as the starting point for information systems. Chronicle groups [events](./concepts/event.md) by [event source](./concepts/event-source.md), such as an order, in an [event store](./concepts/event-store.md). Its [projections](./concepts/projection.md) derive the views your application queries. The sections below explain the trade-off and how to choose the boundary around a business decision.
+ 
+ ## CRUD focuses on state, event sourcing focuses on change
+ 
+-CRUD systems center on the current shape of data:
+-
+-- Create a record
+-- Update a few fields
+-- Delete a row
+-
+-That works well when the current state is all you care about. The trade-off is that the path that led to that state often disappears unless you add separate audit infrastructure.
++CRUD means create, read, update, and delete. You store a record, read it, and update or delete it as the application changes. That works well when current state is all you need. Unless you also keep history, an update replaces the previous values and loses the path that led to the current state.
+ 
+ Event sourcing starts from a different question: what meaningful state changes happened?
+ 
+@@ -23,7 +20,7 @@ Event sourcing starts from a different question: what meaningful state changes h
+ - `PaymentCaptured`
+ - `OrderShipped`
+ 
+-Those events tell a story. You do not just know that a field changed. You know what changed in domain terms, when it changed, and how the process moved forward.
++Each name says what changed in business terms. `PaymentCaptured` records a different fact from `OrderShipped`, even if both would otherwise appear as updates to an order row. What you can later explain depends on which facts you chose to record and the information they carry.
+ 
+ ```mermaid
+ flowchart LR
+@@ -44,25 +41,11 @@ flowchart LR
+ 
+ With CRUD, an `UPDATE Customers SET Address = ...` statement tells you very little about the business meaning. Did the customer move? Did support correct a typo? Was this part of a larger onboarding step?
+ 
+-With event sourcing, the event itself communicates intent. That makes the system easier to understand for developers, operators, auditors, and downstream consumers.
+-
+-This is one of the biggest practical differences:
+-
+-- CRUD records the latest shape of data
+-- Event sourcing records meaningful transitions in the business
+-
+-When the record of change is meaningful, your system becomes more transparent. You can reason about what is going on without reverse-engineering it from final state alone.
++You can make that distinction explicit with separate events for a move and a correction. A developer investigating a bug or an operator answering a support question can then follow the recorded changes instead of guessing from the latest address. The event names and payloads carry the explanation; event sourcing does not infer an intent you never recorded.
+ 
+ ## Events help you think in processes
+ 
+-Most business problems are not really about changing isolated fields. They are about moving through a process:
+-
+-- a person registers
+-- an order is approved
+-- a shipment is dispatched
+-- an invoice is paid
+-
+-CRUD tends to pull your thinking toward tables and columns. Event sourcing pulls your thinking toward workflows and decisions. That usually leads to better names, clearer boundaries, and models that match the business more closely.
++An order moves through approval, payment, and shipment. Modeling those changes as events gives each step a name and makes its relationship to the next step visible. You can discuss when to capture payment or confirm an order without starting from which columns to update.
+ 
+ ```mermaid
+ sequenceDiagram
+@@ -79,7 +62,7 @@ sequenceDiagram
+     Projection-->>App: Updated read model
+ ```
+ 
+-When you later need [constraints](./concepts/constraints.md), approval logic, compensating actions, or integration with external systems, the process is already visible in the event stream.
++In Chronicle, a [reactor](./reactors/index.mdx) can respond to one of these events by calling an external system or sending a notification. A [constraint](./concepts/constraints.md) serves a different purpose: it enforces an integrity rule when events are appended. Keep that distinction when adding approval logic or compensating actions; reacting after an append is not the same as preventing it.
+ 
+ ## CRUD loses information unless you bolt it back on
+ 
+@@ -91,42 +74,26 @@ A CRUD model usually keeps only the current representation of an entity. If a va
+ - history tables
+ - operational logs
+ 
+-That usually means the system starts simple and grows extra tracking features later because the need for history inevitably shows up.
++Those are valid ways to retain history, but they are extra features to design and maintain alongside the current-state model. With event sourcing, the events are the source of truth. You can inspect their sequence when debugging and build another read model from the same recorded facts. Historical questions remain limited by the information those events contain.
+ 
+-Event sourcing starts with that history. The full sequence of events is already the source of truth, so:
+-
+-- auditability is built in
+-- debugging is easier because you can inspect the actual sequence of decisions
+-- temporal questions become answerable
+-- rebuilding new read models is possible without guessing past intent
+-
+-If compliance or traceability matters, event sourcing treats it as a foundation instead of an afterthought.
++Retaining history does not remove your responsibility to handle personal data. Chronicle's [compliance mechanisms](./compliance/index.md) include encryption for fields marked as personally identifiable information (PII) and erasure of the key tied to the person the data concerns. Plan that protection before writing personal data, and review [regulatory responsibilities](./compliance/regulatory-responsibilities.md) for obligations beyond the event store.
+ 
+ ## Full event history creates opportunities beyond auditing
+ 
+-A complete stream of events is not only useful for audits. It is also valuable training data.
+-
+-Machine learning and other model-driven features work better when you have the full context of what happened over time:
+-
+-- the order of changes
+-- the gaps between decisions
+-- the actions users took before an outcome
+-- the exact business transitions that led to success or failure
++An event stream can provide historical inputs for analytics or model-training workflows, rather than only a current-state snapshot:
+ 
+-In a CRUD-only system, you often have to reconstruct that context from scattered logs, snapshots, and heuristics. With event sourcing, the context is already present in the event stream.
++- the order of recorded changes
++- timestamps for those changes
++- actions recorded before an outcome
++- business transitions represented by the event types
+ 
+-That makes it easier to build features such as:
+-
+-- fraud or anomaly detection
+-- recommendation or prediction models
+-- operational insights based on process behavior
+-- assistants that understand what stage a workflow is in
++In a CRUD-only system, you may need to reconstruct that history from separate logs or snapshots. With event sourcing, the recorded changes are already in the event stream. Whether those inputs are useful for a model depends on the task and on what your application actually recorded; keeping history does not by itself establish better model results.
+ 
+ ## Event sourcing is not just aggregate roots
+ 
+-Event sourcing is often introduced together with aggregate roots, and that can be useful. Chronicle supports that approach through [aggregate roots support](/arc/backend/csharp/chronicle/aggregates/).
++Keeping events does not dictate how you make a business decision. You still need to decide which facts must stay consistent while concurrent writers act.
+ 
+-An aggregate root gives you a fixed consistency boundary around a model. You load the aggregate, make a decision, and append new events from that boundary.
++An **aggregate root** gives you a fixed consistency boundary around a model: you load its history, make a decision, and append new events from that boundary. If you use domain-driven design (DDD), this may be familiar. Cratis Arc provides [aggregate-root support on top of Chronicle](/arc/backend/csharp/chronicle/aggregates/).
+ 
+ ### Aggregate roots
+ 
+@@ -144,7 +111,7 @@ An aggregate root gives you a fixed consistency boundary around a model. You loa
+ 
+ ### Dynamic Consistency Boundary
+ 
+-Chronicle also supports [Dynamic Consistency Boundary](./dynamic-consistency-boundary/index.md), where the consistency scope is based on the facts a decision actually needs at runtime rather than on a predeclared aggregate.
++[Dynamic Consistency Boundary](./dynamic-consistency-boundary/index.md) bases the consistency scope on the facts a decision actually needs at runtime rather than on a predeclared aggregate. Chronicle supports DCB-style decision models and append conditions within its event-source model, but it is not a DCB event store: each event has one event source ID, and custom tags do not participate in concurrency checks.
+ 
+ If you want Chronicle-specific guidance, read [Dynamic Consistency Boundary in Chronicle](./dynamic-consistency-boundary/chronicle.md).
+ 
+@@ -159,11 +126,13 @@ If you want Chronicle-specific guidance, read [Dynamic Consistency Boundary in C
+ - less familiar if your team expects aggregate-centric design
+ - requires you to think carefully about the facts and constraints involved in each decision
+ 
+-The key point is that event sourcing does not require aggregate roots. Aggregate roots are one way to structure decisions. Dynamic Consistency Boundary is another. Chronicle supports both, so you can choose the model that fits the problem instead of forcing every problem into the same shape.
++:::note[Choose the consistency boundary]
++The key point is that event sourcing does not require aggregate roots. Aggregate roots are one way to structure decisions. DCB-style decision models are another, within Chronicle's event-source and concurrency-scope limits. Choose the model that fits the problem instead of forcing every problem into the same shape.
++:::
+ 
+ ## Why we use it by default
+ 
+-Event sourcing is almost always worth it for systems that carry real business information, because those systems tend to grow questions that current state cannot answer. It is a strong fit when you care about:
++We start with event sourcing when an application needs to explain business changes over time. That history can serve several distinct needs:
+ 
+ - transparency of business behavior
+ - auditability and compliance
+@@ -172,4 +141,8 @@ Event sourcing is almost always worth it for systems that carry real business in
+ - integration through events
+ - analytics or model training on full historical context
+ 
+-If your problem is truly just "store the latest state and move on", CRUD can still be a perfectly reasonable choice for that bounded slice. But information systems usually grow toward history, traceability, replayability, integration, or better process insight. Event sourcing starts there instead of retrofitting it later.
++If a bounded part of your application only needs the latest state, CRUD can be the better fit. Event sourcing asks you to model meaningful facts, evolve their schemas, and account for when derived views catch up. Choose it where retaining and using history justifies that work.
++
++## Evaluate the fit, then try it
++
++Use [when to use event sourcing](./concepts/when-to-use-event-sourcing.md) to weigh those benefits against the modeling, schema evolution, and consistency work. If the trade-off fits your application, [get started with Chronicle](./get-started/index.mdx) to run a local kernel and choose a client setup guide.
+diff --git a/README.md b/README.md
+index 4eb166f72b..58b9b0dbae 100644
+--- a/README.md
++++ b/README.md
+@@ -3,10 +3,10 @@
+     <img src="full-logo.png" alt="Cratis Chronicle" width="480">
+   </a>
+ 
+-  <h3 align="center">Cratis Chronicle</h3>
++  <h1 align="center">Cratis Chronicle</h1>
+ 
+   <p align="center">
+-    An open-source (MIT) event-sourcing database and runtime — Orleans-based .NET kernel, pluggable storage (MongoDB default; PostgreSQL, SQL Server, SQLite, in-memory), and language-agnostic gRPC contracts with clients for .NET, TypeScript, Kotlin/Java, and Elixir (Python coming soon).
++    Cratis Chronicle is an open-source (MIT) event-sourcing database and runtime for applications that need a history of meaningful changes. Record application changes as events, build queryable views with declarative projections, and react to events from .NET, TypeScript, Kotlin/Java, or Elixir.
+     <br />
+     <a href="https://www.cratis.io/chronicle/"><strong>Explore the docs »</strong></a>
+     <br />
+@@ -77,13 +77,13 @@
+ 
+ ## 📖 About
+ 
+-Cratis Chronicle is an event-sourcing database and processing runtime with a first-class .NET SDK and additional TypeScript, Kotlin/Java (JVM), and Elixir clients — with a Python client coming soon — plus pluggable storage-provider implementations including MongoDB (default), PostgreSQL, SQL Server, and SQLite.
++Cratis Chronicle is an event-sourcing database and processing runtime for applications that need to retain meaningful changes, not just current state. You append facts such as `OrderPlaced` to an event log. That history lets you inspect how an order changed and build new views from the events your application recorded.
+ 
+-Chronicle captures every state change in your system as an immutable sequence of events — rather than storing only the current state.
+-This unlocks powerful capabilities like full audit trails, time-travel debugging, and event-driven architectures without the usual complexity.
+-Chronicle is free to use and MIT licensed.
++Chronicle's declarative projections map events onto **read models**, views shaped for the queries your application serves. The kernel handles processing and storage updates. **Reactors** run your code when events arrive, for example to send a notification. Materialized views update after the append, so [choose the consistency behavior](https://www.cratis.io/chronicle/read-models/consistency/) your workflow needs.
+ 
+-Chronicle is built on a simple conviction: event sourcing is worth it for almost any system dealing with information and business flows — so it should feel like the code you already write. Events, reactors, reducers, and projections are plain, idiomatic types, familiar even if you have never event-sourced before, with conventions designed to remove friction and boilerplate. That intent — productivity, quality, and reliability in one deliberately simple ecosystem, AI-friendly by design and with free [AI skills](https://github.com/Cratis/AI) — runs through everything Cratis ships.
++For personal data, Chronicle encrypts fields marked as **personally identifiable information (PII)** under a subject's key and supports erasing that key without removing the event's position in the log. These mechanisms support your compliance work; they do not make an application compliant by themselves. Read [Compliance](https://www.cratis.io/chronicle/compliance/) before recording personal data.
++
++The Orleans-based .NET kernel has a first-class .NET SDK and additional TypeScript, Kotlin/Java (JVM), and Elixir clients; a Python client is coming soon. Storage providers include MongoDB (default), PostgreSQL, SQL Server, SQLite, and in-memory implementations. Client and provider capabilities differ, so use the guide for your chosen setup. Chronicle and its bundled web workbench run without Studio, Arc, or Components. Chronicle is free to use and MIT licensed; free [AI skills](https://github.com/Cratis/AI) are also available for working with the code and documentation.
+ 
+ Chronicle ships with:
+ 
+@@ -91,9 +91,11 @@ Chronicle ships with:
+ - 🧩 **.NET Client SDK** — a rich C# library for interacting with Chronicle from any .NET application
+ - 🌍 **Language-agnostic gRPC contracts** — protobuf contracts that any language can implement, with clients for [TypeScript](https://github.com/Cratis/Chronicle.TypeScript), [Kotlin/Java](https://github.com/Cratis/Chronicle.Kotlin), and [Elixir](https://github.com/Cratis/Chronicle.Elixir), and a [Python](https://github.com/Cratis/Chronicle.Python) client coming soon
+ - 🗄️ **Pluggable storage** — MongoDB (default), PostgreSQL, SQL Server, SQLite, and in-memory providers
+-- 🖥️ **Web Workbench** — a built-in management dashboard for monitoring, browsing events, and administration
++- 🖥️ **Web Workbench** — a bundled browser tool for browsing events, inspecting observer state, and trying supported projection mappings
+ - ⌨️ **CLI** — the [Cratis CLI](https://github.com/Cratis/cli) brings event, observer, projection, and read-model inspection to the terminal
+ 
++Workbench and CLI inspection access does not grant permission to mutate data. See the [workbench guide](https://www.cratis.io/chronicle/workbench/) for the inspection and authorization boundaries.
++
+ > For core values and principles, read our [core values and principles](https://github.com/Cratis/.github/blob/main/profile/README.md).
+ 
+ ---
+@@ -104,7 +106,7 @@ Chronicle ships with:
+ 
+ | | |
+ |---|---|
+-| **Immutable Event Store** | Every state change is persisted as an immutable event — nothing is ever overwritten |
++| **Immutable Event Store** | Appends retain recorded facts; corrections use explicit revision or redaction operations |
+ | **Event Streams** | Organized per aggregate or entity, with full history preservation |
+ | **Schema Evolution** | Strongly-typed event definitions with support for evolving schemas over time |
+ | **Rich Metadata** | Timestamps, correlation IDs, causation IDs, and custom tags on every event |
+@@ -124,7 +126,7 @@ Chronicle ships with:
+ |---|---|
+ | **Multi-tenancy** | First-class namespace support for isolated tenant data |
+ | **Constraints** | Server-side integrity rules enforced at append time |
+-| **Compliance** | Full audit trails and data lineage for regulatory requirements |
++| **Compliance** | PII field encryption, subject-key erasure, and event redaction support personal-data handling alongside the event history |
+ | **Revision** | Built-in support for correcting past events |
+ 
+ ### 💻 Developer Experience
+@@ -148,7 +150,7 @@ Chronicle's boundary is a set of language-agnostic gRPC/protobuf contracts — a
+ | **TypeScript / Node.js** | [`@cratis/chronicle` on npm](https://www.npmjs.com/package/@cratis/chronicle) | [Chronicle.TypeScript](https://github.com/Cratis/Chronicle.TypeScript) |
+ | **Kotlin / Java (JVM)** | [`io.cratis:chronicle` on Maven Central](https://central.sonatype.com/artifact/io.cratis/chronicle) | [Chronicle.Kotlin](https://github.com/Cratis/Chronicle.Kotlin) |
+ | **Elixir** | [`cratis_chronicle` on Hex](https://hex.pm/packages/cratis_chronicle) | [Chronicle.Elixir](https://github.com/Cratis/Chronicle.Elixir) |
+-| **Python** | Coming soon (pre-alpha, not yet published) | [Chronicle.Python](https://github.com/Cratis/Chronicle.Python) |
++| **Python** | Coming soon (not yet published) | [Chronicle.Python](https://github.com/Cratis/Chronicle.Python) |
+ 
+ Building a client for another language? The [building a client](https://www.cratis.io/chronicle/building-a-client/) guide distills everything the existing clients learned along the way.
+ 
+@@ -156,6 +158,8 @@ Building a client for another language? The [building a client](https://www.crat
+ 
+ ## 🚀 Getting Started
+ 
++Start the local kernel below, then follow a [client or host quickstart](https://www.cratis.io/chronicle/get-started/) to connect an application and append an event. The C# snippets here show the API shape; they are not a complete application. Use the [library tutorial](https://www.cratis.io/chronicle/tutorial/) if you want to build the model one step at a time.
++
+ ### Prerequisites
+ 
+ - [.NET 8+](https://dotnet.microsoft.com/download)
+@@ -183,7 +187,7 @@ services:
+       - "127.0.0.1:35000:35000"   # gRPC, REST API and Web Workbench (single TLS port)
+ ```
+ 
+-Both publish the port on this machine only. The development image is for local development: its Workbench accepts the well-known development credentials, so don't expose it on a shared network. Open the Workbench at `https://localhost:35000` and accept the self-signed development certificate.
++Both options publish the port on this machine only. The development image's workbench accepts well-known development credentials, so don't expose it on a shared network. Open the workbench at `https://localhost:35000` and accept the self-signed development certificate. MongoDB stays inside the container with this setup; use the [two-port quickstart](https://www.cratis.io/chronicle/get-started/) if your application will query MongoDB directly.
+ 
+ ```shell
+ docker compose up -d
+@@ -332,18 +336,18 @@ Full documentation is available at **[https://www.cratis.io/chronicle/](https://
+ 
+ ## 🧩 The Cratis ecosystem
+ 
+-This project is part of [Cratis](https://www.cratis.io) — free, MIT-licensed tools for building event-sourced and CQRS applications.
++This project is part of [Cratis Platform](https://www.cratis.io) — tools for building event-sourced and CQRS applications.
+ 
+ - **[Chronicle](https://github.com/Cratis/Chronicle)** — event-sourcing database and runtime. Orleans-based kernel, pluggable storage (MongoDB default; PostgreSQL, SQL Server, SQLite, in-memory), language-agnostic gRPC contracts. [Docs](https://www.cratis.io/chronicle/)
+-- **Chronicle clients** — first-class [.NET SDK](https://github.com/Cratis/Chronicle), plus [TypeScript](https://github.com/Cratis/Chronicle.TypeScript), [Kotlin/Java](https://github.com/Cratis/Chronicle.Kotlin), and [Elixir](https://github.com/Cratis/Chronicle.Elixir); [Python](https://github.com/Cratis/Chronicle.Python) coming soon (pre-alpha). AI agents connect through the [Chronicle MCP server](https://github.com/Cratis/Chronicle.Mcp).
++- **Chronicle clients** — first-class [.NET SDK](https://github.com/Cratis/Chronicle), plus [TypeScript](https://github.com/Cratis/Chronicle.TypeScript), [Kotlin/Java](https://github.com/Cratis/Chronicle.Kotlin), and [Elixir](https://github.com/Cratis/Chronicle.Elixir); [Python](https://github.com/Cratis/Chronicle.Python) coming soon. AI agents connect through the [Chronicle MCP server](https://github.com/Cratis/Chronicle.Mcp).
+ - **[Arc](https://github.com/Cratis/Arc)** — opinionated CQRS framework for ASP.NET Core with commands, queries, validation, authorization, and TypeScript proxy generation. Works without event sourcing. [Docs](https://www.cratis.io/arc/)
+ - **[Components](https://github.com/Cratis/Components)** — React components aligned with Arc patterns. [Docs](https://www.cratis.io/components/)
+ - **[CLI](https://github.com/Cratis/cli) + Workbench** — inspect and diagnose Chronicle from the terminal or the browser. [Docs](https://www.cratis.io/cli/)
+-- **Model-first layer (experimental)** — Studio, [Screenplay](https://github.com/Cratis/Screenplay), [Stage](https://github.com/Cratis/Stage), [Scene](https://github.com/Cratis/Scene), [Prologue](https://github.com/Cratis/Prologue)
+-- **Supporting** — [Fundamentals](https://github.com/Cratis/Fundamentals), [Specifications](https://github.com/Cratis/Specifications), [Synopsis](https://github.com/Cratis/Synopsis), [Lens](https://github.com/Cratis/Lens), [Narrator](https://github.com/Cratis/Narrator), and free [AI tooling](https://github.com/Cratis/AI) (preview); Ensemble coming soon (pre-release)
++- **Model-first layer** — Studio, [Screenplay](https://github.com/Cratis/Screenplay), [Stage](https://github.com/Cratis/Stage), [Scene](https://github.com/Cratis/Scene), [Prologue](https://github.com/Cratis/Prologue)
++- **Supporting** — [Fundamentals](https://github.com/Cratis/Fundamentals), [Specifications](https://github.com/Cratis/Specifications), [Synopsis](https://github.com/Cratis/Synopsis), [Lens](https://github.com/Cratis/Lens), [Narrator](https://github.com/Cratis/Narrator), and free [AI tooling](https://github.com/Cratis/AI); Ensemble coming soon
+ - **[Samples](https://github.com/Cratis/Samples)** — runnable event sourcing and CQRS samples for the whole stack
+ 
+-Everything Cratis publishes today is MIT licensed and free to use.
++Chronicle is MIT licensed and free to use.
+ 
+ Blog: [blog.cratis.io](https://blog.cratis.io)
+ 
