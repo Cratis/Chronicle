@@ -1,0 +1,34 @@
+diff --git a/Integration/Client/for_EventStoreSubscriptions/when_generation_is_pinned/with_two_targets_and_catch_up_and_replay.cs b/Integration/Client/for_EventStoreSubscriptions/when_generation_is_pinned/with_two_targets_and_catch_up_and_replay.cs
+index 1ae09de5c1..d04ab0f320 100644
+--- a/Integration/Client/for_EventStoreSubscriptions/when_generation_is_pinned/with_two_targets_and_catch_up_and_replay.cs
++++ b/Integration/Client/for_EventStoreSubscriptions/when_generation_is_pinned/with_two_targets_and_catch_up_and_replay.cs
+@@ -35,7 +35,13 @@ public class context(ChronicleFixture fixture) : Specification(fixture)
+         public override IEnumerable<Type> EventTypes => [typeof(SubscriptionPersonRegistered), typeof(SubscriptionPersonRegisteredV1)];
+         public override IEnumerable<Type> EventTypeMigrators => [typeof(SubscriptionPersonMigration)];
+ 
+-        protected override void ConfigureServices(IServiceCollection services) => services.AddSingleton(_tracker);
++        protected override void ConfigureServices(IServiceCollection services)
++        {
++            // The out-of-process host is shared across spec classes and self-binds this assembly's types.
++            // Register the reactor instance as well, so it is not built by the host with a tracker of its own.
++            services.AddSingleton(_tracker);
++            services.AddSingleton(new CurrentInboxReactor(_tracker));
++        }
+ 
+         async Task Because()
+         {
+diff --git a/Integration/Client/for_EventStoreSubscriptions/when_subscribing/and_reactors_coordinate_tenant_outbox_forwarding.cs b/Integration/Client/for_EventStoreSubscriptions/when_subscribing/and_reactors_coordinate_tenant_outbox_forwarding.cs
+index 473dd48020..a0757ce453 100644
+--- a/Integration/Client/for_EventStoreSubscriptions/when_subscribing/and_reactors_coordinate_tenant_outbox_forwarding.cs
++++ b/Integration/Client/for_EventStoreSubscriptions/when_subscribing/and_reactors_coordinate_tenant_outbox_forwarding.cs
+@@ -39,6 +39,10 @@ protected override void ConfigureServices(IServiceCollection services)
+         {
+             Tracker = new TenantForwardingTracker();
+             services.AddSingleton(Tracker);
++
++            // The out-of-process host is shared across spec classes and self-binds this assembly's types.
++            // Register the reactor instance as well, so it is not built by the host with a tracker of its own.
++            services.AddSingleton(new LobbyReactor(Tracker));
+         }
+ 
+         async Task Because()
