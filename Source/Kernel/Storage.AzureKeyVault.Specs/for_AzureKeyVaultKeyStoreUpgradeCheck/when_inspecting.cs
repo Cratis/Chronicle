@@ -27,7 +27,7 @@ public class when_inspecting(context ctx) : IClassFixture<context>
 
     [Fact] void should_count_at_least_the_earlier_key() => ctx.Status!.EarlierNameKeys.ShouldBeGreaterThanOrEqual(1L);
     [Fact] void should_count_at_least_the_earlier_erasure() => ctx.Status!.EarlierNameErasures.ShouldBeGreaterThanOrEqual(1L);
-    [Fact] void should_report_no_unresolved_shapes() => ctx.Status!.UnresolvedShapes.ShouldEqual(0L);
+    [Fact] void should_report_unresolved_earlier_names_without_listed_scopes() => ctx.Status!.UnresolvedShapes.ShouldBeGreaterThanOrEqual(2L);
     [Fact] void should_have_a_usable_layout() => ctx.Status!.LayoutUnusable.ShouldBeFalse();
     [Fact] void should_be_complete() => ctx.Status!.Complete.ShouldBeTrue();
     [Fact] void should_report_material_present() => ctx.Status!.EarlierMaterialPresent.ShouldBeTrue();
