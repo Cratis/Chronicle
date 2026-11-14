@@ -22,17 +22,16 @@ public class when_catch_up_concludes_without_moving_and_stale_retries_are_exhaus
             .GetNextSequenceNumberGreaterOrEqualTo(Arg.Any<EventSequenceNumber>(), Arg.Any<IEnumerable<EventType>>())
             .Returns((EventSequenceNumber)50UL);
         await _observer.CaughtUp(JobId.New(), 42L);
-        for (var lap = 0; lap < 3; lap++)
+        for (var lap = 0; lap < 2; lap++)
         {
             await _observer.CaughtUp(JobId.New(), 42L);
         }
 
-        await _observer.CaughtUp(JobId.New(), 42L);
         _timersBefore = _silo.TimerRegistry.NumberOfActiveTimers;
     }
 
     async Task Because() => await _observer.CaughtUp(JobId.New(), 42L);
 
     [Fact] async Task should_back_off() => (await _observer.IsCatchUpBackedOff()).ShouldBeTrue();
-    [Fact] void should_not_leave_a_short_retry_scheduled() => _silo.TimerRegistry.NumberOfActiveTimers.ShouldEqual(_timersBefore);
+    [Fact] void should_not_schedule_another_short_retry() => _silo.TimerRegistry.NumberOfActiveTimers.ShouldEqual(_timersBefore);
 }

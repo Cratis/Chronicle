@@ -311,6 +311,9 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Warning, "Could not look up events of the observer's types from {Next} after a catch-up that moved nothing. Using the zero-work backoff")]
     internal static partial void CatchUpEventLookupFailed(this ILogger<Observer> logger, EventSequenceNumber next, Exception exception);
 
+    [LoggerMessage(LogLevel.Warning, "Looking up events of the observer's types from {Next} after a catch-up that moved nothing failed with {Error}. Using the zero-work backoff")]
+    internal static partial void CatchUpEventLookupErrored(this ILogger<Observer> logger, EventSequenceNumber next, GetSequenceNumberError error);
+
     [LoggerMessage(LogLevel.Warning, "A catch-up job concluded without moving the observer forward ({ConsecutiveLaps} in a row)")]
     internal static partial void CatchUpProducedNoWork(this ILogger<Observer> logger, int consecutiveLaps);
 

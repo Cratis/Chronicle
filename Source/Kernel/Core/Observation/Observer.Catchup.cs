@@ -228,8 +228,7 @@ public partial class Observer
         var madeProgress = CatchUpMadeProgress(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber);
         HandleNewLastHandledEvent(lastHandledEventSequenceNumber);
         State.CatchingUpPartitions.ExceptWith(releasable);
-        if (lastScannedEventSequenceNumber.IsActualValue &&
-            (!State.NextEventSequenceNumber.IsActualValue || State.NextEventSequenceNumber <= lastScannedEventSequenceNumber))
+        if (HasScannedUpToNext(lastScannedEventSequenceNumber))
         {
             State = State with { NextEventSequenceNumber = lastScannedEventSequenceNumber.Next() };
         }
@@ -241,19 +240,20 @@ public partial class Observer
         await WriteStateAsync();
 
         _isPreparingCatchup = false;
-        var settleInObserving = await NoteCatchUpLap(madeProgress);
+        await ContinueAfterCatchUpLap(await NoteCatchUpLap(madeProgress));
+    }
 
-        if (IsRetired || _removed) return;
-        if (!IsQuarantined)
+    async Task ContinueAfterCatchUpLap(bool settleInObserving)
+    {
+        if (IsCatchUpEnded()) return;
+
+        if (settleInObserving)
         {
-            if (settleInObserving)
-            {
-                await SettleCatchUpInObserving();
-            }
-            else
-            {
-                await TransitionTo<Routing>();
-            }
+            await SettleCatchUpInObserving();
+        }
+        else
+        {
+            await TransitionTo<Routing>();
         }
     }
 
@@ -266,8 +266,11 @@ public partial class Observer
     bool CatchUpMadeProgress(EventSequenceNumber lastHandledEventSequenceNumber, EventSequenceNumber lastScannedEventSequenceNumber) =>
         (lastHandledEventSequenceNumber.IsActualValue &&
             (!State.LastHandledEventSequenceNumber.IsActualValue || lastHandledEventSequenceNumber > State.LastHandledEventSequenceNumber)) ||
-        (lastScannedEventSequenceNumber.IsActualValue &&
-            (!State.NextEventSequenceNumber.IsActualValue || State.NextEventSequenceNumber <= lastScannedEventSequenceNumber));
+        HasScannedUpToNext(lastScannedEventSequenceNumber);
+
+    bool HasScannedUpToNext(EventSequenceNumber lastScannedEventSequenceNumber) =>
+        lastScannedEventSequenceNumber.IsActualValue &&
+            (!State.NextEventSequenceNumber.IsActualValue || State.NextEventSequenceNumber <= lastScannedEventSequenceNumber);
 
     /// <summary>
     /// Records the outcome of a concluded catch-up lap.
@@ -331,9 +334,16 @@ public partial class Observer
     async Task<bool> ScheduleShortCatchUpRetry()
     {
         var next = State.NextEventSequenceNumber;
+        var epoch = _catchUpOwnershipEpoch;
         try
         {
             var lookup = await _eventSequence.GetNextSequenceNumberGreaterOrEqualTo(next, _subscription.EventTypes.ToList());
+            if (lookup.TryGetError(out var error) && error != GetSequenceNumberError.NotFound)
+            {
+                logger.CatchUpEventLookupErrored(next, error);
+                return false;
+            }
+
             if (!lookup.Match(number => number.IsActualValue, _ => false))
             {
                 _shortCatchUpRetries = 0;
@@ -346,6 +356,9 @@ public partial class Observer
             return false;
         }
 
+        // CaughtUp interleaves, so catch-up may have changed hands while the lookup was awaited. This lap is obsolete then.
+        if (epoch != _catchUpOwnershipEpoch) return false;
+
         if (_shortCatchUpRetries >= _shortCatchUpRetryDelays.Length)
         {
             logger.StaleCatchUpRetriesExhausted(_shortCatchUpRetries, next);
@@ -355,7 +368,7 @@ public partial class Observer
         var delay = _shortCatchUpRetryDelays[_shortCatchUpRetries++];
         logger.RetryingStaleCatchUp(next, _shortCatchUpRetries, delay);
         _catchUpBackoffUntil = DateTimeOffset.UtcNow + delay;
-        var epoch = _catchUpOwnershipEpoch;
+        CancelShortCatchUpRetry();
         _shortCatchUpRetryTimer = this.RegisterGrainTimer(
             cancellationToken => RetryCatchUpAfterDelay(epoch, cancellationToken),
             new GrainTimerCreationOptions { DueTime = delay, Period = Timeout.InfiniteTimeSpan });
@@ -377,7 +390,9 @@ public partial class Observer
         IsObservingOwnedCatchUp(ownershipEpoch) && State.RunningState != ObserverRunningState.Replaying && _subscription.IsSubscribed;
 
     bool IsObservingOwnedCatchUp(int ownershipEpoch) =>
-        !(IsRetired || _removed || IsQuarantined) && ownershipEpoch == _catchUpOwnershipEpoch;
+        !IsCatchUpEnded() && ownershipEpoch == _catchUpOwnershipEpoch;
+
+    bool IsCatchUpEnded() => IsRetired || _removed || IsQuarantined;
 
     /// <summary>
     /// Waits for any catch-up job acquisition already in flight and adopts the job it produced.

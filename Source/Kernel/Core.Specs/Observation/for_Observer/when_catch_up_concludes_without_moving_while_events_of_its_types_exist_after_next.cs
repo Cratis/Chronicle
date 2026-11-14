@@ -4,6 +4,7 @@
 using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Observation.States;
 
 namespace Cratis.Chronicle.Observation.for_Observer;
 
@@ -27,5 +28,6 @@ public class when_catch_up_concludes_without_moving_while_events_of_its_types_ex
 
     async Task Because() => await _observer.CaughtUp(JobId.New(), 42L);
 
+    [Fact] async Task should_settle_in_observing() => (await _observer.GetCurrentState()).ShouldBeOfExactType<Observing>();
     [Fact] void should_schedule_a_short_retry() => _silo.TimerRegistry.NumberOfActiveTimers.ShouldEqual(_timersBefore + 1);
 }

@@ -9,7 +9,7 @@ using LookupResult = Cratis.Monads.Result<Cratis.Chronicle.Concepts.Events.Event
 namespace Cratis.Chronicle.Observation.for_Observer;
 
 /// <summary>
-/// A failed event lookup is not an answer: the zero-work backoff applies and the failure is not propagated (#5351).
+/// A failed event lookup (one that throws) is not an answer: the zero-work backoff applies and the failure is not propagated (#5351).
 /// </summary>
 public class when_catch_up_concludes_without_moving_and_the_event_lookup_fails : given.an_observer_with_subscription
 {
