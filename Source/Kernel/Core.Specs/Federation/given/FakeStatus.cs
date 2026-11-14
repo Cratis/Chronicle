@@ -46,4 +46,22 @@ public class FakeStatus : IFederationStatus
 
     public FederationBindingStatus GetBinding(string bindingId) =>
         _bindings.TryGetValue(bindingId, out var status) ? status : FederationBindingStatus.Unknown;
+
+    public void RecordDialExchange()
+    {
+    }
+
+    public void RecordDialRenewed()
+    {
+    }
+
+    public void RecordDialClosed()
+    {
+    }
+
+    public void RecordDialFailed(string error)
+    {
+    }
+
+    public FederationDialStatus GetDial() => FederationDialStatus.None;
 }

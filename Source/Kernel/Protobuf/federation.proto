@@ -110,6 +110,9 @@ message FederationEnrollmentStatusResponse {
    string Endpoint = 6;
    string AuthorityFingerprint = 7;
    bool Expired = 8;
+   bool Connected = 9;
+   SerializableDateTimeOffset LastExchange = 10;
+   string LastError = 11;
 }
 message FederationGrantInformationResponse {
    string Id = 1;

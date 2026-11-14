@@ -76,4 +76,32 @@ public interface IFederationStatus
     /// <param name="bindingId">The binding id.</param>
     /// <returns>The state, <see cref="FederationBindingStatus.Unknown"/> when nothing has been recorded.</returns>
     FederationBindingStatus GetBinding(string bindingId);
+
+    /// <summary>
+    /// Record that the dialer session to the authority carried a successful exchange: a pull was answered or an inbound batch was delivered.
+    /// The session is then connected, the last exchange is now and the last error is cleared.
+    /// </summary>
+    void RecordDialExchange();
+
+    /// <summary>
+    /// Record that this kernel renewed its certificate with the authority. Only the time of the last exchange moves; it says nothing about the session.
+    /// </summary>
+    void RecordDialRenewed();
+
+    /// <summary>
+    /// Record that the dialer session to the authority is no longer open. The last exchange and the last error are kept.
+    /// </summary>
+    void RecordDialClosed();
+
+    /// <summary>
+    /// Record that the dialer session to the authority failed. The session is no longer connected.
+    /// </summary>
+    /// <param name="error">The scrubbed error, never containing a secret.</param>
+    void RecordDialFailed(string error);
+
+    /// <summary>
+    /// Get the dialer-side state of the session to the authority.
+    /// </summary>
+    /// <returns>The state, <see cref="FederationDialStatus.None"/> when nothing has been recorded.</returns>
+    FederationDialStatus GetDial();
 }

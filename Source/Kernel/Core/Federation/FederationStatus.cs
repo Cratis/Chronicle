@@ -21,6 +21,7 @@ public class FederationStatus(TimeProvider? timeProvider = null) : IFederationSt
     readonly ConcurrentDictionary<string, FederationBindingStatus> _bindings = new(StringComparer.Ordinal);
     readonly ConcurrentDictionary<string, FederationInboundStatus> _inbound = new(StringComparer.Ordinal);
     readonly ConcurrentDictionary<string, int> _sessions = new(StringComparer.Ordinal);
+    FederationDialStatus _dial = FederationDialStatus.None;
 
     /// <inheritdoc/>
     public void RecordPull(string linkId, int events, long bytes)
@@ -87,4 +88,39 @@ public class FederationStatus(TimeProvider? timeProvider = null) : IFederationSt
     /// <inheritdoc/>
     public FederationBindingStatus GetBinding(string bindingId) =>
         _bindings.TryGetValue(bindingId, out var status) ? status : FederationBindingStatus.Unknown;
+
+    /// <inheritdoc/>
+    public void RecordDialExchange()
+    {
+        var now = _timeProvider.GetUtcNow();
+        Update(_ => new(true, now, null));
+    }
+
+    /// <inheritdoc/>
+    public void RecordDialRenewed()
+    {
+        var now = _timeProvider.GetUtcNow();
+        Update(current => current with { LastExchange = now });
+    }
+
+    /// <inheritdoc/>
+    public void RecordDialClosed() => Update(current => current with { Connected = false });
+
+    /// <inheritdoc/>
+    public void RecordDialFailed(string error) => Update(current => current with { Connected = false, LastError = error });
+
+    /// <inheritdoc/>
+    public FederationDialStatus GetDial() => Volatile.Read(ref _dial);
+
+    void Update(Func<FederationDialStatus, FederationDialStatus> change)
+    {
+        FederationDialStatus current;
+        FederationDialStatus next;
+        do
+        {
+            current = Volatile.Read(ref _dial);
+            next = change(current);
+        }
+        while (!ReferenceEquals(Interlocked.CompareExchange(ref _dial, next, current), current));
+    }
 }

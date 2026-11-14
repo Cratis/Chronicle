@@ -709,6 +709,24 @@ public class FederationEnrollmentStatusResponse
     /// </summary>
     [ProtoMember(8)]
     public bool Expired { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Connected.
+    /// </summary>
+    [ProtoMember(9)]
+    public bool Connected { get; set; }
+
+    /// <summary>
+    /// Gets or sets the LastExchange.
+    /// </summary>
+    [ProtoMember(10)]
+    public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset LastExchange { get; set; }
+
+    /// <summary>
+    /// Gets or sets the LastError.
+    /// </summary>
+    [ProtoMember(11)]
+    public string LastError { get; set; } = string.Empty;
 }
 
 /// <summary>

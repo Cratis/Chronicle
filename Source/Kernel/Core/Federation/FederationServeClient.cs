@@ -27,12 +27,14 @@ namespace Cratis.Chronicle.Federation;
 /// <param name="logger">The <see cref="ILogger{TCategoryName}"/>.</param>
 /// <param name="timing">The optional <see cref="FederationConsumerTiming"/>.</param>
 /// <param name="timeProvider">The optional <see cref="TimeProvider"/>.</param>
+/// <param name="status">The optional <see cref="IFederationStatus"/> the exchanges and failures of the session are recorded in.</param>
 public sealed class FederationServeClient(
     IFederationPullService pullService,
     IOptions<ChronicleOptions> options,
     ILogger<FederationServeClient> logger,
     FederationConsumerTiming? timing = null,
-    TimeProvider? timeProvider = null) : IDisposable
+    TimeProvider? timeProvider = null,
+    IFederationStatus? status = null) : IDisposable
 {
     /// <summary>
     /// The link id the reads of the dialer's own outbox are recorded against.
@@ -127,6 +129,7 @@ public sealed class FederationServeClient(
             catch (Exception exception)
             {
                 IsServing = false;
+                status?.RecordDialFailed(FederationErrorScrubber.Scrub(exception));
                 backoff = _timing.NextBackoff(backoff);
                 logger.ServeCallFailed(exception.GetType().Name, backoff);
                 try
@@ -170,6 +173,7 @@ public sealed class FederationServeClient(
                     request.Limit,
                     request.EventTypes,
                     [grant]);
+                status?.RecordDialExchange();
                 await answers.Writer.WriteAsync(new ServeBatch { RequestId = request.RequestId, Batch = ToResponse(batch) }, cancellationToken);
             }
 

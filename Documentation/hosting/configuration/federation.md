@@ -234,6 +234,16 @@ Redeeming a code makes the kernel connect to the endpoint in the code, so the ke
 
 To see where things stand, use `client.Federation.GetEnrollments()` and `GetIssuedCertificates()` on the authority, and `GetStatus()` on an enrolled kernel. To cut a customer off, call `client.Federation.Revoke(enrollmentId)`. It revokes the enrollment and every certificate issued from it, and takes effect at once. Creating, revoking and listing enrollments and certificates needs administrator rights.
 
+`GetStatus()` returns a `FederationEnrollmentStatus`. Besides the certificate (`Enrolled`, `Identity`, `Serial`, `NotAfter`, `RenewAfter`, `Endpoint`, `AuthorityFingerprint`, `Expired`) it reports the session the kernel dialed to the authority, so an application can prove that the link is established and has worked, not only that a certificate is held:
+
+| Member | Type | Meaning |
+| --- | --- | --- |
+| `Connected` | `bool` | The session to the authority is open and its last operation succeeded. It becomes true only after a successful exchange, and is false when not enrolled, when the certificate has expired, while no connection has been made, and after the session is lost or fails. |
+| `LastExchange` | `DateTimeOffset?` | When the authority last answered a pull of this kernel, when a batch from this kernel's outbox was last delivered to the authority, or when a certificate renewal last succeeded, whichever is latest. Null when none has happened since the kernel started. It is kept when the connection is lost. |
+| `LastError` | `string` | The last failure of the session, scrubbed so it never holds a secret. It is cleared by the next successful exchange. Empty when there is none. |
+
+The state is held in memory on the kernel and starts empty at each start, so a freshly started kernel is not connected until its first exchange succeeds. A kernel that does not dial reports `Connected` as false.
+
 Redeeming a code and reading the enrollment status of a kernel are decided by their own capability, `chronicle.federation.enroll` (a kernel-scope capability, see [decision 0024](https://github.com/Cratis/Chronicle/blob/main/decisions/0024-kernel-authorization-decision-point.md)), which the administrator role includes. Store grants are scoped to a store and exclude the System store, and administrators are users, not applications, so by default only an administrator can redeem a code, or you drive it from configuration with `Federation:Enrollment:CodePath`.
 
 To let a product redeem a code with its own client credential, list its client id in `Federation:Enrollment:Applications`:

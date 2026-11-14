@@ -122,7 +122,7 @@ internal sealed class Federation(
         QueryExecutor.Execute<global::Cratis.Chronicle.Contracts.Federation.FederationEnrollmentStatusResponse>(
             async () =>
             {
-                var result = await global::Cratis.Chronicle.Federation.FederationEnrollmentStatus.CurrentEnrollmentStatus(federationCertificateRegistry, timeProvider);
+                var result = await global::Cratis.Chronicle.Federation.FederationEnrollmentStatus.CurrentEnrollmentStatus(federationCertificateRegistry, timeProvider, federationStatus);
                 return ToFederationEnrollmentStatusResponse(result);
             },
             exception => logger.QueryFailed(exception, "Federation", "CurrentEnrollmentStatus"));
@@ -232,7 +232,10 @@ internal sealed class Federation(
             RenewAfter = source.RenewAfter is null ? null : (global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset?)source.RenewAfter,
             Endpoint = source.Endpoint,
             AuthorityFingerprint = source.AuthorityFingerprint,
-            Expired = source.Expired
+            Expired = source.Expired,
+            Connected = source.Connected,
+            LastExchange = source.LastExchange is null ? null : (global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset?)source.LastExchange,
+            LastError = source.LastError
         };
 
     static global::Cratis.Chronicle.Contracts.Federation.FederationGrantInformationResponse ToFederationGrantInformationResponse(global::Cratis.Chronicle.Federation.FederationGrantInformation source) =>

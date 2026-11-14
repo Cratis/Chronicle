@@ -14,6 +14,9 @@ namespace Cratis.Chronicle.Federation;
 /// <param name="Endpoint">The public endpoint of the authority. Empty when not enrolled.</param>
 /// <param name="AuthorityFingerprint">The SHA-256 fingerprint of the authority root, as lowercase hex. Empty when not enrolled.</param>
 /// <param name="Expired">Whether the certificate has expired, so the kernel is locked out until it is enrolled again.</param>
+/// <param name="Connected">Whether the session this kernel dialed to the authority is open and its last operation succeeded. It becomes true only after a successful exchange, and is false when not enrolled, when the certificate has expired, after the session is lost and while no connection has been made.</param>
+/// <param name="LastExchange">When the authority last answered a pull of this kernel, when an inbound batch was last delivered to the authority, or when a certificate renewal last succeeded, whichever is latest. Null when none has happened since the kernel started.</param>
+/// <param name="LastError">The last failure of the session, scrubbed of secrets. It is cleared by the next successful exchange. Empty when there is none.</param>
 public record FederationEnrollmentStatus(
     bool Enrolled,
     string Identity,
@@ -22,4 +25,7 @@ public record FederationEnrollmentStatus(
     DateTimeOffset? RenewAfter,
     string Endpoint,
     string AuthorityFingerprint,
-    bool Expired);
+    bool Expired,
+    bool Connected = false,
+    DateTimeOffset? LastExchange = null,
+    string LastError = "");
