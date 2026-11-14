@@ -406,6 +406,7 @@ json Cratis.Chronicle.Concepts.Observation.EventStoreSubscriptions.EventStoreSub
   identifier: Cratis.Chronicle.Concepts.Observation.EventStoreSubscriptions.EventStoreSubscriptionId
   namedTags: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.NamedTag>
   sourceEventStore: Cratis.Chronicle.Concepts.EventStoreName
+  sourceNamespaces: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.EventStoreNamespaceName>
 concept Cratis.Chronicle.Concepts.Observation.EventStoreSubscriptions.EventStoreSubscriptionId : string
 json Cratis.Chronicle.Concepts.Observation.EventTypeWithKeyExpression
   eventType: Cratis.Chronicle.Concepts.Events.EventType

@@ -406,6 +406,7 @@ public partial class JsonSchemaGenerator : IJsonSchemaGenerator
 
     JsonNode TransformReadModelNode(JsonSchemaExporterContext context, JsonNode schema)
     {
+        RestoreConceptDictionaryValueSchema(context.TypeInfo.Type, schema);
         var transformed = TransformNode(context, schema, restorePropertiesWithDefaultValues: true, preserveUnformattedNullability: true);
         var attributes = context.PropertyInfo?.AttributeProvider?.GetCustomAttributes(true) ?? [];
         var lengths = attributes.Select(attribute => attribute switch

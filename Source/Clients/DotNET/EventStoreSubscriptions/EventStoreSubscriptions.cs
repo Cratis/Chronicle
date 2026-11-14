@@ -43,7 +43,8 @@ public class EventStoreSubscriptions(IEventTypes eventTypes, IEventStore eventSt
                         ? definition.EventTypePins.Select(et => new ContractEventType { Id = et.Id.Value, Generation = et.Generation.Value }).ToList()
                         : definition.EventTypes.Select(et => new ContractEventType { Id = et.Value, Generation = 1 }).ToList(),
                     GenerationDelivery = (Contracts.Observation.EventGenerationDelivery)definition.GenerationDelivery,
-                    NamedTags = definition.NamedTags.Select(tag => new Contracts.Events.NamedTag { Name = tag.Name.Value, Value = tag.Value }).ToList()
+                    NamedTags = definition.NamedTags.Select(tag => new Contracts.Events.NamedTag { Name = tag.Name.Value, Value = tag.Value }).ToList(),
+                    SourceNamespaces = definition.SourceNamespaces.ToList()
                 }
             ]
         };
@@ -78,7 +79,8 @@ public class EventStoreSubscriptions(IEventTypes eventTypes, IEventStore eventSt
         {
             GenerationDelivery = (EventGenerationDelivery)s.GenerationDelivery,
             EventTypePins = s.EventTypes.Select(et => new Events.EventType(et.Id, et.Generation)).ToArray(),
-            NamedTags = (s.NamedTags ?? []).Select(tag => new NamedTag(new TagName(tag.Name), tag.Value)).ToArray()
+            NamedTags = (s.NamedTags ?? []).Select(tag => new NamedTag(new TagName(tag.Name), tag.Value)).ToArray(),
+            SourceNamespaces = (s.SourceNamespaces ?? []).ToArray()
         });
     }
 }

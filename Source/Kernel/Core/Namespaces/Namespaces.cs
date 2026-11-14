@@ -43,8 +43,13 @@ public class Namespaces(
         {
             @namespace = EventStoreNamespaceName.Default;
         }
-        logger.AddingNamespace(@namespace);
         var eventStoreName = (EventStoreName)this.GetPrimaryKeyString();
+        if (NamespaceNameRules.ContainsComma(@namespace.Value))
+        {
+            throw new InvalidNamespaceName(eventStoreName, @namespace);
+        }
+
+        logger.AddingNamespace(@namespace);
         var added = new NamespaceAdded(eventStoreName, @namespace);
 
         // Record the notification before committing the namespace. Otherwise a failed append followed by

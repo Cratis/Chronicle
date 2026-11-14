@@ -44,6 +44,18 @@ Omit the callback to select all event types known to the C# client:
 
 <ChronicleClientTabs snippet="subscriptions/explicit-subscriptions/no-filter" />
 
+## Restricting Source Namespaces
+
+A subscription mirrors every namespace of the target event store into the source event store. Resolving the source side creates the namespace there when it does not exist. When the source should only be read in some of its namespaces, name them with `WithSourceNamespace()` or `WithSourceNamespaces()`:
+
+<ChronicleClientTabs snippet="subscriptions/explicit-subscriptions/source-namespaces" />
+
+- The target namespaces drive the mirroring: only a target namespace whose name matches a listed one (case-insensitively) is observed. A listed name that the target does not have is never created.
+- A namespace outside the list is neither observed nor created in the source event store.
+- Without any, every namespace is observed, as before.
+- A name containing a comma is refused. A name like `a,a` usually means the tenant header was sent twice. Such a namespace is never mirrored.
+- Narrowing the list on an existing subscription stops observing the namespaces that fall outside it.
+
 ## Pin the Generation Your Application Understands
 
 An event type's generation identifies a version of its schema. To keep forwarding on the generation your C# application understands, opt in per subscription with `WithGenerationDelivery(EventGenerationDelivery.Pinned)`.
