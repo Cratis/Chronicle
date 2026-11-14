@@ -12,8 +12,7 @@ public class with_lossless_double_keys : a_double_projection
 
     void Because()
     {
-        object[] invalid = [double.NaN, double.PositiveInfinity, double.NegativeInfinity, float.NaN, float.PositiveInfinity, float.NegativeInfinity, 9007199254740993L, long.MaxValue];
-        foreach (var value in invalid)
+        foreach (var value in new object[] { double.NaN, double.PositiveInfinity, double.NegativeInfinity, float.NaN, float.PositiveInfinity, float.NegativeInfinity, 9007199254740993L, long.MaxValue })
         {
             _errors.Add(Catch.Exception(() => _scenario.CollectReadModelFor(
                 new Dictionary<string, object?> { ["amount"] = value }, new(new(0), 10))));

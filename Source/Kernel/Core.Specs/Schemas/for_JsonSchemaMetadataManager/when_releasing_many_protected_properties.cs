@@ -36,9 +36,9 @@ public class when_releasing_many_protected_properties : given.real_pii_protectio
         _afterErasure = await ReleaseDocument();
     }
 
-    // Each document gets its own scope on a clock that does not move, so a fence lease cannot expire mid-document.
     async Task<JsonObject> ReleaseDocument()
     {
+        // Each document gets its own scope on a clock that does not move, so a fence lease cannot expire mid-document.
         using var scope = ReleaseKeys.BeginScope(_clock);
         return await _manager.Release("store", "tenant", _schema, "subject", _protected);
     }
