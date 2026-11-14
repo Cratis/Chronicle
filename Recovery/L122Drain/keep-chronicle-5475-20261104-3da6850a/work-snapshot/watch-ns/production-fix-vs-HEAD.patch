@@ -1,0 +1,206 @@
+diff --git a/Source/Kernel/Core/Observation/Reducers/Clients/ReducerObserverSubscriber.cs b/Source/Kernel/Core/Observation/Reducers/Clients/ReducerObserverSubscriber.cs
+index cc56ebdca6..2c6bedc62f 100644
+--- a/Source/Kernel/Core/Observation/Reducers/Clients/ReducerObserverSubscriber.cs
++++ b/Source/Kernel/Core/Observation/Reducers/Clients/ReducerObserverSubscriber.cs
+@@ -67,7 +67,7 @@ public class ReducerObserverSubscriber(
+     public override async Task OnActivateAsync(CancellationToken cancellationToken)
+     {
+         (_key, _) = this.GetKeys();
+-        _changesetNotifier = GrainFactory.GetGrain<IProjectionChangesetNotifier>(_key.ObserverId);
++        _changesetNotifier = GrainFactory.GetGrain<IProjectionChangesetNotifier>(new ProjectionChangesetNotifierKey(_key.ObserverId, _key.EventStore, _key.Namespace));
+         await HandlePipeline();
+     }
+ 
+diff --git a/Source/Kernel/Core/Projections/IProjectionChangesetNotifier.cs b/Source/Kernel/Core/Projections/IProjectionChangesetNotifier.cs
+index bb70cfbcd0..c1c3c0c61b 100644
+--- a/Source/Kernel/Core/Projections/IProjectionChangesetNotifier.cs
++++ b/Source/Kernel/Core/Projections/IProjectionChangesetNotifier.cs
+@@ -13,12 +13,14 @@ namespace Cratis.Chronicle.Projections;
+ /// watching clients.
+ /// </summary>
+ /// <remarks>
+-/// The grain is keyed by the projection or reducer identifier and has a single activation cluster-wide, so it is the
++/// The grain is keyed by the projection or reducer identifier, event store and namespace (see
++/// <see cref="ProjectionChangesetNotifierKey"/>) and has a single activation cluster-wide per key, so it is the
+ /// topology-correct rendezvous between the shared projection or reducer observer (which may run on any silo) and the
+ /// per-connection watch subscribers (each pinned to the silo terminating its client connection). Fan-out
+ /// is to <see cref="IReadModelChangesetSubscriber"/> grain references — reliably routed by Orleans — which
+ /// replaces the previous <c language="csharp">CreateObjectReference</c> grain-observer callback whose one-way dispatch was
+-/// silently dropped on slower backends.
++/// silently dropped on slower backends. Registrations are in memory; each live watch re-registers periodically,
++/// which restores them after an activation is lost.
+ /// </remarks>
+ [Version(1)]
+ public interface IProjectionChangesetNotifier : IGrainWithStringKey
+diff --git a/Source/Kernel/Core/Projections/ProjectionChangesetNotifier.cs b/Source/Kernel/Core/Projections/ProjectionChangesetNotifier.cs
+index 7924eb0eec..fcb0d8999c 100644
+--- a/Source/Kernel/Core/Projections/ProjectionChangesetNotifier.cs
++++ b/Source/Kernel/Core/Projections/ProjectionChangesetNotifier.cs
+@@ -13,10 +13,12 @@ namespace Cratis.Chronicle.Projections;
+ /// </summary>
+ /// <param name="logger">The <see cref="ILogger{T}"/> for logging.</param>
+ /// <remarks>
++/// One activation exists per observer, event store and namespace (see <see cref="ProjectionChangesetNotifierKey"/>).
+ /// Marked <c language="csharp">[KeepAlive]</c> because the subscriber registrations live only in memory — there is no
+-/// persisted state and no re-subscribe recovery, so a deactivation between a client's
+-/// <see cref="Subscribe"/> and the projection's <see cref="Notify"/> would drop the registration and the
+-/// appended event's changeset would never reach the watching client. Every sibling subscription/queue
++/// persisted state, so each live watch re-registers periodically (<see cref="Subscribe"/> is idempotent), which restores
++/// a lost activation. The activation ends when its last watcher unsubscribes. A deactivation between a client's
++/// <see cref="Subscribe"/> and the projection's <see cref="Notify"/> would otherwise drop the registration and the
++/// appended event's changeset would not reach the watching client until the next re-registration. Every sibling subscription/queue
+ /// grain (<c language="csharp">Observer</c>, <c language="csharp">AppendedEventsQueue</c>) is already <c language="csharp">[KeepAlive]</c> for the same reason;
+ /// KeepAlive grains also survive <c language="csharp">ForceActivationCollection</c>. Fan-out is to
+ /// <see cref="IReadModelChangesetSubscriber"/> grain references, which Orleans routes reliably to the silo
+@@ -46,8 +48,11 @@ public override Task OnDeactivateAsync(DeactivationReason reason, CancellationTo
+     /// <inheritdoc/>
+     public Task Subscribe(IReadModelChangesetSubscriber subscriber)
+     {
+-        _subscribers.Add(subscriber);
+-        logger.Subscribed(this.GetPrimaryKeyString(), _subscribers.Count);
++        if (_subscribers.Add(subscriber))
++        {
++            logger.Subscribed(this.GetPrimaryKeyString(), _subscribers.Count);
++        }
++
+         return Task.CompletedTask;
+     }
+ 
+@@ -55,6 +60,11 @@ public Task Subscribe(IReadModelChangesetSubscriber subscriber)
+     public Task Unsubscribe(IReadModelChangesetSubscriber subscriber)
+     {
+         _subscribers.Remove(subscriber);
++        if (_subscribers.Count == 0)
++        {
++            DeactivateOnIdle();
++        }
++
+         return Task.CompletedTask;
+     }
+ 
+diff --git a/Source/Kernel/Core/Projections/ProjectionObserverSubscriber.cs b/Source/Kernel/Core/Projections/ProjectionObserverSubscriber.cs
+index c0f53dc697..692ae86f23 100644
+--- a/Source/Kernel/Core/Projections/ProjectionObserverSubscriber.cs
++++ b/Source/Kernel/Core/Projections/ProjectionObserverSubscriber.cs
+@@ -72,7 +72,7 @@ public override async Task OnActivateAsync(CancellationToken cancellationToken)
+         // Direct grain-to-observer notification — the previous Orleans MemoryStreams pub-sub
+         // propagated subscribers to the producer's PullingAgent on a periodic refresh that
+         // could lag the first publish and silently drop it under load.
+-        _changesetNotifier = GrainFactory.GetGrain<IProjectionChangesetNotifier>(_key.ObserverId);
++        _changesetNotifier = GrainFactory.GetGrain<IProjectionChangesetNotifier>(new ProjectionChangesetNotifierKey(_key.ObserverId, _key.EventStore, _key.Namespace));
+ 
+         var projection = GrainFactory.GetGrain<IProjection>(new ProjectionKey(_key.ObserverId, _key.EventStore));
+         await projection.SubscribeDefinitionsChanged(this.AsReference<INotifyProjectionDefinitionsChanged>());
+diff --git a/Source/Kernel/Core/Projections/ReadModelChangesetSubscriber.cs b/Source/Kernel/Core/Projections/ReadModelChangesetSubscriber.cs
+index 5972dd1c90..2719748698 100644
+--- a/Source/Kernel/Core/Projections/ReadModelChangesetSubscriber.cs
++++ b/Source/Kernel/Core/Projections/ReadModelChangesetSubscriber.cs
+@@ -16,23 +16,27 @@ namespace Cratis.Chronicle.Projections;
+ /// Placed on the silo that owns the watch connection via <c language="csharp">[ConnectedObserverPlacement]</c> (the silo
+ /// address is carried in the <see cref="ObserverSubscriberKey"/>), so the hop to the
+ /// <see cref="IProjectionChangesetMediator"/> — and from there to the client's gRPC stream — is entirely
+-/// in-process. The subscription identifier is carried in the key's event source id slot.
++/// in-process. Only changesets of the watch's own namespace are forwarded. The subscription identifier is carried in the key's event source id slot.
+ /// </remarks>
+ /// <param name="mediator">The <see cref="IProjectionChangesetMediator"/> that owns this silo's watch streams.</param>
+ [ConnectedObserverPlacement]
+ public class ReadModelChangesetSubscriber(IProjectionChangesetMediator mediator) : Grain, IReadModelChangesetSubscriber
+ {
+     Guid _subscriptionId;
++    EventStoreNamespaceName _namespace = EventStoreNamespaceName.NotSet;
+ 
+     /// <inheritdoc/>
+     public override Task OnActivateAsync(CancellationToken cancellationToken)
+     {
+         var key = ObserverSubscriberKey.Parse(this.GetPrimaryKeyString());
+         _subscriptionId = Guid.Parse(key.EventSourceId.Value);
++        _namespace = key.Namespace;
+         return Task.CompletedTask;
+     }
+ 
+     /// <inheritdoc/>
+     public Task OnChangeset(EventStoreNamespaceName namespaceName, ReadModelKey readModelKey, JsonObject readModel, ReadModelChangeContext change) =>
+-        mediator.OnChangeset(_subscriptionId, namespaceName, readModelKey, readModel, change);
++        namespaceName == _namespace
++            ? mediator.OnChangeset(_subscriptionId, namespaceName, readModelKey, readModel, change)
++            : Task.CompletedTask;
+ }
+diff --git a/Source/Kernel/Grpc/ReadModels/ReadModels.cs b/Source/Kernel/Grpc/ReadModels/ReadModels.cs
+index 394fddd5e8..84038927a0 100644
+--- a/Source/Kernel/Grpc/ReadModels/ReadModels.cs
++++ b/Source/Kernel/Grpc/ReadModels/ReadModels.cs
+@@ -57,6 +57,11 @@ internal sealed class ReadModels(
+     /// </summary>
+     internal TimeSpan ReadModelDefinitionRetryDelay { get; set; } = TimeSpan.FromMilliseconds(100);
+ 
++    /// <summary>
++    /// Gets or sets the interval at which a live watch re-registers itself with its changeset notifier.
++    /// </summary>
++    internal TimeSpan WatchRegistrationRefreshInterval { get; set; } = TimeSpan.FromSeconds(30);
++
+     /// <inheritdoc/>
+     public async Task RegisterMany(RegisterManyRequest request, CallContext context = default)
+     {
+@@ -437,6 +442,13 @@ public IObservable<ReadModelChangeset> Watch(WatchRequest request, CallContext c
+             // dispatch from the notifier grain was silently dropped on slower backends.
+             changesetMediator.Subscribe(subscriptionId, async (namespaceName, readModelKey, readModelInstance, change) =>
+             {
++                // Defence in depth: the notifier is scoped to this watch's event store and namespace, but a changeset
++                // of any other namespace is dropped before it is released with that namespace's keys.
++                if (namespaceName != (EventStoreNamespaceName)request.Namespace)
++                {
++                    return;
++                }
++
+                 // Decrypt through the shared release path so observable queries resolve the compliance
+                 // subject exactly like one-shot queries (explicit __subject, else inferred from _id/id).
+                 var decrypted = await ReleaseJsonForReadModel(request.EventStore, namespaceName, schema, readModelInstance, change: change);
+@@ -469,7 +481,7 @@ public IObservable<ReadModelChangeset> Watch(WatchRequest request, CallContext c
+                 subscriptionId.ToString("N"),
+                 localSiloDetails.SiloAddress.ToParsableString());
+             var subscriber = grainFactory.GetGrain<IReadModelChangesetSubscriber>(subscriberKey);
+-            var notifier = grainFactory.GetGrain<IProjectionChangesetNotifier>(definition.ObserverIdentifier);
++            var notifier = grainFactory.GetGrain<IProjectionChangesetNotifier>(new ProjectionChangesetNotifierKey(definition.ObserverIdentifier.Value, request.EventStore, request.Namespace));
+             await notifier.Subscribe(subscriber);
+ 
+             try
+@@ -478,7 +490,7 @@ public IObservable<ReadModelChangeset> Watch(WatchRequest request, CallContext c
+                 // from this point on reaches the forwarder registered above.
+                 observer.OnNext(new ReadModelChangeset { Subscribed = true });
+ 
+-                await Task.Delay(Timeout.Infinite, context.CancellationToken).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
++                await RefreshWatchRegistration(notifier, subscriber, context.CancellationToken);
+             }
+             finally
+             {
+@@ -488,6 +500,30 @@ public IObservable<ReadModelChangeset> Watch(WatchRequest request, CallContext c
+         });
+     }
+ 
++    async Task RefreshWatchRegistration(IProjectionChangesetNotifier notifier, IReadModelChangesetSubscriber subscriber, CancellationToken cancellationToken)
++    {
++        // The notifier keeps its registrations in memory, so a lost activation forgets this watch. Registering again is
++        // idempotent and reactivates the notifier. A transient failure must not end the stream: the client only watches
++        // again on reconnect, so the next tick simply tries again.
++        while (!cancellationToken.IsCancellationRequested)
++        {
++            await Task.Delay(WatchRegistrationRefreshInterval, TimeProvider.System, cancellationToken).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
++            if (cancellationToken.IsCancellationRequested)
++            {
++                return;
++            }
++
++            try
++            {
++                await notifier.Subscribe(subscriber);
++            }
++            catch (Exception)
++            {
++                // Retried on the next tick.
++            }
++        }
++    }
++
+     /// <inheritdoc/>
+     public async Task DehydrateSession(DehydrateSessionRequest request, CallContext context = default)
+     {
