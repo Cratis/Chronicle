@@ -153,6 +153,15 @@ public partial class Observer(
     int _zeroWorkCatchUps;
 
     /// <summary>
+    /// Counts the short retries scheduled in a row for catch-up laps that moved nothing while events of the observer's types wait.
+    /// </summary>
+    /// <remarks>
+    /// Kept apart from <see cref="_zeroWorkCatchUps"/> so the backoff arithmetic is unaffected by the short retries.
+    /// </remarks>
+    int _shortCatchUpRetries;
+    IGrainTimer? _shortCatchUpRetryTimer;
+
+    /// <summary>
     /// The moment from which a catch-up that produced no work may be tried again, or the default value when none is backing off.
     /// </summary>
     DateTimeOffset _catchUpBackoffUntil;

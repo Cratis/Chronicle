@@ -77,6 +77,7 @@ public partial class Observer
         _webhookProbeCancellation?.Dispose();
         _metrics?.Dispose();
         _coalescedWriteTimer?.Dispose();
+        _shortCatchUpRetryTimer?.Dispose();
         _alertMutationLock.Dispose();
         _stateWriteLock.Dispose();
         GC.SuppressFinalize(this);

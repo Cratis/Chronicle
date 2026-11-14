@@ -108,7 +108,7 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Debug, "Waiting for {Count} live deliveries to settle before choosing where catch-up starts")]
     internal static partial void WaitingForLiveDeliveriesBeforeCatchUp(this ILogger<Observer> logger, int count);
 
-    [LoggerMessage(LogLevel.Debug, "Skipping catch-up because observer is replaying")]
+    [LoggerMessage(LogLevel.Information, "Skipping catch-up because observer is replaying")]
     internal static partial void SkippingCatchUpBecauseObserverIsReplaying(this ILogger<Observer> logger);
 
     [LoggerMessage(LogLevel.Debug, "Waiting for catch-up handover to finish routing before replaying")]
@@ -180,13 +180,13 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Trace, "Entering catchup state")]
     internal static partial void Entering(this ILogger<Observer> logger);
 
-    [LoggerMessage(LogLevel.Trace, "Existing catch up job running, will let it finish")]
+    [LoggerMessage(LogLevel.Information, "Existing catch up job running, will let it finish")]
     internal static partial void FinishingExistingCatchUpJob(this ILogger<Observer> logger);
 
-    [LoggerMessage(LogLevel.Trace, "Existing catch up job found - resuming")]
+    [LoggerMessage(LogLevel.Information, "Existing catch up job found - resuming")]
     internal static partial void ResumingCatchUpJob(this ILogger<Observer> logger);
 
-    [LoggerMessage(LogLevel.Trace, "Start new catch up job from event sequence number {EventSequenceNumber}")]
+    [LoggerMessage(LogLevel.Information, "Start new catch up job from event sequence number {EventSequenceNumber}")]
     internal static partial void StartCatchUpJob(this ILogger<Observer> logger, EventSequenceNumber eventSequenceNumber);
 
     [LoggerMessage(LogLevel.Warning, "No catch-up job took ownership of the preparation - clearing it rather than waiting for a job that will never report")]
@@ -301,6 +301,15 @@ internal static partial class ObserverLogMessages
 
     [LoggerMessage(LogLevel.Warning, "Replay could not prepare its job steps; quarantining the observer with the replay pending until the quarantine is cleared")]
     internal static partial void ReplayStepsCouldNotBePrepared(this ILogger<Observer> logger);
+
+    [LoggerMessage(LogLevel.Information, "Catch-up concluded without moving the observer while events of its types exist from {Next}. Retry {Attempt} in {Delay}")]
+    internal static partial void RetryingStaleCatchUp(this ILogger<Observer> logger, EventSequenceNumber next, int attempt, TimeSpan delay);
+
+    [LoggerMessage(LogLevel.Information, "Short catch-up retries exhausted after {Attempts} attempts while events of the observer's types exist from {Next}. Falling back to the zero-work backoff")]
+    internal static partial void StaleCatchUpRetriesExhausted(this ILogger<Observer> logger, int attempts, EventSequenceNumber next);
+
+    [LoggerMessage(LogLevel.Warning, "Could not look up events of the observer's types from {Next} after a catch-up that moved nothing. Using the zero-work backoff")]
+    internal static partial void CatchUpEventLookupFailed(this ILogger<Observer> logger, EventSequenceNumber next, Exception exception);
 
     [LoggerMessage(LogLevel.Warning, "A catch-up job concluded without moving the observer forward ({ConsecutiveLaps} in a row)")]
     internal static partial void CatchUpProducedNoWork(this ILogger<Observer> logger, int consecutiveLaps);
