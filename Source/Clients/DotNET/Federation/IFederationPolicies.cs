@@ -14,8 +14,8 @@ namespace Cratis.Chronicle.Federation;
 /// </para>
 /// <para>
 /// A failed command throws, so a policy that was not changed is never reported as changed. A suspended policy refuses its links at once
-/// and can be resumed; a revoked policy, or a revoked direction, is permanent and the subject has to be given a new id to be admitted
-/// again.
+/// and can be resumed. A revoked direction is refused until it is set again; a revoked policy is permanent and the subject has to be
+/// given a new id to be admitted again.
 /// </para>
 /// </remarks>
 public interface IFederationPolicies

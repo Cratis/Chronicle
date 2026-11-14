@@ -289,6 +289,28 @@ The target comes from the policy alone, never from the certificate or the reques
 
 Pinned grants and bindings are unaffected. A client certificate that matches a pinned grant is served by that grant only and is never widened by a policy. A certificate with no pinned grant is the only one considered for hosted admission.
 
+### Manage policies from the .NET client
+
+An operator application can manage the policy of every subject through the client alone, without reaching into the generated contracts. `IChronicleClient.FederationPolicies` returns an `IFederationPolicies` (namespace `Cratis.Chronicle.Federation`) for the kernel the client is connected to. Every member needs administrator rights on that kernel, the same as the commands above, and a command the kernel refuses throws, so a policy that was not changed is never reported as changed.
+
+| Member | Effect |
+| --- | --- |
+| `Set(subject, entry)` | Creates the policy of a subject, or changes what it may do in one direction. The `FederationPolicyEntry` carries the `FederationDirection`, the target event store and namespace, `AllPublic` and the allowed event types. |
+| `Suspend(subject)` | Refuses the subject's links until it is resumed. |
+| `Resume(subject)` | Admits a suspended subject again. |
+| `RevokeDirection(subject, direction)` | Refuses one direction at once and leaves the other running. |
+| `Revoke(subject)` | Refuses the subject's links for good. |
+| `GetPolicies()` | Returns a `FederationPolicyInformation` per subject: its status, its entries and who changed it last. |
+| `GetLinks()`, `GetLink(subject)` | Return the live link state described below. `GetLink` returns null for a subject that has no policy. |
+
+`FederationDirection` has the same two values as the contract, `AcceptorOutbound` and `AcceptorInbound`, and keeps the meaning described above.
+
+#### Link status
+
+A `FederationLinkInformation` answers whether a subject is connected and what has moved. `Connected` says whether the subject's dialer has a session open now. `LastActivity` is when events last moved in either direction. `Outbound` and `Inbound` are a `FederationLinkTraffic` each, with the time of the last activity, the number of events and the number of content bytes in that direction. `Throttled` counts the outbound pulls that were throttled. `InboundState` is the state of the inbound direction, such as `Streaming`, `Idle` or `Backoff`, and `LastError` is its last error, empty when there is none.
+
+Lag is only known where this kernel appends to its own inbox, so `Inbound.Lag` is the number of events the dialer has that are not yet received, and `Outbound.Lag` is always null. The link state is operational: each kernel node keeps it in memory, so it starts empty when a node restarts and shows what the node that answered has seen. Do not use it as an audit trail; the policy changes are the audit trail.
+
 ### One connection for both directions
 
 A kernel behind a firewall dials out, and one connection carries events both ways. The existing `Pull` call is unchanged. The dialer opens a second call, `Serve`, on the same HTTP/2 connection: the accepting kernel sends pull requests as frames, and the dialer answers each with a batch read from its own outbox. The accepting kernel appends what arrives to the inbox its policy names, with the same guarantees as a pull link:
