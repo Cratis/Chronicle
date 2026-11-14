@@ -311,11 +311,11 @@
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_PartitionRebuildSink.",
-            "weight": 0.0004432324252328064
+            "weight": 0.0008432324252328064
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_PartitionReplayMarkers.",
-            "weight": 0.0004
+            "weight": 0.0006104732185188725
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_PartitionReplayabilityClassifier.",
@@ -439,11 +439,11 @@
         },
         {
             "prefix": "Cratis.Chronicle.Projections.Engine.StructuredLiteralPrototype.",
-            "weight": 0.0004432324252328064
+            "weight": 0.0008432324252328064
         },
         {
             "prefix": "Cratis.Chronicle.Projections.Engine.for_AppliedEventMarkerClassification.",
-            "weight": 0.0004
+            "weight": 0.0006104732185188725
         },
         {
             "prefix": "Cratis.Chronicle.Projections.Engine.for_EventTypeSchemasExtensions.",
@@ -659,11 +659,11 @@
         },
         {
             "prefix": "Cratis.Chronicle.ReadModels.for_ReadModelIndexUpdates.",
-            "weight": 0.0004432324252328064
+            "weight": 0.0008432324252328064
         },
         {
             "prefix": "Cratis.Chronicle.ReadModels.for_ReadModelInstanceExtensions.",
-            "weight": 0.0004
+            "weight": 0.0006104732185188725
         },
         {
             "prefix": "Cratis.Chronicle.ReadModels.for_ReadModelInstanceVisibilities.",
