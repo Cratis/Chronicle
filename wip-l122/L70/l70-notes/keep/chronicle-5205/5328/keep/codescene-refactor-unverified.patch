@@ -1,0 +1,265 @@
+diff --git a/Source/Kernel/Core/Projections/Engine/Pipelines/Steps/ResolveFutures.cs b/Source/Kernel/Core/Projections/Engine/Pipelines/Steps/ResolveFutures.cs
+index 86d751eb5c..34896997b1 100644
+--- a/Source/Kernel/Core/Projections/Engine/Pipelines/Steps/ResolveFutures.cs
++++ b/Source/Kernel/Core/Projections/Engine/Pipelines/Steps/ResolveFutures.cs
+@@ -116,27 +116,14 @@ public async ValueTask<ProjectionEventContext> Perform(IProjection projection, P
+                     // chain needed to navigate from root to the parent. For parents nested beyond one level,
+                     // this searches through intermediate array collections to find the matching parent and
+                     // records the identifier of each intermediate element.
+-                    var parentExistsInCurrentState = TryFindParentWithIndexers(
+-                        context.Changeset.CurrentState,
+-                        context.Changeset,
+-                        context.Key.Value,
+-                        childProjection,
+-                        future.ParentPath,
+-                        future.ParentIdentifiedByProperty,
+-                        parentKey,
+-                        out var parentIndexers);
+-
+-                    var retriedKey = parentExistsInCurrentState ? null : await RetryDeferredKey(childProjection, context, future);
+-                    if (!parentExistsInCurrentState && retriedKey is null)
++                    var (parentFound, parentIndexers, retriedKey) = await FindParentForFuture(childProjection, context, future, parentKey);
++                    if (!parentFound)
+                     {
+                         // Parent still doesn't exist, skip this future
+                         logger.ParentNotInCurrentState(future.Id);
+                         continue;
+                     }
+-                    if (retriedKey is not null)
+-                    {
+-                        parentIndexers = retriedKey.Key.ArrayIndexers.All.SkipLast(1).ToList();
+-                    }
++
+ 
+                     logger.ParentExistsInCurrentState(future.Id);
+                     logger.ResolvedKeyCallingOnNext(future.ParentKey, future.Id);
+@@ -144,7 +131,7 @@ public async ValueTask<ProjectionEventContext> Perform(IProjection projection, P
+                     var childIdentifierPath = future.ChildPath + future.IdentifiedByProperty;
+                     var childType = projection.TargetReadModelSchema.GetTargetTypeForPropertyPath(childIdentifierPath, typeFormats);
+ 
+-                    var childKey = retriedKey?.Key.ArrayIndexers.All.Last().Identifier ?? GetChildKey(future);
++                    var childKey = ChildKeyFor(future, retriedKey);
+ 
+                     if (childType is not null && childKey is not null)
+                     {
+@@ -181,22 +168,7 @@ public async ValueTask<ProjectionEventContext> Perform(IProjection projection, P
+                         JoinKey = childKey ?? key.Value
+                     };
+ 
+-                    if (retriedKey is not null)
+-                    {
+-                        // A different event needs a fresh key memo, not the releasing parent's cached results.
+-                        futureContext = new ProjectionEventContext(
+-                            key,
+-                            future.Event,
+-                            futureChangeset,
+-                            futureContext.OperationType,
+-                            context.NeedsInitialState,
+-                            retriedKey.JoinKey ?? childKey ?? key.Value)
+-                        {
+-                            GenerationDelivery = context.GenerationDelivery,
+-                            IsNewInstance = context.IsNewInstance
+-                        };
+-                        futureContext.MemoizeResolvedKey(childProjection.GetKeyResolverFor(future.Event.Context.EventType), retriedKey with { Key = key });
+-                    }
++                    futureContext = WithFreshKeyMemo(futureContext, context, childProjection, future, retriedKey, childKey);
+ 
+                     ProvideToAncestors(childProjection, futureContext);
+                     childProjection.OnNext(futureContext);
+@@ -490,28 +462,58 @@ static object GetActualStoredKey(IEnumerable<ExpandoObject> collection, Property
+         return childKey;
+     }
+ 
+-    async Task<ResolvedKey?> RetryDeferredKey(IProjection childProjection, ProjectionEventContext context, ProjectionFuture future)
++    static object? ChildKeyFor(ProjectionFuture future, ResolvedKey? retriedKey) =>
++        retriedKey?.Key.ArrayIndexers.All.Last().Identifier ?? GetChildKey(future);
++
++    static ProjectionEventContext WithFreshKeyMemo(
++        ProjectionEventContext futureContext,
++        ProjectionEventContext context,
++        IProjection childProjection,
++        ProjectionFuture future,
++        ResolvedKey? retriedKey,
++        object? childKey)
+     {
+-        if (!IsParentEvent(childProjection, context.EventType.Id))
++        if (retriedKey is null)
+         {
+-            return null;
++            return futureContext;
+         }
+ 
+-        var resolver = childProjection.GetKeyResolverFor(future.Event.Context.EventType);
+-        if (await resolver(eventSequenceStorage, sink, future.Event) is not ResolvedKey resolved ||
+-            !KeyValueEquality.AreEqual(resolved.Key.Value, context.Key.Value))
++        // A different event needs a fresh key memo, not the releasing parent's cached results.
++        var fresh = new ProjectionEventContext(
++            futureContext.Key,
++            future.Event,
++            futureContext.Changeset,
++            futureContext.OperationType,
++            context.NeedsInitialState,
++            retriedKey.JoinKey ?? childKey ?? futureContext.Key.Value)
+         {
+-            return null;
+-        }
++            GenerationDelivery = context.GenerationDelivery,
++            IsNewInstance = context.IsNewInstance
++        };
++        fresh.MemoizeResolvedKey(childProjection.GetKeyResolverFor(future.Event.Context.EventType), retriedKey with { Key = futureContext.Key });
++        return fresh;
++    }
+ 
+-        var indexers = resolved.Key.ArrayIndexers.All.ToArray();
+-        if (indexers.Length == 0 || indexers[^1].ArrayProperty != future.ChildPath || indexers[^1].IdentifierProperty != future.IdentifiedByProperty)
++    static bool IsLeafOfFuture(ArrayIndexer[] indexers, ProjectionFuture future)
++    {
++        if (indexers.Length == 0)
+         {
+-            return null;
++            return false;
+         }
+ 
++        var leaf = indexers[^1];
++        return leaf.ArrayProperty == future.ChildPath && leaf.IdentifierProperty == future.IdentifiedByProperty;
++    }
++
++    static bool MatchesParentChain(IProjection childProjection, ProjectionEventContext context, ProjectionFuture future, ResolvedKey resolved, ArrayIndexer[] indexers)
++    {
+         var parentKey = future.ParentPath.IsRoot ? resolved.Key.Value : indexers.LastOrDefault(indexer => indexer.ArrayProperty == future.ParentPath)?.Identifier;
+-        if (parentKey is null || !TryFindParentWithIndexers(
++        if (parentKey is null)
++        {
++            return false;
++        }
++
++        if (!TryFindParentWithIndexers(
+             context.Changeset.CurrentState,
+             context.Changeset,
+             context.Key.Value,
+@@ -521,15 +523,61 @@ static object GetActualStoredKey(IEnumerable<ExpandoObject> collection, Property
+             parentKey,
+             out var parentIndexers))
+         {
+-            return null;
++            return false;
+         }
+ 
+         // A matching leaf alone is insufficient when the resolver selected a different ancestor chain.
+         var expectedParents = indexers.SkipLast(1).ToArray();
+-        return parentIndexers.Count == expectedParents.Length && parentIndexers.Zip(expectedParents).All(pair =>
+-            pair.First.ArrayProperty == pair.Second.ArrayProperty &&
+-            pair.First.IdentifierProperty == pair.Second.IdentifierProperty &&
+-            KeyValueEquality.AreEqual(pair.First.Identifier, pair.Second.Identifier)) ? resolved : null;
++        return parentIndexers.Count == expectedParents.Length && parentIndexers.Zip(expectedParents).All(pair => IsSameIndexer(pair.First, pair.Second));
++    }
++
++    static bool IsSameIndexer(ArrayIndexer actual, ArrayIndexer expected) =>
++        IsSamePosition(actual, expected) && KeyValueEquality.AreEqual(actual.Identifier, expected.Identifier);
++
++    static bool IsSamePosition(ArrayIndexer actual, ArrayIndexer expected) =>
++        actual.ArrayProperty == expected.ArrayProperty && actual.IdentifierProperty == expected.IdentifierProperty;
++
++    async Task<(bool Found, List<ArrayIndexer> ParentIndexers, ResolvedKey? RetriedKey)> FindParentForFuture(
++        IProjection childProjection,
++        ProjectionEventContext context,
++        ProjectionFuture future,
++        object parentKey)
++    {
++        if (TryFindParentWithIndexers(
++            context.Changeset.CurrentState,
++            context.Changeset,
++            context.Key.Value,
++            childProjection,
++            future.ParentPath,
++            future.ParentIdentifiedByProperty,
++            parentKey,
++            out var parentIndexers))
++        {
++            return (true, parentIndexers, null);
++        }
++
++        var retriedKey = await RetryDeferredKey(childProjection, context, future);
++        return retriedKey is null
++            ? (false, parentIndexers, null)
++            : (true, retriedKey.Key.ArrayIndexers.All.SkipLast(1).ToList(), retriedKey);
++    }
++
++    async Task<ResolvedKey?> RetryDeferredKey(IProjection childProjection, ProjectionEventContext context, ProjectionFuture future)
++    {
++        if (!IsParentEvent(childProjection, context.EventType.Id))
++        {
++            return null;
++        }
++
++        var resolver = childProjection.GetKeyResolverFor(future.Event.Context.EventType);
++        if (await resolver(eventSequenceStorage, sink, future.Event) is not ResolvedKey resolved ||
++            !KeyValueEquality.AreEqual(resolved.Key.Value, context.Key.Value))
++        {
++            return null;
++        }
++
++        var indexers = resolved.Key.ArrayIndexers.All.ToArray();
++        return IsLeafOfFuture(indexers, future) && MatchesParentChain(childProjection, context, future, resolved, indexers) ? resolved : null;
+     }
+ 
+     void LogFailure(Exception exception, ProjectionFuture future)
+diff --git a/Source/Kernel/Storage.MongoDB/EventStoreNamespaceDatabase.cs b/Source/Kernel/Storage.MongoDB/EventStoreNamespaceDatabase.cs
+index ece137203e..45a989d142 100644
+--- a/Source/Kernel/Storage.MongoDB/EventStoreNamespaceDatabase.cs
++++ b/Source/Kernel/Storage.MongoDB/EventStoreNamespaceDatabase.cs
+@@ -153,12 +153,7 @@ static IEnumerable<CreateIndexModel<Event>> DesiredEventIndexes()
+                 Builders<Event>.IndexKeys.Ascending(_ => _.Type)),
+             new CreateIndexOptions { Name = "eventSourceId_eventTypeId", Background = true });
+ 
+-        yield return new(
+-            Builders<Event>.IndexKeys.Combine(
+-                Builders<Event>.IndexKeys.Ascending(_ => _.EventSourceId),
+-                Builders<Event>.IndexKeys.Ascending(_ => _.Type),
+-                Builders<Event>.IndexKeys.Descending(_ => _.SequenceNumber)),
+-            new CreateIndexOptions { Name = "eventSourceId_eventTypeId_sequenceNumber", Background = true });
++        yield return ParentHistoryIndex();
+ 
+         yield return new(
+             Builders<Event>.IndexKeys.Combine(
+@@ -216,5 +211,12 @@ static IEnumerable<CreateIndexModel<Event>> DesiredEventIndexes()
+             new CreateIndexOptions { Name = "namedTags_name_value" });
+     }
+ 
++    static CreateIndexModel<Event> ParentHistoryIndex() => new(
++        Builders<Event>.IndexKeys.Combine(
++            Builders<Event>.IndexKeys.Ascending(_ => _.EventSourceId),
++            Builders<Event>.IndexKeys.Ascending(_ => _.Type),
++            Builders<Event>.IndexKeys.Descending(_ => _.SequenceNumber)),
++        new CreateIndexOptions { Name = "eventSourceId_eventTypeId_sequenceNumber", Background = true });
++
+     string GetCollectionNameFor(EventSequenceId eventSequenceId) => eventSequenceId.Value;
+ }
+diff --git a/Source/Kernel/Storage.Sql/EventStores/Namespaces/EventSequences/EventSequenceMigrator.ParentHistory.cs b/Source/Kernel/Storage.Sql/EventStores/Namespaces/EventSequences/EventSequenceMigrator.ParentHistory.cs
+index 642b69a66a..f4a4e38e91 100644
+--- a/Source/Kernel/Storage.Sql/EventStores/Namespaces/EventSequences/EventSequenceMigrator.ParentHistory.cs
++++ b/Source/Kernel/Storage.Sql/EventStores/Namespaces/EventSequences/EventSequenceMigrator.ParentHistory.cs
+@@ -65,10 +65,7 @@ static async Task<bool> ParentHistoryIndexExists(EventSequenceDbContext context,
+ 
+     async Task EnsureParentHistoryIndex(EventSequenceDbContext context, string tableName)
+     {
+-        // Partial legacy schemas cannot support event reads until their source/type columns exist.
+-        if (!await tableMigrator.ColumnExists(context, tableName, nameof(EventEntry.EventSourceId)) ||
+-            !await tableMigrator.ColumnExists(context, tableName, nameof(EventEntry.Type)) ||
+-            await ParentHistoryIndexExists(context, tableName))
++        if (!await HasParentHistoryColumns(context, tableName) || await ParentHistoryIndexExists(context, tableName))
+         {
+             return;
+         }
+@@ -77,4 +74,11 @@ await ParentHistoryIndexExists(context, tableName))
+         AddParentHistoryIndex(migration, tableName);
+         await tableMigrator.ExecuteMigrationOperations(context, migration);
+     }
++
++    async Task<bool> HasParentHistoryColumns(EventSequenceDbContext context, string tableName)
++    {
++        // Partial legacy schemas cannot support event reads until their source/type columns exist.
++        return await tableMigrator.ColumnExists(context, tableName, nameof(EventEntry.EventSourceId)) &&
++            await tableMigrator.ColumnExists(context, tableName, nameof(EventEntry.Type));
++    }
+ }

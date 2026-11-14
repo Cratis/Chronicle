@@ -1,0 +1,746 @@
+diff --git a/Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ProjectionPipeline/when_preparing_a_page/and_a_parent_key_changes_inside_the_page.cs b/Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ProjectionPipeline/when_preparing_a_page/and_a_parent_key_changes_inside_the_page.cs
+new file mode 100644
+index 0000000000..5cf95382fd
+--- /dev/null
++++ b/Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ProjectionPipeline/when_preparing_a_page/and_a_parent_key_changes_inside_the_page.cs
+@@ -0,0 +1,40 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Chronicle.Concepts.Events;
++
++namespace Cratis.Chronicle.Projections.Engine.Pipelines.for_ProjectionPipeline.when_preparing_a_page;
++
++public class and_a_parent_key_changes_inside_the_page : given.a_page_pipeline
++{
++    string _baseline;
++    string _preparedResult;
++
++    void Establish()
++    {
++        _events = [EventFor("child-0", _childType, 10, "parent-0"), EventFor("child-1", _childType, 11, "parent-1"),
++            EventFor("child-2", _childType, 13, "parent-0"), EventFor("child-3", _childType, 14, "parent-1")];
++        _additionalParents.Add(EventFor("parent-0", _parentType, 12, "root-1"));
++        _additionalParents.Add(EventFor("parent-0", _parentType, 20, "future-root"));
++    }
++
++    async Task Because()
++    {
++        await _pipeline.ResumeReplay(_replayContext);
++        _baseline = await HandlePage(_pipeline);
++        await _pipeline.EndBulk();
++        ResetCounts();
++        await _pipeline.ResumeReplay(_replayContext);
++        await _pipeline.PreparePage(_events);
++        _preparedResult = await HandlePage(_pipeline);
++    }
++
++    [Fact] void should_resolve_each_child_at_its_own_sequence() => _preparedResult.ShouldEqual("root-0:1,root-1:3");
++    [Fact] void should_match_unprepared_handling() => _preparedResult.ShouldEqual(_baseline);
++    [Fact] void should_read_one_bounded_parent_batch() => _storage.Received(1).GetInstancesOfAnyInRange(
++        Arg.Is<IEnumerable<EventSourceId>>(sources => sources.Count() == 2), Arg.Any<IEnumerable<EventTypeId>>(), 10, 14, Arg.Any<CancellationToken>());
++    [Fact] void should_not_read_per_child() => _storage.DidNotReceive().GetInstancesOfAnyInRange(
++        Arg.Is<IEnumerable<EventSourceId>>(sources => sources.Count() == 1), Arg.Any<IEnumerable<EventTypeId>>(), Arg.Any<EventSequenceNumber>(), Arg.Any<EventSequenceNumber>(), Arg.Any<CancellationToken>());
++    [Fact] void should_prepare_the_sink_once() => _sinkBatches.ShouldEqual(1);
++    [Fact] void should_use_only_prepared_sink_documents() => _sinkReads.ShouldEqual(0);
++}
+diff --git a/Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ProjectionPipeline/when_preparing_a_page/and_a_partition_is_replayed_after_parent_history_changes.cs b/Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ProjectionPipeline/when_preparing_a_page/and_a_partition_is_replayed_after_parent_history_changes.cs
+index cfb9d3f77f..9d97d89c1c 100644
+--- a/Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ProjectionPipeline/when_preparing_a_page/and_a_partition_is_replayed_after_parent_history_changes.cs
++++ b/Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ProjectionPipeline/when_preparing_a_page/and_a_partition_is_replayed_after_parent_history_changes.cs
+@@ -14,7 +14,7 @@ async Task Because()
+         await HandlePage(_pipeline);
+         await _pipeline.EndBulk();
+         ResetCounts();
+-        _parents[new("parent-0")] = EventFor("parent-0", _parentType, 100, "root-1");
++        _parents[new("parent-0")] = EventFor("parent-0", _parentType, 1, "root-1");
+         await _pipeline.ResumeReplay(_replayContext);
+         await _pipeline.PreparePage(_events);
+         _result = await HandlePage(_pipeline);
+diff --git a/Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ProjectionPipeline/when_preparing_a_page/and_parent_keys_can_be_batched.cs b/Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ProjectionPipeline/when_preparing_a_page/and_parent_keys_can_be_batched.cs
+index 773c0e00c9..db3303b3ba 100644
+--- a/Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ProjectionPipeline/when_preparing_a_page/and_parent_keys_can_be_batched.cs
++++ b/Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ProjectionPipeline/when_preparing_a_page/and_parent_keys_can_be_batched.cs
+@@ -26,6 +26,8 @@ async Task Because()
+     [Fact] void should_produce_identical_results() => _preparedResult.ShouldEqual(_baseline);
+     [Fact] void should_batch_the_sink_reads_once() => _sinkBatches.ShouldEqual(1);
+     [Fact] void should_not_read_sink_documents_individually() => _preparedSinkReads.ShouldEqual(0);
+-    [Fact] void should_batch_the_parent_reads_once() => _storage.Received(1).GetLastInstancesOfAny(Arg.Any<IEnumerable<EventSourceId>>(), Arg.Any<IEnumerable<EventTypeId>>());
+-    [Fact] void should_not_read_parent_events_individually() => _storage.DidNotReceive().TryGetLastInstanceOfAny(Arg.Any<EventSourceId>(), Arg.Any<IEnumerable<EventTypeId>>());
++    [Fact] void should_batch_the_parent_reads_once() => _storage.Received(1).GetInstancesOfAnyInRange(
++        Arg.Is<IEnumerable<EventSourceId>>(sources => sources.OrderBy(source => source.Value).SequenceEqual(new EventSourceId[] { new("parent-0"), new("parent-1") })),
++        Arg.Is<IEnumerable<EventTypeId>>(types => types.SequenceEqual(new[] { _parentType.Id })), 10, 13, Arg.Any<CancellationToken>());
++    [Fact] void should_not_read_parent_events_individually() => _storage.DidNotReceive().GetInstancesOfAnyInRange(Arg.Is<IEnumerable<EventSourceId>>(sources => sources.Count() == 1), Arg.Any<IEnumerable<EventTypeId>>(), Arg.Any<EventSequenceNumber>(), Arg.Any<EventSequenceNumber>(), Arg.Any<CancellationToken>());
+ }
+diff --git a/Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ProjectionPipeline/when_preparing_a_page/and_the_next_page_has_no_events.cs b/Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ProjectionPipeline/when_preparing_a_page/and_the_next_page_has_no_events.cs
+index 6d3ee254e9..1f4df88a4c 100644
+--- a/Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ProjectionPipeline/when_preparing_a_page/and_the_next_page_has_no_events.cs
++++ b/Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ProjectionPipeline/when_preparing_a_page/and_the_next_page_has_no_events.cs
+@@ -16,5 +16,5 @@ async Task Because()
+     }
+ 
+     [Fact] void should_clear_the_sink_preparation() => _sinkReads.ShouldEqual(4);
+-    [Fact] void should_clear_only_the_page_seeded_parent_entries() => _storage.Received(2).TryGetLastInstanceOfAny(Arg.Any<EventSourceId>(), Arg.Any<IEnumerable<EventTypeId>>());
++    [Fact] void should_clear_only_the_page_seeded_parent_entries() => _storage.Received(4).GetInstancesOfAnyInRange(Arg.Is<IEnumerable<EventSourceId>>(sources => sources.Count() == 1), Arg.Any<IEnumerable<EventTypeId>>(), Arg.Any<EventSequenceNumber>(), Arg.Any<EventSequenceNumber>(), Arg.Any<CancellationToken>());
+ }
+diff --git a/Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ProjectionPipeline/when_preparing_a_page/and_the_page_is_complete.cs b/Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ProjectionPipeline/when_preparing_a_page/and_the_page_is_complete.cs
+index 8faaccb855..c1ed7f8b85 100644
+--- a/Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ProjectionPipeline/when_preparing_a_page/and_the_page_is_complete.cs
++++ b/Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ProjectionPipeline/when_preparing_a_page/and_the_page_is_complete.cs
+@@ -16,5 +16,5 @@ async Task Because()
+     }
+ 
+     [Fact] void should_clear_the_sink_preparation() => _sinkReads.ShouldEqual(4);
+-    [Fact] void should_clear_only_the_page_seeded_parent_entries() => _storage.Received(2).TryGetLastInstanceOfAny(Arg.Any<EventSourceId>(), Arg.Any<IEnumerable<EventTypeId>>());
++    [Fact] void should_clear_only_the_page_seeded_parent_entries() => _storage.Received(4).GetInstancesOfAnyInRange(Arg.Is<IEnumerable<EventSourceId>>(sources => sources.Count() == 1), Arg.Any<IEnumerable<EventTypeId>>(), Arg.Any<EventSequenceNumber>(), Arg.Any<EventSequenceNumber>(), Arg.Any<CancellationToken>());
+ }
+diff --git a/Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ProjectionPipeline/when_preparing_a_page/and_the_parent_batch_is_partial.cs b/Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ProjectionPipeline/when_preparing_a_page/and_the_parent_batch_throws.cs
+similarity index 53%
+rename from Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ProjectionPipeline/when_preparing_a_page/and_the_parent_batch_is_partial.cs
+rename to Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ProjectionPipeline/when_preparing_a_page/and_the_parent_batch_throws.cs
+index 5a6c949eb0..85fad00a86 100644
+--- a/Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ProjectionPipeline/when_preparing_a_page/and_the_parent_batch_is_partial.cs
++++ b/Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ProjectionPipeline/when_preparing_a_page/and_the_parent_batch_throws.cs
+@@ -2,18 +2,17 @@
+ // Licensed under the MIT license. See LICENSE file in the project root for full license information.
+ 
+ using Cratis.Chronicle.Concepts.Events;
+-using Cratis.Monads;
+ 
+ namespace Cratis.Chronicle.Projections.Engine.Pipelines.for_ProjectionPipeline.when_preparing_a_page;
+ 
+-public class and_the_parent_batch_is_partial : given.a_page_pipeline
++public class and_the_parent_batch_throws : given.a_page_pipeline
+ {
+     string _result;
+ 
+     void Establish()
+     {
+-        _storage.GetLastInstancesOfAny(Arg.Any<IEnumerable<EventSourceId>>(), Arg.Any<IEnumerable<EventTypeId>>())
+-            .Returns(Task.FromResult<IReadOnlyDictionary<EventSourceId, Option<AppendedEvent>>>(new Dictionary<EventSourceId, Option<AppendedEvent>> { [new("parent-0")] = new(_parents[new("parent-0")]) }));
++        _storage.GetInstancesOfAnyInRange(Arg.Is<IEnumerable<EventSourceId>>(sources => sources.Count() > 1), Arg.Any<IEnumerable<EventTypeId>>(), Arg.Any<EventSequenceNumber>(), Arg.Any<EventSequenceNumber>(), Arg.Any<CancellationToken>())
++            .Returns<Task<IReadOnlyDictionary<EventSourceId, IReadOnlyList<AppendedEvent>>>>(_ => throw new InvalidOperationException("parent preparation failed"));
+     }
+ 
+     async Task Because()
+@@ -25,5 +24,5 @@ async Task Because()
+ 
+     [Fact] void should_use_normal_handling_after_the_prepare_failure() => _result.ShouldEqual("root-0:2,root-1:2");
+     [Fact] void should_discard_all_partial_sink_preparation() => _sinkReads.ShouldEqual(4);
+-    [Fact] void should_discard_prepared_parent_entries() => _storage.Received(2).TryGetLastInstanceOfAny(Arg.Any<EventSourceId>(), Arg.Any<IEnumerable<EventTypeId>>());
++    [Fact] void should_discard_prepared_parent_entries() => _storage.Received(4).GetInstancesOfAnyInRange(Arg.Is<IEnumerable<EventSourceId>>(sources => sources.Count() == 1), Arg.Any<IEnumerable<EventTypeId>>(), Arg.Any<EventSequenceNumber>(), Arg.Any<EventSequenceNumber>(), Arg.Any<CancellationToken>());
+ }
+diff --git a/Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ProjectionPipeline/when_preparing_a_page/and_the_pipeline_is_replaced_mid_page.cs b/Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ProjectionPipeline/when_preparing_a_page/and_the_pipeline_is_replaced_mid_page.cs
+index 42f84e2162..c99c654069 100644
+--- a/Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ProjectionPipeline/when_preparing_a_page/and_the_pipeline_is_replaced_mid_page.cs
++++ b/Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ProjectionPipeline/when_preparing_a_page/and_the_pipeline_is_replaced_mid_page.cs
+@@ -21,5 +21,5 @@ async Task Because()
+ 
+     [Fact] void should_produce_the_same_result_without_the_old_plan() => _result.ShouldEqual("root-0:2,root-1:2");
+     [Fact] void should_not_reuse_the_old_sink_preparation() => _sinkReads.ShouldEqual(4);
+-    [Fact] void should_resolve_parent_reads_in_the_replacement() => _storage.Received(2).TryGetLastInstanceOfAny(Arg.Any<EventSourceId>(), Arg.Any<IEnumerable<EventTypeId>>());
++    [Fact] void should_resolve_parent_reads_in_the_replacement() => _storage.Received(4).GetInstancesOfAnyInRange(Arg.Is<IEnumerable<EventSourceId>>(sources => sources.Count() == 1), Arg.Any<IEnumerable<EventTypeId>>(), Arg.Any<EventSequenceNumber>(), Arg.Any<EventSequenceNumber>(), Arg.Any<CancellationToken>());
+ }
+diff --git a/Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ProjectionPipeline/when_preparing_a_page/and_the_sink_prepare_throws_after_seeding_a_hit.cs b/Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ProjectionPipeline/when_preparing_a_page/and_the_sink_prepare_throws_after_seeding_a_hit.cs
+index 2112997ebc..fa9fcbfede 100644
+--- a/Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ProjectionPipeline/when_preparing_a_page/and_the_sink_prepare_throws_after_seeding_a_hit.cs
++++ b/Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ProjectionPipeline/when_preparing_a_page/and_the_sink_prepare_throws_after_seeding_a_hit.cs
+@@ -28,5 +28,5 @@ async Task Because()
+ 
+     [Fact] void should_use_normal_handling_after_the_prepare_failure() => _result.ShouldEqual("root-0:2,root-1:2");
+     [Fact] void should_discard_all_partial_sink_preparation() => _sinkReads.ShouldEqual(4);
+-    [Fact] void should_discard_prepared_parent_entries() => _storage.Received(2).TryGetLastInstanceOfAny(Arg.Any<EventSourceId>(), Arg.Any<IEnumerable<EventTypeId>>());
++    [Fact] void should_discard_prepared_parent_entries() => _storage.Received(4).GetInstancesOfAnyInRange(Arg.Is<IEnumerable<EventSourceId>>(sources => sources.Count() == 1), Arg.Any<IEnumerable<EventTypeId>>(), Arg.Any<EventSequenceNumber>(), Arg.Any<EventSequenceNumber>(), Arg.Any<CancellationToken>());
+ }
+diff --git a/Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ProjectionPipeline/when_preparing_a_page/given/a_page_pipeline.cs b/Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ProjectionPipeline/when_preparing_a_page/given/a_page_pipeline.cs
+index d4d5fd2af4..eb335cdc65 100644
+--- a/Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ProjectionPipeline/when_preparing_a_page/given/a_page_pipeline.cs
++++ b/Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ProjectionPipeline/when_preparing_a_page/given/a_page_pipeline.cs
+@@ -13,7 +13,6 @@
+ using Cratis.Chronicle.Storage.EventSequences;
+ using Cratis.Chronicle.Storage.ReadModels;
+ using Cratis.Chronicle.Storage.Sinks;
+-using Cratis.Monads;
+ using Microsoft.Extensions.Logging.Abstractions;
+ 
+ namespace Cratis.Chronicle.Projections.Engine.Pipelines.for_ProjectionPipeline.when_preparing_a_page.given;
+@@ -28,6 +27,7 @@ public class a_page_pipeline : Specification
+     protected IProjection _projection;
+     protected AppendedEvent[] _events;
+     protected Dictionary<EventSourceId, AppendedEvent> _parents;
++    protected List<AppendedEvent> _additionalParents = [];
+     protected Dictionary<string, ExpandoObject> _documents;
+     protected Dictionary<string, ExpandoObject> _prepared;
+     protected int _sinkReads;
+@@ -43,17 +43,15 @@ void Establish()
+         _documents = new();
+         _prepared = new();
+         _parents = new();
+-        _events = Enumerable.Range(0, 4).Select(index => EventFor($"child-{index}", _childType, (ulong)index, $"parent-{index % 2}")).ToArray();
++        _events = Enumerable.Range(0, 4).Select(index => EventFor($"child-{index}", _childType, (ulong)(10 + index), $"parent-{index % 2}")).ToArray();
+         for (var index = 0; index < 2; index++)
+         {
+-            _parents[$"parent-{index}"] = EventFor($"parent-{index}", _parentType, (ulong)(100 + index), $"root-{index}");
++            _parents[$"parent-{index}"] = EventFor($"parent-{index}", _parentType, (ulong)(1 + index), $"root-{index}");
+             _documents[$"root-{index}"] = new ExpandoObject();
+             ((IDictionary<string, object?>)_documents[$"root-{index}"])["count"] = 0;
+         }
+-        _storage.GetLastInstancesOfAny(Arg.Any<IEnumerable<EventSourceId>>(), Arg.Any<IEnumerable<EventTypeId>>())
+-            .Returns(call => Task.FromResult<IReadOnlyDictionary<EventSourceId, Option<AppendedEvent>>>(call.ArgAt<IEnumerable<EventSourceId>>(0).ToDictionary(source => source, source => new Option<AppendedEvent>(_parents[source]))));
+-        _storage.TryGetLastInstanceOfAny(Arg.Any<EventSourceId>(), Arg.Any<IEnumerable<EventTypeId>>())
+-            .Returns(call => Task.FromResult(new Option<AppendedEvent>(_parents[call.Arg<EventSourceId>()])));
++        _storage.GetInstancesOfAnyInRange(Arg.Any<IEnumerable<EventSourceId>>(), Arg.Any<IEnumerable<EventTypeId>>(), Arg.Any<EventSequenceNumber>(), Arg.Any<EventSequenceNumber>(), Arg.Any<CancellationToken>())
++            .Returns(call => Task.FromResult(ReadParentHistory(call.ArgAt<IEnumerable<EventSourceId>>(0), call.ArgAt<EventSequenceNumber>(2), call.ArgAt<EventSequenceNumber>(3))));
+         ConfigureSink();
+         ConfigureProjection();
+         _pipeline = CreatePipeline();
+@@ -79,6 +77,16 @@ protected async Task<string> HandlePage(ProjectionPipeline pipeline)
+         return string.Join(',', _documents.OrderBy(pair => pair.Key).Select(pair => $"{pair.Key}:{((IDictionary<string, object?>)pair.Value)["count"]}"));
+     }
+ 
++    protected IReadOnlyDictionary<EventSourceId, IReadOnlyList<AppendedEvent>> ReadParentHistory(IEnumerable<EventSourceId> sources, EventSequenceNumber from, EventSequenceNumber upTo) =>
++        sources.ToDictionary(source => source, source =>
++        {
++            var history = _parents.Values.Concat(_additionalParents)
++                .Where(@event => @event.Context.EventSourceId == source && @event.Context.SequenceNumber <= upTo)
++                .OrderBy(@event => @event.Context.SequenceNumber).ToArray();
++            var predecessor = history.LastOrDefault(@event => @event.Context.SequenceNumber < from);
++            return (IReadOnlyList<AppendedEvent>)history.Where(@event => ReferenceEquals(@event, predecessor) || @event.Context.SequenceNumber >= from).ToArray();
++        });
++
+     protected void ResetCounts()
+     {
+         foreach (var document in _documents.Values) ((IDictionary<string, object?>)document)["count"] = 0;
+diff --git a/Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ReplayScopedEventSequenceStorage/given/a_bounded_parent_page.cs b/Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ReplayScopedEventSequenceStorage/given/a_bounded_parent_page.cs
+new file mode 100644
+index 0000000000..7c52399dcc
+--- /dev/null
++++ b/Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ReplayScopedEventSequenceStorage/given/a_bounded_parent_page.cs
+@@ -0,0 +1,39 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using System.Dynamic;
++using Cratis.Chronicle.Concepts.Events;
++
++namespace Cratis.Chronicle.Projections.Engine.Pipelines.for_ReplayScopedEventSequenceStorage.given;
++
++public class a_bounded_parent_page : a_replay_scoped_storage
++{
++    protected readonly EventSourceId _missing = "missing";
++    protected AppendedEvent _predecessor;
++    protected AppendedEvent _changed;
++    protected AppendedEvent _last;
++    protected IProjectionPageCache _page;
++    protected IReadOnlyDictionary<EventSourceId, IReadOnlyList<AppendedEvent>> _history;
++
++    void Establish()
++    {
++        _page = (IProjectionPageCache)_session;
++        _predecessor = EventAt(2);
++        _changed = EventAt(12);
++        _last = EventAt(20);
++        _history = new Dictionary<EventSourceId, IReadOnlyList<AppendedEvent>> { [_eventSourceId] = [_predecessor, _changed, _last] };
++        _inner.GetInstancesOfAnyInRange(Arg.Any<IEnumerable<EventSourceId>>(), Arg.Any<IEnumerable<EventTypeId>>(), Arg.Any<EventSequenceNumber>(), Arg.Any<EventSequenceNumber>(), Arg.Any<CancellationToken>())
++            .Returns(_history);
++    }
++
++    protected async Task Prepare()
++    {
++        _session.BeginReplaySession();
++        _page.BeginPreparedPage();
++        await _storage.GetInstancesOfAnyInRange([_eventSourceId, _missing], _eventTypeIds, 10, 20);
++    }
++
++    protected AppendedEvent EventAt(EventSequenceNumber number) => new(
++        EventContext.Empty with { EventSourceId = _eventSourceId, EventType = _eventTypes[0], SequenceNumber = number },
++        new ExpandoObject());
++}
+diff --git a/Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ReplayScopedEventSequenceStorage/when_a_parent_first_appears_inside_the_prepared_page.cs b/Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ReplayScopedEventSequenceStorage/when_a_parent_first_appears_inside_the_prepared_page.cs
+new file mode 100644
+index 0000000000..12005db6df
+--- /dev/null
++++ b/Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ReplayScopedEventSequenceStorage/when_a_parent_first_appears_inside_the_prepared_page.cs
+@@ -0,0 +1,30 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Chronicle.Concepts.Events;
++
++namespace Cratis.Chronicle.Projections.Engine.Pipelines.for_ReplayScopedEventSequenceStorage;
++
++public class when_a_parent_first_appears_inside_the_prepared_page : given.a_bounded_parent_page
++{
++    IReadOnlyDictionary<EventSourceId, IReadOnlyList<AppendedEvent>> _before;
++    IReadOnlyList<AppendedEvent> _after;
++    IReadOnlyDictionary<EventSourceId, IReadOnlyList<AppendedEvent>> _beforeAgain;
++
++    void Establish() => _inner.GetInstancesOfAnyInRange(Arg.Any<IEnumerable<EventSourceId>>(), Arg.Any<IEnumerable<EventTypeId>>(), Arg.Any<EventSequenceNumber>(), Arg.Any<EventSequenceNumber>(), Arg.Any<CancellationToken>())
++        .Returns(new Dictionary<EventSourceId, IReadOnlyList<AppendedEvent>> { [_eventSourceId] = [_changed] });
++
++    async Task Because()
++    {
++        await Prepare();
++        _before = await _storage.GetInstancesOfAnyInRange([_eventSourceId], _eventTypeIds, 10, 9);
++        _after = (await _storage.GetInstancesOfAnyInRange([_eventSourceId], _eventTypeIds, 13, 12))[_eventSourceId];
++        _beforeAgain = await _storage.GetInstancesOfAnyInRange([_eventSourceId], _eventTypeIds, 10, 9);
++    }
++
++    [Fact] void should_not_use_a_future_parent_for_the_earlier_child() => _before.Count.ShouldEqual(0);
++    [Fact] void should_resolve_a_later_child_from_the_same_window() => _after.ShouldContainOnly(_changed);
++    [Fact] void should_not_reuse_the_later_hit_for_an_earlier_child() => _beforeAgain.Count.ShouldEqual(0);
++    [Fact] void should_only_read_one_batch_for_hits_and_misses() => _inner.Received(1).GetInstancesOfAnyInRange(
++        Arg.Any<IEnumerable<EventSourceId>>(), Arg.Any<IEnumerable<EventTypeId>>(), Arg.Any<EventSequenceNumber>(), Arg.Any<EventSequenceNumber>(), Arg.Any<CancellationToken>());
++}
+diff --git a/Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ReplayScopedEventSequenceStorage/when_a_prepared_parent_read_is_cancelled.cs b/Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ReplayScopedEventSequenceStorage/when_a_prepared_parent_read_is_cancelled.cs
+new file mode 100644
+index 0000000000..61f23f4dcf
+--- /dev/null
++++ b/Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ReplayScopedEventSequenceStorage/when_a_prepared_parent_read_is_cancelled.cs
+@@ -0,0 +1,25 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Chronicle.Concepts.Events;
++
++namespace Cratis.Chronicle.Projections.Engine.Pipelines.for_ReplayScopedEventSequenceStorage;
++
++public class when_a_prepared_parent_read_is_cancelled : given.a_bounded_parent_page
++{
++    Exception _error;
++    readonly CancellationTokenSource _cancellation = new();
++
++    async Task Because()
++    {
++        await Prepare();
++        _cancellation.Cancel();
++        _error = await Catch.Exception(() => _storage.GetInstancesOfAnyInRange([_eventSourceId], _eventTypeIds, 13, 12, _cancellation.Token));
++    }
++
++    [Fact] void should_honor_cancellation_even_on_a_cache_hit() => _error.ShouldBeOfExactType<OperationCanceledException>();
++    [Fact] void should_not_issue_another_storage_read() => _inner.Received(1).GetInstancesOfAnyInRange(
++        Arg.Any<IEnumerable<EventSourceId>>(), Arg.Any<IEnumerable<EventTypeId>>(), Arg.Any<EventSequenceNumber>(), Arg.Any<EventSequenceNumber>(), Arg.Any<CancellationToken>());
++
++    void Destroy() => _cancellation.Dispose();
++}
+diff --git a/Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ReplayScopedEventSequenceStorage/when_discarding_prepared_parent_history.cs b/Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ReplayScopedEventSequenceStorage/when_discarding_prepared_parent_history.cs
+new file mode 100644
+index 0000000000..a2d03e5b38
+--- /dev/null
++++ b/Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ReplayScopedEventSequenceStorage/when_discarding_prepared_parent_history.cs
+@@ -0,0 +1,30 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Chronicle.Concepts.Events;
++
++namespace Cratis.Chronicle.Projections.Engine.Pipelines.for_ReplayScopedEventSequenceStorage;
++
++public class when_discarding_prepared_parent_history : given.a_bounded_parent_page
++{
++    async Task Because()
++    {
++        await Prepare();
++        _page.ClearPreparedPage();
++        await ReadChild();
++        await Prepare();
++        _session.EndReplaySession();
++        _session.BeginReplaySession();
++        await ReadChild();
++        await Prepare();
++        _page.BeginPreparedPage();
++        await ReadChild();
++    }
++
++    [Fact] void should_fetch_again_after_page_clear_session_end_and_page_replacement() => _inner.Received(3).GetInstancesOfAnyInRange(
++        Arg.Is<IEnumerable<EventSourceId>>(sources => sources.SequenceEqual(new[] { _eventSourceId })), _eventTypeIds, 13, 12, Arg.Any<CancellationToken>());
++    [Fact] void should_prefetch_each_new_session() => _inner.Received(3).GetInstancesOfAnyInRange(
++        Arg.Is<IEnumerable<EventSourceId>>(sources => sources.Count() == 2), _eventTypeIds, 10, 20, Arg.Any<CancellationToken>());
++
++    Task ReadChild() => _storage.GetInstancesOfAnyInRange([_eventSourceId], _eventTypeIds, 13, 12);
++}
+diff --git a/Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ReplayScopedEventSequenceStorage/when_looking_outside_prepared_parent_history.cs b/Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ReplayScopedEventSequenceStorage/when_looking_outside_prepared_parent_history.cs
+new file mode 100644
+index 0000000000..f7e32ef392
+--- /dev/null
++++ b/Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ReplayScopedEventSequenceStorage/when_looking_outside_prepared_parent_history.cs
+@@ -0,0 +1,34 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Chronicle.Concepts.Events;
++
++namespace Cratis.Chronicle.Projections.Engine.Pipelines.for_ReplayScopedEventSequenceStorage;
++
++public class when_looking_outside_prepared_parent_history : given.a_bounded_parent_page
++{
++    readonly CancellationTokenSource _cancellation = new();
++    IReadOnlyDictionary<EventSourceId, IReadOnlyList<AppendedEvent>> _older;
++    IReadOnlyDictionary<EventSourceId, IReadOnlyList<AppendedEvent>> _later;
++
++    async Task Because()
++    {
++        await Prepare();
++        _older = await _storage.GetInstancesOfAnyInRange([_eventSourceId], _eventTypeIds, 2, 1, _cancellation.Token);
++        _later = await _storage.GetInstancesOfAnyInRange([_eventSourceId], _eventTypeIds, 21, 20, _cancellation.Token);
++        await _storage.GetInstancesOfAnyInRange([_eventSourceId], [new("other-type")], 13, 12, _cancellation.Token);
++        await _storage.GetInstancesOfAnyInRange([new("other-source")], _eventTypeIds, 13, 12, _cancellation.Token);
++        await _storage.GetInstancesOfAnyInRange([_eventSourceId], _eventTypeIds, 13, 12);
++    }
++
++    [Fact] void should_fetch_an_older_predecessor_on_demand() => _inner.Received(1).GetInstancesOfAnyInRange(
++        Arg.Is<IEnumerable<EventSourceId>>(sources => sources.SequenceEqual(new[] { _eventSourceId })), _eventTypeIds, 2, 1, _cancellation.Token);
++    [Fact] void should_forward_a_child_after_the_page_with_its_token() => _inner.Received(1).GetInstancesOfAnyInRange(
++        Arg.Is<IEnumerable<EventSourceId>>(sources => sources.SequenceEqual(new[] { _eventSourceId })), _eventTypeIds, 21, 20, _cancellation.Token);
++    [Fact] void should_return_the_inner_older_result() => ReferenceEquals(_older, _history).ShouldBeTrue();
++    [Fact] void should_return_the_inner_later_result() => ReferenceEquals(_later, _history).ShouldBeTrue();
++    [Fact] void should_not_share_entries_across_sources_or_types_or_replace_the_page() => _inner.Received(5).GetInstancesOfAnyInRange(
++        Arg.Any<IEnumerable<EventSourceId>>(), Arg.Any<IEnumerable<EventTypeId>>(), Arg.Any<EventSequenceNumber>(), Arg.Any<EventSequenceNumber>(), Arg.Any<CancellationToken>());
++
++    void Destroy() => _cancellation.Dispose();
++}
+diff --git a/Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ReplayScopedEventSequenceStorage/when_preparing_bounded_history_outside_replay.cs b/Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ReplayScopedEventSequenceStorage/when_preparing_bounded_history_outside_replay.cs
+new file mode 100644
+index 0000000000..592d405c4b
+--- /dev/null
++++ b/Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ReplayScopedEventSequenceStorage/when_preparing_bounded_history_outside_replay.cs
+@@ -0,0 +1,23 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Chronicle.Concepts.Events;
++
++namespace Cratis.Chronicle.Projections.Engine.Pipelines.for_ReplayScopedEventSequenceStorage;
++
++public class when_preparing_bounded_history_outside_replay : given.a_bounded_parent_page
++{
++    async Task Because()
++    {
++        _page.BeginPreparedPage();
++        await _storage.GetInstancesOfAnyInRange([_eventSourceId, _missing], _eventTypeIds, 10, 20);
++        await _storage.GetInstancesOfAnyInRange([_eventSourceId, _missing], _eventTypeIds, 10, 20);
++        _session.BeginReplaySession();
++        await _storage.GetInstancesOfAnyInRange([_eventSourceId], _eventTypeIds, 13, 12);
++    }
++
++    [Fact] void should_forward_every_read_without_a_replay_session() => _inner.Received(2).GetInstancesOfAnyInRange(
++        Arg.Is<IEnumerable<EventSourceId>>(sources => sources.Count() == 2), _eventTypeIds, 10, 20, Arg.Any<CancellationToken>());
++    [Fact] void should_not_seed_the_next_session() => _inner.Received(1).GetInstancesOfAnyInRange(
++        Arg.Is<IEnumerable<EventSourceId>>(sources => sources.Count() == 1), _eventTypeIds, 13, 12, Arg.Any<CancellationToken>());
++}
+diff --git a/Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ReplayScopedEventSequenceStorage/when_using_prepared_parent_history.cs b/Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ReplayScopedEventSequenceStorage/when_using_prepared_parent_history.cs
+new file mode 100644
+index 0000000000..3b8f7216f5
+--- /dev/null
++++ b/Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ReplayScopedEventSequenceStorage/when_using_prepared_parent_history.cs
+@@ -0,0 +1,38 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Chronicle.Concepts.Events;
++
++namespace Cratis.Chronicle.Projections.Engine.Pipelines.for_ReplayScopedEventSequenceStorage;
++
++public class when_using_prepared_parent_history : given.a_bounded_parent_page
++{
++    IReadOnlyList<AppendedEvent> _early;
++    IReadOnlyList<AppendedEvent> _later;
++    IReadOnlyList<AppendedEvent> _inclusive;
++    IReadOnlyList<AppendedEvent> _upperBound;
++    IReadOnlyList<AppendedEvent> _strict;
++    IReadOnlyDictionary<EventSourceId, IReadOnlyList<AppendedEvent>> _miss;
++    IReadOnlyDictionary<EventSourceId, IReadOnlyList<AppendedEvent>> _missAgain;
++
++    async Task Because()
++    {
++        await Prepare();
++        _early = (await _storage.GetInstancesOfAnyInRange([_eventSourceId], _eventTypeIds, 10, 9))[_eventSourceId];
++        _later = (await _storage.GetInstancesOfAnyInRange([_eventSourceId], _eventTypeIds, 13, 12))[_eventSourceId];
++        _inclusive = (await _storage.GetInstancesOfAnyInRange([_eventSourceId], _eventTypeIds, 12, 12))[_eventSourceId];
++        _strict = (await _storage.GetInstancesOfAnyInRange([_eventSourceId], _eventTypeIds, 12, 11))[_eventSourceId];
++        _upperBound = (await _storage.GetInstancesOfAnyInRange([_eventSourceId], _eventTypeIds, 20, 19))[_eventSourceId];
++        _miss = await _storage.GetInstancesOfAnyInRange([_missing], _eventTypeIds, 11, 10);
++        _missAgain = await _storage.GetInstancesOfAnyInRange([_missing], _eventTypeIds, 19, 18);
++    }
++
++    [Fact] void should_return_the_predecessor_for_the_first_child() => _early.ShouldContainOnly(_predecessor);
++    [Fact] void should_return_the_changed_key_for_a_later_child() => _later.ShouldContainOnly(_changed);
++    [Fact] void should_allow_the_releasing_parent_at_an_inclusive_bound() => _inclusive.ShouldContainOnly(_predecessor, _changed);
++    [Fact] void should_exclude_a_parent_at_the_strict_child_bound() => _strict.ShouldContainOnly(_predecessor);
++    [Fact] void should_not_use_a_parent_at_the_page_upper_bound_for_that_child() => _upperBound.ShouldContainOnly(_changed);
++    [Fact] void should_cache_an_omitted_source_as_a_miss() => _miss.Count.ShouldEqual(0);
++    [Fact] void should_reuse_the_cached_miss_at_another_child_boundary() => _missAgain.Count.ShouldEqual(0);
++    [Fact] void should_only_read_the_prepared_batch() => _inner.Received(1).GetInstancesOfAnyInRange(Arg.Any<IEnumerable<EventSourceId>>(), Arg.Any<IEnumerable<EventTypeId>>(), Arg.Any<EventSequenceNumber>(), Arg.Any<EventSequenceNumber>(), Arg.Any<CancellationToken>());
++}
+diff --git a/Source/Kernel/Core/Projections/Engine/PageKeyResolver.cs b/Source/Kernel/Core/Projections/Engine/PageKeyResolver.cs
+index 43cc0d7614..0823d8bbeb 100644
+--- a/Source/Kernel/Core/Projections/Engine/PageKeyResolver.cs
++++ b/Source/Kernel/Core/Projections/Engine/PageKeyResolver.cs
+@@ -33,6 +33,7 @@ internal sealed class PageKeyResolver(KeyResolver resolver, Func<AppendedEvent,
+     internal static KeyResolver Parent(KeyResolver resolver, IProjection projection, KeyResolver parentKeyResolver, bool constant) =>
+         new PageKeyResolver(resolver, async (@event, reads) =>
+         {
++            using var scope = ParentKeyResolutionScope.ForChild(@event.Context.SequenceNumber);
+             var parentKey = await Plan(parentKeyResolver, @event, reads);
+             if (parentKey?.Value is null) return null;
+             var parent = projection.HasParent ? projection.Parent! : projection;
+diff --git a/Source/Kernel/Core/Projections/Engine/PageParentReads.cs b/Source/Kernel/Core/Projections/Engine/PageParentReads.cs
+index fb1eb006bd..ae726b81d0 100644
+--- a/Source/Kernel/Core/Projections/Engine/PageParentReads.cs
++++ b/Source/Kernel/Core/Projections/Engine/PageParentReads.cs
+@@ -3,32 +3,38 @@
+ 
+ using Cratis.Chronicle.Concepts.Events;
+ using Cratis.Chronicle.Storage.EventSequences;
+-using Cratis.Monads;
+ 
+ namespace Cratis.Chronicle.Projections.Engine;
+ 
+ /// <summary>
+-/// Collects parent reads by event-type set without substituting missing or partial batch results for real reads.
++/// Collects bounded parent reads by event-type set, retaining missing sources without repeating reads.
+ /// </summary>
+ /// <param name="storage">The replay-scoped event sequence.</param>
+-internal sealed class PageParentReads(IEventSequenceStorage storage)
++/// <param name="from">The first sequence in the page.</param>
++/// <param name="upTo">The maximum sequence in the page.</param>
++internal sealed class PageParentReads(IEventSequenceStorage storage, EventSequenceNumber from, EventSequenceNumber upTo)
+ {
+-    readonly Dictionary<string, Dictionary<EventSourceId, Option<AppendedEvent>>> _loaded = new();
++    readonly Dictionary<string, Dictionary<EventSourceId, ParentHistoryWindow>> _loaded = new();
+     readonly Dictionary<string, (EventTypeId[] Types, HashSet<EventSourceId> Sources)> _pending = new();
+ 
+-    /// <summary>Gets whether a new batch of parent reads is needed.</summary>
++    /// <summary>
++    /// Gets whether a new batch of parent reads is needed.
++    /// </summary>
+     internal bool HasPending => _pending.Count > 0;
+ 
+-    /// <summary>Finds a loaded parent or enrolls its source in the next batch.</summary>
++    /// <summary>
++    /// Finds a loaded parent as of the child or enrolls its source in the next batch.
++    /// </summary>
+     /// <param name="source">The parent event source.</param>
+     /// <param name="types">The parent's own event types.</param>
+-    /// <returns>The latest matching parent, when already loaded and present.</returns>
++    /// <returns>The latest eligible parent, when already loaded and present.</returns>
+     internal AppendedEvent? Find(EventSourceId source, EventTypeId[] types)
+     {
+         var key = string.Join('|', types.Select(type => type.Value).Distinct().Order(StringComparer.Ordinal));
+         if (_loaded.TryGetValue(key, out var loaded) && loaded.TryGetValue(source, out var result))
+         {
+-            return result.TryGetValue(out var found) ? found : null;
++            var bound = ParentKeyResolutionScope.Current;
++            return result.Find(bound.SequenceNumber, bound.Inclusive);
+         }
+ 
+         if (!_pending.TryGetValue(key, out var request))
+@@ -40,25 +46,21 @@ internal sealed class PageParentReads(IEventSequenceStorage storage)
+         return null;
+     }
+ 
+-    /// <summary>Loads all enrolled sources, rejecting partial results.</summary>
++    /// <summary>
++    /// Loads the page window and latest predecessor for all enrolled sources. Omitted sources are misses.
++    /// </summary>
+     /// <returns>A task representing the batched reads.</returns>
+-    /// <exception cref="InvalidOperationException">A provider returned an incomplete batch.</exception>
+     internal async Task Load()
+     {
+         foreach (var (key, request) in _pending)
+         {
+-            var results = await storage.GetLastInstancesOfAny(request.Sources, request.Types);
+-            if (request.Sources.Any(source => !results.ContainsKey(source)))
+-            {
+-                throw new InvalidOperationException("A prepared parent batch did not include every requested source.");
+-            }
+-
++            var results = await storage.GetInstancesOfAnyInRange(request.Sources, request.Types, from, upTo);
+             if (!_loaded.TryGetValue(key, out var loaded))
+             {
+                 loaded = new();
+                 _loaded[key] = loaded;
+             }
+-            foreach (var source in request.Sources) loaded[source] = results[source];
++            foreach (var source in request.Sources) loaded[source] = new(from, upTo, results.GetValueOrDefault(source) ?? []);
+         }
+         _pending.Clear();
+     }
+diff --git a/Source/Kernel/Core/Projections/Engine/ParentHistoryWindow.cs b/Source/Kernel/Core/Projections/Engine/ParentHistoryWindow.cs
+new file mode 100644
+index 0000000000..e42118834c
+--- /dev/null
++++ b/Source/Kernel/Core/Projections/Engine/ParentHistoryWindow.cs
+@@ -0,0 +1,45 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Chronicle.Concepts.Events;
++
++namespace Cratis.Chronicle.Projections.Engine;
++
++/// <summary>
++/// Holds one bounded parent history and its predecessor, including an empty result for a missing source.
++/// </summary>
++/// <param name="from">The page's inclusive lower boundary.</param>
++/// <param name="upTo">The page's inclusive upper boundary.</param>
++/// <param name="events">The matching events and latest predecessor, in sequence order.</param>
++internal sealed class ParentHistoryWindow(EventSequenceNumber from, EventSequenceNumber upTo, IReadOnlyList<AppendedEvent> events)
++{
++    /// <summary>
++    /// Gets whether the window can answer a bounded lookup without fetching an older predecessor.
++    /// </summary>
++    /// <param name="start">The lookup's lower boundary.</param>
++    /// <param name="end">The lookup's inclusive upper boundary.</param>
++    /// <returns>Whether the requested history is covered.</returns>
++    internal bool Covers(EventSequenceNumber start, EventSequenceNumber end) =>
++        start >= from && start <= upTo && end <= upTo && (end >= from || (from > EventSequenceNumber.First && end == from - 1));
++
++    /// <summary>
++    /// Selects the latest eligible predecessor and the requested inclusive range.
++    /// </summary>
++    /// <param name="start">The inclusive lower boundary.</param>
++    /// <param name="end">The inclusive upper boundary, also applied to the predecessor.</param>
++    /// <returns>The bounded events in sequence order.</returns>
++    internal IReadOnlyList<AppendedEvent> Select(EventSequenceNumber start, EventSequenceNumber end)
++    {
++        var predecessor = events.LastOrDefault(@event => @event.Context.SequenceNumber < start && @event.Context.SequenceNumber <= end);
++        return events.Where(@event => ReferenceEquals(@event, predecessor) || (@event.Context.SequenceNumber >= start && @event.Context.SequenceNumber <= end)).ToArray();
++    }
++
++    /// <summary>
++    /// Finds the latest parent eligible at the original child's boundary.
++    /// </summary>
++    /// <param name="sequenceNumber">The original child's sequence or deferred release boundary.</param>
++    /// <param name="inclusive">Whether the releasing parent itself is eligible.</param>
++    /// <returns>The eligible parent, or null when no parent is present.</returns>
++    internal AppendedEvent? Find(EventSequenceNumber sequenceNumber, bool inclusive) =>
++        events.LastOrDefault(@event => inclusive ? @event.Context.SequenceNumber <= sequenceNumber : @event.Context.SequenceNumber < sequenceNumber);
++}
+diff --git a/Source/Kernel/Core/Projections/Engine/Pipelines/ProjectionPagePreparation.cs b/Source/Kernel/Core/Projections/Engine/Pipelines/ProjectionPagePreparation.cs
+index 2f283f689d..975cda8960 100644
+--- a/Source/Kernel/Core/Projections/Engine/Pipelines/ProjectionPagePreparation.cs
++++ b/Source/Kernel/Core/Projections/Engine/Pipelines/ProjectionPagePreparation.cs
+@@ -22,7 +22,7 @@ internal sealed class ProjectionPagePreparation(IEventSequenceStorage storage, I
+     /// <returns>A task representing preparation.</returns>
+     internal async Task Prepare(IProjection projection, IReadOnlyList<AppendedEvent> events)
+     {
+-        var reads = new PageParentReads(storage);
++        var reads = new PageParentReads(storage, events[0].Context.SequenceNumber, events.Max(@event => @event.Context.SequenceNumber.Value));
+         var roots = new List<Key>();
+         do
+         {
+diff --git a/Source/Kernel/Core/Projections/Engine/Pipelines/ReplayScopedEventSequenceStorage.ParentHistory.cs b/Source/Kernel/Core/Projections/Engine/Pipelines/ReplayScopedEventSequenceStorage.ParentHistory.cs
+new file mode 100644
+index 0000000000..11e46f26e4
+--- /dev/null
++++ b/Source/Kernel/Core/Projections/Engine/Pipelines/ReplayScopedEventSequenceStorage.ParentHistory.cs
+@@ -0,0 +1,56 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using System.Collections.Concurrent;
++using Cratis.Chronicle.Concepts.Events;
++
++namespace Cratis.Chronicle.Projections.Engine.Pipelines;
++
++internal sealed partial class ReplayScopedEventSequenceStorage
++{
++    readonly ConcurrentDictionary<string, ParentHistoryWindow> _parentHistory = new();
++
++    /// <inheritdoc/>
++    public async Task<IReadOnlyDictionary<EventSourceId, IReadOnlyList<AppendedEvent>>> GetInstancesOfAnyInRange(
++        IEnumerable<EventSourceId> eventSourceIds,
++        IEnumerable<EventTypeId> eventTypes,
++        EventSequenceNumber from,
++        EventSequenceNumber upTo,
++        CancellationToken cancellationToken = default)
++    {
++        cancellationToken.ThrowIfCancellationRequested();
++        var sources = eventSourceIds.Distinct().ToArray();
++        var types = eventTypes as EventTypeId[] ?? eventTypes.ToArray();
++        if (_active && TryGetPreparedHistory(sources, types, from, upTo, out var cached)) return cached;
++
++        var results = await inner.GetInstancesOfAnyInRange(sources, types, from, upTo, cancellationToken);
++        if (_active && _preparingPage && from <= upTo)
++        {
++            foreach (var source in sources)
++            {
++                var key = BuildKey(source, types.Select(type => type.Value));
++                _parentHistory.TryAdd(key, new(from, upTo, results.GetValueOrDefault(source) ?? []));
++            }
++        }
++        return results;
++    }
++
++    bool TryGetPreparedHistory(
++        EventSourceId[] sources,
++        EventTypeId[] types,
++        EventSequenceNumber from,
++        EventSequenceNumber upTo,
++        out IReadOnlyDictionary<EventSourceId, IReadOnlyList<AppendedEvent>> results)
++    {
++        var found = new Dictionary<EventSourceId, IReadOnlyList<AppendedEvent>>();
++        results = found;
++        foreach (var source in sources)
++        {
++            var key = BuildKey(source, types.Select(type => type.Value));
++            if (!_parentHistory.TryGetValue(key, out var window) || !window.Covers(from, upTo)) return false;
++            var events = window.Select(from, upTo);
++            if (events.Count > 0) found[source] = events;
++        }
++        return true;
++    }
++}
+diff --git a/Source/Kernel/Core/Projections/Engine/Pipelines/ReplayScopedEventSequenceStorage.cs b/Source/Kernel/Core/Projections/Engine/Pipelines/ReplayScopedEventSequenceStorage.cs
+index 32bf538d23..e03871dfef 100644
+--- a/Source/Kernel/Core/Projections/Engine/Pipelines/ReplayScopedEventSequenceStorage.cs
++++ b/Source/Kernel/Core/Projections/Engine/Pipelines/ReplayScopedEventSequenceStorage.cs
+@@ -22,10 +22,10 @@ namespace Cratis.Chronicle.Projections.Engine.Pipelines;
+ /// session. Replaying a hierarchy repeats the same parent/creation-event lookups once per child event;
+ /// caching them collapses those repeats to a single storage query per distinct pair.
+ /// <para>
+-/// Only the position-independent lookups (<see cref="GetHeadSequenceNumber"/> and
+-/// <see cref="TryGetLastInstanceOfAny"/>) are cached — they read only the immutable event log. Every
+-/// other member, and all sink-dependent resolution, passes straight through so live behavior is
+-/// unchanged. The caches are consulted only while a session is active and are cleared at both session
++/// Position-independent lookups (<see cref="GetHeadSequenceNumber"/> and
++/// <see cref="TryGetLastInstanceOfAny"/>) are memoized. Bounded parent history is cached only for the
++/// prepared page interval, including missing sources; older predecessors are fetched on demand.
++/// All sink-dependent resolution passes straight through so live behavior is unchanged. The caches are consulted only while a session is active and are cleared at both session
+ /// boundaries, so a cached value can never leak into live event handling (see <see cref="IReplayScopedCache"/>).
+ /// </para>
+ /// <para>
+@@ -37,7 +37,7 @@ namespace Cratis.Chronicle.Projections.Engine.Pipelines;
+ /// </para>
+ /// </remarks>
+ /// <param name="inner">The underlying <see cref="IEventSequenceStorage"/> that performs the actual work.</param>
+-internal sealed class ReplayScopedEventSequenceStorage(IEventSequenceStorage inner) : IEventSequenceStorage, IReplayScopedCache, IProjectionPageCache
++internal sealed partial class ReplayScopedEventSequenceStorage(IEventSequenceStorage inner) : IEventSequenceStorage, IReplayScopedCache, IProjectionPageCache
+ {
+     readonly ConcurrentDictionary<string, Task<EventSequenceNumber>> _headSequenceNumbers = new();
+     readonly ConcurrentDictionary<string, Task<Option<AppendedEvent>>> _lastInstances = new();
+@@ -95,15 +95,6 @@ public Task<Option<AppendedEvent>> TryGetLastInstanceOfAny(EventSourceId eventSo
+             (inner, eventSourceId, eventTypesList));
+     }
+ 
+-    /// <inheritdoc/>
+-    public Task<IReadOnlyDictionary<EventSourceId, IReadOnlyList<AppendedEvent>>> GetInstancesOfAnyInRange(
+-        IEnumerable<EventSourceId> eventSourceIds,
+-        IEnumerable<EventTypeId> eventTypes,
+-        EventSequenceNumber from,
+-        EventSequenceNumber upTo,
+-        CancellationToken cancellationToken = default) =>
+-        inner.GetInstancesOfAnyInRange(eventSourceIds, eventTypes, from, upTo, cancellationToken);
+-
+     /// <inheritdoc/>
+     public void BeginPreparedPage()
+     {
+@@ -115,6 +106,7 @@ public void BeginPreparedPage()
+     public void ClearPreparedPage()
+     {
+         _preparingPage = false;
++        _parentHistory.Clear();
+         foreach (var key in _preparedKeys.Keys) _lastInstances.TryRemove(key, out _);
+         _preparedKeys.Clear();
+     }

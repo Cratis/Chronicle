@@ -1,0 +1,42 @@
+diff --git a/Source/Kernel/Core/Projections/Engine/KeyResolvers.cs b/Source/Kernel/Core/Projections/Engine/KeyResolvers.cs
+index faffa66d1e..ecd51b313d 100644
+--- a/Source/Kernel/Core/Projections/Engine/KeyResolvers.cs
++++ b/Source/Kernel/Core/Projections/Engine/KeyResolvers.cs
+@@ -420,6 +420,7 @@ async Task<ParentEventResult> FindParentEvent(
+         // Try to find parent events and attempt to resolve each one
+         // Continue trying if we encounter deferred resolutions
+         var resolvedParentEvent = await TryResolveParentEventFromSequence(
++            @event.Context.SequenceNumber,
+             parentKey,
+             parentEventTypeIds,
+             parentProjection,
+@@ -460,6 +461,7 @@ async Task<ParentEventResult> FindParentEvent(
+     }
+ 
+     async Task<Option<AppendedEvent>> TryResolveParentEventFromSequence(
++        EventSequenceNumber upperBound,
+         Key parentKey,
+         EventTypeId[] parentEventTypeIds,
+         IProjection parentProjection,
+@@ -468,7 +470,20 @@ async Task<Option<AppendedEvent>> TryResolveParentEventFromSequence(
+     {
+         // First, try the most recent event (traditional approach)
+         logger.FromParentHierarchyTryGetLastInstance(parentKey.Value?.ToString() ?? "null", string.Join(", ", parentEventTypeIds.Select(id => id.ToString())));
+-        var optionalEvent = await eventSequenceStorage.TryGetLastInstanceOfAny(parentKey.Value?.ToString()!, parentEventTypeIds);
++
++        // Temporary repro control: resolve only from history visible at the child event.
++        using var boundedCursor = await eventSequenceStorage.GetRange(
++            EventSequenceNumber.First,
++            upperBound,
++            new EventSourceId(parentKey.Value?.ToString() ?? throw new InvalidOperationException("Missing parent source")),
++            parentEventTypeIds.Select(id => new EventType(id, EventTypeGeneration.First)));
++        var boundedEvents = new List<AppendedEvent>();
++        while (await boundedCursor.MoveNext())
++        {
++            boundedEvents.AddRange(boundedCursor.Current);
++        }
++        var latest = boundedEvents.MaxBy(candidate => candidate.Context.SequenceNumber);
++        var optionalEvent = latest is null ? Option<AppendedEvent>.None() : new Option<AppendedEvent>(latest);
+         if (!optionalEvent.TryGetValue(out var lastEvent))
+         {
+             logger.FromParentHierarchyNoEventFoundByTryGetLast();

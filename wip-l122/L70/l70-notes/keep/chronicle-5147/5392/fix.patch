@@ -1,0 +1,58 @@
+diff --git a/Source/Clients/DotNET/Projections/Projections.cs b/Source/Clients/DotNET/Projections/Projections.cs
+index 2127b57701..a667467ca5 100644
+--- a/Source/Clients/DotNET/Projections/Projections.cs
++++ b/Source/Clients/DotNET/Projections/Projections.cs
+@@ -622,6 +622,7 @@ void Compose()
+         var failures = new Dictionary<Type, Exception>();
+         var variantDeclarations = new Dictionary<Type, FluentVariantDeclaration>();
+         var containerNames = new Dictionary<Type, string>();
++        var declaredContainerNames = new Dictionary<Type, string>();
+         foreach (var projectionType in clientArtifacts.Projections)
+         {
+             var modelType = projectionType.GetInterface(typeof(IProjectionFor<>).Name)!.GetGenericArguments()[0]!;
+@@ -637,6 +638,7 @@ void Compose()
+                     jsonSerializerOptions,
+                     variantDeclarations,
+                     containerNames,
++                    declaredContainerNames,
+                     GenerationDelivery
+                 ]) as Catch<ProjectionDefinition>)!;
+             if (createProjectionDefinitionResult.TryGetException(out var exception))
+@@ -651,6 +653,21 @@ void Compose()
+         VariantReclassifier.CrossWireGroups(result, variantDeclarations);
+         ApplyGenerationDelivery(result, failures);
+ 
++        // An override only means something while the projection that declared it is still defined; revalidation may
++        // have removed it, and a stale override must neither leak into the composed container map nor be skipped over
++        // when the handler for the read model reports its container.
++        foreach (var (projectionType, containerName) in declaredContainerNames)
++        {
++            if (!result.ContainsKey(projectionType))
++            {
++                var readModelType = projectionType.GetReadModelType();
++                if (containerNames.TryGetValue(readModelType, out var recorded) && recorded == containerName)
++                {
++                    containerNames.Remove(readModelType);
++                }
++            }
++        }
++
+         return (result, failures, containerNames);
+     }
+ 
+@@ -686,6 +703,7 @@ public static Catch<ProjectionDefinition> CreateAndDefine(
+             JsonSerializerOptions jsonSerializerOptions,
+             IDictionary<Type, FluentVariantDeclaration> variantDeclarations,
+             IDictionary<Type, string> containerNames,
++            IDictionary<Type, string> declaredContainerNames,
+             Observation.EventGenerationDelivery generationDelivery)
+         {
+             try
+@@ -708,6 +726,7 @@ public static Catch<ProjectionDefinition> CreateAndDefine(
+                     }
+ 
+                     containerNames[typeof(TReadModel)] = containerName;
++                    declaredContainerNames[type] = containerName;
+                 }
+ 
+                 if (builder.VariantDeclaration is not null)
