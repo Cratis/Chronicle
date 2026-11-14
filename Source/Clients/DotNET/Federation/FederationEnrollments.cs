@@ -76,7 +76,10 @@ public class FederationEnrollments(IChronicleConnection connection) : IFederatio
             status.Enrolled ? status.RenewAfter : null,
             status.Endpoint,
             status.AuthorityFingerprint,
-            status.Expired);
+            status.Expired,
+            status.Enrolled && status.Connected,
+            status.Enrolled ? (DateTimeOffset?)status.LastExchange : null,
+            status.LastError ?? string.Empty);
     }
 
     static CallContext CallContextFor(CancellationToken cancellationToken) => new(new CallOptions(cancellationToken: cancellationToken));

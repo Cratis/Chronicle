@@ -157,6 +157,13 @@ public interface IFederation
     /// <returns>The query result.</returns>
     [Operation]
     Task<QueryResult<IEnumerable<FederationPolicyResponse>>> AllPolicies(CallContext callContext = default);
+    /// <summary>
+    /// Executes the AllSubjectLinks query.
+    /// </summary>
+    /// <param name = "callContext">The gRPC call context.</param>
+    /// <returns>The query result.</returns>
+    [Operation]
+    Task<QueryResult<IEnumerable<FederationSubjectLinkResponse>>> AllSubjectLinks(CallContext callContext = default);
 }
 
 /// <summary>
@@ -702,6 +709,24 @@ public class FederationEnrollmentStatusResponse
     /// </summary>
     [ProtoMember(8)]
     public bool Expired { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Connected.
+    /// </summary>
+    [ProtoMember(9)]
+    public bool Connected { get; set; }
+
+    /// <summary>
+    /// Gets or sets the LastExchange.
+    /// </summary>
+    [ProtoMember(10)]
+    public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset LastExchange { get; set; }
+
+    /// <summary>
+    /// Gets or sets the LastError.
+    /// </summary>
+    [ProtoMember(11)]
+    public string LastError { get; set; } = string.Empty;
 }
 
 /// <summary>
@@ -873,4 +898,89 @@ public class FederationPolicyResponse
     /// </summary>
     [ProtoMember(4)]
     public string ChangedBy { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Represents the FederationSubjectLinkResponse message.
+/// </summary>
+[ProtoContract]
+public class FederationSubjectLinkResponse
+{
+    /// <summary>
+    /// Gets or sets the Subject.
+    /// </summary>
+    [ProtoMember(1)]
+    public string Subject { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the Connected.
+    /// </summary>
+    [ProtoMember(2)]
+    public bool Connected { get; set; }
+
+    /// <summary>
+    /// Gets or sets the LastActivity.
+    /// </summary>
+    [ProtoMember(3)]
+    public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset LastActivity { get; set; }
+
+    /// <summary>
+    /// Gets or sets the OutboundLastPull.
+    /// </summary>
+    [ProtoMember(4)]
+    public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset OutboundLastPull { get; set; }
+
+    /// <summary>
+    /// Gets or sets the OutboundEvents.
+    /// </summary>
+    [ProtoMember(5)]
+    public global::System.UInt64 OutboundEvents { get; set; }
+
+    /// <summary>
+    /// Gets or sets the OutboundBytes.
+    /// </summary>
+    [ProtoMember(6)]
+    public global::System.UInt64 OutboundBytes { get; set; }
+
+    /// <summary>
+    /// Gets or sets the OutboundThrottled.
+    /// </summary>
+    [ProtoMember(7)]
+    public global::System.UInt64 OutboundThrottled { get; set; }
+
+    /// <summary>
+    /// Gets or sets the InboundState.
+    /// </summary>
+    [ProtoMember(8)]
+    public string InboundState { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the InboundLastReceived.
+    /// </summary>
+    [ProtoMember(9)]
+    public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset InboundLastReceived { get; set; }
+
+    /// <summary>
+    /// Gets or sets the InboundEvents.
+    /// </summary>
+    [ProtoMember(10)]
+    public global::System.UInt64 InboundEvents { get; set; }
+
+    /// <summary>
+    /// Gets or sets the InboundBytes.
+    /// </summary>
+    [ProtoMember(11)]
+    public global::System.UInt64 InboundBytes { get; set; }
+
+    /// <summary>
+    /// Gets or sets the InboundLag.
+    /// </summary>
+    [ProtoMember(12)]
+    public global::System.UInt64 InboundLag { get; set; }
+
+    /// <summary>
+    /// Gets or sets the LastError.
+    /// </summary>
+    [ProtoMember(13)]
+    public string LastError { get; set; } = string.Empty;
 }

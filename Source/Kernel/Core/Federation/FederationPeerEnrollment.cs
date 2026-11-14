@@ -19,12 +19,14 @@ namespace Cratis.Chronicle.Federation;
 /// <param name="transport">The <see cref="IFederationEnrollmentTransport"/> reaching the authority.</param>
 /// <param name="timeProvider">The <see cref="TimeProvider"/>.</param>
 /// <param name="logger">The logger.</param>
+/// <param name="status">The optional <see cref="IFederationStatus"/> a successful renewal is recorded in.</param>
 [Singleton]
 public sealed class FederationPeerEnrollment(
     IFederationEnrolledIdentities identities,
     IFederationEnrollmentTransport transport,
     TimeProvider timeProvider,
-    ILogger<FederationPeerEnrollment> logger) : IFederationPeerEnrollment, IDisposable
+    ILogger<FederationPeerEnrollment> logger,
+    IFederationStatus? status = null) : IFederationPeerEnrollment, IDisposable
 {
     readonly SemaphoreSlim _lock = new(1, 1);
 
@@ -113,6 +115,7 @@ public sealed class FederationPeerEnrollment(
             var installed = await Install(key, issuance, current.AuthorityFingerprint, endpoint, FederationIssuanceReasons.Renewal, now, current.Identity);
 
             logger.Renewed(installed.Identity, installed.Serial, installed.NotAfter);
+            status?.RecordDialRenewed();
             return true;
         }
         finally

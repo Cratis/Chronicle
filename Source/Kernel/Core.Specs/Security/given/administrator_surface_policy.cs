@@ -24,6 +24,7 @@ public static class administrator_surface_policy
         ["Cratis.Chronicle.Federation.RevokeFederationLink"] = WellKnownAuthorizationPolicies.AdministratorOperations,
         ["Cratis.Chronicle.Federation.FederationEnrollment"] = WellKnownAuthorizationPolicies.Administrator,
         ["Cratis.Chronicle.Federation.FederationPolicy"] = WellKnownAuthorizationPolicies.Administrator,
+        ["Cratis.Chronicle.Federation.FederationSubjectLink"] = WellKnownAuthorizationPolicies.Administrator,
         ["Cratis.Chronicle.Federation.SetFederationPolicy"] = WellKnownAuthorizationPolicies.AdministratorOperations,
         ["Cratis.Chronicle.Federation.SuspendFederationPolicy"] = WellKnownAuthorizationPolicies.AdministratorOperations,
         ["Cratis.Chronicle.Federation.ResumeFederationPolicy"] = WellKnownAuthorizationPolicies.AdministratorOperations,

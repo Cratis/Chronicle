@@ -76,6 +76,7 @@ public class FederationServeService(
         var connectionId = Guid.NewGuid().ToString("N");
         var session = grainFactory.GetGrain<IFederationSession>(subject);
         await session.Open(connectionId);
+        status.RecordSessionOpened(subject);
 
         var endReason = "the dialer ended the call";
         try
@@ -203,6 +204,7 @@ public class FederationServeService(
         finally
         {
             logger.ServeEnded(subject, endReason);
+            status.RecordSessionClosed(subject);
             await session.Close(connectionId);
         }
     }
@@ -348,6 +350,7 @@ public class FederationServeService(
                 // The guard has seen this event already; rebuild it from what is really in the inbox so the retry is not mistaken for a duplicate.
                 state.Guard = NewGuard(binding, await inbox.GetResumePoint(binding));
                 consumerMetrics.EventsAppended(linkId, appended);
+                status.RecordInbound(linkId, appended, bytes);
                 logger.ServeAppendFailed(subject, failure);
                 return Outcome.Failed(failure);
             }
@@ -358,6 +361,7 @@ public class FederationServeService(
         }
 
         consumerMetrics.EventsAppended(linkId, appended);
+        status.RecordInbound(linkId, appended, bytes);
         rateLimiter.Consume(linkId, events.Length, bytes);
         metrics.Delivered(linkId, appended, bytes);
 

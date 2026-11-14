@@ -234,6 +234,16 @@ Redeeming a code makes the kernel connect to the endpoint in the code, so the ke
 
 To see where things stand, use `client.Federation.GetEnrollments()` and `GetIssuedCertificates()` on the authority, and `GetStatus()` on an enrolled kernel. To cut a customer off, call `client.Federation.Revoke(enrollmentId)`. It revokes the enrollment and every certificate issued from it, and takes effect at once. Creating, revoking and listing enrollments and certificates needs administrator rights.
 
+`GetStatus()` returns a `FederationEnrollmentStatus`. Besides the certificate (`Enrolled`, `Identity`, `Serial`, `NotAfter`, `RenewAfter`, `Endpoint`, `AuthorityFingerprint`, `Expired`) it reports the session the kernel dialed to the authority, so an application can prove that the link is established and has worked, not only that a certificate is held:
+
+| Member | Type | Meaning |
+| --- | --- | --- |
+| `Connected` | `bool` | The session to the authority is open and its last operation succeeded. It becomes true only after a successful exchange, and is false when not enrolled, when the certificate has expired, while no connection has been made, and after the session is lost or fails. |
+| `LastExchange` | `DateTimeOffset?` | When the authority last answered a pull of this kernel, when a batch from this kernel's outbox was last delivered to the authority, or when a certificate renewal last succeeded, whichever is latest. Null when none has happened since the kernel started. It is kept when the connection is lost. |
+| `LastError` | `string` | The last failure of the session, scrubbed so it never holds a secret. It is cleared by the next successful exchange. Empty when there is none. |
+
+The state is held in memory on the kernel and starts empty at each start, so a freshly started kernel is not connected until its first exchange succeeds. A kernel that does not dial reports `Connected` as false.
+
 Redeeming a code and reading the enrollment status of a kernel are decided by their own capability, `chronicle.federation.enroll` (a kernel-scope capability, see [decision 0024](https://github.com/Cratis/Chronicle/blob/main/decisions/0024-kernel-authorization-decision-point.md)), which the administrator role includes. Store grants are scoped to a store and exclude the System store, and administrators are users, not applications, so by default only an administrator can redeem a code, or you drive it from configuration with `Federation:Enrollment:CodePath`.
 
 To let a product redeem a code with its own client credential, list its client id in `Federation:Enrollment:Applications`:
@@ -288,6 +298,28 @@ A peer is admitted only when all of these hold, and every check reads the curren
 The target comes from the policy alone, never from the certificate or the request. A pull request may leave the event store and namespace empty or name the policy's target, and anything else is refused, so one subject can never address another subject's target. Every refusal gives the peer the same empty, denied answer, so nothing about what exists can be learned; the reason is only logged on this kernel.
 
 Pinned grants and bindings are unaffected. A client certificate that matches a pinned grant is served by that grant only and is never widened by a policy. A certificate with no pinned grant is the only one considered for hosted admission.
+
+### Manage policies from the .NET client
+
+An operator application can manage the policy of every subject through the client alone, without reaching into the generated contracts. `IChronicleClient.FederationPolicies` returns an `IFederationPolicies` (namespace `Cratis.Chronicle.Federation`) for the kernel the client is connected to. Every member needs administrator rights on that kernel, the same as the commands above, and a command the kernel refuses throws, so a policy that was not changed is never reported as changed.
+
+| Member | Effect |
+| --- | --- |
+| `Set(subject, entry)` | Creates the policy of a subject, or changes what it may do in one direction. The `FederationPolicyEntry` carries the `FederationDirection`, the target event store and namespace, `AllPublic` and the allowed event types. |
+| `Suspend(subject)` | Refuses the subject's links until it is resumed. |
+| `Resume(subject)` | Admits a suspended subject again. |
+| `RevokeDirection(subject, direction)` | Refuses one direction at once and leaves the other running. |
+| `Revoke(subject)` | Refuses the subject's links for good. |
+| `GetPolicies()` | Returns a `FederationPolicyInformation` per subject: its status, its entries and who changed it last. |
+| `GetLinks()`, `GetLink(subject)` | Return the live link state described below. `GetLink` returns null for a subject that has no policy. |
+
+`FederationDirection` has the same two values as the contract, `AcceptorOutbound` and `AcceptorInbound`, and keeps the meaning described above.
+
+#### Link status
+
+A `FederationLinkInformation` answers whether a subject is connected and what has moved. `Connected` says whether the subject's dialer has a session open now. `LastActivity` is when events last moved in either direction. `Outbound` and `Inbound` are a `FederationLinkTraffic` each, with the time of the last activity, the number of events and the number of content bytes in that direction. `Throttled` counts the outbound pulls that were throttled. `InboundState` is the state of the inbound direction, such as `Streaming`, `Idle` or `Backoff`, and `LastError` is its last error, empty when there is none.
+
+Lag is only known where this kernel appends to its own inbox, so `Inbound.Lag` is the number of events the dialer has that are not yet received, and `Outbound.Lag` is always null. The link state is operational: each kernel node keeps it in memory, so it starts empty when a node restarts and shows what the node that answered has seen. Do not use it as an audit trail; the policy changes are the audit trail.
 
 ### One connection for both directions
 

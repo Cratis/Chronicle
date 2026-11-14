@@ -26,6 +26,7 @@ public class a_serve_client : Specification
     protected IFederationPullService _pullService;
     protected FederationServeClient _client;
     protected IFederationPullConnection _connection;
+    protected FederationStatus _dialStatus = new();
     protected bool _serving = true;
     protected string[] _serveEventTypes = [];
     protected List<(string Store, string Namespace, ulong From, int Limit, string[] Types, IReadOnlyList<FederationGrant> Grants)> _reads;
@@ -62,7 +63,7 @@ public class a_serve_client : Specification
                 Dial = new FederationDialOptions { Enabled = true, EventStore = "local", Namespace = "ns", Serve = _serving, ServeEventTypes = _serveEventTypes }
             }
         });
-        _client = new(_pullService, options, NullLogger<FederationServeClient>.Instance, Timing, _clock);
+        _client = new(_pullService, options, NullLogger<FederationServeClient>.Instance, Timing, _clock, _dialStatus);
         _client.Start(_connection);
     }
 }

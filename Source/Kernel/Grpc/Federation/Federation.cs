@@ -122,7 +122,7 @@ internal sealed class Federation(
         QueryExecutor.Execute<global::Cratis.Chronicle.Contracts.Federation.FederationEnrollmentStatusResponse>(
             async () =>
             {
-                var result = await global::Cratis.Chronicle.Federation.FederationEnrollmentStatus.CurrentEnrollmentStatus(federationCertificateRegistry, timeProvider);
+                var result = await global::Cratis.Chronicle.Federation.FederationEnrollmentStatus.CurrentEnrollmentStatus(federationCertificateRegistry, timeProvider, federationStatus);
                 return ToFederationEnrollmentStatusResponse(result);
             },
             exception => logger.QueryFailed(exception, "Federation", "CurrentEnrollmentStatus"));
@@ -159,6 +159,17 @@ internal sealed class Federation(
                 return result.Select(ToFederationPolicyResponse).ToList();
             },
             exception => logger.QueryFailed(exception, "Federation", "AllPolicies"));
+
+    /// <inheritdoc/>
+    [global::Microsoft.AspNetCore.Authorization.Authorize(Policy = "Chronicle.Administrator")]
+    public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.Federation.FederationSubjectLinkResponse>>> AllSubjectLinks(global::ProtoBuf.Grpc.CallContext callContext = default) =>
+        QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Federation.FederationSubjectLinkResponse>>(
+            async () =>
+            {
+                var result = await global::Cratis.Chronicle.Federation.FederationSubjectLink.AllSubjectLinks(federationCertificateRegistry, federationStatus);
+                return result.Select(ToFederationSubjectLinkResponse).ToList();
+            },
+            exception => logger.QueryFailed(exception, "Federation", "AllSubjectLinks"));
 
     static global::Cratis.Chronicle.Contracts.Federation.CreateFederationEnrollmentResponse ToCreateFederationEnrollmentResponse(global::Cratis.Chronicle.Federation.FederationEnrollmentCreatedResult source) =>
         new()
@@ -221,7 +232,10 @@ internal sealed class Federation(
             RenewAfter = source.RenewAfter is null ? null : (global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset?)source.RenewAfter,
             Endpoint = source.Endpoint,
             AuthorityFingerprint = source.AuthorityFingerprint,
-            Expired = source.Expired
+            Expired = source.Expired,
+            Connected = source.Connected,
+            LastExchange = source.LastExchange is null ? null : (global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset?)source.LastExchange,
+            LastError = source.LastError
         };
 
     static global::Cratis.Chronicle.Contracts.Federation.FederationGrantInformationResponse ToFederationGrantInformationResponse(global::Cratis.Chronicle.Federation.FederationGrantInformation source) =>
@@ -262,5 +276,23 @@ internal sealed class Federation(
             Status = (global::Cratis.Chronicle.Contracts.Federation.FederationPolicyStatus)source.Status,
             Entries = source.Entries.Select(element0 => element0.ToContract()).ToList(),
             ChangedBy = source.ChangedBy
+        };
+
+    static global::Cratis.Chronicle.Contracts.Federation.FederationSubjectLinkResponse ToFederationSubjectLinkResponse(global::Cratis.Chronicle.Federation.FederationSubjectLink source) =>
+        new()
+        {
+            Subject = source.Subject,
+            Connected = source.Connected,
+            LastActivity = source.LastActivity is null ? null : (global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset?)source.LastActivity,
+            OutboundLastPull = source.OutboundLastPull is null ? null : (global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset?)source.OutboundLastPull,
+            OutboundEvents = source.OutboundEvents,
+            OutboundBytes = source.OutboundBytes,
+            OutboundThrottled = source.OutboundThrottled,
+            InboundState = source.InboundState,
+            InboundLastReceived = source.InboundLastReceived is null ? null : (global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset?)source.InboundLastReceived,
+            InboundEvents = source.InboundEvents,
+            InboundBytes = source.InboundBytes,
+            InboundLag = source.InboundLag,
+            LastError = source.LastError
         };
 }

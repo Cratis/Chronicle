@@ -57,6 +57,8 @@ public sealed class FederationLinkPump(
     DateTimeOffset? _lastDelivery;
     TimeSpan _backoff = TimeSpan.Zero;
 
+    bool Dials => dialClients is not null && _binding is not null && FederationDial.IsDial(_binding);
+
     /// <inheritdoc/>
     public void Dispose() => CloseConnection();
 
@@ -201,6 +203,11 @@ public sealed class FederationLinkPump(
 
                 metrics.Error(bindingId, "denied");
                 logger.LinkDenied(bindingId);
+                if (Dials)
+                {
+                    status.RecordDialFailed("The producer denied the link");
+                }
+
                 SetStatus(FederationBindingStates.Denied, "The producer denied the link");
                 return _timing.DeniedBackoff;
 
@@ -274,6 +281,10 @@ public sealed class FederationLinkPump(
         _backoff = TimeSpan.Zero;
         _lastDelivery = events.Length > 0 ? _timeProvider.GetUtcNow() : _lastDelivery;
         SetStatus(FederationBindingStates.Streaming, null);
+        if (Dials)
+        {
+            status.RecordDialExchange();
+        }
 
         // A non-empty batch means there may be more: go again immediately. Otherwise the link has caught up.
         return events.Length > 0 ? TimeSpan.Zero : _timing.PollInterval;
@@ -313,6 +324,13 @@ public sealed class FederationLinkPump(
     TimeSpan Fail(string scrubbed, string kind)
     {
         _backoff = _timing.NextBackoff(_backoff);
+
+        // An append failure is local: the session to the authority is fine.
+        if (Dials && kind != "append")
+        {
+            status.RecordDialFailed(scrubbed);
+        }
+
         metrics.Error(bindingId, kind);
         logger.LinkFailed(bindingId, kind, scrubbed);
         SetStatus(FederationBindingStates.Backoff, scrubbed);
@@ -334,6 +352,11 @@ public sealed class FederationLinkPump(
 
     void CloseConnection()
     {
+        if (Dials)
+        {
+            status.RecordDialClosed();
+        }
+
         serveClient?.Stop();
         _connection?.Dispose();
         _connection = null;
