@@ -4,13 +4,13 @@
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Migrations.Operations;
 
-namespace Cratis.Chronicle.Storage.Sql.EventStores.EventStoreSubscriptions.Migrations.for_v19_159_0;
+namespace Cratis.Chronicle.Storage.Sql.EventStores.EventStoreSubscriptions.Migrations.for_v19_160_0;
 
 public class when_upgrading : Specification
 {
     AddColumnOperation _column;
-    void Because() => _column = new v19_159_0().UpOperations.OfType<AddColumnOperation>().Single();
-    [Fact] void should_sort_after_subscription_table_creation() => string.CompareOrdinal(typeof(v19_159_0).GetCustomAttributes(false).OfType<MigrationAttribute>().Single().Id, typeof(v15_0_0).GetCustomAttributes(false).OfType<MigrationAttribute>().Single().Id).ShouldBeGreaterThan(0);
+    void Because() => _column = new v19_160_0().UpOperations.OfType<AddColumnOperation>().Single();
+    [Fact] void should_sort_after_subscription_table_creation() => string.CompareOrdinal(typeof(v19_160_0).GetCustomAttributes(false).OfType<MigrationAttribute>().Single().Id, typeof(v15_0_0).GetCustomAttributes(false).OfType<MigrationAttribute>().Single().Id).ShouldBeGreaterThan(0);
     [Fact] void should_add_the_restriction_column() => _column.Name.ShouldEqual(nameof(EventStoreSubscriptionDefinition.SourceNamespaces));
     [Fact] void should_keep_old_subscriptions_unrestricted() => _column.IsNullable.ShouldBeTrue();
     [Fact] void should_target_the_subscription_table() => _column.Table.ShouldEqual(WellKnownTableNames.EventStoreSubscriptions);

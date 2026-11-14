@@ -10,8 +10,8 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.EventStoreSubscriptions.Migra
 #pragma warning disable SA1600, SA1402, MA0048
 
 [DbContext(typeof(EventStoreDbContext))]
-[Migration($"ES-{WellKnownTableNames.EventStoreSubscriptions}-{nameof(v19_159_0)}")]
-public class v19_159_0 : Migration
+[Migration($"ES-{WellKnownTableNames.EventStoreSubscriptions}-{nameof(v19_160_0)}")]
+public class v19_160_0 : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder) => migrationBuilder.AddColumn<string>(
         name: nameof(EventStoreSubscriptionDefinition.SourceNamespaces), table: WellKnownTableNames.EventStoreSubscriptions, nullable: true);
