@@ -1,0 +1,58 @@
+diff --git a/Integration/Client/for_KernelTlsLifecycle/when_kernel_exits.cs b/Integration/Client/for_KernelTlsLifecycle/when_kernel_exits.cs
+index 123db4e9c4..4b932e3055 100644
+--- a/Integration/Client/for_KernelTlsLifecycle/when_kernel_exits.cs
++++ b/Integration/Client/for_KernelTlsLifecycle/when_kernel_exits.cs
+@@ -90,6 +90,12 @@ static async Task KillAndUnpause(DockerClient client, string id)
+         using var exitTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+         var exit = await client.Containers.WaitContainerAsync(id, exitTimeout.Token).WaitAsync(TimeSpan.FromSeconds(15));
+         exit.StatusCode.ShouldNotEqual(0);
++
++        // Only once the exit has been processed does Docker clear both the running and the paused flags together.
++        using var inspectTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
++        var state = await client.Containers.InspectContainerAsync(id, inspectTimeout.Token).WaitAsync(TimeSpan.FromSeconds(15));
++        state.State.Paused.ShouldBeFalse();
++        state.State.Running.ShouldBeFalse();
+     }
+ 
+     static async Task UnpauseOwnedContainer(DockerClient client, string id)
+@@ -101,12 +107,9 @@ static async Task UnpauseOwnedContainer(DockerClient client, string id)
+         }
+         catch (DockerApiException)
+         {
+-            // The in-flight kill may already have taken the container out of the paused state. Docker reports a
+-            // container as running until the kill's exit is processed, so only the frozen state is asserted here;
+-            // termination is proven by the awaited kill and the non-zero exit code in KillAndUnpause.
+-            using var inspectTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+-            var state = await client.Containers.InspectContainerAsync(id, inspectTimeout.Token).WaitAsync(TimeSpan.FromSeconds(15));
+-            state.State.Paused.ShouldBeFalse();
++            // The in-flight kill may already have ended the frozen process. Docker then refuses the unpause while it
++            // still reports the container as both running and paused, until it processes the kill's exit; inspecting
++            // here races that. KillAndUnpause asserts both flags once the exit has been awaited.
+         }
+     }
+ 
+diff --git a/Integration/Client/for_Reactors/when_reading_observer_information/and_reads_overlap_an_observe_stream_reconnection.cs b/Integration/Client/for_Reactors/when_reading_observer_information/and_reads_overlap_an_observe_stream_reconnection.cs
+index 3e0709c6bb..f4b8361f38 100644
+--- a/Integration/Client/for_Reactors/when_reading_observer_information/and_reads_overlap_an_observe_stream_reconnection.cs
++++ b/Integration/Client/for_Reactors/when_reading_observer_information/and_reads_overlap_an_observe_stream_reconnection.cs
+@@ -38,8 +38,6 @@ async Task Because()
+             if (client is not null)
+             {
+                 eventStore = await client.GetEventStore(EventStore.Name, EventStore.Namespace);
+-                await eventStore.DiscoverAll();
+-                await eventStore.RegisterAll();
+             }
+ 
+             var handler = eventStore.Reactors.GetHandlerFor<ReactorWithoutDelay>();
+@@ -106,7 +104,10 @@ static async Task Reconnect(IChronicleConnection connection, Task start)
+                 {
+                     ConnectionString = new ChronicleConnectionString($"chronicle://localhost:{configurable.KernelGrpcHostPort}/?skipTlsValidation=true"),
+                     EventStore = EventStore.Name,
+-                    AutoDiscoverAndRegister = false
++
++                    // Re-registering after a reconnect is part of automatic registration; without it the recreated
++                    // reactor handler is never registered again and never becomes active.
++                    AutoDiscoverAndRegister = true
+                 },
+                 artifactsProvider: this,
+                 serviceProvider: Services);
