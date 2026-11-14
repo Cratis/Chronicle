@@ -1,0 +1,654 @@
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LegacyReadModelTables/when_adjudicating/and_a_long_name_has_both_the_canonical_and_the_legacy_table.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LegacyReadModelTables/when_adjudicating/and_a_long_name_has_both_the_canonical_and_the_legacy_table.cs
+new file mode 100644
+index 0000000000..eb3e80fcb8
+--- /dev/null
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LegacyReadModelTables/when_adjudicating/and_a_long_name_has_both_the_canonical_and_the_legacy_table.cs
+@@ -0,0 +1,19 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels.for_LegacyReadModelTables.when_adjudicating;
++
++public class and_a_long_name_has_both_the_canonical_and_the_legacy_table : Specification
++{
++    LegacyReadModelRefusal _plain;
++    LegacyReadModelRefusal _withMatchingKeyAndMarker;
++
++    void Because()
++    {
++        _plain = LegacyReadModelTables.Adjudicate(new(NameFits: false, CanonicalExists: true, LegacyExists: true));
++        _withMatchingKeyAndMarker = LegacyReadModelTables.Adjudicate(new(NameFits: false, CanonicalExists: true, LegacyExists: true, LegacyPrimaryKeyMatches: true, SoleMarkerClaimsLegacy: true));
++    }
++
++    [Fact] void should_refuse_the_ambiguity() => _plain.ShouldEqual(LegacyReadModelRefusal.CanonicalAndLegacyTablesExist);
++    [Fact] void should_refuse_even_with_a_matching_primary_key_and_a_sole_marker() => _withMatchingKeyAndMarker.ShouldEqual(LegacyReadModelRefusal.CanonicalAndLegacyTablesExist);
++}
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LegacyReadModelTables/when_adjudicating/and_a_long_name_has_neither_table.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LegacyReadModelTables/when_adjudicating/and_a_long_name_has_neither_table.cs
+new file mode 100644
+index 0000000000..ae8a9d33b5
+--- /dev/null
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LegacyReadModelTables/when_adjudicating/and_a_long_name_has_neither_table.cs
+@@ -0,0 +1,14 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels.for_LegacyReadModelTables.when_adjudicating;
++
++public class and_a_long_name_has_neither_table : Specification
++{
++    LegacyReadModelRefusal _result;
++
++    void Because() => _result = LegacyReadModelTables.Adjudicate(new(NameFits: false, CanonicalExists: false, LegacyExists: false));
++
++    // #4340: refusal pending an L0-approved fresh-scope authority; absence of both tables is not proof of a fresh scope.
++    [Fact] void should_refuse_because_historical_ownership_is_unprovable() => _result.ShouldEqual(LegacyReadModelRefusal.HistoricalOwnershipUnprovable);
++}
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LegacyReadModelTables/when_adjudicating/and_a_long_name_has_only_the_canonical_table.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LegacyReadModelTables/when_adjudicating/and_a_long_name_has_only_the_canonical_table.cs
+new file mode 100644
+index 0000000000..603860680a
+--- /dev/null
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LegacyReadModelTables/when_adjudicating/and_a_long_name_has_only_the_canonical_table.cs
+@@ -0,0 +1,14 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels.for_LegacyReadModelTables.when_adjudicating;
++
++public class and_a_long_name_has_only_the_canonical_table : Specification
++{
++    LegacyReadModelRefusal _result;
++
++    void Because() => _result = LegacyReadModelTables.Adjudicate(new(NameFits: false, CanonicalExists: true, LegacyExists: false));
++
++    // #4340: historical shared-table ownership is unprovable without an approved authority, so the existing canonical table is not trusted.
++    [Fact] void should_refuse_because_historical_ownership_is_unprovable() => _result.ShouldEqual(LegacyReadModelRefusal.HistoricalOwnershipUnprovable);
++}
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LegacyReadModelTables/when_adjudicating/and_a_long_name_has_only_the_legacy_table.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LegacyReadModelTables/when_adjudicating/and_a_long_name_has_only_the_legacy_table.cs
+new file mode 100644
+index 0000000000..0348c6a07f
+--- /dev/null
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LegacyReadModelTables/when_adjudicating/and_a_long_name_has_only_the_legacy_table.cs
+@@ -0,0 +1,20 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels.for_LegacyReadModelTables.when_adjudicating;
++
++public class and_a_long_name_has_only_the_legacy_table : Specification
++{
++    LegacyReadModelRefusal _plain;
++    LegacyReadModelRefusal _withMatchingKeyAndMarker;
++
++    void Because()
++    {
++        _plain = LegacyReadModelTables.Adjudicate(new(NameFits: false, CanonicalExists: false, LegacyExists: true));
++        _withMatchingKeyAndMarker = LegacyReadModelTables.Adjudicate(new(NameFits: false, CanonicalExists: false, LegacyExists: true, LegacyPrimaryKeyMatches: true, SoleMarkerClaimsLegacy: true));
++    }
++
++    // #4340: no ownership authority is established, so there is no automatic adoption and no legacy routing.
++    [Fact] void should_refuse_the_adoption() => _plain.ShouldEqual(LegacyReadModelRefusal.LegacyTableRequiresAdoption);
++    [Fact] void should_not_treat_a_matching_primary_key_or_a_sole_marker_as_ownership() => _withMatchingKeyAndMarker.ShouldEqual(LegacyReadModelRefusal.LegacyTableRequiresAdoption);
++}
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LegacyReadModelTables/when_adjudicating/and_a_long_name_is_adjudicated_in_any_state.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LegacyReadModelTables/when_adjudicating/and_a_long_name_is_adjudicated_in_any_state.cs
+new file mode 100644
+index 0000000000..e61f2a0678
+--- /dev/null
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LegacyReadModelTables/when_adjudicating/and_a_long_name_is_adjudicated_in_any_state.cs
+@@ -0,0 +1,21 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels.for_LegacyReadModelTables.when_adjudicating;
++
++public class and_a_long_name_is_adjudicated_in_any_state : Specification
++{
++    LegacyReadModelRefusal[] _results;
++
++    void Because() => _results =
++    [
++        .. from canonical in new[] { false, true }
++           from legacy in new[] { false, true }
++           from key in new[] { false, true }
++           from marker in new[] { false, true }
++           select LegacyReadModelTables.Adjudicate(new(false, canonical, legacy, key, marker))
++    ];
++
++    [Fact] void should_have_covered_every_combination() => _results.Length.ShouldEqual(16);
++    [Fact] void should_never_permit_use_adoption_or_creation() => _results.Count(result => result == LegacyReadModelRefusal.None).ShouldEqual(0);
++}
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LegacyReadModelTables/when_adjudicating/and_the_legacy_table_disappears_between_attempts.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LegacyReadModelTables/when_adjudicating/and_the_legacy_table_disappears_between_attempts.cs
+new file mode 100644
+index 0000000000..225d1678a6
+--- /dev/null
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LegacyReadModelTables/when_adjudicating/and_the_legacy_table_disappears_between_attempts.cs
+@@ -0,0 +1,22 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels.for_LegacyReadModelTables.when_adjudicating;
++
++public class and_the_legacy_table_disappears_between_attempts : Specification
++{
++    LegacyReadModelRefusal _before;
++    LegacyReadModelRefusal _afterWithCanonical;
++    LegacyReadModelRefusal _afterWithNothing;
++
++    void Because()
++    {
++        _before = LegacyReadModelTables.Adjudicate(new(NameFits: false, CanonicalExists: true, LegacyExists: true));
++        _afterWithCanonical = LegacyReadModelTables.Adjudicate(new(NameFits: false, CanonicalExists: true, LegacyExists: false));
++        _afterWithNothing = LegacyReadModelTables.Adjudicate(new(NameFits: false, CanonicalExists: false, LegacyExists: false));
++    }
++
++    [Fact] void should_have_refused_before() => _before.ShouldNotEqual(LegacyReadModelRefusal.None);
++    [Fact] void should_still_refuse_with_the_canonical_table() => _afterWithCanonical.ShouldNotEqual(LegacyReadModelRefusal.None);
++    [Fact] void should_still_refuse_with_no_table() => _afterWithNothing.ShouldNotEqual(LegacyReadModelRefusal.None);
++}
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LegacyReadModelTables/when_adjudicating/and_the_name_fits.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LegacyReadModelTables/when_adjudicating/and_the_name_fits.cs
+new file mode 100644
+index 0000000000..bfe2b50ec4
+--- /dev/null
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LegacyReadModelTables/when_adjudicating/and_the_name_fits.cs
+@@ -0,0 +1,22 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels.for_LegacyReadModelTables.when_adjudicating;
++
++public class and_the_name_fits : Specification
++{
++    LegacyReadModelRefusal _bothPresent;
++    LegacyReadModelRefusal _neither;
++    LegacyReadModelRefusal _legacyOnly;
++
++    void Because()
++    {
++        _bothPresent = LegacyReadModelTables.Adjudicate(new(NameFits: true, CanonicalExists: true, LegacyExists: true));
++        _neither = LegacyReadModelTables.Adjudicate(new(NameFits: true, CanonicalExists: false, LegacyExists: false));
++        _legacyOnly = LegacyReadModelTables.Adjudicate(new(NameFits: true, CanonicalExists: false, LegacyExists: true));
++    }
++
++    [Fact] void should_not_refuse_when_both_tables_are_reported() => _bothPresent.ShouldEqual(LegacyReadModelRefusal.None);
++    [Fact] void should_not_refuse_when_no_table_exists() => _neither.ShouldEqual(LegacyReadModelRefusal.None);
++    [Fact] void should_not_refuse_when_only_one_table_is_reported() => _legacyOnly.ShouldEqual(LegacyReadModelRefusal.None);
++}
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LongReadModelSchema/given/a_long_name_schema_store.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LongReadModelSchema/given/a_long_name_schema_store.cs
+new file mode 100644
+index 0000000000..9e80eb52b7
+--- /dev/null
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LongReadModelSchema/given/a_long_name_schema_store.cs
+@@ -0,0 +1,21 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++
++namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels.for_LongReadModelSchema.given;
++
++public class a_long_name_schema_store : Specification
++{
++    protected ILongNameSchemaStore _store;
++    protected LongReadModelSchema _schema;
++    protected ReadModelTableLocation _long;
++    protected ReadModelTableLocation _short;
++
++    void Establish()
++    {
++        _store = Substitute.For<ILongNameSchemaStore>();
++        _schema = new LongReadModelSchema(_store);
++        _long = new("chronicle_long_names", "container_hash");
++        _short = new(null, "container");
++    }
++}
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LongReadModelSchema/when_provisioning_a_missing_long_name_schema.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LongReadModelSchema/when_provisioning_a_missing_long_name_schema.cs
+new file mode 100644
+index 0000000000..65b1177777
+--- /dev/null
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LongReadModelSchema/when_provisioning_a_missing_long_name_schema.cs
+@@ -0,0 +1,16 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++
++using Cratis.Chronicle.Storage.Sql.Schema;
++
++namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels.for_LongReadModelSchema;
++
++public class when_provisioning_a_missing_long_name_schema : given.a_long_name_schema_store
++{
++    void Establish() => _store.Exists("chronicle_long_names").Returns(false);
++
++    async Task Because() => await _schema.Provision(_long);
++
++    [Fact] void should_create_the_schema_explicitly() => _store.Received(1).Create("chronicle_long_names");
++}
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LongReadModelSchema/when_provisioning_a_short_name_location.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LongReadModelSchema/when_provisioning_a_short_name_location.cs
+new file mode 100644
+index 0000000000..de51836c5a
+--- /dev/null
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LongReadModelSchema/when_provisioning_a_short_name_location.cs
+@@ -0,0 +1,14 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++
++using Cratis.Chronicle.Storage.Sql.Schema;
++
++namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels.for_LongReadModelSchema;
++
++public class when_provisioning_a_short_name_location : given.a_long_name_schema_store
++{
++    async Task Because() => await _schema.Provision(_short);
++
++    [Fact] void should_not_touch_the_store() => _store.ReceivedCalls().ShouldBeEmpty();
++}
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LongReadModelSchema/when_provisioning_an_existing_long_name_schema.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LongReadModelSchema/when_provisioning_an_existing_long_name_schema.cs
+new file mode 100644
+index 0000000000..729a0bc701
+--- /dev/null
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LongReadModelSchema/when_provisioning_an_existing_long_name_schema.cs
+@@ -0,0 +1,16 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++
++using Cratis.Chronicle.Storage.Sql.Schema;
++
++namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels.for_LongReadModelSchema;
++
++public class when_provisioning_an_existing_long_name_schema : given.a_long_name_schema_store
++{
++    void Establish() => _store.Exists("chronicle_long_names").Returns(true);
++
++    async Task Because() => await _schema.Provision(_long);
++
++    [Fact] void should_not_create_the_schema_again() => _store.DidNotReceiveWithAnyArgs().Create(default!);
++}
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LongReadModelSchema/when_requiring_a_missing_long_name_schema.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LongReadModelSchema/when_requiring_a_missing_long_name_schema.cs
+new file mode 100644
+index 0000000000..f365fcedda
+--- /dev/null
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LongReadModelSchema/when_requiring_a_missing_long_name_schema.cs
+@@ -0,0 +1,21 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++
++using Cratis.Chronicle.Storage.Sql.Schema;
++
++namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels.for_LongReadModelSchema;
++
++public class when_requiring_a_missing_long_name_schema : given.a_long_name_schema_store
++{
++    Exception _exception;
++
++    void Establish() => _store.Exists("chronicle_long_names").Returns(false);
++
++    async Task Because() => _exception = await Catch.Exception(() => _schema.Require(_long));
++
++    [Fact] void should_throw_long_name_schema_missing() => _exception.ShouldBeOfExactType<LongNameSchemaMissing>();
++    [Fact] void should_name_the_schema() => ((LongNameSchemaMissing)_exception).Schema.ShouldEqual("chronicle_long_names");
++    [Fact] void should_recommend_the_migration_command() => _exception.Message.ShouldContain("chronicle --migrate-only");
++    [Fact] void should_never_create_the_schema() => _store.DidNotReceiveWithAnyArgs().Create(default!);
++}
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LongReadModelSchema/when_requiring_a_schema_that_disappears_after_use.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LongReadModelSchema/when_requiring_a_schema_that_disappears_after_use.cs
+new file mode 100644
+index 0000000000..70943911c0
+--- /dev/null
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LongReadModelSchema/when_requiring_a_schema_that_disappears_after_use.cs
+@@ -0,0 +1,25 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++
++using Cratis.Chronicle.Storage.Sql.Schema;
++
++namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels.for_LongReadModelSchema;
++
++public class when_requiring_a_schema_that_disappears_after_use : given.a_long_name_schema_store
++{
++    Exception _first;
++    Exception _second;
++
++    void Establish() => _store.Exists("chronicle_long_names").Returns(true, false);
++
++    async Task Because()
++    {
++        _first = await Catch.Exception(() => _schema.Require(_long));
++        _second = await Catch.Exception(() => _schema.Require(_long));
++    }
++
++    [Fact] void should_succeed_while_it_exists() => _first.ShouldBeNull();
++    [Fact] void should_not_conceal_the_missing_schema_behind_a_cache() => _second.ShouldBeOfExactType<LongNameSchemaMissing>();
++    [Fact] void should_never_create_the_schema() => _store.DidNotReceiveWithAnyArgs().Create(default!);
++}
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LongReadModelSchema/when_requiring_a_short_name_location.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LongReadModelSchema/when_requiring_a_short_name_location.cs
+new file mode 100644
+index 0000000000..aa457c8b01
+--- /dev/null
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LongReadModelSchema/when_requiring_a_short_name_location.cs
+@@ -0,0 +1,17 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++
++using Cratis.Chronicle.Storage.Sql.Schema;
++
++namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels.for_LongReadModelSchema;
++
++public class when_requiring_a_short_name_location : given.a_long_name_schema_store
++{
++    Exception _exception;
++
++    async Task Because() => _exception = await Catch.Exception(() => _schema.Require(_short));
++
++    [Fact] void should_not_throw() => _exception.ShouldBeNull();
++    [Fact] void should_not_touch_the_store() => _store.ReceivedCalls().ShouldBeEmpty();
++}
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LongReadModelSchema/when_requiring_an_existing_long_name_schema.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LongReadModelSchema/when_requiring_an_existing_long_name_schema.cs
+new file mode 100644
+index 0000000000..9f54a08a55
+--- /dev/null
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LongReadModelSchema/when_requiring_an_existing_long_name_schema.cs
+@@ -0,0 +1,19 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++
++using Cratis.Chronicle.Storage.Sql.Schema;
++
++namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels.for_LongReadModelSchema;
++
++public class when_requiring_an_existing_long_name_schema : given.a_long_name_schema_store
++{
++    Exception _exception;
++
++    void Establish() => _store.Exists("chronicle_long_names").Returns(true);
++
++    async Task Because() => _exception = await Catch.Exception(() => _schema.Require(_long));
++
++    [Fact] void should_not_throw() => _exception.ShouldBeNull();
++    [Fact] void should_never_create_the_schema() => _store.DidNotReceiveWithAnyArgs().Create(default!);
++}
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LongReadModelTableNames/when_locating_a_table/and_a_multibyte_name_is_64_bytes.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LongReadModelTableNames/when_locating_a_table/and_a_multibyte_name_is_64_bytes.cs
+new file mode 100644
+index 0000000000..6d3e9beabe
+--- /dev/null
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LongReadModelTableNames/when_locating_a_table/and_a_multibyte_name_is_64_bytes.cs
+@@ -0,0 +1,16 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Arc.EntityFrameworkCore;
++
++namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels.for_LongReadModelTableNames.when_locating_a_table;
++
++public class and_a_multibyte_name_is_64_bytes : Specification
++{
++    ReadModelTableLocation _result;
++
++    void Because() => _result = LongReadModelTableNames.Locate(new string('x', 60) + "😀", DatabaseType.PostgreSql, string.Empty);
++
++    [Fact] void should_be_qualified() => _result.Schema.ShouldEqual("chronicle_long_names");
++    [Fact] void should_fit_the_postgresql_limit() => System.Text.Encoding.UTF8.GetByteCount(_result.Table).ShouldBeLessThanOrEqual(63);
++}
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LongReadModelTableNames/when_locating_a_table/and_a_multibyte_name_is_exactly_63_bytes.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LongReadModelTableNames/when_locating_a_table/and_a_multibyte_name_is_exactly_63_bytes.cs
+new file mode 100644
+index 0000000000..b21fd6357b
+--- /dev/null
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LongReadModelTableNames/when_locating_a_table/and_a_multibyte_name_is_exactly_63_bytes.cs
+@@ -0,0 +1,15 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Arc.EntityFrameworkCore;
++
++namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels.for_LongReadModelTableNames.when_locating_a_table;
++
++public class and_a_multibyte_name_is_exactly_63_bytes : Specification
++{
++    ReadModelTableLocation _result;
++
++    void Because() => _result = LongReadModelTableNames.Locate(new string('x', 59) + "😀", DatabaseType.PostgreSql, string.Empty);
++
++    [Fact] void should_not_be_qualified() => _result.Schema.ShouldBeNull();
++}
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LongReadModelTableNames/when_locating_a_table/and_a_postgresql_name_is_at_the_limit.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LongReadModelTableNames/when_locating_a_table/and_a_postgresql_name_is_at_the_limit.cs
+new file mode 100644
+index 0000000000..2e5310188b
+--- /dev/null
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LongReadModelTableNames/when_locating_a_table/and_a_postgresql_name_is_at_the_limit.cs
+@@ -0,0 +1,17 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Arc.EntityFrameworkCore;
++
++namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels.for_LongReadModelTableNames.when_locating_a_table;
++
++public class and_a_postgresql_name_is_at_the_limit : Specification
++{
++    readonly string _name = new('x', 63);
++    ReadModelTableLocation _result;
++
++    void Because() => _result = LongReadModelTableNames.Locate(_name, DatabaseType.PostgreSql, string.Empty);
++
++    [Fact] void should_not_be_qualified() => _result.Schema.ShouldBeNull();
++    [Fact] void should_keep_the_identical_name_instance() => ReferenceEquals(_result.Table, _name).ShouldBeTrue();
++}
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LongReadModelTableNames/when_locating_a_table/and_a_postgresql_name_is_one_byte_over.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LongReadModelTableNames/when_locating_a_table/and_a_postgresql_name_is_one_byte_over.cs
+new file mode 100644
+index 0000000000..ce1e1af891
+--- /dev/null
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LongReadModelTableNames/when_locating_a_table/and_a_postgresql_name_is_one_byte_over.cs
+@@ -0,0 +1,17 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Arc.EntityFrameworkCore;
++
++namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels.for_LongReadModelTableNames.when_locating_a_table;
++
++public class and_a_postgresql_name_is_one_byte_over : Specification
++{
++    ReadModelTableLocation _result;
++
++    void Because() => _result = LongReadModelTableNames.Locate(new('x', 64), DatabaseType.PostgreSql, string.Empty);
++
++    [Fact] void should_use_the_long_name_schema() => _result.Schema.ShouldEqual("chronicle_long_names");
++    [Fact] void should_use_a_readable_prefix_and_a_128_bit_hash() => _result.Table.ShouldEqual(new string('x', 30) + "_7ce100971f64e7001e8fe5a51973ecdf");
++    [Fact] void should_fit_the_postgresql_limit() => System.Text.Encoding.UTF8.GetByteCount(_result.Table).ShouldEqual(63);
++}
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LongReadModelTableNames/when_locating_a_table/and_a_sql_server_name_is_at_the_limit.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LongReadModelTableNames/when_locating_a_table/and_a_sql_server_name_is_at_the_limit.cs
+new file mode 100644
+index 0000000000..2dc263cf2b
+--- /dev/null
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LongReadModelTableNames/when_locating_a_table/and_a_sql_server_name_is_at_the_limit.cs
+@@ -0,0 +1,17 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Arc.EntityFrameworkCore;
++
++namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels.for_LongReadModelTableNames.when_locating_a_table;
++
++public class and_a_sql_server_name_is_at_the_limit : Specification
++{
++    readonly string _name = new('x', 128);
++    ReadModelTableLocation _result;
++
++    void Because() => _result = LongReadModelTableNames.Locate(_name, DatabaseType.SqlServer, string.Empty);
++
++    [Fact] void should_not_be_qualified() => _result.Schema.ShouldBeNull();
++    [Fact] void should_keep_the_identical_name_instance() => ReferenceEquals(_result.Table, _name).ShouldBeTrue();
++}
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LongReadModelTableNames/when_locating_a_table/and_a_sql_server_name_is_one_code_unit_over.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LongReadModelTableNames/when_locating_a_table/and_a_sql_server_name_is_one_code_unit_over.cs
+new file mode 100644
+index 0000000000..88d052ac6a
+--- /dev/null
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LongReadModelTableNames/when_locating_a_table/and_a_sql_server_name_is_one_code_unit_over.cs
+@@ -0,0 +1,17 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Arc.EntityFrameworkCore;
++
++namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels.for_LongReadModelTableNames.when_locating_a_table;
++
++public class and_a_sql_server_name_is_one_code_unit_over : Specification
++{
++    ReadModelTableLocation _result;
++
++    void Because() => _result = LongReadModelTableNames.Locate(new('x', 129), DatabaseType.SqlServer, string.Empty);
++
++    [Fact] void should_use_the_long_name_schema() => _result.Schema.ShouldEqual("chronicle_long_names");
++    [Fact] void should_use_a_readable_prefix_and_a_128_bit_hash() => _result.Table.ShouldEqual(new string('x', 95) + "_0ec9eb33e74510bcdd1f2ea55206e82f");
++    [Fact] void should_fit_the_sql_server_limit() => _result.Table.Length.ShouldEqual(128);
++}
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LongReadModelTableNames/when_locating_a_table/and_a_sqlite_name_is_very_long.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LongReadModelTableNames/when_locating_a_table/and_a_sqlite_name_is_very_long.cs
+new file mode 100644
+index 0000000000..0e9084c20b
+--- /dev/null
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LongReadModelTableNames/when_locating_a_table/and_a_sqlite_name_is_very_long.cs
+@@ -0,0 +1,17 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Arc.EntityFrameworkCore;
++
++namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels.for_LongReadModelTableNames.when_locating_a_table;
++
++public class and_a_sqlite_name_is_very_long : Specification
++{
++    readonly string _name = new('x', 300);
++    ReadModelTableLocation _result;
++
++    void Because() => _result = LongReadModelTableNames.Locate(_name, DatabaseType.Sqlite, string.Empty);
++
++    [Fact] void should_not_be_qualified() => _result.Schema.ShouldBeNull();
++    [Fact] void should_keep_the_identical_name_instance() => ReferenceEquals(_result.Table, _name).ShouldBeTrue();
++}
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LongReadModelTableNames/when_locating_a_table/and_the_clip_ends_inside_a_multibyte_character.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LongReadModelTableNames/when_locating_a_table/and_the_clip_ends_inside_a_multibyte_character.cs
+new file mode 100644
+index 0000000000..44ceae50b0
+--- /dev/null
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LongReadModelTableNames/when_locating_a_table/and_the_clip_ends_inside_a_multibyte_character.cs
+@@ -0,0 +1,23 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Arc.EntityFrameworkCore;
++
++namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels.for_LongReadModelTableNames.when_locating_a_table;
++
++public class and_the_clip_ends_inside_a_multibyte_character : Specification
++{
++    ReadModelTableLocation _postgres;
++    ReadModelTableLocation _sqlServer;
++
++    void Because()
++    {
++        _postgres = LongReadModelTableNames.Locate(new string('x', 29) + "😀" + new string('y', 40), DatabaseType.PostgreSql, string.Empty);
++        _sqlServer = LongReadModelTableNames.Locate(new string('x', 94) + "😀" + new string('y', 40), DatabaseType.SqlServer, string.Empty);
++    }
++
++    [Fact] void should_not_split_utf8() => _postgres.Table[..30].ShouldEqual(new string('x', 29) + "_");
++    [Fact] void should_not_split_a_surrogate_pair() => _sqlServer.Table[..95].ShouldEqual(new string('x', 94) + "_");
++    [Fact] void should_produce_valid_utf8_within_the_postgresql_limit() => System.Text.Encoding.UTF8.GetByteCount(_postgres.Table).ShouldBeLessThanOrEqual(63);
++    [Fact] void should_stay_within_the_sql_server_limit() => _sqlServer.Table.Length.ShouldBeLessThanOrEqual(128);
++}
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LongReadModelTableNames/when_locating_a_table/and_the_same_name_is_located_twice.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LongReadModelTableNames/when_locating_a_table/and_the_same_name_is_located_twice.cs
+new file mode 100644
+index 0000000000..ea5d3c794c
+--- /dev/null
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LongReadModelTableNames/when_locating_a_table/and_the_same_name_is_located_twice.cs
+@@ -0,0 +1,20 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Arc.EntityFrameworkCore;
++
++namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels.for_LongReadModelTableNames.when_locating_a_table;
++
++public class and_the_same_name_is_located_twice : Specification
++{
++    ReadModelTableLocation _first;
++    ReadModelTableLocation _second;
++
++    void Because()
++    {
++        _first = LongReadModelTableNames.Locate(new('x', 90), DatabaseType.PostgreSql, "tenant");
++        _second = LongReadModelTableNames.Locate(new('x', 90), DatabaseType.PostgreSql, "tenant");
++    }
++
++    [Fact] void should_produce_the_same_location() => _second.ShouldEqual(_first);
++}
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LongReadModelTableNames/when_locating_a_table/and_the_target_schema_varies.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LongReadModelTableNames/when_locating_a_table/and_the_target_schema_varies.cs
+new file mode 100644
+index 0000000000..9f5adb640f
+--- /dev/null
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LongReadModelTableNames/when_locating_a_table/and_the_target_schema_varies.cs
+@@ -0,0 +1,31 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Arc.EntityFrameworkCore;
++
++namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels.for_LongReadModelTableNames.when_locating_a_table;
++
++public class and_the_target_schema_varies : Specification
++{
++    string _empty;
++    string _named;
++    string _long;
++    string _sqlServerLong;
++    string _sqlite;
++
++    void Because()
++    {
++        _empty = LongReadModelTableNames.SchemaFor(DatabaseType.PostgreSql, string.Empty);
++        _named = LongReadModelTableNames.SchemaFor(DatabaseType.PostgreSql, "tenant_a");
++        _long = LongReadModelTableNames.SchemaFor(DatabaseType.PostgreSql, new string('t', 60));
++        _sqlServerLong = LongReadModelTableNames.SchemaFor(DatabaseType.SqlServer, new string('t', 125));
++        _sqlite = LongReadModelTableNames.SchemaFor(DatabaseType.Sqlite, "tenant_a");
++    }
++
++    [Fact] void should_use_the_default_schema_for_an_empty_target() => _empty.ShouldEqual("chronicle_long_names");
++    [Fact] void should_derive_the_schema_from_a_named_target() => _named.ShouldEqual("tenant_a_long_names");
++    [Fact] void should_hash_an_over_limit_postgresql_schema() => _long.ShouldEqual(DatabaseName.Physical(new string('t', 60) + "_long_names", DatabaseType.PostgreSql));
++    [Fact] void should_keep_the_postgresql_schema_within_the_limit() => System.Text.Encoding.UTF8.GetByteCount(_long).ShouldBeLessThanOrEqual(63);
++    [Fact] void should_keep_the_sql_server_schema_within_the_limit() => _sqlServerLong.Length.ShouldBeLessThanOrEqual(128);
++    [Fact] void should_have_no_schema_for_sqlite() => _sqlite.ShouldBeNull();
++}
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LongReadModelTableNames/when_locating_a_table/and_two_backups_of_a_60_byte_container_are_taken.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LongReadModelTableNames/when_locating_a_table/and_two_backups_of_a_60_byte_container_are_taken.cs
+new file mode 100644
+index 0000000000..bf49a3976b
+--- /dev/null
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_LongReadModelTableNames/when_locating_a_table/and_two_backups_of_a_60_byte_container_are_taken.cs
+@@ -0,0 +1,27 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Arc.EntityFrameworkCore;
++
++namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels.for_LongReadModelTableNames.when_locating_a_table;
++
++public class and_two_backups_of_a_60_byte_container_are_taken : Specification
++{
++    const string Container = "container_name_that_is_exactly_sixty_bytes_long_for_the_spec";
++    ReadModelTableLocation _live;
++    ReadModelTableLocation _first;
++    ReadModelTableLocation _second;
++
++    void Because()
++    {
++        _live = LongReadModelTableNames.Locate(Container, DatabaseType.PostgreSql, string.Empty);
++        _first = LongReadModelTableNames.Locate(Container + "_backup_a", DatabaseType.PostgreSql, string.Empty);
++        _second = LongReadModelTableNames.Locate(Container + "_backup_b", DatabaseType.PostgreSql, string.Empty);
++    }
++
++    [Fact] void should_have_a_60_byte_container() => Container.Length.ShouldEqual(60);
++    [Fact] void should_keep_the_live_table_unqualified() => _live.Schema.ShouldBeNull();
++    [Fact] void should_give_the_backups_distinct_tables() => _first.Table.ShouldNotEqual(_second.Table);
++    [Fact] void should_not_reuse_the_live_table_name() => new[] { _first.Table, _second.Table }.ShouldNotContain(_live.Table);
++    [Fact] void should_place_both_backups_in_the_long_name_schema() => new[] { _first.Schema, _second.Schema }.Count(schema => schema == "chronicle_long_names").ShouldEqual(2);
++}
