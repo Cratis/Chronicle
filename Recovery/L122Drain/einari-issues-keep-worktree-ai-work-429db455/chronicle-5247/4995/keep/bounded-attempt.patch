@@ -1,0 +1,933 @@
+diff --git a/Source/Kernel/Storage.Sql.Specs/Cluster/Security/for_UserStorage/given/a_user_storage.cs b/Source/Kernel/Storage.Sql.Specs/Cluster/Security/for_UserStorage/given/a_user_storage.cs
+index 83b0259b51..3798b4739d 100644
+--- a/Source/Kernel/Storage.Sql.Specs/Cluster/Security/for_UserStorage/given/a_user_storage.cs
++++ b/Source/Kernel/Storage.Sql.Specs/Cluster/Security/for_UserStorage/given/a_user_storage.cs
+@@ -62,7 +62,7 @@ ClusterDbContext CreateContext()
+     {
+         var options = new DbContextOptionsBuilder<ClusterDbContext>()
+             .UseSqlite(_connection)
+-            .AddConceptAsSupport().WithoutServiceProviderCaching()
++            .AddConceptAsSupport()
+             .Options;
+ 
+         return new ClusterDbContext(options);
+diff --git a/Source/Kernel/Storage.Sql.Specs/Cluster/for_ClusterStorage/when_two_clients_ensure_the_same_event_store.cs b/Source/Kernel/Storage.Sql.Specs/Cluster/for_ClusterStorage/when_two_clients_ensure_the_same_event_store.cs
+index 5a5dbe03c2..1181cf5abd 100644
+--- a/Source/Kernel/Storage.Sql.Specs/Cluster/for_ClusterStorage/when_two_clients_ensure_the_same_event_store.cs
++++ b/Source/Kernel/Storage.Sql.Specs/Cluster/for_ClusterStorage/when_two_clients_ensure_the_same_event_store.cs
+@@ -60,7 +60,7 @@ async Task Because()
+ 
+     DbContextOptions<ClusterDbContext> Options() => new DbContextOptionsBuilder<ClusterDbContext>()
+         .UseSqlite(_connectionString)
+-        .AddConceptAsSupport().WithoutServiceProviderCaching()
++        .AddConceptAsSupport()
+         .Options;
+ 
+     ClusterDbContext CreateContext() => new(Options());
+diff --git a/Source/Kernel/Storage.Sql.Specs/Cluster/for_ReminderTable/given/a_reminder_table.cs b/Source/Kernel/Storage.Sql.Specs/Cluster/for_ReminderTable/given/a_reminder_table.cs
+index 4ccf4e12ad..41425f1649 100644
+--- a/Source/Kernel/Storage.Sql.Specs/Cluster/for_ReminderTable/given/a_reminder_table.cs
++++ b/Source/Kernel/Storage.Sql.Specs/Cluster/for_ReminderTable/given/a_reminder_table.cs
+@@ -62,7 +62,7 @@ protected ClusterDbContext CreateContext()
+     {
+         var options = new DbContextOptionsBuilder<ClusterDbContext>()
+             .UseSqlite(_connection)
+-            .AddConceptAsSupport().WithoutServiceProviderCaching()
++            .AddConceptAsSupport()
+             .Options;
+ 
+         return new ClusterDbContext(options);
+diff --git a/Source/Kernel/Storage.Sql.Specs/Cluster/for_SqlMembershipTable/given/MembershipHarness.cs b/Source/Kernel/Storage.Sql.Specs/Cluster/for_SqlMembershipTable/given/MembershipHarness.cs
+index 3ac038adcb..4871c945f8 100644
+--- a/Source/Kernel/Storage.Sql.Specs/Cluster/for_SqlMembershipTable/given/MembershipHarness.cs
++++ b/Source/Kernel/Storage.Sql.Specs/Cluster/for_SqlMembershipTable/given/MembershipHarness.cs
+@@ -34,7 +34,6 @@ public async Task Initialize(bool nonDefaultSchema)
+     public ClusterDbContext CreateContext(params IInterceptor[] interceptors)
+     {
+         var builder = new DbContextOptionsBuilder<ClusterDbContext>()
+-            .EnableServiceProviderCaching(false)
+             .AddConceptAsSupport()
+             .AddInterceptors(interceptors);
+         if (sqlServer)
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/EventTypes/for_EventTypesMigrations/when_upgrading_an_event_store_database_from_before_visibility.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/EventTypes/for_EventTypesMigrations/when_upgrading_an_event_store_database_from_before_visibility.cs
+index af18c0ad1a..39897183ec 100644
+--- a/Source/Kernel/Storage.Sql.Specs/EventStores/EventTypes/for_EventTypesMigrations/when_upgrading_an_event_store_database_from_before_visibility.cs
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/EventTypes/for_EventTypesMigrations/when_upgrading_an_event_store_database_from_before_visibility.cs
+@@ -80,6 +80,6 @@ static async Task<bool> ColumnExists(EventStoreDbContext context, string name)
+     EventStoreDbContext CreateContext() =>
+         new(new DbContextOptionsBuilder<EventStoreDbContext>()
+             .UseSqlite(_connection)
+-            .AddConceptAsSupport().WithoutServiceProviderCaching()
++            .AddConceptAsSupport()
+             .Options);
+ }
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/EventTypes/for_EventTypesStorage/given/an_event_types_storage.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/EventTypes/for_EventTypesStorage/given/an_event_types_storage.cs
+index 8ff9adc0b2..661ea2d3bd 100644
+--- a/Source/Kernel/Storage.Sql.Specs/EventStores/EventTypes/for_EventTypesStorage/given/an_event_types_storage.cs
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/EventTypes/for_EventTypesStorage/given/an_event_types_storage.cs
+@@ -69,7 +69,7 @@ protected EventStoreDbContext CreateContext()
+     {
+         var options = new DbContextOptionsBuilder<EventStoreDbContext>()
+             .UseSqlite(_connection)
+-            .AddConceptAsSupport().WithoutServiceProviderCaching()
++            .AddConceptAsSupport()
+             .Options;
+ 
+         return new EventStoreDbContext(options);
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Alerts/PostgreSqlAlertIncidentsHarness.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Alerts/PostgreSqlAlertIncidentsHarness.cs
+index 1ebe4deafb..15ae4f00b7 100644
+--- a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Alerts/PostgreSqlAlertIncidentsHarness.cs
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Alerts/PostgreSqlAlertIncidentsHarness.cs
+@@ -26,7 +26,7 @@ public override async ValueTask DisposeAsync()
+ 
+     /// <inheritdoc/>
+     protected override NamespaceDbContext Context() => new(new DbContextOptionsBuilder<NamespaceDbContext>()
+-        .UseNpgsql(_connectionString).AddConceptAsSupport().WithoutServiceProviderCaching().Options);
++        .UseNpgsql(_connectionString).AddConceptAsSupport().Options);
+ 
+     /// <inheritdoc/>
+     protected override Task<string> ConnectionString() => Fixture.CreateDatabase();
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Alerts/SqlAlertIncidentsHarness.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Alerts/SqlAlertIncidentsHarness.cs
+index 03e571e94a..da41507555 100644
+--- a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Alerts/SqlAlertIncidentsHarness.cs
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Alerts/SqlAlertIncidentsHarness.cs
+@@ -45,7 +45,7 @@ public virtual ValueTask DisposeAsync()
+     /// </summary>
+     /// <returns>The namespace context.</returns>
+     protected virtual NamespaceDbContext Context() => new(new DbContextOptionsBuilder<NamespaceDbContext>()
+-        .UseSqlite(_connectionString).AddConceptAsSupport().WithoutServiceProviderCaching().Options);
++        .UseSqlite(_connectionString).AddConceptAsSupport().Options);
+ 
+     /// <summary>
+     /// Creates an isolated provider database.
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Alerts/for_AlertIncidentsMigrations/given/an_unmigrated_namespace_database.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Alerts/for_AlertIncidentsMigrations/given/an_unmigrated_namespace_database.cs
+index 776621a0b5..45173dca8c 100644
+--- a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Alerts/for_AlertIncidentsMigrations/given/an_unmigrated_namespace_database.cs
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Alerts/for_AlertIncidentsMigrations/given/an_unmigrated_namespace_database.cs
+@@ -36,6 +36,6 @@ public void Dispose()
+ 
+     protected NamespaceDbContext CreateContext() => new(new DbContextOptionsBuilder<NamespaceDbContext>()
+         .UseSqlite(_connectionString)
+-        .AddConceptAsSupport().WithoutServiceProviderCaching()
++        .AddConceptAsSupport()
+         .Options);
+ }
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ClosedStreams/for_ClosedStreamsConstraintStorage/given/an_unmigrated_closed_streams_database.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ClosedStreams/for_ClosedStreamsConstraintStorage/given/an_unmigrated_closed_streams_database.cs
+index a6b3d1c9cb..302b8eb40c 100644
+--- a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ClosedStreams/for_ClosedStreamsConstraintStorage/given/an_unmigrated_closed_streams_database.cs
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ClosedStreams/for_ClosedStreamsConstraintStorage/given/an_unmigrated_closed_streams_database.cs
+@@ -38,5 +38,5 @@ public void Dispose()
+     }
+ 
+     protected NamespaceDbContext CreateContext() => new(new DbContextOptionsBuilder<NamespaceDbContext>()
+-        .UseSqlite(_connectionString).AddConceptAsSupport().WithoutServiceProviderCaching().Options);
++        .UseSqlite(_connectionString).AddConceptAsSupport().Options);
+ }
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ClosedStreams/for_ClosedStreamsConstraintStorage/when_migrating_a_legacy_postgresql_row.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ClosedStreams/for_ClosedStreamsConstraintStorage/when_migrating_a_legacy_postgresql_row.cs
+index 4e0771da68..94f56983de 100644
+--- a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ClosedStreams/for_ClosedStreamsConstraintStorage/when_migrating_a_legacy_postgresql_row.cs
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ClosedStreams/for_ClosedStreamsConstraintStorage/when_migrating_a_legacy_postgresql_row.cs
+@@ -60,5 +60,5 @@ async Task Because()
+     [Fact] void should_read_unavailable_sequence_number() => _rows.Single().SequenceNumber.ShouldEqual(EventSequenceNumber.Unavailable);
+ 
+     NamespaceDbContext CreateContext() => new(new DbContextOptionsBuilder<NamespaceDbContext>()
+-        .UseNpgsql(_connectionString).AddConceptAsSupport().WithoutServiceProviderCaching().Options);
++        .UseNpgsql(_connectionString).AddConceptAsSupport().Options);
+ }
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/EventSequences/for_EventCursor/given/a_cursor_over_a_context_whose_async_disposal_suspends.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/EventSequences/for_EventCursor/given/a_cursor_over_a_context_whose_async_disposal_suspends.cs
+index 1945c4ff09..8e84d8b47d 100644
+--- a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/EventSequences/for_EventCursor/given/a_cursor_over_a_context_whose_async_disposal_suspends.cs
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/EventSequences/for_EventCursor/given/a_cursor_over_a_context_whose_async_disposal_suspends.cs
+@@ -25,7 +25,7 @@ void Establish()
+ 
+         var options = new DbContextOptionsBuilder<EventSequenceDbContext>()
+             .UseSqlite(_connection)
+-            .AddConceptAsSupport().WithoutServiceProviderCaching()
++            .AddConceptAsSupport()
+             .Options;
+ 
+         var context = new suspending_event_sequence_db_context(options);
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/EventSequences/for_EventSequenceMigrator/given/a_named_tag_migrator.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/EventSequences/for_EventSequenceMigrator/given/a_named_tag_migrator.cs
+index 38cec9a05f..b7e784f2d0 100644
+--- a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/EventSequences/for_EventSequenceMigrator/given/a_named_tag_migrator.cs
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/EventSequences/for_EventSequenceMigrator/given/a_named_tag_migrator.cs
+@@ -58,7 +58,7 @@ protected EventSequenceDbContext CreateContext()
+             case "SQLServer": builder.UseSqlServer(_connectionString); break;
+             default: builder.UseSqlite(_connectionString); break;
+         }
+-        builder.AddConceptAsSupport().WithoutServiceProviderCaching();
++        builder.AddConceptAsSupport();
+         return new EventSequenceDbContext(builder.Options, "event-sequence", _migrator);
+     }
+ 
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/EventSequences/for_EventSequenceStorage/given/an_event_sequence_storage.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/EventSequences/for_EventSequenceStorage/given/an_event_sequence_storage.cs
+index 54a92a8e4c..cdf750754f 100644
+--- a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/EventSequences/for_EventSequenceStorage/given/an_event_sequence_storage.cs
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/EventSequences/for_EventSequenceStorage/given/an_event_sequence_storage.cs
+@@ -89,7 +89,7 @@ protected EventSequenceDbContext CreateContext()
+             case "SQLServer": builder.UseSqlServer(_connectionString); break;
+             default: builder.UseSqlite(_connectionString); break;
+         }
+-        builder.AddConceptAsSupport().WithoutServiceProviderCaching();
++        builder.AddConceptAsSupport();
+         return new EventSequenceDbContext(builder.Options, _tableName, _migrator);
+     }
+ 
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/EventSequences/for_EventSequenceStorage/when_appending/and_a_sqlite_writer_inserts_the_slot_after_the_check.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/EventSequences/for_EventSequenceStorage/when_appending/and_a_sqlite_writer_inserts_the_slot_after_the_check.cs
+index 192b9b42d5..87a9619340 100644
+--- a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/EventSequences/for_EventSequenceStorage/when_appending/and_a_sqlite_writer_inserts_the_slot_after_the_check.cs
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/EventSequences/for_EventSequenceStorage/when_appending/and_a_sqlite_writer_inserts_the_slot_after_the_check.cs
+@@ -17,7 +17,7 @@ public class and_a_sqlite_writer_inserts_the_slot_after_the_check : given.a_stor
+     void Establish()
+     {
+         var builder = new DbContextOptionsBuilder<EventSequenceDbContext>().UseSqlite(_connectionString);
+-        builder.AddConceptAsSupport().WithoutServiceProviderCaching();
++        builder.AddConceptAsSupport();
+         void CompetingWrite()
+         {
+             SeedEvent(4UL);
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/EventSequences/for_NamedTagFilters/when_translating_for_supported_providers.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/EventSequences/for_NamedTagFilters/when_translating_for_supported_providers.cs
+index e84443ce4a..40a6dc7ee8 100644
+--- a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/EventSequences/for_NamedTagFilters/when_translating_for_supported_providers.cs
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/EventSequences/for_NamedTagFilters/when_translating_for_supported_providers.cs
+@@ -30,7 +30,7 @@ void Because()
+     static string Translate(Func<DbContextOptionsBuilder<EventSequenceDbContext>, DbContextOptionsBuilder<EventSequenceDbContext>> configure)
+     {
+         var builder = configure(new DbContextOptionsBuilder<EventSequenceDbContext>());
+-        builder.AddConceptAsSupport().WithoutServiceProviderCaching();
++        builder.AddConceptAsSupport();
+         using var context = new EventSequenceDbContext(builder.Options, "events", Substitute.For<IEventSequenceMigrator>());
+         return NamedTagFilters.Apply(context.Events, context.NamedTags, "events", [new(new TagName("account"), ["one", "two"])]).ToQueryString();
+     }
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/FailedPartitions/for_FailedPartitionStorage/given/a_failed_partition_storage.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/FailedPartitions/for_FailedPartitionStorage/given/a_failed_partition_storage.cs
+index f618d8d2cb..00bad407fe 100644
+--- a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/FailedPartitions/for_FailedPartitionStorage/given/a_failed_partition_storage.cs
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/FailedPartitions/for_FailedPartitionStorage/given/a_failed_partition_storage.cs
+@@ -50,7 +50,7 @@ protected NamespaceDbContext CreateContext()
+     {
+         var options = new DbContextOptionsBuilder<NamespaceDbContext>()
+             .UseSqlite(_connectionString)
+-            .AddConceptAsSupport().WithoutServiceProviderCaching()
++            .AddConceptAsSupport()
+             .Options;
+ 
+         return new NamespaceDbContext(options);
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Identities/for_IdentityStorage/when_getting_by_ids.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Identities/for_IdentityStorage/when_getting_by_ids.cs
+index cb473dfe90..97bbe95804 100644
+--- a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Identities/for_IdentityStorage/when_getting_by_ids.cs
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Identities/for_IdentityStorage/when_getting_by_ids.cs
+@@ -45,5 +45,5 @@ public void Dispose()
+         GC.SuppressFinalize(this);
+     }
+ 
+-    NamespaceDbContext CreateContext() => new(new DbContextOptionsBuilder<NamespaceDbContext>().UseSqlite(_connectionString).AddConceptAsSupport().WithoutServiceProviderCaching().Options);
++    NamespaceDbContext CreateContext() => new(new DbContextOptionsBuilder<NamespaceDbContext>().UseSqlite(_connectionString).AddConceptAsSupport().Options);
+ }
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverDefinitionChangeMigration/when_downgrading_postgresql.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverDefinitionChangeMigration/when_downgrading_postgresql.cs
+index 7850c89b5c..06db66578d 100644
+--- a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverDefinitionChangeMigration/when_downgrading_postgresql.cs
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverDefinitionChangeMigration/when_downgrading_postgresql.cs
+@@ -21,7 +21,7 @@ public class when_downgrading_postgresql(PostgreSqlFixture fixture) : Specificat
+     async Task Establish()
+     {
+         _connectionString = await fixture.CreateDatabase();
+-        _context = new(new DbContextOptionsBuilder<NamespaceDbContext>().UseNpgsql(_connectionString).AddConceptAsSupport().WithoutServiceProviderCaching().Options);
++        _context = new(new DbContextOptionsBuilder<NamespaceDbContext>().UseNpgsql(_connectionString).AddConceptAsSupport().Options);
+         await _context.Database.ExecuteSqlRawAsync("CREATE TABLE \"Observers\" (\"Id\" TEXT NOT NULL PRIMARY KEY)");
+         await _context.Database.ExecuteSqlRawAsync("INSERT INTO \"Observers\" (\"Id\") VALUES ('legacy-observer')");
+         _migration = new() { ActiveProvider = _context.Database.ProviderName };
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverDefinitionChangeMigration/when_downgrading_sqlite.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverDefinitionChangeMigration/when_downgrading_sqlite.cs
+index 731c01cab7..f61381d11f 100644
+--- a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverDefinitionChangeMigration/when_downgrading_sqlite.cs
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverDefinitionChangeMigration/when_downgrading_sqlite.cs
+@@ -21,7 +21,7 @@ async Task Establish()
+     {
+         _connection = new("DataSource=:memory:");
+         await _connection.OpenAsync();
+-        _context = new(new DbContextOptionsBuilder<NamespaceDbContext>().UseSqlite(_connection).AddConceptAsSupport().WithoutServiceProviderCaching().Options);
++        _context = new(new DbContextOptionsBuilder<NamespaceDbContext>().UseSqlite(_connection).AddConceptAsSupport().Options);
+         await _context.Database.ExecuteSqlRawAsync("CREATE TABLE Observers (Id TEXT NOT NULL PRIMARY KEY)");
+         await _context.Database.ExecuteSqlRawAsync("INSERT INTO Observers (Id) VALUES ('legacy-observer')");
+         _migration = new() { ActiveProvider = _context.Database.ProviderName };
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverDefinitionChangeMigration/when_upgrading_postgresql.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverDefinitionChangeMigration/when_upgrading_postgresql.cs
+index dd0002dd80..54e45b1513 100644
+--- a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverDefinitionChangeMigration/when_upgrading_postgresql.cs
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverDefinitionChangeMigration/when_upgrading_postgresql.cs
+@@ -21,7 +21,7 @@ public class when_upgrading_postgresql(PostgreSqlFixture fixture) : Specificatio
+     async Task Establish()
+     {
+         _connectionString = await fixture.CreateDatabase();
+-        _context = new(new DbContextOptionsBuilder<NamespaceDbContext>().UseNpgsql(_connectionString).AddConceptAsSupport().WithoutServiceProviderCaching().Options);
++        _context = new(new DbContextOptionsBuilder<NamespaceDbContext>().UseNpgsql(_connectionString).AddConceptAsSupport().Options);
+         await _context.Database.ExecuteSqlRawAsync("CREATE TABLE \"Observers\" (\"Id\" TEXT NOT NULL PRIMARY KEY)");
+         await _context.Database.ExecuteSqlRawAsync("INSERT INTO \"Observers\" (\"Id\") VALUES ('legacy-observer')");
+     }
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverDefinitionChangeMigration/when_upgrading_sqlite.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverDefinitionChangeMigration/when_upgrading_sqlite.cs
+index 3be08659fa..ce2de7057b 100644
+--- a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverDefinitionChangeMigration/when_upgrading_sqlite.cs
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverDefinitionChangeMigration/when_upgrading_sqlite.cs
+@@ -21,7 +21,7 @@ async Task Establish()
+     {
+         _connection = new("DataSource=:memory:");
+         await _connection.OpenAsync();
+-        _context = new(new DbContextOptionsBuilder<NamespaceDbContext>().UseSqlite(_connection).AddConceptAsSupport().WithoutServiceProviderCaching().Options);
++        _context = new(new DbContextOptionsBuilder<NamespaceDbContext>().UseSqlite(_connection).AddConceptAsSupport().Options);
+         await _context.Database.ExecuteSqlRawAsync("CREATE TABLE Observers (Id TEXT NOT NULL PRIMARY KEY)");
+         await _context.Database.ExecuteSqlRawAsync("INSERT INTO Observers (Id) VALUES ('legacy-observer')");
+     }
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverDefinitionChangeRows/when_persisting_postgresql_rows.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverDefinitionChangeRows/when_persisting_postgresql_rows.cs
+index 7ab5baed03..cb116a25c0 100644
+--- a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverDefinitionChangeRows/when_persisting_postgresql_rows.cs
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverDefinitionChangeRows/when_persisting_postgresql_rows.cs
+@@ -24,5 +24,5 @@ async Task Establish()
+ 
+     protected override IObserverDefinitionChangeRows<T> OpenRows<T>() => new ObserverDefinitionChangeRows<T>(() => Task.FromResult(new DbContextScope<NamespaceDbContext>(CreateContext(), static () => { })));
+ 
+-    NamespaceDbContext CreateContext() => new(new DbContextOptionsBuilder<NamespaceDbContext>().UseNpgsql(_connectionString).AddConceptAsSupport().WithoutServiceProviderCaching().Options);
++    NamespaceDbContext CreateContext() => new(new DbContextOptionsBuilder<NamespaceDbContext>().UseNpgsql(_connectionString).AddConceptAsSupport().Options);
+ }
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverDefinitionChangeRows/when_persisting_rows.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverDefinitionChangeRows/when_persisting_rows.cs
+index b3f604d0d2..cd27ba735d 100644
+--- a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverDefinitionChangeRows/when_persisting_rows.cs
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverDefinitionChangeRows/when_persisting_rows.cs
+@@ -30,5 +30,5 @@ async Task Establish()
+ 
+     protected override IObserverDefinitionChangeRows<T> OpenRows<T>() => new ObserverDefinitionChangeRows<T>(() => Task.FromResult(new DbContextScope<NamespaceDbContext>(CreateContext(), static () => { })));
+ 
+-    NamespaceDbContext CreateContext() => new(new DbContextOptionsBuilder<NamespaceDbContext>().UseSqlite(_connectionString).AddConceptAsSupport().WithoutServiceProviderCaching().Options);
++    NamespaceDbContext CreateContext() => new(new DbContextOptionsBuilder<NamespaceDbContext>().UseSqlite(_connectionString).AddConceptAsSupport().Options);
+ }
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverDefinitionChangeRows/when_persisting_sql_server_rows.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverDefinitionChangeRows/when_persisting_sql_server_rows.cs
+index c21c38a273..30de0732cf 100644
+--- a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverDefinitionChangeRows/when_persisting_sql_server_rows.cs
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverDefinitionChangeRows/when_persisting_sql_server_rows.cs
+@@ -24,5 +24,5 @@ async Task Establish()
+ 
+     protected override IObserverDefinitionChangeRows<T> OpenRows<T>() => new ObserverDefinitionChangeRows<T>(() => Task.FromResult(new DbContextScope<NamespaceDbContext>(CreateContext(), static () => { })));
+ 
+-    NamespaceDbContext CreateContext() => new(new DbContextOptionsBuilder<NamespaceDbContext>().UseSqlServer(_connectionString).AddConceptAsSupport().WithoutServiceProviderCaching().Options);
++    NamespaceDbContext CreateContext() => new(new DbContextOptionsBuilder<NamespaceDbContext>().UseSqlServer(_connectionString).AddConceptAsSupport().Options);
+ }
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverStateStorage/given/an_observer_state_storage.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverStateStorage/given/an_observer_state_storage.cs
+index 1e75f09261..0e17d7a578 100644
+--- a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverStateStorage/given/an_observer_state_storage.cs
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverStateStorage/given/an_observer_state_storage.cs
+@@ -53,7 +53,7 @@ protected NamespaceDbContext CreateContext()
+     {
+         var options = new DbContextOptionsBuilder<NamespaceDbContext>()
+             .UseSqlite(_connection)
+-            .AddConceptAsSupport().WithoutServiceProviderCaching()
++            .AddConceptAsSupport()
+             .Options;
+ 
+         return new NamespaceDbContext(options);
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverStateStorage/when_round_tripping/with_postgresql_failed_partition_recovery.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverStateStorage/when_round_tripping/with_postgresql_failed_partition_recovery.cs
+index b9c3266409..8b4fc87568 100644
+--- a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverStateStorage/when_round_tripping/with_postgresql_failed_partition_recovery.cs
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverStateStorage/when_round_tripping/with_postgresql_failed_partition_recovery.cs
+@@ -75,7 +75,7 @@ async Task Because()
+     NamespaceDbContext CreateContext()
+     {
+         var builder = new DbContextOptionsBuilder<NamespaceDbContext>();
+-        builder.UseDatabaseFromConnectionString(_connectionString).AddConceptAsSupport().WithoutServiceProviderCaching();
++        builder.UseDatabaseFromConnectionString(_connectionString).AddConceptAsSupport();
+         return new(builder.Options);
+     }
+ }
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverStateStorage/when_round_tripping/with_postgresql_type_set_control.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverStateStorage/when_round_tripping/with_postgresql_type_set_control.cs
+index 788fe38a04..2fad369dbc 100644
+--- a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverStateStorage/when_round_tripping/with_postgresql_type_set_control.cs
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverStateStorage/when_round_tripping/with_postgresql_type_set_control.cs
+@@ -95,7 +95,7 @@ async Task Because()
+     NamespaceDbContext CreateContext()
+     {
+         var builder = new DbContextOptionsBuilder<NamespaceDbContext>();
+-        builder.UseDatabaseFromConnectionString(_connectionString).AddConceptAsSupport().WithoutServiceProviderCaching();
++        builder.UseDatabaseFromConnectionString(_connectionString).AddConceptAsSupport();
+         return new(builder.Options);
+     }
+ }
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverStateStorage/when_saving/and_control_already_exists/with_an_in_flight_older_write.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverStateStorage/when_saving/and_control_already_exists/with_an_in_flight_older_write.cs
+index 076c99d5c8..c6fdc70c42 100644
+--- a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverStateStorage/when_saving/and_control_already_exists/with_an_in_flight_older_write.cs
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverStateStorage/when_saving/and_control_already_exists/with_an_in_flight_older_write.cs
+@@ -27,7 +27,7 @@ async Task Establish()
+         await _storage.Save(new() { Identifier = "observer", TypeSetControl = _control });
+         _barrier = new();
+         var options = new DbContextOptionsBuilder<NamespaceDbContext>()
+-            .UseSqlite(_connection).AddConceptAsSupport().WithoutServiceProviderCaching().AddInterceptors(_barrier).Options;
++            .UseSqlite(_connection).AddConceptAsSupport().AddInterceptors(_barrier).Options;
+         _delayedContext = new(options);
+         var delayedDatabase = Substitute.For<IDatabase>();
+         delayedDatabase.Namespace(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>())
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverStateStorage/when_saving/and_control_already_exists/with_postgresql_stale_control.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverStateStorage/when_saving/and_control_already_exists/with_postgresql_stale_control.cs
+index 80ff474b7b..0c1c3ac0d0 100644
+--- a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverStateStorage/when_saving/and_control_already_exists/with_postgresql_stale_control.cs
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverStateStorage/when_saving/and_control_already_exists/with_postgresql_stale_control.cs
+@@ -85,7 +85,7 @@ ObserverStateStorage CreateStorage(given.ControlWriteBarrier? barrier = null)
+     NamespaceDbContext CreateContext(given.ControlWriteBarrier? barrier = null)
+     {
+         var builder = new DbContextOptionsBuilder<NamespaceDbContext>();
+-        builder.UseDatabaseFromConnectionString(_connectionString).AddConceptAsSupport().WithoutServiceProviderCaching();
++        builder.UseDatabaseFromConnectionString(_connectionString).AddConceptAsSupport();
+         if (barrier is not null)
+         {
+             builder.AddInterceptors(barrier);
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverStateStorage/when_saving/with_postgresql_existing_null_control.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverStateStorage/when_saving/with_postgresql_existing_null_control.cs
+index 443f9bfd1a..fe91c53fea 100644
+--- a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverStateStorage/when_saving/with_postgresql_existing_null_control.cs
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverStateStorage/when_saving/with_postgresql_existing_null_control.cs
+@@ -50,7 +50,7 @@ async Task Because()
+     NamespaceDbContext CreateContext()
+     {
+         var builder = new DbContextOptionsBuilder<NamespaceDbContext>();
+-        builder.UseDatabaseFromConnectionString(_connectionString).AddConceptAsSupport().WithoutServiceProviderCaching();
++        builder.UseDatabaseFromConnectionString(_connectionString).AddConceptAsSupport();
+         return new(builder.Options);
+     }
+ }
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverStateStorage/when_saving/without_postgresql_incoming_control.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverStateStorage/when_saving/without_postgresql_incoming_control.cs
+index a841d2f319..c86fad25d3 100644
+--- a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverStateStorage/when_saving/without_postgresql_incoming_control.cs
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverStateStorage/when_saving/without_postgresql_incoming_control.cs
+@@ -44,7 +44,7 @@ async Task Because()
+     NamespaceDbContext CreateContext()
+     {
+         var builder = new DbContextOptionsBuilder<NamespaceDbContext>();
+-        builder.UseDatabaseFromConnectionString(_connectionString).AddConceptAsSupport().WithoutServiceProviderCaching();
++        builder.UseDatabaseFromConnectionString(_connectionString).AddConceptAsSupport();
+         return new(builder.Options);
+     }
+ }
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverStorageCompatibility/when_checking_the_downgrade_floor.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverStorageCompatibility/when_checking_the_downgrade_floor.cs
+index 31530c5514..71c517f73c 100644
+--- a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverStorageCompatibility/when_checking_the_downgrade_floor.cs
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverStorageCompatibility/when_checking_the_downgrade_floor.cs
+@@ -23,8 +23,8 @@ async Task Establish()
+         _namespaceConnection = new SqliteConnection("DataSource=:memory:");
+         await _storeConnection.OpenAsync();
+         await _namespaceConnection.OpenAsync();
+-        var storeOptions = new DbContextOptionsBuilder<EventStoreDbContext>().UseSqlite(_storeConnection).AddConceptAsSupport().WithoutServiceProviderCaching().Options;
+-        var namespaceOptions = new DbContextOptionsBuilder<NamespaceDbContext>().UseSqlite(_namespaceConnection).AddConceptAsSupport().WithoutServiceProviderCaching().Options;
++        var storeOptions = new DbContextOptionsBuilder<EventStoreDbContext>().UseSqlite(_storeConnection).AddConceptAsSupport().Options;
++        var namespaceOptions = new DbContextOptionsBuilder<NamespaceDbContext>().UseSqlite(_namespaceConnection).AddConceptAsSupport().Options;
+         await using (var context = new EventStoreDbContext(storeOptions))
+         {
+             await context.Database.MigrateAsync();
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverTypeSetMigration/when_downgrading_sql_server.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverTypeSetMigration/when_downgrading_sql_server.cs
+index 69a08b0713..dc17f0473b 100644
+--- a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverTypeSetMigration/when_downgrading_sql_server.cs
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverTypeSetMigration/when_downgrading_sql_server.cs
+@@ -30,7 +30,7 @@ async Task Establish()
+         var builder = new DbContextOptionsBuilder<NamespaceDbContext>();
+ 
+         // Match Database.BuildOptions so Arc's SQL generator creates the JSON CHECK constraints.
+-        builder.UseDatabaseFromConnectionString(_connectionString).AddConceptAsSupport().WithoutServiceProviderCaching();
++        builder.UseDatabaseFromConnectionString(_connectionString).AddConceptAsSupport();
+         _context = new(builder.Options);
+         await _context.Database.ExecuteSqlRawAsync("CREATE TABLE [Observers] ([Id] nvarchar(255) NOT NULL PRIMARY KEY, [LastHandledEventSequenceNumber] bigint NOT NULL)");
+         await _context.Database.ExecuteSqlRawAsync("INSERT INTO [Observers] ([Id], [LastHandledEventSequenceNumber]) VALUES ('legacy-observer', 42)");
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverTypeSetMigration/when_upgrading_postgresql.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverTypeSetMigration/when_upgrading_postgresql.cs
+index bfaf7e02b6..6c3dd82576 100644
+--- a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverTypeSetMigration/when_upgrading_postgresql.cs
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverTypeSetMigration/when_upgrading_postgresql.cs
+@@ -25,7 +25,7 @@ async Task Establish()
+     {
+         _connectionString = await fixture.CreateDatabase();
+         var builder = new DbContextOptionsBuilder<NamespaceDbContext>();
+-        builder.UseDatabaseFromConnectionString(_connectionString).AddConceptAsSupport().WithoutServiceProviderCaching();
++        builder.UseDatabaseFromConnectionString(_connectionString).AddConceptAsSupport();
+         _context = new(builder.Options);
+         await _context.Database.ExecuteSqlRawAsync("CREATE TABLE \"Observers\" (\"Id\" TEXT NOT NULL PRIMARY KEY)");
+         await _context.Database.ExecuteSqlRawAsync("INSERT INTO \"Observers\" (\"Id\") VALUES ('legacy-observer')");
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverTypeSetMigration/when_upgrading_sqlite.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverTypeSetMigration/when_upgrading_sqlite.cs
+index 3fd20a5aad..3c66b44d17 100644
+--- a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverTypeSetMigration/when_upgrading_sqlite.cs
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Observers/for_ObserverTypeSetMigration/when_upgrading_sqlite.cs
+@@ -21,7 +21,7 @@ async Task Establish()
+     {
+         _connection = new("DataSource=:memory:");
+         await _connection.OpenAsync();
+-        _context = new(new DbContextOptionsBuilder<NamespaceDbContext>().UseSqlite(_connection).AddConceptAsSupport().WithoutServiceProviderCaching().Options);
++        _context = new(new DbContextOptionsBuilder<NamespaceDbContext>().UseSqlite(_connection).AddConceptAsSupport().Options);
+         await _context.Database.ExecuteSqlRawAsync("CREATE TABLE Observers (Id TEXT NOT NULL PRIMARY KEY)");
+         await _context.Database.ExecuteSqlRawAsync("INSERT INTO Observers (Id) VALUES ('legacy-observer')");
+     }
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Occurrences/for_OccurrenceMigrations/when_creating_namespace_tables.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Occurrences/for_OccurrenceMigrations/when_creating_namespace_tables.cs
+index 0a11071b34..7e4d3c46e5 100644
+--- a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Occurrences/for_OccurrenceMigrations/when_creating_namespace_tables.cs
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/Occurrences/for_OccurrenceMigrations/when_creating_namespace_tables.cs
+@@ -16,7 +16,7 @@ public class when_creating_namespace_tables : Specification
+     void Because()
+     {
+         _tables = new Migrations.v19_67_0 { ActiveProvider = "Microsoft.EntityFrameworkCore.Sqlite" }.UpOperations.OfType<CreateTableOperation>().Select(table => table.Name).ToArray();
+-        using var context = new NamespaceDbContext(new DbContextOptionsBuilder<NamespaceDbContext>().UseSqlite("Data Source=:memory:").AddConceptAsSupport().WithoutServiceProviderCaching().Options);
++        using var context = new NamespaceDbContext(new DbContextOptionsBuilder<NamespaceDbContext>().UseSqlite("Data Source=:memory:").AddConceptAsSupport().Options);
+         _mapsReceipts = context.Model.FindEntityType(typeof(EffectReceiptEntry)) is not null;
+     }
+ 
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_ReadModelMigrator/given/a_read_model_migrator.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_ReadModelMigrator/given/a_read_model_migrator.cs
+index 75c2d8ab0d..897943e7cb 100644
+--- a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_ReadModelMigrator/given/a_read_model_migrator.cs
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/ReadModels/for_ReadModelMigrator/given/a_read_model_migrator.cs
+@@ -57,7 +57,7 @@ protected ReadModelDbContext CreateContext(string tableName, IReadOnlyList<Proje
+     {
+         var options = new DbContextOptionsBuilder<ReadModelDbContext>()
+             .UseSqlite(_connectionString)
+-            .AddConceptAsSupport().WithoutServiceProviderCaching()
++            .AddConceptAsSupport()
+             .Options;
+ 
+         return new ReadModelDbContext(options, tableName, columns, _migrator);
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/UniqueConstraints/for_UniqueConstraintMigrator/given/a_legacy_server_table.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/UniqueConstraints/for_UniqueConstraintMigrator/given/a_legacy_server_table.cs
+index 11c6a5f7f9..88aa86da62 100644
+--- a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/UniqueConstraints/for_UniqueConstraintMigrator/given/a_legacy_server_table.cs
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/UniqueConstraints/for_UniqueConstraintMigrator/given/a_legacy_server_table.cs
+@@ -41,7 +41,6 @@ protected async Task CreateLegacyTable(string connectionString, bool sqlServer,
+             builder.UseNpgsql(connectionString);
+         }
+ 
+-        builder.WithoutServiceProviderCaching();
+         _options = builder.Options;
+         _context = new(_options, _tableName, _migrator);
+         await _context.Database.OpenConnectionAsync();
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/UniqueConstraints/for_UniqueConstraintMigrator/given/a_legacy_sqlite_table.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/UniqueConstraints/for_UniqueConstraintMigrator/given/a_legacy_sqlite_table.cs
+index 0cb1cb6ff9..9f70a4e43f 100644
+--- a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/UniqueConstraints/for_UniqueConstraintMigrator/given/a_legacy_sqlite_table.cs
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/UniqueConstraints/for_UniqueConstraintMigrator/given/a_legacy_sqlite_table.cs
+@@ -24,7 +24,7 @@ async Task Establish()
+             new TableMigrator<UniqueConstraintDbContext>(Substitute.For<ILogger<TableMigrator<UniqueConstraintDbContext>>>()),
+             new TableMigrator<UniqueConstraintValuesDbContext>(Substitute.For<ILogger<TableMigrator<UniqueConstraintValuesDbContext>>>()),
+             _logger);
+-        _context = new(new DbContextOptionsBuilder<UniqueConstraintDbContext>().UseSqlite(_connection.ConnectionString).WithoutServiceProviderCaching().Options, TableName, _migrator);
++        _context = new(new DbContextOptionsBuilder<UniqueConstraintDbContext>().UseSqlite(_connection.ConnectionString).Options, TableName, _migrator);
+         await _context.Database.ExecuteSqlRawAsync("CREATE TABLE legacy_claims (EventSourceId TEXT PRIMARY KEY, Value TEXT NOT NULL, SequenceNumber INTEGER NOT NULL); CREATE INDEX IX_legacy_claims_Value ON legacy_claims (Value)");
+     }
+ 
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/UniqueConstraints/for_UniqueConstraintsStorage/given/a_per_value_constraint.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/UniqueConstraints/for_UniqueConstraintsStorage/given/a_per_value_constraint.cs
+index 5e8a69b06a..73515dddbc 100644
+--- a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/UniqueConstraints/for_UniqueConstraintsStorage/given/a_per_value_constraint.cs
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/UniqueConstraints/for_UniqueConstraintsStorage/given/a_per_value_constraint.cs
+@@ -48,7 +48,7 @@ void Establish()
+     void Destroy() => _connection.Dispose();
+ 
+     UniqueConstraintValuesDbContext CreateContext(string tableName) => new(
+-        new DbContextOptionsBuilder<UniqueConstraintValuesDbContext>().UseSqlite(_connection.ConnectionString).AddConceptAsSupport().WithoutServiceProviderCaching().Options,
++        new DbContextOptionsBuilder<UniqueConstraintValuesDbContext>().UseSqlite(_connection.ConnectionString).AddConceptAsSupport().Options,
+         tableName,
+         _migrator);
+ }
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/UniqueConstraints/for_UniqueConstraintsStorage/given/a_unique_constraints_storage.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/UniqueConstraints/for_UniqueConstraintsStorage/given/a_unique_constraints_storage.cs
+index ece642b3f3..18a0036ba9 100644
+--- a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/UniqueConstraints/for_UniqueConstraintsStorage/given/a_unique_constraints_storage.cs
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/UniqueConstraints/for_UniqueConstraintsStorage/given/a_unique_constraints_storage.cs
+@@ -61,7 +61,7 @@ UniqueConstraintDbContext CreateContext()
+     {
+         var options = new DbContextOptionsBuilder<UniqueConstraintDbContext>()
+             .UseSqlite(_connection.ConnectionString)
+-            .AddConceptAsSupport().WithoutServiceProviderCaching()
++            .AddConceptAsSupport()
+             .AddInterceptors(_interceptors)
+             .Options;
+ 
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/UniqueConstraints/for_UniqueConstraintsStorage/when_clearing_default_mode_claims.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/UniqueConstraints/for_UniqueConstraintsStorage/when_clearing_default_mode_claims.cs
+index a10997cd6c..110f6d852e 100644
+--- a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/UniqueConstraints/for_UniqueConstraintsStorage/when_clearing_default_mode_claims.cs
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/UniqueConstraints/for_UniqueConstraintsStorage/when_clearing_default_mode_claims.cs
+@@ -29,7 +29,7 @@ async Task Establish()
+         database.UniqueConstraintTable(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<string>()).Returns(async call =>
+         {
+             var context = new UniqueConstraintDbContext(
+-                new DbContextOptionsBuilder<UniqueConstraintDbContext>().UseSqlite(_connection.ConnectionString).AddConceptAsSupport().WithoutServiceProviderCaching().Options,
++                new DbContextOptionsBuilder<UniqueConstraintDbContext>().UseSqlite(_connection.ConnectionString).AddConceptAsSupport().Options,
+                 call.ArgAt<string>(2),
+                 migrator);
+             await context.EnsureTableExists();
+@@ -38,7 +38,7 @@ async Task Establish()
+         database.UniqueConstraintValuesTable(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<string>()).Returns(async call =>
+         {
+             var context = new UniqueConstraintValuesDbContext(
+-                new DbContextOptionsBuilder<UniqueConstraintValuesDbContext>().UseSqlite(_connection.ConnectionString).AddConceptAsSupport().WithoutServiceProviderCaching().Options,
++                new DbContextOptionsBuilder<UniqueConstraintValuesDbContext>().UseSqlite(_connection.ConnectionString).AddConceptAsSupport().Options,
+                 call.ArgAt<string>(2),
+                 migrator);
+             await context.EnsureTableExists();
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/UniqueEventTypesConstraints/for_UniqueEventTypesConstraintsStorage/given/a_unique_event_types_constraints_storage.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/UniqueEventTypesConstraints/for_UniqueEventTypesConstraintsStorage/given/a_unique_event_types_constraints_storage.cs
+index 0d5445d269..1801581f38 100644
+--- a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/UniqueEventTypesConstraints/for_UniqueEventTypesConstraintsStorage/given/a_unique_event_types_constraints_storage.cs
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/UniqueEventTypesConstraints/for_UniqueEventTypesConstraintsStorage/given/a_unique_event_types_constraints_storage.cs
+@@ -120,7 +120,7 @@ EventSequenceDbContext CreateContext()
+     {
+         var options = new DbContextOptionsBuilder<EventSequenceDbContext>()
+             .UseSqlite(_connection)
+-            .AddConceptAsSupport().WithoutServiceProviderCaching()
++            .AddConceptAsSupport()
+             .Options;
+ 
+         return new EventSequenceDbContext(options, $"{EventSequenceId.Log}_events", Substitute.For<IEventSequenceMigrator>());
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/given/a_migrated_namespace_database.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/given/a_migrated_namespace_database.cs
+index 098a8e017b..5d974f4f8e 100644
+--- a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/given/a_migrated_namespace_database.cs
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/given/a_migrated_namespace_database.cs
+@@ -49,7 +49,7 @@ protected NamespaceDbContext CreateContext()
+     {
+         var options = new DbContextOptionsBuilder<NamespaceDbContext>()
+             .UseSqlite(_connectionString)
+-            .AddConceptAsSupport().WithoutServiceProviderCaching()
++            .AddConceptAsSupport()
+             .Options;
+ 
+         return new NamespaceDbContext(options);
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/given/a_migrated_postgresql_namespace_database.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/given/a_migrated_postgresql_namespace_database.cs
+index 8eac639d08..9932e79171 100644
+--- a/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/given/a_migrated_postgresql_namespace_database.cs
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/given/a_migrated_postgresql_namespace_database.cs
+@@ -40,7 +40,7 @@ NamespaceDbContext CreateContext()
+     {
+         var options = new DbContextOptionsBuilder<NamespaceDbContext>()
+             .UseNpgsql(_connectionString)
+-            .AddConceptAsSupport().WithoutServiceProviderCaching()
++            .AddConceptAsSupport()
+             .Options;
+ 
+         return new NamespaceDbContext(options);
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Occurrences/for_LifecycleFanOutStorage/when_storing_an_intent.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Occurrences/for_LifecycleFanOutStorage/when_storing_an_intent.cs
+index 5a2f8d9093..dfe480ac4b 100644
+--- a/Source/Kernel/Storage.Sql.Specs/EventStores/Occurrences/for_LifecycleFanOutStorage/when_storing_an_intent.cs
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Occurrences/for_LifecycleFanOutStorage/when_storing_an_intent.cs
+@@ -44,7 +44,7 @@ EventStoreDbContext CreateContext()
+             case "SQLServer": builder.UseSqlServer(_connectionString); break;
+             default: builder.UseSqlite(_connectionString); break;
+         }
+-        builder.AddConceptAsSupport().WithoutServiceProviderCaching();
++        builder.AddConceptAsSupport();
+         return new(builder.Options);
+     }
+ }
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Occurrences/for_OccurrenceMigrations/when_creating_application_tables.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Occurrences/for_OccurrenceMigrations/when_creating_application_tables.cs
+index 888f28ca01..b06d53341f 100644
+--- a/Source/Kernel/Storage.Sql.Specs/EventStores/Occurrences/for_OccurrenceMigrations/when_creating_application_tables.cs
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Occurrences/for_OccurrenceMigrations/when_creating_application_tables.cs
+@@ -15,7 +15,7 @@ public class when_creating_application_tables : Specification
+     void Because()
+     {
+         _tables = new Migrations.v19_67_0 { ActiveProvider = "Microsoft.EntityFrameworkCore.Sqlite" }.UpOperations.OfType<CreateTableOperation>().Select(table => table.Name).ToArray();
+-        using var context = new EventStoreDbContext(new DbContextOptionsBuilder<EventStoreDbContext>().UseSqlite("Data Source=:memory:").AddConceptAsSupport().WithoutServiceProviderCaching().Options);
++        using var context = new EventStoreDbContext(new DbContextOptionsBuilder<EventStoreDbContext>().UseSqlite("Data Source=:memory:").AddConceptAsSupport().Options);
+         _mapsReceipts = context.Model.FindEntityType(typeof(EffectReceiptEntry)) is not null;
+     }
+ 
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Occurrences/for_OccurrencesStorage/given/an_occurrence_storage.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Occurrences/for_OccurrencesStorage/given/an_occurrence_storage.cs
+index 03ec06d7e8..361b518cf3 100644
+--- a/Source/Kernel/Storage.Sql.Specs/EventStores/Occurrences/for_OccurrencesStorage/given/an_occurrence_storage.cs
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Occurrences/for_OccurrencesStorage/given/an_occurrence_storage.cs
+@@ -74,7 +74,7 @@ NamespaceDbContext CreateContext()
+                 break;
+         }
+ 
+-        builder.AddConceptAsSupport().WithoutServiceProviderCaching();
++        builder.AddConceptAsSupport();
+         return new NamespaceDbContext(builder.Options);
+     }
+ }
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/Occurrences/for_TriggerDefinitionsStorage/given/trigger_definitions.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/Occurrences/for_TriggerDefinitionsStorage/given/trigger_definitions.cs
+index 750d2a3157..1a765f0615 100644
+--- a/Source/Kernel/Storage.Sql.Specs/EventStores/Occurrences/for_TriggerDefinitionsStorage/given/trigger_definitions.cs
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/Occurrences/for_TriggerDefinitionsStorage/given/trigger_definitions.cs
+@@ -54,7 +54,7 @@ EventStoreDbContext CreateContext()
+             default: builder.UseSqlite(_connectionString); break;
+         }
+ 
+-        builder.AddConceptAsSupport().WithoutServiceProviderCaching();
++        builder.AddConceptAsSupport();
+         return new(builder.Options);
+     }
+ }
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/for_EventStoreStorage/when_recording_initialization.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/for_EventStoreStorage/when_recording_initialization.cs
+index db92c5e8ca..df8d1859e2 100644
+--- a/Source/Kernel/Storage.Sql.Specs/EventStores/for_EventStoreStorage/when_recording_initialization.cs
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/for_EventStoreStorage/when_recording_initialization.cs
+@@ -23,7 +23,7 @@ async Task Establish()
+     {
+         _connection = new SqliteConnection($"DataSource=initialization-{Guid.NewGuid():N};Mode=Memory;Cache=Shared");
+         await _connection.OpenAsync();
+-        _options = new DbContextOptionsBuilder<EventStoreDbContext>().UseSqlite(_connection).AddConceptAsSupport().WithoutServiceProviderCaching().Options;
++        _options = new DbContextOptionsBuilder<EventStoreDbContext>().UseSqlite(_connection).AddConceptAsSupport().Options;
+         await using (var context = new EventStoreDbContext(_options))
+         {
+             await context.Database.MigrateAsync();
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/for_EventStoreStorage/when_recording_observer_initialization.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/for_EventStoreStorage/when_recording_observer_initialization.cs
+index af08631444..5bcee37104 100644
+--- a/Source/Kernel/Storage.Sql.Specs/EventStores/for_EventStoreStorage/when_recording_observer_initialization.cs
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/for_EventStoreStorage/when_recording_observer_initialization.cs
+@@ -24,7 +24,7 @@ async Task Establish()
+     {
+         _connection = new SqliteConnection($"DataSource=observer-initialization-{Guid.NewGuid():N};Mode=Memory;Cache=Shared");
+         await _connection.OpenAsync();
+-        _options = new DbContextOptionsBuilder<EventStoreDbContext>().UseSqlite(_connection).AddConceptAsSupport().WithoutServiceProviderCaching().Options;
++        _options = new DbContextOptionsBuilder<EventStoreDbContext>().UseSqlite(_connection).AddConceptAsSupport().Options;
+         await using (var context = new EventStoreDbContext(_options))
+         {
+             await context.Database.MigrateAsync();
+diff --git a/Source/Kernel/Storage.Sql.Specs/EventStores/given/an_event_store_db_context.cs b/Source/Kernel/Storage.Sql.Specs/EventStores/given/an_event_store_db_context.cs
+index 214fcd6c3c..727eb70557 100644
+--- a/Source/Kernel/Storage.Sql.Specs/EventStores/given/an_event_store_db_context.cs
++++ b/Source/Kernel/Storage.Sql.Specs/EventStores/given/an_event_store_db_context.cs
+@@ -17,7 +17,7 @@ void Establish()
+     {
+         var options = new DbContextOptionsBuilder<EventStoreDbContext>()
+             .UseSqlite("DataSource=:memory:")
+-            .AddConceptAsSupport().WithoutServiceProviderCaching()
++            .AddConceptAsSupport()
+             .Options;
+ 
+         context = new EventStoreDbContext(options);
+diff --git a/Source/Kernel/Storage.Sql.Specs/Jobs/for_jobs_storage/when_the_kernel_resolves_it_for_an_event_store_namespace.cs b/Source/Kernel/Storage.Sql.Specs/Jobs/for_jobs_storage/when_the_kernel_resolves_it_for_an_event_store_namespace.cs
+index 2bf050ad33..e3ad8a13bb 100644
+--- a/Source/Kernel/Storage.Sql.Specs/Jobs/for_jobs_storage/when_the_kernel_resolves_it_for_an_event_store_namespace.cs
++++ b/Source/Kernel/Storage.Sql.Specs/Jobs/for_jobs_storage/when_the_kernel_resolves_it_for_an_event_store_namespace.cs
+@@ -76,7 +76,7 @@ DbContextOptions<JobsDbContext> BuildOptionsTheWayTheKernelDoes()
+         // through Arc, and concept support added on top.
+         var builder = new DbContextOptionsBuilder<JobsDbContext>();
+         builder.UseDatabaseFromConnectionString($"Data Source={_databaseFile}");
+-        builder.AddConceptAsSupport().WithoutServiceProviderCaching();
++        builder.AddConceptAsSupport();
+         return builder.Options;
+     }
+ 
+diff --git a/Source/Kernel/Storage.Sql.Specs/Sinks/PostgreSqlSinkHarness.cs b/Source/Kernel/Storage.Sql.Specs/Sinks/PostgreSqlSinkHarness.cs
+index 026c367523..57f856780f 100644
+--- a/Source/Kernel/Storage.Sql.Specs/Sinks/PostgreSqlSinkHarness.cs
++++ b/Source/Kernel/Storage.Sql.Specs/Sinks/PostgreSqlSinkHarness.cs
+@@ -96,7 +96,7 @@ async Task<DbContextScope<ReadModelDbContext>> OpenTable(string containerName)
+     {
+         var builder = new DbContextOptionsBuilder<ReadModelDbContext>();
+         builder.UseDatabaseFromConnectionString(ConnectionString);
+-        var options = builder.AddConceptAsSupport().WithoutServiceProviderCaching().AddInterceptors(Interceptors).Options;
++        var options = builder.AddConceptAsSupport().WithSpecInterceptors(Interceptors).Options;
+ 
+ #pragma warning disable CA2000 // Disposed by the sink through the returned scope.
+         var context = new ReadModelDbContext(options, containerName, _columns, _migrator);
+diff --git a/Source/Kernel/Storage.Sql.Specs/Sinks/SqlServerSinkHarness.cs b/Source/Kernel/Storage.Sql.Specs/Sinks/SqlServerSinkHarness.cs
+index 7602fe5375..da86679d3c 100644
+--- a/Source/Kernel/Storage.Sql.Specs/Sinks/SqlServerSinkHarness.cs
++++ b/Source/Kernel/Storage.Sql.Specs/Sinks/SqlServerSinkHarness.cs
+@@ -77,7 +77,7 @@ async Task<DbContextScope<ReadModelDbContext>> OpenTable(string containerName)
+     {
+         var builder = new DbContextOptionsBuilder<ReadModelDbContext>();
+         builder.UseDatabaseFromConnectionString(ConnectionString);
+-        var options = builder.AddConceptAsSupport().WithoutServiceProviderCaching().AddInterceptors(Interceptors).Options;
++        var options = builder.AddConceptAsSupport().WithSpecInterceptors(Interceptors).Options;
+ 
+ #pragma warning disable CA2000 // Disposed by the sink through the returned scope.
+         var context = new ReadModelDbContext(options, containerName, _columns, _migrator);
+diff --git a/Source/Kernel/Storage.Sql.Specs/Sinks/SqlSinkHarness.cs b/Source/Kernel/Storage.Sql.Specs/Sinks/SqlSinkHarness.cs
+index 186bc52972..4a1672ef43 100644
+--- a/Source/Kernel/Storage.Sql.Specs/Sinks/SqlSinkHarness.cs
++++ b/Source/Kernel/Storage.Sql.Specs/Sinks/SqlSinkHarness.cs
+@@ -126,8 +126,8 @@ async Task<ReadModelDbContext> CreateContext(string containerName)
+     {
+         var builder = new DbContextOptionsBuilder<ReadModelDbContext>();
+         builder.UseDatabaseFromConnectionString(ConnectionString);
+-        var options = builder.AddConceptAsSupport().WithoutServiceProviderCaching()
+-            .AddInterceptors(Interceptors)
++        var options = builder.AddConceptAsSupport()
++            .WithSpecInterceptors(Interceptors)
+             .Options;
+ 
+         var context = new ReadModelDbContext(options, containerName, _columns, _migrator);
+diff --git a/Source/Kernel/Storage.Sql.Specs/Sinks/for_Sink/given/an_accumulating_sql_read_model.cs b/Source/Kernel/Storage.Sql.Specs/Sinks/for_Sink/given/an_accumulating_sql_read_model.cs
+index 30dba85fc7..91d0a2f78b 100644
+--- a/Source/Kernel/Storage.Sql.Specs/Sinks/for_Sink/given/an_accumulating_sql_read_model.cs
++++ b/Source/Kernel/Storage.Sql.Specs/Sinks/for_Sink/given/an_accumulating_sql_read_model.cs
+@@ -28,7 +28,7 @@ protected ReadModelDbContext OpenInspectionContext(string? connectionString = nu
+         var builder = new DbContextOptionsBuilder<ReadModelDbContext>();
+         builder.UseDatabaseFromConnectionString(connectionString ?? _sqlHarness.ConnectionString);
+         return new ReadModelDbContext(
+-            builder.AddConceptAsSupport().WithoutServiceProviderCaching().Options,
++            builder.AddConceptAsSupport().Options,
+             definition.ContainerName.Value,
+             ProjectedColumns.ForSchema(definition.GetSchemaForLatestGeneration()),
+             Substitute.For<IReadModelMigrator>());
+diff --git a/Source/Kernel/Storage.Sql.Specs/Sinks/for_Sink/when_applying_changes/and_a_dictionary_shaped_property_is_set.cs b/Source/Kernel/Storage.Sql.Specs/Sinks/for_Sink/when_applying_changes/and_a_dictionary_shaped_property_is_set.cs
+index 766fabf6ba..33cfc27ab3 100644
+--- a/Source/Kernel/Storage.Sql.Specs/Sinks/for_Sink/when_applying_changes/and_a_dictionary_shaped_property_is_set.cs
++++ b/Source/Kernel/Storage.Sql.Specs/Sinks/for_Sink/when_applying_changes/and_a_dictionary_shaped_property_is_set.cs
+@@ -141,7 +141,7 @@ ReadModelDbContext CreateContext()
+     {
+         var options = new DbContextOptionsBuilder<ReadModelDbContext>()
+             .UseSqlite(_connection)
+-            .AddConceptAsSupport().WithoutServiceProviderCaching()
++            .AddConceptAsSupport()
+             .Options;
+ 
+         return new ReadModelDbContext(options, ContainerName, _columns, Substitute.For<IReadModelMigrator>());
+diff --git a/Source/Kernel/Storage.Sql.Specs/Sinks/for_Sink/when_applying_changes/and_a_keyed_from_shares_the_join_event.cs b/Source/Kernel/Storage.Sql.Specs/Sinks/for_Sink/when_applying_changes/and_a_keyed_from_shares_the_join_event.cs
+index 204920a734..980ff2c57a 100644
+--- a/Source/Kernel/Storage.Sql.Specs/Sinks/for_Sink/when_applying_changes/and_a_keyed_from_shares_the_join_event.cs
++++ b/Source/Kernel/Storage.Sql.Specs/Sinks/for_Sink/when_applying_changes/and_a_keyed_from_shares_the_join_event.cs
+@@ -90,7 +90,7 @@ ReadModelDbContext CreateContext()
+     {
+         var options = new DbContextOptionsBuilder<ReadModelDbContext>()
+             .UseSqlite(_connection)
+-            .AddConceptAsSupport().WithoutServiceProviderCaching()
++            .AddConceptAsSupport()
+             .Options;
+         return new ReadModelDbContext(options, "test", _columns, Substitute.For<IReadModelMigrator>());
+     }
+diff --git a/Source/Kernel/Storage.Sql.Specs/Sinks/for_Sink/when_applying_changes/and_children_have_nested_identities.cs b/Source/Kernel/Storage.Sql.Specs/Sinks/for_Sink/when_applying_changes/and_children_have_nested_identities.cs
+index 773d31b46c..b728849255 100644
+--- a/Source/Kernel/Storage.Sql.Specs/Sinks/for_Sink/when_applying_changes/and_children_have_nested_identities.cs
++++ b/Source/Kernel/Storage.Sql.Specs/Sinks/for_Sink/when_applying_changes/and_children_have_nested_identities.cs
+@@ -83,7 +83,7 @@ async Task Apply(Change change, ulong sequenceNumber)
+     }
+ 
+     ReadModelDbContext CreateContext() => new(
+-        new DbContextOptionsBuilder<ReadModelDbContext>().UseSqlite(_connection).AddConceptAsSupport().WithoutServiceProviderCaching().Options,
++        new DbContextOptionsBuilder<ReadModelDbContext>().UseSqlite(_connection).AddConceptAsSupport().Options,
+         Container,
+         _columns,
+         Substitute.For<IReadModelMigrator>());
+diff --git a/Source/Kernel/Storage.Sql.Specs/Sinks/for_Sink/when_applying_changes/and_property_change_has_leaf_relative_path_with_array_indexers_targeting_existing_child.cs b/Source/Kernel/Storage.Sql.Specs/Sinks/for_Sink/when_applying_changes/and_property_change_has_leaf_relative_path_with_array_indexers_targeting_existing_child.cs
+index 841a547706..defb244735 100644
+--- a/Source/Kernel/Storage.Sql.Specs/Sinks/for_Sink/when_applying_changes/and_property_change_has_leaf_relative_path_with_array_indexers_targeting_existing_child.cs
++++ b/Source/Kernel/Storage.Sql.Specs/Sinks/for_Sink/when_applying_changes/and_property_change_has_leaf_relative_path_with_array_indexers_targeting_existing_child.cs
+@@ -171,7 +171,7 @@ ReadModelDbContext CreateContext()
+     {
+         var options = new DbContextOptionsBuilder<ReadModelDbContext>()
+             .UseSqlite(_connection)
+-            .AddConceptAsSupport().WithoutServiceProviderCaching()
++            .AddConceptAsSupport()
+             .Options;
+ 
+         return new ReadModelDbContext(options, ContainerName, _columns, Substitute.For<IReadModelMigrator>());
+diff --git a/Source/Kernel/Storage.Sql.Specs/Sinks/for_Sink/when_applying_changes/and_property_change_targets_the_same_collection_as_child_added.cs b/Source/Kernel/Storage.Sql.Specs/Sinks/for_Sink/when_applying_changes/and_property_change_targets_the_same_collection_as_child_added.cs
+index 8c80cc83fe..a50cace596 100644
+--- a/Source/Kernel/Storage.Sql.Specs/Sinks/for_Sink/when_applying_changes/and_property_change_targets_the_same_collection_as_child_added.cs
++++ b/Source/Kernel/Storage.Sql.Specs/Sinks/for_Sink/when_applying_changes/and_property_change_targets_the_same_collection_as_child_added.cs
+@@ -130,7 +130,7 @@ ReadModelDbContext CreateContext()
+     {
+         var options = new DbContextOptionsBuilder<ReadModelDbContext>()
+             .UseSqlite(_connection)
+-            .AddConceptAsSupport().WithoutServiceProviderCaching()
++            .AddConceptAsSupport()
+             .Options;
+ 
+         return new ReadModelDbContext(options, ContainerName, _columns, Substitute.For<IReadModelMigrator>());
+diff --git a/Source/Kernel/Storage.Sql.Specs/Sinks/for_Sink/when_observing_instances/given/a_sql_read_model.cs b/Source/Kernel/Storage.Sql.Specs/Sinks/for_Sink/when_observing_instances/given/a_sql_read_model.cs
+index d60865e0e8..f74aca5f50 100644
+--- a/Source/Kernel/Storage.Sql.Specs/Sinks/for_Sink/when_observing_instances/given/a_sql_read_model.cs
++++ b/Source/Kernel/Storage.Sql.Specs/Sinks/for_Sink/when_observing_instances/given/a_sql_read_model.cs
+@@ -139,6 +139,6 @@ ReadModelDbContext CreateContext()
+     {
+         var options = new DbContextOptionsBuilder<ReadModelDbContext>();
+         Configure(options, _connection);
+-        return new ReadModelDbContext(options.AddConceptAsSupport().WithoutServiceProviderCaching().Options, ContainerName, _columns, Substitute.For<IReadModelMigrator>());
++        return new ReadModelDbContext(options.AddConceptAsSupport().Options, ContainerName, _columns, Substitute.For<IReadModelMigrator>());
+     }
+ }
+diff --git a/Source/Kernel/Storage.Sql.Specs/Sinks/for_Sink/when_setting_nested_object_on_child/and_child_already_exists.cs b/Source/Kernel/Storage.Sql.Specs/Sinks/for_Sink/when_setting_nested_object_on_child/and_child_already_exists.cs
+index 4b5c08729b..e2f7cb54ed 100644
+--- a/Source/Kernel/Storage.Sql.Specs/Sinks/for_Sink/when_setting_nested_object_on_child/and_child_already_exists.cs
++++ b/Source/Kernel/Storage.Sql.Specs/Sinks/for_Sink/when_setting_nested_object_on_child/and_child_already_exists.cs
+@@ -210,7 +210,7 @@ ReadModelDbContext CreateContext()
+     {
+         var options = new DbContextOptionsBuilder<ReadModelDbContext>()
+             .UseSqlite(_connection)
+-            .AddConceptAsSupport().WithoutServiceProviderCaching()
++            .AddConceptAsSupport()
+             .Options;
+ 
+         return new ReadModelDbContext(options, ContainerName, _columns, Substitute.For<IReadModelMigrator>());
+diff --git a/Source/Kernel/Storage.Sql.Specs/SpecDbContextOptions.cs b/Source/Kernel/Storage.Sql.Specs/SpecDbContextOptions.cs
+index 8cfce93696..da6e2b8153 100644
+--- a/Source/Kernel/Storage.Sql.Specs/SpecDbContextOptions.cs
++++ b/Source/Kernel/Storage.Sql.Specs/SpecDbContextOptions.cs
+@@ -2,6 +2,7 @@
+ // Licensed under the MIT license. See LICENSE file in the project root for full license information.
+ 
+ using Microsoft.EntityFrameworkCore;
++using Microsoft.EntityFrameworkCore.Diagnostics;
+ 
+ namespace Cratis.Chronicle.Storage.Sql;
+ 
+@@ -11,20 +12,22 @@ namespace Cratis.Chronicle.Storage.Sql;
+ public static class SpecDbContextOptions
+ {
+     /// <summary>
+-    /// Disables EF Core's internal service provider cache for the options being built.
++    /// Adds spec interceptors, keeping the internal provider cache bounded.
+     /// </summary>
+-    /// <remarks>
+-    /// The specs build far more than twenty distinct option sets in one process, and EF Core throws
+-    /// <see cref="Microsoft.EntityFrameworkCore.Diagnostics.CoreEventId.ManyServiceProvidersCreatedWarning"/> for any created after the twentieth, which makes the
+-    /// failing spec depend on test order. Every spec harness goes through this helper.
+-    /// </remarks>
+     /// <typeparam name="TBuilder">The type of options builder.</typeparam>
+     /// <param name="builder">The builder to configure.</param>
++    /// <param name="interceptors">The interceptors for this spec.</param>
+     /// <returns>The same builder for continuation.</returns>
+-    public static TBuilder WithoutServiceProviderCaching<TBuilder>(this TBuilder builder)
++    public static TBuilder WithSpecInterceptors<TBuilder>(this TBuilder builder, IEnumerable<IInterceptor> interceptors)
+         where TBuilder : DbContextOptionsBuilder
+     {
+-        builder.EnableServiceProviderCaching(false);
++        var configuredInterceptors = interceptors.ToArray();
++        builder.AddInterceptors(configuredInterceptors);
++        if (configuredInterceptors.Any(interceptor => interceptor is ISingletonInterceptor))
++        {
++            // Fresh singleton interceptors such as SqlReadCapture vary EF's provider cache key per spec.
++            builder.EnableServiceProviderCaching(false);
++        }
+         return builder;
+     }
+ }
+diff --git a/Source/Kernel/Storage.Sql.Specs/for_Database/given/a_sqlite_database.cs b/Source/Kernel/Storage.Sql.Specs/for_Database/given/a_sqlite_database.cs
+index c0a9f8aa46..5a1e197727 100644
+--- a/Source/Kernel/Storage.Sql.Specs/for_Database/given/a_sqlite_database.cs
++++ b/Source/Kernel/Storage.Sql.Specs/for_Database/given/a_sqlite_database.cs
+@@ -59,7 +59,7 @@ async Task Establish()
+     protected NamespaceDbContext Context(string? connectionString = null, params IInterceptor[] interceptors) => new(
+         new DbContextOptionsBuilder<NamespaceDbContext>()
+             .UseSqlite(connectionString ?? _connectionString)
+-            .AddConceptAsSupport().WithoutServiceProviderCaching()
++            .AddConceptAsSupport()
+             .AddInterceptors(interceptors)
+             .Options);
+ 
+diff --git a/Source/Kernel/Storage.Sql.Specs/for_Database/when_migrating_a_namespace/and_already_exists_has_no_pending_migrations.cs b/Source/Kernel/Storage.Sql.Specs/for_Database/when_migrating_a_namespace/and_already_exists_has_no_pending_migrations.cs
+index 7540d4107b..3f7af5ded4 100644
+--- a/Source/Kernel/Storage.Sql.Specs/for_Database/when_migrating_a_namespace/and_already_exists_has_no_pending_migrations.cs
++++ b/Source/Kernel/Storage.Sql.Specs/for_Database/when_migrating_a_namespace/and_already_exists_has_no_pending_migrations.cs
+@@ -33,7 +33,7 @@ async Task Because()
+ 
+         // Build the options the way Database.BuildOptions does, so this context shares the kernel's EF configuration.
+         builder
+-            .AddConceptAsSupport().WithoutServiceProviderCaching()
++            .AddConceptAsSupport()
+             .AddInterceptors(_failure);
+         await using var context = new NamespaceDbContext(builder.Options);
+ 
+diff --git a/Source/Kernel/Storage.Sql.Specs/for_DatabaseSchemaLock/given/SchemaLockDbContext.cs b/Source/Kernel/Storage.Sql.Specs/for_DatabaseSchemaLock/given/SchemaLockDbContext.cs
+index 912dc499e5..f52852a8a1 100644
+--- a/Source/Kernel/Storage.Sql.Specs/for_DatabaseSchemaLock/given/SchemaLockDbContext.cs
++++ b/Source/Kernel/Storage.Sql.Specs/for_DatabaseSchemaLock/given/SchemaLockDbContext.cs
+@@ -2,17 +2,7 @@
+ // Licensed under the MIT license. See LICENSE file in the project root for full license information.
+ 
+ using Microsoft.EntityFrameworkCore;
+-using Microsoft.EntityFrameworkCore.Diagnostics;
+ 
+ namespace Cratis.Chronicle.Storage.Sql.for_DatabaseSchemaLock.given;
+ 
+-public class SchemaLockDbContext(DbContextOptions<SchemaLockDbContext> options) : DbContext(options)
+-{
+-    /// <inheritdoc/>
+-    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+-    {
+-        // The spec project builds more than twenty distinct EF option sets, and EF Core throws for any
+-        // new one created after the twentieth; which one that is depends on test order.
+-        optionsBuilder.ConfigureWarnings(warnings => warnings.Ignore(CoreEventId.ManyServiceProvidersCreatedWarning));
+-    }
+-}
++public class SchemaLockDbContext(DbContextOptions<SchemaLockDbContext> options) : DbContext(options);
