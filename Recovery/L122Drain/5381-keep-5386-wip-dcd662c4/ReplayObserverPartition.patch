@@ -1,0 +1,19 @@
+diff --git a/Source/Kernel/Core/Observation/Jobs/ReplayObserverPartition.cs b/Source/Kernel/Core/Observation/Jobs/ReplayObserverPartition.cs
+index dd9193222f..071bafd41b 100644
+--- a/Source/Kernel/Core/Observation/Jobs/ReplayObserverPartition.cs
++++ b/Source/Kernel/Core/Observation/Jobs/ReplayObserverPartition.cs
+@@ -110,6 +110,14 @@ protected override async Task OnAllStepsCompleted()
+ 
+         // A selected-type replay cannot prove that it handled the event which failed for this partition.
+         var replayedEventTypes = State.HandledAllEvents && Request.ReplaysAllEventTypes ? Request.EventTypes.ToArray() : [];
++        if (!FurthestOf(State.LastHandledEventSequenceNumber, lastScanned).IsActualValue &&
++            replayedEventTypes.Length == 0 &&
++            Request.HeldBackFrom.IsActualValue && Request.HeldBackFrom > EventSequenceNumber.First)
++        {
++            // An empty partial replay must catch up from held-back live delivery, not from First or nowhere.
++            lastScanned = Request.HeldBackFrom - 1UL;
++        }
++
+         var (handled, scanned) = await CoverageHeldBelowLiveDelivery(observer, State.LastHandledEventSequenceNumber, lastScanned);
+         await observer.PartitionReplayed(Request.Key, handled, scanned, replayedEventTypes);
+     }
