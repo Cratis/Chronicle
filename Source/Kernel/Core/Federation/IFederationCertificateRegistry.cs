@@ -68,4 +68,12 @@ public interface IFederationCertificateRegistry
     /// <param name="event">The event.</param>
     /// <returns>Awaitable task.</returns>
     Task Append(string eventSourceId, object @event);
+
+    /// <summary>
+    /// Claim the single redemption an enrollment has. The event log enforces it with a unique event type constraint, so it holds across silos and concurrent requests.
+    /// </summary>
+    /// <param name="enrollmentId">The enrollment being redeemed.</param>
+    /// <param name="serial">The serial number of the certificate issued for the redemption.</param>
+    /// <returns>True when this caller holds the redemption, false when the enrollment was already redeemed.</returns>
+    Task<bool> ClaimRedemption(string enrollmentId, string serial);
 }

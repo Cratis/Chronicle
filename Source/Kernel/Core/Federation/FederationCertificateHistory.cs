@@ -83,6 +83,10 @@ internal sealed class FederationCertificateHistory
                 _enrollments[id] = new(id, created.Subject, created.Instance, created.TokenHash, created.CreatedAt, created.ExpiresAt, created.CreatedBy, false, false);
                 break;
 
+            case FederationEnrollmentRedeemed when _enrollments.TryGetValue(id, out var claimed):
+                _enrollments[id] = claimed with { Redeemed = true };
+                break;
+
             case FederationEnrollmentRevoked when _enrollments.TryGetValue(id, out var revoked):
                 _enrollments[id] = revoked with { Revoked = true };
                 break;

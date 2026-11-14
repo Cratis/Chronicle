@@ -9,6 +9,12 @@ namespace Cratis.Chronicle.Federation.given;
 public class FakeCertificateRegistry : IFederationCertificateRegistry
 {
     readonly FederationCertificateHistory _history = new();
+    readonly HashSet<string> _claimed = [];
+
+    /// <summary>
+    /// Gets or sets something to wait for after an enrollment was read, to make concurrent callers interleave.
+    /// </summary>
+    public Func<Task>? OnFindEnrollment { get; set; }
 
     /// <summary>
     /// Gets every event appended, in order.
@@ -19,7 +25,17 @@ public class FakeCertificateRegistry : IFederationCertificateRegistry
     public Task<IReadOnlyList<FederationEnrollmentState>> GetEnrollments() => Task.FromResult(_history.Enrollments);
 
     /// <inheritdoc/>
-    public Task<FederationEnrollmentState?> FindEnrollment(string id) => Task.FromResult(_history.FindEnrollment(id));
+    public async Task<FederationEnrollmentState?> FindEnrollment(string id)
+    {
+        var state = _history.FindEnrollment(id);
+        if (OnFindEnrollment is not null)
+        {
+            // The state was read before the wait, so a caller that waits here decides on what was true before the others got in.
+            await OnFindEnrollment();
+        }
+
+        return state;
+    }
 
     /// <inheritdoc/>
     public Task<IReadOnlyList<FederationIssuedCertificateState>> GetIssuedCertificates() => Task.FromResult(_history.Certificates);
@@ -45,5 +61,19 @@ public class FakeCertificateRegistry : IFederationCertificateRegistry
         Appended.Add((eventSourceId, @event));
         _history.Apply(eventSourceId, @event);
         return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public Task<bool> ClaimRedemption(string enrollmentId, string serial)
+    {
+        lock (_claimed)
+        {
+            if (!_claimed.Add(enrollmentId))
+            {
+                return Task.FromResult(false);
+            }
+        }
+
+        return Append(enrollmentId, new FederationEnrollmentRedeemed(serial)).ContinueWith(_ => true, TaskScheduler.Default);
     }
 }

@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Storage;
@@ -27,11 +28,14 @@ public class FederationCertificateRegistry(
     IGrainFactory grainFactory,
     IEventSerializer serializer) : IFederationCertificateRegistry, IDisposable
 {
+    const string RedemptionConstraintName = "FederationEnrollmentRedeemedOnce";
+
     static readonly EventType[] _eventTypes =
     [
         typeof(FederationAuthorityCreated).GetEventType(),
         typeof(FederationEnrollmentCreated).GetEventType(),
         typeof(FederationEnrollmentRevoked).GetEventType(),
+        typeof(FederationEnrollmentRedeemed).GetEventType(),
         typeof(FederationCertificateIssued).GetEventType(),
         typeof(FederationCertificateRevoked).GetEventType(),
         typeof(FederationIdentityInstalled).GetEventType(),
@@ -45,6 +49,7 @@ public class FederationCertificateRegistry(
     readonly SemaphoreSlim _lock = new(1, 1);
     readonly FederationCertificateHistory _history = new();
     EventSequenceNumber _next = EventSequenceNumber.First;
+    volatile bool _redemptionConstraintSaved;
 
     IEventSequenceStorage Events => storage.GetEventStore(EventStoreName.System)
         .GetNamespace(EventStoreNamespaceName.Default).GetEventSequence(EventSequenceId.Log);
@@ -88,6 +93,37 @@ public class FederationCertificateRegistry(
         {
             throw new FederationEventAppendFailed(eventSourceId, string.Join("; ", result.Errors));
         }
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> ClaimRedemption(string enrollmentId, string serial)
+    {
+        await EnsureRedemptionConstraint();
+        var result = await grainFactory.GetEventLog().Append(enrollmentId, new FederationEnrollmentRedeemed(serial));
+        if (result.IsSuccess)
+        {
+            return true;
+        }
+
+        if (result.HasConstraintViolations)
+        {
+            return false;
+        }
+
+        throw new FederationEventAppendFailed(enrollmentId, string.Join("; ", result.Errors));
+    }
+
+    async Task EnsureRedemptionConstraint()
+    {
+        if (_redemptionConstraintSaved)
+        {
+            return;
+        }
+
+        // At most one redemption event per enrollment: the guarantee lives in the event log, not in how this silo happens to serialize requests.
+        await storage.GetEventStore(EventStoreName.System).Constraints.SaveDefinition(
+            new UniqueEventTypeConstraintDefinition(RedemptionConstraintName, [typeof(FederationEnrollmentRedeemed).GetEventType().Id]));
+        _redemptionConstraintSaved = true;
     }
 
     async Task<TResult> Read<TResult>(Func<FederationCertificateHistory, TResult> select)
