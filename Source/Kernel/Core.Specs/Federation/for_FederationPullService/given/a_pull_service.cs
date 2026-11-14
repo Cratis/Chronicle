@@ -25,6 +25,7 @@ public class a_pull_service : Federation.given.certificates
     protected const string Namespace = "Default";
 
     protected IFederationCaller _caller;
+    protected IFederationPeerAdmission _admission;
     protected IFederationRegistry _registry;
     protected IFederationStatus _status;
     protected IEventSequenceStorage _outbox;
@@ -48,6 +49,9 @@ public class a_pull_service : Federation.given.certificates
 
         _caller = Substitute.For<IFederationCaller>();
         _caller.ClientCertificate.Returns(_ => _presented);
+
+        _admission = Substitute.For<IFederationPeerAdmission>();
+        _admission.Admit(Arg.Any<X509Certificate2?>()).Returns(FederationAdmission.Refused(FederationAdmissionRefusal.NoPolicy));
 
         _registry = Substitute.For<IFederationRegistry>();
         _registry.FindActiveGrants(Arg.Any<CertificatePin>()).Returns(callInfo =>
@@ -119,6 +123,7 @@ public class a_pull_service : Federation.given.certificates
         _options = new() { Federation = new() { Enabled = enabled, Port = 35100, Limits = limits } };
         _service = new(
             _caller,
+            _admission,
             _registry,
             _status,
             _storage,
@@ -127,6 +132,13 @@ public class a_pull_service : Federation.given.certificates
             _metrics,
             Options.Create(_options),
             Substitute.For<ILogger<FederationPullService>>());
+    }
+
+    protected void AdmitHostedPeer(bool allPublic = true, string[]? eventTypes = null, FederationDirection direction = FederationDirection.AcceptorOutbound, string eventStore = Store)
+    {
+        var entry = new FederationPolicyEntry(direction, eventStore, Namespace, allPublic, eventTypes ?? []);
+        var policy = new FederationPolicyState("acme", FederationPolicyStatus.Active, [entry], "operator");
+        _admission.Admit(Arg.Any<X509Certificate2?>()).Returns(new FederationAdmission(FederationAdmissionRefusal.None, "acme", "prod", policy));
     }
 
     protected FederationGrantState GrantForCaller(string id = "link-a", bool allPublic = true, params string[] eventTypes) =>

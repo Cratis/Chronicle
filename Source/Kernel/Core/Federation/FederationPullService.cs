@@ -29,6 +29,7 @@ namespace Cratis.Chronicle.Federation;
 /// </para>
 /// </remarks>
 /// <param name="caller">The <see cref="IFederationCaller"/> giving the presented client certificate.</param>
+/// <param name="peerAdmission">The <see cref="IFederationPeerAdmission"/> admitting a hosted peer when no pinned grant matches.</param>
 /// <param name="registry">The <see cref="IFederationRegistry"/> holding the grants.</param>
 /// <param name="status">The <see cref="IFederationStatus"/> to record on.</param>
 /// <param name="storage">The <see cref="IStorage"/> to read the outbox and event types from.</param>
@@ -40,6 +41,7 @@ namespace Cratis.Chronicle.Federation;
 [Singleton]
 public class FederationPullService(
     IFederationCaller caller,
+    IFederationPeerAdmission peerAdmission,
     IFederationRegistry registry,
     IFederationStatus status,
     IStorage storage,
@@ -80,19 +82,40 @@ public class FederationPullService(
             return Denied(FederationMetrics.UnknownLink, "no usable client certificate", fromSequenceNumber);
         }
 
-        var grants = (await registry.FindActiveGrants(pin))
-            .Where(grant => !grant.Revoked &&
-                PinMatches(grant, pin) &&
+        var pinned = (await registry.FindActiveGrants(pin))
+            .Where(grant => !grant.Revoked && PinMatches(grant, pin))
+            .ToArray();
+        var grants = pinned
+            .Where(grant =>
                 string.Equals(grant.EventStore, eventStore, StringComparison.Ordinal) &&
                 grant.Namespaces.Contains(@namespace, StringComparer.Ordinal))
             .OrderBy(grant => grant.Id, StringComparer.Ordinal)
             .ToArray();
-        if (grants.Length == 0)
+        string linkId;
+        FederationGrant[] permitted;
+        if (grants.Length > 0)
         {
+            linkId = grants[0].Id;
+            permitted = [.. grants.Select(ToGrant)];
+        }
+        else if (pinned.Length > 0)
+        {
+            // A pinned peer is only ever served by its pinned grants, never widened by a hosted policy.
             return Denied(FederationMetrics.UnknownLink, "no active grant covers the request", fromSequenceNumber);
         }
+        else
+        {
+            // Not a pinned peer: a hosted peer is admitted by chain, registry and the policy of its subject, and the target
+            // comes from that policy alone.
+            var hosted = await AdmitHostedPeer(eventStore, @namespace);
+            if (hosted is null)
+            {
+                return Denied(FederationMetrics.UnknownLink, "no active grant covers the request", fromSequenceNumber);
+            }
 
-        var linkId = grants[0].Id;
+            (linkId, eventStore, @namespace, permitted) = (hosted.LinkId, hosted.EventStore, hosted.Namespace, [hosted.Grant]);
+        }
+
         var limits = federation.Limits;
         if (!rateLimiter.TryBegin(linkId, limits.MaxEventsPerSecond, limits.MaxBytesPerSecond))
         {
@@ -102,7 +125,6 @@ public class FederationPullService(
             return Empty(FederatedEventBatchStatus.Throttled, string.Empty, fromSequenceNumber, 0);
         }
 
-        var permitted = grants.Select(ToGrant).ToArray();
         var wanted = eventTypes?.Where(_ => !string.IsNullOrEmpty(_)).ToHashSet(StringComparer.Ordinal) ?? [];
         var pageSize = Math.Max(1, limit > 0 ? Math.Min(limit, limits.MaxBatchSize) : limits.MaxBatchSize);
 
@@ -244,6 +266,36 @@ public class FederationPullService(
     static FederatedEventBatch Empty(string status, string originEventStore, ulong next, ulong tail) =>
         new(status, originEventStore, [], next, tail);
 
+    async Task<HostedTarget?> AdmitHostedPeer(string requestedEventStore, string requestedNamespace)
+    {
+        var admission = await peerAdmission.Admit(caller.ClientCertificate);
+        if (!admission.IsAdmitted)
+        {
+            logger.HostedPeerRefused(admission.Refusal);
+            return null;
+        }
+
+        var entry = admission.Policy!.EntryFor(FederationDirection.AcceptorOutbound);
+        if (entry is null)
+        {
+            logger.HostedPeerRefused(FederationAdmissionRefusal.NoPolicy);
+            return null;
+        }
+
+        // The target is the policy's. A peer may leave it out, or name it, but never address another one.
+        var addressesOtherTarget =
+            (!string.IsNullOrEmpty(requestedEventStore) && !string.Equals(requestedEventStore, entry.EventStore, StringComparison.Ordinal)) ||
+            (!string.IsNullOrEmpty(requestedNamespace) && !string.Equals(requestedNamespace, entry.Namespace, StringComparison.Ordinal));
+        if (addressesOtherTarget)
+        {
+            logger.HostedPeerAddressedOtherTarget();
+            return null;
+        }
+
+        var grant = new FederationGrant(entry.AllPublic, entry.EventTypes.Select(_ => new EventTypeId(_)).ToHashSet());
+        return new($"subject:{admission.Subject}", entry.EventStore, entry.Namespace, grant);
+    }
+
     async Task<EventTypeDecision> Decide(Storage.IEventStoreStorage eventStoreStorage, EventType eventType, FederationGrant[] grants)
     {
         var eventTypes = eventStoreStorage.EventTypes;
@@ -269,6 +321,8 @@ public class FederationPullService(
         logger.PullDenied(reason);
         return Empty(FederatedEventBatchStatus.Denied, string.Empty, fromSequenceNumber, 0);
     }
+
+    sealed record HostedTarget(string LinkId, string EventStore, string Namespace, FederationGrant Grant);
 
     sealed record EventTypeDecision(JsonSchema? Schema, bool IsProtected)
     {

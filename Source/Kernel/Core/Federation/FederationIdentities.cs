@@ -21,6 +21,40 @@ public static partial class FederationIdentities
     public static bool IsValidSegment(string? value) => !string.IsNullOrEmpty(value) && Segment.IsMatch(value) && value is not ("." or "..");
 
     /// <summary>
+    /// Take an identity apart, accepting only exactly <c language="text">spiffe://&lt;trust-domain&gt;/customer/&lt;id&gt;/kernel/&lt;instance&gt;</c>.
+    /// </summary>
+    /// <param name="identity">The identity URI, as found in a certificate.</param>
+    /// <param name="trustDomain">The trust domain, when the identity is well-formed.</param>
+    /// <param name="subject">The opaque subject, when the identity is well-formed.</param>
+    /// <param name="instance">The kernel instance, when the identity is well-formed.</param>
+    /// <returns>True when the identity has exactly the expected form.</returns>
+    public static bool TryParse(string? identity, out string trustDomain, out string subject, out string instance)
+    {
+        trustDomain = subject = instance = string.Empty;
+        const string scheme = "spiffe://";
+        if (identity?.StartsWith(scheme, StringComparison.Ordinal) != true)
+        {
+            return false;
+        }
+
+        var parts = identity[scheme.Length..].Split('/');
+        if (parts.Length != 5 || parts[1] != "customer" || parts[3] != "kernel" || !parts.All(IsValidSegment))
+        {
+            return false;
+        }
+
+        if (!parts[0].Equals(parts[0].ToLowerInvariant(), StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        trustDomain = parts[0];
+        subject = parts[2];
+        instance = parts[4];
+        return true;
+    }
+
+    /// <summary>
     /// Build the identity of a peer.
     /// </summary>
     /// <param name="trustDomain">The trust domain.</param>
