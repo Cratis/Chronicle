@@ -14,9 +14,7 @@ public class and_running_state_changed_at_is_unknown : given.all_dependencies
     void Establish()
     {
         var observer = Substitute.For<IObserver>();
-        observer.GetDefinition().Returns(new ObserverDefinition());
-        observer.GetState().Returns(new ObserverState());
-        _observerStateStorage.GetRunningStateChangedAt(Arg.Any<Concepts.Observation.ObserverId>()).Returns((DateTimeOffset?)null);
+        observer.GetInformation().Returns(new ObserverInformationSnapshot(new ObserverDefinition(), new ObserverState(), false, null));
         _grainFactory.GetGrain<IObserver>(Arg.Any<string>(), Arg.Any<string>()).Returns(observer);
     }
 

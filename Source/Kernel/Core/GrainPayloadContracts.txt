@@ -1280,6 +1280,11 @@ json Cratis.Chronicle.Observation.Jobs.RetryFailedPartitionRequest
 json Cratis.Chronicle.Observation.ObserverDetails
   key: Cratis.Chronicle.Concepts.Observation.ObserverKey
   type: Cratis.Chronicle.Concepts.Observation.ObserverType
+json Cratis.Chronicle.Observation.ObserverInformationSnapshot
+  definition: Cratis.Chronicle.Storage.Observation.ObserverDefinition
+  isSubscribed: bool
+  runningStateChangedAt: System.DateTimeOffset?
+  state: Cratis.Chronicle.Storage.Observation.ObserverState
 json Cratis.Chronicle.Observation.ObserverPageResult
   results: System.Collections.Generic.IReadOnlyDictionary<Cratis.Chronicle.Concepts.Keys.Key,Cratis.Chronicle.Observation.ObserverSubscriberResult>
 json Cratis.Chronicle.Observation.ObserverPartitionBatch
