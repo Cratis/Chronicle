@@ -1,0 +1,172 @@
+diff --git a/Source/Kernel/Core.Specs/EventSequences/for_EventSequence/given/an_event_sequence.cs b/Source/Kernel/Core.Specs/EventSequences/for_EventSequence/given/an_event_sequence.cs
+index 7e7afc10a0..ebbab7f786 100644
+--- a/Source/Kernel/Core.Specs/EventSequences/for_EventSequence/given/an_event_sequence.cs
++++ b/Source/Kernel/Core.Specs/EventSequences/for_EventSequence/given/an_event_sequence.cs
+@@ -71,6 +71,7 @@ public class an_event_sequence : Specification
+     protected ILogger<EventSequence> _eventSequenceLogger = NullLogger<EventSequence>.Instance;
+ 
+     protected virtual Telemetry Telemetry => new();
++    protected virtual ConstraintIndexRepairOptions ConstraintIndexRepair => new();
+     protected virtual EventSequenceId SequenceId => EventSequenceId.Log;
+     protected virtual int StatePersistenceInterval => 1000;
+     protected virtual CausationPropertyRetention CausationPropertyRetention => CausationPropertyRetention.Retain;
+@@ -211,6 +212,7 @@ protected void ConfigureSilo()
+             Telemetry = Telemetry,
+             Events = new Configuration.Events
+             {
++                ConstraintIndexRepair = ConstraintIndexRepair,
+                 StatePersistenceInterval = StatePersistenceInterval,
+                 ConstraintsVersionCheckInterval = ConstraintsVersionCheckInterval,
+                 CausationPropertyRetention = CausationPropertyRetention
+diff --git a/Source/Kernel/Core/Configuration/ChronicleOptions.cs b/Source/Kernel/Core/Configuration/ChronicleOptions.cs
+index 24388d9203..4da7054ae5 100644
+--- a/Source/Kernel/Core/Configuration/ChronicleOptions.cs
++++ b/Source/Kernel/Core/Configuration/ChronicleOptions.cs
+@@ -242,6 +242,8 @@ public IEnumerable<ValidationResult> Validate(ValidationContext validationContex
+                 [$"{nameof(ReadModels)}.{nameof(ReadModels.MaxBatchSize)}"]);
+         }
+ 
++        foreach (var error in ValidateConstraintIndexRepair()) yield return error;
++
+         var alertErrors = Alerts.Conditions
+             .Where(_ => _.Value.RaiseAfter < TimeSpan.Zero)
+             .Select(_ => new ValidationResult(
+@@ -254,6 +256,21 @@ public IEnumerable<ValidationResult> Validate(ValidationContext validationContex
+         }
+     }
+ 
++    IEnumerable<ValidationResult> ValidateConstraintIndexRepair()
++    {
++        var path = $"{nameof(Events)}.{nameof(Configuration.Events.ConstraintIndexRepair)}";
++        if (Events?.ConstraintIndexRepair is not { } repair)
++        {
++            yield return new ValidationResult($"{path} must be configured.", [path]);
++            yield break;
++        }
++        foreach (var error in repair.Validate(new ValidationContext(repair)))
++        {
++            var members = error.MemberNames.Select(member => $"{path}.{member}").ToArray();
++            yield return new ValidationResult($"{string.Join(", ", members)}: {error.ErrorMessage}", members);
++        }
++    }
++
+     IEnumerable<ValidationResult> ValidateSingleWriterLease()
+     {
+         if (Clustering.SingleWriterLease.Ttl < TimeSpan.FromSeconds(5))
+diff --git a/Source/Kernel/Core/Configuration/Events.cs b/Source/Kernel/Core/Configuration/Events.cs
+index e945eca9bb..775abdc150 100644
+--- a/Source/Kernel/Core/Configuration/Events.cs
++++ b/Source/Kernel/Core/Configuration/Events.cs
+@@ -8,6 +8,11 @@ namespace Cratis.Chronicle.Configuration;
+ /// </summary>
+ public class Events
+ {
++    /// <summary>
++    /// Gets the timing options for constraint-index repair.
++    /// </summary>
++    public ConstraintIndexRepairOptions ConstraintIndexRepair { get; init; } = new();
++
+     /// <summary>
+     /// Number of appended event queues to use.
+     /// </summary>
+diff --git a/Source/Kernel/Core/EventSequences/EventSequence.ConstraintIndexCatchUp.cs b/Source/Kernel/Core/EventSequences/EventSequence.ConstraintIndexCatchUp.cs
+index 7083c6b5ae..ca7ea801d4 100644
+--- a/Source/Kernel/Core/EventSequences/EventSequence.ConstraintIndexCatchUp.cs
++++ b/Source/Kernel/Core/EventSequences/EventSequence.ConstraintIndexCatchUp.cs
+@@ -57,7 +57,7 @@ async Task RunConstraintIndexCatchUpTurn(CancellationToken cancellationToken)
+         var slots = ConstraintIndexCatchUpSlots.For(storage);
+         if (!slots.TryEnter(this)) return;
+         _catchUpTracking = true;
+-        using var timeout = new CancellationTokenSource(TimeSpan.FromMilliseconds(1750), ConstraintIndexTimeProvider);
++        using var timeout = new CancellationTokenSource(options.Value.Events.ConstraintIndexRepair.CatchUpBudget, ConstraintIndexTimeProvider);
+         using var budget = CancellationTokenSource.CreateLinkedTokenSource(timeout.Token, cancellationToken);
+         try
+         {
+diff --git a/Source/Kernel/Core/EventSequences/EventSequence.ConstraintIndexRepair.cs b/Source/Kernel/Core/EventSequences/EventSequence.ConstraintIndexRepair.cs
+index d5b5c84155..ec3343b5ff 100644
+--- a/Source/Kernel/Core/EventSequences/EventSequence.ConstraintIndexRepair.cs
++++ b/Source/Kernel/Core/EventSequences/EventSequence.ConstraintIndexRepair.cs
+@@ -18,10 +18,10 @@ async Task RepairConstraintIndexesBeforeAppend()
+     {
+         PrepareConstraintIndexRepair();
+         var now = ConstraintIndexTimeProvider.GetUtcNow();
+-        if (now < _nextConstraintRepairAttempt || (_lastAppendRepairEnded is { } ended && now - ended < TimeSpan.FromSeconds(5))) return;
++        if (now < _nextConstraintRepairAttempt || (_lastAppendRepairEnded is { } ended && now - ended < options.Value.Events.ConstraintIndexRepair.AppendRepairInterval)) return;
+         try
+         {
+-            await RunConstraintIndexRepairTurn(TimeSpan.FromSeconds(5), false, CancellationToken.None);
++            await RunConstraintIndexRepairTurn(options.Value.Events.ConstraintIndexRepair.AppendRepairBudget, false, CancellationToken.None);
+         }
+         finally
+         {
+@@ -32,7 +32,7 @@ async Task RepairConstraintIndexesBeforeAppend()
+     async Task RunConstraintIndexRepairTurn(TimeSpan duration, bool timerTurn, CancellationToken cancellationToken, bool persist = true)
+     {
+         var end = ConstraintIndexTimeProvider.GetUtcNow() + duration;
+-        using var soft = new CancellationTokenSource(duration - TimeSpan.FromMilliseconds(250), ConstraintIndexTimeProvider);
++        using var soft = new CancellationTokenSource(duration - options.Value.Events.ConstraintIndexRepair.SoftBudgetMargin, ConstraintIndexTimeProvider);
+         using var hard = new CancellationTokenSource(duration, ConstraintIndexTimeProvider);
+         using var budget = CancellationTokenSource.CreateLinkedTokenSource(soft.Token, cancellationToken);
+         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(hard.Token, cancellationToken);
+@@ -118,7 +118,8 @@ async Task PersistConstraintIndexRepairSnapshot(ConstraintIndexRepairTurn turn)
+         {
+             var remaining = turn.End - ConstraintIndexTimeProvider.GetUtcNow();
+             if (remaining <= TimeSpan.Zero) throw new TimeoutException("No repair budget remains for the state snapshot.");
+-            using var snapshot = new CancellationTokenSource(remaining < TimeSpan.FromMilliseconds(250) ? remaining : TimeSpan.FromMilliseconds(250), ConstraintIndexTimeProvider);
++            var snapshotBudget = options.Value.Events.ConstraintIndexRepair.SnapshotBudget;
++            using var snapshot = new CancellationTokenSource(remaining < snapshotBudget ? remaining : snapshotBudget, ConstraintIndexTimeProvider);
+ 
+             // Timer disposal cancels the fold token, not the completed repair's snapshot.
+             using var snapshotDeadline = CancellationTokenSource.CreateLinkedTokenSource(snapshot.Token, turn.SnapshotLimit);
+@@ -170,7 +171,13 @@ void CompleteConstraintIndexScope(ConstraintIndexReplayScope scope, bool timerTu
+     void BackOffConstraintRepair()
+     {
+         _constraintRepairFailures++;
+-        _nextConstraintRepairAttempt = ConstraintIndexTimeProvider.GetUtcNow().AddSeconds(Math.Min(60, Math.Pow(2, Math.Min(6, _constraintRepairFailures - 1))));
++        var cap = options.Value.Events.ConstraintIndexRepair.RetryMaxDelay;
++        var delay = TimeSpan.FromSeconds(1);
++        for (var failure = 1; failure < _constraintRepairFailures && delay < cap; failure++)
++        {
++            delay = delay.Ticks > cap.Ticks / 2 ? cap : TimeSpan.FromTicks(delay.Ticks * 2);
++        }
++        _nextConstraintRepairAttempt = ConstraintIndexTimeProvider.GetUtcNow() + (delay < cap ? delay : cap);
+     }
+ 
+     void CountReplaySettledErrors(int count)
+diff --git a/Source/Kernel/Core/EventSequences/EventSequence.ConstraintIndexTimer.cs b/Source/Kernel/Core/EventSequences/EventSequence.ConstraintIndexTimer.cs
+index 7a3df78fbd..4198011867 100644
+--- a/Source/Kernel/Core/EventSequences/EventSequence.ConstraintIndexTimer.cs
++++ b/Source/Kernel/Core/EventSequences/EventSequence.ConstraintIndexTimer.cs
+@@ -22,8 +22,8 @@ void UpdateConstraintIndexRepairTimer()
+             RepairConstraintIndexesOnTimer,
+             new GrainTimerCreationOptions
+             {
+-                DueTime = TimeSpan.FromSeconds(1),
+-                Period = TimeSpan.FromSeconds(1),
++                DueTime = options.Value.Events.ConstraintIndexRepair.TimerInterval,
++                Period = options.Value.Events.ConstraintIndexRepair.TimerInterval,
+                 Interleave = false,
+                 KeepAlive = true
+             });
+@@ -38,7 +38,7 @@ async Task RepairConstraintIndexesOnTimer(CancellationToken cancellationToken)
+             if (ConstraintIndexTimeProvider.GetUtcNow() < _nextConstraintRepairAttempt) return;
+             if (_pendingConstraintIndexes.Count > 0)
+             {
+-                await RunConstraintIndexRepairTurn(TimeSpan.FromSeconds(2), true, cancellationToken);
++                await RunConstraintIndexRepairTurn(options.Value.Events.ConstraintIndexRepair.TimerRepairBudget, true, cancellationToken);
+             }
+             else if (State.ConstraintIndexCatchUpBelow is not null)
+             {
+diff --git a/Source/Kernel/Core/EventSequences/EventSequence.ConstraintIndexUpdates.cs b/Source/Kernel/Core/EventSequences/EventSequence.ConstraintIndexUpdates.cs
+index e44df38654..bd59e2341d 100644
+--- a/Source/Kernel/Core/EventSequences/EventSequence.ConstraintIndexUpdates.cs
++++ b/Source/Kernel/Core/EventSequences/EventSequence.ConstraintIndexUpdates.cs
+@@ -26,7 +26,7 @@ public partial class EventSequence
+ 
+     async Task UpdateConstraintIndexes(IEnumerable<(ConstraintValidationContext Context, EventSequenceNumber SequenceNumber)> contexts)
+     {
+-        using var budget = new CancellationTokenSource(TimeSpan.FromSeconds(2), ConstraintIndexTimeProvider);
++        using var budget = new CancellationTokenSource(options.Value.Events.ConstraintIndexRepair.PostCommitUpdateBudget, ConstraintIndexTimeProvider);
+         var batches = new ConstraintIndexBatches();
+         foreach (var (context, number) in contexts)
+         {
