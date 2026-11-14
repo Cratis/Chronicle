@@ -1,0 +1,56 @@
+From c37bdcd317e411f8955048469cf272cad20a5a59 Mon Sep 17 00:00:00 2001
+From: woksin <sindrewilting@gmail.com>
+Date: Thu, 22 Oct 2026 17:03:43 +0200
+Subject: [PATCH 8/8] Close the fence cost window only once open change streams
+ have drained
+
+Without it an unfenced run ends while the server still owes the streams
+most of the fan-out, and its CPU per batch is undercounted.
+---
+ .../FenceCostRun.cs                              | 16 +++++++++++++++-
+ 1 file changed, 15 insertions(+), 1 deletion(-)
+
+diff --git a/Benchmarks/Chronicle.Benchmarks.Clustering/FenceCostRun.cs b/Benchmarks/Chronicle.Benchmarks.Clustering/FenceCostRun.cs
+index 26e46429f2..d09b603074 100644
+--- a/Benchmarks/Chronicle.Benchmarks.Clustering/FenceCostRun.cs
++++ b/Benchmarks/Chronicle.Benchmarks.Clustering/FenceCostRun.cs
+@@ -13,6 +13,7 @@ namespace Cratis.Chronicle.Benchmarks.Clustering;
+ internal static class FenceCostRun
+ {
+     const int WarmupBatches = 5;
++    static readonly TimeSpan _drainLimit = TimeSpan.FromMinutes(3);
+ 
+     /// <summary>
+     /// Runs the configuration and returns its measurements.
+@@ -44,6 +45,16 @@ internal static async Task<object> Measure(FenceCostConfiguration configuration,
+             var clock = Stopwatch.StartNew();
+             await Task.WhenAll(writers.Select((writer, index) => Repeat(writer, configuration.BatchSize, configuration.Batches, latencies[index] = [])));
+             var elapsed = clock.Elapsed.TotalSeconds;
++
++            // Fan-out work the server still owes the streams belongs to these batches, so the window closes once it is delivered.
++            var expected = (long)configuration.Batches * configuration.Writers * configuration.BatchSize * configuration.ChangeStreams;
++            var drained = Stopwatch.StartNew();
++            while (streams.Delivered < expected && drained.Elapsed < _drainLimit)
++            {
++                await Task.Delay(50);
++            }
++
++            var drainSeconds = drained.Elapsed.TotalSeconds;
+             var after = await Task.WhenAll(members.Select(FenceCostServerStats.Read));
+             var deltas = after.Zip(before, (later, earlier) => later.Since(earlier)).ToArray();
+             var all = latencies.SelectMany(writer => writer).Order().ToArray();
+@@ -72,7 +83,10 @@ internal static async Task<object> Measure(FenceCostConfiguration configuration,
+                 UpdatesPerBatch = primary.Updates / batches,
+                 CommandsPerBatch = primary.Commands / batches,
+                 OplogBytesPerBatch = primary.OplogBytes / batches,
+-                ChangeEventsDelivered = streams.Delivered
++                ChangeEventsExpected = expected,
++                ChangeEventsDelivered = streams.Delivered,
++                WriteSeconds = elapsed,
++                DrainSeconds = drainSeconds
+             };
+         }
+         finally
+-- 
+2.50.1 (Apple Git-155)
+

@@ -1,0 +1,1392 @@
+From af7d4fbbfd8374e4c27c706e1c96218280f3b201 Mon Sep 17 00:00:00 2001
+From: woksin <sindrewilting@gmail.com>
+Date: Thu, 22 Oct 2026 13:44:47 +0200
+Subject: [PATCH 3/8] Add replica-set fault matrix and unit specs for the
+ MongoDB writer fence
+
+Covers revocation at every pause point of a batch, a late command from a
+revoked owner, a writer that died mid-batch, unknown commit outcomes
+(committed, not committed, revoked, left open), racing claims, fenced DDL,
+and the fenced sink writes. The history oracle has a planted-write
+self-check, and CHRONICLE_FENCE_SPECS_UNFENCED=1 bypasses the fence for
+stale writers to prove the revocation specs fail without it.
+---
+ .../Generations/Fencing/FenceHistoryOracle.cs |  49 ++++++++
+ .../Generations/Fencing/FencePausePoint.cs    |  13 ++
+ .../Generations/Fencing/PausingProbe.cs       |  40 ++++++
+ .../Generations/Fencing/UnknownCommitMode.cs  |  11 ++
+ .../Generations/Fencing/UnknownCommitStore.cs |  67 ++++++++++
+ .../when_claiming/and_two_owners_race.cs      |  23 ++++
+ .../given/a_fenced_batch_executor.cs          |  51 ++++++++
+ ...ry_attempt_fails_with_a_transient_error.cs |  17 +++
+ ...mmit_result_is_unknown_and_it_committed.cs |  20 +++
+ ...result_is_unknown_and_it_did_not_commit.cs |  32 +++++
+ ...esult_is_unknown_and_the_epoch_moved_on.cs |  19 +++
+ .../and_the_epoch_has_moved_on.cs             |  20 +++
+ .../and_the_epoch_is_current.cs               |  23 ++++
+ ...writes_fail_with_a_transient_error_once.cs |  21 ++++
+ ...ail_with_an_error_that_is_not_transient.cs |  22 ++++
+ ...and_a_batch_is_paused_across_revocation.cs |  38 ++++++
+ ...from_before_the_revocation_arrives_late.cs |  28 +++++
+ ...tale_write_is_planted_without_the_fence.cs |  25 ++++
+ ...he_batch_is_paused_after_the_gate_write.cs |   9 ++
+ ...nd_the_batch_is_paused_before_admission.cs |  37 ++++++
+ .../and_the_batch_is_paused_before_commit.cs  |   9 ++
+ .../and_the_batch_is_paused_mid_execution.cs  |   9 ++
+ .../and_the_writer_process_died_mid_batch.cs  |  46 +++++++
+ .../a_batch_with_an_unknown_commit.cs         |  24 ++++
+ .../and_it_committed.cs                       |  14 +++
+ .../and_it_did_not_commit.cs                  |  14 +++
+ ...the_owner_was_revoked_before_resolution.cs |  15 +++
+ .../and_the_transaction_was_left_open.cs      |  21 ++++
+ .../and_a_revocation_races_it.cs              |  21 ++++
+ .../and_the_owner_was_revoked.cs              |  26 ++++
+ .../Fencing/for_FencedSinkWrites/given.cs     |  25 ++++
+ .../and_it_fails_part_way.cs                  |  25 ++++
+ .../and_the_owner_was_revoked.cs              |  23 ++++
+ .../and_a_later_write_in_the_batch_fails.cs   |  29 +++++
+ .../when_writing/and_it_is_outside_a_batch.cs |  22 ++++
+ .../and_the_receipt_exists.cs                 |  13 ++
+ ...receipt_exists_after_the_epoch_moved_on.cs |  13 ++
+ ...ipt_is_missing_and_the_epoch_is_current.cs |  13 ++
+ ...ceipt_is_missing_and_the_epoch_moved_on.cs |  13 ++
+ .../a_fenced_writer_against_a_replica_set.cs  | 114 ++++++++++++++++++
+ 40 files changed, 1054 insertions(+)
+ create mode 100644 Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/FenceHistoryOracle.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/FencePausePoint.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/PausingProbe.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/UnknownCommitMode.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/UnknownCommitStore.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FenceGates/when_claiming/and_two_owners_race.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/given/a_fenced_batch_executor.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_executing/and_every_attempt_fails_with_a_transient_error.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_executing/and_the_commit_result_is_unknown_and_it_committed.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_executing/and_the_commit_result_is_unknown_and_it_did_not_commit.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_executing/and_the_commit_result_is_unknown_and_the_epoch_moved_on.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_executing/and_the_epoch_has_moved_on.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_executing/and_the_epoch_is_current.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_executing/and_the_writes_fail_with_a_transient_error_once.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_executing/and_the_writes_fail_with_an_error_that_is_not_transient.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_revoking/and_a_batch_is_paused_across_revocation.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_revoking/and_a_command_from_before_the_revocation_arrives_late.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_revoking/and_a_stale_write_is_planted_without_the_fence.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_revoking/and_the_batch_is_paused_after_the_gate_write.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_revoking/and_the_batch_is_paused_before_admission.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_revoking/and_the_batch_is_paused_before_commit.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_revoking/and_the_batch_is_paused_mid_execution.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_revoking/and_the_writer_process_died_mid_batch.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_the_commit_result_is_unknown/a_batch_with_an_unknown_commit.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_the_commit_result_is_unknown/and_it_committed.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_the_commit_result_is_unknown/and_it_did_not_commit.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_the_commit_result_is_unknown/and_the_owner_was_revoked_before_resolution.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_the_commit_result_is_unknown/and_the_transaction_was_left_open.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedDdl/when_running_a_schema_operation/and_a_revocation_races_it.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedDdl/when_running_a_schema_operation/and_the_owner_was_revoked.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedSinkWrites/given.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedSinkWrites/when_bulk_writing/and_it_fails_part_way.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedSinkWrites/when_bulk_writing/and_the_owner_was_revoked.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedSinkWrites/when_writing/and_a_later_write_in_the_batch_fails.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedSinkWrites/when_writing/and_it_is_outside_a_batch.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_MongoFenceStore/when_deciding_a_resolution/and_the_receipt_exists.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_MongoFenceStore/when_deciding_a_resolution/and_the_receipt_exists_after_the_epoch_moved_on.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_MongoFenceStore/when_deciding_a_resolution/and_the_receipt_is_missing_and_the_epoch_is_current.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_MongoFenceStore/when_deciding_a_resolution/and_the_receipt_is_missing_and_the_epoch_moved_on.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/given/a_fenced_writer_against_a_replica_set.cs
+
+diff --git a/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/FenceHistoryOracle.cs b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/FenceHistoryOracle.cs
+new file mode 100644
+index 0000000000..14960f6b19
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/FenceHistoryOracle.cs
+@@ -0,0 +1,49 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using MongoDB.Bson;
++using MongoDB.Driver;
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
++
++/// <summary>
++/// Judges the persisted history a fault scenario left behind, never in-memory state.
++/// </summary>
++/// <remarks>
++/// Every batch writes a fixed number of history documents stamped with its label and the epoch it wrote under. The history is
++/// consistent when no revoked batch left a document, every batch committed before revocation left all of its documents, and no
++/// document stamped with the revoked epoch belongs to anything but a batch committed before revocation.
++/// </remarks>
++public static class FenceHistoryOracle
++{
++    public const string Label = "label";
++    public const string Epoch = "epoch";
++
++    public static BsonDocument Document(string label, int index, long epoch) => new()
++    {
++        { "_id", $"{label}-{index}" },
++        { Label, label },
++        { Epoch, epoch }
++    };
++
++    public static async Task<IReadOnlyList<string>> Check(
++        IMongoCollection<BsonDocument> history,
++        long revokedEpoch,
++        int documentsPerBatch,
++        IEnumerable<string> committedBeforeRevocation,
++        IEnumerable<string> revoked)
++    {
++        var documents = await history.Find(FilterDefinition<BsonDocument>.Empty).ToListAsync();
++        var byLabel = documents.GroupBy(_ => _[Label].AsString).ToDictionary(_ => _.Key, _ => _.Count());
++        var committed = committedBeforeRevocation.ToHashSet();
++        var violations = new List<string>();
++
++        violations.AddRange(revoked.Where(byLabel.ContainsKey).Select(label => $"revoked batch '{label}' committed {byLabel[label]} document(s)"));
++        violations.AddRange(committed.Where(label => byLabel.GetValueOrDefault(label) != documentsPerBatch)
++            .Select(label => $"batch '{label}' committed before revocation left {byLabel.GetValueOrDefault(label)} of {documentsPerBatch} document(s)"));
++        violations.AddRange(documents
++            .Where(_ => _[Epoch].ToInt64() <= revokedEpoch && !committed.Contains(_[Label].AsString))
++            .Select(_ => $"document '{_["_id"]}' carries revoked epoch {_[Epoch]} but was not committed before revocation"));
++        return violations;
++    }
++}
+diff --git a/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/FencePausePoint.cs b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/FencePausePoint.cs
+new file mode 100644
+index 0000000000..1f959e6097
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/FencePausePoint.cs
+@@ -0,0 +1,13 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
++
++public enum FencePausePoint
++{
++    None = 0,
++    BeforeAdmission = 1,
++    AfterAdmission = 2,
++    MidExecution = 3,
++    BeforeCommit = 4
++}
+diff --git a/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/PausingProbe.cs b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/PausingProbe.cs
+new file mode 100644
+index 0000000000..0d78713e9f
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/PausingProbe.cs
+@@ -0,0 +1,40 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
++
++/// <summary>
++/// Pauses the first fenced batch reaching an armed point until released.
++/// </summary>
++public class PausingProbe : IFencedBatchProbe
++{
++    readonly TaskCompletionSource _reached = new(TaskCreationOptions.RunContinuationsAsynchronously);
++    readonly TaskCompletionSource _released = new(TaskCreationOptions.RunContinuationsAsynchronously);
++    FencePausePoint _armed;
++
++    public Task Reached => _reached.Task;
++
++    public void Arm(FencePausePoint point) => _armed = point;
++
++    public void Release() => _released.TrySetResult();
++
++    public Task BeforeAdmission(FenceBatchId batchId) => At(FencePausePoint.BeforeAdmission);
++
++    public Task AfterAdmission(FenceBatchId batchId) => At(FencePausePoint.AfterAdmission);
++
++    public Task MidExecution() => At(FencePausePoint.MidExecution);
++
++    public Task BeforeCommit(FenceBatchId batchId) => At(FencePausePoint.BeforeCommit);
++
++    async Task At(FencePausePoint point)
++    {
++        if (_armed != point)
++        {
++            return;
++        }
++
++        _armed = FencePausePoint.None;
++        _reached.TrySetResult();
++        await _released.Task.WaitAsync(TimeSpan.FromSeconds(60));
++    }
++}
+diff --git a/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/UnknownCommitMode.cs b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/UnknownCommitMode.cs
+new file mode 100644
+index 0000000000..f69c2ea95c
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/UnknownCommitMode.cs
+@@ -0,0 +1,11 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
++
++public enum UnknownCommitMode
++{
++    CommittedButReplyLost = 0,
++    AbortedButReplyLost = 1,
++    LeftOpenAndReplyLost = 2
++}
+diff --git a/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/UnknownCommitStore.cs b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/UnknownCommitStore.cs
+new file mode 100644
+index 0000000000..f31ad62b4d
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/UnknownCommitStore.cs
+@@ -0,0 +1,67 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
++
++/// <summary>
++/// Wraps the real store so the first batch's commit reports an unknown result, after doing what the mode says on the real server.
++/// </summary>
++/// <param name="inner">The real <see cref="IFenceStore"/>.</param>
++/// <param name="mode">What really happens to the first transaction.</param>
++/// <param name="betweenCommitAndReply">Runs after the real outcome and before the unknown result is reported.</param>
++public class UnknownCommitStore(IFenceStore inner, UnknownCommitMode mode, Func<Task> betweenCommitAndReply) : IFenceStore
++{
++    int _begun;
++
++    public int Resolutions { get; private set; }
++
++    public async Task<IFenceTransaction> Begin(CancellationToken cancellationToken)
++    {
++        var transaction = await inner.Begin(cancellationToken);
++        return Interlocked.Increment(ref _begun) == 1 ? new Transaction(transaction, mode, betweenCommitAndReply) : transaction;
++    }
++
++    public Task<UnknownCommitResolution> Resolve(FenceToken token, FenceBatchId batchId, CancellationToken cancellationToken)
++    {
++        Resolutions++;
++        return inner.Resolve(token, batchId, cancellationToken);
++    }
++
++    sealed class Transaction(IFenceTransaction inner, UnknownCommitMode mode, Func<Task> between) : IFenceTransaction
++    {
++        public global::MongoDB.Driver.IClientSessionHandle Session => inner.Session;
++
++        public Task<bool> Admit(FenceToken token, FenceBatchId batchId, CancellationToken cancellationToken) => inner.Admit(token, batchId, cancellationToken);
++
++        public Task WriteReceipt(FenceToken token, FenceBatchId batchId, CancellationToken cancellationToken) => inner.WriteReceipt(token, batchId, cancellationToken);
++
++        public async Task Commit(CancellationToken cancellationToken)
++        {
++            switch (mode)
++            {
++                case UnknownCommitMode.CommittedButReplyLost:
++                    await inner.Commit(cancellationToken);
++                    break;
++                case UnknownCommitMode.AbortedButReplyLost:
++                    await inner.Abort();
++                    break;
++            }
++
++            await between();
++            var error = new global::MongoDB.Driver.MongoException("commit reply lost");
++            error.AddErrorLabel(FenceRetryPolicy.UnknownTransactionCommitResult);
++            throw error;
++        }
++
++        public Task Abort() => mode == UnknownCommitMode.LeftOpenAndReplyLost ? Task.CompletedTask : inner.Abort();
++
++        public void Dispose()
++        {
++            // A transaction left open must not be ended by disposing its session; it stays until the server reaps it.
++            if (mode != UnknownCommitMode.LeftOpenAndReplyLost)
++            {
++                inner.Dispose();
++            }
++        }
++    }
++}
+diff --git a/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FenceGates/when_claiming/and_two_owners_race.cs b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FenceGates/when_claiming/and_two_owners_race.cs
+new file mode 100644
+index 0000000000..919c27b0a5
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FenceGates/when_claiming/and_two_owners_race.cs
+@@ -0,0 +1,23 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Chronicle.Storage.MongoDB.EventSequences;
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing.for_FenceGates.when_claiming;
++
++[Collection(ReplicaSetMongoDBCollection.Name)]
++public class and_two_owners_race(ReplicaSetMongoDBFixture fixture) : given.a_fenced_writer_against_a_replica_set(fixture)
++{
++    FenceToken[] _claims;
++    long? _current;
++
++    async Task Because()
++    {
++        _claims = await Task.WhenAll(_gates.Claim(MaterializationKey, Generation), _gates.Claim(MaterializationKey, Generation));
++        _current = await _gates.CurrentEpoch(MaterializationKey, Generation);
++    }
++
++    [Fact] void should_give_each_owner_its_own_epoch() => _claims[0].Epoch.ShouldNotEqual(_claims[1].Epoch);
++    [Fact] void should_leave_the_last_claim_as_the_current_epoch() => _current.ShouldEqual(_claims.Max(claim => claim.Epoch));
++    [Fact] void should_have_moved_past_the_first_owner() => _current.ShouldEqual(_token.Epoch + 2);
++}
+diff --git a/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/given/a_fenced_batch_executor.cs b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/given/a_fenced_batch_executor.cs
+new file mode 100644
+index 0000000000..15f01772a5
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/given/a_fenced_batch_executor.cs
+@@ -0,0 +1,51 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using MongoDB.Driver;
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing.for_FencedBatchExecutor.given;
++
++public class a_fenced_batch_executor : Specification
++{
++    protected static readonly FenceToken _token = new("store/namespace/model", 1, 7);
++    protected IFenceStore _store;
++    protected List<IFenceTransaction> _transactions;
++    protected FencedBatchExecutor _executor;
++    protected int _writesCalled;
++    protected Func<Task<string>> _writes;
++
++    protected static MongoException Labeled(string label)
++    {
++        var error = new MongoException(label);
++        error.AddErrorLabel(label);
++        return error;
++    }
++
++    protected IFenceTransaction Transaction(int attempt) => _transactions[attempt];
++
++    void Establish()
++    {
++        _store = Substitute.For<IFenceStore>();
++        _transactions = [];
++        _store.Begin(Arg.Any<CancellationToken>()).Returns(_ =>
++        {
++            var transaction = Substitute.For<IFenceTransaction>();
++            transaction.Admit(Arg.Any<FenceToken>(), Arg.Any<FenceBatchId>(), Arg.Any<CancellationToken>()).Returns(true);
++            _transactions.Add(transaction);
++            ConfigureTransaction(transaction, _transactions.Count - 1);
++            return transaction;
++        });
++        _writes = () => Task.FromResult("written");
++        _executor = new(_store, new FenceRetryPolicy(5, TimeSpan.Zero, TimeSpan.Zero, TimeSpan.FromSeconds(30)), NullFencedBatchProbe.Instance);
++    }
++
++    protected virtual void ConfigureTransaction(IFenceTransaction transaction, int attempt)
++    {
++    }
++
++    protected Task<string> Execute() => _executor.Execute(_token, _ =>
++    {
++        _writesCalled++;
++        return _writes();
++    });
++}
+diff --git a/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_executing/and_every_attempt_fails_with_a_transient_error.cs b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_executing/and_every_attempt_fails_with_a_transient_error.cs
+new file mode 100644
+index 0000000000..69f4e79226
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_executing/and_every_attempt_fails_with_a_transient_error.cs
+@@ -0,0 +1,17 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing.for_FencedBatchExecutor.when_executing;
++
++public class and_every_attempt_fails_with_a_transient_error : given.a_fenced_batch_executor
++{
++    Exception _error;
++
++    void Establish() => _writes = () => Task.FromException<string>(Labeled(FenceRetryPolicy.TransientTransactionError));
++
++    async Task Because() => _error = await Catch.Exception(Execute);
++
++    [Fact] void should_give_up() => _error.ShouldBeOfExactType<FencedBatchRetriesExhausted>();
++    [Fact] void should_stop_at_the_policy_limit() => _transactions.Count.ShouldEqual(5);
++    [Fact] void should_never_commit() => _transactions.ForEach(_ => _.DidNotReceive().Commit(Arg.Any<CancellationToken>()));
++}
+diff --git a/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_executing/and_the_commit_result_is_unknown_and_it_committed.cs b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_executing/and_the_commit_result_is_unknown_and_it_committed.cs
+new file mode 100644
+index 0000000000..29610ede16
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_executing/and_the_commit_result_is_unknown_and_it_committed.cs
+@@ -0,0 +1,20 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing.for_FencedBatchExecutor.when_executing;
++
++public class and_the_commit_result_is_unknown_and_it_committed : given.a_fenced_batch_executor
++{
++    string _result;
++
++    protected override void ConfigureTransaction(IFenceTransaction transaction, int attempt) =>
++        transaction.Commit(Arg.Any<CancellationToken>()).Returns(Task.FromException(Labeled(FenceRetryPolicy.UnknownTransactionCommitResult)));
++
++    void Establish() => _store.Resolve(_token, Arg.Any<FenceBatchId>(), Arg.Any<CancellationToken>()).Returns(UnknownCommitResolution.Committed);
++
++    async Task Because() => _result = await Execute();
++
++    [Fact] void should_resolve_the_batch() => _store.Received(1).Resolve(_token, Arg.Any<FenceBatchId>(), Arg.Any<CancellationToken>());
++    [Fact] void should_not_run_the_batch_again() => _transactions.Count.ShouldEqual(1);
++    [Fact] void should_return_the_result() => _result.ShouldEqual("written");
++}
+diff --git a/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_executing/and_the_commit_result_is_unknown_and_it_did_not_commit.cs b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_executing/and_the_commit_result_is_unknown_and_it_did_not_commit.cs
+new file mode 100644
+index 0000000000..03a117d2da
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_executing/and_the_commit_result_is_unknown_and_it_did_not_commit.cs
+@@ -0,0 +1,32 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing.for_FencedBatchExecutor.when_executing;
++
++public class and_the_commit_result_is_unknown_and_it_did_not_commit : given.a_fenced_batch_executor
++{
++    List<FenceBatchId> _admitted;
++    FenceBatchId _resolved;
++
++    protected override void ConfigureTransaction(IFenceTransaction transaction, int attempt)
++    {
++        transaction.When(_ => _.Admit(Arg.Any<FenceToken>(), Arg.Any<FenceBatchId>(), Arg.Any<CancellationToken>())).Do(call => _admitted.Add(call.Arg<FenceBatchId>()));
++        if (attempt == 0)
++        {
++            transaction.Commit(Arg.Any<CancellationToken>()).Returns(Task.FromException(Labeled(FenceRetryPolicy.UnknownTransactionCommitResult)));
++        }
++    }
++
++    void Establish()
++    {
++        _admitted = [];
++        _store.Resolve(_token, Arg.Do<FenceBatchId>(id => _resolved = id), Arg.Any<CancellationToken>()).Returns(UnknownCommitResolution.NotCommitted);
++    }
++
++    async Task Because() => await Execute();
++
++    [Fact] void should_resolve_the_unknown_batch_before_trying_again() => _resolved.ShouldEqual(_admitted[0]);
++    [Fact] void should_run_the_batch_again() => _writesCalled.ShouldEqual(2);
++    [Fact] void should_try_again_as_a_new_batch() => _admitted[1].ShouldNotEqual(_admitted[0]);
++    [Fact] void should_commit_the_second_attempt() => Transaction(1).Received(1).Commit(Arg.Any<CancellationToken>());
++}
+diff --git a/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_executing/and_the_commit_result_is_unknown_and_the_epoch_moved_on.cs b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_executing/and_the_commit_result_is_unknown_and_the_epoch_moved_on.cs
+new file mode 100644
+index 0000000000..b17b9fdc5e
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_executing/and_the_commit_result_is_unknown_and_the_epoch_moved_on.cs
+@@ -0,0 +1,19 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing.for_FencedBatchExecutor.when_executing;
++
++public class and_the_commit_result_is_unknown_and_the_epoch_moved_on : given.a_fenced_batch_executor
++{
++    Exception _error;
++
++    protected override void ConfigureTransaction(IFenceTransaction transaction, int attempt) =>
++        transaction.Commit(Arg.Any<CancellationToken>()).Returns(Task.FromException(Labeled(FenceRetryPolicy.UnknownTransactionCommitResult)));
++
++    void Establish() => _store.Resolve(_token, Arg.Any<FenceBatchId>(), Arg.Any<CancellationToken>()).Returns(UnknownCommitResolution.Revoked);
++
++    async Task Because() => _error = await Catch.Exception(Execute);
++
++    [Fact] void should_refuse_the_batch() => _error.ShouldBeOfExactType<FenceRevoked>();
++    [Fact] void should_not_run_the_batch_again() => _transactions.Count.ShouldEqual(1);
++}
+diff --git a/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_executing/and_the_epoch_has_moved_on.cs b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_executing/and_the_epoch_has_moved_on.cs
+new file mode 100644
+index 0000000000..83bfa244a3
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_executing/and_the_epoch_has_moved_on.cs
+@@ -0,0 +1,20 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing.for_FencedBatchExecutor.when_executing;
++
++public class and_the_epoch_has_moved_on : given.a_fenced_batch_executor
++{
++    Exception _error;
++
++    protected override void ConfigureTransaction(IFenceTransaction transaction, int attempt) =>
++        transaction.Admit(Arg.Any<FenceToken>(), Arg.Any<FenceBatchId>(), Arg.Any<CancellationToken>()).Returns(false);
++
++    async Task Because() => _error = await Catch.Exception(Execute);
++
++    [Fact] void should_refuse_the_batch() => _error.ShouldBeOfExactType<FenceRevoked>();
++    [Fact] void should_not_run_the_writes() => _writesCalled.ShouldEqual(0);
++    [Fact] void should_abort() => Transaction(0).Received(1).Abort();
++    [Fact] void should_not_commit() => Transaction(0).DidNotReceive().Commit(Arg.Any<CancellationToken>());
++    [Fact] void should_not_try_again() => _transactions.Count.ShouldEqual(1);
++}
+diff --git a/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_executing/and_the_epoch_is_current.cs b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_executing/and_the_epoch_is_current.cs
+new file mode 100644
+index 0000000000..1076279c29
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_executing/and_the_epoch_is_current.cs
+@@ -0,0 +1,23 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing.for_FencedBatchExecutor.when_executing;
++
++public class and_the_epoch_is_current : given.a_fenced_batch_executor
++{
++    string _result;
++
++    async Task Because() => _result = await Execute();
++
++    [Fact] void should_return_the_result_of_the_writes() => _result.ShouldEqual("written");
++    [Fact] void should_admit_through_the_gate_with_the_token() => Transaction(0).Received(1).Admit(_token, Arg.Any<FenceBatchId>(), Arg.Any<CancellationToken>());
++    [Fact] void should_write_the_receipt() => Transaction(0).Received(1).WriteReceipt(_token, Arg.Any<FenceBatchId>(), Arg.Any<CancellationToken>());
++    [Fact] void should_commit() => Transaction(0).Received(1).Commit(Arg.Any<CancellationToken>());
++    [Fact] void should_write_once() => _writesCalled.ShouldEqual(1);
++    [Fact] void should_admit_before_writing_the_receipt() => Received.InOrder(() =>
++    {
++        Transaction(0).Admit(_token, Arg.Any<FenceBatchId>(), Arg.Any<CancellationToken>());
++        Transaction(0).WriteReceipt(_token, Arg.Any<FenceBatchId>(), Arg.Any<CancellationToken>());
++        Transaction(0).Commit(Arg.Any<CancellationToken>());
++    });
++}
+diff --git a/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_executing/and_the_writes_fail_with_a_transient_error_once.cs b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_executing/and_the_writes_fail_with_a_transient_error_once.cs
+new file mode 100644
+index 0000000000..954e8e7bde
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_executing/and_the_writes_fail_with_a_transient_error_once.cs
+@@ -0,0 +1,21 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing.for_FencedBatchExecutor.when_executing;
++
++public class and_the_writes_fail_with_a_transient_error_once : given.a_fenced_batch_executor
++{
++    string _result;
++
++    void Establish() => _writes = () => _writesCalled == 1
++        ? Task.FromException<string>(Labeled(FenceRetryPolicy.TransientTransactionError))
++        : Task.FromResult("written");
++
++    async Task Because() => _result = await Execute();
++
++    [Fact] void should_start_the_batch_again() => _transactions.Count.ShouldEqual(2);
++    [Fact] void should_abort_the_failed_attempt() => Transaction(0).Received(1).Abort();
++    [Fact] void should_not_commit_the_failed_attempt() => Transaction(0).DidNotReceive().Commit(Arg.Any<CancellationToken>());
++    [Fact] void should_commit_the_second_attempt() => Transaction(1).Received(1).Commit(Arg.Any<CancellationToken>());
++    [Fact] void should_return_the_result_of_the_second_attempt() => _result.ShouldEqual("written");
++}
+diff --git a/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_executing/and_the_writes_fail_with_an_error_that_is_not_transient.cs b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_executing/and_the_writes_fail_with_an_error_that_is_not_transient.cs
+new file mode 100644
+index 0000000000..565a6498d4
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_executing/and_the_writes_fail_with_an_error_that_is_not_transient.cs
+@@ -0,0 +1,22 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing.for_FencedBatchExecutor.when_executing;
++
++public class and_the_writes_fail_with_an_error_that_is_not_transient : given.a_fenced_batch_executor
++{
++    InvalidOperationException _failure;
++    Exception _error;
++
++    void Establish()
++    {
++        _failure = new InvalidOperationException("write failed");
++        _writes = () => Task.FromException<string>(_failure);
++    }
++
++    async Task Because() => _error = await Catch.Exception(Execute);
++
++    [Fact] void should_surface_the_failure() => _error.ShouldEqual(_failure);
++    [Fact] void should_abort() => Transaction(0).Received(1).Abort();
++    [Fact] void should_not_try_again() => _transactions.Count.ShouldEqual(1);
++}
+diff --git a/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_revoking/and_a_batch_is_paused_across_revocation.cs b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_revoking/and_a_batch_is_paused_across_revocation.cs
+new file mode 100644
+index 0000000000..286681daa1
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_revoking/and_a_batch_is_paused_across_revocation.cs
+@@ -0,0 +1,38 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Chronicle.Storage.MongoDB.EventSequences;
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing.for_FencedBatchExecutor.when_revoking;
++
++/// <summary>
++/// Pauses a batch at a point after it wrote the gate record, revokes while it is paused, then resumes it.
++/// </summary>
++/// <param name="fixture">The <see cref="ReplicaSetMongoDBFixture"/>.</param>
++/// <param name="point">Where the batch pauses.</param>
++public abstract class and_a_batch_is_paused_across_revocation(ReplicaSetMongoDBFixture fixture, FencePausePoint point) : Fencing.given.a_fenced_writer_against_a_replica_set(fixture)
++{
++    protected bool _revocationWaitedForTheBatch;
++    protected Exception? _staleError;
++
++    async Task Because()
++    {
++        await CommitBeforeRevocation("before");
++        _probe.Arm(point);
++        var paused = WriteBatch("paused");
++        await _probe.Reached;
++        var revocation = Revoke();
++        await Task.Delay(500);
++        _revocationWaitedForTheBatch = !revocation.IsCompleted;
++        _probe.Release();
++        await paused;
++        _committedBeforeRevocation.Add("paused");
++        await revocation;
++        _staleError = await StaleBatch("after");
++        await Judge();
++    }
++
++    [Fact] protected void should_make_revocation_wait_for_the_admitted_batch() => _revocationWaitedForTheBatch.ShouldBeTrue();
++    [Fact] protected void should_refuse_a_batch_after_revocation() => _staleError.ShouldBeOfExactType<FenceRevoked>();
++    [Fact] protected void should_leave_a_consistent_history() => _violations.ShouldBeEmpty();
++}
+diff --git a/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_revoking/and_a_command_from_before_the_revocation_arrives_late.cs b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_revoking/and_a_command_from_before_the_revocation_arrives_late.cs
+new file mode 100644
+index 0000000000..c97671fb6a
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_revoking/and_a_command_from_before_the_revocation_arrives_late.cs
+@@ -0,0 +1,28 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Chronicle.Storage.MongoDB.EventSequences;
++using MongoDB.Bson;
++using MongoDB.Driver;
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing.for_FencedBatchExecutor.when_revoking;
++
++[Collection(ReplicaSetMongoDBCollection.Name)]
++public class and_a_command_from_before_the_revocation_arrives_late(ReplicaSetMongoDBFixture fixture) : Fencing.given.a_fenced_writer_against_a_replica_set(fixture)
++{
++    FenceToken _newOwner;
++    Exception? _error;
++
++    async Task Because()
++    {
++        await CommitBeforeRevocation("before");
++        _newOwner = await _gates.Claim(MaterializationKey, Generation);
++        _error = await StaleBatch("late");
++        await WriteBatch("new-owner", _newOwner);
++        await Judge();
++    }
++
++    [Fact] void should_refuse_the_late_command() => _error.ShouldBeOfExactType<FenceRevoked>();
++    [Fact] void should_let_the_new_owner_write() => History.CountDocuments(FilterDefinition<BsonDocument>.Empty).ShouldEqual(DocumentsPerBatch * 2L);
++    [Fact] void should_leave_a_consistent_history() => _violations.ShouldBeEmpty();
++}
+diff --git a/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_revoking/and_a_stale_write_is_planted_without_the_fence.cs b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_revoking/and_a_stale_write_is_planted_without_the_fence.cs
+new file mode 100644
+index 0000000000..3569796fa0
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_revoking/and_a_stale_write_is_planted_without_the_fence.cs
+@@ -0,0 +1,25 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Chronicle.Storage.MongoDB.EventSequences;
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing.for_FencedBatchExecutor.when_revoking;
++
++/// <summary>
++/// Non-vacuity: a stale write that bypasses the fence must be caught by the oracle, or every other case could pass for nothing.
++/// </summary>
++/// <param name="fixture">The <see cref="ReplicaSetMongoDBFixture"/>.</param>
++[Collection(ReplicaSetMongoDBCollection.Name)]
++public class and_a_stale_write_is_planted_without_the_fence(ReplicaSetMongoDBFixture fixture) : Fencing.given.a_fenced_writer_against_a_replica_set(fixture)
++{
++    async Task Because()
++    {
++        await CommitBeforeRevocation("before");
++        await Revoke();
++        await WriteUnfenced("planted", _token.Epoch);
++        await Judge();
++    }
++
++    [Fact] void should_report_the_planted_write() => _violations.ShouldNotBeEmpty();
++    [Fact] void should_report_every_planted_document() => _violations.Count.ShouldEqual(DocumentsPerBatch);
++}
+diff --git a/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_revoking/and_the_batch_is_paused_after_the_gate_write.cs b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_revoking/and_the_batch_is_paused_after_the_gate_write.cs
+new file mode 100644
+index 0000000000..2b2d5f3a1a
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_revoking/and_the_batch_is_paused_after_the_gate_write.cs
+@@ -0,0 +1,9 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Chronicle.Storage.MongoDB.EventSequences;
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing.for_FencedBatchExecutor.when_revoking;
++
++[Collection(ReplicaSetMongoDBCollection.Name)]
++public class and_the_batch_is_paused_after_the_gate_write(ReplicaSetMongoDBFixture fixture) : and_a_batch_is_paused_across_revocation(fixture, FencePausePoint.AfterAdmission);
+diff --git a/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_revoking/and_the_batch_is_paused_before_admission.cs b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_revoking/and_the_batch_is_paused_before_admission.cs
+new file mode 100644
+index 0000000000..ecefc7b616
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_revoking/and_the_batch_is_paused_before_admission.cs
+@@ -0,0 +1,37 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Chronicle.Storage.MongoDB.EventSequences;
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing.for_FencedBatchExecutor.when_revoking;
++
++[Collection(ReplicaSetMongoDBCollection.Name)]
++public class and_the_batch_is_paused_before_admission(ReplicaSetMongoDBFixture fixture) : Fencing.given.a_fenced_writer_against_a_replica_set(fixture)
++{
++    Exception? _error;
++
++    async Task Because()
++    {
++        await CommitBeforeRevocation("before");
++        if (FenceDisabled)
++        {
++            await Revoke();
++            _error = await StaleBatch("paused");
++        }
++        else
++        {
++            _probe.Arm(FencePausePoint.BeforeAdmission);
++            _revoked.Add("paused");
++            var paused = WriteBatch("paused");
++            await _probe.Reached;
++            await Revoke();
++            _probe.Release();
++            _error = await Catch.Exception(() => paused);
++        }
++
++        await Judge();
++    }
++
++    [Fact] void should_refuse_the_batch() => _error.ShouldBeOfExactType<FenceRevoked>();
++    [Fact] void should_leave_a_consistent_history() => _violations.ShouldBeEmpty();
++}
+diff --git a/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_revoking/and_the_batch_is_paused_before_commit.cs b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_revoking/and_the_batch_is_paused_before_commit.cs
+new file mode 100644
+index 0000000000..bf0f7ad396
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_revoking/and_the_batch_is_paused_before_commit.cs
+@@ -0,0 +1,9 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Chronicle.Storage.MongoDB.EventSequences;
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing.for_FencedBatchExecutor.when_revoking;
++
++[Collection(ReplicaSetMongoDBCollection.Name)]
++public class and_the_batch_is_paused_before_commit(ReplicaSetMongoDBFixture fixture) : and_a_batch_is_paused_across_revocation(fixture, FencePausePoint.BeforeCommit);
+diff --git a/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_revoking/and_the_batch_is_paused_mid_execution.cs b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_revoking/and_the_batch_is_paused_mid_execution.cs
+new file mode 100644
+index 0000000000..f7eab585bd
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_revoking/and_the_batch_is_paused_mid_execution.cs
+@@ -0,0 +1,9 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Chronicle.Storage.MongoDB.EventSequences;
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing.for_FencedBatchExecutor.when_revoking;
++
++[Collection(ReplicaSetMongoDBCollection.Name)]
++public class and_the_batch_is_paused_mid_execution(ReplicaSetMongoDBFixture fixture) : and_a_batch_is_paused_across_revocation(fixture, FencePausePoint.MidExecution);
+diff --git a/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_revoking/and_the_writer_process_died_mid_batch.cs b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_revoking/and_the_writer_process_died_mid_batch.cs
+new file mode 100644
+index 0000000000..ede7494ca2
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_revoking/and_the_writer_process_died_mid_batch.cs
+@@ -0,0 +1,46 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Chronicle.Storage.MongoDB.EventSequences;
++using MongoDB.Bson;
++using MongoDB.Driver;
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing.for_FencedBatchExecutor.when_revoking;
++
++[Collection(ReplicaSetMongoDBCollection.Name)]
++public class and_the_writer_process_died_mid_batch(ReplicaSetMongoDBFixture fixture) : Fencing.given.a_fenced_writer_against_a_replica_set(fixture)
++{
++    MongoClient _deadProcess;
++    long _epochAfterRevocation;
++
++    async Task Because()
++    {
++        await CommitBeforeRevocation("before");
++        await SetTransactionLifetime(2);
++        try
++        {
++            // The dead writer admitted its batch and wrote part of it, then vanished without committing or ending its session.
++            _deadProcess = new MongoClient(ConnectionString);
++            var deadDatabase = _deadProcess.GetDatabase(_database.DatabaseNamespace.DatabaseName);
++            var session = await _deadProcess.StartSessionAsync();
++            session.StartTransaction(MongoFenceStore.TransactionOptions);
++            var transaction = new MongoFenceTransaction(deadDatabase, session);
++            (await transaction.Admit(_token, FenceBatchId.New(), CancellationToken.None)).ShouldBeTrue();
++            await deadDatabase.GetCollection<BsonDocument>("history").InsertOneAsync(session, FenceHistoryOracle.Document("dead", 0, _token.Epoch));
++            _revoked.Add("dead");
++
++            _epochAfterRevocation = await Revoke();
++        }
++        finally
++        {
++            await SetTransactionLifetime(60);
++        }
++
++        await Judge();
++    }
++
++    void Destroy() => _deadProcess?.Dispose();
++
++    [Fact] void should_complete_the_revocation() => _epochAfterRevocation.ShouldEqual(_token.Epoch + 1);
++    [Fact] void should_leave_a_consistent_history() => _violations.ShouldBeEmpty();
++}
+diff --git a/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_the_commit_result_is_unknown/a_batch_with_an_unknown_commit.cs b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_the_commit_result_is_unknown/a_batch_with_an_unknown_commit.cs
+new file mode 100644
+index 0000000000..d436dd4892
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_the_commit_result_is_unknown/a_batch_with_an_unknown_commit.cs
+@@ -0,0 +1,24 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Chronicle.Storage.MongoDB.EventSequences;
++using MongoDB.Bson;
++using MongoDB.Driver;
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing.for_FencedBatchExecutor.when_the_commit_result_is_unknown;
++
++public abstract class a_batch_with_an_unknown_commit(ReplicaSetMongoDBFixture fixture, UnknownCommitMode mode) : Fencing.given.a_fenced_writer_against_a_replica_set(fixture)
++{
++    protected UnknownCommitStore _unknownStore;
++    protected Exception? _error;
++
++    protected virtual Task BetweenCommitAndReply() => Task.CompletedTask;
++
++    async Task Because()
++    {
++        _unknownStore = new(_store, mode, BetweenCommitAndReply);
++        _error = await Catch.Exception(() => WriteBatch("unknown", executor: new FencedBatchExecutor(_unknownStore, _policy, _probe)));
++    }
++
++    protected long DocumentsWritten => History.CountDocuments(FilterDefinition<BsonDocument>.Empty);
++}
+diff --git a/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_the_commit_result_is_unknown/and_it_committed.cs b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_the_commit_result_is_unknown/and_it_committed.cs
+new file mode 100644
+index 0000000000..8151ec8023
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_the_commit_result_is_unknown/and_it_committed.cs
+@@ -0,0 +1,14 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Chronicle.Storage.MongoDB.EventSequences;
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing.for_FencedBatchExecutor.when_the_commit_result_is_unknown;
++
++[Collection(ReplicaSetMongoDBCollection.Name)]
++public class and_it_committed(ReplicaSetMongoDBFixture fixture) : a_batch_with_an_unknown_commit(fixture, UnknownCommitMode.CommittedButReplyLost)
++{
++    [Fact] void should_succeed() => _error.ShouldBeNull();
++    [Fact] void should_resolve_once() => _unknownStore.Resolutions.ShouldEqual(1);
++    [Fact] void should_not_write_the_batch_twice() => DocumentsWritten.ShouldEqual(DocumentsPerBatch);
++}
+diff --git a/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_the_commit_result_is_unknown/and_it_did_not_commit.cs b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_the_commit_result_is_unknown/and_it_did_not_commit.cs
+new file mode 100644
+index 0000000000..afc8cc05f8
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_the_commit_result_is_unknown/and_it_did_not_commit.cs
+@@ -0,0 +1,14 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Chronicle.Storage.MongoDB.EventSequences;
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing.for_FencedBatchExecutor.when_the_commit_result_is_unknown;
++
++[Collection(ReplicaSetMongoDBCollection.Name)]
++public class and_it_did_not_commit(ReplicaSetMongoDBFixture fixture) : a_batch_with_an_unknown_commit(fixture, UnknownCommitMode.AbortedButReplyLost)
++{
++    [Fact] void should_succeed() => _error.ShouldBeNull();
++    [Fact] void should_resolve_once() => _unknownStore.Resolutions.ShouldEqual(1);
++    [Fact] void should_write_the_batch_exactly_once() => DocumentsWritten.ShouldEqual(DocumentsPerBatch);
++}
+diff --git a/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_the_commit_result_is_unknown/and_the_owner_was_revoked_before_resolution.cs b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_the_commit_result_is_unknown/and_the_owner_was_revoked_before_resolution.cs
+new file mode 100644
+index 0000000000..baf16b0687
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_the_commit_result_is_unknown/and_the_owner_was_revoked_before_resolution.cs
+@@ -0,0 +1,15 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Chronicle.Storage.MongoDB.EventSequences;
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing.for_FencedBatchExecutor.when_the_commit_result_is_unknown;
++
++[Collection(ReplicaSetMongoDBCollection.Name)]
++public class and_the_owner_was_revoked_before_resolution(ReplicaSetMongoDBFixture fixture) : a_batch_with_an_unknown_commit(fixture, UnknownCommitMode.AbortedButReplyLost)
++{
++    protected override Task BetweenCommitAndReply() => Revoke();
++
++    [Fact] void should_refuse_the_batch() => _error.ShouldBeOfExactType<FenceRevoked>();
++    [Fact] void should_not_write_the_batch() => DocumentsWritten.ShouldEqual(0);
++}
+diff --git a/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_the_commit_result_is_unknown/and_the_transaction_was_left_open.cs b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_the_commit_result_is_unknown/and_the_transaction_was_left_open.cs
+new file mode 100644
+index 0000000000..706f9348be
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedBatchExecutor/when_the_commit_result_is_unknown/and_the_transaction_was_left_open.cs
+@@ -0,0 +1,21 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Chronicle.Storage.MongoDB.EventSequences;
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing.for_FencedBatchExecutor.when_the_commit_result_is_unknown;
++
++/// <summary>
++/// The server still holds the batch open; resolution must wait for it to end rather than guess.
++/// </summary>
++/// <param name="fixture">The <see cref="ReplicaSetMongoDBFixture"/>.</param>
++[Collection(ReplicaSetMongoDBCollection.Name)]
++public class and_the_transaction_was_left_open(ReplicaSetMongoDBFixture fixture) : a_batch_with_an_unknown_commit(fixture, UnknownCommitMode.LeftOpenAndReplyLost)
++{
++    async Task Establish() => await SetTransactionLifetime(2);
++
++    async Task Destroy() => await SetTransactionLifetime(60);
++
++    [Fact] void should_succeed() => _error.ShouldBeNull();
++    [Fact] void should_write_the_batch_exactly_once() => DocumentsWritten.ShouldEqual(DocumentsPerBatch);
++}
+diff --git a/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedDdl/when_running_a_schema_operation/and_a_revocation_races_it.cs b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedDdl/when_running_a_schema_operation/and_a_revocation_races_it.cs
+new file mode 100644
+index 0000000000..7666dd2d67
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedDdl/when_running_a_schema_operation/and_a_revocation_races_it.cs
+@@ -0,0 +1,21 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Chronicle.Storage.MongoDB.EventSequences;
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing.for_FencedDdl.when_running_a_schema_operation;
++
++[Collection(ReplicaSetMongoDBCollection.Name)]
++public class and_a_revocation_races_it(ReplicaSetMongoDBFixture fixture) : given.a_fenced_writer_against_a_replica_set(fixture)
++{
++    Exception? _error;
++
++    async Task Because() =>
++        _error = await Catch.Exception(() => new FencedDdl(_gates).Run(_token, async () =>
++        {
++            await _database.CreateCollectionAsync("renamed-target");
++            await Revoke();
++        }));
++
++    [Fact] void should_report_the_race() => _error.ShouldBeOfExactType<FencedDdlRacedRevocation>();
++}
+diff --git a/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedDdl/when_running_a_schema_operation/and_the_owner_was_revoked.cs b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedDdl/when_running_a_schema_operation/and_the_owner_was_revoked.cs
+new file mode 100644
+index 0000000000..b5b47ce3e2
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedDdl/when_running_a_schema_operation/and_the_owner_was_revoked.cs
+@@ -0,0 +1,26 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Chronicle.Storage.MongoDB.EventSequences;
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing.for_FencedDdl.when_running_a_schema_operation;
++
++[Collection(ReplicaSetMongoDBCollection.Name)]
++public class and_the_owner_was_revoked(ReplicaSetMongoDBFixture fixture) : given.a_fenced_writer_against_a_replica_set(fixture)
++{
++    bool _ran;
++    Exception? _error;
++
++    async Task Because()
++    {
++        await Revoke();
++        _error = await Catch.Exception(() => new FencedDdl(_gates).Run(_token, () =>
++        {
++            _ran = true;
++            return Task.CompletedTask;
++        }));
++    }
++
++    [Fact] void should_not_run_the_operation() => _ran.ShouldBeFalse();
++    [Fact] void should_refuse_the_owner() => _error.ShouldBeOfExactType<FenceRevoked>();
++}
+diff --git a/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedSinkWrites/given.cs b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedSinkWrites/given.cs
+new file mode 100644
+index 0000000000..905f086e50
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedSinkWrites/given.cs
+@@ -0,0 +1,25 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Chronicle.Storage.MongoDB.EventSequences;
++using MongoDB.Bson;
++using MongoDB.Driver;
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing.for_FencedSinkWrites;
++
++public class given(ReplicaSetMongoDBFixture fixture) : Fencing.given.a_fenced_writer_against_a_replica_set(fixture)
++{
++    protected FencedSinkWrites _writes;
++    protected IMongoCollection<BsonDocument> _models;
++
++    async Task Establish()
++    {
++        _writes = new(new FixedFenceTokenSource(_token), _executor);
++        await _database.CreateCollectionAsync("models");
++        _models = _database.GetCollection<BsonDocument>("models");
++    }
++
++    protected static WriteModel<BsonDocument> Insert(int id) => new InsertOneModel<BsonDocument>(new BsonDocument("_id", id));
++
++    protected Task<long> Count() => _models.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty);
++}
+diff --git a/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedSinkWrites/when_bulk_writing/and_it_fails_part_way.cs b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedSinkWrites/when_bulk_writing/and_it_fails_part_way.cs
+new file mode 100644
+index 0000000000..91d7ed4f65
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedSinkWrites/when_bulk_writing/and_it_fails_part_way.cs
+@@ -0,0 +1,25 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Chronicle.Storage.MongoDB.EventSequences;
++using MongoDB.Bson;
++using MongoDB.Driver;
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing.for_FencedSinkWrites.when_bulk_writing;
++
++[Collection(ReplicaSetMongoDBCollection.Name)]
++public class and_it_fails_part_way(ReplicaSetMongoDBFixture fixture) : given(fixture)
++{
++    Exception? _error;
++    long _count;
++
++    async Task Because()
++    {
++        await _models.InsertOneAsync(new BsonDocument("_id", 3));
++        _error = await Catch.Exception(() => _writes.BulkWrite(_models, [Insert(1), Insert(2), Insert(3), Insert(4)], CancellationToken.None));
++        _count = await Count();
++    }
++
++    [Fact] void should_surface_the_write_error() => _error.ShouldBeOfExactType<MongoBulkWriteException<BsonDocument>>();
++    [Fact] void should_keep_the_requests_before_the_failure_like_an_ordered_bulk_write() => _count.ShouldEqual(3L);
++}
+diff --git a/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedSinkWrites/when_bulk_writing/and_the_owner_was_revoked.cs b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedSinkWrites/when_bulk_writing/and_the_owner_was_revoked.cs
+new file mode 100644
+index 0000000000..e1faccf17c
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedSinkWrites/when_bulk_writing/and_the_owner_was_revoked.cs
+@@ -0,0 +1,23 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Chronicle.Storage.MongoDB.EventSequences;
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing.for_FencedSinkWrites.when_bulk_writing;
++
++[Collection(ReplicaSetMongoDBCollection.Name)]
++public class and_the_owner_was_revoked(ReplicaSetMongoDBFixture fixture) : given(fixture)
++{
++    Exception? _error;
++    long _count;
++
++    async Task Because()
++    {
++        await Revoke();
++        _error = await Catch.Exception(() => _writes.BulkWrite(_models, [Insert(1), Insert(2)], CancellationToken.None));
++        _count = await Count();
++    }
++
++    [Fact] void should_refuse_the_owner() => _error.ShouldBeOfExactType<FenceRevoked>();
++    [Fact] void should_not_write_anything() => _count.ShouldEqual(0L);
++}
+diff --git a/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedSinkWrites/when_writing/and_a_later_write_in_the_batch_fails.cs b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedSinkWrites/when_writing/and_a_later_write_in_the_batch_fails.cs
+new file mode 100644
+index 0000000000..dd2c83bb01
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedSinkWrites/when_writing/and_a_later_write_in_the_batch_fails.cs
+@@ -0,0 +1,29 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Chronicle.Storage.MongoDB.EventSequences;
++using MongoDB.Bson;
++using MongoDB.Driver;
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing.for_FencedSinkWrites.when_writing;
++
++[Collection(ReplicaSetMongoDBCollection.Name)]
++public class and_a_later_write_in_the_batch_fails(ReplicaSetMongoDBFixture fixture) : given(fixture)
++{
++    Exception? _error;
++    long _count;
++
++    async Task Because()
++    {
++        _error = await Catch.Exception(() => _writes.InBatch(async () =>
++        {
++            await _writes.UpdateOne(_models, Builders<BsonDocument>.Filter.Eq("_id", 1), Builders<BsonDocument>.Update.Set("name", "first"), new UpdateOptions { IsUpsert = true });
++            await _writes.UpdateOne(_models, Builders<BsonDocument>.Filter.Eq("_id", 2), Builders<BsonDocument>.Update.Set("_id", 3), new UpdateOptions { IsUpsert = true });
++            return 0;
++        }));
++        _count = await Count();
++    }
++
++    [Fact] void should_fail() => _error.ShouldNotBeNull();
++    [Fact] void should_roll_back_the_earlier_write_with_it() => _count.ShouldEqual(0L);
++}
+diff --git a/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedSinkWrites/when_writing/and_it_is_outside_a_batch.cs b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedSinkWrites/when_writing/and_it_is_outside_a_batch.cs
+new file mode 100644
+index 0000000000..8a230391fb
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedSinkWrites/when_writing/and_it_is_outside_a_batch.cs
+@@ -0,0 +1,22 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Chronicle.Storage.MongoDB.EventSequences;
++using MongoDB.Bson;
++using MongoDB.Driver;
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing.for_FencedSinkWrites.when_writing;
++
++[Collection(ReplicaSetMongoDBCollection.Name)]
++public class and_it_is_outside_a_batch(ReplicaSetMongoDBFixture fixture) : given(fixture)
++{
++    Exception? _error;
++
++    async Task Because()
++    {
++        await Revoke();
++        _error = await Catch.Exception(() => _writes.DeleteOne(_models, Builders<BsonDocument>.Filter.Eq("_id", 1)));
++    }
++
++    [Fact] void should_still_be_fenced() => _error.ShouldBeOfExactType<FenceRevoked>();
++}
+diff --git a/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_MongoFenceStore/when_deciding_a_resolution/and_the_receipt_exists.cs b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_MongoFenceStore/when_deciding_a_resolution/and_the_receipt_exists.cs
+new file mode 100644
+index 0000000000..4635f9512c
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_MongoFenceStore/when_deciding_a_resolution/and_the_receipt_exists.cs
+@@ -0,0 +1,13 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing.for_MongoFenceStore.when_deciding_a_resolution;
++
++public class and_the_receipt_exists : Specification
++{
++    UnknownCommitResolution _result;
++
++    void Because() => _result = MongoFenceStore.Decide(true, 7, 7);
++
++    [Fact] void should_resolve_as_committed() => _result.ShouldEqual(UnknownCommitResolution.Committed);
++}
+diff --git a/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_MongoFenceStore/when_deciding_a_resolution/and_the_receipt_exists_after_the_epoch_moved_on.cs b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_MongoFenceStore/when_deciding_a_resolution/and_the_receipt_exists_after_the_epoch_moved_on.cs
+new file mode 100644
+index 0000000000..7f9f4cad67
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_MongoFenceStore/when_deciding_a_resolution/and_the_receipt_exists_after_the_epoch_moved_on.cs
+@@ -0,0 +1,13 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing.for_MongoFenceStore.when_deciding_a_resolution;
++
++public class and_the_receipt_exists_after_the_epoch_moved_on : Specification
++{
++    UnknownCommitResolution _result;
++
++    void Because() => _result = MongoFenceStore.Decide(true, 8, 7);
++
++    [Fact] void should_resolve_as_committed() => _result.ShouldEqual(UnknownCommitResolution.Committed);
++}
+diff --git a/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_MongoFenceStore/when_deciding_a_resolution/and_the_receipt_is_missing_and_the_epoch_is_current.cs b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_MongoFenceStore/when_deciding_a_resolution/and_the_receipt_is_missing_and_the_epoch_is_current.cs
+new file mode 100644
+index 0000000000..602561a185
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_MongoFenceStore/when_deciding_a_resolution/and_the_receipt_is_missing_and_the_epoch_is_current.cs
+@@ -0,0 +1,13 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing.for_MongoFenceStore.when_deciding_a_resolution;
++
++public class and_the_receipt_is_missing_and_the_epoch_is_current : Specification
++{
++    UnknownCommitResolution _result;
++
++    void Because() => _result = MongoFenceStore.Decide(false, 7, 7);
++
++    [Fact] void should_resolve_as_not_committed() => _result.ShouldEqual(UnknownCommitResolution.NotCommitted);
++}
+diff --git a/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_MongoFenceStore/when_deciding_a_resolution/and_the_receipt_is_missing_and_the_epoch_moved_on.cs b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_MongoFenceStore/when_deciding_a_resolution/and_the_receipt_is_missing_and_the_epoch_moved_on.cs
+new file mode 100644
+index 0000000000..4a1eddf094
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_MongoFenceStore/when_deciding_a_resolution/and_the_receipt_is_missing_and_the_epoch_moved_on.cs
+@@ -0,0 +1,13 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing.for_MongoFenceStore.when_deciding_a_resolution;
++
++public class and_the_receipt_is_missing_and_the_epoch_moved_on : Specification
++{
++    UnknownCommitResolution _result;
++
++    void Because() => _result = MongoFenceStore.Decide(false, 8, 7);
++
++    [Fact] void should_resolve_as_revoked() => _result.ShouldEqual(UnknownCommitResolution.Revoked);
++}
+diff --git a/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/given/a_fenced_writer_against_a_replica_set.cs b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/given/a_fenced_writer_against_a_replica_set.cs
+new file mode 100644
+index 0000000000..1cf070a862
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/given/a_fenced_writer_against_a_replica_set.cs
+@@ -0,0 +1,114 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Chronicle.Storage.MongoDB.EventSequences;
++using MongoDB.Bson;
++using MongoDB.Driver;
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing.given;
++
++public class a_fenced_writer_against_a_replica_set(ReplicaSetMongoDBFixture fixture) : Specification
++{
++    protected const string MaterializationKey = "store/namespace/model";
++    protected const ulong Generation = 1;
++    protected const int DocumentsPerBatch = 3;
++    protected static readonly FenceRetryPolicy _policy = new(100000, TimeSpan.FromMilliseconds(2), TimeSpan.FromMilliseconds(50), TimeSpan.FromSeconds(90));
++
++    protected IMongoClient _client;
++    protected IMongoDatabase _database;
++    protected FenceGates _gates;
++    protected FenceToken _token;
++    protected PausingProbe _probe;
++    protected MongoFenceStore _store;
++    protected FencedBatchExecutor _executor;
++    protected List<string> _committedBeforeRevocation;
++    protected List<string> _revoked;
++    protected IReadOnlyList<string> _violations;
++    string _databaseName;
++
++    protected string ConnectionString => fixture.ConnectionString;
++
++    /// <summary>
++    /// Gets a value indicating whether the stale writers bypass the fence; set once to prove the oracle catches it (non-vacuity).
++    /// </summary>
++    protected static bool FenceDisabled => Environment.GetEnvironmentVariable("CHRONICLE_FENCE_SPECS_UNFENCED") == "1";
++
++    protected IMongoCollection<BsonDocument> History => _database.GetCollection<BsonDocument>("history");
++
++    async Task Establish()
++    {
++        _client = new MongoClient(fixture.ConnectionString);
++        _databaseName = MongoDBSpecDatabaseNames.New();
++        _database = _client.GetDatabase(_databaseName);
++        await _database.CreateCollectionAsync("history");
++        _gates = new(_database, _policy);
++        _token = await _gates.Claim(MaterializationKey, Generation);
++        _probe = new();
++        _store = new(_database, _policy);
++        _executor = new(_store, _policy, _probe);
++        _committedBeforeRevocation = [];
++        _revoked = [];
++    }
++
++    void Destroy()
++    {
++        _client.DropDatabase(_databaseName);
++        _client.Dispose();
++    }
++
++    protected Task<int> WriteBatch(string label, FenceToken? token = null, IFencedBatchExecutor? executor = null)
++    {
++        var writeToken = token ?? _token;
++        return (executor ?? _executor).Execute(writeToken, async session =>
++        {
++            for (var index = 0; index < DocumentsPerBatch; index++)
++            {
++                await History.InsertOneAsync(session, FenceHistoryOracle.Document(label, index, writeToken.Epoch));
++                if (index == 0)
++                {
++                    await _probe.MidExecution();
++                }
++            }
++
++            return DocumentsPerBatch;
++        });
++    }
++
++    protected async Task WriteUnfenced(string label, long epoch)
++    {
++        for (var index = 0; index < DocumentsPerBatch; index++)
++        {
++            await History.InsertOneAsync(FenceHistoryOracle.Document(label, index, epoch));
++        }
++    }
++
++    protected async Task CommitBeforeRevocation(string label)
++    {
++        await WriteBatch(label);
++        _committedBeforeRevocation.Add(label);
++    }
++
++    protected Task<long> Revoke() => _gates.Revoke(MaterializationKey, Generation);
++
++    protected async Task<Exception?> StaleBatch(string label)
++    {
++        _revoked.Add(label);
++        if (FenceDisabled)
++        {
++            await WriteUnfenced(label, _token.Epoch);
++            return null;
++        }
++
++        return await Catch.Exception(() => WriteBatch(label));
++    }
++
++    protected async Task Judge() =>
++        _violations = await FenceHistoryOracle.Check(History, _token.Epoch, DocumentsPerBatch, _committedBeforeRevocation, _revoked);
++
++    protected async Task SetTransactionLifetime(int seconds)
++    {
++        // A client of its own, so this also works from a Destroy that runs after the shared client is disposed.
++        using var admin = new MongoClient(ConnectionString);
++        await admin.GetDatabase("admin").RunCommandAsync<BsonDocument>(new BsonDocument { { "setParameter", 1 }, { "transactionLifetimeLimitSeconds", seconds } });
++    }
++}
+-- 
+2.50.1 (Apple Git-155)
+

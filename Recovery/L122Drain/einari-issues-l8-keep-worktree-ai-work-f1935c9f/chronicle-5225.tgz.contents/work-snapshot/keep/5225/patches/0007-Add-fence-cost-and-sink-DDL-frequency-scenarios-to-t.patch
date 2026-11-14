@@ -1,0 +1,834 @@
+From 1b680db9097ec9fa0b0498cde5e4498083556696 Mon Sep 17 00:00:00 2001
+From: woksin <sindrewilting@gmail.com>
+Date: Thu, 22 Oct 2026 15:19:59 +0200
+Subject: [PATCH 7/8] Add fence cost and sink DDL frequency scenarios to the
+ clustering benchmarks
+
+--fence-cost measures fenced against unfenced sink batches on Docker
+replica sets (batch size, open change streams, parallel writers,
+unknown-commit resolution) from serverStatus deltas per member.
+--fence-ddl counts schema commands during steady-state appends and a
+projection replay.
+---
+ .../FenceCostChangeStreams.cs                 |  55 +++++++++
+ .../FenceCostConfiguration.cs                 |  15 +++
+ .../FenceCostDdlScenario.cs                   |  81 +++++++++++++
+ .../FenceCostReplicaSet.cs                    | 111 ++++++++++++++++++
+ .../FenceCostRun.cs                           | 106 +++++++++++++++++
+ .../FenceCostScenario.cs                      |  95 +++++++++++++++
+ .../FenceCostServerStats.cs                   |  71 +++++++++++
+ .../FenceCostUnknownCommit.cs                 |  97 +++++++++++++++
+ .../FenceCostWriter.cs                        |  90 ++++++++++++++
+ .../Program.cs                                |  12 ++
+ 10 files changed, 733 insertions(+)
+ create mode 100644 Benchmarks/Chronicle.Benchmarks.Clustering/FenceCostChangeStreams.cs
+ create mode 100644 Benchmarks/Chronicle.Benchmarks.Clustering/FenceCostConfiguration.cs
+ create mode 100644 Benchmarks/Chronicle.Benchmarks.Clustering/FenceCostDdlScenario.cs
+ create mode 100644 Benchmarks/Chronicle.Benchmarks.Clustering/FenceCostReplicaSet.cs
+ create mode 100644 Benchmarks/Chronicle.Benchmarks.Clustering/FenceCostRun.cs
+ create mode 100644 Benchmarks/Chronicle.Benchmarks.Clustering/FenceCostScenario.cs
+ create mode 100644 Benchmarks/Chronicle.Benchmarks.Clustering/FenceCostServerStats.cs
+ create mode 100644 Benchmarks/Chronicle.Benchmarks.Clustering/FenceCostUnknownCommit.cs
+ create mode 100644 Benchmarks/Chronicle.Benchmarks.Clustering/FenceCostWriter.cs
+
+diff --git a/Benchmarks/Chronicle.Benchmarks.Clustering/FenceCostChangeStreams.cs b/Benchmarks/Chronicle.Benchmarks.Clustering/FenceCostChangeStreams.cs
+new file mode 100644
+index 0000000000..cec75be364
+--- /dev/null
++++ b/Benchmarks/Chronicle.Benchmarks.Clustering/FenceCostChangeStreams.cs
+@@ -0,0 +1,55 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using MongoDB.Bson;
++using MongoDB.Driver;
++
++namespace Cratis.Chronicle.Benchmarks.Clustering;
++
++/// <summary>
++/// Holds a number of change streams open on a collection and drains them, the way served read-model observers do.
++/// </summary>
++internal sealed class FenceCostChangeStreams : IAsyncDisposable
++{
++    readonly CancellationTokenSource _stop = new();
++    readonly List<Task> _readers = [];
++    long _delivered;
++
++    /// <summary>
++    /// Gets the number of change events delivered so far.
++    /// </summary>
++    internal long Delivered => Interlocked.Read(ref _delivered);
++
++    /// <inheritdoc/>
++    public async ValueTask DisposeAsync()
++    {
++        await _stop.CancelAsync();
++        await Task.WhenAll(_readers.Select(reader => reader.ContinueWith(_ => { }, TaskScheduler.Default)));
++        _stop.Dispose();
++    }
++
++    /// <summary>
++    /// Opens the change streams.
++    /// </summary>
++    /// <param name="collection">The collection to watch.</param>
++    /// <param name="count">How many streams to open.</param>
++    /// <returns>The open streams.</returns>
++    internal static async Task<FenceCostChangeStreams> Open(IMongoCollection<BsonDocument> collection, int count)
++    {
++        var streams = new FenceCostChangeStreams();
++        var cursors = await Task.WhenAll(Enumerable.Range(0, count).Select(_ => collection.WatchAsync(new ChangeStreamOptions { MaxAwaitTime = TimeSpan.FromMilliseconds(500) })));
++        streams._readers.AddRange(cursors.Select(streams.Drain));
++        return streams;
++    }
++
++    async Task Drain(IChangeStreamCursor<ChangeStreamDocument<BsonDocument>> cursor)
++    {
++        using (cursor)
++        {
++            while (!_stop.IsCancellationRequested && await cursor.MoveNextAsync(_stop.Token))
++            {
++                Interlocked.Add(ref _delivered, cursor.Current.Count());
++            }
++        }
++    }
++}
+diff --git a/Benchmarks/Chronicle.Benchmarks.Clustering/FenceCostConfiguration.cs b/Benchmarks/Chronicle.Benchmarks.Clustering/FenceCostConfiguration.cs
+new file mode 100644
+index 0000000000..b3a667cbab
+--- /dev/null
++++ b/Benchmarks/Chronicle.Benchmarks.Clustering/FenceCostConfiguration.cs
+@@ -0,0 +1,15 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++namespace Cratis.Chronicle.Benchmarks.Clustering;
++
++/// <summary>
++/// One measured configuration of the fence cost scenario.
++/// </summary>
++/// <param name="Members">The number of replica-set members.</param>
++/// <param name="Fenced">Whether the writes are fenced.</param>
++/// <param name="BatchSize">The number of upserts per batch.</param>
++/// <param name="Batches">The number of measured batches per writer.</param>
++/// <param name="ChangeStreams">The number of change streams open on the collection.</param>
++/// <param name="Writers">The number of parallel writers, each with its own materialization key.</param>
++internal sealed record FenceCostConfiguration(int Members, bool Fenced, int BatchSize, int Batches, int ChangeStreams, int Writers);
+diff --git a/Benchmarks/Chronicle.Benchmarks.Clustering/FenceCostDdlScenario.cs b/Benchmarks/Chronicle.Benchmarks.Clustering/FenceCostDdlScenario.cs
+new file mode 100644
+index 0000000000..e86e4b3de0
+--- /dev/null
++++ b/Benchmarks/Chronicle.Benchmarks.Clustering/FenceCostDdlScenario.cs
+@@ -0,0 +1,81 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using System.Diagnostics;
++using System.Text.Json;
++using Cratis.Chronicle.Projections;
++using MongoDB.Bson;
++using MongoDB.Driver;
++
++namespace Cratis.Chronicle.Benchmarks.Clustering;
++
++/// <summary>
++/// Counts the schema operations (create, drop, rename, index) MongoDB serves while a projection takes steady-state appends and
++/// while it is replayed, from the server's command metrics around each phase. Flag-off kernel; one JSON line per phase.
++/// </summary>
++internal static class FenceCostDdlScenario
++{
++    static readonly string[] _commands = ["create", "drop", "dropDatabase", "renameCollection", "createIndexes", "dropIndexes", "collMod"];
++
++    /// <summary>
++    /// Runs the scenario.
++    /// </summary>
++    /// <returns>Awaitable task.</returns>
++    internal static async Task Run()
++    {
++        var eventCount = int.Parse(Environment.GetEnvironmentVariable("FENCE_DDL_EVENTS") ?? "5000");
++        using var deadline = new CancellationTokenSource(TimeSpan.FromMinutes(5));
++        var fixture = new ClusterBenchmarkFixture(ClusterTopology.SingleSilo);
++        await fixture.Start();
++        try
++        {
++            var admin = fixture.ReadModelDatabase.Client.GetDatabase("admin");
++            var dataset = new LiveRebuildDataset(fixture, eventCount);
++
++            var before = await Read(admin);
++            await dataset.Seed().WaitAsync(deadline.Token);
++            var seeded = await Read(admin);
++            Emit("steady-state-appends", eventCount + 2, seeded, before);
++
++            var original = await dataset.ServedGeneration();
++            var tail = await fixture.EventStore1.EventLog.GetTailSequenceNumber();
++            await dataset.Replay().WaitAsync(deadline.Token);
++            var clock = Stopwatch.StartNew();
++            while (Equals(await dataset.ServedGeneration(), original))
++            {
++                deadline.Token.ThrowIfCancellationRequested();
++                await Task.Delay(100, deadline.Token);
++            }
++
++            await dataset.Handler.WaitTillActive().WaitAsync(deadline.Token);
++            await dataset.Handler.WaitTillReachesEventSequenceNumber(tail).WaitAsync(deadline.Token);
++            await dataset.Verify().WaitAsync(deadline.Token);
++            Emit("replay", eventCount + 2, await Read(admin), seeded, clock.Elapsed.TotalSeconds);
++        }
++        finally
++        {
++            await fixture.DisposeAsync();
++        }
++    }
++
++    static async Task<Dictionary<string, long>> Read(IMongoDatabase admin)
++    {
++        var status = await admin.RunCommandAsync<BsonDocument>(new BsonDocument("serverStatus", 1));
++        var commands = status["metrics"]["commands"].AsBsonDocument;
++        return _commands.ToDictionary(name => name, name => commands.TryGetValue(name, out var metric) ? metric["total"].ToInt64() : 0, StringComparer.Ordinal);
++    }
++
++    static void Emit(string phase, int events, Dictionary<string, long> after, Dictionary<string, long> before, double? seconds = null)
++    {
++        var counts = _commands.ToDictionary(name => name, name => after[name] - before[name], StringComparer.Ordinal);
++        Console.WriteLine(JsonSerializer.Serialize(new
++        {
++            Scenario = "sink-ddl-frequency",
++            Phase = phase,
++            Events = events,
++            Seconds = seconds,
++            Counts = counts,
++            PerThousandEvents = counts.ToDictionary(pair => pair.Key, pair => pair.Value * 1000d / events, StringComparer.Ordinal)
++        }));
++    }
++}
+diff --git a/Benchmarks/Chronicle.Benchmarks.Clustering/FenceCostReplicaSet.cs b/Benchmarks/Chronicle.Benchmarks.Clustering/FenceCostReplicaSet.cs
+new file mode 100644
+index 0000000000..f3ea5bf2db
+--- /dev/null
++++ b/Benchmarks/Chronicle.Benchmarks.Clustering/FenceCostReplicaSet.cs
+@@ -0,0 +1,111 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using System.Diagnostics;
++using MongoDB.Bson;
++using MongoDB.Driver;
++
++namespace Cratis.Chronicle.Benchmarks.Clustering;
++
++/// <summary>
++/// A throwaway MongoDB replica set in Docker, one container per member on a private network, with every member published on a
++/// host port so its server statistics can be read directly.
++/// </summary>
++/// <param name="members">The number of members; the first is the preferred primary.</param>
++/// <param name="image">The MongoDB image to run.</param>
++internal sealed class FenceCostReplicaSet(int members, string image)
++{
++    const int FirstHostPort = 37017;
++    readonly string _network = $"fence-cost-{Guid.NewGuid():N}"[..20];
++
++    /// <summary>
++    /// Gets the connection string of the primary.
++    /// </summary>
++    internal string PrimaryConnectionString => MemberConnectionString(0);
++
++    /// <summary>
++    /// Gets the number of members.
++    /// </summary>
++    internal int Members => members;
++
++    /// <summary>
++    /// Gets the connection string of one member, connected to directly.
++    /// </summary>
++    /// <param name="member">The member index.</param>
++    /// <returns>The connection string.</returns>
++    internal static string MemberConnectionString(int member) => $"mongodb://localhost:{FirstHostPort + member}/?directConnection=true";
++
++    /// <summary>
++    /// Removes the members and their network.
++    /// </summary>
++    /// <returns>Awaitable task.</returns>
++    internal async Task Stop()
++    {
++        for (var member = 0; member < members; member++)
++        {
++            await Docker($"rm -f {_network}-m{member}", throwOnError: false);
++        }
++
++        await Docker($"network rm {_network}", throwOnError: false);
++    }
++
++    /// <summary>
++    /// Starts the members and initiates the replica set, waiting until the first member is primary.
++    /// </summary>
++    /// <returns>Awaitable task.</returns>
++    internal async Task Start()
++    {
++        await Docker($"network create {_network}");
++        for (var member = 0; member < members; member++)
++        {
++            await Docker($"run -d --name {_network}-m{member} --network {_network} --network-alias m{member} -p {FirstHostPort + member}:27017 {image} --replSet rs0 --bind_ip_all --oplogSize 20000");
++        }
++
++        var configuration = new BsonDocument
++        {
++            { "_id", "rs0" },
++            { "members", new BsonArray(Enumerable.Range(0, members).Select(member => new BsonDocument { { "_id", member }, { "host", $"m{member}:27017" }, { "priority", member == 0 ? 2 : 1 } })) }
++        };
++        using var client = new MongoClient(PrimaryConnectionString);
++        var admin = client.GetDatabase("admin");
++        await Retry(() => admin.RunCommandAsync<BsonDocument>(new BsonDocument("replSetInitiate", configuration)));
++        await Retry(async () =>
++        {
++            var hello = await admin.RunCommandAsync<BsonDocument>(new BsonDocument("hello", 1));
++            if (!hello.GetValue("isWritablePrimary", false).AsBoolean || (members > 1 && hello["hosts"].AsBsonArray.Count != members))
++            {
++                throw new InvalidOperationException("The replica set has no primary yet.");
++            }
++
++            return hello;
++        });
++    }
++
++    static async Task Retry<T>(Func<Task<T>> operation)
++    {
++        var deadline = Stopwatch.StartNew();
++        while (true)
++        {
++            try
++            {
++                await operation();
++                return;
++            }
++            catch (Exception) when (deadline.Elapsed < TimeSpan.FromSeconds(90))
++            {
++                await Task.Delay(500);
++            }
++        }
++    }
++
++    static async Task Docker(string arguments, bool throwOnError = true)
++    {
++        using var process = Process.Start(new ProcessStartInfo("docker", arguments) { RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false })!;
++        var error = await process.StandardError.ReadToEndAsync();
++        await process.WaitForExitAsync();
++        if (throwOnError && process.ExitCode != 0)
++        {
++            throw new InvalidOperationException($"docker {arguments} failed: {error}");
++        }
++    }
++}
+diff --git a/Benchmarks/Chronicle.Benchmarks.Clustering/FenceCostRun.cs b/Benchmarks/Chronicle.Benchmarks.Clustering/FenceCostRun.cs
+new file mode 100644
+index 0000000000..26e46429f2
+--- /dev/null
++++ b/Benchmarks/Chronicle.Benchmarks.Clustering/FenceCostRun.cs
+@@ -0,0 +1,106 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using System.Diagnostics;
++using MongoDB.Bson;
++using MongoDB.Driver;
++
++namespace Cratis.Chronicle.Benchmarks.Clustering;
++
++/// <summary>
++/// Measures one <see cref="FenceCostConfiguration"/> against a running replica set.
++/// </summary>
++internal static class FenceCostRun
++{
++    const int WarmupBatches = 5;
++
++    /// <summary>
++    /// Runs the configuration and returns its measurements.
++    /// </summary>
++    /// <param name="configuration">The configuration.</param>
++    /// <param name="replicaSet">The replica set.</param>
++    /// <returns>An object holding the measurements, ready to serialize.</returns>
++    internal static async Task<object> Measure(FenceCostConfiguration configuration, FenceCostReplicaSet replicaSet)
++    {
++        var settings = MongoClientSettings.FromConnectionString(replicaSet.PrimaryConnectionString);
++        settings.MaxConnectionPoolSize = 200;
++        using var client = new MongoClient(settings);
++        var database = client.GetDatabase("fence-cost");
++        var collection = database.GetCollection<BsonDocument>($"models-{Guid.NewGuid():N}");
++        await database.CreateCollectionAsync(collection.CollectionNamespace.CollectionName);
++        var writers = await Task.WhenAll(Enumerable.Range(0, configuration.Writers).Select(writer => FenceCostWriter.Create(configuration.Fenced, database, collection, writer)));
++        await Task.WhenAll(writers.Select(writer => Repeat(writer, configuration.BatchSize, WarmupBatches, null)));
++
++        var streamSettings = MongoClientSettings.FromConnectionString(replicaSet.PrimaryConnectionString);
++        streamSettings.MaxConnectionPoolSize = configuration.ChangeStreams + 20;
++        using var streamClient = new MongoClient(streamSettings);
++        await using var streams = await FenceCostChangeStreams.Open(streamClient.GetDatabase("fence-cost").GetCollection<BsonDocument>(collection.CollectionNamespace.CollectionName), configuration.ChangeStreams);
++        var members = Enumerable.Range(0, replicaSet.Members).Select(member => new MongoClient(FenceCostReplicaSet.MemberConnectionString(member))).ToArray();
++        try
++        {
++            var attemptsBefore = writers.Sum(writer => writer.Attempts);
++            var before = await Task.WhenAll(members.Select(FenceCostServerStats.Read));
++            var latencies = new List<double>[configuration.Writers];
++            var clock = Stopwatch.StartNew();
++            await Task.WhenAll(writers.Select((writer, index) => Repeat(writer, configuration.BatchSize, configuration.Batches, latencies[index] = [])));
++            var elapsed = clock.Elapsed.TotalSeconds;
++            var after = await Task.WhenAll(members.Select(FenceCostServerStats.Read));
++            var deltas = after.Zip(before, (later, earlier) => later.Since(earlier)).ToArray();
++            var all = latencies.SelectMany(writer => writer).Order().ToArray();
++            var batches = (double)all.Length;
++            var primary = deltas[0];
++            return new
++            {
++                configuration.Members,
++                configuration.Fenced,
++                configuration.BatchSize,
++                configuration.ChangeStreams,
++                configuration.Writers,
++                Batches = all.Length,
++                BatchesPerSecond = batches / elapsed,
++                DocumentsPerSecond = batches * configuration.BatchSize / elapsed,
++                P50Ms = Percentile(all, 0.50),
++                P95Ms = Percentile(all, 0.95),
++                P99Ms = Percentile(all, 0.99),
++                Retries = configuration.Fenced ? writers.Sum(writer => writer.Attempts) - attemptsBefore - all.Length : 0,
++                primary.TransactionsStarted,
++                primary.TransactionsCommitted,
++                primary.TransactionsAborted,
++                PrimaryCpuSecondsPer1000Batches = primary.CpuMicroseconds / 1e6 / batches * 1000,
++                AllMembersCpuSecondsPer1000Batches = deltas.Sum(delta => delta.CpuMicroseconds) / 1e6 / batches * 1000,
++                InsertsPerBatch = primary.Inserts / batches,
++                UpdatesPerBatch = primary.Updates / batches,
++                CommandsPerBatch = primary.Commands / batches,
++                OplogBytesPerBatch = primary.OplogBytes / batches,
++                ChangeEventsDelivered = streams.Delivered
++            };
++        }
++        finally
++        {
++            foreach (var writer in writers)
++            {
++                writer.Dispose();
++            }
++
++            foreach (var member in members)
++            {
++                member.Dispose();
++            }
++
++            await database.DropCollectionAsync(collection.CollectionNamespace.CollectionName);
++        }
++    }
++
++    static async Task Repeat(FenceCostWriter writer, int size, int batches, List<double>? latencies)
++    {
++        for (var batch = 0; batch < batches; batch++)
++        {
++            var started = Stopwatch.GetTimestamp();
++            await writer.WriteBatch(size);
++            latencies?.Add(Stopwatch.GetElapsedTime(started).TotalMilliseconds);
++        }
++    }
++
++    static double Percentile(double[] sorted, double percentile) =>
++        sorted.Length == 0 ? 0 : sorted[Math.Min(sorted.Length - 1, (int)Math.Ceiling(percentile * sorted.Length) - 1)];
++}
+diff --git a/Benchmarks/Chronicle.Benchmarks.Clustering/FenceCostScenario.cs b/Benchmarks/Chronicle.Benchmarks.Clustering/FenceCostScenario.cs
+new file mode 100644
+index 0000000000..e61a064072
+--- /dev/null
++++ b/Benchmarks/Chronicle.Benchmarks.Clustering/FenceCostScenario.cs
+@@ -0,0 +1,95 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using System.Text.Json;
++using MongoDB.Bson;
++using MongoDB.Driver;
++
++namespace Cratis.Chronicle.Benchmarks.Clustering;
++
++/// <summary>
++/// Measures what fencing sink writes costs: fenced against unfenced batches on a single-node and a three-node replica set, for
++/// several batch sizes, numbers of open change streams and parallel writers, plus unknown-commit resolution. Writes one JSON
++/// line per measurement.
++/// </summary>
++internal static class FenceCostScenario
++{
++    /// <summary>
++    /// Runs every configuration.
++    /// </summary>
++    /// <returns>Awaitable task.</returns>
++    internal static async Task Run()
++    {
++        var image = Environment.GetEnvironmentVariable("FENCE_COST_IMAGE") ?? "mongo:8.2";
++        var topologies = Numbers("FENCE_COST_MEMBERS", "1,3");
++        var sizes = Numbers("FENCE_COST_SIZES", "100,500,1000");
++        var streams = Numbers("FENCE_COST_STREAMS", "0,50,500");
++        var parallel = Numbers("FENCE_COST_WRITERS", "8");
++        var documents = Numbers("FENCE_COST_DOCUMENTS", "40000")[0];
++        foreach (var members in topologies)
++        {
++            var replicaSet = new FenceCostReplicaSet(members, image);
++            try
++            {
++                await replicaSet.Start();
++                await Measure(replicaSet, image, sizes, streams, parallel, documents);
++            }
++            finally
++            {
++                await replicaSet.Stop();
++            }
++        }
++    }
++
++    static async Task Measure(FenceCostReplicaSet replicaSet, string image, int[] sizes, int[] streams, int[] parallel, int documents)
++    {
++        var members = replicaSet.Members;
++        Emit(await Describe(replicaSet, image));
++        foreach (var streamCount in streams)
++        {
++            foreach (var size in sizes)
++            {
++                var target = documents / (1 + (streamCount / 10));
++                var batches = Math.Max(streamCount == 0 ? 30 : 5, target / size);
++                foreach (var fenced in new[] { false, true })
++                {
++                    Emit(await FenceCostRun.Measure(new(members, fenced, size, batches, streamCount, 1), replicaSet));
++                }
++            }
++        }
++
++        foreach (var writers in parallel.Where(writers => writers > 1))
++        {
++            foreach (var fenced in new[] { false, true })
++            {
++                Emit(await FenceCostRun.Measure(new(members, fenced, 500, Math.Max(10, documents / 500 / writers * 2), 0, writers), replicaSet));
++            }
++        }
++
++        if (Environment.GetEnvironmentVariable("FENCE_COST_UNKNOWN") != "0")
++        {
++            Emit(await FenceCostUnknownCommit.Measure(replicaSet, 20, 5));
++        }
++    }
++
++    static async Task<object> Describe(FenceCostReplicaSet replicaSet, string image)
++    {
++        using var client = new MongoClient(replicaSet.PrimaryConnectionString);
++        var build = await client.GetDatabase("admin").RunCommandAsync<BsonDocument>(new BsonDocument("buildInfo", 1));
++        return new { Scenario = "replica-set", replicaSet.Members, Image = image, MongoVersion = build["version"].AsString };
++    }
++
++    static void Emit(object measurement)
++    {
++        var line = JsonSerializer.Serialize(measurement);
++        Console.WriteLine(line);
++        var output = Environment.GetEnvironmentVariable("FENCE_COST_OUT");
++        if (!string.IsNullOrEmpty(output))
++        {
++            File.AppendAllLines(output, [line]);
++        }
++    }
++
++    static int[] Numbers(string name, string fallback) =>
++        (Environment.GetEnvironmentVariable(name) ?? fallback).Split(',', StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).ToArray();
++}
+diff --git a/Benchmarks/Chronicle.Benchmarks.Clustering/FenceCostServerStats.cs b/Benchmarks/Chronicle.Benchmarks.Clustering/FenceCostServerStats.cs
+new file mode 100644
+index 0000000000..687961c6bf
+--- /dev/null
++++ b/Benchmarks/Chronicle.Benchmarks.Clustering/FenceCostServerStats.cs
+@@ -0,0 +1,71 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using MongoDB.Bson;
++using MongoDB.Driver;
++
++namespace Cratis.Chronicle.Benchmarks.Clustering;
++
++/// <summary>
++/// The server-side counters of one replica-set member that the fence cost is measured with.
++/// </summary>
++/// <param name="CpuMicroseconds">The mongod process's user plus system CPU time, in microseconds.</param>
++/// <param name="Inserts">The insert opcounter.</param>
++/// <param name="Updates">The update opcounter.</param>
++/// <param name="Deletes">The delete opcounter.</param>
++/// <param name="Commands">The command opcounter.</param>
++/// <param name="TransactionsStarted">Transactions started.</param>
++/// <param name="TransactionsCommitted">Transactions committed.</param>
++/// <param name="TransactionsAborted">Transactions aborted.</param>
++/// <param name="OplogBytes">The oplog's data size in bytes.</param>
++internal sealed record FenceCostServerStats(
++    long CpuMicroseconds,
++    long Inserts,
++    long Updates,
++    long Deletes,
++    long Commands,
++    long TransactionsStarted,
++    long TransactionsCommitted,
++    long TransactionsAborted,
++    long OplogBytes)
++{
++    /// <summary>
++    /// Reads the counters of one member.
++    /// </summary>
++    /// <param name="client">A client connected directly to the member.</param>
++    /// <returns>The counters.</returns>
++    internal static async Task<FenceCostServerStats> Read(IMongoClient client)
++    {
++        var status = await client.GetDatabase("admin").RunCommandAsync<BsonDocument>(new BsonDocument("serverStatus", 1));
++        var oplog = await client.GetDatabase("local").RunCommandAsync<BsonDocument>(new BsonDocument("collStats", "oplog.rs"));
++        var extra = status["extra_info"].AsBsonDocument;
++        var opcounters = status["opcounters"].AsBsonDocument;
++        var transactions = status["transactions"].AsBsonDocument;
++        return new(
++            extra["user_time_us"].ToInt64() + extra["system_time_us"].ToInt64(),
++            opcounters["insert"].ToInt64(),
++            opcounters["update"].ToInt64(),
++            opcounters["delete"].ToInt64(),
++            opcounters["command"].ToInt64(),
++            transactions["totalStarted"].ToInt64(),
++            transactions["totalCommitted"].ToInt64(),
++            transactions["totalAborted"].ToInt64(),
++            oplog["size"].ToInt64());
++    }
++
++    /// <summary>
++    /// Subtracts an earlier reading.
++    /// </summary>
++    /// <param name="earlier">The earlier reading.</param>
++    /// <returns>The difference.</returns>
++    internal FenceCostServerStats Since(FenceCostServerStats earlier) => new(
++        CpuMicroseconds - earlier.CpuMicroseconds,
++        Inserts - earlier.Inserts,
++        Updates - earlier.Updates,
++        Deletes - earlier.Deletes,
++        Commands - earlier.Commands,
++        TransactionsStarted - earlier.TransactionsStarted,
++        TransactionsCommitted - earlier.TransactionsCommitted,
++        TransactionsAborted - earlier.TransactionsAborted,
++        OplogBytes - earlier.OplogBytes);
++}
+diff --git a/Benchmarks/Chronicle.Benchmarks.Clustering/FenceCostUnknownCommit.cs b/Benchmarks/Chronicle.Benchmarks.Clustering/FenceCostUnknownCommit.cs
+new file mode 100644
+index 0000000000..e70dfd354e
+--- /dev/null
++++ b/Benchmarks/Chronicle.Benchmarks.Clustering/FenceCostUnknownCommit.cs
+@@ -0,0 +1,97 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using System.Diagnostics;
++using Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
++using MongoDB.Bson;
++using MongoDB.Driver;
++
++namespace Cratis.Chronicle.Benchmarks.Clustering;
++
++/// <summary>
++/// Measures how long resolving an unknown commit outcome takes, for a batch that committed, one that did not, and one whose
++/// transaction was left open by a writer that went away.
++/// </summary>
++internal static class FenceCostUnknownCommit
++{
++    /// <summary>
++    /// Runs the measurements.
++    /// </summary>
++    /// <param name="replicaSet">The replica set.</param>
++    /// <param name="repetitions">How many times to resolve a committed and a not-committed batch.</param>
++    /// <param name="transactionLifetimeSeconds">The transaction lifetime limit to set while measuring the left-open case.</param>
++    /// <returns>An object holding the measurements, ready to serialize.</returns>
++    internal static async Task<object> Measure(FenceCostReplicaSet replicaSet, int repetitions, int transactionLifetimeSeconds)
++    {
++        using var client = new MongoClient(replicaSet.PrimaryConnectionString);
++        var database = client.GetDatabase("fence-cost-unknown");
++        await FenceStorage.EnsureCollections(database);
++        var store = new MongoFenceStore(database, FenceRetryPolicy.Default);
++        var token = await new FenceGates(database, FenceRetryPolicy.Default).Claim("unknown", 1);
++
++        var committed = new List<double>();
++        var notCommitted = new List<double>();
++        for (var repetition = 0; repetition < repetitions; repetition++)
++        {
++            committed.Add(await Time(store, token, await Leave(store, token, commit: true)));
++            notCommitted.Add(await Time(store, token, await Leave(store, token, commit: false)));
++        }
++
++        var admin = client.GetDatabase("admin");
++        await admin.RunCommandAsync<BsonDocument>(new BsonDocument { { "setParameter", 1 }, { "transactionLifetimeLimitSeconds", transactionLifetimeSeconds } });
++        double leftOpen;
++        try
++        {
++            var open = await store.Begin(CancellationToken.None);
++            var batch = new FenceBatchId(Guid.NewGuid());
++            await open.Admit(token, batch, CancellationToken.None);
++            leftOpen = await Time(store, token, batch);
++            await open.Abort();
++            open.Dispose();
++        }
++        finally
++        {
++            await admin.RunCommandAsync<BsonDocument>(new BsonDocument { { "setParameter", 1 }, { "transactionLifetimeLimitSeconds", 60 } });
++        }
++
++        await client.DropDatabaseAsync("fence-cost-unknown");
++        return new
++        {
++            Scenario = "unknown-commit-resolution",
++            replicaSet.Members,
++            CommittedMedianMs = Median(committed),
++            CommittedMaxMs = committed.Max(),
++            NotCommittedMedianMs = Median(notCommitted),
++            NotCommittedMaxMs = notCommitted.Max(),
++            TransactionLifetimeLimitSeconds = transactionLifetimeSeconds,
++            LeftOpenMs = leftOpen
++        };
++    }
++
++    static async Task<FenceBatchId> Leave(MongoFenceStore store, FenceToken token, bool commit)
++    {
++        using var transaction = await store.Begin(CancellationToken.None);
++        var batch = new FenceBatchId(Guid.NewGuid());
++        await transaction.Admit(token, batch, CancellationToken.None);
++        await transaction.WriteReceipt(token, batch, CancellationToken.None);
++        if (commit)
++        {
++            await transaction.Commit(CancellationToken.None);
++        }
++        else
++        {
++            await transaction.Abort();
++        }
++
++        return batch;
++    }
++
++    static async Task<double> Time(MongoFenceStore store, FenceToken token, FenceBatchId batch)
++    {
++        var started = Stopwatch.GetTimestamp();
++        await store.Resolve(token, batch, CancellationToken.None);
++        return Stopwatch.GetElapsedTime(started).TotalMilliseconds;
++    }
++
++    static double Median(List<double> values) => values.Order().ElementAt(values.Count / 2);
++}
+diff --git a/Benchmarks/Chronicle.Benchmarks.Clustering/FenceCostWriter.cs b/Benchmarks/Chronicle.Benchmarks.Clustering/FenceCostWriter.cs
+new file mode 100644
+index 0000000000..87c53d75ef
+--- /dev/null
++++ b/Benchmarks/Chronicle.Benchmarks.Clustering/FenceCostWriter.cs
+@@ -0,0 +1,90 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
++using MongoDB.Bson;
++using MongoDB.Driver;
++
++namespace Cratis.Chronicle.Benchmarks.Clustering;
++
++/// <summary>
++/// One sink writer flushing batches of upserts into a collection, fenced or not, through the same <see cref="ISinkWrites"/> the
++/// MongoDB sink uses.
++/// </summary>
++internal sealed class FenceCostWriter : IFencedBatchProbe, IDisposable
++{
++    const int KeySpace = 20_000;
++    static readonly string _payload = new('x', 100);
++    readonly ISinkWrites _writes;
++    readonly IMongoCollection<BsonDocument> _collection;
++    readonly string _prefix;
++    long _attempts;
++    long _batch;
++
++    FenceCostWriter(IMongoCollection<BsonDocument> collection, string prefix, Func<FenceCostWriter, ISinkWrites> writes)
++    {
++        _collection = collection;
++        _prefix = prefix;
++        _writes = writes(this);
++    }
++
++    /// <summary>
++    /// Gets how many fenced batch attempts were made, including retries.
++    /// </summary>
++    internal long Attempts => Interlocked.Read(ref _attempts);
++
++    /// <inheritdoc/>
++    public Task BeforeAdmission(FenceBatchId batchId)
++    {
++        Interlocked.Increment(ref _attempts);
++        return Task.CompletedTask;
++    }
++
++    /// <inheritdoc/>
++    public Task AfterAdmission(FenceBatchId batchId) => Task.CompletedTask;
++
++    /// <inheritdoc/>
++    public Task BeforeCommit(FenceBatchId batchId) => Task.CompletedTask;
++
++    /// <inheritdoc/>
++    public void Dispose() => (_writes as IDisposable)?.Dispose();
++
++    /// <summary>
++    /// Creates a writer.
++    /// </summary>
++    /// <param name="fenced">Whether the writer is fenced.</param>
++    /// <param name="database">The database holding the collection and the fence collections.</param>
++    /// <param name="collection">The collection to write to.</param>
++    /// <param name="writer">The writer's index, which is also its materialization key.</param>
++    /// <returns>The writer.</returns>
++    internal static async Task<FenceCostWriter> Create(bool fenced, IMongoDatabase database, IMongoCollection<BsonDocument> collection, int writer)
++    {
++        if (!fenced)
++        {
++            return new(collection, $"w{writer}", _ => UnfencedSinkWrites.Instance);
++        }
++
++        var token = await new FenceGates(database, FenceRetryPolicy.Default).Claim($"{collection.CollectionNamespace.CollectionName}/w{writer}", 1);
++        return new(collection, $"w{writer}", probe => new FencedSinkWrites(new FixedFenceTokenSource(token), new FencedBatchExecutor(new MongoFenceStore(database, FenceRetryPolicy.Default), FenceRetryPolicy.Default, probe)));
++    }
++
++    /// <summary>
++    /// Writes the next batch.
++    /// </summary>
++    /// <param name="size">The number of upserts in the batch.</param>
++    /// <returns>Awaitable task.</returns>
++    internal Task WriteBatch(int size)
++    {
++        var batch = Interlocked.Increment(ref _batch);
++        var requests = new List<WriteModel<BsonDocument>>(size);
++        for (var index = 0; index < size; index++)
++        {
++            var key = $"{_prefix}-{((batch * size) + index) % KeySpace}";
++            requests.Add(new UpdateOneModel<BsonDocument>(
++                Builders<BsonDocument>.Filter.Eq("_id", key),
++                Builders<BsonDocument>.Update.Set("batch", batch).Set("payload", _payload)) { IsUpsert = true });
++        }
++
++        return _writes.BulkWrite(_collection, requests, CancellationToken.None);
++    }
++}
+diff --git a/Benchmarks/Chronicle.Benchmarks.Clustering/Program.cs b/Benchmarks/Chronicle.Benchmarks.Clustering/Program.cs
+index 230123eabe..3265c812da 100644
+--- a/Benchmarks/Chronicle.Benchmarks.Clustering/Program.cs
++++ b/Benchmarks/Chronicle.Benchmarks.Clustering/Program.cs
+@@ -3,6 +3,18 @@
+ 
+ using BenchmarkDotNet.Running;
+ 
++if (args.Contains("--fence-cost", StringComparer.Ordinal))
++{
++    await Cratis.Chronicle.Benchmarks.Clustering.FenceCostScenario.Run();
++    return;
++}
++
++if (args.Contains("--fence-ddl", StringComparer.Ordinal))
++{
++    await Cratis.Chronicle.Benchmarks.Clustering.FenceCostDdlScenario.Run();
++    return;
++}
++
+ if (args.Contains("--rebuild-live", StringComparer.Ordinal))
+ {
+     await Cratis.Chronicle.Benchmarks.Clustering.LiveRebuildScenario.Run();
+-- 
+2.50.1 (Apple Git-155)
+

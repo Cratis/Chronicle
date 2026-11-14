@@ -1,0 +1,324 @@
+From 2f0750c5889f0b3121980893943ee42f01e62f4b Mon Sep 17 00:00:00 2001
+From: woksin <sindrewilting@gmail.com>
+Date: Thu, 22 Oct 2026 13:08:11 +0200
+Subject: [PATCH 2/8] Route MongoDB sink writes through a fence seam behind
+ Features.ProjectionGenerations
+
+With the flag off the sink makes exactly the driver calls it made before. With
+it on every sink write, and each changeset's direct writes as one group, runs in
+a fenced batch.
+---
+ Source/Kernel/Core/Configuration/Features.cs  |  8 +++
+ .../Sinks/ChangesetConverter.cs               | 31 +++++++--
+ Source/Kernel/Storage.MongoDB/Sinks/Sink.cs   | 68 ++++++++++++++++---
+ .../Storage.MongoDB/Sinks/SinkFactory.cs      | 25 ++++++-
+ 4 files changed, 115 insertions(+), 17 deletions(-)
+
+diff --git a/Source/Kernel/Core/Configuration/Features.cs b/Source/Kernel/Core/Configuration/Features.cs
+index ad29b3ec1e..25f7971d48 100644
+--- a/Source/Kernel/Core/Configuration/Features.cs
++++ b/Source/Kernel/Core/Configuration/Features.cs
+@@ -29,4 +29,12 @@ public class Features
+     /// </summary>
+     /// <remarks>When enabled, provides an internal OpenIdDict-based OAuth authority for authentication.</remarks>
+     public bool OAuthAuthority { get; init; } = true;
++
++    /// <summary>
++    /// Whether projection generations are enabled. Default false.
++    /// </summary>
++    /// <remarks>
++    /// Preview. When enabled, every write of a MongoDB sink runs in a transaction fenced by the owner epoch of its generation.
++    /// </remarks>
++    public bool ProjectionGenerations { get; init; }
+ }
+diff --git a/Source/Kernel/Storage.MongoDB/Sinks/ChangesetConverter.cs b/Source/Kernel/Storage.MongoDB/Sinks/ChangesetConverter.cs
+index e9acccf32b..8ca9f25dc4 100644
+--- a/Source/Kernel/Storage.MongoDB/Sinks/ChangesetConverter.cs
++++ b/Source/Kernel/Storage.MongoDB/Sinks/ChangesetConverter.cs
+@@ -9,6 +9,7 @@
+ using Cratis.Chronicle.Dynamic;
+ using Cratis.Chronicle.Properties;
+ using Cratis.Chronicle.Schemas;
++using Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
+ using Microsoft.Extensions.Logging;
+ using Microsoft.Extensions.Logging.Abstractions;
+ using MongoDB.Bson;
+@@ -27,13 +28,33 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
+ /// <param name="collections"><see cref="ISinkCollections"/> to use.</param>
+ /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between documents and <see cref="ExpandoObject"/>.</param>
+ /// <param name="logger"><see cref="ILogger{TCategoryName}"/> for logging.</param>
++/// <param name="writes"><see cref="ISinkWrites"/> executing the joined-document writes, fenced or not.</param>
+ public class ChangesetConverter(
+     ReadModelDefinition readModel,
+     IMongoDBConverter converter,
+     ISinkCollections collections,
+     IExpandoObjectConverter expandoObjectConverter,
+-    ILogger<ChangesetConverter> logger) : IChangesetConverter
++    ILogger<ChangesetConverter> logger,
++    ISinkWrites writes) : IChangesetConverter
+ {
++    /// <summary>
++    /// Initializes a new instance of the <see cref="ChangesetConverter"/> class writing without a fence.
++    /// </summary>
++    /// <param name="readModel">The <see cref="ReadModelDefinition"/> the sink is for.</param>
++    /// <param name="converter"><see cref="IMongoDBConverter"/> to use.</param>
++    /// <param name="collections"><see cref="ISinkCollections"/> to use.</param>
++    /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between documents and <see cref="ExpandoObject"/>.</param>
++    /// <param name="logger"><see cref="ILogger{TCategoryName}"/> for logging.</param>
++    public ChangesetConverter(
++        ReadModelDefinition readModel,
++        IMongoDBConverter converter,
++        ISinkCollections collections,
++        IExpandoObjectConverter expandoObjectConverter,
++        ILogger<ChangesetConverter> logger)
++        : this(readModel, converter, collections, expandoObjectConverter, logger, UnfencedSinkWrites.Instance)
++    {
++    }
++
+     /// <summary>
+     /// Initializes a new instance of the <see cref="ChangesetConverter"/> class without a logger.
+     /// </summary>
+@@ -491,16 +512,18 @@ async Task PerformJoined(Key key, UpdateDefinitionBuilder<BsonDocument> updateDe
+                 ? Builders<BsonDocument>.Filter.Type(parent.Path, BsonType.Null)
+                 : BuildNullArrayParentFilter(parent.Path, parent.Filters);
+             var repairFilter = Builders<BsonDocument>.Filter.And(joinFilter, nullFilter);
+-            await collection.UpdateManyAsync(
++            await writes.UpdateMany(
++                collection,
+                 repairFilter,
+                 updateDefinitionBuilder.Unset(parent.Path),
+                 new UpdateOptions { ArrayFilters = parent.Filters });
+         }
+ 
+         BuildLastHandledEventSequenceNumber(updateDefinitionBuilder, ref joinUpdateBuilder, eventSequenceNumber);
+-        var result = await collection.UpdateManyAsync(
++        var result = await writes.UpdateMany(
++            collection,
+             joinFilter,
+-            joinUpdateBuilder,
++            joinUpdateBuilder!,
+             new UpdateOptions
+             {
+                 IsUpsert = false,
+diff --git a/Source/Kernel/Storage.MongoDB/Sinks/Sink.cs b/Source/Kernel/Storage.MongoDB/Sinks/Sink.cs
+index 2244ffb529..b73abde7c2 100644
+--- a/Source/Kernel/Storage.MongoDB/Sinks/Sink.cs
++++ b/Source/Kernel/Storage.MongoDB/Sinks/Sink.cs
+@@ -11,6 +11,7 @@
+ using Cratis.Chronicle.Concepts.ReadModels;
+ using Cratis.Chronicle.Concepts.Sinks;
+ using Cratis.Chronicle.Properties;
++using Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
+ using Cratis.Chronicle.Storage.ReadModels;
+ using Cratis.Chronicle.Storage.Sinks;
+ using Cratis.Monads;
+@@ -37,6 +38,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
+ /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between documents and <see cref="ExpandoObject"/>.</param>
+ /// <param name="changeStreams"><see cref="IReadModelChangeStreams"/> for observing the collections of the read model.</param>
+ /// <param name="logger"><see cref="ILogger{TCategoryName}"/> for logging.</param>
++/// <param name="writes"><see cref="ISinkWrites"/> executing the data writes, fenced or not.</param>
+ public class Sink(
+     ReadModelDefinition readModel,
+     IMongoDBConverter converter,
+@@ -44,8 +46,31 @@ public class Sink(
+     IChangesetConverter changesetConverter,
+     IExpandoObjectConverter expandoObjectConverter,
+     IReadModelChangeStreams changeStreams,
+-    ILogger<Sink> logger) : ISink, IDisposable
++    ILogger<Sink> logger,
++    ISinkWrites writes) : ISink, IDisposable
+ {
++    /// <summary>
++    /// Initializes a new instance of the <see cref="Sink"/> class writing without a fence.
++    /// </summary>
++    /// <param name="readModel">The <see cref="ReadModelDefinition"/> the sink is for.</param>
++    /// <param name="converter"><see cref="IMongoDBConverter"/> for dealing with conversion.</param>
++    /// <param name="collections">Provider for <see cref="ISinkCollections"/> to use.</param>
++    /// <param name="changesetConverter">Provider for <see cref="IChangesetConverter"/> for converting changesets.</param>
++    /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between documents and <see cref="ExpandoObject"/>.</param>
++    /// <param name="changeStreams"><see cref="IReadModelChangeStreams"/> for observing the collections of the read model.</param>
++    /// <param name="logger"><see cref="ILogger{TCategoryName}"/> for logging.</param>
++    public Sink(
++        ReadModelDefinition readModel,
++        IMongoDBConverter converter,
++        ISinkCollections collections,
++        IChangesetConverter changesetConverter,
++        IExpandoObjectConverter expandoObjectConverter,
++        IReadModelChangeStreams changeStreams,
++        ILogger<Sink> logger)
++        : this(readModel, converter, collections, changesetConverter, expandoObjectConverter, changeStreams, logger, UnfencedSinkWrites.Instance)
++    {
++    }
++
+     /// <summary>
+     /// Initializes a new instance of the <see cref="Sink"/> class without a logger.
+     /// </summary>
+@@ -254,10 +279,32 @@ async Task<IEnumerable<FailedPartition>> ApplyChangesCore(
+         // A dropped join flush reports every partition of its batch, not just this writer's, and the write still runs.
+         // Its outcome is claimed only on a returning path: an exception leaves it in the ledger for the next drain or EndBulk.
+         var joinBatch = await FlushBeforeJoin(changeset, options);
+-        var failures = await WriteAfterJoin(key, changeset, eventSequenceNumber, guardedPlan, options);
++        var failures = WriteDirectlyInOneBatch(changeset, options)
++            ? await writes.InBatch(() => WriteAfterJoin(key, changeset, eventSequenceNumber, guardedPlan, options))
++            : await WriteAfterJoin(key, changeset, eventSequenceNumber, guardedPlan, options);
+         return joinBatch is null ? failures : TakeBulkFailures([joinBatch]).Concat(failures).ToArray();
+     }
+ 
++    /// <summary>
++    /// Checks whether the writes of a changeset bypass the bulk window and so run as one batch.
++    /// </summary>
++    /// <remarks>
++    /// The direct writes of one changeset (joins, child removals, legacy null repairs and the main write) are one fenced batch, so a
++    /// revoked owner commits all or none of them. A changeset whose writes are buffered is fenced by the bulk flush instead.
++    /// </remarks>
++    /// <param name="changeset">The changeset to write.</param>
++    /// <param name="options">The <see cref="SinkWriteOptions"/> of the write.</param>
++    /// <returns>True if the writes run as one batch.</returns>
++    bool WriteDirectlyInOneBatch(IChangeset<AppendedEvent, ExpandoObject> changeset, SinkWriteOptions options) =>
++        !CanBuffer(options) || changeset.HasJoined();
++
++    /// <summary>
++    /// Checks whether a write may be buffered; inside a fenced batch nothing is, as it would be flushed outside the batch's transaction.
++    /// </summary>
++    /// <param name="options">The <see cref="SinkWriteOptions"/> of the write.</param>
++    /// <returns>True if the write may be buffered.</returns>
++    bool CanBuffer(SinkWriteOptions options) => options.CanBuffer(_isBulkMode) && !writes.IsInBatch;
++
+     static Key PartitionFor(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset) =>
+         changeset.Incoming is { } incoming ? (Key)incoming.Context.EventSourceId : key;
+ 
+@@ -376,7 +423,7 @@ static bool IsUpsertWrite(bool onlyPropertyUpdatesAlongsideJoin, bool isRootLeve
+ 
+     async Task<IEnumerable<FailedPartition>> ApplyRemoval(Key key, EventSequenceNumber eventSequenceNumber, FilterDefinition<BsonDocument> filter, SinkWriteOptions options)
+     {
+-        if (options.CanBuffer(_isBulkMode))
++        if (CanBuffer(options))
+         {
+             var cacheKey = converter.ToBsonValue(key).ToString()!;
+             if (await AddToBulk(new DeleteOneModel<BsonDocument>(filter), key, options.PartitionOr(key), eventSequenceNumber, () => ForgetBulkState(cacheKey)))
+@@ -385,7 +432,7 @@ async Task<IEnumerable<FailedPartition>> ApplyRemoval(Key key, EventSequenceNumb
+             }
+         }
+ 
+-        await Collection.DeleteOneAsync(filter);
++        await writes.DeleteOne(Collection, filter);
+         if (options.IsImmediate)
+         {
+             EvictBulkState(key);
+@@ -455,14 +502,14 @@ async Task UnsetNullParents(UpdateWrite write, SinkWriteOptions options)
+             var operation = new UpdateOneModel<BsonDocument>(nullFilter, unset) { ArrayFilters = parent.Filters };
+             if (!await TryBufferOperation(operation, write, options))
+             {
+-                await Collection.UpdateOneAsync(nullFilter, unset, new UpdateOptions { ArrayFilters = parent.Filters });
++                await writes.UpdateOne(Collection, nullFilter, unset, new UpdateOptions { ArrayFilters = parent.Filters });
+             }
+         }
+     }
+ 
+     async Task<bool> TryBufferOperation(WriteModel<BsonDocument> operation, UpdateWrite write, SinkWriteOptions options)
+     {
+-        if (!options.CanBuffer(_isBulkMode))
++        if (!CanBuffer(options))
+         {
+             return false;
+         }
+@@ -477,7 +524,8 @@ async Task<IEnumerable<FailedPartition>> WriteUpdate(UpdateWrite write, IChanges
+             return failures;
+         }
+ 
+-        await Collection.UpdateOneAsync(
++        await writes.UpdateOne(
++            Collection,
+             write.Filter,
+             write.Converted.UpdateDefinition,
+             new UpdateOptions
+@@ -492,7 +540,7 @@ await Collection.UpdateOneAsync(
+ 
+     async Task<IEnumerable<FailedPartition>?> TryBufferUpdate(UpdateWrite write, IChangeset<AppendedEvent, ExpandoObject> changeset, SinkWriteOptions options)
+     {
+-        if (!options.CanBuffer(_isBulkMode))
++        if (!CanBuffer(options))
+         {
+             return null;
+         }
+@@ -1318,7 +1366,7 @@ async Task<IEnumerable<FailedPartition>> WriteBatch(BulkBatch batch, Cancellatio
+             try
+             {
+                 cancellationToken.ThrowIfCancellationRequested();
+-                await Collection.BulkWriteAsync(remaining, cancellationToken: cancellationToken).WaitAsync(cancellationToken);
++                await writes.BulkWrite(Collection, remaining, cancellationToken).WaitAsync(cancellationToken);
+                 break;
+             }
+             catch (MongoBulkWriteException<BsonDocument> ex)
+@@ -1558,7 +1606,7 @@ async Task RemoveChildFromAll(ChildRemovedFromAll childRemoved)
+         var identifiedByProperty = childRemoved.IdentifiedByProperty.ToMongoDB();
+         var childFilter = Builders<BsonDocument>.Filter.Eq(identifiedByProperty, childRemoved.Key.ToBsonValue());
+         var update = Builders<BsonDocument>.Update.PullFilter(string.Join('.', path), childFilter);
+-        await Collection.UpdateManyAsync(filter, update, new UpdateOptions { ArrayFilters = arrayFilters.Count == 0 ? null : arrayFilters });
++        await writes.UpdateMany(Collection, filter, update, new UpdateOptions { ArrayFilters = arrayFilters.Count == 0 ? null : arrayFilters });
+     }
+ 
+     static (List<string> Path, List<BsonDocumentArrayFilterDefinition<BsonDocument>> ArrayFilters, FilterDefinition<BsonDocument> Filter) BuildChildPath(IPropertyPathSegment[] segments)
+diff --git a/Source/Kernel/Storage.MongoDB/Sinks/SinkFactory.cs b/Source/Kernel/Storage.MongoDB/Sinks/SinkFactory.cs
+index f8785221b2..2eb034ec38 100644
+--- a/Source/Kernel/Storage.MongoDB/Sinks/SinkFactory.cs
++++ b/Source/Kernel/Storage.MongoDB/Sinks/SinkFactory.cs
+@@ -4,10 +4,14 @@
+ using Cratis.Chronicle.Concepts;
+ using Cratis.Chronicle.Concepts.ReadModels;
+ using Cratis.Chronicle.Concepts.Sinks;
++using Cratis.Chronicle.Configuration;
+ using Cratis.Chronicle.Schemas;
++using Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
+ using Cratis.Chronicle.Storage.Sinks;
+ using Microsoft.Extensions.DependencyInjection;
+ using Microsoft.Extensions.Logging;
++using Microsoft.Extensions.Options;
++using MongoDB.Driver;
+ 
+ namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
+ 
+@@ -46,15 +50,18 @@ public ISink CreateFor(EventStoreName eventStore, EventStoreNamespaceName @names
+             readModel,
+             serviceProvider.GetRequiredService<ILogger<MongoDBConverter>>());
+ 
++        var readModelDatabase = database.GetReadModelDatabase(eventStore, @namespace);
++        var writes = CreateWrites(eventStore, @namespace, readModel, readModelDatabase);
+         var mongoDBSinkCollections = new SinkCollections(
+             readModel,
+-            database.GetReadModelDatabase(eventStore, @namespace));
++            readModelDatabase);
+         var mongoDBChangesetConverter = new ChangesetConverter(
+             readModel,
+             mongoDBConverter,
+             mongoDBSinkCollections,
+             expandoObjectConverter,
+-            serviceProvider.GetRequiredService<ILogger<ChangesetConverter>>());
++            serviceProvider.GetRequiredService<ILogger<ChangesetConverter>>(),
++            writes);
+ 
+         return new Sink(
+             readModel,
+@@ -63,6 +70,18 @@ public ISink CreateFor(EventStoreName eventStore, EventStoreNamespaceName @names
+             mongoDBChangesetConverter,
+             expandoObjectConverter,
+             serviceProvider.GetRequiredService<IReadModelChangeStreams>(),
+-            serviceProvider.GetRequiredService<ILogger<Sink>>());
++            serviceProvider.GetRequiredService<ILogger<Sink>>(),
++            writes);
++    }
++
++    ISinkWrites CreateWrites(EventStoreName eventStore, EventStoreNamespaceName @namespace, ReadModelDefinition readModel, IMongoDatabase readModelDatabase)
++    {
++        if (serviceProvider.GetService<IOptions<ChronicleOptions>>()?.Value.Features.ProjectionGenerations != true)
++        {
++            return UnfencedSinkWrites.Instance;
++        }
++
++        var tokens = new ClaimingFenceTokenSource(new FenceGates(readModelDatabase), $"{eventStore}/{@namespace}/{readModel.Identifier}", readModel.LatestGeneration.Value);
++        return new FencedSinkWrites(tokens, new FencedBatchExecutor(new MongoFenceStore(readModelDatabase)));
+     }
+ }
+-- 
+2.50.1 (Apple Git-155)
+

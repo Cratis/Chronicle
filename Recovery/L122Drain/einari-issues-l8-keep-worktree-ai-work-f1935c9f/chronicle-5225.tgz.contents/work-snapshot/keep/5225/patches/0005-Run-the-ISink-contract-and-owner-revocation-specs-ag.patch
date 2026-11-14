@@ -1,0 +1,438 @@
+From bcee09fab70a8b1d3103f45cc3839deff6f24a66 Mon Sep 17 00:00:00 2001
+From: woksin <sindrewilting@gmail.com>
+Date: Thu, 22 Oct 2026 14:00:39 +0200
+Subject: [PATCH 5/8] Run the ISink contract and owner-revocation specs against
+ fenced sink writes
+
+---
+ .../Fencing/FencedMongoSinkHarness.cs         | 88 +++++++++++++++++++
+ ..._child_addition_also_updates_its_parent.cs | 13 +++
+ ...out_of_order_event_is_applied_unguarded.cs | 13 +++
+ .../and_the_event_has_already_been_applied.cs | 13 +++
+ .../and_the_event_is_beyond_the_watermark.cs  | 13 +++
+ .../and_the_read_model_does_not_exist_yet.cs  | 13 +++
+ .../and_a_second_replay_follows_the_first.cs  | 13 +++
+ .../and_the_replay_produced_no_writes.cs      | 13 +++
+ .../and_the_replay_produced_writes.cs         | 13 +++
+ .../and_writes_follow.cs                      | 13 +++
+ .../and_the_read_model_already_has_state.cs   | 13 +++
+ ...a_join_on_the_child_updates_its_parents.cs | 13 +++
+ .../and_it_holds_the_read_model.cs            | 13 +++
+ .../and_it_applies_changes.cs                 | 28 ++++++
+ .../and_it_removes_the_read_model.cs          | 34 +++++++
+ 15 files changed, 306 insertions(+)
+ create mode 100644 Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/FencedMongoSinkHarness.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_Sink/contract/when_applying_changes/and_a_child_addition_also_updates_its_parent.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_Sink/contract/when_applying_changes_guarded_on_watermark/and_an_out_of_order_event_is_applied_unguarded.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_Sink/contract/when_applying_changes_guarded_on_watermark/and_the_event_has_already_been_applied.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_Sink/contract/when_applying_changes_guarded_on_watermark/and_the_event_is_beyond_the_watermark.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_Sink/contract/when_applying_changes_guarded_on_watermark/and_the_read_model_does_not_exist_yet.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_Sink/contract/when_ending_a_replay/and_a_second_replay_follows_the_first.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_Sink/contract/when_ending_a_replay/and_the_replay_produced_no_writes.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_Sink/contract/when_ending_a_replay/and_the_replay_produced_writes.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_Sink/contract/when_leaving_a_replay/and_writes_follow.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_Sink/contract/when_preparing_an_initial_run/and_the_read_model_already_has_state.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_Sink/contract/when_removing_a_child_from_all/and_a_join_on_the_child_updates_its_parents.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_Sink/contract/when_removing_a_container/and_it_holds_the_read_model.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_Sink/when_the_owner_is_revoked/and_it_applies_changes.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_Sink/when_the_owner_is_revoked/and_it_removes_the_read_model.cs
+
+diff --git a/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/FencedMongoSinkHarness.cs b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/FencedMongoSinkHarness.cs
+new file mode 100644
+index 0000000000..0cfb81bdd6
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/FencedMongoSinkHarness.cs
+@@ -0,0 +1,88 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Chronicle.Concepts.ReadModels;
++using Cratis.Chronicle.Schemas;
++using Cratis.Chronicle.Storage.MongoDB.Sinks;
++using Cratis.Chronicle.Storage.Sinks;
++using Microsoft.Extensions.Logging.Abstractions;
++using MongoDB.Driver;
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
++
++/// <summary>
++/// Runs the shared <see cref="ISink"/> contract against the MongoDB sink with every write fenced, in a database of its own.
++/// </summary>
++/// <remarks>
++/// Fenced writes run in transactions, so the harness needs a replica set. The sink owns its generation through a claimed
++/// <see cref="FenceToken"/>; a case revokes it through <see cref="Revoke"/>.
++/// </remarks>
++public class FencedMongoSinkHarness : ISinkHarness
++{
++    /// <summary>
++    /// The materialization key the sink's gate is held under.
++    /// </summary>
++    public const string MaterializationKey = "store/namespace/test-read-model";
++
++    IMongoClient? _client;
++    string? _databaseName;
++    FenceGates _gates = default!;
++
++    /// <summary>
++    /// Gets or sets the connection string of the replica set.
++    /// </summary>
++    public string ConnectionString { get; set; } = string.Empty;
++
++    /// <summary>
++    /// Gets or sets the <see cref="IFencedBatchProbe"/> the sink's batches run through.
++    /// </summary>
++    public IFencedBatchProbe Probe { get; set; } = new NullFencedBatchProbe();
++
++    /// <summary>
++    /// Gets the <see cref="IMongoDatabase"/> the sink was created in.
++    /// </summary>
++    public IMongoDatabase Database { get; private set; } = default!;
++
++    /// <summary>
++    /// Gets the <see cref="FenceToken"/> the sink writes with.
++    /// </summary>
++    public FenceToken Token { get; private set; } = default!;
++
++    /// <inheritdoc/>
++    public ISink CreateSink(ReadModelDefinition definition)
++    {
++        _databaseName = MongoDBSpecDatabaseNames.New();
++        _client = new MongoClient(ConnectionString);
++        Database = _client.GetDatabase(_databaseName);
++        _gates = new FenceGates(Database);
++        Token = _gates.Claim(MaterializationKey, definition.LatestGeneration.Value).GetAwaiter().GetResult();
++        var writes = new FencedSinkWrites(new FixedFenceTokenSource(Token), new FencedBatchExecutor(new MongoFenceStore(Database), FenceRetryPolicy.Default, Probe));
++
++        var typeFormats = new TypeFormats();
++        var expandoObjectConverter = new ExpandoObjectConverter(typeFormats);
++        var collections = new SinkCollections(definition, Database);
++        var mongoDBConverter = new MongoDBConverter(expandoObjectConverter, typeFormats, definition, NullLogger<MongoDBConverter>.Instance);
++        var changesetConverter = new ChangesetConverter(definition, mongoDBConverter, collections, expandoObjectConverter, NullLogger<ChangesetConverter>.Instance, writes);
++        var changeStreams = new ReadModelChangeStreams(NullLogger<ReadModelChangeStreams>.Instance);
++
++        return new Sink(definition, mongoDBConverter, collections, changesetConverter, expandoObjectConverter, changeStreams, NullLogger<Sink>.Instance, writes);
++    }
++
++    /// <summary>
++    /// Revokes the sink's ownership of its generation.
++    /// </summary>
++    /// <returns>Awaitable task.</returns>
++    public Task Revoke() => _gates.Revoke(Token.MaterializationKey, Token.Generation);
++
++    /// <inheritdoc/>
++    public void Dispose()
++    {
++        if (_client is not null && _databaseName is not null)
++        {
++            _client.DropDatabase(_databaseName);
++            _client.Dispose();
++        }
++
++        GC.SuppressFinalize(this);
++    }
++}
+diff --git a/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_Sink/contract/when_applying_changes/and_a_child_addition_also_updates_its_parent.cs b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_Sink/contract/when_applying_changes/and_a_child_addition_also_updates_its_parent.cs
+new file mode 100644
+index 0000000000..b94d24d1ed
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_Sink/contract/when_applying_changes/and_a_child_addition_also_updates_its_parent.cs
+@@ -0,0 +1,13 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Chronicle.Storage.MongoDB.EventSequences;
++using Contract = Cratis.Chronicle.Storage.Sinks.for_ISink.when_applying_changes;
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing.for_Sink.contract.when_applying_changes;
++
++[Collection(ReplicaSetMongoDBCollection.Name)]
++public class and_a_child_addition_also_updates_its_parent(ReplicaSetMongoDBFixture fixture) : Contract.and_a_child_addition_also_updates_its_parent<FencedMongoSinkHarness>
++{
++    protected override FencedMongoSinkHarness CreateHarness() => new() { ConnectionString = fixture.ConnectionString };
++}
+diff --git a/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_Sink/contract/when_applying_changes_guarded_on_watermark/and_an_out_of_order_event_is_applied_unguarded.cs b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_Sink/contract/when_applying_changes_guarded_on_watermark/and_an_out_of_order_event_is_applied_unguarded.cs
+new file mode 100644
+index 0000000000..4d483c078e
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_Sink/contract/when_applying_changes_guarded_on_watermark/and_an_out_of_order_event_is_applied_unguarded.cs
+@@ -0,0 +1,13 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Chronicle.Storage.MongoDB.EventSequences;
++using Contract = Cratis.Chronicle.Storage.Sinks.for_ISink.when_applying_changes_guarded_on_watermark;
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing.for_Sink.contract.when_applying_changes_guarded_on_watermark;
++
++[Collection(ReplicaSetMongoDBCollection.Name)]
++public class and_an_out_of_order_event_is_applied_unguarded(ReplicaSetMongoDBFixture fixture) : Contract.and_an_out_of_order_event_is_applied_unguarded<FencedMongoSinkHarness>
++{
++    protected override FencedMongoSinkHarness CreateHarness() => new() { ConnectionString = fixture.ConnectionString };
++}
+diff --git a/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_Sink/contract/when_applying_changes_guarded_on_watermark/and_the_event_has_already_been_applied.cs b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_Sink/contract/when_applying_changes_guarded_on_watermark/and_the_event_has_already_been_applied.cs
+new file mode 100644
+index 0000000000..34d3e3a04e
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_Sink/contract/when_applying_changes_guarded_on_watermark/and_the_event_has_already_been_applied.cs
+@@ -0,0 +1,13 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Chronicle.Storage.MongoDB.EventSequences;
++using Contract = Cratis.Chronicle.Storage.Sinks.for_ISink.when_applying_changes_guarded_on_watermark;
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing.for_Sink.contract.when_applying_changes_guarded_on_watermark;
++
++[Collection(ReplicaSetMongoDBCollection.Name)]
++public class and_the_event_has_already_been_applied(ReplicaSetMongoDBFixture fixture) : Contract.and_the_event_has_already_been_applied<FencedMongoSinkHarness>
++{
++    protected override FencedMongoSinkHarness CreateHarness() => new() { ConnectionString = fixture.ConnectionString };
++}
+diff --git a/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_Sink/contract/when_applying_changes_guarded_on_watermark/and_the_event_is_beyond_the_watermark.cs b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_Sink/contract/when_applying_changes_guarded_on_watermark/and_the_event_is_beyond_the_watermark.cs
+new file mode 100644
+index 0000000000..235830b03c
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_Sink/contract/when_applying_changes_guarded_on_watermark/and_the_event_is_beyond_the_watermark.cs
+@@ -0,0 +1,13 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Chronicle.Storage.MongoDB.EventSequences;
++using Contract = Cratis.Chronicle.Storage.Sinks.for_ISink.when_applying_changes_guarded_on_watermark;
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing.for_Sink.contract.when_applying_changes_guarded_on_watermark;
++
++[Collection(ReplicaSetMongoDBCollection.Name)]
++public class and_the_event_is_beyond_the_watermark(ReplicaSetMongoDBFixture fixture) : Contract.and_the_event_is_beyond_the_watermark<FencedMongoSinkHarness>
++{
++    protected override FencedMongoSinkHarness CreateHarness() => new() { ConnectionString = fixture.ConnectionString };
++}
+diff --git a/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_Sink/contract/when_applying_changes_guarded_on_watermark/and_the_read_model_does_not_exist_yet.cs b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_Sink/contract/when_applying_changes_guarded_on_watermark/and_the_read_model_does_not_exist_yet.cs
+new file mode 100644
+index 0000000000..259ca69075
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_Sink/contract/when_applying_changes_guarded_on_watermark/and_the_read_model_does_not_exist_yet.cs
+@@ -0,0 +1,13 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Chronicle.Storage.MongoDB.EventSequences;
++using Contract = Cratis.Chronicle.Storage.Sinks.for_ISink.when_applying_changes_guarded_on_watermark;
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing.for_Sink.contract.when_applying_changes_guarded_on_watermark;
++
++[Collection(ReplicaSetMongoDBCollection.Name)]
++public class and_the_read_model_does_not_exist_yet(ReplicaSetMongoDBFixture fixture) : Contract.and_the_read_model_does_not_exist_yet<FencedMongoSinkHarness>
++{
++    protected override FencedMongoSinkHarness CreateHarness() => new() { ConnectionString = fixture.ConnectionString };
++}
+diff --git a/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_Sink/contract/when_ending_a_replay/and_a_second_replay_follows_the_first.cs b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_Sink/contract/when_ending_a_replay/and_a_second_replay_follows_the_first.cs
+new file mode 100644
+index 0000000000..9c4a3eefc3
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_Sink/contract/when_ending_a_replay/and_a_second_replay_follows_the_first.cs
+@@ -0,0 +1,13 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Chronicle.Storage.MongoDB.EventSequences;
++using Contract = Cratis.Chronicle.Storage.Sinks.for_ISink.when_ending_a_replay;
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing.for_Sink.contract.when_ending_a_replay;
++
++[Collection(ReplicaSetMongoDBCollection.Name)]
++public class and_a_second_replay_follows_the_first(ReplicaSetMongoDBFixture fixture) : Contract.and_a_second_replay_follows_the_first<FencedMongoSinkHarness>
++{
++    protected override FencedMongoSinkHarness CreateHarness() => new() { ConnectionString = fixture.ConnectionString };
++}
+diff --git a/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_Sink/contract/when_ending_a_replay/and_the_replay_produced_no_writes.cs b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_Sink/contract/when_ending_a_replay/and_the_replay_produced_no_writes.cs
+new file mode 100644
+index 0000000000..9e09788348
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_Sink/contract/when_ending_a_replay/and_the_replay_produced_no_writes.cs
+@@ -0,0 +1,13 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Chronicle.Storage.MongoDB.EventSequences;
++using Contract = Cratis.Chronicle.Storage.Sinks.for_ISink.when_ending_a_replay;
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing.for_Sink.contract.when_ending_a_replay;
++
++[Collection(ReplicaSetMongoDBCollection.Name)]
++public class and_the_replay_produced_no_writes(ReplicaSetMongoDBFixture fixture) : Contract.and_the_replay_produced_no_writes<FencedMongoSinkHarness>
++{
++    protected override FencedMongoSinkHarness CreateHarness() => new() { ConnectionString = fixture.ConnectionString };
++}
+diff --git a/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_Sink/contract/when_ending_a_replay/and_the_replay_produced_writes.cs b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_Sink/contract/when_ending_a_replay/and_the_replay_produced_writes.cs
+new file mode 100644
+index 0000000000..bc9782406b
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_Sink/contract/when_ending_a_replay/and_the_replay_produced_writes.cs
+@@ -0,0 +1,13 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Chronicle.Storage.MongoDB.EventSequences;
++using Contract = Cratis.Chronicle.Storage.Sinks.for_ISink.when_ending_a_replay;
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing.for_Sink.contract.when_ending_a_replay;
++
++[Collection(ReplicaSetMongoDBCollection.Name)]
++public class and_the_replay_produced_writes(ReplicaSetMongoDBFixture fixture) : Contract.and_the_replay_produced_writes<FencedMongoSinkHarness>
++{
++    protected override FencedMongoSinkHarness CreateHarness() => new() { ConnectionString = fixture.ConnectionString };
++}
+diff --git a/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_Sink/contract/when_leaving_a_replay/and_writes_follow.cs b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_Sink/contract/when_leaving_a_replay/and_writes_follow.cs
+new file mode 100644
+index 0000000000..fdfcaa468d
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_Sink/contract/when_leaving_a_replay/and_writes_follow.cs
+@@ -0,0 +1,13 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Chronicle.Storage.MongoDB.EventSequences;
++using Contract = Cratis.Chronicle.Storage.Sinks.for_ISink.when_leaving_a_replay;
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing.for_Sink.contract.when_leaving_a_replay;
++
++[Collection(ReplicaSetMongoDBCollection.Name)]
++public class and_writes_follow(ReplicaSetMongoDBFixture fixture) : Contract.and_writes_follow<FencedMongoSinkHarness>
++{
++    protected override FencedMongoSinkHarness CreateHarness() => new() { ConnectionString = fixture.ConnectionString };
++}
+diff --git a/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_Sink/contract/when_preparing_an_initial_run/and_the_read_model_already_has_state.cs b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_Sink/contract/when_preparing_an_initial_run/and_the_read_model_already_has_state.cs
+new file mode 100644
+index 0000000000..4af9f16a78
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_Sink/contract/when_preparing_an_initial_run/and_the_read_model_already_has_state.cs
+@@ -0,0 +1,13 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Chronicle.Storage.MongoDB.EventSequences;
++using Contract = Cratis.Chronicle.Storage.Sinks.for_ISink.when_preparing_an_initial_run;
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing.for_Sink.contract.when_preparing_an_initial_run;
++
++[Collection(ReplicaSetMongoDBCollection.Name)]
++public class and_the_read_model_already_has_state(ReplicaSetMongoDBFixture fixture) : Contract.and_the_read_model_already_has_state<FencedMongoSinkHarness>
++{
++    protected override FencedMongoSinkHarness CreateHarness() => new() { ConnectionString = fixture.ConnectionString };
++}
+diff --git a/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_Sink/contract/when_removing_a_child_from_all/and_a_join_on_the_child_updates_its_parents.cs b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_Sink/contract/when_removing_a_child_from_all/and_a_join_on_the_child_updates_its_parents.cs
+new file mode 100644
+index 0000000000..31dc2071dd
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_Sink/contract/when_removing_a_child_from_all/and_a_join_on_the_child_updates_its_parents.cs
+@@ -0,0 +1,13 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Chronicle.Storage.MongoDB.EventSequences;
++using Contract = Cratis.Chronicle.Storage.Sinks.for_ISink.when_removing_a_child_from_all;
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing.for_Sink.contract.when_removing_a_child_from_all;
++
++[Collection(ReplicaSetMongoDBCollection.Name)]
++public class and_a_join_on_the_child_updates_its_parents(ReplicaSetMongoDBFixture fixture) : Contract.and_a_join_on_the_child_updates_its_parents<FencedMongoSinkHarness>
++{
++    protected override FencedMongoSinkHarness CreateHarness() => new() { ConnectionString = fixture.ConnectionString };
++}
+diff --git a/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_Sink/contract/when_removing_a_container/and_it_holds_the_read_model.cs b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_Sink/contract/when_removing_a_container/and_it_holds_the_read_model.cs
+new file mode 100644
+index 0000000000..e692417041
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_Sink/contract/when_removing_a_container/and_it_holds_the_read_model.cs
+@@ -0,0 +1,13 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Chronicle.Storage.MongoDB.EventSequences;
++using Contract = Cratis.Chronicle.Storage.Sinks.for_ISink.when_removing_a_container;
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing.for_Sink.contract.when_removing_a_container;
++
++[Collection(ReplicaSetMongoDBCollection.Name)]
++public class and_it_holds_the_read_model(ReplicaSetMongoDBFixture fixture) : Contract.and_it_holds_the_read_model<FencedMongoSinkHarness>
++{
++    protected override FencedMongoSinkHarness CreateHarness() => new() { ConnectionString = fixture.ConnectionString };
++}
+diff --git a/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_Sink/when_the_owner_is_revoked/and_it_applies_changes.cs b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_Sink/when_the_owner_is_revoked/and_it_applies_changes.cs
+new file mode 100644
+index 0000000000..779896f0e7
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_Sink/when_the_owner_is_revoked/and_it_applies_changes.cs
+@@ -0,0 +1,28 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Chronicle.Storage.MongoDB.EventSequences;
++using Contract = Cratis.Chronicle.Storage.Sinks.for_ISink;
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing.for_Sink.when_the_owner_is_revoked;
++
++[Collection(ReplicaSetMongoDBCollection.Name)]
++public class and_it_applies_changes(ReplicaSetMongoDBFixture fixture) : Contract.given.an_accumulating_read_model<FencedMongoSinkHarness>
++{
++    FencedMongoSinkHarness _fencedHarness;
++    Exception? _error;
++    int _count;
++
++    protected override FencedMongoSinkHarness CreateHarness() => _fencedHarness = new() { ConnectionString = fixture.ConnectionString };
++
++    async Task Because()
++    {
++        await _sink.ApplyChanges(_key, ChangesetSettingCountTo(1), 42UL);
++        await _fencedHarness.Revoke();
++        _error = await Catch.Exception(() => _sink.ApplyChanges(_key, ChangesetSettingCountTo(2), 43UL));
++        _count = await CurrentCount();
++    }
++
++    [Fact] void should_refuse_the_write() => _error.ShouldBeOfExactType<FenceRevoked>();
++    [Fact] void should_leave_the_persisted_state_as_it_was() => _count.ShouldEqual(1);
++}
+diff --git a/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_Sink/when_the_owner_is_revoked/and_it_removes_the_read_model.cs b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_Sink/when_the_owner_is_revoked/and_it_removes_the_read_model.cs
+new file mode 100644
+index 0000000000..39851443e5
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_Sink/when_the_owner_is_revoked/and_it_removes_the_read_model.cs
+@@ -0,0 +1,34 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using System.Dynamic;
++using Cratis.Chronicle.Changes;
++using Cratis.Chronicle.Concepts.Events;
++using Cratis.Chronicle.Storage.MongoDB.EventSequences;
++using Contract = Cratis.Chronicle.Storage.Sinks.for_ISink;
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing.for_Sink.when_the_owner_is_revoked;
++
++[Collection(ReplicaSetMongoDBCollection.Name)]
++public class and_it_removes_the_read_model(ReplicaSetMongoDBFixture fixture) : Contract.given.an_accumulating_read_model<FencedMongoSinkHarness>
++{
++    FencedMongoSinkHarness _fencedHarness;
++    Exception? _error;
++    int? _count;
++
++    protected override FencedMongoSinkHarness CreateHarness() => _fencedHarness = new() { ConnectionString = fixture.ConnectionString };
++
++    async Task Because()
++    {
++        await _sink.ApplyChanges(_key, ChangesetSettingCountTo(1), 42UL);
++        await _fencedHarness.Revoke();
++        var removal = Substitute.For<IChangeset<AppendedEvent, ExpandoObject>>();
++        removal.InitialState.Returns(new ExpandoObject());
++        removal.HasBeenRemoved().Returns(true);
++        _error = await Catch.Exception(() => _sink.ApplyChanges(_key, removal, 43UL));
++        _count = await CurrentCountOrNull();
++    }
++
++    [Fact] void should_refuse_the_removal() => _error.ShouldBeOfExactType<FenceRevoked>();
++    [Fact] void should_keep_the_read_model() => _count.ShouldEqual(1);
++}
+-- 
+2.50.1 (Apple Git-155)
+

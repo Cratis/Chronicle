@@ -1,0 +1,1435 @@
+From 55436ba3bf17ac4a587d856f7d80682982a391ee Mon Sep 17 00:00:00 2001
+From: woksin <sindrewilting@gmail.com>
+Date: Thu, 22 Oct 2026 13:08:11 +0200
+Subject: [PATCH 1/8] Add MongoDB writer fence: gate records, fenced batch
+ executor and unknown-commit resolution
+
+Prototype for #5225. A fenced batch runs in one transaction that first writes
+the gate record expecting the owner's epoch, then the batch's writes, then a
+receipt. Revocation bumps the epoch in a transaction and so serializes against
+admitted batches. An unknown commit result is resolved by an unconditional gate
+write plus a receipt read in one transaction, never by a blind retry.
+---
+ .../Fencing/ClaimingFenceTokenSource.cs       |  21 ++++
+ .../Generations/Fencing/FenceBatchId.cs       |  17 +++
+ .../Generations/Fencing/FenceCollections.cs   |  45 ++++++++
+ .../Generations/Fencing/FenceGates.cs         |  72 ++++++++++++
+ .../Generations/Fencing/FenceRetryPolicy.cs   |  84 ++++++++++++++
+ .../Generations/Fencing/FenceRevoked.cs       |  17 +++
+ .../Generations/Fencing/FenceStorage.cs       |  52 +++++++++
+ .../Generations/Fencing/FenceToken.cs         |  18 +++
+ .../Fencing/FencedBatchAttemptOutcome.cs      |  25 ++++
+ .../Fencing/FencedBatchExecutor.cs            | 107 ++++++++++++++++++
+ .../Fencing/FencedBatchOutcomeUnknown.cs      |  19 ++++
+ .../Fencing/FencedBatchRetriesExhausted.cs    |  13 +++
+ .../Generations/Fencing/FencedDdl.cs          |  40 +++++++
+ .../Fencing/FencedDdlRacedRevocation.cs       |  20 ++++
+ .../Generations/Fencing/FencedSinkWrites.cs   | 105 +++++++++++++++++
+ .../Fencing/FixedFenceTokenSource.cs          |  14 +++
+ .../Generations/Fencing/IFenceGates.cs        |  41 +++++++
+ .../Generations/Fencing/IFenceStore.cs        |  27 +++++
+ .../Generations/Fencing/IFenceTokenSource.cs  |  20 ++++
+ .../Generations/Fencing/IFenceTransaction.cs  |  51 +++++++++
+ .../Fencing/IFencedBatchExecutor.cs           |  25 ++++
+ .../Generations/Fencing/IFencedBatchProbe.cs  |  31 +++++
+ .../Generations/Fencing/ISinkWrites.cs        |  69 +++++++++++
+ .../Generations/Fencing/MongoFenceStore.cs    | 104 +++++++++++++++++
+ .../Fencing/MongoFenceTransaction.cs          |  68 +++++++++++
+ .../Fencing/NullFencedBatchProbe.cs           |  24 ++++
+ .../Generations/Fencing/UnfencedSinkWrites.cs |  40 +++++++
+ .../Fencing/UnknownCommitResolution.cs        |  25 ++++
+ 28 files changed, 1194 insertions(+)
+ create mode 100644 Source/Kernel/Storage.MongoDB/Generations/Fencing/ClaimingFenceTokenSource.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB/Generations/Fencing/FenceBatchId.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB/Generations/Fencing/FenceCollections.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB/Generations/Fencing/FenceGates.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB/Generations/Fencing/FenceRetryPolicy.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB/Generations/Fencing/FenceRevoked.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB/Generations/Fencing/FenceStorage.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB/Generations/Fencing/FenceToken.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB/Generations/Fencing/FencedBatchAttemptOutcome.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB/Generations/Fencing/FencedBatchExecutor.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB/Generations/Fencing/FencedBatchOutcomeUnknown.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB/Generations/Fencing/FencedBatchRetriesExhausted.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB/Generations/Fencing/FencedDdl.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB/Generations/Fencing/FencedDdlRacedRevocation.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB/Generations/Fencing/FencedSinkWrites.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB/Generations/Fencing/FixedFenceTokenSource.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB/Generations/Fencing/IFenceGates.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB/Generations/Fencing/IFenceStore.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB/Generations/Fencing/IFenceTokenSource.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB/Generations/Fencing/IFenceTransaction.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB/Generations/Fencing/IFencedBatchExecutor.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB/Generations/Fencing/IFencedBatchProbe.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB/Generations/Fencing/ISinkWrites.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB/Generations/Fencing/MongoFenceStore.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB/Generations/Fencing/MongoFenceTransaction.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB/Generations/Fencing/NullFencedBatchProbe.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB/Generations/Fencing/UnfencedSinkWrites.cs
+ create mode 100644 Source/Kernel/Storage.MongoDB/Generations/Fencing/UnknownCommitResolution.cs
+
+diff --git a/Source/Kernel/Storage.MongoDB/Generations/Fencing/ClaimingFenceTokenSource.cs b/Source/Kernel/Storage.MongoDB/Generations/Fencing/ClaimingFenceTokenSource.cs
+new file mode 100644
+index 0000000000..58de85d3b7
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB/Generations/Fencing/ClaimingFenceTokenSource.cs
+@@ -0,0 +1,21 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
++
++/// <summary>
++/// Represents an <see cref="IFenceTokenSource"/> that claims the gate once, the first time a token is asked for.
++/// </summary>
++/// <param name="gates">The <see cref="IFenceGates"/> to claim through.</param>
++/// <param name="materializationKey">The key identifying the materialization.</param>
++/// <param name="generation">The generation to claim.</param>
++/// <remarks>
++/// A stand-in until generations are bound to owners: the most recent writer to claim owns the gate, which revokes every earlier one.
++/// </remarks>
++public sealed class ClaimingFenceTokenSource(IFenceGates gates, string materializationKey, ulong generation) : IFenceTokenSource
++{
++    readonly Lazy<Task<FenceToken>> _token = new(() => gates.Claim(materializationKey, generation));
++
++    /// <inheritdoc/>
++    public Task<FenceToken> Current(CancellationToken cancellationToken = default) => _token.Value.WaitAsync(cancellationToken);
++}
+diff --git a/Source/Kernel/Storage.MongoDB/Generations/Fencing/FenceBatchId.cs b/Source/Kernel/Storage.MongoDB/Generations/Fencing/FenceBatchId.cs
+new file mode 100644
+index 0000000000..77c70018a9
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB/Generations/Fencing/FenceBatchId.cs
+@@ -0,0 +1,17 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
++
++/// <summary>
++/// Represents the identifier of one fenced batch attempt, written as its receipt.
++/// </summary>
++/// <param name="Value">The underlying value.</param>
++public record FenceBatchId(Guid Value) : ConceptAs<Guid>(Value)
++{
++    /// <summary>
++    /// Creates a new unique <see cref="FenceBatchId"/>.
++    /// </summary>
++    /// <returns>A new <see cref="FenceBatchId"/>.</returns>
++    public static FenceBatchId New() => new(Guid.NewGuid());
++}
+diff --git a/Source/Kernel/Storage.MongoDB/Generations/Fencing/FenceCollections.cs b/Source/Kernel/Storage.MongoDB/Generations/Fencing/FenceCollections.cs
+new file mode 100644
+index 0000000000..655c124740
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB/Generations/Fencing/FenceCollections.cs
+@@ -0,0 +1,45 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
++
++/// <summary>
++/// Holds the names of the collections and fields the writer fence keeps its records in.
++/// </summary>
++public static class FenceCollections
++{
++    /// <summary>
++    /// The collection holding one gate record per materialization generation.
++    /// </summary>
++    public const string Gates = "fence-gates";
++
++    /// <summary>
++    /// The collection holding one receipt per committed fenced batch.
++    /// </summary>
++    public const string Receipts = "fence-receipts";
++
++    /// <summary>
++    /// The gate record field holding the owner epoch.
++    /// </summary>
++    public const string Epoch = "epoch";
++
++    /// <summary>
++    /// The gate record field counting admitted batches; every admission writes it, so admission conflicts with revocation.
++    /// </summary>
++    public const string Admitted = "admitted";
++
++    /// <summary>
++    /// The gate record field counting unknown-commit resolutions; a resolution writes it to close the gate on the batch.
++    /// </summary>
++    public const string Resolutions = "resolutions";
++
++    /// <summary>
++    /// The receipt field naming the gate the batch was admitted through.
++    /// </summary>
++    public const string Gate = "gate";
++
++    /// <summary>
++    /// The receipt field holding the time the receipt was written, used for expiring old receipts.
++    /// </summary>
++    public const string At = "at";
++}
+diff --git a/Source/Kernel/Storage.MongoDB/Generations/Fencing/FenceGates.cs b/Source/Kernel/Storage.MongoDB/Generations/Fencing/FenceGates.cs
+new file mode 100644
+index 0000000000..d9d62b8a65
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB/Generations/Fencing/FenceGates.cs
+@@ -0,0 +1,72 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using MongoDB.Bson;
++using MongoDB.Driver;
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
++
++/// <summary>
++/// Represents an implementation of <see cref="IFenceGates"/> keeping gate records in a MongoDB database.
++/// </summary>
++/// <param name="database">The <see cref="IMongoDatabase"/> holding the gate records, the same database as the data they guard.</param>
++/// <param name="retryPolicy">The <see cref="FenceRetryPolicy"/> bounding how long revocation waits for an in-flight batch.</param>
++public class FenceGates(IMongoDatabase database, FenceRetryPolicy retryPolicy) : IFenceGates
++{
++    static readonly TransactionOptions _transactionOptions = new(ReadConcern.Snapshot, writeConcern: WriteConcern.WMajority);
++
++    /// <summary>
++    /// Initializes a new instance of the <see cref="FenceGates"/> class with the default retry policy.
++    /// </summary>
++    /// <param name="database">The <see cref="IMongoDatabase"/> holding the gate records.</param>
++    public FenceGates(IMongoDatabase database)
++        : this(database, FenceRetryPolicy.Default)
++    {
++    }
++
++    IMongoCollection<BsonDocument> Gates => database.GetCollection<BsonDocument>(FenceCollections.Gates);
++
++    /// <inheritdoc/>
++    public async Task<FenceToken> Claim(string materializationKey, ulong generation, CancellationToken cancellationToken = default)
++    {
++        await FenceStorage.EnsureCollections(database, cancellationToken);
++        var epoch = await BumpEpoch(materializationKey, generation, cancellationToken);
++        return new(materializationKey, generation, epoch);
++    }
++
++    /// <inheritdoc/>
++    public async Task<long> Revoke(string materializationKey, ulong generation, CancellationToken cancellationToken = default)
++    {
++        await FenceStorage.EnsureCollections(database, cancellationToken);
++        return await BumpEpoch(materializationKey, generation, cancellationToken);
++    }
++
++    /// <inheritdoc/>
++    public async Task<long?> CurrentEpoch(string materializationKey, ulong generation, CancellationToken cancellationToken = default)
++    {
++        var gateId = new FenceToken(materializationKey, generation, 0).GateId;
++        using var cursor = await Gates.WithReadConcern(ReadConcern.Majority).FindAsync(Builders<BsonDocument>.Filter.Eq("_id", gateId), cancellationToken: cancellationToken);
++        var gate = await cursor.FirstOrDefaultAsync(cancellationToken);
++        return gate?[FenceCollections.Epoch].ToInt64();
++    }
++
++    async Task<long> BumpEpoch(string materializationKey, ulong generation, CancellationToken cancellationToken)
++    {
++        var gateId = new FenceToken(materializationKey, generation, 0).GateId;
++        return await retryPolicy.RetryTransient(
++            async () =>
++            {
++                using var session = await database.Client.StartSessionAsync(cancellationToken: cancellationToken);
++                session.StartTransaction(_transactionOptions);
++                var gate = await Gates.FindOneAndUpdateAsync(
++                    session,
++                    Builders<BsonDocument>.Filter.Eq("_id", gateId),
++                    Builders<BsonDocument>.Update.Inc(FenceCollections.Epoch, 1L),
++                    new FindOneAndUpdateOptions<BsonDocument> { IsUpsert = true, ReturnDocument = ReturnDocument.After },
++                    cancellationToken);
++                await session.CommitTransactionAsync(cancellationToken);
++                return gate[FenceCollections.Epoch].ToInt64();
++            },
++            cancellationToken);
++    }
++}
+diff --git a/Source/Kernel/Storage.MongoDB/Generations/Fencing/FenceRetryPolicy.cs b/Source/Kernel/Storage.MongoDB/Generations/Fencing/FenceRetryPolicy.cs
+new file mode 100644
+index 0000000000..db396f743e
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB/Generations/Fencing/FenceRetryPolicy.cs
+@@ -0,0 +1,84 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using MongoDB.Driver;
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
++
++/// <summary>
++/// Represents how fenced transactions retry transient transaction errors, such as a write conflict on the gate record.
++/// </summary>
++/// <param name="MaxAttempts">The maximum number of attempts.</param>
++/// <param name="InitialBackoff">The backoff after the first transient failure; it doubles up to <paramref name="MaxBackoff"/>.</param>
++/// <param name="MaxBackoff">The longest single backoff.</param>
++/// <param name="Deadline">The longest total time spent retrying.</param>
++/// <remarks>
++/// The deadline bounds how long revocation or unknown-commit resolution waits for a batch the server still holds open; MongoDB aborts
++/// such a transaction once its lifetime limit (transactionLifetimeLimitSeconds, 60 seconds by default) passes, so the default deadline is longer.
++/// </remarks>
++public record FenceRetryPolicy(int MaxAttempts, TimeSpan InitialBackoff, TimeSpan MaxBackoff, TimeSpan Deadline)
++{
++    /// <summary>
++    /// The error label MongoDB attaches to an error that aborted a transaction which can be retried from the start.
++    /// </summary>
++    public const string TransientTransactionError = "TransientTransactionError";
++
++    /// <summary>
++    /// The error label MongoDB attaches to an error after which the commit of a transaction may or may not have happened.
++    /// </summary>
++    public const string UnknownTransactionCommitResult = "UnknownTransactionCommitResult";
++
++    /// <summary>
++    /// Gets the default <see cref="FenceRetryPolicy"/>.
++    /// </summary>
++    public static readonly FenceRetryPolicy Default = new(1000, TimeSpan.FromMilliseconds(5), TimeSpan.FromMilliseconds(500), TimeSpan.FromSeconds(90));
++
++    /// <summary>
++    /// Checks whether an error aborted a transaction that can be retried from the start.
++    /// </summary>
++    /// <param name="error">The error to check.</param>
++    /// <returns>True if transient.</returns>
++    public static bool IsTransient(Exception error) => error is MongoException mongo && mongo.HasErrorLabel(TransientTransactionError);
++
++    /// <summary>
++    /// Checks whether an error leaves the outcome of a commit unknown.
++    /// </summary>
++    /// <param name="error">The error to check.</param>
++    /// <returns>True if the commit outcome is unknown.</returns>
++    public static bool IsUnknownCommit(Exception error) => error is MongoException mongo && mongo.HasErrorLabel(UnknownTransactionCommitResult);
++
++    /// <summary>
++    /// Gets the backoff before a given retry.
++    /// </summary>
++    /// <param name="attempt">The one-based attempt that just failed.</param>
++    /// <returns>The backoff.</returns>
++    public TimeSpan BackoffFor(int attempt)
++    {
++        var factor = Math.Pow(2, Math.Min(attempt - 1, 16));
++        var backoff = TimeSpan.FromTicks((long)Math.Min(InitialBackoff.Ticks * factor, MaxBackoff.Ticks));
++        return backoff + TimeSpan.FromTicks(Random.Shared.NextInt64(Math.Max(1, backoff.Ticks / 2)));
++    }
++
++    /// <summary>
++    /// Runs a whole transaction, starting it again after each transient transaction error within the policy's bounds.
++    /// </summary>
++    /// <typeparam name="T">The type of result.</typeparam>
++    /// <param name="transaction">The transaction to run; each call must start its own session and transaction.</param>
++    /// <param name="cancellationToken">The <see cref="CancellationToken"/> to stop waiting with.</param>
++    /// <returns>The result of the attempt that committed.</returns>
++    public async Task<T> RetryTransient<T>(Func<Task<T>> transaction, CancellationToken cancellationToken)
++    {
++        var started = DateTimeOffset.UtcNow;
++        for (var attempt = 1; ; attempt++)
++        {
++            try
++            {
++                return await transaction();
++            }
++            catch (Exception error) when (IsTransient(error) && attempt < MaxAttempts && DateTimeOffset.UtcNow - started < Deadline)
++            {
++                await Task.Delay(BackoffFor(attempt), cancellationToken);
++            }
++        }
++    }
++}
+diff --git a/Source/Kernel/Storage.MongoDB/Generations/Fencing/FenceRevoked.cs b/Source/Kernel/Storage.MongoDB/Generations/Fencing/FenceRevoked.cs
+new file mode 100644
+index 0000000000..0c0018bf32
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB/Generations/Fencing/FenceRevoked.cs
+@@ -0,0 +1,17 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
++
++/// <summary>
++/// The exception that is thrown when a fenced write is refused because its owner epoch has been revoked.
++/// </summary>
++/// <param name="token">The <see cref="FenceToken"/> that is no longer current.</param>
++public class FenceRevoked(FenceToken token)
++    : Exception($"The writer fence for '{token.GateId}' no longer holds epoch {token.Epoch}; the write was not committed.")
++{
++    /// <summary>
++    /// Gets the <see cref="FenceToken"/> that is no longer current.
++    /// </summary>
++    public FenceToken Token { get; } = token;
++}
+diff --git a/Source/Kernel/Storage.MongoDB/Generations/Fencing/FenceStorage.cs b/Source/Kernel/Storage.MongoDB/Generations/Fencing/FenceStorage.cs
+new file mode 100644
+index 0000000000..faddb9df05
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB/Generations/Fencing/FenceStorage.cs
+@@ -0,0 +1,52 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using MongoDB.Bson;
++using MongoDB.Driver;
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
++
++/// <summary>
++/// Prepares the collections the writer fence keeps its records in.
++/// </summary>
++public static class FenceStorage
++{
++    /// <summary>
++    /// How long a batch receipt is kept; it only has to outlive the resolution of an unknown commit.
++    /// </summary>
++    public static readonly TimeSpan ReceiptRetention = TimeSpan.FromDays(1);
++
++    /// <summary>
++    /// Ensures the gate and receipt collections exist, outside any transaction, with receipts expiring.
++    /// </summary>
++    /// <param name="database">The <see cref="IMongoDatabase"/> to prepare.</param>
++    /// <param name="cancellationToken">The <see cref="CancellationToken"/> to stop waiting with.</param>
++    /// <returns>Awaitable task.</returns>
++    /// <remarks>
++    /// Creating a collection implicitly inside a transaction is allowed from MongoDB 4.4, but doing it here keeps the first batch
++    /// from racing another writer's first batch on the catalog, which aborts one of them.
++    /// </remarks>
++    public static async Task EnsureCollections(IMongoDatabase database, CancellationToken cancellationToken = default)
++    {
++        using var cursor = await database.ListCollectionNamesAsync(cancellationToken: cancellationToken);
++        var existing = await cursor.ToListAsync(cancellationToken);
++        foreach (var name in new[] { FenceCollections.Gates, FenceCollections.Receipts }.Except(existing))
++        {
++            try
++            {
++                await database.CreateCollectionAsync(name, cancellationToken: cancellationToken);
++            }
++            catch (MongoCommandException error) when (error.CodeName == "NamespaceExists")
++            {
++                // Another writer created it first.
++            }
++        }
++
++        var receipts = database.GetCollection<BsonDocument>(FenceCollections.Receipts);
++        await receipts.Indexes.CreateOneAsync(
++            new CreateIndexModel<BsonDocument>(
++                Builders<BsonDocument>.IndexKeys.Ascending(FenceCollections.At),
++                new CreateIndexOptions { ExpireAfter = ReceiptRetention, Name = "fence_receipt_expiry" }),
++            cancellationToken: cancellationToken);
++    }
++}
+diff --git a/Source/Kernel/Storage.MongoDB/Generations/Fencing/FenceToken.cs b/Source/Kernel/Storage.MongoDB/Generations/Fencing/FenceToken.cs
+new file mode 100644
+index 0000000000..21ea38b0c5
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB/Generations/Fencing/FenceToken.cs
+@@ -0,0 +1,18 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
++
++/// <summary>
++/// Represents the right of one owner to write one generation of one materialization.
++/// </summary>
++/// <param name="MaterializationKey">The key identifying the materialization the gate guards.</param>
++/// <param name="Generation">The generation of the materialization the gate guards.</param>
++/// <param name="Epoch">The owner epoch the gate record held when the right was granted.</param>
++public record FenceToken(string MaterializationKey, ulong Generation, long Epoch)
++{
++    /// <summary>
++    /// Gets the identifier of the gate record guarding the materialization generation.
++    /// </summary>
++    public string GateId => $"{MaterializationKey}#{Generation}";
++}
+diff --git a/Source/Kernel/Storage.MongoDB/Generations/Fencing/FencedBatchAttemptOutcome.cs b/Source/Kernel/Storage.MongoDB/Generations/Fencing/FencedBatchAttemptOutcome.cs
+new file mode 100644
+index 0000000000..dca08a2f48
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB/Generations/Fencing/FencedBatchAttemptOutcome.cs
+@@ -0,0 +1,25 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
++
++/// <summary>
++/// Defines how one attempt of a fenced batch ended.
++/// </summary>
++internal enum FencedBatchAttemptOutcome
++{
++    /// <summary>
++    /// The attempt committed.
++    /// </summary>
++    Committed = 0,
++
++    /// <summary>
++    /// The epoch has moved on; the attempt did not commit and no attempt may.
++    /// </summary>
++    Revoked = 1,
++
++    /// <summary>
++    /// The attempt did not commit and may be made again.
++    /// </summary>
++    Retry = 2
++}
+diff --git a/Source/Kernel/Storage.MongoDB/Generations/Fencing/FencedBatchExecutor.cs b/Source/Kernel/Storage.MongoDB/Generations/Fencing/FencedBatchExecutor.cs
+new file mode 100644
+index 0000000000..03738cafde
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB/Generations/Fencing/FencedBatchExecutor.cs
+@@ -0,0 +1,107 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using MongoDB.Driver;
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
++
++/// <summary>
++/// Represents an implementation of <see cref="IFencedBatchExecutor"/>.
++/// </summary>
++/// <param name="store">The <see cref="IFenceStore"/> to open transactions in.</param>
++/// <param name="retryPolicy">The <see cref="FenceRetryPolicy"/> bounding retries of transient transaction errors.</param>
++/// <param name="probe">The <see cref="IFencedBatchProbe"/> a fault harness pauses batches through.</param>
++/// <remarks>
++/// A transient transaction error aborts the whole attempt, so it is started again from the start with a new batch id.
++/// An unknown commit result is never retried blindly: the store resolves it first and only a batch it proved can never commit runs again.
++/// </remarks>
++public class FencedBatchExecutor(IFenceStore store, FenceRetryPolicy retryPolicy, IFencedBatchProbe probe) : IFencedBatchExecutor
++{
++    /// <summary>
++    /// Initializes a new instance of the <see cref="FencedBatchExecutor"/> class with the default retry policy and no probe.
++    /// </summary>
++    /// <param name="store">The <see cref="IFenceStore"/> to open transactions in.</param>
++    public FencedBatchExecutor(IFenceStore store)
++        : this(store, FenceRetryPolicy.Default, NullFencedBatchProbe.Instance)
++    {
++    }
++
++    /// <inheritdoc/>
++    public async Task<T> Execute<T>(FenceToken token, Func<IClientSessionHandle, Task<T>> writes, CancellationToken cancellationToken = default)
++    {
++        var started = DateTimeOffset.UtcNow;
++        for (var attempt = 1; ; attempt++)
++        {
++            var (outcome, result, error) = await Attempt(token, writes, cancellationToken);
++            switch (outcome)
++            {
++                case FencedBatchAttemptOutcome.Committed:
++                    return result!;
++                case FencedBatchAttemptOutcome.Revoked:
++                    throw new FenceRevoked(token);
++            }
++
++            if (attempt >= retryPolicy.MaxAttempts || DateTimeOffset.UtcNow - started >= retryPolicy.Deadline)
++            {
++                throw new FencedBatchRetriesExhausted(token, attempt, error!);
++            }
++
++            await Task.Delay(retryPolicy.BackoffFor(attempt), cancellationToken);
++        }
++    }
++
++    async Task<(FencedBatchAttemptOutcome Outcome, T? Result, Exception? Error)> Attempt<T>(FenceToken token, Func<IClientSessionHandle, Task<T>> writes, CancellationToken cancellationToken)
++    {
++        var batchId = FenceBatchId.New();
++        using var transaction = await store.Begin(cancellationToken);
++        T result;
++        try
++        {
++            await probe.BeforeAdmission(batchId);
++            if (!await transaction.Admit(token, batchId, cancellationToken))
++            {
++                await transaction.Abort();
++                return (FencedBatchAttemptOutcome.Revoked, default, null);
++            }
++
++            await probe.AfterAdmission(batchId);
++            result = await writes(transaction.Session);
++            await transaction.WriteReceipt(token, batchId, cancellationToken);
++            await probe.BeforeCommit(batchId);
++        }
++        catch (Exception error)
++        {
++            await transaction.Abort();
++            if (FenceRetryPolicy.IsTransient(error))
++            {
++                return (FencedBatchAttemptOutcome.Retry, default, error);
++            }
++
++            throw;
++        }
++
++        return await CommitOrResolve(token, batchId, transaction, result, cancellationToken);
++    }
++
++    async Task<(FencedBatchAttemptOutcome Outcome, T? Result, Exception? Error)> CommitOrResolve<T>(FenceToken token, FenceBatchId batchId, IFenceTransaction transaction, T result, CancellationToken cancellationToken)
++    {
++        try
++        {
++            await transaction.Commit(cancellationToken);
++            return (FencedBatchAttemptOutcome.Committed, result, null);
++        }
++        catch (Exception error) when (FenceRetryPolicy.IsUnknownCommit(error))
++        {
++            return await store.Resolve(token, batchId, cancellationToken) switch
++            {
++                UnknownCommitResolution.Committed => (FencedBatchAttemptOutcome.Committed, result, null),
++                UnknownCommitResolution.Revoked => (FencedBatchAttemptOutcome.Revoked, default, null),
++                _ => (FencedBatchAttemptOutcome.Retry, default, error)
++            };
++        }
++        catch (Exception error) when (FenceRetryPolicy.IsTransient(error))
++        {
++            return (FencedBatchAttemptOutcome.Retry, default, error);
++        }
++    }
++}
+diff --git a/Source/Kernel/Storage.MongoDB/Generations/Fencing/FencedBatchOutcomeUnknown.cs b/Source/Kernel/Storage.MongoDB/Generations/Fencing/FencedBatchOutcomeUnknown.cs
+new file mode 100644
+index 0000000000..08fe6a75a1
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB/Generations/Fencing/FencedBatchOutcomeUnknown.cs
+@@ -0,0 +1,19 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
++
++/// <summary>
++/// The exception that is thrown when the outcome of a fenced batch whose commit result was unknown could not be resolved in time.
++/// </summary>
++/// <param name="token">The <see cref="FenceToken"/> the batch was admitted with.</param>
++/// <param name="batchId">The <see cref="FenceBatchId"/> of the batch.</param>
++/// <param name="innerException">The last error seen while resolving.</param>
++public class FencedBatchOutcomeUnknown(FenceToken token, FenceBatchId batchId, Exception? innerException)
++    : Exception($"The outcome of fenced batch '{batchId}' through '{token.GateId}' could not be resolved; it may or may not have committed.", innerException)
++{
++    /// <summary>
++    /// Gets the <see cref="FenceBatchId"/> of the batch.
++    /// </summary>
++    public FenceBatchId BatchId { get; } = batchId;
++}
+diff --git a/Source/Kernel/Storage.MongoDB/Generations/Fencing/FencedBatchRetriesExhausted.cs b/Source/Kernel/Storage.MongoDB/Generations/Fencing/FencedBatchRetriesExhausted.cs
+new file mode 100644
+index 0000000000..75447a2316
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB/Generations/Fencing/FencedBatchRetriesExhausted.cs
+@@ -0,0 +1,13 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
++
++/// <summary>
++/// The exception that is thrown when a fenced batch keeps failing with transient transaction errors.
++/// </summary>
++/// <param name="token">The <see cref="FenceToken"/> the batch was attempted with.</param>
++/// <param name="attempts">The number of attempts made.</param>
++/// <param name="innerException">The last transient error.</param>
++public class FencedBatchRetriesExhausted(FenceToken token, int attempts, Exception innerException)
++    : Exception($"A fenced batch through '{token.GateId}' failed with a transient transaction error {attempts} times; none of the attempts committed.", innerException);
+diff --git a/Source/Kernel/Storage.MongoDB/Generations/Fencing/FencedDdl.cs b/Source/Kernel/Storage.MongoDB/Generations/Fencing/FencedDdl.cs
+new file mode 100644
+index 0000000000..c7e1053d0f
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB/Generations/Fencing/FencedDdl.cs
+@@ -0,0 +1,40 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
++
++/// <summary>
++/// Orders a schema operation that MongoDB cannot run inside a transaction behind an epoch check, and checks the epoch again after it.
++/// </summary>
++/// <param name="gates">The <see cref="IFenceGates"/> to read the epoch from.</param>
++/// <remarks>
++/// Dropping or renaming a collection cannot join the fenced transaction, so it cannot be made atomic with the gate. This is the
++/// weaker guarantee that remains: it refuses to start for a revoked owner, and reports a revocation that raced it so the caller can
++/// compensate. It does not stop a revoked owner's operation that was already running.
++/// </remarks>
++public class FencedDdl(IFenceGates gates)
++{
++    /// <summary>
++    /// Runs a schema operation for the owner of a token.
++    /// </summary>
++    /// <param name="token">The <see cref="FenceToken"/> of the owner.</param>
++    /// <param name="operation">The schema operation.</param>
++    /// <param name="cancellationToken">The <see cref="CancellationToken"/> to stop waiting with.</param>
++    /// <returns>Awaitable task.</returns>
++    /// <exception cref="FenceRevoked">The epoch had moved on before the operation; it did not run.</exception>
++    /// <exception cref="FencedDdlRacedRevocation">The epoch moved on while the operation ran.</exception>
++    public async Task Run(FenceToken token, Func<Task> operation, CancellationToken cancellationToken = default)
++    {
++        if (await gates.CurrentEpoch(token.MaterializationKey, token.Generation, cancellationToken) != token.Epoch)
++        {
++            throw new FenceRevoked(token);
++        }
++
++        await operation();
++
++        if (await gates.CurrentEpoch(token.MaterializationKey, token.Generation, cancellationToken) != token.Epoch)
++        {
++            throw new FencedDdlRacedRevocation(token);
++        }
++    }
++}
+diff --git a/Source/Kernel/Storage.MongoDB/Generations/Fencing/FencedDdlRacedRevocation.cs b/Source/Kernel/Storage.MongoDB/Generations/Fencing/FencedDdlRacedRevocation.cs
+new file mode 100644
+index 0000000000..f005d345f0
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB/Generations/Fencing/FencedDdlRacedRevocation.cs
+@@ -0,0 +1,20 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
++
++/// <summary>
++/// The exception that is thrown when a schema operation ran while its owner's epoch was being revoked.
++/// </summary>
++/// <param name="token">The <see cref="FenceToken"/> the operation was ordered behind.</param>
++/// <remarks>
++/// The operation has run and cannot be undone by the fence; the caller must treat its effect as made by a revoked owner.
++/// </remarks>
++public class FencedDdlRacedRevocation(FenceToken token)
++    : Exception($"A schema operation guarded by '{token.GateId}' epoch {token.Epoch} ran while the epoch was revoked; its effect must be treated as unowned.")
++{
++    /// <summary>
++    /// Gets the <see cref="FenceToken"/> the operation was ordered behind.
++    /// </summary>
++    public FenceToken Token { get; } = token;
++}
+diff --git a/Source/Kernel/Storage.MongoDB/Generations/Fencing/FencedSinkWrites.cs b/Source/Kernel/Storage.MongoDB/Generations/Fencing/FencedSinkWrites.cs
+new file mode 100644
+index 0000000000..5921a25c46
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB/Generations/Fencing/FencedSinkWrites.cs
+@@ -0,0 +1,105 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using MongoDB.Bson;
++using MongoDB.Driver;
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
++
++/// <summary>
++/// Represents an <see cref="ISinkWrites"/> running every write inside a fenced batch.
++/// </summary>
++/// <param name="tokens">The <see cref="IFenceTokenSource"/> giving the owner's current <see cref="FenceToken"/>.</param>
++/// <param name="executor">The <see cref="IFencedBatchExecutor"/> running the batches.</param>
++/// <remarks>
++/// A write outside <see cref="InBatch{T}"/> becomes a batch of its own, so no write reaches the collection unfenced. The batches
++/// of one sink run one at a time: they all write the same gate record, so running them concurrently would only make them abort
++/// each other with write conflicts.
++/// </remarks>
++public sealed class FencedSinkWrites(IFenceTokenSource tokens, IFencedBatchExecutor executor) : ISinkWrites, IDisposable
++{
++    readonly AsyncLocal<IClientSessionHandle?> _session = new();
++    readonly SemaphoreSlim _lane = new(1, 1);
++
++    /// <inheritdoc/>
++    public bool IsInBatch => _session.Value is not null;
++
++    /// <inheritdoc/>
++    public Task<T> InBatch<T>(Func<Task<T>> work) => IsInBatch ? work() : Run(_ => work(), CancellationToken.None);
++
++    /// <inheritdoc/>
++    public Task<UpdateResult> UpdateOne(IMongoCollection<BsonDocument> collection, FilterDefinition<BsonDocument> filter, UpdateDefinition<BsonDocument> update, UpdateOptions options) =>
++        InSession(session => collection.UpdateOneAsync(session, filter, update, options));
++
++    /// <inheritdoc/>
++    public Task<UpdateResult> UpdateMany(IMongoCollection<BsonDocument> collection, FilterDefinition<BsonDocument> filter, UpdateDefinition<BsonDocument> update, UpdateOptions options) =>
++        InSession(session => collection.UpdateManyAsync(session, filter, update, options));
++
++    /// <inheritdoc/>
++    public Task<DeleteResult> DeleteOne(IMongoCollection<BsonDocument> collection, FilterDefinition<BsonDocument> filter) =>
++        InSession(session => collection.DeleteOneAsync(session, filter));
++
++    /// <inheritdoc/>
++    /// <remarks>
++    /// A write error aborts the whole transaction, unlike an unfenced ordered bulk write, which keeps the requests before the failed one.
++    /// To keep that contract the requests before the failed index are written again in a batch of their own before the error is rethrown.
++    /// </remarks>
++    public async Task BulkWrite(IMongoCollection<BsonDocument> collection, IReadOnlyList<WriteModel<BsonDocument>> requests, CancellationToken cancellationToken)
++    {
++        if (_session.Value is { } current)
++        {
++            await collection.BulkWriteAsync(current, requests, cancellationToken: cancellationToken);
++            return;
++        }
++
++        try
++        {
++            await Run(session => collection.BulkWriteAsync(session, requests, cancellationToken: cancellationToken), cancellationToken);
++        }
++        catch (MongoBulkWriteException<BsonDocument> error) when (error.WriteErrors.Count > 0)
++        {
++            var failedAt = error.WriteErrors.Min(writeError => writeError.Index);
++            if (failedAt > 0)
++            {
++                var written = requests.Take(failedAt).ToList();
++                await Run(session => collection.BulkWriteAsync(session, written, cancellationToken: cancellationToken), cancellationToken);
++            }
++
++            throw;
++        }
++    }
++
++    /// <inheritdoc/>
++    public void Dispose() => _lane.Dispose();
++
++    Task<T> InSession<T>(Func<IClientSessionHandle, Task<T>> write) =>
++        _session.Value is { } current ? write(current) : Run(write, CancellationToken.None);
++
++    async Task<T> Run<T>(Func<IClientSessionHandle, Task<T>> work, CancellationToken cancellationToken)
++    {
++        var token = await tokens.Current(cancellationToken);
++        await _lane.WaitAsync(cancellationToken);
++        try
++        {
++            return await executor.Execute(
++                token,
++                async session =>
++                {
++                    _session.Value = session;
++                    try
++                    {
++                        return await work(session);
++                    }
++                    finally
++                    {
++                        _session.Value = null;
++                    }
++                },
++                cancellationToken);
++        }
++        finally
++        {
++            _lane.Release();
++        }
++    }
++}
+diff --git a/Source/Kernel/Storage.MongoDB/Generations/Fencing/FixedFenceTokenSource.cs b/Source/Kernel/Storage.MongoDB/Generations/Fencing/FixedFenceTokenSource.cs
+new file mode 100644
+index 0000000000..33e399a1f9
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB/Generations/Fencing/FixedFenceTokenSource.cs
+@@ -0,0 +1,14 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
++
++/// <summary>
++/// Represents an <see cref="IFenceTokenSource"/> holding a token handed to it.
++/// </summary>
++/// <param name="token">The <see cref="FenceToken"/> to write with.</param>
++public sealed class FixedFenceTokenSource(FenceToken token) : IFenceTokenSource
++{
++    /// <inheritdoc/>
++    public Task<FenceToken> Current(CancellationToken cancellationToken = default) => Task.FromResult(token);
++}
+diff --git a/Source/Kernel/Storage.MongoDB/Generations/Fencing/IFenceGates.cs b/Source/Kernel/Storage.MongoDB/Generations/Fencing/IFenceGates.cs
+new file mode 100644
+index 0000000000..5c395b0b8c
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB/Generations/Fencing/IFenceGates.cs
+@@ -0,0 +1,41 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
++
++/// <summary>
++/// Defines the owner side of the writer fence: claiming and revoking the right to write a materialization generation.
++/// </summary>
++public interface IFenceGates
++{
++    /// <summary>
++    /// Claims ownership of a materialization generation by bumping its epoch, which revokes any previous owner.
++    /// </summary>
++    /// <param name="materializationKey">The key identifying the materialization.</param>
++    /// <param name="generation">The generation to claim.</param>
++    /// <param name="cancellationToken">The <see cref="CancellationToken"/> to stop waiting with.</param>
++    /// <returns>The <see cref="FenceToken"/> granting the new owner the right to write.</returns>
++    Task<FenceToken> Claim(string materializationKey, ulong generation, CancellationToken cancellationToken = default);
++
++    /// <summary>
++    /// Revokes the current owner of a materialization generation by bumping its epoch in a transaction.
++    /// </summary>
++    /// <param name="materializationKey">The key identifying the materialization.</param>
++    /// <param name="generation">The generation to revoke.</param>
++    /// <param name="cancellationToken">The <see cref="CancellationToken"/> to stop waiting with.</param>
++    /// <returns>The epoch the gate holds after revocation.</returns>
++    /// <remarks>
++    /// Revocation serializes behind any batch already holding the gate: it commits only once that batch has committed or aborted,
++    /// and no batch admitted under an older epoch can commit after it.
++    /// </remarks>
++    Task<long> Revoke(string materializationKey, ulong generation, CancellationToken cancellationToken = default);
++
++    /// <summary>
++    /// Reads the epoch a gate holds now, as committed by a majority.
++    /// </summary>
++    /// <param name="materializationKey">The key identifying the materialization.</param>
++    /// <param name="generation">The generation of the gate.</param>
++    /// <param name="cancellationToken">The <see cref="CancellationToken"/> to stop waiting with.</param>
++    /// <returns>The current epoch, or null if the gate has never been claimed.</returns>
++    Task<long?> CurrentEpoch(string materializationKey, ulong generation, CancellationToken cancellationToken = default);
++}
+diff --git a/Source/Kernel/Storage.MongoDB/Generations/Fencing/IFenceStore.cs b/Source/Kernel/Storage.MongoDB/Generations/Fencing/IFenceStore.cs
+new file mode 100644
+index 0000000000..044c679705
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB/Generations/Fencing/IFenceStore.cs
+@@ -0,0 +1,27 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
++
++/// <summary>
++/// Defines the storage the fenced batch executor opens transactions in and resolves unknown commits against.
++/// </summary>
++public interface IFenceStore
++{
++    /// <summary>
++    /// Begins a transaction for one fenced batch attempt.
++    /// </summary>
++    /// <param name="cancellationToken">The <see cref="CancellationToken"/> to stop waiting with.</param>
++    /// <returns>The open <see cref="IFenceTransaction"/>.</returns>
++    Task<IFenceTransaction> Begin(CancellationToken cancellationToken);
++
++    /// <summary>
++    /// Learns whether a batch whose commit result was unknown committed, closing the gate on it if it did not.
++    /// </summary>
++    /// <param name="token">The <see cref="FenceToken"/> the batch was admitted with.</param>
++    /// <param name="batchId">The <see cref="FenceBatchId"/> of the batch.</param>
++    /// <param name="cancellationToken">The <see cref="CancellationToken"/> to stop waiting with.</param>
++    /// <returns>The <see cref="UnknownCommitResolution"/>.</returns>
++    /// <exception cref="FencedBatchOutcomeUnknown">The outcome could not be learned within the retry policy.</exception>
++    Task<UnknownCommitResolution> Resolve(FenceToken token, FenceBatchId batchId, CancellationToken cancellationToken);
++}
+diff --git a/Source/Kernel/Storage.MongoDB/Generations/Fencing/IFenceTokenSource.cs b/Source/Kernel/Storage.MongoDB/Generations/Fencing/IFenceTokenSource.cs
+new file mode 100644
+index 0000000000..5de0520b18
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB/Generations/Fencing/IFenceTokenSource.cs
+@@ -0,0 +1,20 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
++
++/// <summary>
++/// Defines the source of the <see cref="FenceToken"/> a sink writes with.
++/// </summary>
++/// <remarks>
++/// A stand-in for the generation binding: once generations are bound to owners, the binding hands out the token.
++/// </remarks>
++public interface IFenceTokenSource
++{
++    /// <summary>
++    /// Gets the owner's current <see cref="FenceToken"/>.
++    /// </summary>
++    /// <param name="cancellationToken">The <see cref="CancellationToken"/> to stop waiting with.</param>
++    /// <returns>The <see cref="FenceToken"/>.</returns>
++    Task<FenceToken> Current(CancellationToken cancellationToken = default);
++}
+diff --git a/Source/Kernel/Storage.MongoDB/Generations/Fencing/IFenceTransaction.cs b/Source/Kernel/Storage.MongoDB/Generations/Fencing/IFenceTransaction.cs
+new file mode 100644
+index 0000000000..e1e4e999d7
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB/Generations/Fencing/IFenceTransaction.cs
+@@ -0,0 +1,51 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using MongoDB.Driver;
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
++
++/// <summary>
++/// Defines one open transaction of a fenced batch.
++/// </summary>
++public interface IFenceTransaction : IDisposable
++{
++    /// <summary>
++    /// Gets the <see cref="IClientSessionHandle"/> every write of the batch must go through.
++    /// </summary>
++    IClientSessionHandle Session { get; }
++
++    /// <summary>
++    /// Admits the batch by writing the gate record on the condition that it still holds the token's epoch.
++    /// </summary>
++    /// <param name="token">The <see cref="FenceToken"/> the batch writes with.</param>
++    /// <param name="batchId">The <see cref="FenceBatchId"/> of the batch.</param>
++    /// <param name="cancellationToken">The <see cref="CancellationToken"/> to stop waiting with.</param>
++    /// <returns>True if admitted, false if the epoch has moved on.</returns>
++    /// <remarks>
++    /// This is a write, not a read: it makes the batch conflict with any revocation, so the two serialize on the gate record.
++    /// </remarks>
++    Task<bool> Admit(FenceToken token, FenceBatchId batchId, CancellationToken cancellationToken);
++
++    /// <summary>
++    /// Writes the batch's receipt, which exists after commit exactly when the batch committed.
++    /// </summary>
++    /// <param name="token">The <see cref="FenceToken"/> the batch writes with.</param>
++    /// <param name="batchId">The <see cref="FenceBatchId"/> of the batch.</param>
++    /// <param name="cancellationToken">The <see cref="CancellationToken"/> to stop waiting with.</param>
++    /// <returns>Awaitable task.</returns>
++    Task WriteReceipt(FenceToken token, FenceBatchId batchId, CancellationToken cancellationToken);
++
++    /// <summary>
++    /// Commits the transaction.
++    /// </summary>
++    /// <param name="cancellationToken">The <see cref="CancellationToken"/> to stop waiting with.</param>
++    /// <returns>Awaitable task.</returns>
++    Task Commit(CancellationToken cancellationToken);
++
++    /// <summary>
++    /// Aborts the transaction if it is still open; never throws.
++    /// </summary>
++    /// <returns>Awaitable task.</returns>
++    Task Abort();
++}
+diff --git a/Source/Kernel/Storage.MongoDB/Generations/Fencing/IFencedBatchExecutor.cs b/Source/Kernel/Storage.MongoDB/Generations/Fencing/IFencedBatchExecutor.cs
+new file mode 100644
+index 0000000000..7f55c92091
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB/Generations/Fencing/IFencedBatchExecutor.cs
+@@ -0,0 +1,25 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using MongoDB.Driver;
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
++
++/// <summary>
++/// Defines a runner of fenced batches: data writes that commit only if their owner epoch is still current.
++/// </summary>
++public interface IFencedBatchExecutor
++{
++    /// <summary>
++    /// Runs a batch of writes in one transaction with the conditional gate write and the batch receipt.
++    /// </summary>
++    /// <typeparam name="T">The type of result.</typeparam>
++    /// <param name="token">The <see cref="FenceToken"/> to write with.</param>
++    /// <param name="writes">The batch's writes; every write must use the given session. Called again from the start after a transient error.</param>
++    /// <param name="cancellationToken">The <see cref="CancellationToken"/> to stop waiting with.</param>
++    /// <returns>The result of the writes of the attempt that committed.</returns>
++    /// <exception cref="FenceRevoked">The epoch has moved on; nothing of the batch committed.</exception>
++    /// <exception cref="FencedBatchOutcomeUnknown">The commit result was unknown and could not be resolved.</exception>
++    /// <exception cref="FencedBatchRetriesExhausted">Every attempt failed with a transient transaction error.</exception>
++    Task<T> Execute<T>(FenceToken token, Func<IClientSessionHandle, Task<T>> writes, CancellationToken cancellationToken = default);
++}
+diff --git a/Source/Kernel/Storage.MongoDB/Generations/Fencing/IFencedBatchProbe.cs b/Source/Kernel/Storage.MongoDB/Generations/Fencing/IFencedBatchProbe.cs
+new file mode 100644
+index 0000000000..f1ca218eea
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB/Generations/Fencing/IFencedBatchProbe.cs
+@@ -0,0 +1,31 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
++
++/// <summary>
++/// Defines points in a fenced batch where a fault harness can pause or fail it; production uses <see cref="NullFencedBatchProbe"/>.
++/// </summary>
++public interface IFencedBatchProbe
++{
++    /// <summary>
++    /// Called in the open transaction before the gate record is written.
++    /// </summary>
++    /// <param name="batchId">The <see cref="FenceBatchId"/> of the batch.</param>
++    /// <returns>Awaitable task.</returns>
++    Task BeforeAdmission(FenceBatchId batchId);
++
++    /// <summary>
++    /// Called after the gate record write and before the batch's data writes.
++    /// </summary>
++    /// <param name="batchId">The <see cref="FenceBatchId"/> of the batch.</param>
++    /// <returns>Awaitable task.</returns>
++    Task AfterAdmission(FenceBatchId batchId);
++
++    /// <summary>
++    /// Called after the data writes and the receipt, just before commit.
++    /// </summary>
++    /// <param name="batchId">The <see cref="FenceBatchId"/> of the batch.</param>
++    /// <returns>Awaitable task.</returns>
++    Task BeforeCommit(FenceBatchId batchId);
++}
+diff --git a/Source/Kernel/Storage.MongoDB/Generations/Fencing/ISinkWrites.cs b/Source/Kernel/Storage.MongoDB/Generations/Fencing/ISinkWrites.cs
+new file mode 100644
+index 0000000000..4a0b462089
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB/Generations/Fencing/ISinkWrites.cs
+@@ -0,0 +1,69 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using MongoDB.Bson;
++using MongoDB.Driver;
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
++
++/// <summary>
++/// Defines how the MongoDB sink executes its data writes: directly, or fenced by the owner epoch of its generation.
++/// </summary>
++/// <remarks>
++/// Every data write the sink makes goes through this seam. <see cref="UnfencedSinkWrites"/> makes exactly the driver calls the sink
++/// always made; <see cref="FencedSinkWrites"/> runs each write, or each group of writes in <see cref="InBatch{T}"/>, inside a
++/// transaction that also writes the gate record expecting the owner's epoch.
++/// </remarks>
++public interface ISinkWrites
++{
++    /// <summary>
++    /// Gets a value indicating whether the current flow is inside a batch, where writes must be executed directly rather than buffered.
++    /// </summary>
++    bool IsInBatch { get; }
++
++    /// <summary>
++    /// Runs a group of writes that must commit together or not at all.
++    /// </summary>
++    /// <typeparam name="T">The type of result.</typeparam>
++    /// <param name="work">The writes; may be called again from the start after a transient transaction error.</param>
++    /// <returns>The result of the work.</returns>
++    Task<T> InBatch<T>(Func<Task<T>> work);
++
++    /// <summary>
++    /// Updates one document.
++    /// </summary>
++    /// <param name="collection">The collection to write.</param>
++    /// <param name="filter">The filter.</param>
++    /// <param name="update">The update.</param>
++    /// <param name="options">The options.</param>
++    /// <returns>The <see cref="UpdateResult"/>.</returns>
++    Task<UpdateResult> UpdateOne(IMongoCollection<BsonDocument> collection, FilterDefinition<BsonDocument> filter, UpdateDefinition<BsonDocument> update, UpdateOptions options);
++
++    /// <summary>
++    /// Updates every matching document.
++    /// </summary>
++    /// <param name="collection">The collection to write.</param>
++    /// <param name="filter">The filter.</param>
++    /// <param name="update">The update.</param>
++    /// <param name="options">The options.</param>
++    /// <returns>The <see cref="UpdateResult"/>.</returns>
++    Task<UpdateResult> UpdateMany(IMongoCollection<BsonDocument> collection, FilterDefinition<BsonDocument> filter, UpdateDefinition<BsonDocument> update, UpdateOptions options);
++
++    /// <summary>
++    /// Deletes one document.
++    /// </summary>
++    /// <param name="collection">The collection to write.</param>
++    /// <param name="filter">The filter.</param>
++    /// <returns>The <see cref="DeleteResult"/>.</returns>
++    Task<DeleteResult> DeleteOne(IMongoCollection<BsonDocument> collection, FilterDefinition<BsonDocument> filter);
++
++    /// <summary>
++    /// Executes an ordered bulk write.
++    /// </summary>
++    /// <param name="collection">The collection to write.</param>
++    /// <param name="requests">The write models, in order.</param>
++    /// <param name="cancellationToken">The <see cref="CancellationToken"/> to stop waiting with.</param>
++    /// <returns>Awaitable task.</returns>
++    /// <exception cref="MongoBulkWriteException{T}">A write failed; every request before the first failed index has been written.</exception>
++    Task BulkWrite(IMongoCollection<BsonDocument> collection, IReadOnlyList<WriteModel<BsonDocument>> requests, CancellationToken cancellationToken);
++}
+diff --git a/Source/Kernel/Storage.MongoDB/Generations/Fencing/MongoFenceStore.cs b/Source/Kernel/Storage.MongoDB/Generations/Fencing/MongoFenceStore.cs
+new file mode 100644
+index 0000000000..de9d1a2af1
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB/Generations/Fencing/MongoFenceStore.cs
+@@ -0,0 +1,104 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using MongoDB.Bson;
++using MongoDB.Driver;
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
++
++/// <summary>
++/// Represents an implementation of <see cref="IFenceStore"/> for a MongoDB replica set.
++/// </summary>
++/// <param name="database">The <see cref="IMongoDatabase"/> holding the gate and receipt records and the data they guard.</param>
++/// <param name="retryPolicy">The <see cref="FenceRetryPolicy"/> bounding unknown-commit resolution.</param>
++public class MongoFenceStore(IMongoDatabase database, FenceRetryPolicy retryPolicy) : IFenceStore
++{
++    /// <summary>
++    /// The options every fenced transaction runs with: a snapshot read and a majority-acknowledged commit, so a committed batch
++    /// survives failover and a resolution reads only what a majority holds.
++    /// </summary>
++    public static readonly TransactionOptions TransactionOptions = new(ReadConcern.Snapshot, writeConcern: WriteConcern.WMajority);
++
++    /// <summary>
++    /// Initializes a new instance of the <see cref="MongoFenceStore"/> class with the default retry policy.
++    /// </summary>
++    /// <param name="database">The <see cref="IMongoDatabase"/> holding the records.</param>
++    public MongoFenceStore(IMongoDatabase database)
++        : this(database, FenceRetryPolicy.Default)
++    {
++    }
++
++    /// <inheritdoc/>
++    public async Task<IFenceTransaction> Begin(CancellationToken cancellationToken)
++    {
++        var session = await database.Client.StartSessionAsync(cancellationToken: cancellationToken);
++        session.StartTransaction(TransactionOptions);
++        return new MongoFenceTransaction(database, session);
++    }
++
++    /// <inheritdoc/>
++    /// <remarks>
++    /// The resolution writes the gate record unconditionally in its own transaction. That write conflicts with the unresolved
++    /// batch for as long as the server holds it open, and once it commits the batch is settled for good: it either committed
++    /// before, and its receipt is in the resolution's snapshot, or it can never commit. Its gate write was its first operation
++    /// and had been acknowledged before the commit was sent, so it cannot arrive later. A conflict, or a resolution whose own
++    /// commit is unknown, is retried; the resolution is idempotent.
++    /// </remarks>
++    public async Task<UnknownCommitResolution> Resolve(FenceToken token, FenceBatchId batchId, CancellationToken cancellationToken)
++    {
++        var started = DateTimeOffset.UtcNow;
++        for (var attempt = 1; ; attempt++)
++        {
++            try
++            {
++                return await ResolveOnce(token, batchId, cancellationToken);
++            }
++            catch (Exception error) when (FenceRetryPolicy.IsTransient(error) || FenceRetryPolicy.IsUnknownCommit(error))
++            {
++                if (attempt >= retryPolicy.MaxAttempts || DateTimeOffset.UtcNow - started >= retryPolicy.Deadline)
++                {
++                    throw new FencedBatchOutcomeUnknown(token, batchId, error);
++                }
++
++                await Task.Delay(retryPolicy.BackoffFor(attempt), cancellationToken);
++            }
++        }
++    }
++
++    /// <summary>
++    /// Decides what a settled resolution found.
++    /// </summary>
++    /// <param name="receiptExists">Whether the batch's receipt was in the resolution's snapshot.</param>
++    /// <param name="gateEpoch">The epoch the gate held, or null if it no longer exists.</param>
++    /// <param name="batchEpoch">The epoch the batch was admitted with.</param>
++    /// <returns>The <see cref="UnknownCommitResolution"/>.</returns>
++    internal static UnknownCommitResolution Decide(bool receiptExists, long? gateEpoch, long batchEpoch)
++    {
++        if (receiptExists)
++        {
++            return UnknownCommitResolution.Committed;
++        }
++
++        return gateEpoch == batchEpoch ? UnknownCommitResolution.NotCommitted : UnknownCommitResolution.Revoked;
++    }
++
++    async Task<UnknownCommitResolution> ResolveOnce(FenceToken token, FenceBatchId batchId, CancellationToken cancellationToken)
++    {
++        using var session = await database.Client.StartSessionAsync(cancellationToken: cancellationToken);
++        session.StartTransaction(TransactionOptions);
++        var gate = await database.GetCollection<BsonDocument>(FenceCollections.Gates).FindOneAndUpdateAsync(
++            session,
++            Builders<BsonDocument>.Filter.Eq("_id", token.GateId),
++            Builders<BsonDocument>.Update.Inc(FenceCollections.Resolutions, 1L),
++            new FindOneAndUpdateOptions<BsonDocument> { ReturnDocument = ReturnDocument.After },
++            cancellationToken);
++        using var receipts = await database.GetCollection<BsonDocument>(FenceCollections.Receipts).FindAsync(
++            session,
++            Builders<BsonDocument>.Filter.Eq("_id", batchId.Value.ToString()),
++            cancellationToken: cancellationToken);
++        var receipt = await receipts.FirstOrDefaultAsync(cancellationToken);
++        await session.CommitTransactionAsync(cancellationToken);
++
++        return Decide(receipt is not null, gate?[FenceCollections.Epoch].ToInt64(), token.Epoch);
++    }
++}
+diff --git a/Source/Kernel/Storage.MongoDB/Generations/Fencing/MongoFenceTransaction.cs b/Source/Kernel/Storage.MongoDB/Generations/Fencing/MongoFenceTransaction.cs
+new file mode 100644
+index 0000000000..8619d1fc13
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB/Generations/Fencing/MongoFenceTransaction.cs
+@@ -0,0 +1,68 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using MongoDB.Bson;
++using MongoDB.Driver;
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
++
++/// <summary>
++/// Represents an implementation of <see cref="IFenceTransaction"/> over a MongoDB session transaction.
++/// </summary>
++/// <param name="database">The <see cref="IMongoDatabase"/> holding the gate and receipt records.</param>
++/// <param name="session">The <see cref="IClientSessionHandle"/> with the transaction started.</param>
++public sealed class MongoFenceTransaction(IMongoDatabase database, IClientSessionHandle session) : IFenceTransaction
++{
++    /// <inheritdoc/>
++    public IClientSessionHandle Session => session;
++
++    /// <inheritdoc/>
++    public async Task<bool> Admit(FenceToken token, FenceBatchId batchId, CancellationToken cancellationToken)
++    {
++        var result = await database.GetCollection<BsonDocument>(FenceCollections.Gates).UpdateOneAsync(
++            session,
++            Builders<BsonDocument>.Filter.And(
++                Builders<BsonDocument>.Filter.Eq("_id", token.GateId),
++                Builders<BsonDocument>.Filter.Eq(FenceCollections.Epoch, token.Epoch)),
++            Builders<BsonDocument>.Update.Inc(FenceCollections.Admitted, 1L),
++            cancellationToken: cancellationToken);
++        return result.MatchedCount == 1;
++    }
++
++    /// <inheritdoc/>
++    public Task WriteReceipt(FenceToken token, FenceBatchId batchId, CancellationToken cancellationToken) =>
++        database.GetCollection<BsonDocument>(FenceCollections.Receipts).InsertOneAsync(
++            session,
++            new BsonDocument
++            {
++                { "_id", batchId.Value.ToString() },
++                { FenceCollections.Gate, token.GateId },
++                { FenceCollections.Epoch, token.Epoch },
++                { FenceCollections.At, DateTime.UtcNow }
++            },
++            cancellationToken: cancellationToken);
++
++    /// <inheritdoc/>
++    public Task Commit(CancellationToken cancellationToken) => session.CommitTransactionAsync(cancellationToken);
++
++    /// <inheritdoc/>
++    public async Task Abort()
++    {
++        if (!session.IsInTransaction)
++        {
++            return;
++        }
++
++        try
++        {
++            await session.AbortTransactionAsync();
++        }
++        catch (MongoException)
++        {
++            // The server has already aborted it, for instance after a write conflict; nothing is left to undo.
++        }
++    }
++
++    /// <inheritdoc/>
++    public void Dispose() => session.Dispose();
++}
+diff --git a/Source/Kernel/Storage.MongoDB/Generations/Fencing/NullFencedBatchProbe.cs b/Source/Kernel/Storage.MongoDB/Generations/Fencing/NullFencedBatchProbe.cs
+new file mode 100644
+index 0000000000..6b99fd9ce2
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB/Generations/Fencing/NullFencedBatchProbe.cs
+@@ -0,0 +1,24 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
++
++/// <summary>
++/// Represents an <see cref="IFencedBatchProbe"/> that does nothing.
++/// </summary>
++public sealed class NullFencedBatchProbe : IFencedBatchProbe
++{
++    /// <summary>
++    /// Gets the shared instance.
++    /// </summary>
++    public static readonly NullFencedBatchProbe Instance = new();
++
++    /// <inheritdoc/>
++    public Task BeforeAdmission(FenceBatchId batchId) => Task.CompletedTask;
++
++    /// <inheritdoc/>
++    public Task AfterAdmission(FenceBatchId batchId) => Task.CompletedTask;
++
++    /// <inheritdoc/>
++    public Task BeforeCommit(FenceBatchId batchId) => Task.CompletedTask;
++}
+diff --git a/Source/Kernel/Storage.MongoDB/Generations/Fencing/UnfencedSinkWrites.cs b/Source/Kernel/Storage.MongoDB/Generations/Fencing/UnfencedSinkWrites.cs
+new file mode 100644
+index 0000000000..70d03dd24c
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB/Generations/Fencing/UnfencedSinkWrites.cs
+@@ -0,0 +1,40 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using MongoDB.Bson;
++using MongoDB.Driver;
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
++
++/// <summary>
++/// Represents an <see cref="ISinkWrites"/> making exactly the driver calls the sink makes without a fence.
++/// </summary>
++public sealed class UnfencedSinkWrites : ISinkWrites
++{
++    /// <summary>
++    /// Gets the shared instance.
++    /// </summary>
++    public static readonly UnfencedSinkWrites Instance = new();
++
++    /// <inheritdoc/>
++    public bool IsInBatch => false;
++
++    /// <inheritdoc/>
++    public Task<T> InBatch<T>(Func<Task<T>> work) => work();
++
++    /// <inheritdoc/>
++    public Task<UpdateResult> UpdateOne(IMongoCollection<BsonDocument> collection, FilterDefinition<BsonDocument> filter, UpdateDefinition<BsonDocument> update, UpdateOptions options) =>
++        collection.UpdateOneAsync(filter, update, options);
++
++    /// <inheritdoc/>
++    public Task<UpdateResult> UpdateMany(IMongoCollection<BsonDocument> collection, FilterDefinition<BsonDocument> filter, UpdateDefinition<BsonDocument> update, UpdateOptions options) =>
++        collection.UpdateManyAsync(filter, update, options);
++
++    /// <inheritdoc/>
++    public Task<DeleteResult> DeleteOne(IMongoCollection<BsonDocument> collection, FilterDefinition<BsonDocument> filter) =>
++        collection.DeleteOneAsync(filter);
++
++    /// <inheritdoc/>
++    public Task BulkWrite(IMongoCollection<BsonDocument> collection, IReadOnlyList<WriteModel<BsonDocument>> requests, CancellationToken cancellationToken) =>
++        collection.BulkWriteAsync(requests, cancellationToken: cancellationToken);
++}
+diff --git a/Source/Kernel/Storage.MongoDB/Generations/Fencing/UnknownCommitResolution.cs b/Source/Kernel/Storage.MongoDB/Generations/Fencing/UnknownCommitResolution.cs
+new file mode 100644
+index 0000000000..6d2ab36159
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB/Generations/Fencing/UnknownCommitResolution.cs
+@@ -0,0 +1,25 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
++
++/// <summary>
++/// Defines what resolving a fenced batch with an unknown commit result found.
++/// </summary>
++public enum UnknownCommitResolution
++{
++    /// <summary>
++    /// The batch's receipt exists; the batch committed and must not run again.
++    /// </summary>
++    Committed = 0,
++
++    /// <summary>
++    /// The gate was closed on the batch without its receipt and the epoch is still current; it can never commit and may run again.
++    /// </summary>
++    NotCommitted = 1,
++
++    /// <summary>
++    /// The gate was closed on the batch without its receipt and the epoch has moved on; the batch never committed and the owner is revoked.
++    /// </summary>
++    Revoked = 2
++}
+-- 
+2.50.1 (Apple Git-155)
+

@@ -1,0 +1,211 @@
+From 879a107eb8f3782318961bfa3a996a2d3b63fd51 Mon Sep 17 00:00:00 2001
+From: woksin <sindrewilting@gmail.com>
+Date: Thu, 22 Oct 2026 14:00:39 +0200
+Subject: [PATCH 4/8] Apply the sink's in-memory bulk cache changes only after
+ a fenced batch commits
+
+A fenced batch can abort after its writes ran (revocation, a failed
+write, a transient retry). Cache updates and evictions made by the
+immediate write paths are now queued through ISinkWrites.AfterCommit and
+dropped with an aborted attempt, so a bulk window never answers reads
+with state that never reached the collection. Unfenced writes apply the
+change at once, as before.
+---
+ ..._wrote_immediately_inside_a_bulk_window.cs | 60 +++++++++++++++++++
+ .../Generations/Fencing/FencedSinkWrites.cs   | 22 ++++++-
+ .../Generations/Fencing/ISinkWrites.cs        | 10 ++++
+ .../Generations/Fencing/UnfencedSinkWrites.cs |  3 +
+ Source/Kernel/Storage.MongoDB/Sinks/Sink.cs   |  4 +-
+ 5 files changed, 96 insertions(+), 3 deletions(-)
+ create mode 100644 Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_Sink/when_a_fenced_batch_aborts/and_it_wrote_immediately_inside_a_bulk_window.cs
+
+diff --git a/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_Sink/when_a_fenced_batch_aborts/and_it_wrote_immediately_inside_a_bulk_window.cs b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_Sink/when_a_fenced_batch_aborts/and_it_wrote_immediately_inside_a_bulk_window.cs
+new file mode 100644
+index 0000000000..8688c05405
+--- /dev/null
++++ b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_Sink/when_a_fenced_batch_aborts/and_it_wrote_immediately_inside_a_bulk_window.cs
+@@ -0,0 +1,60 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using System.Dynamic;
++using Cratis.Chronicle.Storage.MongoDB.EventSequences;
++using Cratis.Chronicle.Storage.Sinks;
++using Contract = Cratis.Chronicle.Storage.Sinks.for_ISink;
++
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing.for_Sink.when_a_fenced_batch_aborts;
++
++/// <summary>
++/// A bulk window answers reads from an in-memory cache; a batch that aborts after its writes ran must not leave that cache changed.
++/// </summary>
++/// <param name="fixture">The <see cref="ReplicaSetMongoDBFixture"/>.</param>
++[Collection(ReplicaSetMongoDBCollection.Name)]
++public class and_it_wrote_immediately_inside_a_bulk_window(ReplicaSetMongoDBFixture fixture) : Contract.given.an_accumulating_read_model<FencedMongoSinkHarness>
++{
++    readonly FailingProbe _probe = new();
++    Exception? _error;
++    int? _countSeenThroughTheWindow;
++
++    protected override FencedMongoSinkHarness CreateHarness() => new() { ConnectionString = fixture.ConnectionString, Probe = _probe };
++
++    async Task Because()
++    {
++        await _sink.ApplyChanges(_key, ChangesetSettingCountTo(1), 42UL);
++        await _sink.BeginBulk();
++        var changeset = ChangesetSettingCountTo(2);
++        var state = new ExpandoObject();
++        ((IDictionary<string, object?>)state)["count"] = 2;
++        changeset.CurrentState.Returns(state);
++        _probe.FailNextCommit = true;
++        _error = await Catch.Exception(() => _sink.ApplyChangesImmediately(_key, changeset, 43UL, SinkWriteMode.Always));
++        _countSeenThroughTheWindow = await CurrentCountOrNull();
++        await _sink.EndBulk();
++    }
++
++    [Fact] void should_fail_the_write() => _error.ShouldBeOfExactType<InvalidOperationException>();
++    [Fact] void should_not_answer_reads_with_the_aborted_state() => _countSeenThroughTheWindow.ShouldEqual(1);
++
++    sealed class FailingProbe : IFencedBatchProbe
++    {
++        public bool FailNextCommit { get; set; }
++
++        public Task BeforeAdmission(FenceBatchId batchId) => Task.CompletedTask;
++
++        public Task AfterAdmission(FenceBatchId batchId) => Task.CompletedTask;
++
++        public Task BeforeCommit(FenceBatchId batchId)
++        {
++            if (!FailNextCommit)
++            {
++                return Task.CompletedTask;
++            }
++
++            FailNextCommit = false;
++            throw new InvalidOperationException("The batch aborts after its writes ran");
++        }
++    }
++}
+diff --git a/Source/Kernel/Storage.MongoDB/Generations/Fencing/FencedSinkWrites.cs b/Source/Kernel/Storage.MongoDB/Generations/Fencing/FencedSinkWrites.cs
+index 5921a25c46..b5113b836b 100644
+--- a/Source/Kernel/Storage.MongoDB/Generations/Fencing/FencedSinkWrites.cs
++++ b/Source/Kernel/Storage.MongoDB/Generations/Fencing/FencedSinkWrites.cs
+@@ -19,6 +19,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
+ public sealed class FencedSinkWrites(IFenceTokenSource tokens, IFencedBatchExecutor executor) : ISinkWrites, IDisposable
+ {
+     readonly AsyncLocal<IClientSessionHandle?> _session = new();
++    readonly AsyncLocal<List<Action>?> _afterCommit = new();
+     readonly SemaphoreSlim _lane = new(1, 1);
+ 
+     /// <inheritdoc/>
+@@ -27,6 +28,18 @@ public sealed class FencedSinkWrites(IFenceTokenSource tokens, IFencedBatchExecu
+     /// <inheritdoc/>
+     public Task<T> InBatch<T>(Func<Task<T>> work) => IsInBatch ? work() : Run(_ => work(), CancellationToken.None);
+ 
++    /// <inheritdoc/>
++    public void AfterCommit(Action change)
++    {
++        if (_afterCommit.Value is { } pending)
++        {
++            pending.Add(change);
++            return;
++        }
++
++        change();
++    }
++
+     /// <inheritdoc/>
+     public Task<UpdateResult> UpdateOne(IMongoCollection<BsonDocument> collection, FilterDefinition<BsonDocument> filter, UpdateDefinition<BsonDocument> update, UpdateOptions options) =>
+         InSession(session => collection.UpdateOneAsync(session, filter, update, options));
+@@ -78,14 +91,18 @@ Task<T> InSession<T>(Func<IClientSessionHandle, Task<T>> write) =>
+     async Task<T> Run<T>(Func<IClientSessionHandle, Task<T>> work, CancellationToken cancellationToken)
+     {
+         var token = await tokens.Current(cancellationToken);
++        List<Action> committed = [];
+         await _lane.WaitAsync(cancellationToken);
+         try
+         {
+-            return await executor.Execute(
++            var result = await executor.Execute(
+                 token,
+                 async session =>
+                 {
++                    // Each attempt starts from nothing: changes queued by an attempt that aborted are dropped with it.
++                    committed = [];
+                     _session.Value = session;
++                    _afterCommit.Value = committed;
+                     try
+                     {
+                         return await work(session);
+@@ -93,9 +110,12 @@ async Task<T> Run<T>(Func<IClientSessionHandle, Task<T>> work, CancellationToken
+                     finally
+                     {
+                         _session.Value = null;
++                        _afterCommit.Value = null;
+                     }
+                 },
+                 cancellationToken);
++            committed.ForEach(change => change());
++            return result;
+         }
+         finally
+         {
+diff --git a/Source/Kernel/Storage.MongoDB/Generations/Fencing/ISinkWrites.cs b/Source/Kernel/Storage.MongoDB/Generations/Fencing/ISinkWrites.cs
+index 4a0b462089..5008c7d982 100644
+--- a/Source/Kernel/Storage.MongoDB/Generations/Fencing/ISinkWrites.cs
++++ b/Source/Kernel/Storage.MongoDB/Generations/Fencing/ISinkWrites.cs
+@@ -29,6 +29,16 @@ public interface ISinkWrites
+     /// <returns>The result of the work.</returns>
+     Task<T> InBatch<T>(Func<Task<T>> work);
+ 
++    /// <summary>
++    /// Runs an in-memory change that must only take effect once the writes it describes are persisted.
++    /// </summary>
++    /// <param name="change">The change, typically to a cache the sink answers reads from.</param>
++    /// <remarks>
++    /// Outside a batch the change runs at once. Inside one it runs after the batch commits, and is dropped if the attempt that
++    /// queued it aborts, so a revoked or failed batch cannot leave a cache describing state that never reached the collection.
++    /// </remarks>
++    void AfterCommit(Action change);
++
+     /// <summary>
+     /// Updates one document.
+     /// </summary>
+diff --git a/Source/Kernel/Storage.MongoDB/Generations/Fencing/UnfencedSinkWrites.cs b/Source/Kernel/Storage.MongoDB/Generations/Fencing/UnfencedSinkWrites.cs
+index 70d03dd24c..372dac2ca9 100644
+--- a/Source/Kernel/Storage.MongoDB/Generations/Fencing/UnfencedSinkWrites.cs
++++ b/Source/Kernel/Storage.MongoDB/Generations/Fencing/UnfencedSinkWrites.cs
+@@ -22,6 +22,9 @@ public sealed class UnfencedSinkWrites : ISinkWrites
+     /// <inheritdoc/>
+     public Task<T> InBatch<T>(Func<Task<T>> work) => work();
+ 
++    /// <inheritdoc/>
++    public void AfterCommit(Action change) => change();
++
+     /// <inheritdoc/>
+     public Task<UpdateResult> UpdateOne(IMongoCollection<BsonDocument> collection, FilterDefinition<BsonDocument> filter, UpdateDefinition<BsonDocument> update, UpdateOptions options) =>
+         collection.UpdateOneAsync(filter, update, options);
+diff --git a/Source/Kernel/Storage.MongoDB/Sinks/Sink.cs b/Source/Kernel/Storage.MongoDB/Sinks/Sink.cs
+index b73abde7c2..98d0764492 100644
+--- a/Source/Kernel/Storage.MongoDB/Sinks/Sink.cs
++++ b/Source/Kernel/Storage.MongoDB/Sinks/Sink.cs
+@@ -435,7 +435,7 @@ async Task<IEnumerable<FailedPartition>> ApplyRemoval(Key key, EventSequenceNumb
+         await writes.DeleteOne(Collection, filter);
+         if (options.IsImmediate)
+         {
+-            EvictBulkState(key);
++            writes.AfterCommit(() => EvictBulkState(key));
+         }
+ 
+         return [];
+@@ -570,7 +570,7 @@ void CacheImmediateWrite(UpdateWrite write, IChangeset<AppendedEvent, ExpandoObj
+ 
+         if (_isBulkMode && !changeset.HasJoined())
+         {
+-            CreateCacheState(write.Key, changeset, write.EventSequenceNumber)();
++            writes.AfterCommit(CreateCacheState(write.Key, changeset, write.EventSequenceNumber));
+         }
+     }
+ 
+-- 
+2.50.1 (Apple Git-155)
+

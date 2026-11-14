@@ -1,0 +1,144 @@
+From e1f0b9669d5a5a3968976a73cac2ecd66d4b0391 Mon Sep 17 00:00:00 2001
+From: woksin <sindrewilting@gmail.com>
+Date: Thu, 22 Oct 2026 15:19:59 +0200
+Subject: [PATCH 6/8] Rename FencedDdl to EpochCheckedDdl and state that it
+ only detects
+
+An epoch check before and after a drop or rename detects a stale schema
+operation but cannot prevent it: a drop delayed between the checks still
+runs. Nothing should present it as a fence.
+---
+ .../and_a_revocation_races_it.cs               |  6 +++---
+ .../and_the_owner_was_revoked.cs               |  4 ++--
+ .../{FencedDdl.cs => EpochCheckedDdl.cs}       | 18 +++++++++++-------
+ ...on.cs => EpochCheckedDdlRacedRevocation.cs} |  2 +-
+ 4 files changed, 17 insertions(+), 13 deletions(-)
+ rename Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/{for_FencedDdl => for_EpochCheckedDdl}/when_running_a_schema_operation/and_a_revocation_races_it.cs (78%)
+ rename Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/{for_FencedDdl => for_EpochCheckedDdl}/when_running_a_schema_operation/and_the_owner_was_revoked.cs (84%)
+ rename Source/Kernel/Storage.MongoDB/Generations/Fencing/{FencedDdl.cs => EpochCheckedDdl.cs} (59%)
+ rename Source/Kernel/Storage.MongoDB/Generations/Fencing/{FencedDdlRacedRevocation.cs => EpochCheckedDdlRacedRevocation.cs} (93%)
+
+diff --git a/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedDdl/when_running_a_schema_operation/and_a_revocation_races_it.cs b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_EpochCheckedDdl/when_running_a_schema_operation/and_a_revocation_races_it.cs
+similarity index 78%
+rename from Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedDdl/when_running_a_schema_operation/and_a_revocation_races_it.cs
+rename to Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_EpochCheckedDdl/when_running_a_schema_operation/and_a_revocation_races_it.cs
+index 7666dd2d67..76d3a7fa6e 100644
+--- a/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedDdl/when_running_a_schema_operation/and_a_revocation_races_it.cs
++++ b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_EpochCheckedDdl/when_running_a_schema_operation/and_a_revocation_races_it.cs
+@@ -3,7 +3,7 @@
+ 
+ using Cratis.Chronicle.Storage.MongoDB.EventSequences;
+ 
+-namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing.for_FencedDdl.when_running_a_schema_operation;
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing.for_EpochCheckedDdl.when_running_a_schema_operation;
+ 
+ [Collection(ReplicaSetMongoDBCollection.Name)]
+ public class and_a_revocation_races_it(ReplicaSetMongoDBFixture fixture) : given.a_fenced_writer_against_a_replica_set(fixture)
+@@ -11,11 +11,11 @@ public class and_a_revocation_races_it(ReplicaSetMongoDBFixture fixture) : given
+     Exception? _error;
+ 
+     async Task Because() =>
+-        _error = await Catch.Exception(() => new FencedDdl(_gates).Run(_token, async () =>
++        _error = await Catch.Exception(() => new EpochCheckedDdl(_gates).Run(_token, async () =>
+         {
+             await _database.CreateCollectionAsync("renamed-target");
+             await Revoke();
+         }));
+ 
+-    [Fact] void should_report_the_race() => _error.ShouldBeOfExactType<FencedDdlRacedRevocation>();
++    [Fact] void should_report_the_race() => _error.ShouldBeOfExactType<EpochCheckedDdlRacedRevocation>();
+ }
+diff --git a/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedDdl/when_running_a_schema_operation/and_the_owner_was_revoked.cs b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_EpochCheckedDdl/when_running_a_schema_operation/and_the_owner_was_revoked.cs
+similarity index 84%
+rename from Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedDdl/when_running_a_schema_operation/and_the_owner_was_revoked.cs
+rename to Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_EpochCheckedDdl/when_running_a_schema_operation/and_the_owner_was_revoked.cs
+index b5b47ce3e2..770633d633 100644
+--- a/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_FencedDdl/when_running_a_schema_operation/and_the_owner_was_revoked.cs
++++ b/Source/Kernel/Storage.MongoDB.Specs/Generations/Fencing/for_EpochCheckedDdl/when_running_a_schema_operation/and_the_owner_was_revoked.cs
+@@ -3,7 +3,7 @@
+ 
+ using Cratis.Chronicle.Storage.MongoDB.EventSequences;
+ 
+-namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing.for_FencedDdl.when_running_a_schema_operation;
++namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing.for_EpochCheckedDdl.when_running_a_schema_operation;
+ 
+ [Collection(ReplicaSetMongoDBCollection.Name)]
+ public class and_the_owner_was_revoked(ReplicaSetMongoDBFixture fixture) : given.a_fenced_writer_against_a_replica_set(fixture)
+@@ -14,7 +14,7 @@ public class and_the_owner_was_revoked(ReplicaSetMongoDBFixture fixture) : given
+     async Task Because()
+     {
+         await Revoke();
+-        _error = await Catch.Exception(() => new FencedDdl(_gates).Run(_token, () =>
++        _error = await Catch.Exception(() => new EpochCheckedDdl(_gates).Run(_token, () =>
+         {
+             _ran = true;
+             return Task.CompletedTask;
+diff --git a/Source/Kernel/Storage.MongoDB/Generations/Fencing/FencedDdl.cs b/Source/Kernel/Storage.MongoDB/Generations/Fencing/EpochCheckedDdl.cs
+similarity index 59%
+rename from Source/Kernel/Storage.MongoDB/Generations/Fencing/FencedDdl.cs
+rename to Source/Kernel/Storage.MongoDB/Generations/Fencing/EpochCheckedDdl.cs
+index c7e1053d0f..d3ee34378d 100644
+--- a/Source/Kernel/Storage.MongoDB/Generations/Fencing/FencedDdl.cs
++++ b/Source/Kernel/Storage.MongoDB/Generations/Fencing/EpochCheckedDdl.cs
+@@ -4,15 +4,19 @@
+ namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
+ 
+ /// <summary>
+-/// Orders a schema operation that MongoDB cannot run inside a transaction behind an epoch check, and checks the epoch again after it.
++/// Checks the owner's epoch before and after a schema operation that MongoDB cannot run inside a transaction. This is detection,
++/// not a fence.
+ /// </summary>
+ /// <param name="gates">The <see cref="IFenceGates"/> to read the epoch from.</param>
+ /// <remarks>
+-/// Dropping or renaming a collection cannot join the fenced transaction, so it cannot be made atomic with the gate. This is the
+-/// weaker guarantee that remains: it refuses to start for a revoked owner, and reports a revocation that raced it so the caller can
+-/// compensate. It does not stop a revoked owner's operation that was already running.
++/// Dropping or renaming a collection cannot join the fenced transaction, so nothing makes it atomic with the gate. The pre-check
++/// refuses to start for an owner that is already revoked, and the post-check reports a revocation that happened while the
++/// operation ran. Neither prevents a stale operation: a drop delayed between the pre-check and the server executing it still
++/// runs. Callers must not rely on this to protect another owner's data; destructive schema operations need exclusion (an
++/// administrative path with access revoked first) or a layout where a stale owner's operation can only touch its own
++/// generation's container.
+ /// </remarks>
+-public class FencedDdl(IFenceGates gates)
++public class EpochCheckedDdl(IFenceGates gates)
+ {
+     /// <summary>
+     /// Runs a schema operation for the owner of a token.
+@@ -22,7 +26,7 @@ public class FencedDdl(IFenceGates gates)
+     /// <param name="cancellationToken">The <see cref="CancellationToken"/> to stop waiting with.</param>
+     /// <returns>Awaitable task.</returns>
+     /// <exception cref="FenceRevoked">The epoch had moved on before the operation; it did not run.</exception>
+-    /// <exception cref="FencedDdlRacedRevocation">The epoch moved on while the operation ran.</exception>
++    /// <exception cref="EpochCheckedDdlRacedRevocation">The epoch moved on while the operation ran.</exception>
+     public async Task Run(FenceToken token, Func<Task> operation, CancellationToken cancellationToken = default)
+     {
+         if (await gates.CurrentEpoch(token.MaterializationKey, token.Generation, cancellationToken) != token.Epoch)
+@@ -34,7 +38,7 @@ public async Task Run(FenceToken token, Func<Task> operation, CancellationToken
+ 
+         if (await gates.CurrentEpoch(token.MaterializationKey, token.Generation, cancellationToken) != token.Epoch)
+         {
+-            throw new FencedDdlRacedRevocation(token);
++            throw new EpochCheckedDdlRacedRevocation(token);
+         }
+     }
+ }
+diff --git a/Source/Kernel/Storage.MongoDB/Generations/Fencing/FencedDdlRacedRevocation.cs b/Source/Kernel/Storage.MongoDB/Generations/Fencing/EpochCheckedDdlRacedRevocation.cs
+similarity index 93%
+rename from Source/Kernel/Storage.MongoDB/Generations/Fencing/FencedDdlRacedRevocation.cs
+rename to Source/Kernel/Storage.MongoDB/Generations/Fencing/EpochCheckedDdlRacedRevocation.cs
+index f005d345f0..9cea09c329 100644
+--- a/Source/Kernel/Storage.MongoDB/Generations/Fencing/FencedDdlRacedRevocation.cs
++++ b/Source/Kernel/Storage.MongoDB/Generations/Fencing/EpochCheckedDdlRacedRevocation.cs
+@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
+ /// <remarks>
+ /// The operation has run and cannot be undone by the fence; the caller must treat its effect as made by a revoked owner.
+ /// </remarks>
+-public class FencedDdlRacedRevocation(FenceToken token)
++public class EpochCheckedDdlRacedRevocation(FenceToken token)
+     : Exception($"A schema operation guarded by '{token.GateId}' epoch {token.Epoch} ran while the epoch was revoked; its effect must be treated as unowned.")
+ {
+     /// <summary>
+-- 
+2.50.1 (Apple Git-155)
+
