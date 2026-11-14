@@ -96,7 +96,9 @@ public class FederationServeService(
 
                 if (!await session.Renew(connectionId))
                 {
+                    // Told apart from a failure so the dialer backs off for long instead of reconnecting straight away and flapping.
                     endReason = "a newer connection superseded it";
+                    yield return DeniedFrame();
                     yield break;
                 }
 
@@ -163,8 +165,13 @@ public class FederationServeService(
                 if (outcome.Failure is not null)
                 {
                     endReason = outcome.Failure;
-                    consumerMetrics.Error(linkId, "append");
+                    consumerMetrics.Error(linkId, outcome.Denied ? "limits" : "append");
                     SetStatus(linkId, FederationBindingStates.Backoff, state, outcome.Failure);
+                    if (outcome.Denied)
+                    {
+                        yield return DeniedFrame();
+                    }
+
                     yield break;
                 }
 
@@ -259,16 +266,46 @@ public class FederationServeService(
         FederatedEventBatchResponse batch,
         SessionState state)
     {
-        var events = batch.Events.OrderBy(_ => _.SequenceNumber).ToArray();
+        // The dialer asked for at most Limit events and is bound by the same caps a pull is: nothing of an oversized batch is appended.
+        var limits = options.Value.Federation.Limits;
+        var received = (batch.Events ?? []).ToArray();
+        if (received.Length > limits.MaxBatchSize)
+        {
+            return Outcome.Violation("the dialer delivered more events than were asked for");
+        }
+
+        var totalBytes = 0L;
+        foreach (var item in received)
+        {
+            var size = Encoding.UTF8.GetByteCount(item.Content ?? string.Empty);
+            if (size > limits.MaxEventContentBytes)
+            {
+                return Outcome.Violation("the dialer delivered an event that is too large");
+            }
+
+            totalBytes += size;
+            if (totalBytes > limits.MaxBatchBytes)
+            {
+                return Outcome.Violation("the dialer delivered a batch that is too large");
+            }
+        }
+
+        var events = received.OrderBy(_ => _.SequenceNumber).ToArray();
         consumerMetrics.EventsPulled(linkId, events.Length);
         state.Tail = batch.TailSequenceNumber;
 
-        var origin = batch.OriginEventStore;
-        if (events.Length > 0 && string.IsNullOrEmpty(origin))
+        // The origin is what the acceptor authenticated, never what the dialer says about itself: it names the provenance of every event
+        // appended and the loop guard works on it. A claim the dialer still makes has to stay the same for the whole session.
+        if (!string.IsNullOrEmpty(batch.OriginEventStore))
         {
-            return Outcome.Failed("the dialer named no origin event store");
+            state.ClaimedOrigin ??= batch.OriginEventStore;
+            if (!string.Equals(state.ClaimedOrigin, batch.OriginEventStore, StringComparison.Ordinal))
+            {
+                return Outcome.Violation("the dialer changed its origin within the session");
+            }
         }
 
+        var origin = linkId;
         var guard = state.Guard ??= NewGuard(binding, state.Last);
         var appended = 0;
         var bytes = 0L;
@@ -355,13 +392,17 @@ public class FederationServeService(
         public FederationResumePoint? Last { get; set; }
 
         public ForwardedEventGuard? Guard { get; set; }
+
+        public string? ClaimedOrigin { get; set; }
     }
 
-    sealed record Outcome(string? Failure, bool Slowed, int Count)
+    sealed record Outcome(string? Failure, bool Slowed, int Count, bool Denied = false)
     {
         public static Outcome Slow { get; } = new(null, true, 0);
 
         public static Outcome Failed(string failure) => new(failure, false, 0);
+
+        public static Outcome Violation(string failure) => new(failure, false, 0, true);
 
         public static Outcome Delivered(int count) => new(null, false, count);
     }

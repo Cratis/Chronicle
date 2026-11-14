@@ -20,7 +20,7 @@ public class when_a_session_resumes_after_the_connection_was_lost : given.a_serv
     {
         // The connection is lost after the first batch arrived. The next connection may land on another silo, which only has the inbox to go by.
         _first = await Dial(request => Answer(request, "customer-store", 0UL, 1UL, 2UL), frames => frames.Count >= 2);
-        _inbox.Resume = new FederationResumePoint("customer-store", 2UL);
+        _inbox.Resume = new FederationResumePoint("hosted-acme", 2UL);
         _second = await Dial(
             request => Answer(request, "customer-store", request.FromSequenceNumber == 3UL ? [3UL, 4UL] : []),
             frames => frames.Count >= 3);

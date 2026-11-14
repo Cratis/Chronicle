@@ -13,6 +13,6 @@ public class when_a_dialer_claims_the_origin_of_this_store : given.a_serve_servi
 
     async Task Because() => await Dial(request => Answer(request, TargetStore, 0UL, 1UL), frames => frames.Count >= 2);
 
-    [Fact] void should_append_nothing() => _inbox.Appended.ShouldBeEmpty();
-    [Fact] void should_count_the_events_as_skipped_for_their_origin() => _consumerMetrics.Received().EventSkipped(Arg.Any<string>(), FederationSkipReasons.OwnOrigin);
+    [Fact] void should_append_the_events_under_the_authenticated_origin() => _inbox.Appended.ToArray().ShouldEqual([("hosted-acme", 0UL), ("hosted-acme", 1UL)]);
+    [Fact] void should_never_use_the_claimed_origin() => _inbox.Appended.Exists(_ => _.Origin == TargetStore).ShouldBeFalse();
 }

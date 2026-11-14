@@ -27,7 +27,7 @@ public class when_a_dialer_serves_its_events : given.a_serve_service
     [Fact] void should_move_the_cursor_past_what_arrived() => _frames.Select(_ => _.FromSequenceNumber).Take(3).ToArray().ShouldEqual([0UL, 2UL, 3UL]);
     [Fact] void should_number_the_requests() => _frames.Select(_ => _.RequestId).Take(3).ToArray().ShouldEqual([1UL, 2UL, 3UL]);
     [Fact] void should_ask_only_for_what_is_subscribed_and_allowed() => _frames[0].EventTypes.ToArray().ShouldEqual(["type-a"]);
-    [Fact] void should_append_every_event_in_order() => _inbox.Appended.ToArray().ShouldEqual([("customer-store", 0UL), ("customer-store", 1UL), ("customer-store", 2UL)]);
+    [Fact] void should_append_every_event_in_order() => _inbox.Appended.ToArray().ShouldEqual([("hosted-acme", 0UL), ("hosted-acme", 1UL), ("hosted-acme", 2UL)]);
     [Fact] void should_only_append_to_the_target_of_the_policy() => _inbox.Targets.Distinct().ToArray().ShouldEqual([(TargetStore, TargetNamespace)]);
     [Fact] void should_not_send_a_denied_frame() => _frames.Exists(_ => _.Status == FederatedEventBatchStatus.Denied).ShouldBeFalse();
 }

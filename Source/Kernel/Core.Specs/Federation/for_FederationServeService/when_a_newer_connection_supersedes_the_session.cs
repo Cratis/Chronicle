@@ -9,6 +9,7 @@ namespace Cratis.Chronicle.Federation.for_FederationServeService;
 public class when_a_newer_connection_supersedes_the_session : given.a_serve_service
 {
     bool _firstEnded;
+    ServePullRequest _lastFrame;
 
     async Task Establish()
     {
@@ -27,9 +28,13 @@ public class when_a_newer_connection_supersedes_the_session : given.a_serve_serv
         // A newer connection for the same subject, for instance through another silo.
         await _sessions["acme"].Open("newer");
 
+        // The older connection is told it was denied, so it backs off for long instead of reconnecting straight away and flapping.
+        var denied = await enumerator.MoveNextAsync();
+        _lastFrame = denied ? enumerator.Current : null;
         _firstEnded = !await enumerator.MoveNextAsync();
         await enumerator.DisposeAsync();
     }
 
+    [Fact] void should_deny_the_older_connection() => (_lastFrame?.Status == FederatedEventBatchStatus.Denied).ShouldBeTrue();
     [Fact] void should_end_the_older_connection() => _firstEnded.ShouldBeTrue();
 }

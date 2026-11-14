@@ -28,5 +28,5 @@ public class when_a_dialer_sends_event_types_the_policy_does_not_allow : given.a
         },
         frames => frames.Count >= 2);
 
-    [Fact] void should_append_only_the_allowed_type() => _inbox.Appended.ToArray().ShouldEqual([("customer-store", 0UL)]);
+    [Fact] void should_append_only_the_allowed_type() => _inbox.Appended.ToArray().ShouldEqual([("hosted-acme", 0UL)]);
 }
