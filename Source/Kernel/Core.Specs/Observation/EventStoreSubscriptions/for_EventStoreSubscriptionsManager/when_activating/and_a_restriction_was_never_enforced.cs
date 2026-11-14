@@ -9,7 +9,7 @@ public class and_a_restriction_was_never_enforced : given.a_manager_over_several
     {
         _observersAreSubscribed = true;
         await _manager.Add(DefinitionFor("Default"));
-        _observers.Clear();
+        _observers[KeyFor("Tenant1")].ClearReceivedCalls();
         _requestedKeys.Clear();
     }
 
