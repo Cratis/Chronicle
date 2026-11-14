@@ -29,7 +29,7 @@ public class and_the_unsettled_outcome_reaches_the_wire : given.an_event_sequenc
                 ExceptionMessages = [error.Message]
             };
         });
-        _service = new(pipeline, _storage, NullLogger<Services.Occurrences.Occurrences>.Instance);
+        _service = new(pipeline, _storage, NamespaceCasingContext.Create(), NullLogger<Services.Occurrences.Occurrences>.Instance);
     }
 
     async Task Because() => _wireResult = await _service.RecordEffectReceipt(new()

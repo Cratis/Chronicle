@@ -49,7 +49,9 @@ public static class MongoDBChronicleBuilderExtensions
             services.AddStorageConnectionResolution(WellKnownConnectionStorage.MongoDB, options.Storage.ConnectionResolution);
             services.AddSingleton<MongoDBIndexProvisioner>();
             services.AddSingleton<IMongoDBIndexProvisioner>(provider => provider.GetRequiredService<MongoDBIndexProvisioner>());
+            services.AddSingleton<IMongoDBCapabilityProbe, MongoDBCapabilityProbe>();
         });
+        builder.SiloBuilder.AddStartupTask<VerifyMongoDBCapabilities>(ServiceLifecycleStage.First);
         builder.SiloBuilder.AddStartupTask<VerifyMongoDBIndexes>(ServiceLifecycleStage.First);
         return builder;
     }

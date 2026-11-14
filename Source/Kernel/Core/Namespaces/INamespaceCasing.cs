@@ -17,4 +17,11 @@ public interface INamespaceCasing
     /// <param name="namespace">The requested namespace.</param>
     /// <returns>The stored casing, or the requested name when unknown.</returns>
     ValueTask<EventStoreNamespaceName> Canonicalize(EventStoreName eventStore, EventStoreNamespaceName @namespace);
+
+    /// <summary>
+    /// Invalidates cached casing for a removed namespace.
+    /// </summary>
+    /// <param name="eventStore">The event store owning the namespace.</param>
+    /// <param name="namespace">The removed namespace.</param>
+    void Forget(EventStoreName eventStore, EventStoreNamespaceName @namespace);
 }

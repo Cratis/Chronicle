@@ -290,6 +290,7 @@ internal sealed class Observers(
     public async Task<ObserverInformation> GetObserverInformation(GetObserverInformationRequest request, CallContext context = default)
     {
         await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.ObserverId, request.EventSequenceId), StoreAccess.Read);
+        request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
         var observer = await grainFactory.GetObserver(request, storage, namespaceCasing);
         var definition = await observer.GetDefinition();
         var state = await observer.GetState();
@@ -353,6 +354,7 @@ internal sealed class Observers(
     public async Task<IEnumerable<ObserverInformation>> GetObservers(AllObserversRequest request, CallContext context = default)
     {
         await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace), StoreAccess.Read);
+        request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
         var observerDefinitions = await storage.GetEventStore(request.EventStore).Observers.GetAll();
         var observerStateStorage = storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).Observers;
         var observerStates = await observerStateStorage.GetAll();
@@ -368,12 +370,21 @@ internal sealed class Observers(
 
     /// <inheritdoc/>
     public IObservable<IEnumerable<ObserverInformation>> ObserveObservers(AllObserversRequest request, CallContext context = default) =>
-        SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace), StoreAccess.Read, () => ObserveGuardedObservers(request, context));
+        SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace), StoreAccess.Read, () =>
+            Observable.FromAsync(async () =>
+            {
+                request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
+                return request;
+            })
+            .SelectMany(_ => ObserveGuardedObservers(request, context))
+            .TakeUntil(Observable.Create<bool>(observer =>
+                context.CancellationToken.Register(() => observer.OnNext(true)))));
 
     /// <inheritdoc/>
     public async Task<IEnumerable<ObserverInformation>> GetReplayableObserversForEventTypes(GetReplayableObserversForEventTypesRequest request, CallContext context = default)
     {
         await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace), StoreAccess.Read);
+        request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
         var eventTypes = request.EventTypes.ToChronicle();
         var observerDefinitions = await storage.GetEventStore(request.EventStore).Observers.GetReplayableObserversForEventTypes(eventTypes);
         var observerStateStorage = storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).Observers;

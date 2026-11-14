@@ -12,7 +12,7 @@ public class when_binding_a_zero_page_limit_and_position : given.scoped_queries
 
     async Task Because()
     {
-        var service = new Services.Alerts.Alerts(_storage, _readiness, NullLogger<Services.Alerts.Alerts>.Instance);
+        var service = new Services.Alerts.Alerts(_storage, _readiness, NamespaceCasingContext.Create(), NullLogger<Services.Alerts.Alerts>.Instance);
         var request = Serializer.DeepClone(new Contracts.Alerts.GetOpenIncidentsRequest
         {
             EventStore = "affected",

@@ -18,7 +18,7 @@ public class and_the_store_is_spelled_in_upper_case : for_QueryExecutor.given.a_
     {
         _grainFactory = Substitute.For<IGrainFactory>();
         _storage = Substitute.For<IStorage>();
-        _jobs = new Jobs(Substitute.For<Cratis.Arc.Commands.ICommandPipeline>(), _storage, _grainFactory, new for_Jobs.given.RecordingLogger<Jobs>());
+        _jobs = new Jobs(Substitute.For<Cratis.Arc.Commands.ICommandPipeline>(), _storage, _grainFactory, NamespaceCasingContext.Create(), new for_Jobs.given.RecordingLogger<Jobs>());
     }
 
     async Task Because() => _result = await _jobs.AllJobs(new AllJobsRequest { EventStore = "SYSTEM", Namespace = "Default" }, CallFor(new Probe(), CallerNamed(OrdinaryUser)));
