@@ -17,7 +17,7 @@ public class when_a_non_administrator_requests_incidents_of_the_system_store : f
     public async Task should_refuse_every_query_without_touching_storage(string caller)
     {
         var storage = Substitute.For<IStorage>();
-        var alerts = new Alerts(storage, Substitute.For<IAlertIncidentsReadiness>(), NullLogger<Alerts>.Instance);
+        var alerts = new Alerts(storage, Substitute.For<IAlertIncidentsReadiness>(), NamespaceCasingContext.Create(), NullLogger<Alerts>.Instance);
         var context = CallFor(new(), CallerNamed(caller));
 
         var lookup = await alerts.GetOpenIncident(new() { EventStore = "System", IncidentId = Guid.NewGuid() }, context);

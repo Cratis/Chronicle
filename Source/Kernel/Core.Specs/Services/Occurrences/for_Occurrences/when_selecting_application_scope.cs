@@ -24,7 +24,7 @@ public class when_selecting_application_scope
         var context = new QueryContext("Cratis.Chronicle.Occurrences.OccurrenceSnapshot.GetOccurrence", CorrelationId.New(), Paging.NotPaged, Sorting.None, arguments, ServiceProvider: caller.Http.RequestServices);
         var arc = await new SystemStoreQueryFilter().OnPerform(context);
         (arc is null).ShouldEqual(allowed);
-        var service = new Occurrences(Substitute.For<ICommandPipeline>(), Substitute.For<IStorage>(), NullLogger<Occurrences>.Instance);
+        var service = new Occurrences(Substitute.For<ICommandPipeline>(), Substitute.For<IStorage>(), NamespaceCasingContext.Create(), NullLogger<Occurrences>.Instance);
         var grpc = await service.GetOccurrence(new GetOccurrenceRequest { EventStore = "store", Namespace = "tenant", OccurrenceId = "one", ApplicationScope = applicationScope }, caller.Context);
         grpc.IsAuthorized.ShouldEqual(allowed);
     }

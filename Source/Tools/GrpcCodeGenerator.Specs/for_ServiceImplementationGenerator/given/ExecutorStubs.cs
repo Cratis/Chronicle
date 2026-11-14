@@ -39,6 +39,9 @@ public static class ExecutorStubs
 
         internal static class QueryExecutor
         {
+            internal static IObservable<TData> Canonicalize<TData>(Func<Task<IObservable<TData>>> query, System.Threading.CancellationToken cancellationToken) =>
+                throw new NotSupportedException();
+
             internal static IObservable<QueryResult<TData>> Execute<TData>(Func<IObservable<TData>> query, Action<Exception>? onError = null) =>
                 throw new NotSupportedException();
 
@@ -52,7 +55,7 @@ public static class ExecutorStubs
                 throw new NotSupportedException();
         }
 
-        internal readonly record struct QueryRouting(string? Store, string? Namespace = null, string? First = null, string? Second = null, string? Third = null, string? Fourth = null, string? Fifth = null);
+        internal readonly record struct QueryRouting(string? Store, string? Namespace = null, string? First = null, string? Second = null, string? Third = null, string? Fourth = null, string? Fifth = null, string? Capability = null, bool ApplicationScope = false);
 
         internal static class ServiceLogMessages
         {
