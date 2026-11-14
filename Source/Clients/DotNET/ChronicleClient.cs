@@ -78,6 +78,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
     CancellationTokenSource? _deploymentCheckCancellation;
     int _isDisposed;
     int _serverlessReported;
+    global::Cratis.Chronicle.Federation.IFederationEnrollments? _federation;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ChronicleClient"/> class.
@@ -247,6 +248,9 @@ public class ChronicleClient : IChronicleClient, IDisposable
 
     /// <inheritdoc/>
     public ICausationManager CausationManager { get; }
+
+    /// <inheritdoc/>
+    public global::Cratis.Chronicle.Federation.IFederationEnrollments Federation => _federation ??= new global::Cratis.Chronicle.Federation.FederationEnrollments(_connection);
 
     /// <summary>
     /// Gets the cancellation token used for the owned connection lifetime.
