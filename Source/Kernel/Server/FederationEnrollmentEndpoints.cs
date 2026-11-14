@@ -32,11 +32,13 @@ internal static class FederationEnrollmentEndpoints
 
     static async Task<IResult> Authority(HttpContext context, IOptions<ChronicleOptions> options, FederationEnrollmentRateLimiter limiter, IGrainFactory grainFactory, IFederationAuthorityKeys keys)
     {
-        if (!Admit(context, options.Value, limiter))
+        var (refusal, lease) = Admit(context, options.Value, limiter, FederationEnrollmentBudget.Discovery);
+        if (refusal is not null)
         {
-            return Results.StatusCode(StatusCodes.Status429TooManyRequests);
+            return refusal;
         }
 
+        using var held = lease;
         await grainFactory.GetGrain<IFederationAuthority>(IFederationAuthority.Key).EnsureAuthority();
         var (authority, _) = await keys.GetOrCreate();
         return Results.Bytes(authority.RawData, "application/pkix-cert");
@@ -44,11 +46,13 @@ internal static class FederationEnrollmentEndpoints
 
     static async Task<IResult> Redeem(HttpContext context, IOptions<ChronicleOptions> options, FederationEnrollmentRateLimiter limiter, IGrainFactory grainFactory)
     {
-        if (!Admit(context, options.Value, limiter))
+        var (refusal, lease) = Admit(context, options.Value, limiter, FederationEnrollmentBudget.Discovery);
+        if (refusal is not null)
         {
-            return Results.StatusCode(StatusCodes.Status429TooManyRequests);
+            return refusal;
         }
 
+        using var held = lease;
         var request = await ReadBody<FederationRedeemRequest>(context);
         if (request is null || !TryDecode(request.Csr, out var csr))
         {
@@ -61,11 +65,13 @@ internal static class FederationEnrollmentEndpoints
 
     static async Task<IResult> Renew(HttpContext context, IOptions<ChronicleOptions> options, FederationEnrollmentRateLimiter limiter, IGrainFactory grainFactory)
     {
-        if (!Admit(context, options.Value, limiter))
+        var (refusal, lease) = Admit(context, options.Value, limiter, FederationEnrollmentBudget.Renewal);
+        if (refusal is not null)
         {
-            return Results.StatusCode(StatusCodes.Status429TooManyRequests);
+            return refusal;
         }
 
+        using var held = lease;
         var presented = context.Connection.ClientCertificate;
         if (presented is null)
         {
@@ -82,7 +88,7 @@ internal static class FederationEnrollmentEndpoints
         return ToResult(issuance);
     }
 
-    static bool Admit(HttpContext context, ChronicleOptions options, FederationEnrollmentRateLimiter limiter)
+    static (IResult? Refusal, IDisposable? Lease) Admit(HttpContext context, ChronicleOptions options, FederationEnrollmentRateLimiter limiter, FederationEnrollmentBudget budget)
     {
         var feature = context.Features.Get<IHttpMaxRequestBodySizeFeature>();
         if (feature is { IsReadOnly: false })
@@ -90,7 +96,15 @@ internal static class FederationEnrollmentEndpoints
             feature.MaxRequestBodySize = FederationEnrollmentRoutes.MaxRequestBodySize;
         }
 
-        return limiter.TryAcquire(context.Connection.RemoteIpAddress, options.Federation.Hosted.RequestsPerMinutePerSource);
+        if (!limiter.TryAcquire(context.Connection.RemoteIpAddress, options.Federation.Hosted.RequestsPerMinutePerSource, budget))
+        {
+            return (Results.StatusCode(StatusCodes.Status429TooManyRequests), null);
+        }
+
+        var lease = limiter.TryEnter(options.Federation.Hosted.MaxConcurrentEnrollmentRequests);
+        return lease is null
+            ? (Results.StatusCode(StatusCodes.Status503ServiceUnavailable), null)
+            : (null, lease);
     }
 
     static async Task<TRequest?> ReadBody<TRequest>(HttpContext context)

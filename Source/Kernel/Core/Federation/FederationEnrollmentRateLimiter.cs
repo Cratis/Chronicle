@@ -13,8 +13,9 @@ namespace Cratis.Chronicle.Federation;
 /// </summary>
 /// <remarks>
 /// A fixed one-minute window per source. IPv6 sources are grouped by their /64 prefix, because a single host is typically handed a whole /64.
-/// Memory is bounded: when too many sources are tracked, expired windows are dropped, and if that is not enough every new source is refused
-/// rather than letting the table grow.
+/// Memory is bounded: when too many sources are tracked, expired windows are dropped, and if that is not enough the oldest tenth are dropped.
+/// A full table never refuses everyone, because the routes are reachable before authentication and one flood must not lock the others out.
+/// Each <see cref="FederationEnrollmentBudget"/> has its own window, so a flood of one kind of request does not use up the other.
 /// </remarks>
 /// <param name="timeProvider">The <see cref="TimeProvider"/> used to open and close windows.</param>
 [Singleton]
@@ -23,16 +24,18 @@ public class FederationEnrollmentRateLimiter(TimeProvider timeProvider)
     const int MaxTrackedSources = 10_000;
     static readonly TimeSpan _window = TimeSpan.FromMinutes(1);
     readonly ConcurrentDictionary<string, Window> _windows = new(StringComparer.Ordinal);
+    int _inFlight;
 
     /// <summary>
     /// Try to admit a request from a source.
     /// </summary>
     /// <param name="source">The address the request came from.</param>
     /// <param name="requestsPerMinute">How many requests a source may make per minute.</param>
+    /// <param name="budget">Which budget the request counts against.</param>
     /// <returns>True when the request is admitted, false when the source must be refused.</returns>
-    public bool TryAcquire(IPAddress? source, int requestsPerMinute)
+    public bool TryAcquire(IPAddress? source, int requestsPerMinute, FederationEnrollmentBudget budget = FederationEnrollmentBudget.Discovery)
     {
-        var key = Key(source);
+        var key = $"{budget}|{Key(source)}";
         var now = timeProvider.GetTimestamp();
 
         if (_windows.Count >= MaxTrackedSources && !_windows.ContainsKey(key))
@@ -40,7 +43,7 @@ public class FederationEnrollmentRateLimiter(TimeProvider timeProvider)
             Evict(now);
             if (_windows.Count >= MaxTrackedSources)
             {
-                return false;
+                EvictOldest();
             }
         }
 
@@ -56,6 +59,22 @@ public class FederationEnrollmentRateLimiter(TimeProvider timeProvider)
             window.Count++;
             return window.Count <= requestsPerMinute;
         }
+    }
+
+    /// <summary>
+    /// Try to start serving a request, so that no more than <paramref name="maxConcurrent"/> are being served at once.
+    /// </summary>
+    /// <param name="maxConcurrent">How many requests may be served at once.</param>
+    /// <returns>A lease to dispose when the request has been served, or null when the route is at capacity and the request must be refused.</returns>
+    public IDisposable? TryEnter(int maxConcurrent)
+    {
+        if (Interlocked.Increment(ref _inFlight) > maxConcurrent)
+        {
+            Interlocked.Decrement(ref _inFlight);
+            return null;
+        }
+
+        return new Lease(this);
     }
 
     static string Key(IPAddress? source)
@@ -79,6 +98,26 @@ public class FederationEnrollmentRateLimiter(TimeProvider timeProvider)
         return source.ToString();
     }
 
+    void EvictOldest()
+    {
+        var oldest = _windows
+            .Select(_ =>
+            {
+                lock (_.Value)
+                {
+                    return (_.Key, _.Value.Started);
+                }
+            })
+            .OrderBy(_ => _.Started)
+            .Take(MaxTrackedSources / 10)
+            .ToArray();
+
+        foreach (var (key, _) in oldest)
+        {
+            _windows.TryRemove(key, out _);
+        }
+    }
+
     void Evict(long now)
     {
         foreach (var (key, window) in _windows)
@@ -92,6 +131,19 @@ public class FederationEnrollmentRateLimiter(TimeProvider timeProvider)
             if (expired)
             {
                 _windows.TryRemove(key, out _);
+            }
+        }
+    }
+
+    sealed class Lease(FederationEnrollmentRateLimiter limiter) : IDisposable
+    {
+        int _disposed;
+
+        public void Dispose()
+        {
+            if (Interlocked.Exchange(ref _disposed, 1) == 0)
+            {
+                Interlocked.Decrement(ref limiter._inFlight);
             }
         }
     }
