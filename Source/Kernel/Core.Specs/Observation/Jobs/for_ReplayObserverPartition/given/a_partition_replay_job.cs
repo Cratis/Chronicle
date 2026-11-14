@@ -25,7 +25,6 @@ public class a_partition_replay_job : Specification
     protected TestableReplayObserverPartition _job;
     protected IObserver _observer;
     protected IObserverServiceClient _replayStateServiceClient;
-    protected IPartitionReplayMarkers _partitionReplayMarkers;
     protected ReplayObserverPartitionRequest _request;
     protected IStorage<JobStateWithLastHandledEvent> _stateStorage;
     protected Cratis.Chronicle.Storage.IEventStoreStorage _eventStore;
@@ -41,7 +40,6 @@ public class a_partition_replay_job : Specification
             [new EventType("some-event", EventTypeGeneration.First)]) { ReplaysAllEventTypes = true, HeldBackFrom = 45UL };
 
         _replayStateServiceClient = Substitute.For<IObserverServiceClient>();
-        _partitionReplayMarkers = Substitute.For<IPartitionReplayMarkers>();
         _observer = Substitute.For<IObserver>();
         var jobStorage = Substitute.For<IJobStorage>();
         var jobStepStorage = Substitute.For<IJobStepStorage>();
@@ -63,7 +61,6 @@ public class a_partition_replay_job : Specification
         _silo.AddService(storage);
         _silo.AddService(jobTypes);
         _silo.AddService(_replayStateServiceClient);
-        _silo.AddService(_partitionReplayMarkers);
         _silo.AddService(NullLogger<IJob>.Instance);
         _silo.AddService(NullLogger<ObserverManager<IJobObserver>>.Instance);
         var loggerFactory = Substitute.For<ILoggerFactory>();

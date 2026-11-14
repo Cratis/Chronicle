@@ -37,38 +37,24 @@ public static class ReadModelInstanceExtensions
     }
 
     /// <summary>
-    /// Excludes the sink bookkeeping properties the read model schema does not declare.
+    /// Excludes initialization state unless declared in the read model schema.
     /// </summary>
     /// <param name="instance">The sink-owned instance.</param>
     /// <param name="schema">The read model schema.</param>
     /// <returns>The response state, without mutating the sink-owned instance.</returns>
-    /// <remarks>
-    /// The last handled event sequence number is kept: clients mirror it onto the instance to tell how far it has
-    /// been brought up to date. Every other <see cref="WellKnownProperties.All"/> entry is sink bookkeeping and
-    /// never part of a response unless the schema declares it.
-    /// </remarks>
-    public static ExpandoObject WithoutSinkBookkeeping(this ExpandoObject instance, JsonSchema schema)
+    public static ExpandoObject WithoutInitializationState(this ExpandoObject instance, JsonSchema schema)
     {
-        var values = (IDictionary<string, object?>)instance;
-        var bookkeeping = WellKnownProperties.All
-            .Where(name => name != WellKnownProperties.LastHandledEventSequenceNumber && values.ContainsKey(name))
-            .ToHashSet(StringComparer.Ordinal);
-        if (bookkeeping.Count == 0)
-        {
-            return instance;
-        }
-
-        bookkeeping.ExceptWith(schema.GetFlattenedProperties().Select(property => property.Name));
-        if (bookkeeping.Count == 0)
+        if (!((IDictionary<string, object?>)instance).ContainsKey(WellKnownProperties.ReadModelInstanceInitialized) ||
+            schema.GetFlattenedProperties().Any(property => property.Name == WellKnownProperties.ReadModelInstanceInitialized))
         {
             return instance;
         }
 
         var result = new ExpandoObject();
-        var target = (IDictionary<string, object?>)result;
-        foreach (var (name, value) in instance.Where(property => !bookkeeping.Contains(property.Key)))
+        var values = (IDictionary<string, object?>)result;
+        foreach (var (name, value) in instance.Where(property => property.Key != WellKnownProperties.ReadModelInstanceInitialized))
         {
-            target[name] = value;
+            values[name] = value;
         }
 
         return result;

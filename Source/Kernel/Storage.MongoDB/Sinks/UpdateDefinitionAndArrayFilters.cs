@@ -30,11 +30,6 @@ public record UpdateDefinitionAndArrayFilters(UpdateDefinition<BsonDocument> Upd
     internal IReadOnlyList<string> RequiredArrayPaths { get; init; } = [];
 
     /// <summary>
-    /// Gets a value indicating whether the update is a guarded pipeline update that decides for itself which of its writes apply.
-    /// </summary>
-    internal bool IsConditional { get; init; }
-
-    /// <summary>
     /// Compares only the original positional values, excluding internal repair metadata.
     /// </summary>
     /// <param name="other">The value to compare with.</param>

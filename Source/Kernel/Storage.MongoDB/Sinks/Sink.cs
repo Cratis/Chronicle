@@ -8,7 +8,6 @@ using System.Runtime.ExceptionServices;
 using System.Text.RegularExpressions;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
@@ -365,21 +364,15 @@ public partial class Sink(
         SinkWriteMode mode) => ApplyChangesCore(key, changeset, eventSequenceNumber, new SinkWriteOptions(mode));
 
     /// <inheritdoc/>
-    public Task<IEnumerable<FailedPartition>> ApplyChangesImmediately(
+    public async Task<IEnumerable<FailedPartition>> ApplyChangesImmediately(
         Key key,
         IChangeset<AppendedEvent, ExpandoObject> changeset,
         EventSequenceNumber eventSequenceNumber,
-        SinkWriteMode mode) => ApplyChangesImmediately(key, changeset, eventSequenceNumber, new SinkWriteOptions(mode));
-
-    async Task<IEnumerable<FailedPartition>> ApplyChangesImmediately(
-        Key key,
-        IChangeset<AppendedEvent, ExpandoObject> changeset,
-        EventSequenceNumber eventSequenceNumber,
-        SinkWriteOptions options)
+        SinkWriteMode mode)
     {
         if (!_isBulkMode)
         {
-            return await ApplyChangesCore(key, changeset, eventSequenceNumber, options);
+            return await ApplyChanges(key, changeset, eventSequenceNumber, mode);
         }
 
         var drain = await DrainBulk();
@@ -387,7 +380,7 @@ public partial class Sink(
         var failures = new List<FailedPartition>();
         try
         {
-            failures.AddRange(await ApplyChangesCore(key, changeset, eventSequenceNumber, options with { DrainedBatches = drainedBatches }));
+            failures.AddRange(await ApplyChangesCore(key, changeset, eventSequenceNumber, new SinkWriteOptions(mode, drainedBatches)));
         }
         catch (MongoWriteException exception) when (exception.WriteError is not null && exception.WriteConcernError is null)
         {
@@ -415,7 +408,7 @@ public partial class Sink(
         {
             var removalFilter = options.Mode == SinkWriteMode.GuardedUpsert
                 ? Builders<BsonDocument>.Filter.And(plan.Filter, BelowWatermark(eventSequenceNumber))
-                : WithoutRepeatedRemoval(plan.Filter, changeset, eventSequenceNumber, plan, options);
+                : plan.Filter;
             return await ApplyRemoval(key, eventSequenceNumber, removalFilter, options);
         }
 
@@ -487,17 +480,12 @@ public partial class Sink(
         WritePlan plan,
         SinkWriteOptions options)
     {
-        if (OrderedSegmentsFor(changeset, eventSequenceNumber, plan, options) is { } segments)
-        {
-            return await WriteSegments(key, changeset, eventSequenceNumber, plan, options, segments);
-        }
-
         // Converting runs the joins, which are matched by what the documents hold now. A join on a child this changeset
         // removes from all has to find the documents still holding it, so the children are removed only afterwards.
         UpdateDefinitionAndArrayFilters converted;
         if (changesetConverter is IChangesetConverterWithDirectWrites converterWithDirectWrites)
         {
-            converted = await converterWithDirectWrites.ToUpdateDefinition(key, changeset, eventSequenceNumber, DirectWrites, MarkersFor(changeset, eventSequenceNumber, plan, options));
+            converted = await converterWithDirectWrites.ToUpdateDefinition(key, changeset, eventSequenceNumber, DirectWrites);
         }
         else
         {
@@ -516,7 +504,7 @@ public partial class Sink(
             return [];
         }
 
-        var write = ScopeToExistingArrays(NewWrite(key, eventSequenceNumber, converted, plan));
+        var write = ScopeToExistingArrays(new UpdateWrite(key, eventSequenceNumber, converted, plan.Filter, plan.IsUpsert));
         if (!plan.UsesJoinTargetsOnlyFilter)
         {
             await UnsetNullParents(write, options);
@@ -741,20 +729,19 @@ public partial class Sink(
             return failures;
         }
 
-        var updateOptions = new UpdateOptions
-        {
-            IsUpsert = write.IsUpsert,
-            ArrayFilters = ArrayFiltersOf(write)
-        };
-        await writes.UpdateOne(Collection, write.Filter, write.Converted.UpdateDefinition, updateOptions);
-
+        await writes.UpdateOne(
+            Collection,
+            write.Filter,
+            write.Converted.UpdateDefinition,
+            new UpdateOptions
+            {
+                IsUpsert = write.IsUpsert,
+                ArrayFilters = write.Converted.ArrayFilters
+            });
         CacheImmediateWrite(write, changeset, options);
 
         return [];
     }
-
-    static IEnumerable<BsonDocumentArrayFilterDefinition<BsonDocument>>? ArrayFiltersOf(UpdateWrite write) =>
-        write.Converted.ArrayFilters.Any() ? write.Converted.ArrayFilters : null;
 
     async Task<IEnumerable<FailedPartition>?> TryBufferUpdate(UpdateWrite write, IChangeset<AppendedEvent, ExpandoObject> changeset, SinkWriteOptions options)
     {
@@ -763,11 +750,10 @@ public partial class Sink(
             return null;
         }
 
-        var isConditional = write.Converted.IsConditional;
         var updateModel = new UpdateOneModel<BsonDocument>(write.Filter, write.Converted.UpdateDefinition)
         {
             IsUpsert = write.IsUpsert,
-            ArrayFilters = ArrayFiltersOf(write)
+            ArrayFilters = write.Converted.ArrayFilters
         };
 
         if (options.Page is { } page)
@@ -777,18 +763,16 @@ public partial class Sink(
         }
 
         var hasJoined = changeset.HasJoined();
-        var cacheState = hasJoined || options.Mode == SinkWriteMode.GuardedUpsert || isConditional ? null : CreateCacheState(write.Key, changeset, write.EventSequenceNumber);
+        var cacheState = hasJoined || options.Mode == SinkWriteMode.GuardedUpsert ? null : CreateCacheState(write.Key, changeset, write.EventSequenceNumber);
 
         void WhenQueued()
         {
             // Guarded writes may be rejected without failing the batch. Neither their state nor their
             // watermark is a safe answer for another operation in this bulk window.
-            if (options.Mode == SinkWriteMode.GuardedUpsert || isConditional)
+            if (options.Mode == SinkWriteMode.GuardedUpsert)
             {
                 InvalidateGuardedBulkState(write.Key);
-
-                // A guarded pipeline update filters on the document id alone, so its upsert cannot collide with another document.
-                if (!isConditional && updateModel.IsUpsert)
+                if (updateModel.IsUpsert)
                 {
                     _guardedBulkUpserts.Add(updateModel);
                 }
@@ -814,7 +798,7 @@ public partial class Sink(
             return;
         }
 
-        if (options.Mode == SinkWriteMode.GuardedUpsert || write.Converted.IsConditional)
+        if (options.Mode == SinkWriteMode.GuardedUpsert)
         {
             writes.AfterCommit(() => EvictBulkState(write.Key));
         }
@@ -2091,7 +2075,7 @@ public partial class Sink(
         public string For(int operationIndex) => ByOperation.TryGetValue(operationIndex, out var reason) ? reason : First;
     }
 
-    sealed record SinkWriteOptions(SinkWriteMode Mode, HashSet<BulkBatch>? DrainedBatches = null, Key? Partition = null, PageOperations? Page = null, string EventSequence = WellKnownEventSequences.EventLog)
+    sealed record SinkWriteOptions(SinkWriteMode Mode, HashSet<BulkBatch>? DrainedBatches = null, Key? Partition = null, PageOperations? Page = null)
     {
         public bool IsImmediate => DrainedBatches is not null;
 
