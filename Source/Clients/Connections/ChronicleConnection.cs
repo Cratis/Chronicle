@@ -740,7 +740,8 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         {
             Administrators = callInvoker.CreateGrpcService<Contracts.Security.IAdministrators>(clientFactory),
             Occurrences = callInvoker.CreateGrpcService<Contracts.Occurrences.IOccurrences>(clientFactory),
-            Imports = callInvoker.CreateGrpcService<Contracts.Imports.IImports>(clientFactory)
+            Imports = callInvoker.CreateGrpcService<Contracts.Imports.IImports>(clientFactory),
+            Federation = callInvoker.CreateGrpcService<Contracts.Federation.IFederation>(clientFactory)
         };
     }
 

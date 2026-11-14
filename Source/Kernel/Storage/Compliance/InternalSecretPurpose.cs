@@ -25,6 +25,16 @@ public record InternalSecretPurpose : ConceptAs<string>
     /// </summary>
     public static readonly InternalSecretPurpose MutationReceiptDigest = new("mutation-receipt-digest-v2");
 
+    /// <summary>
+    /// The key pair and certificate of the federation certificate authority a kernel creates when hosted federation is enabled.
+    /// </summary>
+    public static readonly InternalSecretPurpose FederationAuthority = new("federation-authority-v1");
+
+    /// <summary>
+    /// The secret that protects the private key of the federation identity a kernel holds after it has been enrolled.
+    /// </summary>
+    public static readonly InternalSecretPurpose FederationKeyProtection = new("federation-key-protection-v1");
+
     InternalSecretPurpose(string value)
         : base(value)
     {

@@ -21,6 +21,12 @@ public interface IChronicleClient
     ICausationManager CausationManager { get; }
 
     /// <summary>
+    /// Gets the <see cref="global::Cratis.Chronicle.Federation.IFederationEnrollments"/> for the kernel the client is connected to: creating, redeeming and revoking hosted federation enrollments and reading their status.
+    /// </summary>
+    /// <exception cref="NotSupportedException">The client implementation does not support federation enrollment.</exception>
+    global::Cratis.Chronicle.Federation.IFederationEnrollments Federation => throw new NotSupportedException("Federation enrollment is not supported by this client.");
+
+    /// <summary>
     /// Get an event store by name and optional namespace.
     /// </summary>
     /// <param name="name">Name of the event store to get.</param>

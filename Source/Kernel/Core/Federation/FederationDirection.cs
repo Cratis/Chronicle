@@ -1,0 +1,24 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+namespace Cratis.Chronicle.Federation;
+
+/// <summary>
+/// Represents which way events flow on a hosted federation link, seen from the kernel that accepts the connection.
+/// </summary>
+/// <remarks>
+/// Who dials is decoupled from which way data flows (decision 0032). Each direction is governed by its own policy entry.
+/// The values are explicit and never renumbered; they are part of the persisted policy events and the wire contract.
+/// </remarks>
+public enum FederationDirection
+{
+    /// <summary>
+    /// The acceptor is the producer: the dialer pulls events from the acceptor's outbox.
+    /// </summary>
+    AcceptorOutbound = 0,
+
+    /// <summary>
+    /// The acceptor is the consumer: the dialer serves events from its own outbox to the acceptor.
+    /// </summary>
+    AcceptorInbound = 1
+}

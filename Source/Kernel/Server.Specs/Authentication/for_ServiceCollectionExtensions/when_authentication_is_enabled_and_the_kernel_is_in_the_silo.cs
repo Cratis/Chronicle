@@ -36,5 +36,7 @@ public class when_authentication_is_enabled_and_the_kernel_is_in_the_silo : give
     [Fact] void should_keep_the_schemes_of_the_operations_policy() => _options.GetPolicy(WellKnownAuthorizationPolicies.AdministratorOperations)!.AuthenticationSchemes.ShouldContain("MultiScheme");
     [Fact] void should_require_an_authenticated_user_for_administration() => _options.GetPolicy(WellKnownAuthorizationPolicies.Administrator)!.Requirements.OfType<DenyAnonymousAuthorizationRequirement>().ShouldNotBeEmpty();
     [Fact] void should_require_an_authenticated_user_for_operations() => _options.GetPolicy(WellKnownAuthorizationPolicies.AdministratorOperations)!.Requirements.OfType<DenyAnonymousAuthorizationRequirement>().ShouldNotBeEmpty();
+    [Fact] void should_keep_the_schemes_of_the_federation_enrollment_policy() => _options.GetPolicy(WellKnownAuthorizationPolicies.FederationEnrollment)!.AuthenticationSchemes.ShouldContain("MultiScheme");
+    [Fact] void should_require_an_authenticated_user_for_federation_enrollment() => _options.GetPolicy(WellKnownAuthorizationPolicies.FederationEnrollment)!.Requirements.OfType<DenyAnonymousAuthorizationRequirement>().ShouldNotBeEmpty();
     [Fact] void should_require_authentication_in_the_fallback_policy() => _options.FallbackPolicy!.Requirements.OfType<DenyAnonymousAuthorizationRequirement>().ShouldNotBeEmpty();
 }

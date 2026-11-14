@@ -16,6 +16,8 @@ internal sealed class Federation(
     global::Cratis.Arc.Commands.ICommandPipeline commandPipeline,
     global::Cratis.Chronicle.Federation.IFederationRegistry federationRegistry,
     global::Cratis.Chronicle.Federation.IFederationStatus federationStatus,
+    global::Cratis.Chronicle.Federation.IFederationCertificateRegistry federationCertificateRegistry,
+    global::System.TimeProvider timeProvider,
     global::Microsoft.Extensions.Logging.ILogger<global::Cratis.Chronicle.Services.Federation.Federation> logger) : global::Cratis.Chronicle.Contracts.Federation.IFederation
 {
     /// <inheritdoc/>
@@ -25,16 +27,66 @@ internal sealed class Federation(
             new global::Cratis.Chronicle.Federation.BindFederationPeer(request.Id, request.LogicalSource, request.Endpoint, request.ServerPin, request.ClientCertificate, request.RemoteEventStore, request.RemoteNamespace, request.TargetEventStore, request.TargetNamespace));
 
     /// <inheritdoc/>
+    public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult<global::Cratis.Chronicle.Contracts.Federation.CreateFederationEnrollmentResponse>> CreateFederationEnrollment(global::Cratis.Chronicle.Contracts.Federation.CreateFederationEnrollmentRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
+        CommandExecutor.Execute<global::Cratis.Chronicle.Federation.FederationEnrollmentCreatedResult, global::Cratis.Chronicle.Contracts.Federation.CreateFederationEnrollmentResponse>(
+            commandPipeline,
+            new global::Cratis.Chronicle.Federation.CreateFederationEnrollment(request.Subject, request.Instance),
+            response => ToCreateFederationEnrollmentResponse(response));
+
+    /// <inheritdoc/>
+    public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult<global::Cratis.Chronicle.Contracts.Federation.RedeemFederationEnrollmentResponse>> RedeemFederationEnrollment(global::Cratis.Chronicle.Contracts.Federation.RedeemFederationEnrollmentRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
+        CommandExecutor.Execute<global::Cratis.Chronicle.Federation.FederationRedemption, global::Cratis.Chronicle.Contracts.Federation.RedeemFederationEnrollmentResponse>(
+            commandPipeline,
+            new global::Cratis.Chronicle.Federation.RedeemFederationEnrollment(request.Code),
+            response => ToRedeemFederationEnrollmentResponse(response));
+
+    /// <inheritdoc/>
+    public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> ResumeFederationPolicy(global::Cratis.Chronicle.Contracts.Federation.ResumeFederationPolicyRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
+        CommandExecutor.Execute(
+            commandPipeline,
+            new global::Cratis.Chronicle.Federation.ResumeFederationPolicy(request.Subject));
+
+    /// <inheritdoc/>
+    public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> RevokeFederationEnrollment(global::Cratis.Chronicle.Contracts.Federation.RevokeFederationEnrollmentRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
+        CommandExecutor.Execute(
+            commandPipeline,
+            new global::Cratis.Chronicle.Federation.RevokeFederationEnrollment(request.Id));
+
+    /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> RevokeFederationLink(global::Cratis.Chronicle.Contracts.Federation.RevokeFederationLinkRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         CommandExecutor.Execute(
             commandPipeline,
             new global::Cratis.Chronicle.Federation.RevokeFederationLink(request.Id));
 
     /// <inheritdoc/>
+    public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> RevokeFederationPolicy(global::Cratis.Chronicle.Contracts.Federation.RevokeFederationPolicyRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
+        CommandExecutor.Execute(
+            commandPipeline,
+            new global::Cratis.Chronicle.Federation.RevokeFederationPolicy(request.Subject));
+
+    /// <inheritdoc/>
+    public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> RevokeFederationPolicyDirection(global::Cratis.Chronicle.Contracts.Federation.RevokeFederationPolicyDirectionRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
+        CommandExecutor.Execute(
+            commandPipeline,
+            new global::Cratis.Chronicle.Federation.RevokeFederationPolicyDirection(request.Subject, (global::Cratis.Chronicle.Federation.FederationDirection)request.Direction));
+
+    /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> SetFederationGrant(global::Cratis.Chronicle.Contracts.Federation.SetFederationGrantRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         CommandExecutor.Execute(
             commandPipeline,
             new global::Cratis.Chronicle.Federation.SetFederationGrant(request.Id, request.ClientPin, request.EventStore, request.Namespaces, request.AllPublic, request.EventTypes));
+
+    /// <inheritdoc/>
+    public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> SetFederationPolicy(global::Cratis.Chronicle.Contracts.Federation.SetFederationPolicyRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
+        CommandExecutor.Execute(
+            commandPipeline,
+            new global::Cratis.Chronicle.Federation.SetFederationPolicy(request.Subject, (global::Cratis.Chronicle.Federation.FederationDirection)request.Direction, request.EventStore, request.Namespace, request.AllPublic, request.EventTypes));
+
+    /// <inheritdoc/>
+    public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> SuspendFederationPolicy(global::Cratis.Chronicle.Contracts.Federation.SuspendFederationPolicyRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
+        CommandExecutor.Execute(
+            commandPipeline,
+            new global::Cratis.Chronicle.Federation.SuspendFederationPolicy(request.Subject));
 
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> UnbindFederationPeer(global::Cratis.Chronicle.Contracts.Federation.UnbindFederationPeerRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
@@ -55,6 +107,28 @@ internal sealed class Federation(
 
     /// <inheritdoc/>
     [global::Microsoft.AspNetCore.Authorization.Authorize(Policy = "Chronicle.Administrator")]
+    public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.Federation.FederationEnrollmentResponse>>> AllEnrollments(global::ProtoBuf.Grpc.CallContext callContext = default) =>
+        QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Federation.FederationEnrollmentResponse>>(
+            async () =>
+            {
+                var result = await global::Cratis.Chronicle.Federation.FederationEnrollment.AllEnrollments(federationCertificateRegistry, timeProvider);
+                return result.Select(ToFederationEnrollmentResponse).ToList();
+            },
+            exception => logger.QueryFailed(exception, "Federation", "AllEnrollments"));
+
+    /// <inheritdoc/>
+    [global::Microsoft.AspNetCore.Authorization.Authorize(Policy = "Chronicle.Federation.Enroll")]
+    public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<global::Cratis.Chronicle.Contracts.Federation.FederationEnrollmentStatusResponse>> CurrentEnrollmentStatus(global::ProtoBuf.Grpc.CallContext callContext = default) =>
+        QueryExecutor.Execute<global::Cratis.Chronicle.Contracts.Federation.FederationEnrollmentStatusResponse>(
+            async () =>
+            {
+                var result = await global::Cratis.Chronicle.Federation.FederationEnrollmentStatus.CurrentEnrollmentStatus(federationCertificateRegistry, timeProvider);
+                return ToFederationEnrollmentStatusResponse(result);
+            },
+            exception => logger.QueryFailed(exception, "Federation", "CurrentEnrollmentStatus"));
+
+    /// <inheritdoc/>
+    [global::Microsoft.AspNetCore.Authorization.Authorize(Policy = "Chronicle.Administrator")]
     public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.Federation.FederationGrantInformationResponse>>> AllGrants(global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Federation.FederationGrantInformationResponse>>(
             async () =>
@@ -63,6 +137,46 @@ internal sealed class Federation(
                 return result.Select(ToFederationGrantInformationResponse).ToList();
             },
             exception => logger.QueryFailed(exception, "Federation", "AllGrants"));
+
+    /// <inheritdoc/>
+    [global::Microsoft.AspNetCore.Authorization.Authorize(Policy = "Chronicle.Administrator")]
+    public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.Federation.FederationIssuedCertificateResponse>>> AllIssuedCertificates(global::ProtoBuf.Grpc.CallContext callContext = default) =>
+        QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Federation.FederationIssuedCertificateResponse>>(
+            async () =>
+            {
+                var result = await global::Cratis.Chronicle.Federation.FederationIssuedCertificate.AllIssuedCertificates(federationCertificateRegistry, timeProvider);
+                return result.Select(ToFederationIssuedCertificateResponse).ToList();
+            },
+            exception => logger.QueryFailed(exception, "Federation", "AllIssuedCertificates"));
+
+    /// <inheritdoc/>
+    [global::Microsoft.AspNetCore.Authorization.Authorize(Policy = "Chronicle.Administrator")]
+    public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.Federation.FederationPolicyResponse>>> AllPolicies(global::ProtoBuf.Grpc.CallContext callContext = default) =>
+        QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Federation.FederationPolicyResponse>>(
+            async () =>
+            {
+                var result = await global::Cratis.Chronicle.Federation.FederationPolicy.AllPolicies(federationCertificateRegistry);
+                return result.Select(ToFederationPolicyResponse).ToList();
+            },
+            exception => logger.QueryFailed(exception, "Federation", "AllPolicies"));
+
+    static global::Cratis.Chronicle.Contracts.Federation.CreateFederationEnrollmentResponse ToCreateFederationEnrollmentResponse(global::Cratis.Chronicle.Federation.FederationEnrollmentCreatedResult source) =>
+        new()
+        {
+            Id = source.Id,
+            Code = source.Code,
+            ExpiresAt = (global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset)source.ExpiresAt
+        };
+
+    static global::Cratis.Chronicle.Contracts.Federation.RedeemFederationEnrollmentResponse ToRedeemFederationEnrollmentResponse(global::Cratis.Chronicle.Federation.FederationRedemption source) =>
+        new()
+        {
+            Identity = source.Identity,
+            Serial = source.Serial,
+            NotAfter = (global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset)source.NotAfter,
+            Endpoint = source.Endpoint,
+            AlreadyEnrolled = source.AlreadyEnrolled
+        };
 
     static global::Cratis.Chronicle.Contracts.Federation.FederationBindingResponse ToFederationBindingResponse(global::Cratis.Chronicle.Federation.FederationBinding source) =>
         new()
@@ -85,6 +199,31 @@ internal sealed class Federation(
             LastError = source.LastError
         };
 
+    static global::Cratis.Chronicle.Contracts.Federation.FederationEnrollmentResponse ToFederationEnrollmentResponse(global::Cratis.Chronicle.Federation.FederationEnrollment source) =>
+        new()
+        {
+            Id = source.Id,
+            Subject = source.Subject,
+            Instance = source.Instance,
+            CreatedAt = (global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset)source.CreatedAt,
+            ExpiresAt = (global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset)source.ExpiresAt,
+            CreatedBy = source.CreatedBy,
+            Status = source.Status
+        };
+
+    static global::Cratis.Chronicle.Contracts.Federation.FederationEnrollmentStatusResponse ToFederationEnrollmentStatusResponse(global::Cratis.Chronicle.Federation.FederationEnrollmentStatus source) =>
+        new()
+        {
+            Enrolled = source.Enrolled,
+            Identity = source.Identity,
+            Serial = source.Serial,
+            NotAfter = source.NotAfter is null ? null : (global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset?)source.NotAfter,
+            RenewAfter = source.RenewAfter is null ? null : (global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset?)source.RenewAfter,
+            Endpoint = source.Endpoint,
+            AuthorityFingerprint = source.AuthorityFingerprint,
+            Expired = source.Expired
+        };
+
     static global::Cratis.Chronicle.Contracts.Federation.FederationGrantInformationResponse ToFederationGrantInformationResponse(global::Cratis.Chronicle.Federation.FederationGrantInformation source) =>
         new()
         {
@@ -100,5 +239,28 @@ internal sealed class Federation(
             EventsDelivered = source.EventsDelivered,
             BytesDelivered = source.BytesDelivered,
             Throttled = source.Throttled
+        };
+
+    static global::Cratis.Chronicle.Contracts.Federation.FederationIssuedCertificateResponse ToFederationIssuedCertificateResponse(global::Cratis.Chronicle.Federation.FederationIssuedCertificate source) =>
+        new()
+        {
+            Serial = source.Serial,
+            EnrollmentId = source.EnrollmentId,
+            Subject = source.Subject,
+            Instance = source.Instance,
+            Identity = source.Identity,
+            NotBefore = (global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset)source.NotBefore,
+            NotAfter = (global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset)source.NotAfter,
+            Reason = source.Reason,
+            Status = source.Status
+        };
+
+    static global::Cratis.Chronicle.Contracts.Federation.FederationPolicyResponse ToFederationPolicyResponse(global::Cratis.Chronicle.Federation.FederationPolicy source) =>
+        new()
+        {
+            Subject = source.Subject,
+            Status = (global::Cratis.Chronicle.Contracts.Federation.FederationPolicyStatus)source.Status,
+            Entries = source.Entries.Select(element0 => element0.ToContract()).ToList(),
+            ChangedBy = source.ChangedBy
         };
 }

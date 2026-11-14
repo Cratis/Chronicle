@@ -27,6 +27,8 @@ public class AuthorizationDecisions(
     IStoreEntitlementsCache? cache = null,
     IHttpContextAccessor? httpContextAccessor = null) : IAuthorizationDecisions
 {
+    static readonly HashSet<string> _internalClientClaims = ["name"];
+    static readonly HashSet<string> _externalClientClaims = ["client_id", "azp"];
     static StoreDecisionInputs? _fallbackInputs;
 
     /// <summary>Gets immutable inputs for the current snapshot.</summary>
@@ -51,6 +53,11 @@ public class AuthorizationDecisions(
             if (IsUnenrolled(capability, scope)) return Allow(AuthorizationReason.NotEnrolled, capability, scope);
             if (!options.Value.Authentication.Enabled) return Allow(AuthorizationReason.AuthenticationDisabled, capability, scope);
             if (principal?.Identity?.IsAuthenticated is not true) return Deny(AuthorizationReason.NoPrincipal, capability, scope);
+            if (capability == WellKnownCapabilities.EnrollFederation && IsEnrollingApplication(principal))
+            {
+                return Allow(AuthorizationReason.Granted, capability, scope);
+            }
+
             return IsOrdinaryStoreScope(capability, scope)
                 ? DecideStore(principal, capability, scope, services)
                 : DecideAdministrator(principal, capability, scope, services);
@@ -75,6 +82,47 @@ public class AuthorizationDecisions(
         capability == WellKnownCapabilities.OperateEventStore
         && scope.EventStore is not null
         && !string.Equals(scope.EventStore.Value, EventStoreName.System.Value, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Gets whether the principal is an application whose client id the operator configured to enroll this kernel.
+    /// </summary>
+    /// <remarks>
+    /// Decided from the already-validated claims and the configuration alone: no I/O and no cached result. A principal that carries
+    /// a user marker is never an application. With the internal authority the client id is the name claim Chronicle itself minted
+    /// into the token; with an external authority it is the client id or authorized-party claim of that authority's token.
+    /// </remarks>
+    /// <param name="principal">The authenticated caller.</param>
+    /// <returns>True when the caller is a configured enrolling application.</returns>
+    bool IsEnrollingApplication(ClaimsPrincipal principal)
+    {
+        var configured = options.Value.Federation.Enrollment.Applications;
+        if (configured?.Any() is not true)
+        {
+            return false;
+        }
+
+        if (principal.HasClaim(ChronicleClaimTypes.Principal, ChronicleClaimTypes.User)
+            || principal.Claims.Any(_ => _.Type == ChronicleClaims.PrincipalKind))
+        {
+            return false;
+        }
+
+        var claimTypes = options.Value.Authentication.UseInternalAuthority ? _internalClientClaims : _externalClientClaims;
+        foreach (var claim in principal.Claims)
+        {
+            if (!claimTypes.Contains(claim.Type) || string.IsNullOrEmpty(claim.Value))
+            {
+                continue;
+            }
+
+            if (configured.Any(_ => string.Equals(_, claim.Value, StringComparison.Ordinal)))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     Task<AuthorizationDecision> Allow(AuthorizationReason reason, Capability capability, AuthorizationScope scope) => Inputs.Result(reason, capability, scope, true);
     Task<AuthorizationDecision> Deny(AuthorizationReason reason, Capability capability, AuthorizationScope scope) => Inputs.Result(reason, capability, scope, false);
