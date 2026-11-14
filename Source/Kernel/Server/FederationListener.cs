@@ -15,12 +15,17 @@ internal static class FederationListener
     /// Loads the federation certificate, or returns null when federation is disabled.
     /// </summary>
     /// <param name="options">The Chronicle options.</param>
-    /// <returns>The certificate, or null when federation is disabled.</returns>
+    /// <returns>The certificate, or null when federation is disabled or hosted federation issues the listener certificate itself.</returns>
     /// <exception cref="InvalidOperationException">Thrown when federation is enabled without a usable certificate.</exception>
     internal static X509Certificate2? LoadCertificate(ChronicleOptions options)
     {
         var federation = options.Federation;
         if (!federation.Enabled)
+        {
+            return null;
+        }
+
+        if (IssuesOwnCertificate(options))
         {
             return null;
         }
@@ -40,20 +45,29 @@ internal static class FederationListener
     }
 
     /// <summary>
+    /// Determines whether the listener presents a certificate the kernel issues itself, from its own federation authority.
+    /// That is the case for hosted federation when no certificate path is configured.
+    /// </summary>
+    /// <param name="options">The Chronicle options.</param>
+    /// <returns>True when the kernel issues the listener certificate.</returns>
+    internal static bool IssuesOwnCertificate(ChronicleOptions options) =>
+        options.Federation.Enabled && options.Federation.Hosted.Enabled && string.IsNullOrEmpty(options.Federation.CertificatePath);
+
+    /// <summary>
     /// Registers the federation listener when federation is enabled.
     /// </summary>
     /// <param name="options">The Chronicle options.</param>
     /// <param name="certificate">The certificate returned by <see cref="LoadCertificate"/>.</param>
-    /// <param name="listen">Registers a federation listener on a port with a certificate.</param>
+    /// <param name="listen">Registers a federation listener on a port with a certificate, or with none when the kernel issues its own.</param>
     /// <exception cref="InvalidOperationException">Thrown when federation is enabled without a certificate, or its port collides with another listener.</exception>
-    internal static void Configure(ChronicleOptions options, X509Certificate2? certificate, Action<int, X509Certificate2> listen)
+    internal static void Configure(ChronicleOptions options, X509Certificate2? certificate, Action<int, X509Certificate2?> listen)
     {
         if (!options.Federation.Enabled)
         {
             return;
         }
 
-        if (certificate is null)
+        if (certificate is null && !IssuesOwnCertificate(options))
         {
             throw new InvalidOperationException("Federation is enabled but no certificate is available.");
         }
