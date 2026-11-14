@@ -1,6 +1,6 @@
 ---
 title: Rebuild a Chronicle constraint index
-description: Start and monitor an explicit unique or closing constraint index rebuild without changing the registered declaration.
+description: Start and monitor an explicit unique or closing constraint index rebuild with ReindexConstraints, without changing the registered declaration.
 ---
 
 Use `ReindexConstraints` to repair persisted claims or closures without editing and re-registering a declaration. The command starts the existing durable reindex job; it does not rewrite event history or change constraint definitions.

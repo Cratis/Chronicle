@@ -14,4 +14,9 @@ public interface IFederationPullConnection : IDisposable
     /// Gets the pull service of the producer.
     /// </summary>
     IFederationPull Service { get; }
+
+    /// <summary>
+    /// Gets the service the dialer produces through, on the same connection as <see cref="Service"/>.
+    /// </summary>
+    IFederationServe ServeService { get; }
 }

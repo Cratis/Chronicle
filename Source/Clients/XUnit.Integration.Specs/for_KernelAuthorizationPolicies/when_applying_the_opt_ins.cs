@@ -20,7 +20,7 @@ public class when_applying_the_opt_ins : Specification
 
     void Because() => _optedIn = [.. _provider.GetServices<AnonymousAspNetAuthorizationPolicyRegistration>().Select(_ => _.Name)];
 
-    [Fact] void should_opt_both_policies_into_anonymous_evaluation() => _optedIn.ShouldContainOnly("Chronicle.Administrator", "Chronicle.Administrator.Operations");
+    [Fact] void should_opt_every_kernel_policy_into_anonymous_evaluation() => _optedIn.ShouldContainOnly("Chronicle.Administrator", "Chronicle.Administrator.Operations", "Chronicle.Federation.Enroll");
 
     void Destroy() => _provider.Dispose();
 }

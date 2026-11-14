@@ -115,14 +115,24 @@ public partial class ProjectionsManager
 
     async Task IgnoreOlderRegistrations(IEnumerable<ProjectionDefinition> definitions)
     {
+        var unrecorded = new List<IgnoredRegistration>();
         foreach (var definition in definitions)
         {
             var stored = State.Projections.First(projection => projection.Identifier == definition.Identifier);
 
             // Registrations are stamped with their version, so an older one always carries it.
             logger.IgnoringOlderRegistration(definition.Identifier, definition.Version!, stored.Version!);
-            await AddIgnoredRegistrationRecommendation(definition.Identifier, definition.Version!, stored.Version!);
+
+            // A client that keeps retrying, or several replicas of an old version, register the same ignored
+            // definitions again and again. Each pair is only recommended once per activation.
+            var ignored = new IgnoredRegistration(definition.Identifier, definition.Version!, stored.Version!);
+            if (_recordedIgnoredRegistrations.Add(ignored))
+            {
+                unrecorded.Add(ignored);
+            }
         }
+
+        await AddIgnoredRegistrationRecommendations(unrecorded);
     }
 
     bool IsOlderThanStored(ProjectionDefinition definition, string? version) =>
@@ -143,23 +153,63 @@ public partial class ProjectionsManager
             IsRegisteredBy(stored.Identifier, registrant) &&
             ProjectionVersions.IsOlder(version, stored.Version));
 
-    async Task AddIgnoredRegistrationRecommendation(ProjectionId identifier, string incomingVersion, string storedVersion)
+    /// <summary>
+    /// Recommends, in every namespace, looking at each ignored registration. The recommendation is advisory, so it
+    /// is fanned out with bounded concurrency and never fails the registration it describes. Asking one namespace at
+    /// a time for each projection kept this non-reentrant grain busy for as long as it takes to make every
+    /// projection times every namespace sequential calls, which starved every other registration queued behind it.
+    /// </summary>
+    /// <param name="ignoredRegistrations">The ignored registrations not yet recommended.</param>
+    /// <returns>Awaitable task.</returns>
+    async Task AddIgnoredRegistrationRecommendations(List<IgnoredRegistration> ignoredRegistrations)
     {
-        var namespaces = await GrainFactory.GetGrain<INamespaces>(_eventStoreName).GetAll();
-        foreach (var @namespace in namespaces)
-        {
-            var recommendationsManager = GrainFactory.GetGrain<IRecommendationsManager>(0, new RecommendationsManagerKey(_eventStoreName, @namespace));
+        if (ignoredRegistrations.Count == 0) return;
 
-            // The manager deduplicates on the request, so the same projection and version pair is only ever listed once.
-            await recommendationsManager.Add<IIgnoredProjectionRegistrationRecommendation, IgnoredProjectionRegistrationRequest>(
-                $"Projection registration ignored: projection '{identifier}' was registered by an older client version {incomingVersion} than the stored {storedVersion}. Deploy the newer version, or set Cratis:Chronicle:SoftwareVersion (environment variable Cratis__Chronicle__SoftwareVersion) on the client to a version higher than the stored {storedVersion} to roll back deliberately.",
-                new()
+        try
+        {
+            var namespaces = await GrainFactory.GetGrain<INamespaces>(_eventStoreName).GetAll();
+            using var gate = new SemaphoreSlim(IgnoredRegistrationRecommendationConcurrency);
+            var additions = ignoredRegistrations
+                .SelectMany(ignored => namespaces.Select(@namespace => (Ignored: ignored, Namespace: @namespace)))
+                .Select(async pair =>
                 {
-                    ProjectionId = identifier,
-                    IncomingVersion = incomingVersion,
-                    StoredVersion = storedVersion
+                    await gate.WaitAsync();
+                    try
+                    {
+                        await AddIgnoredRegistrationRecommendation(pair.Ignored, pair.Namespace);
+                    }
+                    finally
+                    {
+                        gate.Release();
+                    }
                 });
+            await Task.WhenAll(additions);
         }
+        catch (Exception ex)
+        {
+            foreach (var ignored in ignoredRegistrations)
+            {
+                _recordedIgnoredRegistrations.Remove(ignored);
+            }
+
+            logger.FailedToRecommendIgnoredRegistrations(ex, _eventStoreName, ignoredRegistrations.Count);
+        }
+    }
+
+    async Task AddIgnoredRegistrationRecommendation(IgnoredRegistration ignored, Concepts.EventStoreNamespaceName @namespace)
+    {
+        var (identifier, incomingVersion, storedVersion) = ignored;
+        var recommendationsManager = GrainFactory.GetGrain<IRecommendationsManager>(0, new RecommendationsManagerKey(_eventStoreName, @namespace));
+
+        // The manager deduplicates on the request, so the same projection and version pair is only ever listed once.
+        await recommendationsManager.Add<IIgnoredProjectionRegistrationRecommendation, IgnoredProjectionRegistrationRequest>(
+            $"Projection registration ignored: projection '{identifier}' was registered by an older client version {incomingVersion} than the stored {storedVersion}. Deploy the newer version, or set Cratis:Chronicle:SoftwareVersion (environment variable Cratis__Chronicle__SoftwareVersion) on the client to a version higher than the stored {storedVersion} to roll back deliberately.",
+            new()
+            {
+                ProjectionId = identifier,
+                IncomingVersion = incomingVersion,
+                StoredVersion = storedVersion
+            });
     }
 
     /// <summary>

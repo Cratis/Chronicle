@@ -85,6 +85,9 @@ public class CacheEncryptionKeyStorage(
     public IReadOnlyList<EncryptionKeyStorageCapability> Capabilities => actualKeyStore.Capabilities;
 
     /// <inheritdoc/>
+    public bool KeepsInternalSecretsOutsideTheEventStoreDatabases => actualKeyStore.KeepsInternalSecretsOutsideTheEventStoreDatabases;
+
+    /// <inheritdoc/>
     public EncryptionKeyFenceGuarantees FenceGuarantees => actualKeyStore.FenceGuarantees;
 
     /// <summary>

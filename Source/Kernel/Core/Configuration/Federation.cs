@@ -49,6 +49,26 @@ public class Federation
     public IDictionary<string, FederationGrantConfiguration> Grants { get; init; } = new Dictionary<string, FederationGrantConfiguration>(StringComparer.Ordinal);
 
     /// <summary>
+    /// Gets or inits the hosted federation configuration, where this kernel is the certificate authority for the links of many applications.
+    /// </summary>
+    public FederationHostedOptions Hosted { get; init; } = new();
+
+    /// <summary>
+    /// Gets or inits the configuration of this kernel as a peer that enrolls with a hosted federation authority.
+    /// </summary>
+    public FederationEnrollmentOptions Enrollment { get; init; } = new();
+
+    /// <summary>
+    /// Gets or inits the configuration of this kernel as a dialer that connects out with its enrolled certificate and serves both directions on one connection.
+    /// </summary>
+    public FederationDialOptions Dial { get; init; } = new();
+
+    /// <summary>
+    /// Gets whether the kernel runs the consumer side: <see cref="Enabled"/> keeps starting it alongside the listener, and <see cref="FederationDialOptions.Enabled"/> starts it with no listener.
+    /// </summary>
+    public bool ConsumerEnabled => Enabled || Dial.Enabled;
+
+    /// <summary>
     /// Gets or inits the per-link limits.
     /// </summary>
     public FederationLimits Limits { get; init; } = new();
