@@ -202,7 +202,16 @@ class [GrainType("reindexconstraints")] Cratis.Chronicle.Events.Constraints.Rein
 
 class [GrainType("reindexconstraintsstep")] Cratis.Chronicle.Events.Constraints.ReindexConstraintsStep
 
+class [GrainType("federationauthority")] Cratis.Chronicle.Federation.FederationAuthority
+
 class [GrainType("federationconsumer")] Cratis.Chronicle.Federation.FederationConsumer
+
+interface [GrainInterfaceType("Cratis.Chronicle.Federation.IFederationAuthority")] Cratis.Chronicle.Federation.IFederationAuthority [Version(1)]
+  6F347AF8: CreateEnrollment(string, string) -> Task<Cratis.Chronicle.Federation.FederationEnrollmentCreatedResult>
+  56C99D96: EnsureAuthority() -> Task<string>
+  C1C47F8B: Redeem(string, string, byte[]) -> Task<Cratis.Chronicle.Federation.FederationIssuance>
+  F8536876: Renew(byte[], byte[]) -> Task<Cratis.Chronicle.Federation.FederationIssuance>
+  0270BD46: RevokeEnrollment(string) -> Task
 
 interface [GrainInterfaceType("Cratis.Chronicle.Federation.IFederationConsumer")] Cratis.Chronicle.Federation.IFederationConsumer [Version(1)]
   4939B1CE: Ensure() -> Task

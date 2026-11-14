@@ -28,6 +28,30 @@ public interface IFederation
     [Operation]
     Task<CommandResult> BindFederationPeer(BindFederationPeerRequest request, CallContext callContext = default);
     /// <summary>
+    /// Executes the CreateFederationEnrollment command.
+    /// </summary>
+    /// <param name = "request">The CreateFederationEnrollment request.</param>
+    /// <param name = "callContext">The gRPC call context.</param>
+    /// <returns>The command result.</returns>
+    [Operation]
+    Task<CommandResult<CreateFederationEnrollmentResponse>> CreateFederationEnrollment(CreateFederationEnrollmentRequest request, CallContext callContext = default);
+    /// <summary>
+    /// Executes the RedeemFederationEnrollment command.
+    /// </summary>
+    /// <param name = "request">The RedeemFederationEnrollment request.</param>
+    /// <param name = "callContext">The gRPC call context.</param>
+    /// <returns>The command result.</returns>
+    [Operation]
+    Task<CommandResult<RedeemFederationEnrollmentResponse>> RedeemFederationEnrollment(RedeemFederationEnrollmentRequest request, CallContext callContext = default);
+    /// <summary>
+    /// Executes the RevokeFederationEnrollment command.
+    /// </summary>
+    /// <param name = "request">The RevokeFederationEnrollment request.</param>
+    /// <param name = "callContext">The gRPC call context.</param>
+    /// <returns>The command result.</returns>
+    [Operation]
+    Task<CommandResult> RevokeFederationEnrollment(RevokeFederationEnrollmentRequest request, CallContext callContext = default);
+    /// <summary>
     /// Executes the RevokeFederationLink command.
     /// </summary>
     /// <param name = "request">The RevokeFederationLink request.</param>
@@ -59,12 +83,33 @@ public interface IFederation
     [Operation]
     Task<QueryResult<IEnumerable<FederationBindingResponse>>> AllBindings(CallContext callContext = default);
     /// <summary>
+    /// Executes the AllEnrollments query.
+    /// </summary>
+    /// <param name = "callContext">The gRPC call context.</param>
+    /// <returns>The query result.</returns>
+    [Operation]
+    Task<QueryResult<IEnumerable<FederationEnrollmentResponse>>> AllEnrollments(CallContext callContext = default);
+    /// <summary>
+    /// Executes the CurrentEnrollmentStatus query.
+    /// </summary>
+    /// <param name = "callContext">The gRPC call context.</param>
+    /// <returns>The query result.</returns>
+    [Operation]
+    Task<QueryResult<FederationEnrollmentStatusResponse>> CurrentEnrollmentStatus(CallContext callContext = default);
+    /// <summary>
     /// Executes the AllGrants query.
     /// </summary>
     /// <param name = "callContext">The gRPC call context.</param>
     /// <returns>The query result.</returns>
     [Operation]
     Task<QueryResult<IEnumerable<FederationGrantInformationResponse>>> AllGrants(CallContext callContext = default);
+    /// <summary>
+    /// Executes the AllIssuedCertificates query.
+    /// </summary>
+    /// <param name = "callContext">The gRPC call context.</param>
+    /// <returns>The query result.</returns>
+    [Operation]
+    Task<QueryResult<IEnumerable<FederationIssuedCertificateResponse>>> AllIssuedCertificates(CallContext callContext = default);
 }
 
 /// <summary>
@@ -126,6 +171,113 @@ public class BindFederationPeerRequest
     /// </summary>
     [ProtoMember(9)]
     public string TargetNamespace { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Represents the CreateFederationEnrollmentRequest message.
+/// </summary>
+[ProtoContract]
+public class CreateFederationEnrollmentRequest
+{
+    /// <summary>
+    /// Gets or sets the Subject.
+    /// </summary>
+    [ProtoMember(1)]
+    public string Subject { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the Instance.
+    /// </summary>
+    [ProtoMember(2)]
+    public string Instance { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Represents the CreateFederationEnrollmentResponse message.
+/// </summary>
+[ProtoContract]
+public class CreateFederationEnrollmentResponse
+{
+    /// <summary>
+    /// Gets or sets the Id.
+    /// </summary>
+    [ProtoMember(1)]
+    public string Id { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the Code.
+    /// </summary>
+    [ProtoMember(2)]
+    public string Code { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the ExpiresAt.
+    /// </summary>
+    [ProtoMember(3)]
+    public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset ExpiresAt { get; set; } = new();
+}
+
+/// <summary>
+/// Represents the RedeemFederationEnrollmentRequest message.
+/// </summary>
+[ProtoContract]
+public class RedeemFederationEnrollmentRequest
+{
+    /// <summary>
+    /// Gets or sets the Code.
+    /// </summary>
+    [ProtoMember(1)]
+    public string Code { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Represents the RedeemFederationEnrollmentResponse message.
+/// </summary>
+[ProtoContract]
+public class RedeemFederationEnrollmentResponse
+{
+    /// <summary>
+    /// Gets or sets the Identity.
+    /// </summary>
+    [ProtoMember(1)]
+    public string Identity { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the Serial.
+    /// </summary>
+    [ProtoMember(2)]
+    public string Serial { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the NotAfter.
+    /// </summary>
+    [ProtoMember(3)]
+    public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset NotAfter { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets the Endpoint.
+    /// </summary>
+    [ProtoMember(4)]
+    public string Endpoint { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the AlreadyEnrolled.
+    /// </summary>
+    [ProtoMember(5)]
+    public bool AlreadyEnrolled { get; set; }
+}
+
+/// <summary>
+/// Represents the RevokeFederationEnrollmentRequest message.
+/// </summary>
+[ProtoContract]
+public class RevokeFederationEnrollmentRequest
+{
+    /// <summary>
+    /// Gets or sets the Id.
+    /// </summary>
+    [ProtoMember(1)]
+    public string Id { get; set; } = string.Empty;
 }
 
 /// <summary>
@@ -301,6 +453,110 @@ public class FederationBindingResponse
 }
 
 /// <summary>
+/// Represents the FederationEnrollmentResponse message.
+/// </summary>
+[ProtoContract]
+public class FederationEnrollmentResponse
+{
+    /// <summary>
+    /// Gets or sets the Id.
+    /// </summary>
+    [ProtoMember(1)]
+    public string Id { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the Subject.
+    /// </summary>
+    [ProtoMember(2)]
+    public string Subject { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the Instance.
+    /// </summary>
+    [ProtoMember(3)]
+    public string Instance { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the CreatedAt.
+    /// </summary>
+    [ProtoMember(4)]
+    public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset CreatedAt { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets the ExpiresAt.
+    /// </summary>
+    [ProtoMember(5)]
+    public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset ExpiresAt { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets the CreatedBy.
+    /// </summary>
+    [ProtoMember(6)]
+    public string CreatedBy { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the Status.
+    /// </summary>
+    [ProtoMember(7)]
+    public string Status { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Represents the FederationEnrollmentStatusResponse message.
+/// </summary>
+[ProtoContract]
+public class FederationEnrollmentStatusResponse
+{
+    /// <summary>
+    /// Gets or sets the Enrolled.
+    /// </summary>
+    [ProtoMember(1)]
+    public bool Enrolled { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Identity.
+    /// </summary>
+    [ProtoMember(2)]
+    public string Identity { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the Serial.
+    /// </summary>
+    [ProtoMember(3)]
+    public string Serial { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the NotAfter.
+    /// </summary>
+    [ProtoMember(4)]
+    public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset NotAfter { get; set; }
+
+    /// <summary>
+    /// Gets or sets the RenewAfter.
+    /// </summary>
+    [ProtoMember(5)]
+    public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset RenewAfter { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Endpoint.
+    /// </summary>
+    [ProtoMember(6)]
+    public string Endpoint { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the AuthorityFingerprint.
+    /// </summary>
+    [ProtoMember(7)]
+    public string AuthorityFingerprint { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the Expired.
+    /// </summary>
+    [ProtoMember(8)]
+    public bool Expired { get; set; }
+}
+
+/// <summary>
 /// Represents the FederationGrantInformationResponse message.
 /// </summary>
 [ProtoContract]
@@ -377,4 +633,65 @@ public class FederationGrantInformationResponse
     /// </summary>
     [ProtoMember(12)]
     public global::System.UInt64 Throttled { get; set; }
+}
+
+/// <summary>
+/// Represents the FederationIssuedCertificateResponse message.
+/// </summary>
+[ProtoContract]
+public class FederationIssuedCertificateResponse
+{
+    /// <summary>
+    /// Gets or sets the Serial.
+    /// </summary>
+    [ProtoMember(1)]
+    public string Serial { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the EnrollmentId.
+    /// </summary>
+    [ProtoMember(2)]
+    public string EnrollmentId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the Subject.
+    /// </summary>
+    [ProtoMember(3)]
+    public string Subject { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the Instance.
+    /// </summary>
+    [ProtoMember(4)]
+    public string Instance { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the Identity.
+    /// </summary>
+    [ProtoMember(5)]
+    public string Identity { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the NotBefore.
+    /// </summary>
+    [ProtoMember(6)]
+    public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset NotBefore { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets the NotAfter.
+    /// </summary>
+    [ProtoMember(7)]
+    public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset NotAfter { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets the Reason.
+    /// </summary>
+    [ProtoMember(8)]
+    public string Reason { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the Status.
+    /// </summary>
+    [ProtoMember(9)]
+    public string Status { get; set; } = string.Empty;
 }

@@ -41,6 +41,12 @@ public static class FederationPortPolicy
         var isPull = servesPull || IsHttpRoute(path);
         var onFederationPort = IsFederationPort(options, localPort);
 
+        // The enrollment routes are served on the federation listener only, and only when hosted federation is enabled.
+        if (IsEnrollmentRoute(path))
+        {
+            return !(onFederationPort && options.Federation.Hosted.Enabled);
+        }
+
         // The pull service is anonymous with respect to OAuth because a peer authenticates with its client certificate,
         // so it may only ever be reached through the federation listener, and never over the HTTP route.
         if (isPull)
@@ -62,6 +68,21 @@ public static class FederationPortPolicy
         ArgumentNullException.ThrowIfNull(options);
         return options.Federation.Enabled && localPort == options.Federation.Port;
     }
+
+    /// <summary>
+    /// Determines whether a request to a path must present a client certificate. Everything on the federation listener does,
+    /// except redeeming an enrollment, and fetching the public authority certificate it is checked against, which is how a peer without a certificate gets one.
+    /// </summary>
+    /// <param name="path">The request path.</param>
+    /// <returns>True when a client certificate is required.</returns>
+    public static bool RequiresClientCertificate(string? path) =>
+        !IsRoute(path, FederationEnrollmentRoutes.Redeem) && !IsRoute(path, FederationEnrollmentRoutes.Authority);
+
+    static bool IsEnrollmentRoute(string? path) =>
+        IsRoute(path, FederationEnrollmentRoutes.Redeem) || IsRoute(path, FederationEnrollmentRoutes.Renew) || IsRoute(path, FederationEnrollmentRoutes.Authority);
+
+    static bool IsRoute(string? path, string route) =>
+        path?.TrimEnd('/').Equals(route, StringComparison.OrdinalIgnoreCase) == true;
 
     static bool IsHttpRoute(string? path) =>
         path?.TrimEnd('/').Equals(HttpRoute, StringComparison.OrdinalIgnoreCase) == true;

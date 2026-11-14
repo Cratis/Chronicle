@@ -1,14 +1,24 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
-
 export * from './AllBindings';
+export * from './AllEnrollments';
 export * from './AllGrants';
+export * from './AllIssuedCertificates';
 export * from './BindFederationPeer';
+export * from './CreateFederationEnrollment';
+export * from './CurrentEnrollmentStatus';
 export * from './FederatedEvent';
 export * from './FederatedEventBatch';
 export * from './FederationBinding';
+export * from './FederationEnrollment';
+export * from './FederationEnrollmentCreatedResult';
+export * from './FederationEnrollmentStatus';
 export * from './FederationGrantInformation';
+export * from './FederationIssuedCertificate';
+export * from './FederationRedemption';
 export * from './Pull';
+export * from './RedeemFederationEnrollment';
+export * from './RevokeFederationEnrollment';
 export * from './RevokeFederationLink';
 export * from './SetFederationGrant';
 export * from './UnbindFederationPeer';
