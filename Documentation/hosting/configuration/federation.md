@@ -183,7 +183,9 @@ The kernel generates a key pair locally, so the private key never leaves it. It 
 
 For automated deployments, put the code in a file and set `Federation:Enrollment:CodePath`. A kernel that is not yet enrolled redeems it at startup. Do not put the code inline in configuration.
 
-To see where things stand, use `client.Federation.GetEnrollments()` and `GetIssuedCertificates()` on the authority, and `GetStatus()` on an enrolled kernel. To cut a customer off, call `client.Federation.Revoke(enrollmentId)`. It revokes the enrollment and every certificate issued from it, and takes effect at once. All of these need administrator rights.
+To see where things stand, use `client.Federation.GetEnrollments()` and `GetIssuedCertificates()` on the authority, and `GetStatus()` on an enrolled kernel. To cut a customer off, call `client.Federation.Revoke(enrollmentId)`. It revokes the enrollment and every certificate issued from it, and takes effect at once. Creating, revoking and listing enrollments and certificates needs administrator rights.
+
+Redeeming a code and reading the enrollment status of a kernel are decided by their own capability, `chronicle.federation.enroll` (a kernel-scope capability, see [decision 0024](https://github.com/Cratis/Chronicle/blob/main/decisions/0024-kernel-authorization-decision-point.md)), which the administrator role includes. The kernel has no way yet to grant a kernel-scope capability to anything but an administrator: store grants are scoped to a store and exclude the System store, and administrators are users, not applications. So an application's own client credential cannot redeem a code today. Redeem with an administrator, or drive it from configuration with `Federation:Enrollment:CodePath`.
 
 ### Renewal
 
@@ -195,9 +197,35 @@ The enrollment routes are on the same host and port as the federation service. T
 
 The unauthenticated surface is kept small: a request body of at most 8 KiB, a rate limit per source address (IPv6 sources are grouped by their /64), a constant-time token comparison, and one generic refusal for an unknown, expired, used or revoked enrollment. A renewal is accepted only for a certificate this kernel issued and has not revoked, so a leaked authority key alone cannot mint a working identity.
 
+### Policy per subject
+
+A certificate says who a peer is. A policy says what that peer may do. The policy is keyed by the opaque subject in the identity, so a subject with many links, for example one per product environment, has one policy. Set it on the authority kernel with these commands (administrator only):
+
+| Command | Effect |
+| --- | --- |
+| `SetFederationPolicy(Subject, Direction, EventStore, Namespace, AllPublic, EventTypes)` | Creates the policy of a subject, or changes what it may do in one direction. |
+| `SuspendFederationPolicy(Subject)` | Refuses the subject's links until it is resumed. |
+| `ResumeFederationPolicy(Subject)` | Admits a suspended subject again. |
+| `RevokeFederationPolicy(Subject)` | Refuses the subject's links for good. A revoked subject cannot be set again; enroll a new subject instead. |
+
+`AllPolicies` lists them. Every change is an event with the identity that acted, and takes effect on the subject's links at once without affecting any other subject.
+
+Each direction has its own entry, seen from the kernel that accepts the connection: `AcceptorOutbound` means the peer pulls events from this kernel, `AcceptorInbound` means the peer sends events to it. An entry names the target (an event store and a namespace) and the allowed event types, either every public event type or a list. The ceiling is always the public event types, and event types with protected personal data are never forwarded. Only `AcceptorOutbound` is served today; `AcceptorInbound` can be recorded now so a policy does not have to change when the peer-to-acceptor direction arrives.
+
+A peer is admitted only when all of these hold, and every check reads the current state:
+
+1. The client certificate chains to this kernel's authority and is within its validity.
+2. The identity in its subject alternative name is exactly `spiffe://<trust-domain>/customer/<subject>/kernel/<instance>` in this kernel's trust domain.
+3. Its serial number is in the registry of certificates this kernel issued, was not revoked, and was issued for that same identity. A certificate that chains but was never issued here, for example one signed with a leaked authority key, is refused.
+4. The subject has a policy and it is active, not suspended or revoked.
+
+The target comes from the policy alone, never from the certificate or the request. A pull request may leave the event store and namespace empty or name the policy's target, and anything else is refused, so one subject can never address another subject's target. Every refusal gives the peer the same empty, denied answer, so nothing about what exists can be learned; the reason is only logged on this kernel.
+
+Pinned grants and bindings are unaffected. A client certificate that matches a pinned grant is served by that grant only and is never widened by a policy. A certificate with no pinned grant is the only one considered for hosted admission.
+
 ### Audit trail
 
-Every step is an event in the system event log: `FederationAuthorityCreated`, `FederationEnrollmentCreated`, `FederationEnrollmentRevoked`, `FederationCertificateIssued` (subject, serial number, expiry, why, and who acted) and `FederationCertificateRevoked`, and on an enrolled kernel `FederationIdentityInstalled`. The `FederationCertificateIssued` events are the registry of every certificate the authority issued. Events never contain the token secret, the enrollment code or a private key. The private key of an enrolled kernel is recorded only encrypted with a secret held by the key custody.
+Every step is an event in the system event log: `FederationAuthorityCreated`, `FederationEnrollmentCreated`, `FederationEnrollmentRevoked`, `FederationCertificateIssued` (subject, serial number, expiry, why, and who acted) and `FederationCertificateRevoked`, `FederationPolicySet`, `FederationPolicySuspended`, `FederationPolicyResumed` and `FederationPolicyRevoked` for the policies, and on an enrolled kernel `FederationIdentityInstalled`. The `FederationCertificateIssued` events are the registry of every certificate the authority issued. Events never contain the token secret, the enrollment code or a private key. The private key of an enrolled kernel is recorded only encrypted with a secret held by the key custody.
 
 ## Rotating a certificate
 
