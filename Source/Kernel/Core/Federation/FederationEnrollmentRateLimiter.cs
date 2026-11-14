@@ -13,9 +13,17 @@ namespace Cratis.Chronicle.Federation;
 /// </summary>
 /// <remarks>
 /// A fixed one-minute window per source. IPv6 sources are grouped by their /64 prefix, because a single host is typically handed a whole /64.
-/// Memory is bounded: when too many sources are tracked, expired windows are dropped, and if that is not enough the oldest tenth are dropped.
-/// A full table never refuses everyone, because the routes are reachable before authentication and one flood must not lock the others out.
-/// Each <see cref="FederationEnrollmentBudget"/> has its own window, so a flood of one kind of request does not use up the other.
+/// Memory is bounded: when too many sources are tracked, expired windows are dropped, and if that is not enough the least recently seen tenth
+/// of the windows that are not throttled are dropped, so a source that is being throttled keeps its window while a flood of rotating
+/// sources, each seen once, is what gets evicted. A full table never refuses everyone, because the routes are reachable before authentication
+/// and one flood must not lock the others out.
+/// Each <see cref="FederationEnrollmentBudget"/> has its own window and its own concurrency pool, so a flood of one kind of request does not
+/// use up the other: unenrolled peers cannot hold every slot that renewals need.
+/// <para>
+/// Residual risk: the limit is per source, and an attacker with a very large number of sources, such as a whole IPv6 /48, still gets a request
+/// budget of one window per source. The renewal pool and the per-source windows keep renewals served, but a deployment facing such an attacker
+/// needs the network edge to limit it as well.
+/// </para>
 /// </remarks>
 /// <param name="timeProvider">The <see cref="TimeProvider"/> used to open and close windows.</param>
 [Singleton]
@@ -24,7 +32,7 @@ public class FederationEnrollmentRateLimiter(TimeProvider timeProvider)
     const int MaxTrackedSources = 10_000;
     static readonly TimeSpan _window = TimeSpan.FromMinutes(1);
     readonly ConcurrentDictionary<string, Window> _windows = new(StringComparer.Ordinal);
-    int _inFlight;
+    readonly int[] _inFlight = new int[Enum.GetValues<FederationEnrollmentBudget>().Length];
 
     /// <summary>
     /// Try to admit a request from a source.
@@ -54,10 +62,13 @@ public class FederationEnrollmentRateLimiter(TimeProvider timeProvider)
             {
                 window.Started = now;
                 window.Count = 0;
+                window.Throttled = false;
             }
 
             window.Count++;
-            return window.Count <= requestsPerMinute;
+            window.LastSeen = now;
+            window.Throttled = window.Count > requestsPerMinute;
+            return !window.Throttled;
         }
     }
 
@@ -65,16 +76,18 @@ public class FederationEnrollmentRateLimiter(TimeProvider timeProvider)
     /// Try to start serving a request, so that no more than <paramref name="maxConcurrent"/> are being served at once.
     /// </summary>
     /// <param name="maxConcurrent">How many requests may be served at once.</param>
+    /// <param name="budget">Which pool the request counts against. Each budget has its own, so renewals are never starved by anonymous requests.</param>
     /// <returns>A lease to dispose when the request has been served, or null when the route is at capacity and the request must be refused.</returns>
-    public IDisposable? TryEnter(int maxConcurrent)
+    public IDisposable? TryEnter(int maxConcurrent, FederationEnrollmentBudget budget = FederationEnrollmentBudget.Discovery)
     {
-        if (Interlocked.Increment(ref _inFlight) > maxConcurrent)
+        ref var inFlight = ref _inFlight[(int)budget];
+        if (Interlocked.Increment(ref inFlight) > maxConcurrent)
         {
-            Interlocked.Decrement(ref _inFlight);
+            Interlocked.Decrement(ref inFlight);
             return null;
         }
 
-        return new Lease(this);
+        return new Lease(this, (int)budget);
     }
 
     static string Key(IPAddress? source)
@@ -100,19 +113,24 @@ public class FederationEnrollmentRateLimiter(TimeProvider timeProvider)
 
     void EvictOldest()
     {
-        var oldest = _windows
+        var seen = _windows
             .Select(_ =>
             {
                 lock (_.Value)
                 {
-                    return (_.Key, _.Value.Started);
+                    return (_.Key, _.Value.LastSeen, _.Value.Throttled);
                 }
             })
-            .OrderBy(_ => _.Started)
+            .ToArray();
+
+        // Windows of sources being throttled are the last to go; the least recently seen of the rest are the first.
+        var oldest = seen
+            .OrderBy(_ => _.Throttled)
+            .ThenBy(_ => _.LastSeen)
             .Take(MaxTrackedSources / 10)
             .ToArray();
 
-        foreach (var (key, _) in oldest)
+        foreach (var (key, _, _) in oldest)
         {
             _windows.TryRemove(key, out _);
         }
@@ -135,7 +153,7 @@ public class FederationEnrollmentRateLimiter(TimeProvider timeProvider)
         }
     }
 
-    sealed class Lease(FederationEnrollmentRateLimiter limiter) : IDisposable
+    sealed class Lease(FederationEnrollmentRateLimiter limiter, int pool) : IDisposable
     {
         int _disposed;
 
@@ -143,7 +161,7 @@ public class FederationEnrollmentRateLimiter(TimeProvider timeProvider)
         {
             if (Interlocked.Exchange(ref _disposed, 1) == 0)
             {
-                Interlocked.Decrement(ref limiter._inFlight);
+                Interlocked.Decrement(ref limiter._inFlight[pool]);
             }
         }
     }
@@ -151,6 +169,10 @@ public class FederationEnrollmentRateLimiter(TimeProvider timeProvider)
     sealed class Window(long started)
     {
         public long Started { get; set; } = started;
+
+        public long LastSeen { get; set; } = started;
+
+        public bool Throttled { get; set; }
 
         public int Count { get; set; }
     }

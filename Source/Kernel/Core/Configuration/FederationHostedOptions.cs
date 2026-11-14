@@ -63,4 +63,10 @@ public class FederationHostedOptions
     /// Gets or inits how many enrollment requests the pre-authentication enrollment routes serve at once. Further requests are refused with 503. Defaults to 16.
     /// </summary>
     public int MaxConcurrentEnrollmentRequests { get; init; } = 16;
+
+    /// <summary>
+    /// Gets or inits how many renewal requests are served at once. Renewals have a pool of their own, so anonymous requests that fill
+    /// <see cref="MaxConcurrentEnrollmentRequests"/> cannot stop enrolled peers from renewing before their certificates expire. Defaults to 16.
+    /// </summary>
+    public int MaxConcurrentRenewalRequests { get; init; } = 16;
 }

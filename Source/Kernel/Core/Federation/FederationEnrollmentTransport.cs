@@ -6,6 +6,7 @@ using System.Net.Sockets;
 using System.Security.Authentication;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using System.Text.Json;
 using Cratis.Chronicle.Configuration;
 using Cratis.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -26,6 +27,8 @@ namespace Cratis.Chronicle.Federation;
 [Singleton]
 public class FederationEnrollmentTransport(TimeProvider timeProvider, FederationEndpointPolicy policy, IOptions<ChronicleOptions> options) : IFederationEnrollmentTransport
 {
+    const int MaxAuthorityBytes = (int)FederationEnrollmentRoutes.MaxRequestBodySize;
+    const int MaxIssuanceBytes = 64 * 1024;
     static readonly TimeSpan _renewalTimeout = TimeSpan.FromSeconds(30);
 
     TimeSpan FailureDuration => options.Value.Federation.Enrollment.FailureDuration;
@@ -79,6 +82,38 @@ public class FederationEnrollmentTransport(TimeProvider timeProvider, Federation
     /// <inheritdoc/>
     public Task<FederationIssuance> Renew(Uri endpoint, X509Certificate2 authority, X509Certificate2 clientCertificate, FederationRenewRequest request, CancellationToken cancellationToken) =>
         Post(endpoint, FederationEnrollmentRoutes.Renew, authority, clientCertificate, request, _renewalTimeout, cancellationToken);
+
+    /// <summary>
+    /// Reads a response body, and gives up the moment it is longer than allowed, so a hostile endpoint cannot stream an unbounded body
+    /// for the length of the attempt. Whatever the reason, the caller treats null as the same uniform failure.
+    /// </summary>
+    /// <param name="content">The <see cref="HttpContent"/> of the response.</param>
+    /// <param name="maxBytes">The most bytes to accept.</param>
+    /// <param name="cancellationToken">The <see cref="CancellationToken"/>.</param>
+    /// <returns>The body, or null when it is longer than allowed.</returns>
+    internal static async Task<byte[]?> ReadLimited(HttpContent content, int maxBytes, CancellationToken cancellationToken)
+    {
+        if (content.Headers.ContentLength > maxBytes)
+        {
+            return null;
+        }
+
+        await using var stream = await content.ReadAsStreamAsync(cancellationToken);
+        await using var buffer = new MemoryStream();
+        var chunk = new byte[4096];
+        int read;
+        while ((read = await stream.ReadAsync(chunk, cancellationToken)) > 0)
+        {
+            if (buffer.Length + read > maxBytes)
+            {
+                return null;
+            }
+
+            await buffer.WriteAsync(chunk.AsMemory(0, read), cancellationToken);
+        }
+
+        return buffer.ToArray();
+    }
 
     static bool IsConnectionFailure(Exception exception, CancellationToken cancellationToken) =>
         exception is HttpRequestException or SocketException or AuthenticationException or IOException or InvalidOperationException
@@ -151,21 +186,21 @@ public class FederationEnrollmentTransport(TimeProvider timeProvider, Federation
 #pragma warning disable CA5359 // See above: the response is checked against the fingerprint instead.
         using var handler = CreateHandler((_, _, _, _) => true, null, addresses, AttemptTimeout);
 #pragma warning restore CA5359
-        using var client = new HttpClient(handler, false) { Timeout = AttemptTimeout };
+        using var client = new HttpClient(handler, false) { Timeout = AttemptTimeout, MaxResponseContentBufferSize = MaxAuthorityBytes };
         using var message = new HttpRequestMessage(HttpMethod.Get, new Uri(endpoint, FederationEnrollmentRoutes.Authority))
         {
             Version = HttpVersion.Version20,
             VersionPolicy = HttpVersionPolicy.RequestVersionExact
         };
 
-        using var response = await client.SendAsync(message, cancellationToken);
+        using var response = await client.SendAsync(message, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
             return null;
         }
 
-        var bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken);
-        if (bytes.Length is 0 or > (int)FederationEnrollmentRoutes.MaxRequestBodySize)
+        var bytes = await ReadLimited(response.Content, MaxAuthorityBytes, cancellationToken);
+        if (bytes is null || bytes.Length == 0)
         {
             return null;
         }
@@ -201,7 +236,7 @@ public class FederationEnrollmentTransport(TimeProvider timeProvider, Federation
             clientCertificate,
             addresses,
             timeout);
-        using var client = new HttpClient(handler, false) { Timeout = timeout };
+        using var client = new HttpClient(handler, false) { Timeout = timeout, MaxResponseContentBufferSize = MaxIssuanceBytes };
         using var message = new HttpRequestMessage(HttpMethod.Post, new Uri(endpoint, route))
         {
             Version = HttpVersion.Version20,
@@ -209,13 +244,24 @@ public class FederationEnrollmentTransport(TimeProvider timeProvider, Federation
             Content = JsonContent.Create(request)
         };
 
-        using var response = await client.SendAsync(message, cancellationToken);
+        using var response = await client.SendAsync(message, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
         if (response.StatusCode is HttpStatusCode.OK or HttpStatusCode.Forbidden or HttpStatusCode.BadRequest)
         {
-            var issuance = await response.Content.ReadFromJsonAsync<FederationIssuance>(cancellationToken);
-            if (issuance is not null)
+            var bytes = await ReadLimited(response.Content, MaxIssuanceBytes, cancellationToken);
+            if (bytes is not null)
             {
-                return issuance;
+                try
+                {
+                    var issuance = JsonSerializer.Deserialize<FederationIssuance>(bytes, JsonSerializerOptions.Web);
+                    if (issuance is not null)
+                    {
+                        return issuance;
+                    }
+                }
+                catch (JsonException)
+                {
+                    // Not an answer of the authority.
+                }
             }
         }
 

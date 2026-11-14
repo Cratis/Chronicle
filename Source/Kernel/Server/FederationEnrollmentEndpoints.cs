@@ -101,7 +101,10 @@ internal static class FederationEnrollmentEndpoints
             return (Results.StatusCode(StatusCodes.Status429TooManyRequests), null);
         }
 
-        var lease = limiter.TryEnter(options.Federation.Hosted.MaxConcurrentEnrollmentRequests);
+        var maxConcurrent = budget == FederationEnrollmentBudget.Renewal
+            ? options.Federation.Hosted.MaxConcurrentRenewalRequests
+            : options.Federation.Hosted.MaxConcurrentEnrollmentRequests;
+        var lease = limiter.TryEnter(maxConcurrent, budget);
         return lease is null
             ? (Results.StatusCode(StatusCodes.Status503ServiceUnavailable), null)
             : (null, lease);
