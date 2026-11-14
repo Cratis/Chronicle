@@ -27,6 +27,8 @@ A link is one direction. Two services consuming each other are two links, each w
 | `federation.limits.maxBatchSize` | `Cratis__Chronicle__Federation__Limits__MaxBatchSize` | `500` | Events returned by one pull |
 | `federation.limits.maxEventsPerSecond` | `Cratis__Chronicle__Federation__Limits__MaxEventsPerSecond` | `5000` | Per-link event rate |
 | `federation.limits.maxBytesPerSecond` | `Cratis__Chronicle__Federation__Limits__MaxBytesPerSecond` | `16777216` | Per-link content bandwidth |
+| `federation.limits.maxBatchBytes` | `Cratis__Chronicle__Federation__Limits__MaxBatchBytes` | `16777216` | Content bytes in one batch a dialer delivers. A larger batch ends the call with a denial and nothing of it is appended |
+| `federation.limits.maxEventContentBytes` | `Cratis__Chronicle__Federation__Limits__MaxEventContentBytes` | `1048576` | Content bytes in one event a dialer delivers. A larger event is handled like a larger batch |
 
 Chronicle refuses to start when federation is enabled without a certificate or when the port collides with another listener. Passwords are read from a file, never configured inline, so no secret appears in configuration, logs or the audit trail.
 
