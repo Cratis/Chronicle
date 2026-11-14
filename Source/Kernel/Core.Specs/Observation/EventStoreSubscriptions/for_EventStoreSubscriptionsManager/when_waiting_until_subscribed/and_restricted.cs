@@ -11,6 +11,7 @@ public class and_restricted : given.a_manager_over_several_namespaces
     {
         _observersAreSubscribed = true;
         await _manager.Add(DefinitionFor("Tenant1"));
+        _requestedKeys.Clear();
     }
 
     async Task Because() => _error = await Catch.Exception(() => _manager.WaitUntilSubscribed(SubscriptionName, TimeSpan.FromSeconds(5)));

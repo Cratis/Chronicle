@@ -11,6 +11,7 @@ public class and_a_legacy_malformed_namespace_has_an_active_observer : given.a_m
         _sourceHas.Add(Malformed);
         _observersAreSubscribed = true;
         await _manager.Add(DefinitionFor());
+        _observers[KeyFor(Malformed)].ClearReceivedCalls();
         _requestedKeys.Clear();
     }
 
