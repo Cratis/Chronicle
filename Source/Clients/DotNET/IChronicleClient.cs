@@ -27,6 +27,12 @@ public interface IChronicleClient
     global::Cratis.Chronicle.Federation.IFederationEnrollments Federation => throw new NotSupportedException("Federation enrollment is not supported by this client.");
 
     /// <summary>
+    /// Gets the <see cref="global::Cratis.Chronicle.Federation.IFederationPolicies"/> for the kernel the client is connected to: setting, suspending, resuming and revoking the policy of hosted federation subjects and reading their policies and link status.
+    /// </summary>
+    /// <exception cref="NotSupportedException">The client implementation does not support federation policies.</exception>
+    global::Cratis.Chronicle.Federation.IFederationPolicies FederationPolicies => throw new NotSupportedException("Federation policies are not supported by this client.");
+
+    /// <summary>
     /// Get an event store by name and optional namespace.
     /// </summary>
     /// <param name="name">Name of the event store to get.</param>
