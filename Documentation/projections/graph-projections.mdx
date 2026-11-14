@@ -1,6 +1,6 @@
 ---
 uid: Chronicle.Projections.GraphProjections
-description: "Project events onto a property graph of nodes, edges and properties using model-bound attributes or a fluent builder, and learn what a graph sink applies."
+description: "Project events onto a property graph of nodes, edges and properties using model-bound attributes or a fluent builder, learn what a graph sink applies, and read the graph back through typed views."
 ---
 # Graph projections
 
@@ -99,10 +99,65 @@ The in-memory graph sink is the executable reference for these semantics, and ev
 
 <ChronicleClientTabs snippet="projections/graph/testing" />
 
+## Read a graph with views
+
+A **view** reads a graph back as a typed read model. It is anchored at one node and lists what to read from it: the node's properties, relations along edges to other views, and properties of the edge that was followed. Views only read. They do not change the graph, its schema or what is registered, and a graph without views behaves exactly as before.
+
+Declare one view per consumer, shaped for what that consumer reads, rather than one shape shared by every screen.
+
+### Declare a view
+
+Mark the record with `ViewOf<TNode>`, naming the node it is anchored at. The view belongs to the graph of that node. A member is a property of the node, matched by name after the naming policy. The member with `[Key]`, or a member named `Id` when the node has no property of that name, reads the key of the node. `FromNode("property")` reads a node property that is named differently.
+
+<ChronicleClientTabs snippet="projections/graph/views" />
+
+### Nest views
+
+`Follows<TEdge>` makes a member a relation: it follows the edge to the view at the far end. A collection member holds every related item, an empty list when there is none. A single member holds the one related item, or null. The direction is derived from the root of the view: from the source of the edge it is outgoing, from the target it is incoming. An edge whose source and target are the same node type, such as a group that is part of a group, needs an explicit direction, for example `Follows<PartOf>(GraphViewDirection.Outgoing)`.
+
+Nesting is finite. A view cannot contain itself, directly or through other views; declare a separate view for each level you read.
+
+### Read properties of the edge
+
+`FromEdge` makes a member a property of the edge that was followed to reach the view, such as the date a person joined a group. Give it the property name when the member is named differently. A view that reads edge properties is only valid as the target of relations along one edge type.
+
+### Query a view
+
+`IGraph` is the entry point. `Nodes<TView>()` starts a query for the roots of a view. `Where` keeps the roots whose property equals a value, and `WhereRelated` keeps the roots that have at least one related item, optionally one whose properties equal given values. Clauses name members with selectors, never free predicates, so a query that compiles always translates. `ToList` returns every matching root and `FirstOrDefault` the first one, or null.
+
+<ChronicleClientTabs snippet="projections/graph/views-query" />
+
+Clauses only select roots. A relation always holds every related item, never only the ones a clause matched.
+
+### Hydration
+
+The read result arrives as neutral rows and is built into the view records. Values are converted from what the graph stores: a concept from the value it wraps, a `Guid` from its string, an enum from its name, a decimal from a number and a timestamp from its stored form. A property the graph does not have, such as on a bare node that only an edge has created, reads as null or the type's default.
+
+### Test with GraphScenario
+
+`GraphScenario` reads the views of the graphs it runs and queries them against its in-memory graph through `scenario.Graph`. Append events and query the views they leave behind, or put nodes and edges straight into the graph with `SeedNode` and `SeedEdge`.
+
+<ChronicleClientTabs snippet="projections/graph/views-testing" />
+
+### How reads execute
+
+The client compiles a query to a backend-neutral `GraphQuery` and hands it to an `IGraphQueryExecutor`, which returns `GraphRow` trees. A host package that reaches the graph store provides the executor, and with it the `IGraph` an application uses; the Chronicle client does not read the store itself. `GraphViews.Discover` finds the views and the graphs they read from the client artifacts, and `QueryableGraph` combines the views with an executor. The in-memory executor of `GraphScenario` is the reference every executor is held to.
+
+### Limits
+
+- Nesting is finite, and there are no variable-length paths.
+- Roots and related items are ordered by node key, then by the identity of an identified edge. There is no other ordering, no aggregation, no `or` and no ranges.
+- Reads are eventually consistent with the event log and can see stale elements while a projection replays.
+- A view that breaks a declaration rule is reported when the client registers its graphs and left out; the graphs and the other views still register.
+
 ## Analyzers
 
-The code analysis package reports a graph declaration that cannot work:
+The code analysis package reports a graph or view declaration that cannot work:
 
 - [CHR0066](../code-analysis/CHR0066.mdx): a node or an edge has an object property.
 - [CHR0067](../code-analysis/CHR0067.mdx): a node does not have exactly one key, or an edge has more than one.
 - [CHR0068](../code-analysis/CHR0068.mdx): a type is both a node or an edge and a read model.
+- [CHR0078](../code-analysis/CHR0078.mdx): a view is anchored at a type that is not a node.
+- [CHR0079](../code-analysis/CHR0079.mdx): a relation of a view follows a type that is not an edge.
+- [CHR0080](../code-analysis/CHR0080.mdx): a relation of a view leads to a type that is not a view.
+- [CHR0081](../code-analysis/CHR0081.mdx): a type is both a view and a node or an edge.
