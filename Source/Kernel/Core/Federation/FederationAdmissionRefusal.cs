@@ -75,5 +75,15 @@ public enum FederationAdmissionRefusal
     /// <summary>
     /// The policy of the subject is revoked.
     /// </summary>
-    Revoked = 12
+    Revoked = 12,
+
+    /// <summary>
+    /// The enrollment the certificate descends from was revoked, whether or not the certificate itself was.
+    /// </summary>
+    EnrollmentRevoked = 13,
+
+    /// <summary>
+    /// The certificate is not the current one of its subject: a newer certificate was issued, so only that one is admitted.
+    /// </summary>
+    Superseded = 14
 }

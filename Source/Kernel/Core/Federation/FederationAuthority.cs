@@ -153,7 +153,15 @@ public class FederationAuthority(
                 return FederationIssuance.Rejected;
             }
 
-            return await Issue(issued.EnrollmentId, issued.Subject, issued.Instance, issued.Identity, certificateRequest, FederationIssuanceReasons.Renewal, issued.Identity);
+            var renewed = await Issue(issued.EnrollmentId, issued.Subject, issued.Instance, issued.Identity, certificateRequest, FederationIssuanceReasons.Renewal, issued.Identity);
+            if (renewed.Outcome == FederationIssuanceOutcome.Issued)
+            {
+                // One live certificate per instance: the one that was renewed is superseded, so a leaked older copy can neither renew again nor connect.
+                await registry.Append(issued.Serial, new FederationCertificateRevoked(issued.Identity, "renewal"));
+                logger.CertificateRevoked(issued.Serial, issued.Identity);
+            }
+
+            return renewed;
         }
     }
 

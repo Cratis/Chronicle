@@ -14,6 +14,7 @@ public sealed class FederationSession : Grain, IFederationSession
     /// <inheritdoc/>
     public Task Open(string connectionId)
     {
+        // Only certificates the registry names the current one of the subject get this far, so the newest connection of the current one wins.
         _current = connectionId;
         return Task.CompletedTask;
     }

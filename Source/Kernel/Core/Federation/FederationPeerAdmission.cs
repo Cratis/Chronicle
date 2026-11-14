@@ -74,6 +74,28 @@ public class FederationPeerAdmission(
             return FederationAdmission.Refused(FederationAdmissionRefusal.SubjectMismatch);
         }
 
+        // A revocation can land between the claim of a redemption and the recording of its certificate, which leaves a certificate that
+        // is not itself revoked. The enrollment it descends from is the authority on that.
+        var enrollment = await registry.FindEnrollment(issued.EnrollmentId);
+        if (enrollment?.Revoked != false)
+        {
+            return FederationAdmission.Refused(FederationAdmissionRefusal.EnrollmentRevoked);
+        }
+
+        // One live instance per subject: the newest certificate the authority issued for the subject is the only one admitted, so an older
+        // certificate, of another instance or a leaked predecessor, can never take the session of the current one.
+        var now = timeProvider.GetUtcNow();
+        var current = (await registry.GetIssuedCertificates())
+            .Where(_ => _.Subject == subject && !_.Revoked && _.NotAfter > now)
+            .Append(issued)
+            .OrderByDescending(_ => _.NotBefore)
+            .ThenByDescending(_ => _.Serial, StringComparer.Ordinal)
+            .First();
+        if (!string.Equals(current.Serial, issued.Serial, StringComparison.Ordinal))
+        {
+            return FederationAdmission.Refused(FederationAdmissionRefusal.Superseded);
+        }
+
         var policy = await registry.FindPolicy(subject);
         return policy?.Status switch
         {
