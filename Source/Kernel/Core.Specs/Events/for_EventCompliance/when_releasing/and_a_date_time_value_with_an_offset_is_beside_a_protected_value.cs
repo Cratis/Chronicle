@@ -5,7 +5,6 @@ using System.Text;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Compliance.GDPR;
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.EventTypes;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.ProtectedValues;
 using Cratis.Chronicle.Schemas;
@@ -40,10 +39,7 @@ public class and_a_date_time_value_with_an_offset_is_beside_a_protected_value : 
         _manager = new(
             new KnownInstancesOf<IJsonSchemaMetadataValueHandler>(new PIICompliancePropertyValueHandler(provisioner, keys, encryption)),
             NullLogger<JsonSchemaMetadataManager>.Instance);
-        var cache = Substitute.For<IEventTypeSchemaCache>();
-        cache.GetProtectionSchemaFor(Arg.Any<Concepts.EventStoreName>(), Arg.Any<EventTypeId>(), Arg.Any<EventTypeGeneration>(), Arg.Any<JsonSchema>())
-            .Returns(new ValueTask<JsonSchema>(_schema));
-        _compliance = new(_manager, _converter, cache);
+        _compliance = new(_manager, _converter, new OwnGenerationSchemaCache());
 
         var content = _converter.ToExpandoObject(Encoding.UTF8.GetBytes($$"""{"name":"{{Name}}","moment":"{{WithOffset}}"}"""), _schema);
         var applied = await _manager.Apply("store", "namespace", _schema, Identifier, _converter.ToJsonObject(content, _schema));

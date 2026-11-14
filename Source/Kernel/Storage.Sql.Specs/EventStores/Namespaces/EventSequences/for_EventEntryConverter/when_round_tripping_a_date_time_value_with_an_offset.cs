@@ -46,9 +46,5 @@ public class when_round_tripping_a_date_time_value_with_an_offset : Specificatio
     [Fact] void should_read_back_the_value_as_the_same_instant() => _result["moment"].ShouldEqual(DateTimeOffset.Parse(WithOffset));
     [Fact] void should_read_back_the_value_with_its_own_offset() => ((DateTimeOffset)_result["moment"]!).Offset.ShouldEqual(TimeSpan.FromMinutes(330));
 
-    string? StoredMoment()
-    {
-        using var document = JsonDocument.Parse(_entry.Content);
-        return document.RootElement.GetProperty("1").GetProperty("moment").GetString();
-    }
+    string? StoredMoment() => JsonElement.Parse(_entry.Content).GetProperty("1").GetProperty("moment").GetString();
 }

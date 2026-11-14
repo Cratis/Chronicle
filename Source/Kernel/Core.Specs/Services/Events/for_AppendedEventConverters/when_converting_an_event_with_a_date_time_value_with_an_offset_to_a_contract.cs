@@ -31,5 +31,5 @@ public class when_converting_an_event_with_a_date_time_value_with_an_offset_to_a
     void Because() => _result = _event.ToContract(new JsonSerializerOptions());
 
     [Fact] void should_deliver_the_value_with_its_own_offset() =>
-        JsonDocument.Parse(_result.Content).RootElement.GetProperty("moment").GetString().ShouldEqual(WithOffset);
+        JsonElement.Parse(_result.Content).GetProperty("moment").GetString().ShouldEqual(WithOffset);
 }
