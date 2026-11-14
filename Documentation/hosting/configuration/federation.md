@@ -120,7 +120,7 @@ OpenTelemetry meters `Cratis.Chronicle.Federation` and the kernel meter carry ev
 ## Security model
 
 - **A separate listener.** HTTP/2 only, on its own port. Requests to any path outside the federation service are answered with 404, so the Workbench, the API and the client services are unreachable on it. The federation service is in turn refused on every other port.
-- **TLS 1.3 only, with a client certificate required.** A client that offers only older versions, or no certificate, never completes the handshake.
+- **TLS 1.3 only, with a client certificate required.** A client that offers only older versions never completes the handshake, and every route requires a client certificate, except the two public enrollment routes described in [Hosted federation](#hosted-federation).
 - **Pinned certificates, not a shared authority.** A peer is identified by the SHA-256 hash of its certificate's public key. A certificate issued by the same authority is not enough. With no active grant for a pin, every pull is denied.
 - **Grants are bounded by visibility.** A pull returns only public event types that the grant covers and the consumer asked for.
 - **At-least-once delivery, deduplicated.** The consumer records the origin event store and source sequence number on each inbox event and resumes from the last one after a restart or reconnect, so a redelivered event is not duplicated. Events whose origin is the receiving store are rejected, so two stores consuming each other cannot loop.
@@ -130,6 +130,74 @@ OpenTelemetry meters `Cratis.Chronicle.Federation` and the kernel meter carry ev
 ### Personal data across a link
 
 Public events should not carry personal data. As a safeguard, the producer never forwards an event whose event type schema carries protected properties (personal data or `[Encrypted]` values). Such events are skipped, counted by the `skipped-protected` metric, and the cursor moves past them. This keeps plaintext and key material from crossing an organization boundary. Erasure therefore never needs to propagate over a link, because protected values never travel. Cross-organization key sharing is not supported.
+
+## Hosted federation
+
+Pinned grants suit two parties who configure each other. An operator that runs applications for many customers cannot hand-pin every one. With hosted federation the kernel is the certificate authority for the links of its customers: an operator creates a one-time enrollment, hands the customer a single code, and the customer's kernel turns it into a certificate. Pinned grants and bindings keep working unchanged, and hosted federation is off unless enabled.
+
+### Enable it on the authority kernel
+
+Hosted federation is served on the federation listener, so enable that first. Then enable the authority and tell it the endpoint customers reach it on:
+
+```json
+{
+  "Chronicle": {
+    "Federation": {
+      "Enabled": true,
+      "Port": 35100,
+      "Hosted": {
+        "Enabled": true,
+        "PublicEndpoint": "https://federation.example.com:35100",
+        "TrustDomain": "example"
+      }
+    }
+  }
+}
+```
+
+| Setting | Default | Meaning |
+| --- | --- | --- |
+| `Hosted:Enabled` | `false` | Act as the certificate authority and accept enrollments. |
+| `Hosted:PublicEndpoint` | none | The public https endpoint put in every enrollment code. There is no built-in default, so it must be set before an enrollment can be created. |
+| `Hosted:TrustDomain` | `chronicle` | The trust domain of the identities issued, lowercase. |
+| `Hosted:CertificateLifetime` | 14 days | The lifetime of an issued certificate. |
+| `Hosted:EnrollmentLifetime` | 7 days | How long an enrollment code can be redeemed. |
+| `Hosted:ListenerCertificateLifetime` | 30 days | The lifetime of the listener certificate the kernel issues itself. |
+| `Hosted:RequestsPerMinutePerSource` | 10 | How many enrollment and renewal requests one source address may make per minute. |
+
+The first time hosted federation is enabled, the kernel creates the authority: a P-384 key pair and a self-signed certificate that can only sign leaf certificates. The private key is held in the kernel's key custody, as a kernel-internal secret kept apart from subject keys, and is never in configuration, logs, events or audit entries. A key store that cannot hold internal secrets makes the authority fail closed. Several silos converge on one authority.
+
+When `Federation:CertificatePath` is not set, the kernel also issues the listener certificate itself from its own authority and renews it at half of its lifetime. Customers trust it because the enrollment code carries the fingerprint of the authority root. Set `CertificatePath` to present a certificate from a public authority instead.
+
+### Enroll a customer
+
+Create an enrollment for an opaque subject, which is whatever id you use for the customer. It becomes part of the identity `spiffe://<trust-domain>/customer/<subject>/kernel/<instance>`:
+
+In the .NET client that is `IChronicleClient.Federation.Create("acme", instance: "prod")`. Its result carries the enrollment code, which is shown only now. Hand it to the customer over a channel you trust.
+
+The code is one string carrying the public endpoint, the SHA-256 fingerprint of the authority root and a one-time token secret. Treat it as a password. Only a hash of the token is stored, and the code is single-use and expires.
+
+The customer redeems it on their own kernel with `IChronicleClient.Federation.Redeem(code)`, or with the `RedeemFederationEnrollment` command.
+
+The kernel generates a key pair locally, so the private key never leaves it. It fetches the authority certificate and checks it against the fingerprint in the code before it sends anything, then sends a certificate request and the token. It verifies the server certificate chains to that root, so the connection is trusted by the code and not by the system trust store. The identity in the issued certificate comes from the enrollment, never from the request: the request is only used for its public key. The kernel stores the key and certificate in its key custody and takes them into use without a restart. Redeeming again while already enrolled with the same authority changes nothing.
+
+For automated deployments, put the code in a file and set `Federation:Enrollment:CodePath`. A kernel that is not yet enrolled redeems it at startup. Do not put the code inline in configuration.
+
+To see where things stand, use `client.Federation.GetEnrollments()` and `GetIssuedCertificates()` on the authority, and `GetStatus()` on an enrolled kernel. To cut a customer off, call `client.Federation.Revoke(enrollmentId)`. It revokes the enrollment and every certificate issued from it, and takes effect at once. All of these need administrator rights.
+
+### Renewal
+
+A certificate lasts 14 days by default. After half of its lifetime the kernel renews it over mutual TLS with a new key, and the response can carry an updated endpoint, so the authority can move without re-enrolling customers. A kernel that stopped renewing and let its certificate expire is refused and has to be enrolled again. `Federation:Enrollment:RenewalCheckInterval` (default 1 hour) controls how often the kernel checks.
+
+### The public enrollment routes
+
+The enrollment routes are on the same host and port as the federation service. Two of them do not require a client certificate, because that is how a peer without one gets one: `GET /federation/enrollment/authority`, which returns the public authority certificate, and `POST /federation/enrollment/redeem`. `POST /federation/enrollment/renew` requires the certificate to renew. The listener accepts a connection without a certificate and enforces the requirement per route, so the federation service itself still requires one.
+
+The unauthenticated surface is kept small: a request body of at most 8 KiB, a rate limit per source address (IPv6 sources are grouped by their /64), a constant-time token comparison, and one generic refusal for an unknown, expired, used or revoked enrollment. A renewal is accepted only for a certificate this kernel issued and has not revoked, so a leaked authority key alone cannot mint a working identity.
+
+### Audit trail
+
+Every step is an event in the system event log: `FederationAuthorityCreated`, `FederationEnrollmentCreated`, `FederationEnrollmentRevoked`, `FederationCertificateIssued` (subject, serial number, expiry, why, and who acted) and `FederationCertificateRevoked`, and on an enrolled kernel `FederationIdentityInstalled`. The `FederationCertificateIssued` events are the registry of every certificate the authority issued. Events never contain the token secret, the enrollment code or a private key. The private key of an enrolled kernel is recorded only encrypted with a secret held by the key custody.
 
 ## Rotating a certificate
 
