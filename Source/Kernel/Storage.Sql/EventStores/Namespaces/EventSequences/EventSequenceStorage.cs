@@ -757,6 +757,7 @@ public partial class EventSequenceStorage(
 
         query = ApplyTagsFilter(query, tags);
 
+        query = query.OrderBy(e => e.SequenceNumber);
         query = query.Take(limit);
 
         return CreateCursor(query, scope, false, cancellationToken);
