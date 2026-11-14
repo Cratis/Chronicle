@@ -37,6 +37,19 @@ public interface IFederationCertificateRegistry
     Task<FederationIssuedCertificateState?> FindIssuedCertificate(string serial);
 
     /// <summary>
+    /// Get the policies of every subject, revoked and suspended ones included.
+    /// </summary>
+    /// <returns>The policies.</returns>
+    Task<IReadOnlyList<FederationPolicyState>> GetPolicies();
+
+    /// <summary>
+    /// Find the policy of a subject.
+    /// </summary>
+    /// <param name="subject">The opaque subject.</param>
+    /// <returns>The policy, or null when the subject has none.</returns>
+    Task<FederationPolicyState?> FindPolicy(string subject);
+
+    /// <summary>
     /// Get the creation event of the authority.
     /// </summary>
     /// <returns>The event, or null when this kernel never created an authority.</returns>

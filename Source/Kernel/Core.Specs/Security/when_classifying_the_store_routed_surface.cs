@@ -24,6 +24,7 @@ public class when_classifying_the_store_routed_surface : Specification
         ["Federation.FederationBinding"] = "lists federation bindings of this kernel; has no store",
         ["Federation.FederationGrantInformation"] = "lists federation grants of this kernel; has no store",
         ["Federation.FederationEnrollment"] = "lists federation enrollments of this kernel; has no store",
+        ["Federation.FederationPolicy"] = "lists the hosted federation policies of this kernel; has no store",
         ["Federation.FederationIssuedCertificate"] = "lists the certificates the federation authority of this kernel issued; has no store",
         ["Federation.FederationEnrollmentStatus"] = "reports the enrollment of this kernel; has no store",
         ["Servers.ServerInstanceDetails"] = "lists server instances; has no store",

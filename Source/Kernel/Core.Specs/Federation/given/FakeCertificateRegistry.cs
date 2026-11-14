@@ -28,6 +28,12 @@ public class FakeCertificateRegistry : IFederationCertificateRegistry
     public Task<FederationIssuedCertificateState?> FindIssuedCertificate(string serial) => Task.FromResult(_history.FindCertificate(serial));
 
     /// <inheritdoc/>
+    public Task<IReadOnlyList<FederationPolicyState>> GetPolicies() => Task.FromResult(_history.Policies);
+
+    /// <inheritdoc/>
+    public Task<FederationPolicyState?> FindPolicy(string subject) => Task.FromResult(_history.FindPolicy(subject));
+
+    /// <inheritdoc/>
     public Task<FederationAuthorityCreated?> GetAuthority() => Task.FromResult(_history.Authority);
 
     /// <inheritdoc/>

@@ -88,6 +88,10 @@ message FederationBindingResponse {
    SerializableDateTimeOffset LastDelivery = 15;
    string LastError = 16;
 }
+enum FederationDirection {
+   AcceptorOutbound = 0;
+   AcceptorInbound = 1;
+}
 message FederationEnrollmentResponse {
    string Id = 1;
    string Subject = 2;
@@ -131,6 +135,24 @@ message FederationIssuedCertificateResponse {
    SerializableDateTimeOffset NotAfter = 7;
    string Reason = 8;
    string Status = 9;
+}
+message FederationPolicyEntry {
+   FederationDirection Direction = 1;
+   string EventStore = 2;
+   string Namespace = 3;
+   bool AllPublic = 4;
+   repeated string EventTypes = 5;
+}
+message FederationPolicyResponse {
+   string Subject = 1;
+   FederationPolicyStatus Status = 2;
+   repeated FederationPolicyEntry Entries = 3;
+   string ChangedBy = 4;
+}
+enum FederationPolicyStatus {
+   Active = 0;
+   Suspended = 1;
+   Revoked = 2;
 }
 message PullRequest {
    string EventStore = 1;
@@ -187,6 +209,14 @@ message QueryResult_IEnumerable_FederationIssuedCertificateResponse {
    string ExceptionStackTrace = 5;
    repeated FederationIssuedCertificateResponse Data = 6;
 }
+message QueryResult_IEnumerable_FederationPolicyResponse {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2;
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   repeated FederationPolicyResponse Data = 6;
+}
 message RedeemFederationEnrollmentRequest {
    string Code = 1;
 }
@@ -197,11 +227,17 @@ message RedeemFederationEnrollmentResponse {
    string Endpoint = 4;
    bool AlreadyEnrolled = 5;
 }
+message ResumeFederationPolicyRequest {
+   string Subject = 1;
+}
 message RevokeFederationEnrollmentRequest {
    string Id = 1;
 }
 message RevokeFederationLinkRequest {
    string Id = 1;
+}
+message RevokeFederationPolicyRequest {
+   string Subject = 1;
 }
 // Represents a DateTimeOffset value as an ISO 8601 string (e.g., "2024-01-15T12:30:00.0000000+02:00").
 message SerializableDateTimeOffset {
@@ -214,6 +250,17 @@ message SetFederationGrantRequest {
    repeated string Namespaces = 4;
    bool AllPublic = 5;
    repeated string EventTypes = 6;
+}
+message SetFederationPolicyRequest {
+   string Subject = 1;
+   FederationDirection Direction = 2;
+   string EventStore = 3;
+   string Namespace = 4;
+   bool AllPublic = 5;
+   repeated string EventTypes = 6;
+}
+message SuspendFederationPolicyRequest {
+   string Subject = 1;
 }
 message UnbindFederationPeerRequest {
    string Id = 1;
@@ -234,13 +281,18 @@ service Federation {
    rpc AllEnrollments (.google.protobuf.Empty) returns (QueryResult_IEnumerable_FederationEnrollmentResponse);
    rpc AllGrants (.google.protobuf.Empty) returns (QueryResult_IEnumerable_FederationGrantInformationResponse);
    rpc AllIssuedCertificates (.google.protobuf.Empty) returns (QueryResult_IEnumerable_FederationIssuedCertificateResponse);
+   rpc AllPolicies (.google.protobuf.Empty) returns (QueryResult_IEnumerable_FederationPolicyResponse);
    rpc BindFederationPeer (BindFederationPeerRequest) returns (CommandResult);
    rpc CreateFederationEnrollment (CreateFederationEnrollmentRequest) returns (CommandResult_CreateFederationEnrollmentResponse);
    rpc CurrentEnrollmentStatus (.google.protobuf.Empty) returns (QueryResult_FederationEnrollmentStatusResponse);
    rpc RedeemFederationEnrollment (RedeemFederationEnrollmentRequest) returns (CommandResult_RedeemFederationEnrollmentResponse);
+   rpc ResumeFederationPolicy (ResumeFederationPolicyRequest) returns (CommandResult);
    rpc RevokeFederationEnrollment (RevokeFederationEnrollmentRequest) returns (CommandResult);
    rpc RevokeFederationLink (RevokeFederationLinkRequest) returns (CommandResult);
+   rpc RevokeFederationPolicy (RevokeFederationPolicyRequest) returns (CommandResult);
    rpc SetFederationGrant (SetFederationGrantRequest) returns (CommandResult);
+   rpc SetFederationPolicy (SetFederationPolicyRequest) returns (CommandResult);
+   rpc SuspendFederationPolicy (SuspendFederationPolicyRequest) returns (CommandResult);
    rpc UnbindFederationPeer (UnbindFederationPeerRequest) returns (CommandResult);
 }
 service FederationPull {

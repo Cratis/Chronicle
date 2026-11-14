@@ -41,6 +41,12 @@ internal sealed class Federation(
             response => ToRedeemFederationEnrollmentResponse(response));
 
     /// <inheritdoc/>
+    public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> ResumeFederationPolicy(global::Cratis.Chronicle.Contracts.Federation.ResumeFederationPolicyRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
+        CommandExecutor.Execute(
+            commandPipeline,
+            new global::Cratis.Chronicle.Federation.ResumeFederationPolicy(request.Subject));
+
+    /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> RevokeFederationEnrollment(global::Cratis.Chronicle.Contracts.Federation.RevokeFederationEnrollmentRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         CommandExecutor.Execute(
             commandPipeline,
@@ -53,10 +59,28 @@ internal sealed class Federation(
             new global::Cratis.Chronicle.Federation.RevokeFederationLink(request.Id));
 
     /// <inheritdoc/>
+    public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> RevokeFederationPolicy(global::Cratis.Chronicle.Contracts.Federation.RevokeFederationPolicyRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
+        CommandExecutor.Execute(
+            commandPipeline,
+            new global::Cratis.Chronicle.Federation.RevokeFederationPolicy(request.Subject));
+
+    /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> SetFederationGrant(global::Cratis.Chronicle.Contracts.Federation.SetFederationGrantRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         CommandExecutor.Execute(
             commandPipeline,
             new global::Cratis.Chronicle.Federation.SetFederationGrant(request.Id, request.ClientPin, request.EventStore, request.Namespaces, request.AllPublic, request.EventTypes));
+
+    /// <inheritdoc/>
+    public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> SetFederationPolicy(global::Cratis.Chronicle.Contracts.Federation.SetFederationPolicyRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
+        CommandExecutor.Execute(
+            commandPipeline,
+            new global::Cratis.Chronicle.Federation.SetFederationPolicy(request.Subject, (global::Cratis.Chronicle.Federation.FederationDirection)request.Direction, request.EventStore, request.Namespace, request.AllPublic, request.EventTypes));
+
+    /// <inheritdoc/>
+    public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> SuspendFederationPolicy(global::Cratis.Chronicle.Contracts.Federation.SuspendFederationPolicyRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
+        CommandExecutor.Execute(
+            commandPipeline,
+            new global::Cratis.Chronicle.Federation.SuspendFederationPolicy(request.Subject));
 
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> UnbindFederationPeer(global::Cratis.Chronicle.Contracts.Federation.UnbindFederationPeerRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
@@ -118,6 +142,17 @@ internal sealed class Federation(
                 return result.Select(ToFederationIssuedCertificateResponse).ToList();
             },
             exception => logger.QueryFailed(exception, "Federation", "AllIssuedCertificates"));
+
+    /// <inheritdoc/>
+    [global::Microsoft.AspNetCore.Authorization.Authorize(Policy = "Chronicle.Administrator")]
+    public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.Federation.FederationPolicyResponse>>> AllPolicies(global::ProtoBuf.Grpc.CallContext callContext = default) =>
+        QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Federation.FederationPolicyResponse>>(
+            async () =>
+            {
+                var result = await global::Cratis.Chronicle.Federation.FederationPolicy.AllPolicies(federationCertificateRegistry);
+                return result.Select(ToFederationPolicyResponse).ToList();
+            },
+            exception => logger.QueryFailed(exception, "Federation", "AllPolicies"));
 
     static global::Cratis.Chronicle.Contracts.Federation.CreateFederationEnrollmentResponse ToCreateFederationEnrollmentResponse(global::Cratis.Chronicle.Federation.FederationEnrollmentCreatedResult source) =>
         new()
@@ -212,5 +247,14 @@ internal sealed class Federation(
             NotAfter = (global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset)source.NotAfter,
             Reason = source.Reason,
             Status = source.Status
+        };
+
+    static global::Cratis.Chronicle.Contracts.Federation.FederationPolicyResponse ToFederationPolicyResponse(global::Cratis.Chronicle.Federation.FederationPolicy source) =>
+        new()
+        {
+            Subject = source.Subject,
+            Status = (global::Cratis.Chronicle.Contracts.Federation.FederationPolicyStatus)source.Status,
+            Entries = source.Entries.Select(element0 => element0.ToContract()).ToList(),
+            ChangedBy = source.ChangedBy
         };
 }

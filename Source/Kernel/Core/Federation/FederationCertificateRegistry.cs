@@ -34,7 +34,11 @@ public class FederationCertificateRegistry(
         typeof(FederationEnrollmentRevoked).GetEventType(),
         typeof(FederationCertificateIssued).GetEventType(),
         typeof(FederationCertificateRevoked).GetEventType(),
-        typeof(FederationIdentityInstalled).GetEventType()
+        typeof(FederationIdentityInstalled).GetEventType(),
+        typeof(FederationPolicySet).GetEventType(),
+        typeof(FederationPolicySuspended).GetEventType(),
+        typeof(FederationPolicyResumed).GetEventType(),
+        typeof(FederationPolicyRevoked).GetEventType()
     ];
 
     readonly SemaphoreSlim _lock = new(1, 1);
@@ -62,6 +66,12 @@ public class FederationCertificateRegistry(
 
     /// <inheritdoc/>
     public Task<FederationIssuedCertificateState?> FindIssuedCertificate(string serial) => Read(_ => _.FindCertificate(serial));
+
+    /// <inheritdoc/>
+    public Task<IReadOnlyList<FederationPolicyState>> GetPolicies() => Read(_ => _.Policies);
+
+    /// <inheritdoc/>
+    public Task<FederationPolicyState?> FindPolicy(string subject) => Read(_ => _.FindPolicy(subject));
 
     /// <inheritdoc/>
     public Task<FederationAuthorityCreated?> GetAuthority() => Read(_ => _.Authority);
