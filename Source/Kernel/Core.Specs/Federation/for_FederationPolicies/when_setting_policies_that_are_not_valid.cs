@@ -18,6 +18,16 @@ public class when_setting_policies_that_are_not_valid : given.a_peer_admission
         _registry.Appended.ShouldBeEmpty();
     }
 
+    [Theory]
+    [InlineData(FederationDirection.AcceptorInbound)]
+    [InlineData(FederationDirection.AcceptorOutbound)]
+    public async Task should_refuse_the_system_event_store_as_the_target(FederationDirection direction)
+    {
+        var exception = await Catch.Exception(() => _policies.Set("acme", direction, "System", "ns", true, [], "operator"));
+        exception.ShouldBeOfExactType<InvalidFederationPolicy>();
+        _registry.Appended.ShouldBeEmpty();
+    }
+
     [Fact]
     public async Task should_refuse_an_unknown_direction()
     {

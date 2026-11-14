@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Storage;
 using Cratis.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -10,9 +12,10 @@ namespace Cratis.Chronicle.Federation;
 /// Represents an implementation of <see cref="IFederationPolicies"/> that records every change as an event in the system event log.
 /// </summary>
 /// <param name="registry">The <see cref="IFederationCertificateRegistry"/> holding and recording the policies.</param>
+/// <param name="storage">The <see cref="IStorage"/> used to check that the target event store exists.</param>
 /// <param name="logger">The logger.</param>
 [Singleton]
-public class FederationPolicies(IFederationCertificateRegistry registry, ILogger<FederationPolicies> logger) : IFederationPolicies
+public class FederationPolicies(IFederationCertificateRegistry registry, IStorage storage, ILogger<FederationPolicies> logger) : IFederationPolicies
 {
     /// <inheritdoc/>
     public async Task Set(string subject, FederationDirection direction, string eventStore, string @namespace, bool allPublic, IEnumerable<string> eventTypes, string actedBy)
@@ -31,6 +34,16 @@ public class FederationPolicies(IFederationCertificateRegistry registry, ILogger
         if (string.IsNullOrWhiteSpace(eventStore) || string.IsNullOrWhiteSpace(@namespace))
         {
             throw new InvalidFederationPolicy(subject, "the target event store and namespace are required");
+        }
+
+        if (string.Equals(eventStore, EventStoreName.System.Value, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidFederationPolicy(subject, "the system event store cannot be the target of a policy");
+        }
+
+        if (!await storage.HasEventStore(eventStore))
+        {
+            throw new InvalidFederationPolicy(subject, "the target event store does not exist");
         }
 
         if (!allPublic && types.Length == 0)

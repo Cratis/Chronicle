@@ -2,6 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Security.Cryptography.X509Certificates;
+using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
@@ -15,6 +17,7 @@ public class a_peer_admission : a_federation_authority
     protected const string TargetStore = "customers";
     protected const string TargetNamespace = "acme-prod";
 
+    protected IStorage _storage;
     protected FederationPeerAdmission _admission;
     protected FederationPolicies _policies;
     protected FederationAdmission _admitted;
@@ -23,7 +26,9 @@ public class a_peer_admission : a_federation_authority
     void Establish()
     {
         _certificates = [];
-        _policies = new(_registry, NullLogger<FederationPolicies>.Instance);
+        _storage = Substitute.For<IStorage>();
+        _storage.HasEventStore(Arg.Any<EventStoreName>()).Returns(true);
+        _policies = new(_registry, _storage, NullLogger<FederationPolicies>.Instance);
         _admission = new(_registry, _keys, Options.Create(_options), _time);
     }
 
