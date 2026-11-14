@@ -1,0 +1,756 @@
+diff --git a/Source/Kernel/Core.Specs/ReadModels/for_ReadModelReadBindings/given/a_read_binding_resolver.cs b/Source/Kernel/Core.Specs/ReadModels/for_ReadModelReadBindings/given/a_read_binding_resolver.cs
+index faf7077403..3cb11f504e 100644
+--- a/Source/Kernel/Core.Specs/ReadModels/for_ReadModelReadBindings/given/a_read_binding_resolver.cs
++++ b/Source/Kernel/Core.Specs/ReadModels/for_ReadModelReadBindings/given/a_read_binding_resolver.cs
+@@ -40,6 +40,7 @@ void Establish()
+         _sink = Substitute.For<ISink>();
+         _sinks = Substitute.For<ISinks>();
+         _sinks.GetFor(_definition, _definition.ContainerName).Returns(_sink);
++        _sinks.GetWithoutProvisioning(_definition).Returns(_sink);
+         var storage = Substitute.For<IStorage>();
+         var eventStoreStorage = Substitute.For<IEventStoreStorage>();
+         var namespaceStorage = Substitute.For<IEventStoreNamespaceStorage>();
+diff --git a/Source/Kernel/Core.Specs/ReadModels/for_ReadModelReadBindings/when_resolving_with_generations_disabled/and_an_explicit_occurrence_is_specified.cs b/Source/Kernel/Core.Specs/ReadModels/for_ReadModelReadBindings/when_resolving_with_generations_disabled/and_an_explicit_occurrence_is_specified.cs
+index cb0c550cfd..342ab96407 100644
+--- a/Source/Kernel/Core.Specs/ReadModels/for_ReadModelReadBindings/when_resolving_with_generations_disabled/and_an_explicit_occurrence_is_specified.cs
++++ b/Source/Kernel/Core.Specs/ReadModels/for_ReadModelReadBindings/when_resolving_with_generations_disabled/and_an_explicit_occurrence_is_specified.cs
+@@ -9,7 +9,8 @@ public class and_an_explicit_occurrence_is_specified : given.a_read_binding_reso
+ {
+     async Task Because() => _binding = await _resolver.Resolve(EventStore, Namespace, _definition, "historical-container");
+ 
+-    [Fact] void should_resolve_the_existing_container() => _sinks.Received(1).GetFor(_definition, _definition.ContainerName);
++    [Fact] void should_resolve_the_sink_without_provisioning() => _sinks.Received(1).GetWithoutProvisioning(_definition);
++    [Fact] void should_not_initialize_the_primary_container() => _sinks.DidNotReceiveWithAnyArgs().GetFor(default!, default!);
+     [Fact] void should_return_the_existing_sink() => _binding.Sink.ShouldBeSame(_sink);
+     [Fact] void should_preserve_the_occurrence() => _binding.Occurrence.ShouldEqual((ReadModelContainerName)"historical-container");
+ }
+diff --git a/Source/Kernel/Core.Specs/ReadModels/for_ReadModelReadBindings/when_resolving_with_generations_disabled/and_the_occurrence_is_not_registered.cs b/Source/Kernel/Core.Specs/ReadModels/for_ReadModelReadBindings/when_resolving_with_generations_disabled/and_the_occurrence_is_not_registered.cs
+index ab8b64a14e..ba9693d865 100644
+--- a/Source/Kernel/Core.Specs/ReadModels/for_ReadModelReadBindings/when_resolving_with_generations_disabled/and_the_occurrence_is_not_registered.cs
++++ b/Source/Kernel/Core.Specs/ReadModels/for_ReadModelReadBindings/when_resolving_with_generations_disabled/and_the_occurrence_is_not_registered.cs
+@@ -14,4 +14,5 @@ public class and_the_occurrence_is_not_registered : given.a_read_binding_resolve
+     [Fact] void should_reject_the_occurrence() => _error.ShouldBeOfExactType<UnknownReadModelOccurrence>();
+     [Fact] void should_not_echo_the_occurrence() => _error.Message.ShouldNotContain("DROP");
+     [Fact] void should_not_resolve_a_sink() => _sinks.DidNotReceiveWithAnyArgs().GetFor(default!, default!);
++    [Fact] void should_not_resolve_a_sink_without_provisioning() => _sinks.DidNotReceiveWithAnyArgs().GetWithoutProvisioning(default!);
+ }
+diff --git a/Source/Kernel/Core/ReadModels/ReadModelContainerNames.cs b/Source/Kernel/Core/ReadModels/ReadModelContainerNames.cs
+index edd328a811..5820d6a6ef 100644
+--- a/Source/Kernel/Core/ReadModels/ReadModelContainerNames.cs
++++ b/Source/Kernel/Core/ReadModels/ReadModelContainerNames.cs
+@@ -20,10 +20,11 @@ public static class ReadModelContainerNames
+     /// <exception cref="InvalidReadModelContainerName">Thrown when the name is empty, whitespace, or contains control, quote or delimiter characters.</exception>
+     public static void EnsureValid(this ReadModelContainerName name, ReadModelIdentifier readModel)
+     {
+-        var value = name.Value;
+-        if (string.IsNullOrWhiteSpace(value) || value.Any(_ => char.IsControl(_) || ForbiddenCharacters.Contains(_)))
++        if (string.IsNullOrWhiteSpace(name.Value) || name.Value.Any(IsForbidden))
+         {
+             throw new InvalidReadModelContainerName(readModel);
+         }
+     }
++
++    static bool IsForbidden(char character) => char.IsControl(character) || ForbiddenCharacters.Contains(character);
+ }
+diff --git a/Source/Kernel/Core/ReadModels/ReadModelReadBindings.cs b/Source/Kernel/Core/ReadModels/ReadModelReadBindings.cs
+index 0ef8023e81..237de1a7b3 100644
+--- a/Source/Kernel/Core/ReadModels/ReadModelReadBindings.cs
++++ b/Source/Kernel/Core/ReadModels/ReadModelReadBindings.cs
+@@ -24,7 +24,12 @@ public async Task<ReadModelReadBinding> Resolve(
+     {
+         await EnsureKnownOccurrence(eventStore, eventStoreNamespace, definition, occurrence);
+         var sinks = storage.GetEventStore(eventStore).GetNamespace(eventStoreNamespace).Sinks;
+-        var sink = await sinks.GetFor(definition, definition.ContainerName);
++
++        // Reading an occurrence must not provision the primary container or its indexes.
++        var isOccurrence = occurrence is not null && occurrence.Value != definition.ContainerName.Value;
++        var sink = isOccurrence
++            ? await sinks.GetWithoutProvisioning(definition)
++            : await sinks.GetFor(definition, definition.ContainerName);
+         var visibility = await visibilities.GetFor(eventStore, eventStoreNamespace, definition);
+         return new(sink, occurrence, visibility);
+     }
+diff --git a/Source/Kernel/Storage.Specs/Sinks/for_Sinks/given/a_sink_factory.cs b/Source/Kernel/Storage.Specs/Sinks/for_Sinks/given/a_sink_factory.cs
+new file mode 100644
+index 0000000000..fd5aa61081
+--- /dev/null
++++ b/Source/Kernel/Storage.Specs/Sinks/for_Sinks/given/a_sink_factory.cs
+@@ -0,0 +1,39 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Chronicle.Concepts.ReadModels;
++using Cratis.Chronicle.Concepts.Sinks;
++using Cratis.Chronicle.Schemas;
++
++namespace Cratis.Chronicle.Storage.Sinks.for_Sinks.given;
++
++public abstract class a_sink_factory : Specification
++{
++    static SinkTypeId _type = "df371e5d-b244-48d0-aaad-f298a127dd92";
++
++    protected Sinks _sinks;
++    protected ISinkFactory _factory;
++    protected ISink _sink;
++    protected ReadModelDefinition _model;
++
++    void Establish()
++    {
++        _model = new(
++            "SomethingId",
++            "Something",
++            "Something",
++            ReadModelOwner.None,
++            ReadModelSource.Code,
++            ReadModelObserverType.Projection,
++            ReadModelObserverIdentifier.Unspecified,
++            new SinkDefinition(SinkConfigurationId.None, _type),
++            new Dictionary<ReadModelGeneration, JsonSchema>(),
++            []);
++
++        _sink = Substitute.For<ISink>();
++        _factory = Substitute.For<ISinkFactory>();
++        _factory.TypeId.Returns(_type);
++        _factory.CreateFor(string.Empty, string.Empty, _model).Returns(_sink);
++        _sinks = new(string.Empty, string.Empty, new KnownInstancesOf<ISinkFactory>([_factory]));
++    }
++}
+diff --git a/Source/Kernel/Storage.Specs/Sinks/for_Sinks/when_getting_without_provisioning/and_the_sink_is_initialized_later.cs b/Source/Kernel/Storage.Specs/Sinks/for_Sinks/when_getting_without_provisioning/and_the_sink_is_initialized_later.cs
+new file mode 100644
+index 0000000000..c6cbedcb3e
+--- /dev/null
++++ b/Source/Kernel/Storage.Specs/Sinks/for_Sinks/when_getting_without_provisioning/and_the_sink_is_initialized_later.cs
+@@ -0,0 +1,19 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++namespace Cratis.Chronicle.Storage.Sinks.for_Sinks.when_getting_without_provisioning;
++
++public class and_the_sink_is_initialized_later : given.a_sink_factory
++{
++    ISink _result;
++
++    async Task Because()
++    {
++        await _sinks.GetWithoutProvisioning(_model);
++        _result = await _sinks.GetFor(_model);
++    }
++
++    [Fact] void should_return_the_same_sink() => _result.ShouldEqual(_sink);
++    [Fact] void should_ensure_indexes_once() => _sink.Received(1).EnsureIndexes();
++    [Fact] void should_create_the_sink_once() => _factory.Received(1).CreateFor(string.Empty, string.Empty, _model);
++}
+diff --git a/Source/Kernel/Storage.Specs/Sinks/for_Sinks/when_getting_without_provisioning/and_the_sink_is_not_cached.cs b/Source/Kernel/Storage.Specs/Sinks/for_Sinks/when_getting_without_provisioning/and_the_sink_is_not_cached.cs
+new file mode 100644
+index 0000000000..740b049506
+--- /dev/null
++++ b/Source/Kernel/Storage.Specs/Sinks/for_Sinks/when_getting_without_provisioning/and_the_sink_is_not_cached.cs
+@@ -0,0 +1,14 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++namespace Cratis.Chronicle.Storage.Sinks.for_Sinks.when_getting_without_provisioning;
++
++public class and_the_sink_is_not_cached : given.a_sink_factory
++{
++    ISink _result;
++
++    async Task Because() => _result = await _sinks.GetWithoutProvisioning(_model);
++
++    [Fact] void should_return_the_sink() => _result.ShouldEqual(_sink);
++    [Fact] void should_not_ensure_indexes() => _sink.DidNotReceive().EnsureIndexes();
++}
+diff --git a/Source/Kernel/Storage.Sql.Specs/for_Database/given/a_database_without_read_model_storage.cs b/Source/Kernel/Storage.Sql.Specs/for_Database/given/a_database_without_read_model_storage.cs
+new file mode 100644
+index 0000000000..54718634c0
+--- /dev/null
++++ b/Source/Kernel/Storage.Sql.Specs/for_Database/given/a_database_without_read_model_storage.cs
+@@ -0,0 +1,33 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
++using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
++using Microsoft.Extensions.Logging.Abstractions;
++
++namespace Cratis.Chronicle.Storage.Sql.for_Database.given;
++
++/// <summary>
++/// The real <see cref="Database"/> over SQLite with the real read model migrator, where only the cluster file exists.
++/// Anything that provisions leaves a file or a table behind, which the specifications observe.
++/// </summary>
++public class a_database_without_read_model_storage : a_sqlite_database
++{
++    protected readonly ProjectedColumn[] _columns = [new("Id", typeof(string), true, false, false, false), new("Value", typeof(int), false, false, false, false)];
++
++    void Establish()
++    {
++        var migrator = new ReadModelMigrator(
++            new TableMigrator<ReadModelDbContext>(NullLogger<TableMigrator<ReadModelDbContext>>.Instance),
++            NullLogger<ReadModelMigrator>.Instance);
++        _readModelMigrator.EnsureTableMigrated(Arg.Any<string>(), Arg.Any<ReadModelDbContext>())
++            .Returns(call => migrator.EnsureTableMigrated(call.Arg<string>(), call.Arg<ReadModelDbContext>()));
++        _readModelMigrator.EnsureExistingTableMigrated(Arg.Any<string>(), Arg.Any<ReadModelDbContext>())
++            .Returns(call => migrator.EnsureExistingTableMigrated(call.Arg<string>(), call.Arg<ReadModelDbContext>()));
++    }
++
++    /// <summary>
++    /// Gets the names of the files in the directory the databases live in.
++    /// </summary>
++    protected string[] FilesOnDisk => [.. Directory.GetFiles(_directory).Select(Path.GetFileName).Order()!];
++}
+diff --git a/Source/Kernel/Storage.Sql.Specs/for_Database/when_reading_without_provisioning/and_a_registered_occurrence_is_resolved_on_a_cold_indexed_sink.cs b/Source/Kernel/Storage.Sql.Specs/for_Database/when_reading_without_provisioning/and_a_registered_occurrence_is_resolved_on_a_cold_indexed_sink.cs
+new file mode 100644
+index 0000000000..5384d5ca4e
+--- /dev/null
++++ b/Source/Kernel/Storage.Sql.Specs/for_Database/when_reading_without_provisioning/and_a_registered_occurrence_is_resolved_on_a_cold_indexed_sink.cs
+@@ -0,0 +1,50 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Chronicle.Concepts.ReadModels;
++using Cratis.Chronicle.Concepts.Sinks;
++using Cratis.Chronicle.Json;
++using Cratis.Chronicle.Schemas;
++using Cratis.Chronicle.Storage.Sinks;
++using Cratis.Chronicle.Storage.Sql.Sinks;
++using Microsoft.Extensions.DependencyInjection;
++using Microsoft.Extensions.Logging;
++using Microsoft.Extensions.Logging.Abstractions;
++using StorageSinks = Cratis.Chronicle.Storage.Sinks.Sinks;
++
++namespace Cratis.Chronicle.Storage.Sql.for_Database.when_reading_without_provisioning;
++
++public class and_a_registered_occurrence_is_resolved_on_a_cold_indexed_sink : given.a_database_without_read_model_storage
++{
++    ISink _sink;
++
++    async Task Because()
++    {
++        var schema = JsonSchema.FromJson("""{"type":"object","properties":{"id":{"type":"string"},"value":{"type":"integer"}}}""");
++        var definition = new ReadModelDefinition(
++            "indexed",
++            "indexed_model",
++            "Indexed",
++            ReadModelOwner.Client,
++            ReadModelSource.Code,
++            ReadModelObserverType.Projection,
++            "indexed",
++            new SinkDefinition(SinkConfigurationId.None, WellKnownSinkTypes.SQL),
++            new Dictionary<ReadModelGeneration, JsonSchema> { [ReadModelGeneration.First] = schema },
++            [new IndexDefinition("value")]);
++
++        await using var services = new ServiceCollection()
++            .AddSingleton<IDatabase>(_database)
++            .AddSingleton<ReplayingTables>()
++            .AddSingleton<ILogger<Sink>>(NullLogger<Sink>.Instance)
++            .BuildServiceProvider();
++        var factory = new SinkFactory(services, new ExpandoObjectConverter(new TypeFormats()));
++        var sinks = new StorageSinks("store", "namespace", new KnownInstancesOf<ISinkFactory>([factory]));
++
++        _sink = await sinks.GetWithoutProvisioning(definition);
++        await _sink.GetInstances("indexed_model-20240101000000-deadbeef", 0, 10, ReadModelInstanceVisibility.InitializedOnly);
++    }
++
++    [Fact] void should_resolve_the_sink() => _sink.ShouldNotBeNull();
++    [Fact] void should_not_create_any_database_file() => FilesOnDisk.ShouldEqual(["cluster.db"]);
++}
+diff --git a/Source/Kernel/Storage.Sql.Specs/for_Database/when_reading_without_provisioning/and_asking_a_fresh_namespace_for_its_replays.cs b/Source/Kernel/Storage.Sql.Specs/for_Database/when_reading_without_provisioning/and_asking_a_fresh_namespace_for_its_replays.cs
+new file mode 100644
+index 0000000000..06aebe7585
+--- /dev/null
++++ b/Source/Kernel/Storage.Sql.Specs/for_Database/when_reading_without_provisioning/and_asking_a_fresh_namespace_for_its_replays.cs
+@@ -0,0 +1,17 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Chronicle.Storage.ReadModels;
++using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReplayedModels;
++
++namespace Cratis.Chronicle.Storage.Sql.for_Database.when_reading_without_provisioning;
++
++public class and_asking_a_fresh_namespace_for_its_replays : given.a_database_without_read_model_storage
++{
++    IEnumerable<ReadModelOccurrence> _occurrences;
++
++    async Task Because() => _occurrences = await new ReplayedModelsStorage("store", "fresh-namespace", _database).GetOccurrences("model");
++
++    [Fact] void should_have_no_occurrences() => _occurrences.ShouldBeEmpty();
++    [Fact] void should_leave_the_namespace_unprovisioned() => FilesOnDisk.ShouldEqual(["cluster.db"]);
++}
+diff --git a/Source/Kernel/Storage.Sql.Specs/for_Database/when_reading_without_provisioning/and_the_namespace_database_file_is_absent.cs b/Source/Kernel/Storage.Sql.Specs/for_Database/when_reading_without_provisioning/and_the_namespace_database_file_is_absent.cs
+new file mode 100644
+index 0000000000..a8396a297b
+--- /dev/null
++++ b/Source/Kernel/Storage.Sql.Specs/for_Database/when_reading_without_provisioning/and_the_namespace_database_file_is_absent.cs
+@@ -0,0 +1,16 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
++
++namespace Cratis.Chronicle.Storage.Sql.for_Database.when_reading_without_provisioning;
++
++public class and_the_namespace_database_file_is_absent : given.a_database_without_read_model_storage
++{
++    DbContextScope<NamespaceDbContext>? _scope;
++
++    async Task Because() => _scope = await _database.ExistingNamespace("store", "fresh-namespace");
++
++    [Fact] void should_report_the_namespace_as_absent() => _scope.ShouldBeNull();
++    [Fact] void should_not_create_a_database_file() => FilesOnDisk.ShouldEqual(["cluster.db"]);
++}
+diff --git a/Source/Kernel/Storage.Sql.Specs/for_Database/when_reading_without_provisioning/and_the_read_model_database_file_is_absent.cs b/Source/Kernel/Storage.Sql.Specs/for_Database/when_reading_without_provisioning/and_the_read_model_database_file_is_absent.cs
+new file mode 100644
+index 0000000000..f7c6dcd462
+--- /dev/null
++++ b/Source/Kernel/Storage.Sql.Specs/for_Database/when_reading_without_provisioning/and_the_read_model_database_file_is_absent.cs
+@@ -0,0 +1,16 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
++
++namespace Cratis.Chronicle.Storage.Sql.for_Database.when_reading_without_provisioning;
++
++public class and_the_read_model_database_file_is_absent : given.a_database_without_read_model_storage
++{
++    DbContextScope<ReadModelDbContext>? _scope;
++
++    async Task Because() => _scope = await _database.ExistingReadModelTable("store", "namespace", "ghost-20240101000000-deadbeef", _columns);
++
++    [Fact] void should_report_the_table_as_absent() => _scope.ShouldBeNull();
++    [Fact] void should_not_create_a_database_file() => FilesOnDisk.ShouldEqual(["cluster.db"]);
++}
+diff --git a/Source/Kernel/Storage.Sql/Database.Existing.cs b/Source/Kernel/Storage.Sql/Database.Existing.cs
+new file mode 100644
+index 0000000000..839c58ef3d
+--- /dev/null
++++ b/Source/Kernel/Storage.Sql/Database.Existing.cs
+@@ -0,0 +1,196 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using System.Collections.Concurrent;
++using Cratis.Arc.EntityFrameworkCore;
++using Cratis.Chronicle.Concepts;
++using Cratis.Chronicle.Storage.Sql.Connections;
++using Microsoft.Data.Sqlite;
++using Microsoft.Data.SqlClient;
++using Microsoft.EntityFrameworkCore;
++using Npgsql;
++
++namespace Cratis.Chronicle.Storage.Sql;
++
++/// <summary>
++/// The part of <see cref="Database"/> that reaches storage that already exists, without ever provisioning anything.
++/// </summary>
++/// <remarks>
++/// Nothing here creates a database file, a database, a schema, a table, an index, a migration history or a
++/// <c language="csharp">DatabaseNames</c> binding. Storage that is missing is reported as absent.
++/// </remarks>
++public partial class Database
++{
++    /// <summary>
++    /// SQLITE_CANTOPEN: the database file does not exist and the connection may not create it.
++    /// </summary>
++    const int SqliteCannotOpen = 14;
++
++    /// <summary>
++    /// PostgreSQL invalid_catalog_name: the database does not exist.
++    /// </summary>
++    const string PostgreSqlMissingDatabase = "3D000";
++
++    /// <summary>
++    /// PostgreSQL undefined_table and invalid_schema_name: the cluster database was never migrated.
++    /// </summary>
++    static readonly string[] _postgreSqlMissingObjects = ["42P01", "3F000"];
++
++    /// <summary>
++    /// SQL Server: cannot open the database requested by the login (4060), or invalid object name (208).
++    /// </summary>
++    static readonly int[] _sqlServerMissingStorage = [4060, 208];
++
++    static bool IsMissingStorage(Exception exception) => exception switch
++    {
++        SqliteException sqlite => sqlite.SqliteErrorCode == SqliteCannotOpen,
++        PostgresException postgres => postgres.SqlState == PostgreSqlMissingDatabase || _postgreSqlMissingObjects.Contains(postgres.SqlState),
++        SqlException sqlServer => _sqlServerMissingStorage.Contains(sqlServer.Number),
++        _ => false
++    };
++
++    static SqlTarget WithoutCreate(SqlTarget target)
++    {
++        if (target.ConnectionString.GetDatabaseType() != DatabaseType.Sqlite)
++        {
++            return target;
++        }
++
++        var builder = new SqliteConnectionStringBuilder(target.ConnectionString);
++        if (builder.Mode == SqliteOpenMode.Memory || builder.DataSource.Contains(":memory:", StringComparison.OrdinalIgnoreCase))
++        {
++            return target;
++        }
++
++        builder.Mode = SqliteOpenMode.ReadWrite;
++        return target with { ConnectionString = builder.ConnectionString };
++    }
++
++    /// <summary>
++    /// Resolve where an already provisioned database is, without creating its binding.
++    /// </summary>
++    /// <param name="identity">The <see cref="DatabaseIdentity"/>.</param>
++    /// <param name="purpose">The <see cref="ConnectionPurpose"/>.</param>
++    /// <returns>The <see cref="SqlTarget"/>, or null when the database was never bound or cannot be reached.</returns>
++    async Task<SqlTarget?> ExistingTarget(DatabaseIdentity identity, ConnectionPurpose purpose)
++    {
++        try
++        {
++            return WithoutCreate(await Target(identity, purpose, readOnly: true));
++        }
++        catch (Exception exception) when (exception is SchemaNotCurrent or DatabaseNameBindingFailure || IsMissingStorage(exception))
++        {
++            return null;
++        }
++    }
++
++    /// <summary>
++    /// Create a database context for data that is only read if it is already there.
++    /// </summary>
++    /// <typeparam name="TDbContext">The type of database context.</typeparam>
++    /// <param name="identity">The <see cref="DatabaseIdentity"/>.</param>
++    /// <param name="key">The cache key for what the context is for.</param>
++    /// <param name="cache">The options cache.</param>
++    /// <param name="create">Creates a context from options.</param>
++    /// <param name="exists">Probes, with a context that creates nothing, whether what the context needs is in place.</param>
++    /// <returns>The context, or null when the database or what the probe looks for does not exist. The caller owns it.</returns>
++    async Task<TDbContext?> CreateExistingContext<TDbContext>(
++        DatabaseIdentity identity,
++        string key,
++        ConcurrentDictionary<string, CachedDbContextOptions<TDbContext>> cache,
++        Func<DbContextOptions<TDbContext>, TDbContext> create,
++        Func<TDbContext, SqlTarget, Task<bool>> exists)
++        where TDbContext : DbContext
++    {
++        var target = await ExistingTarget(identity, ConnectionPurpose.Runtime);
++        if (target is null)
++        {
++            return null;
++        }
++
++        var context = create(OptionsFor(cache, $"{key}:{ConnectionPurpose.Runtime}", target));
++        try
++        {
++            if (await ExistsFor(identity, key, cache, create, exists, context, target))
++            {
++                return context;
++            }
++        }
++        catch (Exception exception) when (IsMissingStorage(exception))
++        {
++            // The database is not there, and nothing here creates it.
++        }
++        catch
++        {
++            await context.DisposeAsync();
++            throw;
++        }
++
++        await context.DisposeAsync();
++        return null;
++    }
++
++    async Task<bool> ExistsFor<TDbContext>(
++        DatabaseIdentity identity,
++        string key,
++        ConcurrentDictionary<string, CachedDbContextOptions<TDbContext>> cache,
++        Func<DbContextOptions<TDbContext>, TDbContext> create,
++        Func<TDbContext, SqlTarget, Task<bool>> exists,
++        TDbContext context,
++        SqlTarget target)
++        where TDbContext : DbContext
++    {
++        if (!_resolution.IsConfigured)
++        {
++            return await exists(context, target);
++        }
++
++        // With connection resolution configured the probe runs on the schema identity, as preparation does.
++        var schemaTarget = await ExistingTarget(identity, ConnectionPurpose.Schema);
++        if (schemaTarget is null)
++        {
++            return false;
++        }
++
++        await using var schemaContext = create(OptionsFor(cache, $"{key}:{nameof(ConnectionPurpose.Schema)}", schemaTarget));
++        return await exists(schemaContext, schemaTarget);
++    }
++
++    async Task<DbContextScope<ReadModelDbContext>?> GetExistingReadModelDbContext(
++        EventStoreName eventStore,
++        EventStoreNamespaceName @namespace,
++        string tableName,
++        Func<DbContextOptions<ReadModelDbContext>, string, ReadModelDbContext> createDbContext)
++    {
++#pragma warning disable CA2000
++        var dbContext = await CreateExistingContext(
++            new(DatabaseKind.ReadModels, eventStore.Value, @namespace.Value),
++            $"readmodel-read:{eventStore.Value}:{@namespace.Value}:{tableName}",
++            _readModelOptions,
++            options => createDbContext(options, tableName),
++            EnsureExistingTableMigrated);
++#pragma warning restore CA2000
++
++        return dbContext is null ? null : new DbContextScope<ReadModelDbContext>(dbContext, static () => { });
++    }
++
++    async Task<bool> EnsureExistingTableMigrated(ReadModelDbContext context, SqlTarget target)
++    {
++        if (target.ConnectionString.GetDatabaseType() != DatabaseType.Sqlite)
++        {
++            return await readModelMigrator.EnsureExistingTableMigrated(context.TableName, context);
++        }
++
++        var migrationLock = DatabaseMigrationLock.For(target.ConnectionString);
++        await migrationLock.Semaphore.WaitAsync();
++        try
++        {
++            RefreshMigrationCaches(migrationLock);
++            return await readModelMigrator.EnsureExistingTableMigrated(context.TableName, context);
++        }
++        finally
++        {
++            migrationLock.Semaphore.Release();
++        }
++    }
++}
+diff --git a/Source/Kernel/Storage.Sql/Database.Provisioning.cs b/Source/Kernel/Storage.Sql/Database.Provisioning.cs
+index e7a3bdc089..bc14f5d35d 100644
+--- a/Source/Kernel/Storage.Sql/Database.Provisioning.cs
++++ b/Source/Kernel/Storage.Sql/Database.Provisioning.cs
+@@ -402,54 +402,6 @@ async Task<DbContextScope<TDbContext>> GetOrCreateTableDbContext<TDbContext>(
+         return new DbContextScope<TDbContext>(dbContext, static () => { });
+     }
+ 
+-    async Task<DbContextScope<ReadModelDbContext>?> GetExistingReadModelDbContext(
+-        EventStoreName eventStore,
+-        EventStoreNamespaceName @namespace,
+-        string tableName,
+-        Func<DbContextOptions<ReadModelDbContext>, string, ReadModelDbContext> createDbContext)
+-    {
+-        var exists = false;
+-
+-        // Reading must never create a database or a table, so there is no EnsureDatabaseExists and no table creation here.
+-#pragma warning disable CA2000
+-        var dbContext = await CreateContext(
+-            new(DatabaseKind.ReadModels, eventStore.Value, @namespace.Value),
+-            $"readmodel-read:{eventStore.Value}:{@namespace.Value}:{tableName}",
+-            _readModelOptions,
+-            options => createDbContext(options, tableName),
+-            async (context, target) => exists = await EnsureExistingTableMigrated(context, target),
+-            ConnectionPurpose.Runtime);
+-#pragma warning restore CA2000
+-
+-        if (exists)
+-        {
+-            return new DbContextScope<ReadModelDbContext>(dbContext, static () => { });
+-        }
+-
+-        await dbContext.DisposeAsync();
+-        return null;
+-    }
+-
+-    async Task<bool> EnsureExistingTableMigrated(ReadModelDbContext context, SqlTarget target)
+-    {
+-        if (target.ConnectionString.GetDatabaseType() != DatabaseType.Sqlite)
+-        {
+-            return await readModelMigrator.EnsureExistingTableMigrated(context.TableName, context);
+-        }
+-
+-        var migrationLock = DatabaseMigrationLock.For(target.ConnectionString);
+-        await migrationLock.Semaphore.WaitAsync();
+-        try
+-        {
+-            RefreshMigrationCaches(migrationLock);
+-            return await readModelMigrator.EnsureExistingTableMigrated(context.TableName, context);
+-        }
+-        finally
+-        {
+-            migrationLock.Semaphore.Release();
+-        }
+-    }
+-
+     async Task<DbContextScope<ReadModelDbContext>> GetOrCreateReadModelDbContext(
+         EventStoreName eventStore,
+         EventStoreNamespaceName @namespace,
+diff --git a/Source/Kernel/Storage.Sql/Database.cs b/Source/Kernel/Storage.Sql/Database.cs
+index 1efa05497e..3180d6e7f8 100644
+--- a/Source/Kernel/Storage.Sql/Database.cs
++++ b/Source/Kernel/Storage.Sql/Database.cs
+@@ -188,6 +188,21 @@ public async Task<DbContextScope<NamespaceDbContext>> Namespace(EventStoreName e
+         return new DbContextScope<NamespaceDbContext>(dbContext, static () => { });
+     }
+ 
++    /// <inheritdoc/>
++    public async Task<DbContextScope<NamespaceDbContext>?> ExistingNamespace(EventStoreName eventStore, EventStoreNamespaceName @namespace)
++    {
++#pragma warning disable CA2000
++        var dbContext = await CreateExistingContext(
++            new(DatabaseKind.Namespace, eventStore.Value, @namespace.Value),
++            $"namespace-read:{eventStore.Value}:{@namespace.Value}",
++            _namespaceOptions,
++            static options => new NamespaceDbContext(options),
++            async (context, _) => !(await context.Database.GetPendingMigrationsAsync()).Any());
++#pragma warning restore CA2000
++
++        return dbContext is null ? null : new DbContextScope<NamespaceDbContext>(dbContext, static () => { });
++    }
++
+     /// <inheritdoc/>
+     /// <remarks>
+     /// The jobs storage migrates its own tables through these options, so they resolve for
+diff --git a/Source/Kernel/Storage.Sql/EventStores/Namespaces/ReplayedModels/ReplayedModelsStorage.cs b/Source/Kernel/Storage.Sql/EventStores/Namespaces/ReplayedModels/ReplayedModelsStorage.cs
+index b9e3541dfe..0f6d710ebd 100644
+--- a/Source/Kernel/Storage.Sql/EventStores/Namespaces/ReplayedModels/ReplayedModelsStorage.cs
++++ b/Source/Kernel/Storage.Sql/EventStores/Namespaces/ReplayedModels/ReplayedModelsStorage.cs
+@@ -27,9 +27,16 @@ public async Task Replayed(ReadModelOccurrence occurrence)
+     }
+ 
+     /// <inheritdoc/>
++    /// <remarks>
++    /// Reading occurrences never provisions anything: a namespace whose storage does not exist yet has none.
++    /// </remarks>
+     public async Task<IEnumerable<ReadModelOccurrence>> GetOccurrences(ReadModelIdentifier readModel)
+     {
+-        await using var scope = await database.Namespace(eventStore, @namespace);
++        await using var scope = await database.ExistingNamespace(eventStore, @namespace);
++        if (scope is null)
++        {
++            return [];
++        }
+ 
+         var occurrences = await scope.DbContext.ReplayedModels
+             .Where(r => r.ReadModelIdentifier == readModel.Value)
+diff --git a/Source/Kernel/Storage.Sql/IDatabase.cs b/Source/Kernel/Storage.Sql/IDatabase.cs
+index 580e789330..5e7b01eb92 100644
+--- a/Source/Kernel/Storage.Sql/IDatabase.cs
++++ b/Source/Kernel/Storage.Sql/IDatabase.cs
+@@ -50,6 +50,15 @@ public interface IDatabase
+     /// <returns>A <see cref="DbContextScope{NamespaceDbContext}"/> for the specified event store namespace.</returns>
+     Task<DbContextScope<NamespaceDbContext>> Namespace(EventStoreName eventStore, EventStoreNamespaceName @namespace);
+ 
++    /// <summary>
++    /// Gets a database context scope for an event store namespace that has already been provisioned and migrated.
++    /// Unlike <see cref="Namespace"/> it never creates or migrates a database, a schema, a table or a database name binding.
++    /// </summary>
++    /// <param name="eventStore">The name of the event store.</param>
++    /// <param name="namespace">The name of the namespace.</param>
++    /// <returns>A <see cref="DbContextScope{NamespaceDbContext}"/>, or null when the namespace storage is absent or not fully migrated.</returns>
++    Task<DbContextScope<NamespaceDbContext>?> ExistingNamespace(EventStoreName eventStore, EventStoreNamespaceName @namespace);
++
+     /// <summary>
+     /// Gets the <see cref="DbContextOptions{JobsDbContext}"/> for the Cratis.Orleans job system's storage in
+     /// the database of an event store namespace - the same database the namespace's own DbContext uses.
+diff --git a/Source/Kernel/Storage/Sinks/ISinks.cs b/Source/Kernel/Storage/Sinks/ISinks.cs
+index d8e6498011..3407674004 100644
+--- a/Source/Kernel/Storage/Sinks/ISinks.cs
++++ b/Source/Kernel/Storage/Sinks/ISinks.cs
+@@ -25,6 +25,16 @@ public interface ISinks
+     /// <returns><see cref="ISink"/> instance.</returns>
+     Task<ISink> GetFor(ReadModelDefinition readModel);
+ 
++    /// <summary>
++    /// Get a <see cref="ISink"/> for reading an occurrence, without creating any storage or indexes for it.
++    /// </summary>
++    /// <param name="readModel"><see cref="ReadModelDefinition"/> to get for.</param>
++    /// <returns><see cref="ISink"/> instance.</returns>
++    /// <remarks>
++    /// The sink is shared with <see cref="GetFor(ReadModelDefinition)"/>, which initializes it when it is first asked for.
++    /// </remarks>
++    Task<ISink> GetWithoutProvisioning(ReadModelDefinition readModel);
++
+     /// <summary>
+     /// Get a <see cref="ISink"/> that writes to an explicit destination container instead of the read model's own container.
+     /// </summary>
+diff --git a/Source/Kernel/Storage/Sinks/Sinks.cs b/Source/Kernel/Storage/Sinks/Sinks.cs
+index 2876eaac18..b4ef72d30b 100644
+--- a/Source/Kernel/Storage/Sinks/Sinks.cs
++++ b/Source/Kernel/Storage/Sinks/Sinks.cs
+@@ -24,32 +24,40 @@ public class Sinks(
+     IInstancesOf<ISinkFactory> sinkFactories) : ISinks
+ {
+     readonly Dictionary<SinkTypeId, ISinkFactory> _factories = sinkFactories.Where(_ => _ is not null).ToDictionary(_ => _.TypeId, _ => _);
+-    readonly ConcurrentDictionary<SinkKey, (ISink Sink, ReadModelDefinition Definition)> _sinks = new();
++    readonly ConcurrentDictionary<SinkKey, SinkEntry> _sinks = new();
+     readonly ConcurrentDictionary<SinkKey, SemaphoreSlim> _gates = new();
+ 
+     /// <inheritdoc/>
+-    public async Task<ISink> GetFor(ReadModelDefinition readModel)
++    public Task<ISink> GetFor(ReadModelDefinition readModel) => Get(readModel, initialize: true);
++
++    /// <inheritdoc/>
++    public Task<ISink> GetWithoutProvisioning(ReadModelDefinition readModel) => Get(readModel, initialize: false);
++
++    async Task<ISink> Get(ReadModelDefinition readModel, bool initialize)
+     {
+         readModel.Sink.EnsureReadModelSupported();
+         ThrowIfUnknownSink(readModel.Sink.Type);
+         var key = new SinkKey(readModel.Sink.Type, readModel.Sink.Configuration, readModel.ContainerName, readModel.Sink.EventSequence);
+-        if (_sinks.TryGetValue(key, out var cached) && SameDefinition(cached.Definition, readModel)) return cached.Sink;
++        if (_sinks.TryGetValue(key, out var cached) && SameDefinition(cached.Definition, readModel) && (cached.Initialized || !initialize)) return cached.Sink;
+         var gate = _gates.GetOrAdd(key, _ => new SemaphoreSlim(1, 1));
+         await gate.WaitAsync();
+         try
+         {
+             var changed = _sinks.TryGetValue(key, out var existing);
+-            if (changed && SameDefinition(existing.Definition, readModel)) return existing.Sink;
+-            var sink = _factories[readModel.Sink.Type].CreateFor(eventStoreName, eventStoreNamespaceName, readModel);
+-            if (changed && sink is ICanReconcileIndexes reconciler)
++            var sameDefinition = changed && SameDefinition(existing!.Definition, readModel);
++            if (sameDefinition && (existing!.Initialized || !initialize)) return existing.Sink;
++            var sink = sameDefinition ? existing!.Sink : _factories[readModel.Sink.Type].CreateFor(eventStoreName, eventStoreNamespaceName, readModel);
++            if (initialize)
+             {
+-                await reconciler.ReconcileIndexes();
++                await Initialize(sink, changed && !sameDefinition);
+             }
+-            else
++
++            // A sink for a changed definition is never cached uninitialized: the next initializing request must reconcile its indexes.
++            if (initialize || !changed)
+             {
+-                await sink.EnsureIndexes();
++                _sinks[key] = new(sink, readModel, initialize);
+             }
+-            _sinks[key] = (sink, readModel);
++
+             return sink;
+         }
+         finally
+@@ -58,6 +66,18 @@ public async Task<ISink> GetFor(ReadModelDefinition readModel)
+         }
+     }
+ 
++    static async Task Initialize(ISink sink, bool changed)
++    {
++        if (changed && sink is ICanReconcileIndexes reconciler)
++        {
++            await reconciler.ReconcileIndexes();
++        }
++        else
++        {
++            await sink.EnsureIndexes();
++        }
++    }
++
+     /// <inheritdoc/>
+     public Task<ISink> GetFor(ReadModelDefinition readModel, ReadModelContainerName container) =>
+         GetFor(readModel with { ContainerName = container });
+@@ -75,5 +95,7 @@ void ThrowIfUnknownSink(SinkTypeId typeId)
+         if (!HasType(typeId)) throw new UnknownSink(typeId);
+     }
+ 
++    sealed record SinkEntry(ISink Sink, ReadModelDefinition Definition, bool Initialized);
++
+     sealed record SinkKey(SinkTypeId TypeId, SinkConfigurationId ConfigurationId, ReadModelContainerName ContainerName, EventSequenceSinkConfiguration? EventSequence);
+ }

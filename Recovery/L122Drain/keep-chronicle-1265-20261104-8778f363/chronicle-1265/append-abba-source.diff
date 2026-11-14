@@ -1,0 +1,1662 @@
+diff --git a/Source/Kernel/Concepts/Clients/ClientConnectionEpoch.cs b/Source/Kernel/Concepts/Clients/ClientConnectionEpoch.cs
+new file mode 100644
+index 0000000000..95fd818d26
+--- /dev/null
++++ b/Source/Kernel/Concepts/Clients/ClientConnectionEpoch.cs
+@@ -0,0 +1,38 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++namespace Cratis.Chronicle.Concepts.Clients;
++
++/// <summary>
++/// Represents the identifier of one connected period of a client connection.
++/// </summary>
++/// <remarks>
++/// A connection identifier can be reused for a restored client. The epoch tells a notification
++/// from an earlier connected period apart from one for the current period.
++/// </remarks>
++/// <param name="Value">Actual inner value.</param>
++public record ClientConnectionEpoch(Guid Value) : ConceptAs<Guid>(Value)
++{
++    /// <summary>
++    /// Represents an epoch that has not been set.
++    /// </summary>
++    public static readonly ClientConnectionEpoch NotSet = new(Guid.Empty);
++
++    /// <summary>
++    /// Implicitly convert from <see cref="Guid"/> to <see cref="ClientConnectionEpoch"/>.
++    /// </summary>
++    /// <param name="value">Guid to convert from.</param>
++    public static implicit operator ClientConnectionEpoch(Guid value) => new(value);
++
++    /// <summary>
++    /// Implicitly convert from <see cref="ClientConnectionEpoch"/> to <see cref="Guid"/>.
++    /// </summary>
++    /// <param name="value"><see cref="ClientConnectionEpoch"/> to convert from.</param>
++    public static implicit operator Guid(ClientConnectionEpoch value) => value.Value;
++
++    /// <summary>
++    /// Create a new unique <see cref="ClientConnectionEpoch"/>.
++    /// </summary>
++    /// <returns>A new <see cref="ClientConnectionEpoch"/>.</returns>
++    public static ClientConnectionEpoch New() => new(Guid.NewGuid());
++}
+diff --git a/Source/Kernel/Core.Specs/Clients/for_ClientConnection/given/a_client_connection.cs b/Source/Kernel/Core.Specs/Clients/for_ClientConnection/given/a_client_connection.cs
+new file mode 100644
+index 0000000000..d96046e833
+--- /dev/null
++++ b/Source/Kernel/Core.Specs/Clients/for_ClientConnection/given/a_client_connection.cs
+@@ -0,0 +1,37 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Microsoft.Extensions.Logging;
++
++namespace Cratis.Chronicle.Clients.for_ClientConnection.given;
++
++public class a_client_connection : Specification
++{
++    protected RecordingClientConnection _connection;
++    protected IGrainFactory _grainFactory;
++    protected GrainId _first = GrainId.Create("reactor", "first");
++    protected GrainId _second = GrainId.Create("reducer", "second");
++    protected IClientDisconnectionSubscriber _firstSubscriber;
++    protected IClientDisconnectionSubscriber _secondSubscriber;
++
++    void Establish()
++    {
++        _grainFactory = Substitute.For<IGrainFactory>();
++        _firstSubscriber = Substitute.For<IClientDisconnectionSubscriber>();
++        _secondSubscriber = Substitute.For<IClientDisconnectionSubscriber>();
++        _grainFactory.GetGrain<IClientDisconnectionSubscriber>(_first).Returns(_firstSubscriber);
++        _grainFactory.GetGrain<IClientDisconnectionSubscriber>(_second).Returns(_secondSubscriber);
++        _connection = new RecordingClientConnection(_grainFactory, Substitute.For<ILogger<ClientConnection>>());
++    }
++
++    protected class RecordingClientConnection(IGrainFactory grainFactory, ILogger<ClientConnection> logger) : ClientConnection(grainFactory, logger)
++    {
++        public int PinCount { get; private set; }
++
++        public int ReleaseCount { get; private set; }
++
++        protected override void Pin() => PinCount++;
++
++        protected override void Release() => ReleaseCount++;
++    }
++}
+diff --git a/Source/Kernel/Core.Specs/Clients/for_ClientConnection/when_connected.cs b/Source/Kernel/Core.Specs/Clients/for_ClientConnection/when_connected.cs
+new file mode 100644
+index 0000000000..985a925997
+--- /dev/null
++++ b/Source/Kernel/Core.Specs/Clients/for_ClientConnection/when_connected.cs
+@@ -0,0 +1,17 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++namespace Cratis.Chronicle.Clients.for_ClientConnection;
++
++public class when_connected : given.a_client_connection
++{
++    async Task Because()
++    {
++        await _connection.Connect();
++        await _connection.Subscribe(_first);
++        await _connection.Unsubscribe(_first);
++    }
++
++    [Fact] void should_be_kept_alive() => _connection.PinCount.ShouldEqual(1);
++    [Fact] void should_not_request_deactivation() => _connection.ReleaseCount.ShouldEqual(0);
++}
+diff --git a/Source/Kernel/Core.Specs/Clients/for_ClientConnection/when_connecting/after_disconnect.cs b/Source/Kernel/Core.Specs/Clients/for_ClientConnection/when_connecting/after_disconnect.cs
+new file mode 100644
+index 0000000000..ec521feeb8
+--- /dev/null
++++ b/Source/Kernel/Core.Specs/Clients/for_ClientConnection/when_connecting/after_disconnect.cs
+@@ -0,0 +1,28 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Chronicle.Concepts.Clients;
++
++namespace Cratis.Chronicle.Clients.for_ClientConnection.when_connecting;
++
++public class after_disconnect : given.a_client_connection
++{
++    ClientConnectionEpoch _firstEpoch;
++    ClientConnectionEpoch _secondEpoch;
++
++    async Task Establish()
++    {
++        await _connection.Connect();
++        _firstEpoch = await _connection.Subscribe(_first);
++        await _connection.Disconnect();
++    }
++
++    async Task Because()
++    {
++        await _connection.Connect();
++        _secondEpoch = await _connection.Subscribe(_first);
++    }
++
++    [Fact] void should_have_a_new_epoch() => _secondEpoch.ShouldNotEqual(_firstEpoch);
++    [Fact] void should_not_be_not_set() => _secondEpoch.ShouldNotEqual(ClientConnectionEpoch.NotSet);
++}
+diff --git a/Source/Kernel/Core.Specs/Clients/for_ClientConnection/when_disconnecting/and_a_subscriber_fails.cs b/Source/Kernel/Core.Specs/Clients/for_ClientConnection/when_disconnecting/and_a_subscriber_fails.cs
+new file mode 100644
+index 0000000000..1d0a3167fd
+--- /dev/null
++++ b/Source/Kernel/Core.Specs/Clients/for_ClientConnection/when_disconnecting/and_a_subscriber_fails.cs
+@@ -0,0 +1,24 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Chronicle.Concepts.Clients;
++
++namespace Cratis.Chronicle.Clients.for_ClientConnection.when_disconnecting;
++
++public class and_a_subscriber_fails : given.a_client_connection
++{
++    Exception _exception;
++
++    async Task Establish()
++    {
++        _firstSubscriber.ClientDisconnected(Arg.Any<ClientConnectionEpoch>()).Returns(_ => throw new InvalidOperationException("boom"));
++        await _connection.Connect();
++        await _connection.Subscribe(_first);
++        await _connection.Subscribe(_second);
++    }
++
++    async Task Because() => _exception = await Catch.Exception(_connection.Disconnect);
++
++    [Fact] void should_not_throw() => _exception.ShouldBeNull();
++    [Fact] void should_still_notify_the_other_subscriber() => _secondSubscriber.ReceivedWithAnyArgs(1).ClientDisconnected(default!);
++}
+diff --git a/Source/Kernel/Core.Specs/Clients/for_ClientConnection/when_disconnecting/and_connected.cs b/Source/Kernel/Core.Specs/Clients/for_ClientConnection/when_disconnecting/and_connected.cs
+new file mode 100644
+index 0000000000..7392e7974d
+--- /dev/null
++++ b/Source/Kernel/Core.Specs/Clients/for_ClientConnection/when_disconnecting/and_connected.cs
+@@ -0,0 +1,13 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++namespace Cratis.Chronicle.Clients.for_ClientConnection.when_disconnecting;
++
++public class and_connected : given.a_client_connection
++{
++    async Task Establish() => await _connection.Connect();
++
++    Task Because() => _connection.Disconnect();
++
++    [Fact] void should_release_after_having_pinned() => (_connection.PinCount, _connection.ReleaseCount).ShouldEqual((1, 1));
++}
+diff --git a/Source/Kernel/Core.Specs/Clients/for_ClientConnection/when_disconnecting/and_subscribers_were_notified.cs b/Source/Kernel/Core.Specs/Clients/for_ClientConnection/when_disconnecting/and_subscribers_were_notified.cs
+new file mode 100644
+index 0000000000..ff5358e153
+--- /dev/null
++++ b/Source/Kernel/Core.Specs/Clients/for_ClientConnection/when_disconnecting/and_subscribers_were_notified.cs
+@@ -0,0 +1,18 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++namespace Cratis.Chronicle.Clients.for_ClientConnection.when_disconnecting;
++
++public class and_subscribers_were_notified : given.a_client_connection
++{
++    async Task Establish()
++    {
++        await _connection.Connect();
++        await _connection.Subscribe(_first);
++    }
++
++    Task Because() => _connection.Disconnect();
++
++    [Fact] void should_notify_the_subscriber() => _firstSubscriber.ReceivedWithAnyArgs(1).ClientDisconnected(default!);
++    [Fact] void should_request_deactivation_once() => _connection.ReleaseCount.ShouldEqual(1);
++}
+diff --git a/Source/Kernel/Core.Specs/Clients/for_ClientConnection/when_disconnecting/twice.cs b/Source/Kernel/Core.Specs/Clients/for_ClientConnection/when_disconnecting/twice.cs
+new file mode 100644
+index 0000000000..72d5f28175
+--- /dev/null
++++ b/Source/Kernel/Core.Specs/Clients/for_ClientConnection/when_disconnecting/twice.cs
+@@ -0,0 +1,21 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++namespace Cratis.Chronicle.Clients.for_ClientConnection.when_disconnecting;
++
++public class twice : given.a_client_connection
++{
++    async Task Establish()
++    {
++        await _connection.Connect();
++        await _connection.Subscribe(_first);
++    }
++
++    async Task Because()
++    {
++        await _connection.Disconnect();
++        await _connection.Disconnect();
++    }
++
++    [Fact] void should_notify_the_subscriber_only_once() => _firstSubscriber.ReceivedWithAnyArgs(1).ClientDisconnected(default!);
++}
+diff --git a/Source/Kernel/Core.Specs/Clients/for_ClientConnection/when_disconnecting/with_subscribers.cs b/Source/Kernel/Core.Specs/Clients/for_ClientConnection/when_disconnecting/with_subscribers.cs
+new file mode 100644
+index 0000000000..89e5e55d23
+--- /dev/null
++++ b/Source/Kernel/Core.Specs/Clients/for_ClientConnection/when_disconnecting/with_subscribers.cs
+@@ -0,0 +1,23 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Chronicle.Concepts.Clients;
++
++namespace Cratis.Chronicle.Clients.for_ClientConnection.when_disconnecting;
++
++public class with_subscribers : given.a_client_connection
++{
++    ClientConnectionEpoch _epoch;
++
++    async Task Establish()
++    {
++        await _connection.Connect();
++        _epoch = await _connection.Subscribe(_first);
++        await _connection.Subscribe(_second);
++    }
++
++    Task Because() => _connection.Disconnect();
++
++    [Fact] void should_notify_the_first_subscriber_once() => _firstSubscriber.Received(1).ClientDisconnected(_epoch);
++    [Fact] void should_notify_the_second_subscriber_once() => _secondSubscriber.Received(1).ClientDisconnected(_epoch);
++}
+diff --git a/Source/Kernel/Core.Specs/Clients/for_ClientConnection/when_subscribing/after_disconnect.cs b/Source/Kernel/Core.Specs/Clients/for_ClientConnection/when_subscribing/after_disconnect.cs
+new file mode 100644
+index 0000000000..3bd952bd2b
+--- /dev/null
++++ b/Source/Kernel/Core.Specs/Clients/for_ClientConnection/when_subscribing/after_disconnect.cs
+@@ -0,0 +1,26 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Chronicle.Concepts.Clients;
++
++namespace Cratis.Chronicle.Clients.for_ClientConnection.when_subscribing;
++
++public class after_disconnect : given.a_client_connection
++{
++    ClientConnectionEpoch _epoch;
++
++    async Task Establish()
++    {
++        await _connection.Connect();
++        await _connection.Disconnect();
++    }
++
++    async Task Because()
++    {
++        _epoch = await _connection.Subscribe(_first);
++        await _connection.Disconnect();
++    }
++
++    [Fact] void should_return_not_set() => _epoch.ShouldEqual(ClientConnectionEpoch.NotSet);
++    [Fact] void should_never_notify_the_subscriber() => _firstSubscriber.DidNotReceiveWithAnyArgs().ClientDisconnected(default!);
++}
+diff --git a/Source/Kernel/Core.Specs/Clients/for_ClientConnection/when_subscribing/twice.cs b/Source/Kernel/Core.Specs/Clients/for_ClientConnection/when_subscribing/twice.cs
+new file mode 100644
+index 0000000000..5658d7f323
+--- /dev/null
++++ b/Source/Kernel/Core.Specs/Clients/for_ClientConnection/when_subscribing/twice.cs
+@@ -0,0 +1,17 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++namespace Cratis.Chronicle.Clients.for_ClientConnection.when_subscribing;
++
++public class twice : given.a_client_connection
++{
++    async Task Because()
++    {
++        await _connection.Connect();
++        await _connection.Subscribe(_first);
++        await _connection.Subscribe(_first);
++        await _connection.Disconnect();
++    }
++
++    [Fact] void should_notify_the_subscriber_once() => _firstSubscriber.ReceivedWithAnyArgs(1).ClientDisconnected(default!);
++}
+diff --git a/Source/Kernel/Core.Specs/Clients/for_ClientConnection/when_subscribing_on_a_fresh_activation.cs b/Source/Kernel/Core.Specs/Clients/for_ClientConnection/when_subscribing_on_a_fresh_activation.cs
+new file mode 100644
+index 0000000000..ce94f029f5
+--- /dev/null
++++ b/Source/Kernel/Core.Specs/Clients/for_ClientConnection/when_subscribing_on_a_fresh_activation.cs
+@@ -0,0 +1,11 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++namespace Cratis.Chronicle.Clients.for_ClientConnection;
++
++public class when_subscribing_on_a_fresh_activation : given.a_client_connection
++{
++    Task Because() => _connection.Subscribe(_first);
++
++    [Fact] void should_not_be_kept_alive() => _connection.PinCount.ShouldEqual(0);
++}
+diff --git a/Source/Kernel/Core.Specs/Clients/for_ClientConnection/when_unsubscribing.cs b/Source/Kernel/Core.Specs/Clients/for_ClientConnection/when_unsubscribing.cs
+new file mode 100644
+index 0000000000..620d35b4fe
+--- /dev/null
++++ b/Source/Kernel/Core.Specs/Clients/for_ClientConnection/when_unsubscribing.cs
+@@ -0,0 +1,21 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++namespace Cratis.Chronicle.Clients.for_ClientConnection;
++
++public class when_unsubscribing : given.a_client_connection
++{
++    async Task Establish()
++    {
++        await _connection.Connect();
++        await _connection.Subscribe(_first);
++    }
++
++    async Task Because()
++    {
++        await _connection.Unsubscribe(_first);
++        await _connection.Disconnect();
++    }
++
++    [Fact] void should_not_notify_the_subscriber() => _firstSubscriber.DidNotReceiveWithAnyArgs().ClientDisconnected(default!);
++}
+diff --git a/Source/Kernel/Core.Specs/Clients/for_ClientConnection/when_unsubscribing_after_disconnect.cs b/Source/Kernel/Core.Specs/Clients/for_ClientConnection/when_unsubscribing_after_disconnect.cs
+new file mode 100644
+index 0000000000..7525f6bf42
+--- /dev/null
++++ b/Source/Kernel/Core.Specs/Clients/for_ClientConnection/when_unsubscribing_after_disconnect.cs
+@@ -0,0 +1,17 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++namespace Cratis.Chronicle.Clients.for_ClientConnection;
++
++public class when_unsubscribing_after_disconnect : given.a_client_connection
++{
++    async Task Establish()
++    {
++        await _connection.Connect();
++        await _connection.Disconnect();
++    }
++
++    Task Because() => _connection.Unsubscribe(_first);
++
++    [Fact] void should_request_deactivation_again() => _connection.ReleaseCount.ShouldEqual(2);
++}
+diff --git a/Source/Kernel/Core.Specs/Clients/for_ClientConnection/when_unsubscribing_on_a_fresh_activation.cs b/Source/Kernel/Core.Specs/Clients/for_ClientConnection/when_unsubscribing_on_a_fresh_activation.cs
+new file mode 100644
+index 0000000000..4bea26ca2a
+--- /dev/null
++++ b/Source/Kernel/Core.Specs/Clients/for_ClientConnection/when_unsubscribing_on_a_fresh_activation.cs
+@@ -0,0 +1,12 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++namespace Cratis.Chronicle.Clients.for_ClientConnection;
++
++public class when_unsubscribing_on_a_fresh_activation : given.a_client_connection
++{
++    Task Because() => _connection.Unsubscribe(_first);
++
++    [Fact] void should_not_be_kept_alive() => _connection.PinCount.ShouldEqual(0);
++    [Fact] void should_request_deactivation() => _connection.ReleaseCount.ShouldEqual(1);
++}
+diff --git a/Source/Kernel/Core.Specs/Clients/for_ConnectedClients/given/a_connection_with_projection_declarations.cs b/Source/Kernel/Core.Specs/Clients/for_ConnectedClients/given/a_connection_with_projection_declarations.cs
+index 6b3012d15e..c2661a9f59 100644
+--- a/Source/Kernel/Core.Specs/Clients/for_ConnectedClients/given/a_connection_with_projection_declarations.cs
++++ b/Source/Kernel/Core.Specs/Clients/for_ConnectedClients/given/a_connection_with_projection_declarations.cs
+@@ -16,12 +16,15 @@ public class a_connection_with_projection_declarations : Specification
+ {
+     protected ConnectedClients _clients;
+     protected ConnectionId _connection = ConnectionId.New();
++    protected IGrainFactory _grainFactory = Substitute.For<IGrainFactory>();
++    protected IClientConnection _clientConnection = Substitute.For<IClientConnection>();
+     protected EventStoreName _eventStore = "the-store";
+     protected ProjectionId _projection = "the-projection";
+ 
+     async Task Establish()
+     {
+-        _clients = new ConnectedClients(Substitute.For<ILogger<ConnectedClients>>(), Substitute.For<IMeter<ConnectedClients>>(), Options.Create(new ChronicleOptions()), Substitute.For<IStorage>());
++        _grainFactory.GetGrain<IClientConnection>(_connection.Value).Returns(_clientConnection);
++        _clients = new ConnectedClients(_grainFactory, Substitute.For<ILogger<ConnectedClients>>(), Substitute.For<IMeter<ConnectedClients>>(), Options.Create(new ChronicleOptions()), Substitute.For<IStorage>());
+         await Connect(_connection);
+         await _clients.RecordDeclaredProjections(_connection, _eventStore, [_projection]);
+     }
+diff --git a/Source/Kernel/Core.Specs/Clients/for_ConnectedClients/when_client_connects.cs b/Source/Kernel/Core.Specs/Clients/for_ConnectedClients/when_client_connects.cs
+index aa88653da2..cef8cfe22e 100644
+--- a/Source/Kernel/Core.Specs/Clients/for_ConnectedClients/when_client_connects.cs
++++ b/Source/Kernel/Core.Specs/Clients/for_ConnectedClients/when_client_connects.cs
+@@ -12,18 +12,22 @@ namespace Cratis.Chronicle.Clients.for_ConnectedClients;
+ 
+ public class when_client_connects : Specification
+ {
++    IClientConnection _clientConnection = Substitute.For<IClientConnection>();
+     ConnectedClients _connectedClients = default!;
+     ConnectionId _connectionId = default!;
+     ConnectedClient _client = default!;
+ 
+     void Establish()
+     {
++        var grainFactory = Substitute.For<IGrainFactory>();
+         _connectedClients = new ConnectedClients(
++            grainFactory,
+             Substitute.For<ILogger<ConnectedClients>>(),
+             Substitute.For<IMeter<ConnectedClients>>(),
+             Options.Create(new ChronicleOptions()),
+             Substitute.For<IStorage>());
+         _connectionId = ConnectionId.New();
++        grainFactory.GetGrain<IClientConnection>(_connectionId.Value).Returns(_clientConnection);
+     }
+ 
+     async Task Because()
+@@ -32,6 +36,7 @@ async Task Because()
+         _client = await _connectedClients.GetConnectedClient(_connectionId);
+     }
+ 
++    [Fact] void should_connect_the_client_connection() => _clientConnection.Received(1).Connect();
+     [Fact] void should_store_the_version() => _client.Version.ShouldEqual("2.3.4");
+     [Fact] void should_store_the_process_id() => _client.ProcessId.ShouldEqual(4242);
+     [Fact] void should_store_the_process_path() => _client.ProcessPath.ShouldEqual("/apps/my-app/MyApp");
+diff --git a/Source/Kernel/Core.Specs/Clients/for_ConnectedClients/when_client_connects_and_the_client_connection_fails.cs b/Source/Kernel/Core.Specs/Clients/for_ConnectedClients/when_client_connects_and_the_client_connection_fails.cs
+new file mode 100644
+index 0000000000..d5dd0156b9
+--- /dev/null
++++ b/Source/Kernel/Core.Specs/Clients/for_ConnectedClients/when_client_connects_and_the_client_connection_fails.cs
+@@ -0,0 +1,42 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Chronicle.Concepts.Clients;
++using Cratis.Chronicle.Configuration;
++using Cratis.Chronicle.Storage;
++using Cratis.Metrics;
++using Microsoft.Extensions.Logging;
++using Microsoft.Extensions.Options;
++
++namespace Cratis.Chronicle.Clients.for_ConnectedClients;
++
++public class when_client_connects_and_the_client_connection_fails : Specification
++{
++    ConnectedClients _connectedClients;
++    ConnectionId _connectionId = ConnectionId.New();
++    Exception _exception;
++    bool _isConnected;
++
++    void Establish()
++    {
++        var grainFactory = Substitute.For<IGrainFactory>();
++        var clientConnection = Substitute.For<IClientConnection>();
++        clientConnection.Connect().Returns(_ => throw new InvalidOperationException("boom"));
++        grainFactory.GetGrain<IClientConnection>(_connectionId.Value).Returns(clientConnection);
++        _connectedClients = new ConnectedClients(
++            grainFactory,
++            Substitute.For<ILogger<ConnectedClients>>(),
++            Substitute.For<IMeter<ConnectedClients>>(),
++            Options.Create(new ChronicleOptions()),
++            Substitute.For<IStorage>());
++    }
++
++    async Task Because()
++    {
++        _exception = await Catch.Exception(() => _connectedClients.OnClientConnected(_connectionId, "1.0", false, 1, "/app", "host", ".NET"));
++        _isConnected = await _connectedClients.IsConnected(_connectionId);
++    }
++
++    [Fact] void should_not_throw() => _exception.ShouldBeNull();
++    [Fact] void should_register_the_client() => _isConnected.ShouldBeTrue();
++}
+diff --git a/Source/Kernel/Core.Specs/Clients/for_ConnectedClients/when_deactivating.cs b/Source/Kernel/Core.Specs/Clients/for_ConnectedClients/when_deactivating.cs
+index a067194209..91835882a1 100644
+--- a/Source/Kernel/Core.Specs/Clients/for_ConnectedClients/when_deactivating.cs
++++ b/Source/Kernel/Core.Specs/Clients/for_ConnectedClients/when_deactivating.cs
+@@ -18,6 +18,7 @@ public class when_deactivating : Specification
+     void Establish()
+     {
+         _connectedClients = new ConnectedClients(
++            Substitute.For<IGrainFactory>(),
+             Substitute.For<ILogger<ConnectedClients>>(),
+             Substitute.For<IMeter<ConnectedClients>>(),
+             Options.Create(new ChronicleOptions()),
+diff --git a/Source/Kernel/Core.Specs/Clients/for_ConnectedClients/when_disconnecting/and_lease_expiry_is_slow_and_fails.cs b/Source/Kernel/Core.Specs/Clients/for_ConnectedClients/when_disconnecting/and_lease_expiry_is_slow_and_fails.cs
+index eb0ccc9c8b..5b1853d906 100644
+--- a/Source/Kernel/Core.Specs/Clients/for_ConnectedClients/when_disconnecting/and_lease_expiry_is_slow_and_fails.cs
++++ b/Source/Kernel/Core.Specs/Clients/for_ConnectedClients/when_disconnecting/and_lease_expiry_is_slow_and_fails.cs
+@@ -47,7 +47,7 @@ async Task Establish()
+             _continued.SetResult();
+             return Task.CompletedTask;
+         });
+-        _clients = new(NullLogger<ConnectedClients>.Instance, _meter, Options.Create(new ChronicleOptions()), storage);
++        _clients = new(Substitute.For<IGrainFactory>(), NullLogger<ConnectedClients>.Instance, _meter, Options.Create(new ChronicleOptions()), storage);
+         await _clients.OnClientConnected(_connection, "1.0", false, 1, "app", "host", ".NET");
+         _meter.ClearReceivedCalls();
+     }
+diff --git a/Source/Kernel/Core.Specs/Clients/for_ConnectedClients/when_disconnecting/notifies_the_client_connection.cs b/Source/Kernel/Core.Specs/Clients/for_ConnectedClients/when_disconnecting/notifies_the_client_connection.cs
+new file mode 100644
+index 0000000000..9a3e5cfe7f
+--- /dev/null
++++ b/Source/Kernel/Core.Specs/Clients/for_ConnectedClients/when_disconnecting/notifies_the_client_connection.cs
+@@ -0,0 +1,11 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++namespace Cratis.Chronicle.Clients.for_ConnectedClients.when_disconnecting;
++
++public class notifies_the_client_connection : given.a_connection_with_projection_declarations
++{
++    Task Because() => _clients.OnClientDisconnected(_connection, "closed");
++
++    [Fact] void should_disconnect_the_client_connection() => _clientConnection.Received(1).Disconnect();
++}
+diff --git a/Source/Kernel/Core.Specs/Clients/for_ConnectedClients/when_disconnecting/with_leases_in_application_and_namespace_scopes.cs b/Source/Kernel/Core.Specs/Clients/for_ConnectedClients/when_disconnecting/with_leases_in_application_and_namespace_scopes.cs
+index ab6f8c8907..0d2c093e16 100644
+--- a/Source/Kernel/Core.Specs/Clients/for_ConnectedClients/when_disconnecting/with_leases_in_application_and_namespace_scopes.cs
++++ b/Source/Kernel/Core.Specs/Clients/for_ConnectedClients/when_disconnecting/with_leases_in_application_and_namespace_scopes.cs
+@@ -37,7 +37,7 @@ void Establish()
+             _expired.SetResult();
+             return Task.CompletedTask;
+         });
+-        _clients = new(Substitute.For<ILogger<ConnectedClients>>(), Substitute.For<IMeter<ConnectedClients>>(), Options.Create(new ChronicleOptions()), storage);
++        _clients = new(Substitute.For<IGrainFactory>(), Substitute.For<ILogger<ConnectedClients>>(), Substitute.For<IMeter<ConnectedClients>>(), Options.Create(new ChronicleOptions()), storage);
+     }
+ 
+     async Task Because()
+diff --git a/Source/Kernel/Core.Specs/Clients/for_ConnectedClients/when_getting_connection_count.cs b/Source/Kernel/Core.Specs/Clients/for_ConnectedClients/when_getting_connection_count.cs
+index 470f20fc23..9a51de1663 100644
+--- a/Source/Kernel/Core.Specs/Clients/for_ConnectedClients/when_getting_connection_count.cs
++++ b/Source/Kernel/Core.Specs/Clients/for_ConnectedClients/when_getting_connection_count.cs
+@@ -18,6 +18,7 @@ public class when_getting_connection_count : Specification
+     void Establish()
+     {
+         _connectedClients = new ConnectedClients(
++            Substitute.For<IGrainFactory>(),
+             Substitute.For<ILogger<ConnectedClients>>(),
+             Substitute.For<IMeter<ConnectedClients>>(),
+             Options.Create(new ChronicleOptions()),
+diff --git a/Source/Kernel/Core.Specs/Clients/for_ConnectedClients/when_getting_connection_count_with_a_reservation_and_a_connected_client.cs b/Source/Kernel/Core.Specs/Clients/for_ConnectedClients/when_getting_connection_count_with_a_reservation_and_a_connected_client.cs
+index b992904683..000b6ab584 100644
+--- a/Source/Kernel/Core.Specs/Clients/for_ConnectedClients/when_getting_connection_count_with_a_reservation_and_a_connected_client.cs
++++ b/Source/Kernel/Core.Specs/Clients/for_ConnectedClients/when_getting_connection_count_with_a_reservation_and_a_connected_client.cs
+@@ -18,6 +18,7 @@ public class when_getting_connection_count_with_a_reservation_and_a_connected_cl
+     void Establish()
+     {
+         _connectedClients = new ConnectedClients(
++            Substitute.For<IGrainFactory>(),
+             Substitute.For<ILogger<ConnectedClients>>(),
+             Substitute.For<IMeter<ConnectedClients>>(),
+             Options.Create(new ChronicleOptions()),
+diff --git a/Source/Kernel/Core.Specs/Clients/for_ConnectedClients/when_reserving_a_connection.cs b/Source/Kernel/Core.Specs/Clients/for_ConnectedClients/when_reserving_a_connection.cs
+index 7f5859a648..444740cb50 100644
+--- a/Source/Kernel/Core.Specs/Clients/for_ConnectedClients/when_reserving_a_connection.cs
++++ b/Source/Kernel/Core.Specs/Clients/for_ConnectedClients/when_reserving_a_connection.cs
+@@ -17,6 +17,7 @@ public class when_reserving_a_connection : Specification
+     void Establish()
+     {
+         _connectedClients = new ConnectedClients(
++            Substitute.For<IGrainFactory>(),
+             Substitute.For<ILogger<ConnectedClients>>(),
+             Substitute.For<IMeter<ConnectedClients>>(),
+             Options.Create(new ChronicleOptions()),
+diff --git a/Source/Kernel/Core.Specs/Clients/for_ConnectedClients/when_restoring_a_client/and_a_connection_is_reserved.cs b/Source/Kernel/Core.Specs/Clients/for_ConnectedClients/when_restoring_a_client/and_a_connection_is_reserved.cs
+index 9522af9c6f..8d0d5f8281 100644
+--- a/Source/Kernel/Core.Specs/Clients/for_ConnectedClients/when_restoring_a_client/and_a_connection_is_reserved.cs
++++ b/Source/Kernel/Core.Specs/Clients/for_ConnectedClients/when_restoring_a_client/and_a_connection_is_reserved.cs
+@@ -20,6 +20,7 @@ public class and_a_connection_is_reserved : Specification
+     int _count;
+ 
+     void Establish() => _clients = new ConnectedClients(
++        Substitute.For<IGrainFactory>(),
+         Substitute.For<ILogger<ConnectedClients>>(),
+         Substitute.For<IMeter<ConnectedClients>>(),
+         Options.Create(new ChronicleOptions()),
+diff --git a/Source/Kernel/Core.Specs/Clients/for_ConnectedClients/when_restoring_a_client/and_it_is_unknown.cs b/Source/Kernel/Core.Specs/Clients/for_ConnectedClients/when_restoring_a_client/and_it_is_unknown.cs
+new file mode 100644
+index 0000000000..4e669dcc7d
+--- /dev/null
++++ b/Source/Kernel/Core.Specs/Clients/for_ConnectedClients/when_restoring_a_client/and_it_is_unknown.cs
+@@ -0,0 +1,19 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Chronicle.Concepts.Clients;
++
++namespace Cratis.Chronicle.Clients.for_ConnectedClients.when_restoring_a_client;
++
++public class and_it_is_unknown : given.a_connection_with_projection_declarations
++{
++    ConnectionId _restored = ConnectionId.New();
++
++    IClientConnection _restoredConnection = Substitute.For<IClientConnection>();
++
++    void Establish() => _grainFactory.GetGrain<IClientConnection>(_restored.Value).Returns(_restoredConnection);
++
++    Task Because() => _clients.OnClientRestored(_restored, "1.0", false, 1, "/app", "host", ".NET");
++
++    [Fact] void should_connect_the_client_connection() => _restoredConnection.Received(1).Connect();
++}
+diff --git a/Source/Kernel/Core.Specs/Observation/Reactors/Clients/for_Reactor/given/a_reactor_grain_with_a_stored_definition.cs b/Source/Kernel/Core.Specs/Observation/Reactors/Clients/for_Reactor/given/a_reactor_grain_with_a_stored_definition.cs
+index f643732125..a0510a7702 100644
+--- a/Source/Kernel/Core.Specs/Observation/Reactors/Clients/for_Reactor/given/a_reactor_grain_with_a_stored_definition.cs
++++ b/Source/Kernel/Core.Specs/Observation/Reactors/Clients/for_Reactor/given/a_reactor_grain_with_a_stored_definition.cs
+@@ -21,6 +21,8 @@ public class a_reactor_grain_with_a_stored_definition : Specification
+     protected const string TheConnection = "the-connection";
+     protected Reactor _grain;
+     protected TestKitSilo _silo;
++    protected IClientConnection _clientConnection;
++    protected ClientConnectionEpoch _epoch = ClientConnectionEpoch.New();
+     protected IObserver _observer;
+     protected IConnectedClients _connectedClients;
+     protected ConnectedClient _client;
+@@ -32,6 +34,10 @@ async Task Establish()
+     {
+         _silo = new TestKitSilo();
+ 
++        _clientConnection = Substitute.For<IClientConnection>();
++        _clientConnection.Subscribe(Arg.Any<GrainId>()).Returns(_epoch);
++        _silo.AddProbe(_ => _clientConnection);
++
+         var definitionComparer = Substitute.For<IReactorDefinitionComparer>();
+         definitionComparer
+             .Compare(Arg.Any<ReactorKey>(), Arg.Any<ReactorDefinition>(), Arg.Any<ReactorDefinition>())
+diff --git a/Source/Kernel/Core.Specs/Observation/Reactors/Clients/for_Reactor/given/a_reactor_grain_with_replay_on_definition_change.cs b/Source/Kernel/Core.Specs/Observation/Reactors/Clients/for_Reactor/given/a_reactor_grain_with_replay_on_definition_change.cs
+index 845ffbefea..7d7c3fd71f 100644
+--- a/Source/Kernel/Core.Specs/Observation/Reactors/Clients/for_Reactor/given/a_reactor_grain_with_replay_on_definition_change.cs
++++ b/Source/Kernel/Core.Specs/Observation/Reactors/Clients/for_Reactor/given/a_reactor_grain_with_replay_on_definition_change.cs
+@@ -2,6 +2,7 @@
+ // Licensed under the MIT license. See LICENSE file in the project root for full license information.
+ 
+ using Cratis.Chronicle.Clients;
++using Cratis.Chronicle.Concepts.Clients;
+ using Cratis.Chronicle.Concepts.EventSequences;
+ using Cratis.Chronicle.Concepts.Observation;
+ using Cratis.Chronicle.Concepts.Observation.Reactors;
+@@ -17,6 +18,8 @@ public class a_reactor_grain_with_replay_on_definition_change : Specification
+ {
+     protected Reactor _grain;
+     protected TestKitSilo _silo;
++    protected IClientConnection _clientConnection;
++    protected ClientConnectionEpoch _epoch = ClientConnectionEpoch.New();
+     protected ReactorDefinition _definition;
+     protected IObserver _observerProbe;
+ 
+@@ -24,6 +27,10 @@ async Task Establish()
+     {
+         _silo = new TestKitSilo();
+ 
++        _clientConnection = Substitute.For<IClientConnection>();
++        _clientConnection.Subscribe(Arg.Any<GrainId>()).Returns(_epoch);
++        _silo.AddProbe(_ => _clientConnection);
++
+         var definitionComparer = Substitute.For<IReactorDefinitionComparer>();
+         definitionComparer
+             .Compare(Arg.Any<ReactorKey>(), Arg.Any<ReactorDefinition>(), Arg.Any<ReactorDefinition>())
+diff --git a/Source/Kernel/Core.Specs/Observation/Reactors/Clients/for_Reactor/when_its_client_disconnects/with_a_stale_epoch.cs b/Source/Kernel/Core.Specs/Observation/Reactors/Clients/for_Reactor/when_its_client_disconnects/with_a_stale_epoch.cs
+new file mode 100644
+index 0000000000..fc197704d5
+--- /dev/null
++++ b/Source/Kernel/Core.Specs/Observation/Reactors/Clients/for_Reactor/when_its_client_disconnects/with_a_stale_epoch.cs
+@@ -0,0 +1,17 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Chronicle.Concepts.Clients;
++
++namespace Cratis.Chronicle.Observation.Reactors.Clients.for_Reactor.when_its_client_disconnects;
++
++public class with_a_stale_epoch : given.a_reactor_grain_with_replay_on_definition_change
++{
++    async Task Because()
++    {
++        await _grain.SetDefinitionAndSubscribe(_definition);
++        await _grain.ClientDisconnected(ClientConnectionEpoch.New());
++    }
++
++    [Fact] async Task should_not_unsubscribe_its_observer() => await _observerProbe.DidNotReceive().UnsubscribeIfMatchesClient(Arg.Any<ConnectionId>());
++}
+diff --git a/Source/Kernel/Core.Specs/Observation/Reactors/Clients/for_Reactor/when_its_client_disconnects/with_the_current_epoch.cs b/Source/Kernel/Core.Specs/Observation/Reactors/Clients/for_Reactor/when_its_client_disconnects/with_the_current_epoch.cs
+new file mode 100644
+index 0000000000..7ce38cc24a
+--- /dev/null
++++ b/Source/Kernel/Core.Specs/Observation/Reactors/Clients/for_Reactor/when_its_client_disconnects/with_the_current_epoch.cs
+@@ -0,0 +1,15 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++namespace Cratis.Chronicle.Observation.Reactors.Clients.for_Reactor.when_its_client_disconnects;
++
++public class with_the_current_epoch : given.a_reactor_grain_with_replay_on_definition_change
++{
++    async Task Because()
++    {
++        await _grain.SetDefinitionAndSubscribe(_definition);
++        await _grain.ClientDisconnected(_epoch);
++    }
++
++    [Fact] async Task should_unsubscribe_its_observer() => await _observerProbe.Received(1).UnsubscribeIfMatchesClient("the-connection");
++}
+diff --git a/Source/Kernel/Core.Specs/Observation/Reactors/Clients/for_Reactor/when_keeping_its_subscription/and_the_connection_epoch_is_already_set.cs b/Source/Kernel/Core.Specs/Observation/Reactors/Clients/for_Reactor/when_keeping_its_subscription/and_the_connection_epoch_is_already_set.cs
+new file mode 100644
+index 0000000000..2ece3fe5cd
+--- /dev/null
++++ b/Source/Kernel/Core.Specs/Observation/Reactors/Clients/for_Reactor/when_keeping_its_subscription/and_the_connection_epoch_is_already_set.cs
+@@ -0,0 +1,18 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++namespace Cratis.Chronicle.Observation.Reactors.Clients.for_Reactor.when_keeping_its_subscription;
++
++public class and_the_connection_epoch_is_already_set : given.a_reactor_grain_with_a_stored_definition
++{
++    async Task Establish()
++    {
++        _observer.KnowsClient(_client.ConnectionId).Returns(true);
++        await _grain.SetDefinitionAndSubscribe(_connectionDefinition);
++        _clientConnection.ClearReceivedCalls();
++    }
++
++    async Task Because() => await _grain.KeepSubscription(_connectionDefinition);
++
++    [Fact] async Task should_not_subscribe_to_the_client_connection_again() => await _clientConnection.DidNotReceive().Subscribe(Arg.Any<GrainId>());
++}
+diff --git a/Source/Kernel/Core.Specs/Observation/Reactors/Clients/for_Reactor/when_subscribing/and_the_client_connection_is_already_disconnected.cs b/Source/Kernel/Core.Specs/Observation/Reactors/Clients/for_Reactor/when_subscribing/and_the_client_connection_is_already_disconnected.cs
+new file mode 100644
+index 0000000000..567c86c4a9
+--- /dev/null
++++ b/Source/Kernel/Core.Specs/Observation/Reactors/Clients/for_Reactor/when_subscribing/and_the_client_connection_is_already_disconnected.cs
+@@ -0,0 +1,15 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Chronicle.Concepts.Clients;
++
++namespace Cratis.Chronicle.Observation.Reactors.Clients.for_Reactor.when_subscribing;
++
++public class and_the_client_connection_is_already_disconnected : given.a_reactor_grain_with_replay_on_definition_change
++{
++    void Establish() => _clientConnection.Subscribe(Arg.Any<GrainId>()).Returns(ClientConnectionEpoch.NotSet);
++
++    async Task Because() => await _grain.SetDefinitionAndSubscribe(_definition);
++
++    [Fact] async Task should_unsubscribe_its_observer() => await _observerProbe.Received(1).UnsubscribeIfMatchesClient("the-connection");
++}
+diff --git a/Source/Kernel/Core.Specs/Observation/Reactors/Clients/for_Reactor/when_subscribing/without_start_at_tail.cs b/Source/Kernel/Core.Specs/Observation/Reactors/Clients/for_Reactor/when_subscribing/without_start_at_tail.cs
+index c98a78e4ab..79d74d26a0 100644
+--- a/Source/Kernel/Core.Specs/Observation/Reactors/Clients/for_Reactor/when_subscribing/without_start_at_tail.cs
++++ b/Source/Kernel/Core.Specs/Observation/Reactors/Clients/for_Reactor/when_subscribing/without_start_at_tail.cs
+@@ -12,4 +12,5 @@ public class without_start_at_tail : given.a_reactor_grain_with_replay_on_defini
+     async Task Because() => await _grain.SetDefinitionAndSubscribe(_definition);
+ 
+     [Fact] async Task should_leave_the_position_alone() => await _observer.DidNotReceive().StartAtTailWhenNew();
++    [Fact] async Task should_subscribe_to_its_client_connection() => await _clientConnection.Received(1).Subscribe(Arg.Any<GrainId>());
+ }
+diff --git a/Source/Kernel/Core.Specs/Observation/Reducers/Clients/for_Reducer/given/a_reducer_grain_with_a_stored_definition.cs b/Source/Kernel/Core.Specs/Observation/Reducers/Clients/for_Reducer/given/a_reducer_grain_with_a_stored_definition.cs
+index 2bda07788d..92e6fd5b7c 100644
+--- a/Source/Kernel/Core.Specs/Observation/Reducers/Clients/for_Reducer/given/a_reducer_grain_with_a_stored_definition.cs
++++ b/Source/Kernel/Core.Specs/Observation/Reducers/Clients/for_Reducer/given/a_reducer_grain_with_a_stored_definition.cs
+@@ -19,6 +19,8 @@ namespace Cratis.Chronicle.Observation.Reducers.Clients.for_Reducer.given;
+ public class a_reducer_grain_with_a_stored_definition : Specification
+ {
+     protected TestKitSilo _silo;
++    protected IClientConnection _clientConnection;
++    protected ClientConnectionEpoch _epoch = ClientConnectionEpoch.New();
+     protected Reducer _grain;
+     protected IObserver _observer;
+     protected IConnectedClients _connectedClients;
+@@ -30,6 +32,10 @@ async Task Establish()
+     {
+         _silo = new TestKitSilo();
+ 
++        _clientConnection = Substitute.For<IClientConnection>();
++        _clientConnection.Subscribe(Arg.Any<GrainId>()).Returns(_epoch);
++        _silo.AddProbe(_ => _clientConnection);
++
+         var definitionComparer = Substitute.For<IReducerDefinitionComparer>();
+         definitionComparer
+             .Compare(Arg.Any<ReducerKey>(), Arg.Any<ReducerDefinition>(), Arg.Any<ReducerDefinition>())
+diff --git a/Source/Kernel/Core.Specs/Observation/Reducers/Clients/for_Reducer/given/a_reducer_grain_with_replay_on_definition_change.cs b/Source/Kernel/Core.Specs/Observation/Reducers/Clients/for_Reducer/given/a_reducer_grain_with_replay_on_definition_change.cs
+index 2cd4d3a726..ce19021c12 100644
+--- a/Source/Kernel/Core.Specs/Observation/Reducers/Clients/for_Reducer/given/a_reducer_grain_with_replay_on_definition_change.cs
++++ b/Source/Kernel/Core.Specs/Observation/Reducers/Clients/for_Reducer/given/a_reducer_grain_with_replay_on_definition_change.cs
+@@ -3,6 +3,7 @@
+ 
+ using Cratis.Chronicle.Clients;
+ using Cratis.Chronicle.Concepts;
++using Cratis.Chronicle.Concepts.Clients;
+ using Cratis.Chronicle.Concepts.EventSequences;
+ using Cratis.Chronicle.Concepts.Observation;
+ using Cratis.Chronicle.Concepts.Observation.Reducers;
+@@ -18,12 +19,18 @@ public class a_reducer_grain_with_replay_on_definition_change : Specification
+ {
+     protected Reducer _grain;
+     protected TestKitSilo _silo;
++    protected IClientConnection _clientConnection;
++    protected ClientConnectionEpoch _epoch = ClientConnectionEpoch.New();
+     protected ReducerDefinition _definition;
+ 
+     async Task Establish()
+     {
+         _silo = new TestKitSilo();
+ 
++        _clientConnection = Substitute.For<IClientConnection>();
++        _clientConnection.Subscribe(Arg.Any<GrainId>()).Returns(_epoch);
++        _silo.AddProbe(_ => _clientConnection);
++
+         var definitionComparer = Substitute.For<IReducerDefinitionComparer>();
+         definitionComparer
+             .Compare(Arg.Any<ReducerKey>(), Arg.Any<ReducerDefinition>(), Arg.Any<ReducerDefinition>())
+diff --git a/Source/Kernel/Core.Specs/Observation/Reducers/Clients/for_Reducer/when_its_client_disconnects/with_a_stale_epoch.cs b/Source/Kernel/Core.Specs/Observation/Reducers/Clients/for_Reducer/when_its_client_disconnects/with_a_stale_epoch.cs
+new file mode 100644
+index 0000000000..218dade7b6
+--- /dev/null
++++ b/Source/Kernel/Core.Specs/Observation/Reducers/Clients/for_Reducer/when_its_client_disconnects/with_a_stale_epoch.cs
+@@ -0,0 +1,27 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Chronicle.Concepts.Clients;
++using Orleans.TestKit;
++
++namespace Cratis.Chronicle.Observation.Reducers.Clients.for_Reducer.when_its_client_disconnects;
++
++public class with_a_stale_epoch : given.a_reducer_grain_with_replay_on_definition_change
++{
++    IObserver _observer;
++
++    void Establish()
++    {
++        _observer = Substitute.For<IObserver>();
++        _silo.AddProbe(_ => _observer);
++        _definition = _definition with { IsActive = true };
++    }
++
++    async Task Because()
++    {
++        await _grain.SetDefinitionAndSubscribe(_definition);
++        await _grain.ClientDisconnected(ClientConnectionEpoch.New());
++    }
++
++    [Fact] async Task should_not_unsubscribe_its_observer() => await _observer.DidNotReceive().UnsubscribeIfMatchesClient(Arg.Any<ConnectionId>());
++}
+diff --git a/Source/Kernel/Core.Specs/Observation/Reducers/Clients/for_Reducer/when_its_client_disconnects/with_the_current_epoch.cs b/Source/Kernel/Core.Specs/Observation/Reducers/Clients/for_Reducer/when_its_client_disconnects/with_the_current_epoch.cs
+new file mode 100644
+index 0000000000..dc852264e1
+--- /dev/null
++++ b/Source/Kernel/Core.Specs/Observation/Reducers/Clients/for_Reducer/when_its_client_disconnects/with_the_current_epoch.cs
+@@ -0,0 +1,26 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Orleans.TestKit;
++
++namespace Cratis.Chronicle.Observation.Reducers.Clients.for_Reducer.when_its_client_disconnects;
++
++public class with_the_current_epoch : given.a_reducer_grain_with_replay_on_definition_change
++{
++    IObserver _observer;
++
++    void Establish()
++    {
++        _observer = Substitute.For<IObserver>();
++        _silo.AddProbe(_ => _observer);
++        _definition = _definition with { IsActive = true };
++    }
++
++    async Task Because()
++    {
++        await _grain.SetDefinitionAndSubscribe(_definition);
++        await _grain.ClientDisconnected(_epoch);
++    }
++
++    [Fact] async Task should_unsubscribe_its_observer() => await _observer.Received(1).UnsubscribeIfMatchesClient("the-connection");
++}
+diff --git a/Source/Kernel/Core.Specs/Observation/Reducers/Clients/for_Reducer/when_keeping_its_subscription/and_the_connection_epoch_is_already_set.cs b/Source/Kernel/Core.Specs/Observation/Reducers/Clients/for_Reducer/when_keeping_its_subscription/and_the_connection_epoch_is_already_set.cs
+new file mode 100644
+index 0000000000..3f565097d4
+--- /dev/null
++++ b/Source/Kernel/Core.Specs/Observation/Reducers/Clients/for_Reducer/when_keeping_its_subscription/and_the_connection_epoch_is_already_set.cs
+@@ -0,0 +1,18 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++namespace Cratis.Chronicle.Observation.Reducers.Clients.for_Reducer.when_keeping_its_subscription;
++
++public class and_the_connection_epoch_is_already_set : given.a_reducer_grain_with_a_stored_definition
++{
++    async Task Establish()
++    {
++        _observer.KnowsClient(_client.ConnectionId).Returns(true);
++        await _grain.SetDefinitionAndSubscribe(_connectionDefinition);
++        _clientConnection.ClearReceivedCalls();
++    }
++
++    async Task Because() => await _grain.KeepSubscription(_connectionDefinition);
++
++    [Fact] async Task should_not_subscribe_to_the_client_connection_again() => await _clientConnection.DidNotReceive().Subscribe(Arg.Any<GrainId>());
++}
+diff --git a/Source/Kernel/Core.Specs/Observation/Reducers/Clients/for_Reducer/when_subscribing/and_the_client_connection_is_already_disconnected.cs b/Source/Kernel/Core.Specs/Observation/Reducers/Clients/for_Reducer/when_subscribing/and_the_client_connection_is_already_disconnected.cs
+new file mode 100644
+index 0000000000..33546d6093
+--- /dev/null
++++ b/Source/Kernel/Core.Specs/Observation/Reducers/Clients/for_Reducer/when_subscribing/and_the_client_connection_is_already_disconnected.cs
+@@ -0,0 +1,24 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Chronicle.Concepts.Clients;
++using Orleans.TestKit;
++
++namespace Cratis.Chronicle.Observation.Reducers.Clients.for_Reducer.when_subscribing;
++
++public class and_the_client_connection_is_already_disconnected : given.a_reducer_grain_with_replay_on_definition_change
++{
++    IObserver _observer;
++
++    void Establish()
++    {
++        _observer = Substitute.For<IObserver>();
++        _silo.AddProbe(_ => _observer);
++        _clientConnection.Subscribe(Arg.Any<GrainId>()).Returns(ClientConnectionEpoch.NotSet);
++        _definition = _definition with { IsActive = true };
++    }
++
++    async Task Because() => await _grain.SetDefinitionAndSubscribe(_definition);
++
++    [Fact] async Task should_unsubscribe_its_observer() => await _observer.Received(1).UnsubscribeIfMatchesClient("the-connection");
++}
+diff --git a/Source/Kernel/Core.Specs/Observation/Reducers/Clients/for_Reducer/when_subscribing/with_pinned_delivery.cs b/Source/Kernel/Core.Specs/Observation/Reducers/Clients/for_Reducer/when_subscribing/with_pinned_delivery.cs
+index cffb8320d0..fdcf28d568 100644
+--- a/Source/Kernel/Core.Specs/Observation/Reducers/Clients/for_Reducer/when_subscribing/with_pinned_delivery.cs
++++ b/Source/Kernel/Core.Specs/Observation/Reducers/Clients/for_Reducer/when_subscribing/with_pinned_delivery.cs
+@@ -18,4 +18,5 @@ void Establish()
+     }
+     async Task Because() => await _grain.SetDefinitionAndSubscribe(_definition);
+     [Fact] async Task should_pass_the_delivery_policy() => await _observer.Received(1).SubscribeWithGenerationDelivery<IReducerObserverSubscriber>(ObserverType.Reducer, Arg.Any<IEnumerable<EventType>>(), Arg.Any<SiloAddress>(), EventGenerationDelivery.Pinned, Arg.Any<object?>(), Arg.Any<bool>(), Arg.Any<ObserverFilters?>());
++    [Fact] async Task should_subscribe_to_its_client_connection() => await _clientConnection.Received(1).Subscribe(Arg.Any<GrainId>());
+ }
+diff --git a/Source/Kernel/Core/Clients/ClientConnection.cs b/Source/Kernel/Core/Clients/ClientConnection.cs
+new file mode 100644
+index 0000000000..dc2c9caf68
+--- /dev/null
++++ b/Source/Kernel/Core/Clients/ClientConnection.cs
+@@ -0,0 +1,109 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Chronicle.Concepts.Clients;
++using Microsoft.Extensions.Logging;
++using Orleans.Placement;
++
++namespace Cratis.Chronicle.Clients;
++
++/// <summary>
++/// Represents an implementation of <see cref="IClientConnection"/>.
++/// </summary>
++/// <param name="grainFactory"><see cref="IGrainFactory"/> for reaching subscribers.</param>
++/// <param name="logger"><see cref="ILogger"/> for logging.</param>
++[PreferLocalPlacement]
++public class ClientConnection(IGrainFactory grainFactory, ILogger<ClientConnection> logger) : Grain, IClientConnection
++{
++    readonly HashSet<GrainId> _subscribers = [];
++    ConnectionState _state = ConnectionState.Unknown;
++    ClientConnectionEpoch _epoch = ClientConnectionEpoch.New();
++
++    enum ConnectionState
++    {
++        Unknown = 0,
++        Connected = 1,
++        Disconnected = 2
++    }
++
++    /// <inheritdoc/>
++    public Task Connect()
++    {
++        if (_state == ConnectionState.Disconnected)
++        {
++            _epoch = ClientConnectionEpoch.New();
++        }
++
++        _state = ConnectionState.Connected;
++
++        // Pinned only while connected: an unknown or disconnected activation follows normal idle collection.
++        Pin();
++        return Task.CompletedTask;
++    }
++
++    /// <inheritdoc/>
++    public async Task Disconnect()
++    {
++        if (_state == ConnectionState.Disconnected)
++        {
++            return;
++        }
++
++        var subscribers = _subscribers.ToArray();
++        _subscribers.Clear();
++        _state = ConnectionState.Disconnected;
++
++        var connectionId = GrainContext?.GrainId.Key.ToString() ?? string.Empty;
++        logger.Disconnected(connectionId, subscribers.Length);
++
++        foreach (var subscriber in subscribers)
++        {
++            try
++            {
++                await grainFactory.GetGrain<IClientDisconnectionSubscriber>(subscriber).ClientDisconnected(_epoch);
++            }
++            catch (Exception ex)
++            {
++                logger.FailedNotifyingSubscriber(ex, connectionId, subscriber.ToString());
++            }
++        }
++
++        // Subscribers have been notified and cleared, nothing more to keep in memory.
++        Release();
++    }
++
++    /// <inheritdoc/>
++    public Task<ClientConnectionEpoch> Subscribe(GrainId subscriber)
++    {
++        if (_state == ConnectionState.Disconnected)
++        {
++            return Task.FromResult(ClientConnectionEpoch.NotSet);
++        }
++
++        _subscribers.Add(subscriber);
++        return Task.FromResult(_epoch);
++    }
++
++    /// <inheritdoc/>
++    public Task Unsubscribe(GrainId subscriber)
++    {
++        _subscribers.Remove(subscriber);
++
++        if (_state != ConnectionState.Connected && _subscribers.Count == 0)
++        {
++            Release();
++        }
++
++        return Task.CompletedTask;
++    }
++
++    /// <summary>
++    /// Keeps the activation alive until it is released. Virtual so it can be observed without an Orleans runtime.
++    /// </summary>
++    protected virtual void Pin() => DelayDeactivation(TimeSpan.MaxValue);
++
++    /// <summary>
++    /// Releases the activation. Virtual so the deactivation request can be observed without an Orleans runtime.
++    /// </summary>
++    protected virtual void Release() => DeactivateOnIdle();
++}
+diff --git a/Source/Kernel/Core/Clients/ClientConnectionLogMessages.cs b/Source/Kernel/Core/Clients/ClientConnectionLogMessages.cs
+new file mode 100644
+index 0000000000..203bb2e435
+--- /dev/null
++++ b/Source/Kernel/Core/Clients/ClientConnectionLogMessages.cs
+@@ -0,0 +1,18 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Microsoft.Extensions.Logging;
++
++namespace Cratis.Chronicle.Clients;
++
++/// <summary>
++/// Holds log messages for <see cref="ClientConnection"/>.
++/// </summary>
++internal static partial class ClientConnectionLogMessages
++{
++    [LoggerMessage(LogLevel.Debug, "Client connection '{ConnectionId}' disconnected, notifying {SubscriberCount} subscriber(s).")]
++    internal static partial void Disconnected(this ILogger<ClientConnection> logger, string connectionId, int subscriberCount);
++
++    [LoggerMessage(LogLevel.Warning, "Failed notifying subscriber '{Subscriber}' that client connection '{ConnectionId}' disconnected.")]
++    internal static partial void FailedNotifyingSubscriber(this ILogger<ClientConnection> logger, Exception exception, string connectionId, string subscriber);
++}
+diff --git a/Source/Kernel/Core/Clients/ConnectedClients.cs b/Source/Kernel/Core/Clients/ConnectedClients.cs
+index 25ce175cee..09c976ef2a 100644
+--- a/Source/Kernel/Core/Clients/ConnectedClients.cs
++++ b/Source/Kernel/Core/Clients/ConnectedClients.cs
+@@ -17,6 +17,7 @@ namespace Cratis.Chronicle.Clients;
+ /// <summary>
+ /// Represents an implementation of <see cref="IConnectedClients"/>.
+ /// </summary>
++/// <param name="grainFactory"><see cref="IGrainFactory"/> for reaching the per-connection <see cref="IClientConnection"/> grains.</param>
+ /// <param name="logger"><see cref="ILogger"/> for logging.</param>
+ /// <param name="meter"><see cref="IMeter{ConnectedClients}"/> for metrics.</param>
+ /// <param name="options"><see cref="IOptions{ChronicleOptions}"/> for configuration.</param>
+@@ -24,6 +25,7 @@ namespace Cratis.Chronicle.Clients;
+ [KeepAlive]
+ [ConnectedClientsPlacement]
+ public partial class ConnectedClients(
++    IGrainFactory grainFactory,
+     ILogger<ConnectedClients> logger,
+     [FromKeyedServices(WellKnown.MeterName)] IMeter<ConnectedClients> meter,
+     IOptions<ChronicleOptions> options,
+@@ -52,7 +54,7 @@ public override Task OnDeactivateAsync(DeactivationReason reason, CancellationTo
+     }
+ 
+     /// <inheritdoc/>
+-    public Task OnClientConnected(
++    public async Task OnClientConnected(
+         ConnectionId connectionId,
+         string version,
+         bool isRunningWithDebugger,
+@@ -76,11 +78,11 @@ public Task OnClientConnected(
+ 
+         meter.ConnectedClients(_clients.Count);
+ 
+-        return Task.CompletedTask;
++        await ConnectClientConnection(connectionId);
+     }
+ 
+     /// <inheritdoc/>
+-    public Task OnClientRestored(
++    public async Task OnClientRestored(
+         ConnectionId connectionId,
+         string version,
+         bool isRunningWithDebugger,
+@@ -91,18 +93,18 @@ public Task OnClientRestored(
+     {
+         if (_clients.ContainsKey(connectionId))
+         {
+-            return Task.CompletedTask;
++            return;
+         }
+ 
+         logger.ClientRestored(connectionId);
+         _clients[connectionId] = CreateEntry(connectionId, version, isRunningWithDebugger, processId, processPath, machineName, clientType);
+         meter.ConnectedClients(_clients.Count);
+ 
+-        return Task.CompletedTask;
++        await ConnectClientConnection(connectionId);
+     }
+ 
+     /// <inheritdoc/>
+-    public Task OnClientDisconnected(ConnectionId connectionId, string reason)
++    public async Task OnClientDisconnected(ConnectionId connectionId, string reason)
+     {
+         logger.ClientDisconnected(connectionId, reason);
+ 
+@@ -114,7 +116,17 @@ public Task OnClientDisconnected(ConnectionId connectionId, string reason)
+         // by kernel time, so a failed scope only delays redelivery until its lease deadline.
+         var now = DateTimeOffset.UtcNow;
+         _ = Task.Run(() => OccurrenceRecovery.ExpireLeases(storage, connectionId.Value, now, logger));
+-        return Task.CompletedTask;
++
++        // Always notify, even when the registry did not know the connection: after a lost registry
++        // activation the per-connection grain may still hold subscribers. The call is one-way.
++        try
++        {
++            await grainFactory.GetGrain<IClientConnection>(connectionId.Value).Disconnect();
++        }
++        catch (Exception ex)
++        {
++            logger.FailedToDisconnectClientConnection(ex, connectionId);
++        }
+     }
+ 
+     /// <inheritdoc/>
+@@ -176,6 +188,18 @@ static ConnectionEntry CreateEntry(
+             ClientType = clientType
+         });
+ 
++    async Task ConnectClientConnection(ConnectionId connectionId)
++    {
++        try
++        {
++            await grainFactory.GetGrain<IClientConnection>(connectionId.Value).Connect();
++        }
++        catch (Exception ex)
++        {
++            logger.FailedToConnectClientConnection(ex, connectionId);
++        }
++    }
++
+     async Task ReviseConnectedClients(CancellationToken cancellationToken)
+     {
+         RemoveExpiredReservations();
+diff --git a/Source/Kernel/Core/Clients/ConnectedClientsLogMessages.cs b/Source/Kernel/Core/Clients/ConnectedClientsLogMessages.cs
+index 22d7972adb..c75826d449 100644
+--- a/Source/Kernel/Core/Clients/ConnectedClientsLogMessages.cs
++++ b/Source/Kernel/Core/Clients/ConnectedClientsLogMessages.cs
+@@ -18,4 +18,10 @@ internal static partial class ConnectedClientsLogMessages
+ 
+     [LoggerMessage(LogLevel.Debug, "Disconnected client with connection identifier '{ConnectionId}'. Reason: {Reason}")]
+     internal static partial void ClientDisconnected(this ILogger<ConnectedClients> logger, string connectionId, string reason);
++
++    [LoggerMessage(LogLevel.Warning, "Failed to mark client connection '{ConnectionId}' as connected.")]
++    internal static partial void FailedToConnectClientConnection(this ILogger<ConnectedClients> logger, Exception exception, string connectionId);
++
++    [LoggerMessage(LogLevel.Warning, "Failed to mark client connection '{ConnectionId}' as disconnected.")]
++    internal static partial void FailedToDisconnectClientConnection(this ILogger<ConnectedClients> logger, Exception exception, string connectionId);
+ }
+diff --git a/Source/Kernel/Core/Clients/IClientConnection.cs b/Source/Kernel/Core/Clients/IClientConnection.cs
+new file mode 100644
+index 0000000000..0f9147b0a7
+--- /dev/null
++++ b/Source/Kernel/Core/Clients/IClientConnection.cs
+@@ -0,0 +1,47 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Chronicle.Concepts.Clients;
++using Orleans.Concurrency;
++
++namespace Cratis.Chronicle.Clients;
++
++/// <summary>
++/// Defines a grain representing one client connection, keyed by its <see cref="ConnectionId"/>.
++/// </summary>
++/// <remarks>
++/// The <see cref="IConnectedClients"/> registry stays the authority and drives <see cref="Connect"/> and <see cref="Disconnect"/>.
++/// An epoch identifies one connected period of the same <see cref="ConnectionId"/>, since a restored client reuses its identifier.
++/// </remarks>
++public interface IClientConnection : IGrainWithStringKey
++{
++    /// <summary>
++    /// Mark the connection as connected. Idempotent. Reconnecting after a disconnect starts a new epoch.
++    /// </summary>
++    /// <returns>Awaitable task.</returns>
++    Task Connect();
++
++    /// <summary>
++    /// Mark the connection as disconnected and notify all subscribers once. Idempotent.
++    /// </summary>
++    /// <returns>Awaitable task.</returns>
++    /// <remarks>
++    /// One-way, so the registry's turn never waits on the fan-out to subscribers.
++    /// </remarks>
++    [OneWay]
++    Task Disconnect();
++
++    /// <summary>
++    /// Subscribe to be told when the connection disconnects. Idempotent.
++    /// </summary>
++    /// <param name="subscriber">The <see cref="GrainId"/> of the <see cref="IClientDisconnectionSubscriber"/>.</param>
++    /// <returns>The current <see cref="ClientConnectionEpoch"/>, or <see cref="ClientConnectionEpoch.NotSet"/> if the connection is already disconnected.</returns>
++    Task<ClientConnectionEpoch> Subscribe(GrainId subscriber);
++
++    /// <summary>
++    /// Stop being told when the connection disconnects.
++    /// </summary>
++    /// <param name="subscriber">The <see cref="GrainId"/> of the subscriber.</param>
++    /// <returns>Awaitable task.</returns>
++    Task Unsubscribe(GrainId subscriber);
++}
+diff --git a/Source/Kernel/Core/Clients/IClientDisconnectionSubscriber.cs b/Source/Kernel/Core/Clients/IClientDisconnectionSubscriber.cs
+new file mode 100644
+index 0000000000..7aebab62a3
+--- /dev/null
++++ b/Source/Kernel/Core/Clients/IClientDisconnectionSubscriber.cs
+@@ -0,0 +1,25 @@
++// Copyright (c) Cratis. All rights reserved.
++// Licensed under the MIT license. See LICENSE file in the project root for full license information.
++
++using Cratis.Chronicle.Concepts.Clients;
++using Orleans.Concurrency;
++
++namespace Cratis.Chronicle.Clients;
++
++/// <summary>
++/// Defines a grain that wants to know when the client connection it belongs to disconnects.
++/// </summary>
++/// <remarks>
++/// The callback is one-way, so a subscriber may call back into any grain, including the
++/// <see cref="IClientConnection"/>, without risk of deadlock.
++/// </remarks>
++public interface IClientDisconnectionSubscriber : IGrainWithStringKey
++{
++    /// <summary>
++    /// Called when the client connection has disconnected.
++    /// </summary>
++    /// <param name="epoch">The <see cref="ClientConnectionEpoch"/> the subscriber was given when subscribing.</param>
++    /// <returns>Awaitable task.</returns>
++    [OneWay]
++    Task ClientDisconnected(ClientConnectionEpoch epoch);
++}
+diff --git a/Source/Kernel/Core/Observation/Reactors/Clients/Reactor.cs b/Source/Kernel/Core/Observation/Reactors/Clients/Reactor.cs
+index 5d59bf3dcd..1bd8393a98 100644
+--- a/Source/Kernel/Core/Observation/Reactors/Clients/Reactor.cs
++++ b/Source/Kernel/Core/Observation/Reactors/Clients/Reactor.cs
+@@ -3,6 +3,7 @@
+ 
+ using Cratis.Chronicle.Clients;
+ using Cratis.Chronicle.Concepts;
++using Cratis.Chronicle.Concepts.Clients;
+ using Cratis.Chronicle.Concepts.Observation;
+ using Cratis.Chronicle.Concepts.Observation.Reactors;
+ using Cratis.Chronicle.Concepts.Observation.Replaying;
+@@ -30,9 +31,11 @@ public class Reactor(
+     IReactorDefinitionComparer reactorDefinitionComparer,
+     ILocalSiloDetails localSiloDetails,
+     IOptions<ChronicleOptions> options,
+-    ILogger<Reactor> logger) : Grain<ReactorDefinition>, IReactor
++    ILogger<Reactor> logger) : Grain<ReactorDefinition>, IReactor, IClientDisconnectionSubscriber
+ {
+     IConnectedClients? _connectedClients;
++    IClientConnection? _clientConnection;
++    ClientConnectionEpoch? _connectionEpoch;
+     ConnectedObserverKey? _observerKey;
+     IObserver? _observer;
+     bool _subscribed;
+@@ -43,6 +46,7 @@ public override Task OnActivateAsync(CancellationToken cancellationToken)
+         _connectedClients = GrainFactory.GetConnectedClients(localSiloDetails.SiloAddress);
+ 
+         _observerKey = ConnectedObserverKey.Parse(this.GetPrimaryKeyString());
++        _clientConnection = GrainFactory.GetGrain<IClientConnection>(_observerKey.ConnectionId.Value);
+ 
+         return Task.CompletedTask;
+     }
+@@ -110,6 +114,7 @@ await _observer.Subscribe<IReactorObserverSubscriber>(
+                     definition.Filters);
+             }
+             _subscribed = true;
++            await SubscribeToClientConnection();
+         }
+     }
+ 
+@@ -133,6 +138,34 @@ public async Task Unsubscribe()
+         await observer.UnsubscribeIfMatchesClient(_observerKey!.ConnectionId);
+ 
+         _subscribed = false;
++
++        try
++        {
++            await _clientConnection!.Unsubscribe(this.GetGrainId());
++        }
++        catch (Exception ex)
++        {
++            logger.FailedUnsubscribingFromClientConnection(ex, _observerKey.ConnectionId, _observerKey.ObserverId!);
++        }
++    }
++
++    /// <inheritdoc/>
++    public async Task ClientDisconnected(ClientConnectionEpoch epoch)
++    {
++        if (_connectionEpoch is not null && epoch != _connectionEpoch)
++        {
++            logger.StaleClientDisconnection(_observerKey!.ConnectionId, _observerKey.ObserverId!);
++            return;
++        }
++
++        try
++        {
++            await ReleaseForDisconnectedClient();
++        }
++        catch (Exception ex)
++        {
++            logger.FailedReleasingForDisconnectedClient(ex, _observerKey!.ConnectionId, _observerKey.ObserverId!);
++        }
+     }
+ 
+     /// <inheritdoc/>
+@@ -161,6 +194,50 @@ await _observer.RestoreClientSubscription<IReactorObserverSubscriber>(
+         }
+ 
+         _subscribed = true;
++
++        // Only on a fresh activation: a tick that already holds an epoch adds no per-tick work.
++        if (_connectionEpoch is null)
++        {
++            await SubscribeToClientConnection();
++        }
++    }
++
++    async Task SubscribeToClientConnection()
++    {
++        try
++        {
++            var epoch = await _clientConnection!.Subscribe(this.GetGrainId());
++            if (epoch == ClientConnectionEpoch.NotSet)
++            {
++                await ReleaseForDisconnectedClient();
++                return;
++            }
++
++            _connectionEpoch = epoch;
++        }
++        catch (Exception ex)
++        {
++            // Best effort: the closing of the client stream and the observer watchdog remain the fallbacks.
++            logger.FailedSubscribingToClientConnection(ex, _observerKey!.ConnectionId, _observerKey.ObserverId!);
++        }
++    }
++
++    async Task ReleaseForDisconnectedClient()
++    {
++        logger.ClientConnectionDisconnected(
++            _observerKey!.ConnectionId,
++            _observerKey!.EventStore,
++            _observerKey.ObserverId!,
++            _observerKey!.EventSequenceId,
++            _observerKey!.Namespace);
++
++        var key = new ObserverKey(_observerKey.ObserverId, _observerKey.EventStore, _observerKey.Namespace, _observerKey.EventSequenceId);
++        var observer = GrainFactory.GetGrain<IObserver>(key);
++
++        // Always unsubscribe, even when not marked as subscribed: a fresh activation may still own the observer subscription.
++        await observer.UnsubscribeIfMatchesClient(_observerKey.ConnectionId);
++        _subscribed = false;
++        _connectionEpoch = null;
+     }
+ 
+     async Task ReplayForAllNamespaces(ReactorKey key, IEnumerable<EventStoreNamespaceName> namespaces)
+diff --git a/Source/Kernel/Core/Observation/Reactors/Clients/ReactorLogMessages.cs b/Source/Kernel/Core/Observation/Reactors/Clients/ReactorLogMessages.cs
+index ec40e85d16..f78813eb4d 100644
+--- a/Source/Kernel/Core/Observation/Reactors/Clients/ReactorLogMessages.cs
++++ b/Source/Kernel/Core/Observation/Reactors/Clients/ReactorLogMessages.cs
+@@ -19,4 +19,19 @@ internal static partial class ReactorLogMessages
+ 
+     [LoggerMessage(LogLevel.Information, "Auto-replaying reactor {ReactorId} for event store {EventStore} on sequence {EventSequenceId} for namespace {Namespace} due to definition change")]
+     internal static partial void AutoReplayingReactor(this ILogger<Reactor> logger, EventStoreName eventStore, ReactorId ReactorId, EventSequenceId eventSequenceId, EventStoreNamespaceName @namespace);
++
++    [LoggerMessage(LogLevel.Debug, "Client connection {ConnectionId} has been disconnected - releasing reactor {ObserverId} for event store {EventStore} on sequence {EventSequenceId} for namespace {Namespace}")]
++    internal static partial void ClientConnectionDisconnected(this ILogger<Reactor> logger, ConnectionId connectionId, EventStoreName eventStore, ReactorId observerId, EventSequenceId eventSequenceId, EventStoreNamespaceName @namespace);
++
++    [LoggerMessage(LogLevel.Debug, "Ignoring disconnection of an earlier period of client connection {ConnectionId} for reactor {ObserverId}")]
++    internal static partial void StaleClientDisconnection(this ILogger<Reactor> logger, ConnectionId connectionId, ReactorId observerId);
++
++    [LoggerMessage(LogLevel.Warning, "Failed subscribing reactor {ObserverId} to client connection {ConnectionId}")]
++    internal static partial void FailedSubscribingToClientConnection(this ILogger<Reactor> logger, Exception exception, ConnectionId connectionId, ReactorId observerId);
++
++    [LoggerMessage(LogLevel.Warning, "Failed unsubscribing reactor {ObserverId} from client connection {ConnectionId}")]
++    internal static partial void FailedUnsubscribingFromClientConnection(this ILogger<Reactor> logger, Exception exception, ConnectionId connectionId, ReactorId observerId);
++
++    [LoggerMessage(LogLevel.Warning, "Failed releasing reactor {ObserverId} after client connection {ConnectionId} disconnected")]
++    internal static partial void FailedReleasingForDisconnectedClient(this ILogger<Reactor> logger, Exception exception, ConnectionId connectionId, ReactorId observerId);
+ }
+diff --git a/Source/Kernel/Core/Observation/Reducers/Clients/Reducer.cs b/Source/Kernel/Core/Observation/Reducers/Clients/Reducer.cs
+index e1c15ca3f7..2ab6829040 100644
+--- a/Source/Kernel/Core/Observation/Reducers/Clients/Reducer.cs
++++ b/Source/Kernel/Core/Observation/Reducers/Clients/Reducer.cs
+@@ -3,6 +3,7 @@
+ 
+ using Cratis.Chronicle.Clients;
+ using Cratis.Chronicle.Concepts;
++using Cratis.Chronicle.Concepts.Clients;
+ using Cratis.Chronicle.Concepts.Events;
+ using Cratis.Chronicle.Concepts.Observation;
+ using Cratis.Chronicle.Concepts.Observation.Reducers;
+@@ -37,18 +38,21 @@ public class Reducer(
+     ILocalSiloDetails localSiloDetails,
+     IOptions<ChronicleOptions> options,
+     IStorage storage,
+-    ILogger<Reducer> logger) : Grain<ReducerDefinition>, IReducer
++    ILogger<Reducer> logger) : Grain<ReducerDefinition>, IReducer, IClientDisconnectionSubscriber
+ {
+     IObserver? _observer;
+     bool _subscribed;
+     ConnectedObserverKey? _observerKey;
+     IConnectedClients? _connectedClients;
++    IClientConnection? _clientConnection;
++    ClientConnectionEpoch? _connectionEpoch;
+ 
+     /// <inheritdoc/>
+     public override Task OnActivateAsync(CancellationToken cancellationToken)
+     {
+         _observerKey = ConnectedObserverKey.Parse(this.GetPrimaryKeyString());
+         _connectedClients = GrainFactory.GetConnectedClients(localSiloDetails.SiloAddress);
++        _clientConnection = GrainFactory.GetGrain<IClientConnection>(_observerKey.ConnectionId.Value);
+ 
+         return Task.CompletedTask;
+     }
+@@ -102,6 +106,7 @@ await _observer.Subscribe<IReducerObserverSubscriber>(
+             }
+ 
+             _subscribed = true;
++            await SubscribeToClientConnection();
+         }
+         else if (_subscribed && !definition.IsActive)
+         {
+@@ -139,6 +144,34 @@ public async Task Unsubscribe()
+             // new client's subscription.
+             await observer.UnsubscribeIfMatchesClient(_observerKey!.ConnectionId);
+             _subscribed = false;
++
++            try
++            {
++                await _clientConnection!.Unsubscribe(this.GetGrainId());
++            }
++            catch (Exception ex)
++            {
++                logger.FailedUnsubscribingFromClientConnection(ex, _observerKey.ConnectionId, _observerKey.ObserverId!);
++            }
++        }
++    }
++
++    /// <inheritdoc/>
++    public async Task ClientDisconnected(ClientConnectionEpoch epoch)
++    {
++        if (_connectionEpoch is not null && epoch != _connectionEpoch)
++        {
++            logger.StaleClientDisconnection(_observerKey!.ConnectionId, _observerKey.ObserverId!);
++            return;
++        }
++
++        try
++        {
++            await ReleaseForDisconnectedClient();
++        }
++        catch (Exception ex)
++        {
++            logger.FailedReleasingForDisconnectedClient(ex, _observerKey!.ConnectionId, _observerKey.ObserverId!);
+         }
+     }
+ 
+@@ -172,6 +205,59 @@ await _observer.RestoreClientSubscription<IReducerObserverSubscriber>(
+         }
+ 
+         _subscribed = true;
++
++        // Only on a fresh activation: a tick that already holds an epoch adds no per-tick work.
++        if (_connectionEpoch is null)
++        {
++            await SubscribeToClientConnection();
++        }
++    }
++
++    async Task SubscribeToClientConnection()
++    {
++        try
++        {
++            var epoch = await _clientConnection!.Subscribe(this.GetGrainId());
++            if (epoch == ClientConnectionEpoch.NotSet)
++            {
++                await ReleaseForDisconnectedClient();
++                return;
++            }
++
++            _connectionEpoch = epoch;
++        }
++        catch (Exception ex)
++        {
++            // Best effort: the closing of the client stream and the observer watchdog remain the fallbacks.
++            logger.FailedSubscribingToClientConnection(ex, _observerKey!.ConnectionId, _observerKey.ObserverId!);
++        }
++    }
++
++    async Task ReleaseForDisconnectedClient()
++    {
++        logger.ClientConnectionDisconnected(
++            _observerKey!.ConnectionId,
++            _observerKey!.EventStore,
++            _observerKey.ObserverId!,
++            _observerKey!.EventSequenceId,
++            _observerKey!.Namespace);
++
++        try
++        {
++            DeactivateOnIdle();
++        }
++        catch (InvalidOperationException)
++        {
++            // Grain activation may already be invalid during silo shutdown.
++        }
++
++        var key = new ObserverKey(_observerKey.ObserverId, _observerKey.EventStore, _observerKey.Namespace, _observerKey.EventSequenceId);
++        var observer = GrainFactory.GetGrain<IObserver>(key);
++
++        // Always unsubscribe, even when not marked as subscribed: a fresh activation may still own the observer subscription.
++        await observer.UnsubscribeIfMatchesClient(_observerKey.ConnectionId);
++        _subscribed = false;
++        _connectionEpoch = null;
+     }
+ 
+     async Task EvolveForAllNamespaces(
+diff --git a/Source/Kernel/Core/Observation/Reducers/Clients/ReducerLogMessages.cs b/Source/Kernel/Core/Observation/Reducers/Clients/ReducerLogMessages.cs
+index bf1a966f63..71aa275b35 100644
+--- a/Source/Kernel/Core/Observation/Reducers/Clients/ReducerLogMessages.cs
++++ b/Source/Kernel/Core/Observation/Reducers/Clients/ReducerLogMessages.cs
+@@ -25,4 +25,19 @@ internal static partial class ReducerLogMessages
+ 
+     [LoggerMessage(LogLevel.Information, "No action - reducer {observerId} for event store {EventStore} on sequence {EventSequenceId} in namespace {@namespace} only consumes newly added event types with no historical events")]
+     internal static partial void ReducerEvolutionNeedsNoAction(this ILogger<Reducer> logger, EventStoreName eventStore, ObserverId observerId, EventSequenceId eventSequenceId, EventStoreNamespaceName @namespace);
++
++    [LoggerMessage(LogLevel.Debug, "Client connection {ConnectionId} has been disconnected - releasing reducer {ObserverId} for event store {EventStore} on sequence {EventSequenceId} for namespace {Namespace}")]
++    internal static partial void ClientConnectionDisconnected(this ILogger<Reducer> logger, ConnectionId connectionId, EventStoreName eventStore, ObserverId observerId, EventSequenceId eventSequenceId, EventStoreNamespaceName @namespace);
++
++    [LoggerMessage(LogLevel.Debug, "Ignoring disconnection of an earlier period of client connection {ConnectionId} for reducer {ObserverId}")]
++    internal static partial void StaleClientDisconnection(this ILogger<Reducer> logger, ConnectionId connectionId, ObserverId observerId);
++
++    [LoggerMessage(LogLevel.Warning, "Failed subscribing reducer {ObserverId} to client connection {ConnectionId}")]
++    internal static partial void FailedSubscribingToClientConnection(this ILogger<Reducer> logger, Exception exception, ConnectionId connectionId, ObserverId observerId);
++
++    [LoggerMessage(LogLevel.Warning, "Failed unsubscribing reducer {ObserverId} from client connection {ConnectionId}")]
++    internal static partial void FailedUnsubscribingFromClientConnection(this ILogger<Reducer> logger, Exception exception, ConnectionId connectionId, ObserverId observerId);
++
++    [LoggerMessage(LogLevel.Warning, "Failed releasing reducer {ObserverId} after client connection {ConnectionId} disconnected")]
++    internal static partial void FailedReleasingForDisconnectedClient(this ILogger<Reducer> logger, Exception exception, ConnectionId connectionId, ObserverId observerId);
+ }
+diff --git a/Source/Kernel/Core/OrleansContracts.txt b/Source/Kernel/Core/OrleansContracts.txt
+index efb3de6b15..a4faecc7da 100644
+--- a/Source/Kernel/Core/OrleansContracts.txt
++++ b/Source/Kernel/Core/OrleansContracts.txt
+@@ -39,8 +39,19 @@ interface [GrainInterfaceType("Cratis.Chronicle.Captures.ICapturesManager")] Cra
+   0DE70EA8: Start(Cratis.Chronicle.Concepts.Captures.CaptureId) -> Task<System.Collections.Generic.IEnumerable<Cratis.Chronicle.Captures.Engine.CaptureValidationMessage>>
+   1D37B5D5: Stop(Cratis.Chronicle.Concepts.Captures.CaptureId) -> Task
+ 
++class [GrainType("clientconnection")] Cratis.Chronicle.Clients.ClientConnection
++
+ class [GrainType("connectedclients")] Cratis.Chronicle.Clients.ConnectedClients
+ 
++interface [GrainInterfaceType("Cratis.Chronicle.Clients.IClientConnection")] Cratis.Chronicle.Clients.IClientConnection [Version(0)]
++  30EA0312: Connect() -> Task
++  A4B5A813: Disconnect() -> Task
++  872F6512: Subscribe(Orleans.Runtime.GrainId) -> Task<Cratis.Chronicle.Concepts.Clients.ClientConnectionEpoch>
++  5A6BF6EB: Unsubscribe(Orleans.Runtime.GrainId) -> Task
++
++interface [GrainInterfaceType("Cratis.Chronicle.Clients.IClientDisconnectionSubscriber")] Cratis.Chronicle.Clients.IClientDisconnectionSubscriber [Version(0)]
++  832F8ABC: ClientDisconnected(Cratis.Chronicle.Concepts.Clients.ClientConnectionEpoch) -> Task
++
+ interface [GrainInterfaceType("Cratis.Chronicle.Clients.IConnectedClients")] Cratis.Chronicle.Clients.IConnectedClients [Version(1)]
+   AE0E91A3: DeclaresProjection(Cratis.Chronicle.Concepts.EventStoreName, Cratis.Chronicle.Concepts.Projections.ProjectionId) -> Task<bool>
+   4317FD1C: GetAllConnectedClients() -> Task<System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Clients.ConnectedClient>>
