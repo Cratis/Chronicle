@@ -46,7 +46,7 @@ public sealed class FederationConsumerKeeper(
     /// <returns>Awaitable task.</returns>
     public async Task Reconcile()
     {
-        if (registry is null || !options.Value.Federation.Enabled)
+        if (registry is null || !options.Value.Federation.ConsumerEnabled)
         {
             return;
         }

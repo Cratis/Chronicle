@@ -32,6 +32,8 @@ public class FakePullClients(FakePull pull) : IFederationPullClientFactory
     {
         public IFederationPull Service { get; } = service;
 
+        public IFederationServe ServeService { get; } = Substitute.For<IFederationServe>();
+
         public void Dispose() => owner.Closed++;
     }
 }

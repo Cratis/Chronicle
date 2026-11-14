@@ -59,6 +59,16 @@ public class Federation
     public FederationEnrollmentOptions Enrollment { get; init; } = new();
 
     /// <summary>
+    /// Gets or inits the configuration of this kernel as a dialer that connects out with its enrolled certificate and serves both directions on one connection.
+    /// </summary>
+    public FederationDialOptions Dial { get; init; } = new();
+
+    /// <summary>
+    /// Gets whether the kernel runs the consumer side: <see cref="Enabled"/> keeps starting it alongside the listener, and <see cref="FederationDialOptions.Enabled"/> starts it with no listener.
+    /// </summary>
+    public bool ConsumerEnabled => Enabled || Dial.Enabled;
+
+    /// <summary>
     /// Gets or inits the per-link limits.
     /// </summary>
     public FederationLimits Limits { get; init; } = new();

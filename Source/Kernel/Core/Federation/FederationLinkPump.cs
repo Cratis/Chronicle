@@ -27,6 +27,8 @@ namespace Cratis.Chronicle.Federation;
 /// <param name="logger">The logger.</param>
 /// <param name="timing">The timing policy.</param>
 /// <param name="timeProvider">The time provider.</param>
+/// <param name="dialClients">The factory of the connection of a dialer link, or null when the kernel never dials.</param>
+/// <param name="serveClient">The dialer's side of producing over the connection of a dialer link, or null when the kernel never dials.</param>
 public sealed class FederationLinkPump(
     string bindingId,
     IFederationRegistry registry,
@@ -38,10 +40,13 @@ public sealed class FederationLinkPump(
     IOptions<ChronicleOptions> options,
     ILogger<FederationLinkPump> logger,
     FederationConsumerTiming? timing = null,
-    TimeProvider? timeProvider = null) : IDisposable
+    TimeProvider? timeProvider = null,
+    IFederationDialClientFactory? dialClients = null,
+    FederationServeClient? serveClient = null) : IDisposable
 {
     readonly FederationConsumerTiming _timing = timing ?? FederationConsumerTiming.Default;
     readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
+    string? _dialSerial;
     FederationBindingState? _binding;
     IFederationPullConnection? _connection;
     ForwardedEventGuard? _guard;
@@ -104,7 +109,7 @@ public sealed class FederationLinkPump(
     async Task<TimeSpan?> StepCore(CancellationToken cancellationToken)
     {
         var federation = options.Value.Federation;
-        var binding = federation.Enabled
+        var binding = federation.ConsumerEnabled
             ? (await registry.GetBindings()).FirstOrDefault(_ => _.Id == bindingId)
             : null;
 
@@ -130,7 +135,9 @@ public sealed class FederationLinkPump(
         _binding = binding;
 
         var selector = new FederationEventSelector(await subscriptions.Get(binding));
-        if (selector.EventTypeIds.Count == 0)
+        var dials = dialClients is not null && FederationDial.IsDial(binding);
+        var serves = dials && federation.Dial.Serve;
+        if (selector.EventTypeIds.Count == 0 && !serves)
         {
             // Nothing subscribes: pull nothing rather than everything.
             SetStatus(FederationBindingStates.Idle, null);
@@ -142,10 +149,32 @@ public sealed class FederationLinkPump(
             await Resume(binding);
         }
 
+        if (dials && _connection is not null && await dialClients!.GetCurrentSerial() != _dialSerial)
+        {
+            // The kernel renewed its certificate: the next connection presents the new one.
+            CloseConnection();
+        }
+
         if (_connection is null)
         {
             SetStatus(FederationBindingStates.Connecting, null);
-            _connection = clients.Create(binding);
+            if (dials)
+            {
+                _dialSerial = await dialClients!.GetCurrentSerial();
+                _connection = await dialClients.Create(binding);
+                serveClient?.Start(_connection);
+            }
+            else
+            {
+                _connection = clients.Create(binding);
+            }
+        }
+
+        if (selector.EventTypeIds.Count == 0)
+        {
+            // Connected only to serve the outbox: there is nothing to pull.
+            SetStatus(FederationBindingStates.Idle, null);
+            return _timing.PollInterval;
         }
 
         var request = CreateRequest(binding, _cursor, federation.Limits.MaxBatchSize, selector.EventTypeIds);
@@ -163,8 +192,13 @@ public sealed class FederationLinkPump(
         switch (batch.Status)
         {
             case FederatedEventBatchStatus.Denied:
-                // A revoked link stops here; it is retried only rarely, and never affects another binding.
-                CloseConnection();
+                // A revoked link stops here; it is retried only rarely, and never affects another binding. A dialer keeps its connection,
+                // because the other direction on it may still be allowed.
+                if (!dials)
+                {
+                    CloseConnection();
+                }
+
                 metrics.Error(bindingId, "denied");
                 logger.LinkDenied(bindingId);
                 SetStatus(FederationBindingStates.Denied, "The producer denied the link");
@@ -300,6 +334,7 @@ public sealed class FederationLinkPump(
 
     void CloseConnection()
     {
+        serveClient?.Stop();
         _connection?.Dispose();
         _connection = null;
     }
