@@ -69,6 +69,7 @@ public partial class KeyResolvers
         {
             candidate = await projection.ReleaseEvent(eventType, candidate);
         }
+        candidate = projection.ForProjection(candidate);
         var result = await projection.GetKeyResolverFor(eventType)(storage, sink, candidate);
         if (result is ResolvedKey)
         {

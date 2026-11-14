@@ -199,7 +199,7 @@ public partial class ProjectionPipeline(
             : await _handleLock.AcquireCoarse();
 
         logger.StartingPipeline(@event.Context.SequenceNumber);
-        var context = ProjectionEventContext.Empty(objectComparer, @event) with
+        var context = ProjectionEventContext.Empty(objectComparer, projection.ForProjection(@event)) with
         {
             OperationType = projection.GetOperationTypeFor(@event.Context.EventType),
             GenerationDelivery = projection.GenerationDelivery,

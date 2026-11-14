@@ -25,7 +25,7 @@ internal static class UniqueConstraintCanonicalText
         ["float"] = value => UniqueConstraintCanonicalNumber.Single((float)value),
         ["double"] = value => UniqueConstraintCanonicalNumber.Double((double)value),
         ["decimal"] = value => UniqueConstraintCanonicalNumber.Decimal((decimal)value),
-        ["date-time"] = value => AsUtc((DateTime)value).ToString(UtcInstant, CultureInfo.InvariantCulture),
+        ["date-time"] = value => (value is DateTimeOffset dateTimeOffset ? dateTimeOffset.UtcDateTime : AsUtc((DateTime)value)).ToString(UtcInstant, CultureInfo.InvariantCulture),
         ["date-time-offset"] = value => ((DateTimeOffset)value).UtcDateTime.ToString(UtcInstant, CultureInfo.InvariantCulture),
         ["date"] = value => ((DateOnly)value).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
         ["time"] = value => ((TimeOnly)value).ToString("HH:mm:ss.fffffff", CultureInfo.InvariantCulture),
