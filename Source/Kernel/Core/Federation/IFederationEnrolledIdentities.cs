@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Federation;
 
 /// <summary>
 /// Defines the custody of the identity this kernel holds after it enrolled. The private key is only ever stored protected by
-/// a secret in the kernel's key custody, never in plain configuration, logs or events.
+/// the operator's key-encryption key, never in plain configuration, logs or events.
 /// </summary>
 public interface IFederationEnrolledIdentities
 {

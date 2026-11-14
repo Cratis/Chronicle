@@ -4,7 +4,6 @@
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
-using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage.Compliance;
 
 namespace Cratis.Chronicle.Federation.for_FederationEnrolledIdentities;
@@ -13,7 +12,8 @@ public class when_installing_an_identity : Specification
 {
     given.FakeCertificateRegistry _registry;
     IEncryptionKeyStorage _custody;
-    EncryptionKey _protectionSecret;
+    given.KeyEncryptionKeyFile _kekFiles;
+    byte[] _kek;
     FederationEnrolledIdentities _identities;
     X509Certificate2 _authority;
     X509Certificate2 _certificate;
@@ -28,11 +28,12 @@ public class when_installing_an_identity : Specification
     void Establish()
     {
         _registry = new();
+        _kekFiles = new();
         _custody = Substitute.For<IEncryptionKeyStorage>();
-        _custody.GetOrAddInternalSecretFor(EventStoreName.System, InternalSecretPurpose.FederationKeyProtection, Arg.Any<EncryptionKey>())
-            .Returns(call => Task.FromResult(_protectionSecret ??= call.Arg<EncryptionKey>()));
-        _identities = new(_registry, _custody);
-        _afterRestart = new(_registry, _custody);
+        var kekPath = _kekFiles.Create();
+        _kek = Convert.FromBase64String(File.ReadAllText(kekPath));
+        _identities = new(_registry, given.KeyEncryptionKeyFile.Protection(kekPath, custody: _custody));
+        _afterRestart = new(_registry, given.KeyEncryptionKeyFile.Protection(kekPath, custody: _custody));
 
         _authority = FederationCertificateAuthority.CreateAuthority("example", DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddYears(1));
         _key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
@@ -46,6 +47,7 @@ public class when_installing_an_identity : Specification
         _authority.Dispose();
         _certificate.Dispose();
         _key.Dispose();
+        _kekFiles.Dispose();
     }
 
     async Task Because()
@@ -59,10 +61,10 @@ public class when_installing_an_identity : Specification
 
     [Fact] void should_record_the_identity() => _event.Identity.ShouldEqual("spiffe://example/customer/acme/kernel/prod");
     [Fact] void should_record_the_serial_number_and_expiry() => (_event.Serial, _event.NotAfter).ShouldEqual((_certificate.SerialNumber, new DateTimeOffset(_certificate.NotAfter)));
-    [Fact] void should_keep_the_protection_secret_in_the_custody() => _protectionSecret.Private.Length.ShouldEqual(32);
+    [Fact] void should_not_keep_a_wrap_key_in_the_database() => _custody.ReceivedCalls().ShouldBeEmpty();
     [Fact] void should_not_record_the_private_key_in_the_clear() => _eventAsJson.ShouldNotContain(Convert.ToBase64String(_pkcs8));
     [Fact] void should_not_record_the_private_key_bytes() => Convert.FromBase64String(_event.ProtectedPrivateKey).AsSpan().IndexOf(_pkcs8.AsSpan(0, 32)).ShouldEqual(-1);
-    [Fact] void should_not_record_the_protection_secret() => _eventAsJson.ShouldNotContain(Convert.ToBase64String(_protectionSecret.Private));
+    [Fact] void should_not_record_the_key_encryption_key() => _eventAsJson.ShouldNotContain(Convert.ToBase64String(_kek));
     [Fact] void should_load_the_identity_with_a_working_key() => _loaded.Certificate.GetECDsaPrivateKey().SignData([1, 2, 3], HashAlgorithmName.SHA256).ShouldNotBeEmpty();
     [Fact] void should_load_the_same_key() => _loaded.Certificate.GetECDsaPrivateKey().ExportPkcs8PrivateKey().ShouldEqual(_pkcs8);
     [Fact] void should_load_the_identity_after_a_restart() => _loadedAfterRestart.Serial.ShouldEqual(_certificate.SerialNumber);

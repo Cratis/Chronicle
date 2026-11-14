@@ -14,6 +14,8 @@ public class when_getting_the_authority : Specification
 {
     IEncryptionKeyStorage _custody;
     EncryptionKey _stored;
+    given.KeyEncryptionKeyFile _kekFiles;
+    FederationKeyProtection _protection;
     FederationAuthorityKeys _first;
     FederationAuthorityKeys _secondSilo;
     (System.Security.Cryptography.X509Certificates.X509Certificate2 Certificate, bool Created) _created;
@@ -26,9 +28,13 @@ public class when_getting_the_authority : Specification
         _custody.GetOrAddInternalSecretFor(EventStoreName.System, InternalSecretPurpose.FederationAuthority, Arg.Any<EncryptionKey>())
             .Returns(call => Task.FromResult(_stored ??= call.Arg<EncryptionKey>()));
         var options = Options.Create(new ChronicleOptions { Federation = new() { Hosted = new() { Enabled = true, TrustDomain = "example" } } });
-        _first = new(_custody, options, TimeProvider.System);
-        _secondSilo = new(_custody, options, TimeProvider.System);
+        _kekFiles = new();
+        _protection = given.KeyEncryptionKeyFile.Protection(_kekFiles.Create());
+        _first = new(_custody, _protection, options, TimeProvider.System);
+        _secondSilo = new(_custody, _protection, options, TimeProvider.System);
     }
+
+    void Destroy() => _kekFiles.Dispose();
 
     async Task Because()
     {
@@ -41,6 +47,7 @@ public class when_getting_the_authority : Specification
     [Fact] void should_not_create_it_again() => _again.Created.ShouldBeFalse();
     [Fact] void should_not_create_it_on_another_silo_that_finds_it_in_the_custody() => _fromTheSecondSilo.Created.ShouldBeFalse();
     [Fact] void should_converge_on_one_authority() => FederationCertificateAuthority.Fingerprint(_fromTheSecondSilo.Certificate).ShouldEqual(FederationCertificateAuthority.Fingerprint(_created.Certificate));
+    [Fact] void should_not_hand_the_private_key_to_the_custody_in_the_clear() => Catch.Exception(() => ECDsa.Create().ImportPkcs8PrivateKey(_stored.Private, out _)).ShouldNotBeNull();
     [Fact] void should_hand_the_private_key_to_the_custody() => _stored.Private.ShouldNotBeEmpty();
     [Fact] void should_hand_only_the_certificate_as_the_public_part() => _stored.Public.ShouldEqual(_created.Certificate.RawData);
     [Fact] void should_be_able_to_sign_with_the_key_in_the_custody() => _created.Certificate.GetECDsaPrivateKey().ShouldNotBeNull();
@@ -50,7 +57,7 @@ public class when_getting_the_authority : Specification
     ECDsa KeyInCustody()
     {
         var key = ECDsa.Create();
-        key.ImportPkcs8PrivateKey(_stored.Private, out _);
+        key.ImportPkcs8PrivateKey(_protection.Unprotect(_stored.Private, "authority", "federation-authority", _created.Certificate.SerialNumber).GetAwaiter().GetResult(), out _);
         return key;
     }
 }

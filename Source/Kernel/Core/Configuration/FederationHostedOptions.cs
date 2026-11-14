@@ -45,4 +45,22 @@ public class FederationHostedOptions
     /// Gets or inits how many enrollment and renewal requests one source address may make per minute. Defaults to 10.
     /// </summary>
     public int RequestsPerMinutePerSource { get; init; } = 10;
+
+    /// <summary>
+    /// Gets or inits the path to a file holding the key-encryption key, 32 random bytes base64 encoded, that wraps the private keys federation holds.
+    /// The key is supplied outside the database, as a mounted secret, and never configured inline. Without it, hosted federation and enrollment
+    /// refuse to operate unless the storage backend keeps internal secrets outside the event store databases. A Development environment generates
+    /// the file when it is missing; production never does.
+    /// </summary>
+    public string? KeyEncryptionKeyPath { get; init; }
+
+    /// <summary>
+    /// Gets or inits the path to the previous key-encryption key, which stays readable while keys wrapped under it still exist. See the federation documentation for rotation.
+    /// </summary>
+    public string? PreviousKeyEncryptionKeyPath { get; init; }
+
+    /// <summary>
+    /// Gets or inits how many enrollment requests the pre-authentication enrollment routes serve at once. Further requests are refused with 503. Defaults to 16.
+    /// </summary>
+    public int MaxConcurrentEnrollmentRequests { get; init; } = 16;
 }
