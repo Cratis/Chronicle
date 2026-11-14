@@ -52,7 +52,7 @@ public class when_a_source_floods_the_enrollment_route : given.a_listening_autho
         handler.SslOptions.EnabledSslProtocols = SslProtocols.Tls13;
 #pragma warning restore CA5398
         handler.SslOptions.RemoteCertificateValidationCallback = (_, certificate, _, _) =>
-            certificate is not null && FederationCertificateAuthority.ChainsTo(new(certificate), _authority, DateTimeOffset.UtcNow);
+            certificate is not null && FederationCertificateAuthority.ChainsTo(new(certificate), _authority, DateTimeOffset.UtcNow, FederationCertificateAuthority.ServerAuthentication);
         return new HttpClient(handler) { DefaultRequestVersion = HttpVersion.Version20, DefaultVersionPolicy = HttpVersionPolicy.RequestVersionExact };
     }
 }

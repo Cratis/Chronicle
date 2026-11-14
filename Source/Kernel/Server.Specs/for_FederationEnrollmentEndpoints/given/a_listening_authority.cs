@@ -32,6 +32,8 @@ public class a_listening_authority : Specification
 
     protected virtual int RequestsPerMinute => 1000;
 
+    protected virtual int MaxConcurrent => 16;
+
     async Task Establish()
     {
         if (!Tls13.Supported)
@@ -53,7 +55,10 @@ public class a_listening_authority : Specification
             {
                 Enabled = true,
                 Port = port,
-                Hosted = new() { Enabled = true, PublicEndpoint = _endpoint.ToString(), TrustDomain = "example", RequestsPerMinutePerSource = RequestsPerMinute }
+
+                // The authority listens on loopback here, so this kernel is explicitly allowed to connect to it.
+                Enrollment = new() { AllowRestrictedAddresses = true, FailureDuration = TimeSpan.Zero },
+                Hosted = new() { Enabled = true, PublicEndpoint = _endpoint.ToString(), TrustDomain = "example", RequestsPerMinutePerSource = RequestsPerMinute, MaxConcurrentEnrollmentRequests = MaxConcurrent }
             }
         };
 

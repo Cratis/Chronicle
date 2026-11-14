@@ -68,7 +68,7 @@ public sealed class FederationPeerEnrollment(
                 throw new InvalidFederationEnrollment("the authority did not accept the enrollment code. It may be unknown, expired or already used");
             }
 
-            var installed = await Install(key, issuance, parsed.AuthorityFingerprint, parsed.Endpoint, FederationIssuanceReasons.Enrollment, now);
+            var installed = await Install(key, issuance, parsed.AuthorityFingerprint, parsed.Endpoint, FederationIssuanceReasons.Enrollment, now, null);
             logger.Enrolled(installed.Identity, installed.Serial, installed.NotAfter);
             return new(installed.Identity, installed.Serial, installed.NotAfter, installed.Endpoint, false);
         }
@@ -110,11 +110,7 @@ public sealed class FederationPeerEnrollment(
             var endpoint = Uri.TryCreate(issuance.Endpoint, UriKind.Absolute, out var moved) && moved.Scheme == Uri.UriSchemeHttps
                 ? moved.ToString()
                 : current.Endpoint;
-            var installed = await Install(key, issuance, current.AuthorityFingerprint, endpoint, FederationIssuanceReasons.Renewal, now);
-            if (installed.Identity != current.Identity)
-            {
-                throw new InvalidFederationEnrollment("the renewed certificate carries a different identity");
-            }
+            var installed = await Install(key, issuance, current.AuthorityFingerprint, endpoint, FederationIssuanceReasons.Renewal, now, current.Identity);
 
             logger.Renewed(installed.Identity, installed.Serial, installed.NotAfter);
             return true;
@@ -125,7 +121,7 @@ public sealed class FederationPeerEnrollment(
         }
     }
 
-    async Task<FederationEnrolledIdentity> Install(ECDsa key, FederationIssuance issuance, string authorityFingerprint, string endpoint, string reason, DateTimeOffset now)
+    async Task<FederationEnrolledIdentity> Install(ECDsa key, FederationIssuance issuance, string authorityFingerprint, string endpoint, string reason, DateTimeOffset now, string? expectedIdentity)
     {
         using var certificate = X509CertificateLoader.LoadCertificate(Convert.FromBase64String(issuance.Certificate));
         using var authority = X509CertificateLoader.LoadCertificate(Convert.FromBase64String(issuance.Authority));
@@ -135,7 +131,7 @@ public sealed class FederationPeerEnrollment(
             throw new InvalidFederationEnrollment("the authority certificate does not match the fingerprint the enrollment code carries");
         }
 
-        if (!FederationCertificateAuthority.ChainsTo(certificate, authority, now))
+        if (!FederationCertificateAuthority.ChainsTo(certificate, authority, now, FederationCertificateAuthority.ClientAuthentication))
         {
             throw new InvalidFederationEnrollment("the issued certificate does not chain to the authority");
         }
@@ -150,6 +146,11 @@ public sealed class FederationPeerEnrollment(
         if (identity is null || identity != issuance.Identity)
         {
             throw new InvalidFederationEnrollment("the issued certificate does not carry the identity the authority reported");
+        }
+
+        if (expectedIdentity is not null && identity != expectedIdentity)
+        {
+            throw new InvalidFederationEnrollment("the renewed certificate carries a different identity");
         }
 
         await identities.Install(key, certificate, authority, endpoint, reason);

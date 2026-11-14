@@ -19,7 +19,7 @@ public class when_redeeming_a_code : given.a_peer_enrollment
     [Fact] void should_report_the_identity_from_the_enrollment() => _redemption.Identity.ShouldEqual("spiffe://example/customer/acme/kernel/prod");
     [Fact] void should_not_report_that_it_was_already_enrolled() => _redemption.AlreadyEnrolled.ShouldBeFalse();
     [Fact] void should_hold_the_certificate_with_a_private_key() => _identity.Certificate.HasPrivateKey.ShouldBeTrue();
-    [Fact] void should_hold_a_certificate_that_chains_to_the_authority() => FederationCertificateAuthority.ChainsTo(_identity.Certificate, _identity.Authority, _time.GetUtcNow()).ShouldBeTrue();
+    [Fact] void should_hold_a_certificate_that_chains_to_the_authority() => FederationCertificateAuthority.ChainsTo(_identity.Certificate, _identity.Authority, _time.GetUtcNow(), FederationCertificateAuthority.ClientAuthentication).ShouldBeTrue();
     [Fact] void should_remember_the_fingerprint_of_the_authority() => _identity.AuthorityFingerprint.ShouldEqual(FederationCertificateAuthority.Fingerprint(_keys.Authority));
     [Fact] void should_remember_the_endpoint() => _identity.Endpoint.ShouldEqual("https://federation.example.com:35100/");
     [Fact] void should_have_installed_it_as_an_enrollment() => _identities.Reasons.Single().ShouldEqual(FederationIssuanceReasons.Enrollment);
