@@ -33,7 +33,7 @@ public class when_redeeming_an_enrollment : given.a_federation_authority
     [Fact] void should_issue_a_certificate() => _issuance.Outcome.ShouldEqual(FederationIssuanceOutcome.Issued);
     [Fact] void should_put_the_identity_from_the_enrollment_in_the_certificate() => FederationCertificateAuthority.GetIdentity(_certificate).ShouldEqual("spiffe://example/customer/acme/kernel/prod");
     [Fact] void should_report_the_identity() => _issuance.Identity.ShouldEqual("spiffe://example/customer/acme/kernel/prod");
-    [Fact] void should_chain_to_the_authority() => FederationCertificateAuthority.ChainsTo(_certificate, _keys.Authority, _time.GetUtcNow()).ShouldBeTrue();
+    [Fact] void should_chain_to_the_authority() => FederationCertificateAuthority.ChainsTo(_certificate, _keys.Authority, _time.GetUtcNow(), FederationCertificateAuthority.ClientAuthentication).ShouldBeTrue();
     [Fact] void should_be_for_the_key_that_made_the_request() => _certificate.GetECDsaPublicKey().ExportSubjectPublicKeyInfo().ShouldEqual(_key.ExportSubjectPublicKeyInfo());
     [Fact] void should_last_fourteen_days_by_default() => (new DateTimeOffset(_certificate.NotAfter) - _time.GetUtcNow()).ShouldEqual(TimeSpan.FromDays(14));
     [Fact] void should_not_be_a_certificate_authority() => _certificate.Extensions.OfType<X509BasicConstraintsExtension>().Single().CertificateAuthority.ShouldBeFalse();

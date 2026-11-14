@@ -17,6 +17,12 @@ public class FakeAuthorityKeys : IFederationAuthorityKeys
     /// </summary>
     public X509Certificate2 Authority => _authority ??= FederationCertificateAuthority.CreateAuthority("example", DateTimeOffset.UtcNow.AddYears(-1), DateTimeOffset.UtcNow.AddYears(20));
 
+    /// <summary>
+    /// Replace the authority.
+    /// </summary>
+    /// <param name="authority">The authority to hold from now on.</param>
+    public void Replace(X509Certificate2 authority) => _authority = authority;
+
     /// <inheritdoc/>
     public Task<(X509Certificate2 Certificate, bool Created)> GetOrCreate()
     {

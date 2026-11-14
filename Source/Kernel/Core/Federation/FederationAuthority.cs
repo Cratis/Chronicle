@@ -140,7 +140,7 @@ public class FederationAuthority(
         {
             var authority = await GetAuthority();
             var now = timeProvider.GetUtcNow();
-            if (!FederationCertificateAuthority.ChainsTo(presented, authority, now))
+            if (!FederationCertificateAuthority.ChainsTo(presented, authority, now, FederationCertificateAuthority.ClientAuthentication))
             {
                 logger.RenewalRefused();
                 return FederationIssuance.Rejected;
@@ -191,10 +191,25 @@ public class FederationAuthority(
     {
         var authority = await GetAuthority();
         var now = timeProvider.GetUtcNow();
+        var authorityExpires = new DateTimeOffset(authority.NotAfter);
+        if (now >= authorityExpires)
+        {
+            // An expired authority cannot be chained to, so nothing it signs is of any use. The operator has to replace the authority; see the federation documentation.
+            logger.AuthorityExpired(authorityExpires);
+            return FederationIssuance.Rejected;
+        }
+
+        // A certificate never outlives the authority that signed it.
+        var notAfter = now.Add(Hosted.CertificateLifetime);
+        if (notAfter > authorityExpires)
+        {
+            notAfter = authorityExpires;
+        }
+
         X509Certificate2 certificate;
         try
         {
-            certificate = FederationCertificateAuthority.IssueClient(authority, certificateRequest, identity, now.Subtract(_clockSkew), now.Add(Hosted.CertificateLifetime));
+            certificate = FederationCertificateAuthority.IssueClient(authority, certificateRequest, identity, now.Subtract(_clockSkew), notAfter);
         }
         catch (InvalidFederationCertificateRequest)
         {
@@ -204,6 +219,14 @@ public class FederationAuthority(
 
         using (certificate)
         {
+            // A code is single use. The claim is made after the request was found to be valid, so a bad request does not burn the code, and
+            // it is the event log that decides between concurrent redemptions, not the order this grain happens to serve them in.
+            if (reason == FederationIssuanceReasons.Enrollment && !await registry.ClaimRedemption(enrollmentId, certificate.SerialNumber))
+            {
+                logger.EnrollmentRefused();
+                return FederationIssuance.Rejected;
+            }
+
             // Recorded before it is handed out: a certificate that is not in the registry is never accepted.
             await registry.Append(certificate.SerialNumber, new FederationCertificateIssued(enrollmentId, subject, instance, identity, new DateTimeOffset(certificate.NotBefore), new DateTimeOffset(certificate.NotAfter), reason, actedBy));
             logger.CertificateIssued(certificate.SerialNumber, identity, new DateTimeOffset(certificate.NotAfter), reason);

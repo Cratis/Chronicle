@@ -42,7 +42,7 @@ public class FederationPeerAdmission(
         }
 
         var (authority, _) = await keys.GetOrCreate();
-        if (!FederationCertificateAuthority.ChainsTo(certificate, authority, timeProvider.GetUtcNow()))
+        if (!FederationCertificateAuthority.ChainsTo(certificate, authority, timeProvider.GetUtcNow(), FederationCertificateAuthority.ClientAuthentication))
         {
             return FederationAdmission.Refused(FederationAdmissionRefusal.NotChained);
         }

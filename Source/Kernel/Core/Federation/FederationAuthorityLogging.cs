@@ -33,4 +33,7 @@ internal static partial class FederationAuthorityLogging
 
     [LoggerMessage(LogLevel.Warning, "A federation certificate request could not be honored")]
     internal static partial void CertificateRequestInvalid(this ILogger<FederationAuthority> logger);
+
+    [LoggerMessage(LogLevel.Error, "The federation authority certificate expired {ExpiredAt}, so no certificate can be issued. The authority has to be replaced and every peer enrolled again")]
+    internal static partial void AuthorityExpired(this ILogger<FederationAuthority> logger, DateTimeOffset expiredAt);
 }

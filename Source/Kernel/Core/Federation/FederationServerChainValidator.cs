@@ -24,5 +24,5 @@ public static class FederationServerChainValidator
         certificate is not null
         && !errors.HasFlag(SslPolicyErrors.RemoteCertificateNameMismatch)
         && !errors.HasFlag(SslPolicyErrors.RemoteCertificateNotAvailable)
-        && FederationCertificateAuthority.ChainsTo(certificate, authority, now);
+        && FederationCertificateAuthority.ChainsTo(certificate, authority, now, FederationCertificateAuthority.ServerAuthentication);
 }

@@ -20,14 +20,14 @@ public static class FederationCertificateAuthority
     /// <summary>
     /// The extended key usage of a certificate that authenticates a client.
     /// </summary>
-    const string ClientAuthentication = "1.3.6.1.5.5.7.3.2";
-
-    const string SubjectAlternativeNameOid = "2.5.29.17";
+    public const string ClientAuthentication = "1.3.6.1.5.5.7.3.2";
 
     /// <summary>
     /// The extended key usage of a certificate that authenticates a server.
     /// </summary>
-    const string ServerAuthentication = "1.3.6.1.5.5.7.3.1";
+    public const string ServerAuthentication = "1.3.6.1.5.5.7.3.1";
+
+    const string SubjectAlternativeNameOid = "2.5.29.17";
 
     /// <summary>
     /// Create a new authority: a P-384 key pair and a self-signed certificate that may only sign leaf certificates.
@@ -150,13 +150,25 @@ public static class FederationCertificateAuthority
     /// <param name="certificate">The certificate to check.</param>
     /// <param name="authority">The authority certificate. Only its public part is used.</param>
     /// <param name="at">The moment to check validity at.</param>
-    /// <returns>True when the certificate chains to the authority and is within its validity period.</returns>
-    public static bool ChainsTo(X509Certificate2 certificate, X509Certificate2 authority, DateTimeOffset at)
+    /// <param name="requiredUsage">The extended key usage the certificate must carry, <see cref="ClientAuthentication"/> or <see cref="ServerAuthentication"/>.</param>
+    /// <returns>True when the certificate chains to the authority, is within its validity period and is usable for <paramref name="requiredUsage"/>.</returns>
+    /// <remarks>
+    /// The chain is built without any network access: revocation is the certificate registry's job, and a certificate presented before
+    /// authentication must never make the kernel fetch an issuer it names (an authority information access extension).
+    /// </remarks>
+    public static bool ChainsTo(X509Certificate2 certificate, X509Certificate2 authority, DateTimeOffset at, string requiredUsage)
     {
+        if (!HasUsage(certificate, requiredUsage))
+        {
+            return false;
+        }
+
         using var chain = new X509Chain();
         chain.ChainPolicy.TrustMode = X509ChainTrustMode.CustomRootTrust;
         chain.ChainPolicy.CustomTrustStore.Add(authority);
         chain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
+        chain.ChainPolicy.DisableCertificateDownloads = true;
+        chain.ChainPolicy.ApplicationPolicy.Add(new Oid(requiredUsage));
         chain.ChainPolicy.VerificationTime = at.UtcDateTime;
         chain.ChainPolicy.VerificationFlags = X509VerificationFlags.NoFlag;
         if (!chain.Build(certificate))
@@ -178,6 +190,18 @@ public static class FederationCertificateAuthority
         serial[0] &= 0x7F;
         serial[0] |= 0x40;
         return serial;
+    }
+
+    static bool HasUsage(X509Certificate2 certificate, string requiredUsage)
+    {
+        var usage = certificate.Extensions.OfType<X509KeyUsageExtension>().FirstOrDefault();
+        if (usage?.KeyUsages.HasFlag(X509KeyUsageFlags.DigitalSignature) != true)
+        {
+            return false;
+        }
+
+        var enhanced = certificate.Extensions.OfType<X509EnhancedKeyUsageExtension>().FirstOrDefault();
+        return enhanced?.EnhancedKeyUsages.OfType<Oid>().Any(_ => _.Value == requiredUsage) == true;
     }
 
     static CertificateRequest Create(byte[] certificateRequest, string subject)
