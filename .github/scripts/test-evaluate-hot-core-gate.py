@@ -317,6 +317,14 @@ class GateDecisions(unittest.TestCase):
         with patch.object(gate, "api", return_value=[{"jobs": [{"name": "other"}]}, {"jobs": GREEN["jobs"]}]):
             self.assertEqual(2, len(gate.collection("jobs", "jobs")))
 
+    def test_paginated_calls_get_a_budget_for_every_page(self):
+        ok = subprocess.CompletedProcess(["gh"], 0, stdout="[]", stderr="")
+        with patch.object(gate.subprocess, "run", return_value=ok) as run:
+            gate.api("jobs", paginate=True)
+            gate.api("run")
+        self.assertEqual(gate.PAGINATED_TIMEOUT, run.call_args_list[0].kwargs["timeout"])
+        self.assertEqual(gate.REQUEST_TIMEOUT, run.call_args_list[1].kwargs["timeout"])
+
     def test_jobs_are_listed_with_a_small_page_size(self):
         with patch.object(gate, "collection", return_value=[]) as collect:
             gate.with_jobs("Cratis/Chronicle", {"id": 7})

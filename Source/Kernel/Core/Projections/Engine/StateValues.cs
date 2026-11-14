@@ -33,9 +33,68 @@ internal static class StateValues
         null => null,
         string => value,
         ExpandoObject expandoObject => expandoObject.Clone(),
-        IEnumerable => CopyThroughHolder(value),
+        IEnumerable => TryCopyList(value, out var copy) ? copy : CopyThroughHolder(value),
         _ => value
     };
+
+    /// <summary>
+    /// Copies a list or object array of nulls, strings and expando objects item by item, giving exactly the <see cref="List{T}"/> of <see cref="object"/>
+    /// that the generic clone builds, without the holder and the reflection around it.
+    /// </summary>
+    /// <param name="value">The collection to copy.</param>
+    /// <param name="copy">The copy, when the collection has a shape this method handles.</param>
+    /// <returns>True when copied; false for anything else (other element types, dictionaries, typed collections), which the clone owns the rules for.</returns>
+    static bool TryCopyList(object value, [NotNullWhen(true)] out object? copy)
+    {
+        copy = null;
+        return value switch
+        {
+            List<object> list => TryCopyItems(list, out copy),
+            object[] array when array.GetType() == typeof(object[]) => TryCopyItems(array, out copy),
+            _ => false
+        };
+    }
+
+    static bool TryCopyItems(IReadOnlyList<object> items, out object? copy)
+    {
+        copy = null;
+        var result = new List<object>(items.Count);
+        for (var i = 0; i < items.Count; i++)
+        {
+            if (!TryCopyItem(items[i], out var itemCopy))
+            {
+                return false;
+            }
+
+            result.Add(itemCopy!);
+        }
+
+        copy = result;
+        return true;
+    }
+
+    /// <summary>
+    /// Copies one list item when it is null, a string or an expando object.
+    /// </summary>
+    /// <param name="item">The item.</param>
+    /// <param name="copy">The copied item.</param>
+    /// <returns>True when the item has a handled shape.</returns>
+    static bool TryCopyItem(object? item, out object? copy)
+    {
+        switch (item)
+        {
+            case null:
+            case string:
+                copy = item;
+                return true;
+            case ExpandoObject expandoObject:
+                copy = expandoObject.Clone();
+                return true;
+            default:
+                copy = null;
+                return false;
+        }
+    }
 
     static object? CopyThroughHolder(object value)
     {
