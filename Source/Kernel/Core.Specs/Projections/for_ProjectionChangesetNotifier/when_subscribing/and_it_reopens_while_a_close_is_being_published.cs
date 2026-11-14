@@ -34,5 +34,5 @@ public class and_it_reopens_while_a_close_is_being_published : given.a_subscribe
     }
 
     [Fact] void should_end_with_the_projection_published_as_watched() => _published[^1].ShouldBeTrue();
-    [Fact] void should_publish_the_close_and_then_the_reopen() => _published.ShouldEqual([true, false, true]);
+    [Fact] void should_publish_the_close_and_then_the_reopen() => _published.ShouldEqual([false, true]);
 }

@@ -58,7 +58,7 @@ public class ProjectionChangesetNotifier(
     }
 
     /// <inheritdoc/>
-    public Task Subscribe(IReadModelChangesetSubscriber subscriber)
+    public async Task Subscribe(IReadModelChangesetSubscriber subscriber)
     {
         var wasUnwatched = _subscribers.Count == 0;
         if (_subscribers.Add(subscriber))
@@ -68,12 +68,18 @@ public class ProjectionChangesetNotifier(
 
         // Becoming watched is always published, never throttled. Otherwise the watch is refreshed by subscribing again,
         // so a subscribe past the republish window renews the watch state.
-        if (wasUnwatched || WatchNeedsRefresh())
+        if (wasUnwatched && !_isPublishing)
+        {
+            // The first subscriber is acknowledged only once the watch state has been published, so a removal handled right
+            // after the watch is established cannot miss its parent notifications. Failures are logged by the publication.
+            _publishTimer?.Dispose();
+            _publishTimer = null;
+            await PublishWatchState();
+        }
+        else if (wasUnwatched || WatchNeedsRefresh())
         {
             SchedulePublish();
         }
-
-        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>

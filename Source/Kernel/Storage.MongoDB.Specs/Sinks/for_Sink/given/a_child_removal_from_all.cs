@@ -17,6 +17,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_Sink.given;
 public class a_child_removal_from_all : Specification
 {
     protected Sink _sink;
+    protected IMongoCollection<BsonDocument> _collection;
     protected IMongoDBConverter _converter;
     protected IChangesetConverter _changesetConverter;
     protected IChangeset<AppendedEvent, ExpandoObject> _changeset;
@@ -39,7 +40,7 @@ public class a_child_removal_from_all : Specification
             SinkDefinition.None,
             new Dictionary<ReadModelGeneration, JsonSchema> { [ReadModelGeneration.First] = new JsonSchema() },
             []);
-        var collection = Substitute.For<IMongoCollection<BsonDocument>>();
+        var collection = _collection = Substitute.For<IMongoCollection<BsonDocument>>();
         var collections = Substitute.For<ISinkCollections>();
         collections.GetCollection().Returns(collection);
         collection.UpdateManyAsync(

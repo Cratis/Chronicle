@@ -1245,7 +1245,8 @@ public partial class Sink(
         {
             if (TryFindValueInDocument(cachedState, pathSegments, 0, childRemoved.Key) && _bulkKeysByCacheKey.TryGetValue(cacheKey, out var cachedKey))
             {
-                yield return cachedKey;
+                // The cached write key may carry child array indexers; the parent document is identified by its root key only.
+                yield return cachedKey with { ArrayIndexers = ArrayIndexers.NoIndexers };
             }
         }
     }
