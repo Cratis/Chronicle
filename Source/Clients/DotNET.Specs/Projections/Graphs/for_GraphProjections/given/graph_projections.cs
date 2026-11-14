@@ -12,12 +12,13 @@ namespace Cratis.Chronicle.Projections.Graphs.for_GraphProjections.given;
 
 internal static class graph_projections
 {
-    internal static GraphProjections For(IEnumerable<Type> elements, IEnumerable<Type> projections, string defaultSinkName)
+    internal static GraphProjections For(IEnumerable<Type> elements, IEnumerable<Type> projections, string defaultSinkName, IEnumerable<Type>? views = null)
     {
         var namingPolicy = new CamelCaseNamingPolicy();
         var artifacts = Substitute.For<IClientArtifactsProvider>();
         artifacts.GraphElements.Returns(elements);
         artifacts.GraphProjections.Returns(projections);
+        artifacts.GraphViews.Returns(views ?? []);
         var eventTypes = new EventTypesForSpecifications([
             typeof(for_GraphDefinitionBuilder.given.PersonRegistered),
             typeof(for_GraphDefinitionBuilder.given.PersonRemoved),

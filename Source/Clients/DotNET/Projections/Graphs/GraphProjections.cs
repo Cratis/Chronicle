@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Graphs;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Sinks;
 using Cratis.Serialization;
@@ -38,6 +39,12 @@ internal sealed class GraphProjections(
     public IDictionary<Type, Exception> Failures { get; } = new Dictionary<Type, Exception>();
 
     /// <summary>
+    /// Gets the views over the graphs found by the last <see cref="Discover"/>. Views that break a rule are left out and
+    /// reported in <see cref="Failures"/>.
+    /// </summary>
+    public IGraphViews Views { get; private set; } = GraphViews.Empty;
+
+    /// <summary>
     /// Discover the graphs.
     /// </summary>
     public void Discover()
@@ -45,8 +52,10 @@ internal sealed class GraphProjections(
         Failures.Clear();
         var builder = new GraphDefinitionBuilder(namingPolicy, eventTypes, schemaGenerator);
         var registrations = new List<GraphRegistration>();
+        var models = new List<GraphModel>();
         foreach (var model in ModelBoundGraphs().Concat(FluentGraphs()))
         {
+            models.Add(model.Model);
             try
             {
                 registrations.Add(builder.Build(model.Model, model.ProjectionId, sinkTypeId.Value, SinkNameFor(model.Model, model.Declarations)));
@@ -60,6 +69,20 @@ internal sealed class GraphProjections(
         }
 
         Registrations = registrations;
+        DiscoverViews(models);
+    }
+
+    void DiscoverViews(IEnumerable<GraphModel> models)
+    {
+        var viewTypes = clientArtifacts.GraphViews.ToArray();
+        if (viewTypes.Length == 0)
+        {
+            Views = GraphViews.Empty;
+            return;
+        }
+
+        Views = new GraphViewReader(namingPolicy).Read(viewTypes, models);
+        foreach (var (type, failure) in Views.Failures) Failures[type] = failure;
     }
 
     string SinkNameFor(GraphModel model, IEnumerable<Type> declarations)

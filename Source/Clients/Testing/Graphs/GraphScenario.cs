@@ -8,6 +8,7 @@ extern alias KernelGrpc;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Graphs;
 using Cratis.Chronicle.Projections.Graphs;
 using Cratis.Chronicle.Storage.Graphs;
 using Cratis.Chronicle.Testing.Events;
@@ -26,6 +27,7 @@ namespace Cratis.Chronicle.Testing.Graphs;
 /// The scenario discovers the node and edge types and the <see cref="IGraphProjection"/> implementations the same way an
 /// application does, builds their definitions, and applies the operations the kernel's graph projection engine produces to
 /// the same in-memory graph sink the kernel uses. Events get increasing sequence numbers in the order they are appended.
+/// The views over the graphs are read the same way, and <see cref="Graph"/> queries them against the in-memory graph.
 /// </remarks>
 public sealed class GraphScenario : IDisposable
 {
@@ -49,11 +51,32 @@ public sealed class GraphScenario : IDisposable
     public GraphScenario(Defaults defaults)
     {
         _eventStore = (EventStoreForTesting)defaults.EventStore;
-        foreach (var registration in (_eventStore.Projections as Projections.Projections)?.Graphs?.Registrations ?? [])
+        var graphs = (_eventStore.Projections as Projections.Projections)?.Graphs;
+        foreach (var registration in graphs?.Registrations ?? [])
         {
             _graphs.Add(RunningGraph.Create(registration));
         }
+
+        Views = graphs?.Views ?? GraphViews.Empty;
+        QueryExecutor = new InMemoryGraphQueryExecutor(name => _graphs.FirstOrDefault(_ => _.Name == name));
+        Graph = new QueryableGraph(Views, QueryExecutor);
     }
+
+    /// <summary>
+    /// Gets the <see cref="IGraph"/> for querying views over the in-memory graphs.
+    /// </summary>
+    public IGraph Graph { get; }
+
+    /// <summary>
+    /// Gets the <see cref="IGraphViews"/> the scenario discovered.
+    /// </summary>
+    public IGraphViews Views { get; }
+
+    /// <summary>
+    /// Gets the <see cref="IGraphQueryExecutor"/> that evaluates queries against the in-memory graphs. It is the reference
+    /// for the graph query semantics an executor of a host package must match.
+    /// </summary>
+    public IGraphQueryExecutor QueryExecutor { get; }
 
     /// <summary>
     /// Append events for an event source. The events are projected onto the graphs immediately.
@@ -82,6 +105,39 @@ public sealed class GraphScenario : IDisposable
 
             _nextSequenceNumber++;
         }
+    }
+
+    /// <summary>
+    /// Put a node straight into the graph, without an event, for a specification that starts from a given graph.
+    /// </summary>
+    /// <param name="label">The node label.</param>
+    /// <param name="key">The key of the node.</param>
+    /// <param name="properties">The properties to set, or none for a bare node with only its key.</param>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    /// <exception cref="NoGraphDeclaresElement">Thrown when no graph declares the label.</exception>
+    public Task SeedNode(string label, object key, IReadOnlyDictionary<string, object?>? properties = null)
+    {
+        var graph = GraphWithNode(label);
+        return Seed(graph, new UpsertNode(new NodeReference(label, key), properties ?? new Dictionary<string, object?>()));
+    }
+
+    /// <summary>
+    /// Put an edge straight into the graph, without an event, for a specification that starts from a given graph. Nodes at
+    /// either end that do not exist yet are created bare, as an edge projection would create them.
+    /// </summary>
+    /// <param name="type">The edge type.</param>
+    /// <param name="sourceKey">The key of the node the edge starts at.</param>
+    /// <param name="targetKey">The key of the node the edge ends at.</param>
+    /// <param name="identity">The value of the identifying property, for an edge type that has one.</param>
+    /// <param name="properties">The properties to set.</param>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    /// <exception cref="NoGraphDeclaresElement">Thrown when no graph declares the edge type.</exception>
+    public Task SeedEdge(string type, object sourceKey, object targetKey, object? identity = null, IReadOnlyDictionary<string, object?>? properties = null)
+    {
+        var graph = GraphWithEdge(type);
+        var definition = graph.Definition.GetEdge(type);
+        var reference = new EdgeReference(type, new(definition.SourceLabel, sourceKey), new(definition.TargetLabel, targetKey), identity);
+        return Seed(graph, new UpsertEdge(reference, properties ?? new Dictionary<string, object?>()));
     }
 
     /// <summary>
@@ -166,6 +222,12 @@ public sealed class GraphScenario : IDisposable
         foreach (var (name, value) in properties) json[name] = JsonSerializer.SerializeToNode(value, _serializerOptions);
         foreach (var (name, value) in extra) json[name] = JsonSerializer.SerializeToNode(value, _serializerOptions);
         return json.Deserialize<TElement>(_serializerOptions)!;
+    }
+
+    async Task Seed(RunningGraph graph, GraphOperation operation)
+    {
+        await graph.Sink.ApplyGraphChanges(new GraphChangeset(graph.Owner, [operation]), new KernelEvents.EventSequenceNumber(_nextSequenceNumber));
+        _nextSequenceNumber++;
     }
 
     RunningGraph GraphWithNode(string label) =>

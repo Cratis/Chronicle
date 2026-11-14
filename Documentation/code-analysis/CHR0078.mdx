@@ -1,0 +1,20 @@
+---
+title: "CHR0078: A graph view must be anchored at a node"
+description: "CHR0078 reports a graph view whose ViewOf root is not a node type, and shows how to anchor it at a node."
+---
+
+## Rule description
+
+A view reads a property graph from one node label. The rule reports a type marked with `ViewOf<TNode>` whose `TNode` is not marked with `[Node]`.
+
+## Severity
+
+Error
+
+## How to fix
+
+Give `ViewOf<TNode>` the node type the view reads from. If the type you named holds the data you need, mark it with `[Node]` and project it onto the graph, or read it with a document read model instead of a view.
+
+## Related topics
+
+- [Graph projections](../projections/graph-projections.mdx)

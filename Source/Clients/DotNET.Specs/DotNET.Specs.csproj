@@ -42,6 +42,11 @@
         <EmbeddedResource Include="../DotNET/Projections/**/*.cs" LogicalName="ProjectionPaths.%(RecursiveDir)%(Filename)%(Extension)" />
     </ItemGroup>
 
+    <!-- The shared graph view conformance fixture, copied byte for byte from the cross-client specification. -->
+    <ItemGroup>
+        <None Update="Graphs/for_GraphViewReader/Fixtures/*.json" CopyToOutputDirectory="PreserveNewest" />
+    </ItemGroup>
+
     <!-- Reuse the exact CoreDNS zone the Composition sample serves, so the +srv integration
          spec resolves against the same DNS records the scale-out story runs against. -->
     <ItemGroup>

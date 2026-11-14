@@ -130,6 +130,9 @@ public abstract partial class ChronicleClientFixture<TChronicleFixture> : IDispo
     public virtual IEnumerable<Type> GraphProjections => GetArtifactTypes(provider => provider.GraphProjections);
 
     /// <inheritdoc/>
+    public virtual IEnumerable<Type> GraphViews => GetArtifactTypes(provider => provider.GraphViews);
+
+    /// <inheritdoc/>
     public virtual IReadOnlyDictionary<string, string?>? AdditionalHostConfiguration => null;
 
     /// <inheritdoc/>

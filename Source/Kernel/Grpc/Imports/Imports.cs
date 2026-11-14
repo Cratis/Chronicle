@@ -18,6 +18,7 @@ internal sealed class Imports(
     global::Cratis.Arc.Commands.ICommandPipeline commandPipeline,
     global::Cratis.Chronicle.Storage.IStorage storage,
     global::Microsoft.Extensions.Options.IOptions<global::Cratis.Chronicle.Configuration.ChronicleOptions> optionsOfChronicleOptions,
+    global::Cratis.Chronicle.Namespaces.INamespaceCasing namespaceCasing,
     global::Microsoft.Extensions.Logging.ILogger<global::Cratis.Chronicle.Services.Imports.Imports> logger) : global::Cratis.Chronicle.Contracts.Imports.IImports
 {
     /// <inheritdoc/>
@@ -55,6 +56,10 @@ internal sealed class Imports(
             new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: request.Namespace),
             async () =>
             {
+                if (!string.IsNullOrEmpty(request.Namespace))
+                {
+                    request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
+                }
                 var result = await global::Cratis.Chronicle.Imports.ImportProgress.GetImport((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, (global::Cratis.Chronicle.Concepts.Imports.ImportId)request.ImportId, storage, optionsOfChronicleOptions);
                 return result is null ? null : ToImportProgressResponse(result);
             },
@@ -65,9 +70,16 @@ internal sealed class Imports(
         QueryExecutor.Execute<global::Cratis.Chronicle.Contracts.Imports.ImportProgressResponse>(
             callContext,
             new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: request.Namespace),
-            () => global::Cratis.Chronicle.Imports.ImportProgress.ObserveImport((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, (global::Cratis.Chronicle.Concepts.Imports.ImportId)request.ImportId, storage, optionsOfChronicleOptions)
+            () => QueryExecutor.Canonicalize(async () =>
+            {
+                if (!string.IsNullOrEmpty(request.Namespace))
+                {
+                    request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
+                }
+                return global::Cratis.Chronicle.Imports.ImportProgress.ObserveImport((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, (global::Cratis.Chronicle.Concepts.Imports.ImportId)request.ImportId, storage, optionsOfChronicleOptions)
                 .CompletedBy(callContext.CancellationToken)
-                .Select(_ => (global::Cratis.Chronicle.Contracts.Imports.ImportProgressResponse)ToImportProgressResponse(_)),
+                .Select(_ => (global::Cratis.Chronicle.Contracts.Imports.ImportProgressResponse)ToImportProgressResponse(_));
+            }, callContext.CancellationToken),
             exception => logger.QueryFailed(exception, "Imports", "ObserveImport"));
 
     static global::Cratis.Chronicle.Contracts.Imports.AbandonImportResponse ToAbandonImportResponse(global::Cratis.Chronicle.Imports.ImportStatus source) =>

@@ -1,5 +1,5 @@
 ---
-id: 0031-hosted-federation-with-a-kernel-issued-certificate-authority
+id: 0032-hosted-federation-with-a-kernel-issued-certificate-authority
 title: Let a kernel host federation for many applications by acting as the certificate authority for their links, enrolling them with a one-time code, and letting the dialer carry both directions
 status: proposed
 stage: none

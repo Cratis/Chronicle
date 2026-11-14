@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Contracts.Federation;
 /// Represents which way events flow on a hosted federation link, seen from the kernel that accepts the connection.
 /// </summary>
 /// <remarks>
-/// Who dials is decoupled from which way data flows (decision 0031). Each direction is governed by its own policy entry.
+/// Who dials is decoupled from which way data flows (decision 0032). Each direction is governed by its own policy entry.
 /// The values are explicit and never renumbered; they are part of the persisted policy events and the wire contract.
 /// </remarks>
 public enum FederationDirection
