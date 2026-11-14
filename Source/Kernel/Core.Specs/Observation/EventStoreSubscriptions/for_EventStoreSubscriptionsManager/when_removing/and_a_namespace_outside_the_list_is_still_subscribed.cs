@@ -9,6 +9,7 @@ public class and_a_namespace_outside_the_list_is_still_subscribed : given.a_mana
     {
         _observersAreSubscribed = true;
         await _manager.Add(DefinitionFor("Default"));
+        _observers[KeyFor("Tenant1")].ClearReceivedCalls();
     }
 
     async Task Because() => await _manager.Remove(SubscriptionName);

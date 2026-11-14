@@ -9,6 +9,7 @@ public class and_restricted_and_the_namespace_is_outside : given.a_manager_over_
     {
         await _manager.Add(DefinitionFor("Default"));
         await AttachNamespaceAdded();
+        _requestedKeys.Clear();
     }
 
     async Task Because() => await _onNamespaceAdded(new("Target", "Tenant9"));

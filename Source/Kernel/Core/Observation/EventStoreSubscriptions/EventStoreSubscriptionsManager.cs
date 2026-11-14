@@ -30,6 +30,7 @@ public class EventStoreSubscriptionsManager(
     static readonly TimeSpan _subscriptionReminderDelay = TimeSpan.FromMilliseconds(100);
     static readonly TimeSpan _subscriptionReminderPeriod = TimeSpan.FromMinutes(1);
 
+    readonly Dictionary<EventStoreSubscriptionId, HashSet<EventStoreNamespaceName>> _pendingRevocations = [];
     EventStoreName _targetEventStoreName = EventStoreName.NotSet;
 
     /// <inheritdoc/>
@@ -47,7 +48,6 @@ public class EventStoreSubscriptionsManager(
     /// <inheritdoc/>
     public async Task Add(EventStoreSubscriptionDefinition definition)
     {
-        var previous = State.Subscriptions.FirstOrDefault(s => s.Identifier == definition.Identifier);
         var subscriptions = State.Subscriptions.ToList();
         subscriptions.RemoveAll(s => s.Identifier == definition.Identifier);
         subscriptions.Add(definition);
@@ -56,13 +56,10 @@ public class EventStoreSubscriptionsManager(
 
         await ScheduleSubscriptionReminder(definition.Identifier);
 
-        // The state is written first, so a concurrent reminder already filters by the new restriction. A revocation that
-        // fails here is retried by every reminder, which derives it from the observers the source holds.
-        if (previous is not null)
-        {
-            var targetNamespaces = await GrainFactory.GetGrain<INamespaces>(_targetEventStoreName).GetAll();
-            await RevokeUnobserved(definition, targetNamespaces);
-        }
+        // The state is written first, so a concurrent reminder already filters by the new restriction.
+        // Sweep even on the first Add to revoke legacy observers; reminders retry only failed revocations.
+        var targetNamespaces = await GrainFactory.GetGrain<INamespaces>(_targetEventStoreName).GetAll();
+        await RevokeUnobserved(definition, targetNamespaces);
     }
 
     /// <inheritdoc/>
@@ -84,6 +81,7 @@ public class EventStoreSubscriptionsManager(
         var namespaces = await GrainFactory.GetGrain<INamespaces>(_targetEventStoreName).GetAll();
         await Unsubscribe(namespaces, definition);
         await RevokeUnobserved(definition, namespaces);
+        _pendingRevocations.Remove(subscriptionId);
     }
 
     /// <inheritdoc/>
@@ -180,7 +178,7 @@ public class EventStoreSubscriptionsManager(
         try
         {
             var namespaces = await GrainFactory.GetGrain<INamespaces>(_targetEventStoreName).GetAll();
-            await RevokeUnobserved(definition, namespaces);
+            await RetryPendingRevocations(definition);
             namespaces = await CanonicalNamespaces(definition, namespaces);
             var healthCheckTasks = namespaces.Select(ns => HealthCheckSubscription(definition, ns));
             var healthCheckResults = await Task.WhenAll(healthCheckTasks);
@@ -444,28 +442,56 @@ public class EventStoreSubscriptionsManager(
     /// <param name="namespaces">The namespaces of the target event store.</param>
     /// <returns>Awaitable task.</returns>
     /// <remarks>
-    /// Revocation is derived from the observers that exist, never from what was observed before, so it survives a
-    /// failed attempt, a restart and a legacy observer for a name that can no longer be observed (a comma). Only a
-    /// namespace the source already has is looked at: resolving an observer for any other would create it there.
-    /// A failure is logged and left for the next reminder.
+    /// Revocation runs on add, activation and removal, derived from the observers that exist, never from what was
+    /// observed before, so it covers restarts and legacy observers for names that can no longer be observed (a comma).
+    /// Only a namespace the source already has is looked at: resolving an observer for any other would create it there.
+    /// Failures are logged and tracked in memory; reminders retry only those namespaces, not every excluded namespace.
     /// </remarks>
     async Task RevokeUnobserved(EventStoreSubscriptionDefinition definition, IEnumerable<EventStoreNamespaceName> namespaces)
     {
-        var sourceNamespaces = GrainFactory.GetGrain<INamespaces>(definition.SourceEventStore);
+        HashSet<EventStoreNamespaceName> failed = [];
         foreach (var name in namespaces.Where(name => !SubscriptionObservation.Observes(definition, name)))
         {
-            try
+            if (!await TryRevoke(definition, name))
             {
-                var canonical = await sourceNamespaces.GetCanonical(name);
-                if (canonical is not null)
-                {
-                    await UnsubscribeIfSubscribed(definition, ObserverFor(definition, canonical), canonical);
-                }
+                failed.Add(name);
             }
-            catch (Exception ex) when (ex is not OperationCanceledException)
+        }
+
+        _pendingRevocations.Remove(definition.Identifier);
+        if (failed.Count > 0)
+        {
+            _pendingRevocations[definition.Identifier] = failed;
+        }
+    }
+
+    async Task RetryPendingRevocations(EventStoreSubscriptionDefinition definition)
+    {
+        if (!_pendingRevocations.TryGetValue(definition.Identifier, out var pending))
+        {
+            return;
+        }
+
+        await RevokeUnobserved(definition, pending);
+    }
+
+    async Task<bool> TryRevoke(EventStoreSubscriptionDefinition definition, EventStoreNamespaceName namespaceName)
+    {
+        try
+        {
+            var sourceNamespaces = GrainFactory.GetGrain<INamespaces>(definition.SourceEventStore);
+            var canonical = await sourceNamespaces.GetCanonical(namespaceName);
+            if (canonical is not null)
             {
-                logger.ErrorRevokingNamespace(ex, definition.Identifier, name);
+                await UnsubscribeIfSubscribed(definition, ObserverFor(definition, canonical), canonical);
             }
+
+            return true;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.ErrorRevokingNamespace(ex, definition.Identifier, namespaceName);
+            return false;
         }
     }
 
