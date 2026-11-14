@@ -236,12 +236,27 @@ message RevokeFederationEnrollmentRequest {
 message RevokeFederationLinkRequest {
    string Id = 1;
 }
+message RevokeFederationPolicyDirectionRequest {
+   string Subject = 1;
+   FederationDirection Direction = 2;
+}
 message RevokeFederationPolicyRequest {
    string Subject = 1;
 }
 // Represents a DateTimeOffset value as an ISO 8601 string (e.g., "2024-01-15T12:30:00.0000000+02:00").
 message SerializableDateTimeOffset {
    string Value = 1;
+}
+message ServeBatch {
+   uint64 RequestId = 1;
+   FederatedEventBatchResponse Batch = 2;
+}
+message ServePullRequest {
+   uint64 RequestId = 1;
+   uint64 FromSequenceNumber = 2;
+   int32 Limit = 3;
+   repeated string EventTypes = 4;
+   string Status = 5;
 }
 message SetFederationGrantRequest {
    string Id = 1;
@@ -290,6 +305,7 @@ service Federation {
    rpc RevokeFederationEnrollment (RevokeFederationEnrollmentRequest) returns (CommandResult);
    rpc RevokeFederationLink (RevokeFederationLinkRequest) returns (CommandResult);
    rpc RevokeFederationPolicy (RevokeFederationPolicyRequest) returns (CommandResult);
+   rpc RevokeFederationPolicyDirection (RevokeFederationPolicyDirectionRequest) returns (CommandResult);
    rpc SetFederationGrant (SetFederationGrantRequest) returns (CommandResult);
    rpc SetFederationPolicy (SetFederationPolicyRequest) returns (CommandResult);
    rpc SuspendFederationPolicy (SuspendFederationPolicyRequest) returns (CommandResult);
@@ -297,4 +313,7 @@ service Federation {
 }
 service FederationPull {
    rpc Pull (PullRequest) returns (QueryResult_FederatedEventBatchResponse);
+}
+service FederationServe {
+   rpc Serve (stream ServeBatch) returns (stream ServePullRequest);
 }

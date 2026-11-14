@@ -27,6 +27,7 @@ export * from './ResumeFederationPolicy';
 export * from './RevokeFederationEnrollment';
 export * from './RevokeFederationLink';
 export * from './RevokeFederationPolicy';
+export * from './RevokeFederationPolicyDirection';
 export * from './SetFederationGrant';
 export * from './SetFederationPolicy';
 export * from './SuspendFederationPolicy';

@@ -125,6 +125,20 @@ public class FederationPullService(
             return Empty(FederatedEventBatchStatus.Throttled, string.Empty, fromSequenceNumber, 0);
         }
 
+        return await Read(linkId, eventStore, @namespace, fromSequenceNumber, limit, eventTypes, permitted);
+    }
+
+    /// <inheritdoc/>
+    public async Task<FederatedEventBatch> Read(
+        string linkId,
+        string eventStore,
+        string @namespace,
+        ulong fromSequenceNumber,
+        int limit,
+        IEnumerable<string> eventTypes,
+        IReadOnlyList<FederationGrant> permitted)
+    {
+        var limits = options.Value.Federation.Limits;
         var wanted = eventTypes?.Where(_ => !string.IsNullOrEmpty(_)).ToHashSet(StringComparer.Ordinal) ?? [];
         var pageSize = Math.Max(1, limit > 0 ? Math.Min(limit, limits.MaxBatchSize) : limits.MaxBatchSize);
 
@@ -296,7 +310,7 @@ public class FederationPullService(
         return new($"subject:{admission.Subject}", entry.EventStore, entry.Namespace, grant);
     }
 
-    async Task<EventTypeDecision> Decide(Storage.IEventStoreStorage eventStoreStorage, EventType eventType, FederationGrant[] grants)
+    async Task<EventTypeDecision> Decide(Storage.IEventStoreStorage eventStoreStorage, EventType eventType, IReadOnlyList<FederationGrant> grants)
     {
         var eventTypes = eventStoreStorage.EventTypes;
         if (!await eventTypes.HasFor(eventType.Id, eventType.Generation))

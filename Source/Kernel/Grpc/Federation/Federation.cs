@@ -65,6 +65,12 @@ internal sealed class Federation(
             new global::Cratis.Chronicle.Federation.RevokeFederationPolicy(request.Subject));
 
     /// <inheritdoc/>
+    public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> RevokeFederationPolicyDirection(global::Cratis.Chronicle.Contracts.Federation.RevokeFederationPolicyDirectionRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
+        CommandExecutor.Execute(
+            commandPipeline,
+            new global::Cratis.Chronicle.Federation.RevokeFederationPolicyDirection(request.Subject, (global::Cratis.Chronicle.Federation.FederationDirection)request.Direction));
+
+    /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> SetFederationGrant(global::Cratis.Chronicle.Contracts.Federation.SetFederationGrantRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         CommandExecutor.Execute(
             commandPipeline,

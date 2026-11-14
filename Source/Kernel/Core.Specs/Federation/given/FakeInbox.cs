@@ -12,6 +12,8 @@ public class FakeInbox : IFederationInbox
 
     public List<(string Origin, ulong SequenceNumber)> Appended { get; } = [];
 
+    public List<(string EventStore, string Namespace)> Targets { get; } = [];
+
     public int FailuresRemaining { get; set; }
 
     public int ResumeLookups { get; private set; }
@@ -31,6 +33,7 @@ public class FakeInbox : IFederationInbox
         }
 
         Appended.Add((originEventStore, @event.SequenceNumber));
+        Targets.Add((binding.TargetEventStore, binding.TargetNamespace));
         return Task.FromResult<string?>(null);
     }
 }

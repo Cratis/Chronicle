@@ -21,6 +21,12 @@ public static class FederationPortPolicy
     public const string ServicePathPrefix = "/Cratis.Chronicle.Contracts.Federation.FederationPull/";
 
     /// <summary>
+    /// The path prefix of the service a dialer produces events through. Like the pull it is anonymous with respect to OAuth, so it is
+    /// served on the federation port alone.
+    /// </summary>
+    public const string ServeServicePathPrefix = "/Cratis.Chronicle.Contracts.Federation.FederationServe/";
+
+    /// <summary>
     /// The route Arc exposes the pull query on over HTTP. It is never served on any port.
     /// </summary>
     public const string HttpRoute = "/api/federation/pull";
@@ -37,7 +43,8 @@ public static class FederationPortPolicy
         ArgumentNullException.ThrowIfNull(options);
 
         // Routing matches paths case-insensitively, so this must too, or a differently-cased path would slip past.
-        var servesPull = path?.StartsWith(ServicePathPrefix, StringComparison.OrdinalIgnoreCase) == true;
+        var servesPull = path?.StartsWith(ServicePathPrefix, StringComparison.OrdinalIgnoreCase) == true ||
+            path?.StartsWith(ServeServicePathPrefix, StringComparison.OrdinalIgnoreCase) == true;
         var isPull = servesPull || IsHttpRoute(path);
         var onFederationPort = IsFederationPort(options, localPort);
 

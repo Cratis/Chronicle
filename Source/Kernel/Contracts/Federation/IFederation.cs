@@ -76,6 +76,14 @@ public interface IFederation
     [Operation]
     Task<CommandResult> RevokeFederationPolicy(RevokeFederationPolicyRequest request, CallContext callContext = default);
     /// <summary>
+    /// Executes the RevokeFederationPolicyDirection command.
+    /// </summary>
+    /// <param name = "request">The RevokeFederationPolicyDirection request.</param>
+    /// <param name = "callContext">The gRPC call context.</param>
+    /// <returns>The command result.</returns>
+    [Operation]
+    Task<CommandResult> RevokeFederationPolicyDirection(RevokeFederationPolicyDirectionRequest request, CallContext callContext = default);
+    /// <summary>
     /// Executes the SetFederationGrant command.
     /// </summary>
     /// <param name = "request">The SetFederationGrant request.</param>
@@ -356,6 +364,25 @@ public class RevokeFederationPolicyRequest
     /// </summary>
     [ProtoMember(1)]
     public string Subject { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Represents the RevokeFederationPolicyDirectionRequest message.
+/// </summary>
+[ProtoContract]
+public class RevokeFederationPolicyDirectionRequest
+{
+    /// <summary>
+    /// Gets or sets the Subject.
+    /// </summary>
+    [ProtoMember(1)]
+    public string Subject { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the Direction.
+    /// </summary>
+    [ProtoMember(2)]
+    public global::Cratis.Chronicle.Contracts.Federation.FederationDirection Direction { get; set; }
 }
 
 /// <summary>
