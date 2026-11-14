@@ -14,6 +14,7 @@ using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Projections.Engine.Graphs;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Storage.Sinks;
 
 namespace Cratis.Chronicle.Projections.Engine;
 
@@ -159,6 +160,9 @@ public class Projection : IProjection, IDisposable
 
     /// <inheritdoc/>
     public bool IsEventSourceKeyed { get; private set; }
+
+    /// <inheritdoc/>
+    public IReadOnlyList<AppliedEventMarkerJoin> MarkedJoins { get; internal set; } = [];
 
     /// <inheritdoc/>
     public IProjection? Parent { get; private set; }

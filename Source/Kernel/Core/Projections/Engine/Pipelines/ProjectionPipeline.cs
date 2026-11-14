@@ -2,7 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Changes;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Projections.Generations;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Projections.Engine.Pipelines.Steps;
@@ -127,6 +129,12 @@ public partial class ProjectionPipeline(
             await changesetStorage.EndReplay(ChangesetContainer);
         }
     }
+
+    /// <inheritdoc/>
+    public Task ClearAppliedEventMarkers(EventStoreNamespaceName @namespace, Key partition) =>
+        projection.MarkedJoins.Count > 0 && sink is ISinkAppliedEventMarkers markers
+            ? markers.ClearAppliedEventMarkers(@namespace, projection.EventSequenceId, partition, projection.MarkedJoins)
+            : Task.CompletedTask;
 
     /// <inheritdoc/>
     public async Task LeaveReplay()

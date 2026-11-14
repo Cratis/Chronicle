@@ -20,6 +20,7 @@ public class SaveChanges : ICanPerformProjectionPipelineStep
     readonly ISink _sink;
     readonly IChangesetStorage _changesetStorage;
     readonly bool _guardWritesOnWatermark;
+    readonly bool _recordAppliedEventMarkers;
     readonly ILogger<SaveChanges> _logger;
     readonly IProjectionFuturesStore? _projectionFutures;
     readonly ReadModelContainerName? _changesetContainer;
@@ -34,7 +35,22 @@ public class SaveChanges : ICanPerformProjectionPipelineStep
     /// <param name="projectionFutures">The persisted futures to acknowledge after successful writes.</param>
     /// <param name="changesetContainer">The container changesets are recorded under, when it is not the read model's own container - as for a materialization generation's destination.</param>
     public SaveChanges(ISink sink, IChangesetStorage changesetStorage, bool guardWritesOnWatermark, ILogger<SaveChanges> logger, IProjectionFutures? projectionFutures = null, ReadModelContainerName? changesetContainer = null)
-        : this(projectionFutures is null ? null : new ProjectionFuturesStore(projectionFutures), sink, changesetStorage, guardWritesOnWatermark, logger, changesetContainer)
+        : this(sink, changesetStorage, guardWritesOnWatermark, false, logger, projectionFutures, changesetContainer)
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SaveChanges"/> class.
+    /// </summary>
+    /// <param name="sink"><see cref="ISink"/> to use.</param>
+    /// <param name="changesetStorage"><see cref="IChangesetStorage"/> for storing changesets as they occur.</param>
+    /// <param name="guardWritesOnWatermark">Whether a write may be made conditional on advancing the read model's watermark.</param>
+    /// <param name="recordAppliedEventMarkers">Whether a projection marked for applied event markers is written once per source event.</param>
+    /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
+    /// <param name="projectionFutures">The persisted futures to acknowledge after successful writes.</param>
+    /// <param name="changesetContainer">The container changesets are recorded under, when it is not the read model's own container - as for a materialization generation's destination.</param>
+    public SaveChanges(ISink sink, IChangesetStorage changesetStorage, bool guardWritesOnWatermark, bool recordAppliedEventMarkers, ILogger<SaveChanges> logger, IProjectionFutures? projectionFutures = null, ReadModelContainerName? changesetContainer = null)
+        : this(projectionFutures is null ? null : new ProjectionFuturesStore(projectionFutures), sink, changesetStorage, guardWritesOnWatermark, recordAppliedEventMarkers, logger, changesetContainer)
     {
     }
 
@@ -45,13 +61,15 @@ public class SaveChanges : ICanPerformProjectionPipelineStep
     /// <param name="sink"><see cref="ISink"/> to use.</param>
     /// <param name="changesetStorage"><see cref="IChangesetStorage"/> for storing changesets as they occur.</param>
     /// <param name="guardWritesOnWatermark">Whether a write may be made conditional on advancing the read model's watermark.</param>
+    /// <param name="recordAppliedEventMarkers">Whether a projection marked for applied event markers is written once per source event.</param>
     /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
     /// <param name="changesetContainer">The container changesets are recorded under, when it is not the read model's own container - as for a materialization generation's destination.</param>
-    internal SaveChanges(IProjectionFuturesStore? futuresStore, ISink sink, IChangesetStorage changesetStorage, bool guardWritesOnWatermark, ILogger<SaveChanges> logger, ReadModelContainerName? changesetContainer = null)
+    internal SaveChanges(IProjectionFuturesStore? futuresStore, ISink sink, IChangesetStorage changesetStorage, bool guardWritesOnWatermark, bool recordAppliedEventMarkers, ILogger<SaveChanges> logger, ReadModelContainerName? changesetContainer = null)
     {
         _sink = sink;
         _changesetStorage = changesetStorage;
         _guardWritesOnWatermark = guardWritesOnWatermark;
+        _recordAppliedEventMarkers = recordAppliedEventMarkers;
         _logger = logger;
         _projectionFutures = futuresStore;
         _changesetContainer = changesetContainer;
@@ -145,10 +163,16 @@ public class SaveChanges : ICanPerformProjectionPipelineStep
     Task<IEnumerable<FailedPartition>> ApplyMainChanges(IProjection projection, ProjectionEventContext context, PendingFutureSave[] foldedFutureSaves)
     {
         var mode = WriteModeFor(projection, context);
-        return foldedFutureSaves.Length > 0
+        var immediately = foldedFutureSaves.Length > 0;
+        return mode == SinkWriteMode.OncePerSourceEvent && _sink is ISinkAppliedEventMarkers markers
+            ? markers.ApplyChangesOncePerSourceEvent(context.Key, context.Changeset, context.Event.Context.SequenceNumber, new(projection.EventSequenceId, immediately))
+            : ApplyUnmarked(context, mode, immediately);
+    }
+
+    Task<IEnumerable<FailedPartition>> ApplyUnmarked(ProjectionEventContext context, SinkWriteMode mode, bool immediately) =>
+        immediately
             ? _sink.ApplyChangesImmediately(context.Key, context.Changeset, context.Event.Context.SequenceNumber, mode)
             : _sink.ApplyChanges(context.Key, context.Changeset, context.Event.Context.SequenceNumber, mode);
-    }
 
     async Task ApplyPendingFutureSaves(ProjectionEventContext context)
     {
@@ -207,11 +231,25 @@ public class SaveChanges : ICanPerformProjectionPipelineStep
     /// monotonic per-document stream; anything that collapses event sources onto one document — a join, a constant
     /// key, a parent hierarchy — is deliberately written out of order and would lose events to the guard. The
     /// event that creates the instance is written unconditionally: there is no document to compare a watermark
-    /// against, and a guarded write never inserts. On a redelivery of that same creating event the instance is
-    /// already there, so the write is guarded and correctly does nothing.
+    /// against, and a guarded write never inserts. A projection marked for applied event markers (event-source-keyed with
+    /// root joins, see <see cref="AppliedEventMarkerClassification"/>) is written with <see cref="SinkWriteMode.OncePerSourceEvent"/>
+    /// instead, including the creating event, because its joins are written out of order by design and the markers, not a
+    /// watermark, decide whether a write was already applied. On a redelivery of that same creating event the instance is
+    /// already there, so the write is guarded and correctly does nothing. Markers are recorded only when the
+    /// RecordAppliedEventMarkers read model option is turned on; otherwise a marked projection is written as any other.
     /// </remarks>
-    SinkWriteMode WriteModeFor(IProjection projection, ProjectionEventContext context) =>
-        _guardWritesOnWatermark && projection.IsEventSourceKeyed && !context.IsNewInstance
+    SinkWriteMode WriteModeFor(IProjection projection, ProjectionEventContext context)
+    {
+        if (IsWrittenOncePerSourceEvent(projection))
+        {
+            return SinkWriteMode.OncePerSourceEvent;
+        }
+
+        return _guardWritesOnWatermark && projection.IsEventSourceKeyed && !context.IsNewInstance
             ? SinkWriteMode.OnlyWhenAdvancingWatermark
             : SinkWriteMode.Always;
+    }
+
+    bool IsWrittenOncePerSourceEvent(IProjection projection) =>
+        _guardWritesOnWatermark && _recordAppliedEventMarkers && projection.MarkedJoins.Count > 0;
 }

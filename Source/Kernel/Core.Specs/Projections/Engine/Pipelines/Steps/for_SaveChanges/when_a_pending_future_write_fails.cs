@@ -29,7 +29,7 @@ public class when_a_pending_future_write_fails : given.a_save_changes_step
         _failingSink.ApplyChangesImmediately(key, changeset, _context.EventSequenceNumber, SinkWriteMode.Always).Returns(Task.FromResult<IEnumerable<FailedPartition>>([_failure]));
     }
 
-    async Task Because() => _result = await new SaveChanges(_failingSink, Substitute.For<IChangesetStorage>(), true, Substitute.For<ILogger<SaveChanges>>()).Perform(_projection, _context);
+    async Task Because() => _result = await new SaveChanges(_failingSink, Substitute.For<IChangesetStorage>(), true, false, Substitute.For<ILogger<SaveChanges>>()).Perform(_projection, _context);
 
     [Fact] void should_report_the_failed_partition() => _result.FailedPartitions.ShouldContainOnly(_failure);
 }

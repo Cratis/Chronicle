@@ -74,9 +74,12 @@ public sealed class UnfencedSinkWrites : ISinkWrites
     /// <param name="guardedUpserts">The explicitly guarded requests.</param>
     /// <returns>Whether the failed request is a watermark no-op.</returns>
     internal static bool IsRejectedGuardedUpsert(MongoBulkWriteException<BsonDocument> exception, IReadOnlyList<WriteModel<BsonDocument>> requests, IReadOnlySet<WriteModel<BsonDocument>>? guardedUpserts) =>
+        IsDuplicateIdAtARequest(exception, requests) &&
+        guardedUpserts?.Contains(requests[exception.WriteErrors[0].Index]) == true;
+
+    static bool IsDuplicateIdAtARequest(MongoBulkWriteException<BsonDocument> exception, IReadOnlyList<WriteModel<BsonDocument>> requests) =>
         exception.WriteConcernError is null && exception.WriteErrors.Count == 1 &&
         exception.WriteErrors[0] is { Category: ServerErrorCategory.DuplicateKey } error &&
         error.Message.Contains("index: _id_", StringComparison.Ordinal) &&
-        error.Index >= 0 && error.Index < requests.Count &&
-        guardedUpserts?.Contains(requests[error.Index]) == true;
+        error.Index >= 0 && error.Index < requests.Count;
 }

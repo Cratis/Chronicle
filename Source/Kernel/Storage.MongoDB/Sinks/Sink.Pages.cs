@@ -45,9 +45,10 @@ public partial class Sink : ISinkPages
         var failures = new List<FailedPartition>();
         foreach (var write in pageWrites)
         {
-            // A join reads and writes other instances, and a guarded upsert treats a rejected insert as accepted;
-            // neither fits one ordered write of the page, so each is written on its own, straight away.
-            if (write.Changeset.HasJoined() || write.Mode == SinkWriteMode.GuardedUpsert)
+            // A join reads and writes other instances, a guarded upsert treats a rejected insert as accepted, and a write
+            // recorded once per source event guards each of its writes by its own applied event marker; none of them fits
+            // one ordered write of the page, so each is written on its own, straight away.
+            if (write.Changeset.HasJoined() || write.Mode is SinkWriteMode.GuardedUpsert or SinkWriteMode.OncePerSourceEvent)
             {
                 failures.AddRange(await ApplyChanges(write.Key, write.Changeset, write.EventSequenceNumber, write.Mode));
                 continue;

@@ -4,7 +4,9 @@
 using System.Dynamic;
 using System.Reactive.Linq;
 using Cratis.Chronicle.Changes;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
@@ -21,14 +23,20 @@ namespace Cratis.Chronicle.Storage.Sinks;
 /// Hand written rather than mocked so the recording is of the overload the pipeline actually calls, not of the
 /// default interface implementation a proxy may or may not intercept.
 /// </remarks>
-public class RecordingSink : ISink
+public class RecordingSink : ISink, ISinkAppliedEventMarkers
 {
     readonly List<SinkWriteMode> _writeModes = [];
+    readonly List<EventSequenceId> _markedEventSequences = [];
 
     /// <summary>
     /// Gets the write modes recorded, in call order.
     /// </summary>
     public IReadOnlyList<SinkWriteMode> WriteModes => _writeModes;
+
+    /// <summary>
+    /// Gets the event sequences the writes made once per source event were recorded under, in call order.
+    /// </summary>
+    public IReadOnlyList<EventSequenceId> MarkedEventSequences => _markedEventSequences;
 
     /// <summary>
     /// Gets or sets the instance <see cref="FindOrDefault"/> answers with.
@@ -62,6 +70,16 @@ public class RecordingSink : ISink
     {
         _writeModes.Add(mode);
         return Task.FromResult(FailedPartitions);
+    }
+
+    /// <inheritdoc/>
+    public Task ClearAppliedEventMarkers(EventStoreNamespaceName @namespace, EventSequenceId eventSequence, Key partition, IReadOnlyList<AppliedEventMarkerJoin> joins) => Task.CompletedTask;
+
+    /// <inheritdoc/>
+    public Task<IEnumerable<FailedPartition>> ApplyChangesOncePerSourceEvent(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber, AppliedEventMarkerWriteOrigin origin)
+    {
+        _markedEventSequences.Add(origin.EventSequence);
+        return ApplyChanges(key, changeset, eventSequenceNumber, SinkWriteMode.OncePerSourceEvent);
     }
 
     /// <inheritdoc/>
