@@ -110,7 +110,7 @@ public partial class Sink : ISinkPages
 
         if (GuardWithWatermark(plan, key, mode, eventSequenceNumber) is { } guardedPlan)
         {
-            await WriteAfterJoin(key, changeset, eventSequenceNumber, guardedPlan, options);
+            await WriteAfterJoin(new ChangesetWrite(key, changeset, eventSequenceNumber), guardedPlan, options);
         }
     }
 

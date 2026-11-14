@@ -424,25 +424,29 @@ public partial class Sink(
         // Its outcome is claimed only on a returning path: an exception leaves it in the ledger for the next drain or EndBulk.
         InvalidatePrefetchBeforeJoin(changeset);
         var joinBatch = await FlushBeforeJoin(changeset, options);
-        IEnumerable<FailedPartition> failures;
+        var failures = await WriteGuarded(new ChangesetWrite(key, changeset, eventSequenceNumber), guardedPlan, options);
+        return joinBatch is null ? failures : TakeBulkFailures([joinBatch]).Concat(failures).ToArray();
+    }
+
+    async Task<IEnumerable<FailedPartition>> WriteGuarded(ChangesetWrite write, WritePlan plan, SinkWriteOptions options)
+    {
         try
         {
-            failures = WriteDirectlyInOneBatch(changeset, options)
-                ? await writes.InBatch(() => WriteAfterJoin(key, changeset, eventSequenceNumber, guardedPlan, options))
-                : await WriteAfterJoin(key, changeset, eventSequenceNumber, guardedPlan, options);
+            return WriteDirectlyInOneBatch(write.Changeset, options)
+                ? await writes.InBatch(() => WriteAfterJoin(write, plan, options))
+                : await WriteAfterJoin(write, plan, options);
         }
         catch (MongoWriteException exception) when (options.Mode == SinkWriteMode.GuardedUpsert && IsDuplicateId(exception))
         {
-            EvictBulkState(key);
-            failures = [];
+            EvictBulkState(write.Key);
+            return [];
         }
         catch (NonIdempotentWriteCannotBeSplit error)
         {
-            var partition = options.PartitionOr(key);
-            logger.RefusedOversizedChangesetSplit(readModel.Identifier, key.ToString(), partition.ToString(), error.Collection, error.MaxBatchSize, string.Join(", ", error.Operations));
-            throw new OversizedChangesetCannotBeSplit(readModel.Identifier, key, partition, error);
+            var partition = options.PartitionOr(write.Key);
+            logger.RefusedOversizedChangesetSplit(readModel.Identifier, write.Key.ToString(), partition.ToString(), error.Collection, error.MaxBatchSize, string.Join(", ", error.Operations));
+            throw new OversizedChangesetCannotBeSplit(readModel.Identifier, write.Key, partition, error);
         }
-        return joinBatch is null ? failures : TakeBulkFailures([joinBatch]).Concat(failures).ToArray();
     }
 
     /// <summary>
@@ -473,13 +477,9 @@ public partial class Sink(
         if (changeset.HasJoined()) DirectWrites.BeforeWrite();
     }
 
-    async Task<IEnumerable<FailedPartition>> WriteAfterJoin(
-        Key key,
-        IChangeset<AppendedEvent, ExpandoObject> changeset,
-        EventSequenceNumber eventSequenceNumber,
-        WritePlan plan,
-        SinkWriteOptions options)
+    async Task<IEnumerable<FailedPartition>> WriteAfterJoin(ChangesetWrite write, WritePlan plan, SinkWriteOptions options)
     {
+        var (key, changeset, eventSequenceNumber) = write;
         // Converting runs the joins, which are matched by what the documents hold now. A join on a child this changeset
         // removes from all has to find the documents still holding it, so the children are removed only afterwards.
         UpdateDefinitionAndArrayFilters converted;
@@ -504,13 +504,13 @@ public partial class Sink(
             return [];
         }
 
-        var write = ScopeToExistingArrays(new UpdateWrite(key, eventSequenceNumber, converted, plan.Filter, plan.IsUpsert));
+        var updateWrite = ScopeToExistingArrays(new UpdateWrite(key, eventSequenceNumber, converted, plan.Filter, plan.IsUpsert));
         if (!plan.UsesJoinTargetsOnlyFilter)
         {
-            await UnsetNullParents(write, options);
+            await UnsetNullParents(updateWrite, options);
         }
 
-        return await WriteUpdate(write, changeset, options);
+        return await WriteUpdate(updateWrite, changeset, options);
     }
 
     async Task<BulkBatch?> FlushBeforeJoin(IChangeset<AppendedEvent, ExpandoObject> changeset, SinkWriteOptions options)
@@ -552,55 +552,13 @@ public partial class Sink(
 
     WritePlan PlanWrite(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset)
     {
-        var hasDirectKeyScopedChanges = changeset.Changes.Any(IsDirectKeyScopedChange);
-        var hasConstructiveChanges = changeset.Changes.Any(IsConstructiveChange);
-
-        // When the event was consumed by a Join (Children Join<TEvent>) AND the only direct
-        // key-scoped changes are PropertiesChanged (no ChildAdded / ChildRemoved that would
-        // legitimately construct a document at this key), the upsert keyed on the join value
-        // would create a phantom document. The classic case: a Group projection with
-        // FromEvery.Set(LastUpdated) + Children.Join<UserCreated>. When UserCreated arrives
-        // for a UserId that no Group has, the FromEvery PropertiesChanged would otherwise
-        // upsert a phantom Group keyed on UserId. Use the join-targets-only filter (Empty)
-        // in this case so only existing documents are updated.
-        var hasJoined = changeset.HasJoined();
-        var hasActualRootLevelJoin = HasActualRootLevelJoin(changeset.Changes);
-        var hasKeyedFrom = changeset.Changes.OfType<Joined>().Any(joined => joined.HasKeyedFrom);
-
-        // A From and a Join can consume the same event. Only a From owns the direct keyed write;
-        // a join-only event's direct properties have no safe _id target and must still be suppressed.
-        var onlyPropertyUpdatesAlongsideJoin = hasJoined && hasDirectKeyScopedChanges && !hasConstructiveChanges && !hasKeyedFrom;
-        var shouldSuppressRootUpdateAfterRootLevelJoin = hasActualRootLevelJoin && onlyPropertyUpdatesAlongsideJoin;
-
-        // Compute the _id filter value only when the document is actually keyed by _id. For a join whose
-        // target documents are matched by the join column (the Empty filter below), the resolved key carries
-        // the JOIN VALUE — which for a differently-typed read model key (e.g. a string organization number
-        // against a Guid-keyed model) cannot be converted to the _id type and throws "Unrecognized Guid
-        // format", freezing the partition — even though that value is never used to key a document here.
-        var usesJoinTargetsOnlyFilter = (hasJoined && !hasDirectKeyScopedChanges) || onlyPropertyUpdatesAlongsideJoin;
-        var filter = usesJoinTargetsOnlyFilter ?
+        var shape = WriteShape.For(key, changeset);
+        var filter = shape.UsesJoinTargetsOnlyFilter ?
             FilterDefinition<BsonDocument>.Empty :
             Builders<BsonDocument>.Filter.Eq("_id", converter.ToBsonValue(key));
 
-        // A ROOT-level join (no array indexers) never CONSTRUCTS a root document — it only enriches an
-        // existing root matched by the join column; the root's own key is set by its From/[FromEvent] source.
-        // Upserting on the resolved key for a root join would materialize a phantom root keyed by the JOIN
-        // VALUE, which for a differently-typed read model key (e.g. a string organization number against a
-        // Guid-keyed model) is stored with a string _id and freezes the partition the moment a later read
-        // coerces it back to the key type ("Unrecognized Guid format"). A CHILD join (has array indexers)
-        // still upserts so it can construct the child structure regardless of seed order.
-        var isRootLevelJoin = hasJoined && !key.ArrayIndexers.All.Any();
-
-        // Pulling a child from an absent root must not recreate that root. A changeset that also adds a child
-        // can still construct it, but a removal without an addition only updates an existing document.
-        var onlyRemovesChildren = changeset.Changes.Any(change => change is ChildRemoved) && !changeset.Changes.Any(change => change is ChildAdded);
-        var isUpsert = !onlyRemovesChildren && IsUpsertWrite(onlyPropertyUpdatesAlongsideJoin, isRootLevelJoin, hasKeyedFrom);
-
-        return new(filter, isUpsert, usesJoinTargetsOnlyFilter, shouldSuppressRootUpdateAfterRootLevelJoin);
+        return new(filter, shape.IsUpsert, shape.UsesJoinTargetsOnlyFilter, shape.ShouldSuppressRootUpdateAfterRootLevelJoin);
     }
-
-    static bool IsUpsertWrite(bool onlyPropertyUpdatesAlongsideJoin, bool isRootLevelJoin, bool hasKeyedFrom) =>
-        !onlyPropertyUpdatesAlongsideJoin && (!isRootLevelJoin || hasKeyedFrom);
 
     async Task<IEnumerable<FailedPartition>> ApplyRemoval(Key key, EventSequenceNumber eventSequenceNumber, FilterDefinition<BsonDocument> filter, SinkWriteOptions options)
     {
@@ -613,7 +571,7 @@ public partial class Sink(
         if (CanBuffer(options))
         {
             var cacheKey = SinkCacheKey.For(converter.ToBsonValue(key));
-            if (await AddToBulk(new DeleteOneModel<BsonDocument>(filter), key, options.PartitionOr(key), eventSequenceNumber, () =>
+            if (await AddToBulk(new QueuedOperation(new DeleteOneModel<BsonDocument>(filter), key, options.PartitionOr(key), eventSequenceNumber), () =>
             {
                 if (options.Mode == SinkWriteMode.GuardedUpsert)
                 {
@@ -719,7 +677,7 @@ public partial class Sink(
             return false;
         }
 
-        return await AddToBulk(operation, write.Key, options.PartitionOr(write.Key), write.EventSequenceNumber);
+        return await AddToBulk(new QueuedOperation(operation, write.Key, options.PartitionOr(write.Key), write.EventSequenceNumber));
     }
 
     async Task<IEnumerable<FailedPartition>> WriteUpdate(UpdateWrite write, IChangeset<AppendedEvent, ExpandoObject> changeset, SinkWriteOptions options)
@@ -783,7 +741,7 @@ public partial class Sink(
             }
         }
 
-        if (await AddToBulk(updateModel, write.Key, options.PartitionOr(write.Key), write.EventSequenceNumber, WhenQueued))
+        if (await AddToBulk(new QueuedOperation(updateModel, write.Key, options.PartitionOr(write.Key), write.EventSequenceNumber), WhenQueued))
         {
             return hasJoined ? await ExecuteBulk() : await FlushBulkIfNeeded();
         }
@@ -1000,7 +958,7 @@ public partial class Sink(
 
             // A final flush whose outcome is unknown reports every partition it held. Only a replay throws instead,
             // because it abandons the rebuilt collection those partitions would have been recorded against.
-            if (throwOnFinalFlushError && drain.Queued is { } queued && TakeBatchError(queued) is { } error)
+            if (throwOnFinalFlushError && TakeQueuedBatchError(drain) is { } error)
             {
                 ExceptionDispatchInfo.Throw(error);
             }
@@ -1421,17 +1379,6 @@ public partial class Sink(
         return write with { Filter = filter, IsUpsert = false };
     }
 
-    static bool IsDirectKeyScopedChange(Change change) =>
-        change is PropertiesChanged<ExpandoObject> or ChildAdded or ChildRemoved;
-
-    static bool IsConstructiveChange(Change change) =>
-        change is ChildAdded or ChildRemoved;
-
-    static bool HasActualRootLevelJoin(IEnumerable<Change> changes) =>
-        changes
-            .OfType<Joined>()
-            .Any(joined => !joined.ArrayIndexers.All.Any());
-
     /// <summary>
     /// Builds the clause that restricts a write to documents that have not yet observed the given event.
     /// </summary>
@@ -1481,67 +1428,86 @@ public partial class Sink(
         return GetCollation(options);
     }
 
+    Exception? TakeQueuedBatchError(BulkDrain drain) => drain.Queued is { } queued ? TakeBatchError(queued) : null;
+
     /// <summary>
     /// Queues an operation into the open bulk window, together with the bulk state that describes it.
     /// </summary>
-    /// <param name="operation">The <see cref="WriteModel{TDocument}"/> to queue.</param>
-    /// <param name="key">The <see cref="Key"/> the operation is for.</param>
-    /// <param name="partition">The event source id of the partition the operation is reported under if its batch fails.</param>
-    /// <param name="eventSequenceNumber">The <see cref="EventSequenceNumber"/> the operation applies.</param>
+    /// <param name="queued">The <see cref="QueuedOperation"/> to queue.</param>
     /// <param name="whenQueued">Optional update of the bulk state, made atomically with queueing the operation.</param>
     /// <returns>True if the operation was queued; false if no bulk window is open and the caller must write directly.</returns>
     /// <remarks>
     /// Checking the window and queueing happen under one lock, so <see cref="EndBulk()"/> either flushes the operation or
     /// never admits it. While a window is closing, the caller waits for it to finish before it is told to write directly.
     /// </remarks>
-    async Task<bool> AddToBulk(WriteModel<BsonDocument> operation, Key key, Key partition, EventSequenceNumber eventSequenceNumber, Action? whenQueued = null)
+    async Task<bool> AddToBulk(QueuedOperation queued, Action? whenQueued = null)
     {
         while (true)
         {
-            Task? closing;
-            BulkBatch? full = null;
+            BulkAdmission admission;
             lock (_bulkLock)
             {
-                if (!_isBulkMode)
-                {
+                admission = Admit(queued, whenQueued);
+            }
+
+            switch (admission.Kind)
+            {
+                case BulkAdmissionKind.NoWindow:
                     return false;
-                }
-
-                closing = _closing?.Task;
-                if (closing is null)
-                {
-                    var destination = writes.MaxBatchSize.HasValue ? converter.ToBsonValue(key) : null;
-                    if (writes.MaxBatchSize is { } cap && _bulkDestinations.Count >= cap && !_bulkDestinations.Contains(destination!))
-                    {
-                        // Detach under the admission lock: concurrent producers cannot overfill a fenced batch.
-                        full = TakeBulkBatch();
-                    }
-                    else
-                    {
-                        var operationIndex = _bulkOperations.Count;
-                        _bulkOperations.Add(operation);
-                        if (destination is not null)
-                        {
-                            _bulkDestinations.Add(destination);
-                        }
-                        _bulkOperationMetadata[operationIndex] = (key, partition, eventSequenceNumber);
-                        _currentBulkSize += EstimateOperationSize(operation);
-                        whenQueued?.Invoke();
-                        return true;
-                    }
-                }
-            }
-
-            if (full is not null)
-            {
-                // Leave failures in the outcome ledger for FlushBulk/EndBulk; never consume and discard them here.
-                await CompleteBulkBatch(full);
-            }
-            else
-            {
-                await closing!;
+                case BulkAdmissionKind.Queued:
+                    return true;
+                case BulkAdmissionKind.WindowFull:
+                    // Leave failures in the outcome ledger for FlushBulk/EndBulk; never consume and discard them here.
+                    await CompleteBulkBatch(admission.Full!);
+                    break;
+                default:
+                    await admission.Closing!;
+                    break;
             }
         }
+    }
+
+    // Must be called under _bulkLock.
+    bool WouldOverfillFencedBatch(BsonValue? destination)
+    {
+        if (writes.MaxBatchSize is not { } cap)
+        {
+            return false;
+        }
+
+        return _bulkDestinations.Count >= cap && !_bulkDestinations.Contains(destination!);
+    }
+
+    // Must be called under _bulkLock.
+    BulkAdmission Admit(QueuedOperation queued, Action? whenQueued)
+    {
+        if (!_isBulkMode)
+        {
+            return new(BulkAdmissionKind.NoWindow);
+        }
+
+        if (_closing?.Task is { } closing)
+        {
+            return new(BulkAdmissionKind.WindowClosing, Closing: closing);
+        }
+
+        var destination = writes.MaxBatchSize.HasValue ? converter.ToBsonValue(queued.Key) : null;
+        if (WouldOverfillFencedBatch(destination))
+        {
+            // Detach under the admission lock: concurrent producers cannot overfill a fenced batch.
+            return new(BulkAdmissionKind.WindowFull, Full: TakeBulkBatch());
+        }
+
+        var operationIndex = _bulkOperations.Count;
+        _bulkOperations.Add(queued.Operation);
+        if (destination is not null)
+        {
+            _bulkDestinations.Add(destination);
+        }
+        _bulkOperationMetadata[operationIndex] = (queued.Key, queued.Partition, queued.EventSequenceNumber);
+        _currentBulkSize += EstimateOperationSize(queued.Operation);
+        whenQueued?.Invoke();
+        return new(BulkAdmissionKind.Queued);
     }
 
     async Task<IEnumerable<FailedPartition>> FlushBulkIfNeeded()
@@ -1762,7 +1728,7 @@ public partial class Sink(
             catch (MongoBulkWriteException ex)
             {
                 var reasons = ReportBulkWriteErrors(ex, remainingIndexes, batch.Metadata);
-                AddFailedPartitions(remainingIndexes, batch.Metadata, batch.FailedPartitions, reasons, ex.WriteConcernError is not null);
+                AddFailedPartitions(remainingIndexes, batch, reasons, ex.WriteConcernError is not null);
                 break;
             }
         }
@@ -1797,12 +1763,12 @@ public partial class Sink(
 
         if (!CanResumeAfter(exception, remaining))
         {
-            AddFailedPartitions(remainingIndexes, batch.Metadata, batch.FailedPartitions, reasons, exception.WriteConcernError is not null);
+            AddFailedPartitions(remainingIndexes, batch, reasons, exception.WriteConcernError is not null);
             return null;
         }
 
         var failedOffset = exception.WriteErrors[0].Index;
-        AddFailedPartitions([remainingIndexes[failedOffset]], batch.Metadata, batch.FailedPartitions, reasons);
+        AddFailedPartitions([remainingIndexes[failedOffset]], batch, reasons);
 
         // The observer will replay a failed partition from its earliest failed sequence number.
         // Do not write any later changes for that partition ahead of the replayed change.
@@ -1843,30 +1809,32 @@ public partial class Sink(
             exception.UnprocessedRequests.SequenceEqual(remaining.Skip(processed.Count));
     }
 
-    static void AddFailedPartitions(
-        IEnumerable<int> indexes,
-        Dictionary<int, (Key ReadModelKey, Key EventSourceId, EventSequenceNumber SequenceNumber)> metadata,
-        Dictionary<Key, (EventSequenceNumber SequenceNumber, string Reason, bool OutcomeUnknown)> failedPartitions,
-        BulkWriteFailureReasons reasons,
-        bool outcomeUnknown = false)
+    static void AddFailedPartitions(IEnumerable<int> indexes, BulkBatch batch, BulkWriteFailureReasons reasons, bool outcomeUnknown = false)
     {
         foreach (var index in indexes)
         {
-            if (!metadata.TryGetValue(index, out var operationMetadata))
+            if (batch.Metadata.TryGetValue(index, out var operationMetadata))
             {
-                continue;
+                RecordFailedPartition(batch.FailedPartitions, operationMetadata, reasons.For(index), outcomeUnknown);
             }
+        }
+    }
 
-            var hasExisting = failedPartitions.TryGetValue(operationMetadata.EventSourceId, out var existing);
-            var unknown = outcomeUnknown || (hasExisting && existing.OutcomeUnknown);
-            if (IsEarliestFailure(operationMetadata, failedPartitions))
-            {
-                failedPartitions[operationMetadata.EventSourceId] = (operationMetadata.SequenceNumber, reasons.For(index), unknown);
-            }
-            else if (unknown && hasExisting)
-            {
-                failedPartitions[operationMetadata.EventSourceId] = existing with { OutcomeUnknown = true };
-            }
+    static void RecordFailedPartition(
+        Dictionary<Key, (EventSequenceNumber SequenceNumber, string Reason, bool OutcomeUnknown)> failedPartitions,
+        (Key ReadModelKey, Key EventSourceId, EventSequenceNumber SequenceNumber) operationMetadata,
+        string reason,
+        bool outcomeUnknown)
+    {
+        var hasExisting = failedPartitions.TryGetValue(operationMetadata.EventSourceId, out var existing);
+        var unknown = outcomeUnknown || (hasExisting && existing.OutcomeUnknown);
+        if (IsEarliestFailure(operationMetadata, failedPartitions))
+        {
+            failedPartitions[operationMetadata.EventSourceId] = (operationMetadata.SequenceNumber, reason, unknown);
+        }
+        else if (unknown && hasExisting)
+        {
+            failedPartitions[operationMetadata.EventSourceId] = existing with { OutcomeUnknown = true };
         }
     }
 
@@ -2083,6 +2051,20 @@ public partial class Sink(
 
         public bool CanBuffer(bool isBulkMode) => isBulkMode && !IsImmediate && Page is null;
     }
+
+    sealed record QueuedOperation(WriteModel<BsonDocument> Operation, Key Key, Key Partition, EventSequenceNumber EventSequenceNumber);
+
+    enum BulkAdmissionKind
+    {
+        NoWindow,
+        Queued,
+        WindowFull,
+        WindowClosing
+    }
+
+    sealed record BulkAdmission(BulkAdmissionKind Kind, BulkBatch? Full = null, Task? Closing = null);
+
+    sealed record ChangesetWrite(Key Key, IChangeset<AppendedEvent, ExpandoObject> Changeset, EventSequenceNumber EventSequenceNumber);
 
     sealed record WritePlan(
         FilterDefinition<BsonDocument> Filter,
