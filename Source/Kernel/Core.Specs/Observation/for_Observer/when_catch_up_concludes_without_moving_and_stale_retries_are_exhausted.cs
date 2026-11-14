@@ -22,7 +22,7 @@ public class when_catch_up_concludes_without_moving_and_stale_retries_are_exhaus
             .GetNextSequenceNumberGreaterOrEqualTo(Arg.Any<EventSequenceNumber>(), Arg.Any<IEnumerable<EventType>>())
             .Returns((EventSequenceNumber)50UL);
         await _observer.CaughtUp(JobId.New(), 42L);
-        for (var lap = 0; lap < 2; lap++)
+        for (var lap = 0; lap < 3; lap++)
         {
             await _observer.CaughtUp(JobId.New(), 42L);
         }
