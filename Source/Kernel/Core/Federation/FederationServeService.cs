@@ -155,6 +155,15 @@ public class FederationServeService(
                     yield break;
                 }
 
+                // A revocation that landed while the dialer was answering takes effect before anything of the answer is appended.
+                target = await Admit();
+                if (target is null)
+                {
+                    endReason = "the direction was refused";
+                    yield return DeniedFrame();
+                    yield break;
+                }
+
                 var outcome = answer.Batch.Status switch
                 {
                     FederatedEventBatchStatus.Ok => await Forward(subject, linkId, binding, selector, target.Entry, answer.Batch, state),
