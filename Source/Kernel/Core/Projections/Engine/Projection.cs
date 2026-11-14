@@ -134,7 +134,7 @@ public class Projection : IProjection, IDisposable
     public Func<EventType, AppendedEvent, Task<AppendedEvent>>? ReleaseStoredEvent { get; init; }
 
     /// <summary>
-    /// Gets the <see cref="ProjectionDateTimes"/> that holds <c>date-time</c> values of events the way the projection computes from them.
+    /// Gets the <see cref="ProjectionDateTimes"/> that holds <c language="json">date-time</c> values of events the way the projection computes from them.
     /// </summary>
     public ProjectionDateTimes DateTimes { get; init; } = ProjectionDateTimes.None;
 

@@ -47,5 +47,5 @@ public sealed class ProjectionDateTimes(IEnumerable<EventTypeSchema> eventTypeSc
     }
 
     JsonSchema? SchemaFor(EventType eventType) =>
-        _schemaByEventType.GetOrAdd(eventType, _ => _eventTypeSchemas.SchemaFor(_)?.Schema);
+        _schemaByEventType.GetOrAdd(eventType, static (type, schemas) => schemas.SchemaFor(type)?.Schema, _eventTypeSchemas);
 }
