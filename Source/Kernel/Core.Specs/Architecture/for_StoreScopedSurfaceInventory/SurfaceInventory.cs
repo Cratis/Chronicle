@@ -298,6 +298,7 @@ public static class SurfaceInventory
         ["Arc:Jobs.JobStepSummary.GetJobSteps"] = new(StoreRead),
         ["Arc:Jobs.JobSummary.AllJobs"] = new(StoreRead),
         ["Arc:Jobs.JobSummary.ObserveJobs"] = new(StoreRead),
+        ["Arc:Events.Constraints.Operator.ConstraintReindexCapability.CanReindexConstraints"] = new(StoreRead, "Store-routed authorization probe; AdministratorOperations policy is also required."),
         ["Arc:Events.Constraints.Operator.ReindexConstraints.Handle"] = new(StoreManage),
         ["Arc:Jobs.ResumeJob.Handle"] = new(StoreManage),
         ["Arc:Jobs.ResumeJobWithResult.Handle"] = new(StoreManage),

@@ -53,8 +53,14 @@ public class ResolveKey(IEventSequenceStorage eventSequenceStorage, ISink sink, 
         return context with { Key = key, JoinKey = resolvedKey.JoinKey ?? key.Value };
     }
 
-    Key EnsureCorrectTypeForArrayIndexersOnKey(IProjection projection, Key key) =>
-        key with
+    Key EnsureCorrectTypeForArrayIndexersOnKey(IProjection projection, Key key)
+    {
+        if (key.ArrayIndexers.IsEmpty)
+        {
+            return key;
+        }
+
+        return key with
         {
             ArrayIndexers = new ArrayIndexers(
                 key.ArrayIndexers.All.Select(arrayIndexer =>
@@ -71,4 +77,5 @@ public class ResolveKey(IEventSequenceStorage eventSequenceStorage, ISink sink, 
                     };
                 }))
         };
+    }
 }

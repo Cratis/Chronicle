@@ -38,9 +38,24 @@ public record EncryptionKeyMigrationReport(
     public bool MigrationLocked { get; init; }
 
     /// <summary>
+    /// Gets the number of entries left as they are because they carry an expiry, a not-before time, a content type, tags, a disabled version or more than one version. Counted in <see cref="ConflictsKept"/> too.
+    /// </summary>
+    public long HeldForAttributeDecision { get; init; }
+
+    /// <summary>
+    /// Gets the number of entries removed under earlier names whose deleted copies the key store still holds, because it refused to purge them.
+    /// </summary>
+    public long LegacyRemovedNotPurged { get; init; }
+
+    /// <summary>
+    /// Gets the number of event store and namespace pairs the kernel knows of that were not listed. Only reported: nothing is added to the list.
+    /// </summary>
+    public long ScopesMissingFromList { get; init; }
+
+    /// <summary>
     /// Gets whether anything is left for an operator to review.
     /// </summary>
-    public bool NeedsReview => ConflictsKept + AmbiguousForReview > 0;
+    public bool NeedsReview => ConflictsKept + AmbiguousForReview + LegacyRemovedNotPurged > 0;
 
     /// <summary>
     /// Gets whether a dry run found anything it would copy.

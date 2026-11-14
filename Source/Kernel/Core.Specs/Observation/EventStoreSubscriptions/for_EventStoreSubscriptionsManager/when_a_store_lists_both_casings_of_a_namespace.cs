@@ -29,6 +29,7 @@ public class when_a_store_lists_both_casings_of_a_namespace : a_subscriber_with_
     {
         var eventType = new EventType("source-event", EventTypeGeneration.First);
         _events = [new(EventContext.From("Studio", "Cratis", eventType, EventSourceType.Default, "source-1", EventStreamType.All, EventStreamId.Default, 42UL, CorrelationId.New()), new ExpandoObject())];
+        _storage.GetEventStore("Lobby").EventStoreSubscriptions.GetAll().Returns(_ => [new EventStoreSubscriptionDefinition("subscription", "Studio", [eventType])]);
         _namespaceCasing.Canonicalize("Lobby", "Cratis").Returns((EventStoreNamespaceName)"Cratis");
 
         _managerSilo = new TestKitSilo();

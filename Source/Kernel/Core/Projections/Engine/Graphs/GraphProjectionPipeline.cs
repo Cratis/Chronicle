@@ -34,33 +34,80 @@ public class GraphProjectionPipeline(
     IObjectComparer objectComparer,
     ILogger<GraphProjectionPipeline> logger) : IProjectionPipeline
 {
-    /// <inheritdoc/>
-    public Task BeginReplay(ReplayContext context) => sink.BeginReplay(projection.Identifier, context);
+    long _activity;
+    bool _sessionOpen;
+    Action? _sessionOpened;
 
     /// <inheritdoc/>
-    public Task ResumeReplay(ReplayContext context) => sink.ResumeReplay(projection.Identifier, context);
+    public long GetActivity() => Interlocked.Read(ref _activity);
 
     /// <inheritdoc/>
-    public Task<IEnumerable<FailedPartition>> EndReplay(ReplayContext context) => sink.EndReplay(projection.Identifier, context);
+    public bool IsPinned() => Volatile.Read(ref _sessionOpen);
 
     /// <inheritdoc/>
-    public Task LeaveReplay() => sink.LeaveReplay(projection.Identifier);
+    public void ObserveSessions(Action onSessionOpened) => _sessionOpened = onSessionOpened;
 
     /// <inheritdoc/>
-    public Task BeginBulk() => sink.BeginBulk();
+    public Task BeginReplay(ReplayContext context)
+    {
+        Interlocked.Increment(ref _activity);
+        OpenSession();
+        return sink.BeginReplay(projection.Identifier, context);
+    }
 
     /// <inheritdoc/>
-    public Task ResumeBulk() => sink.ResumeBulk();
+    public Task ResumeReplay(ReplayContext context)
+    {
+        Interlocked.Increment(ref _activity);
+        OpenSession();
+        return sink.ResumeReplay(projection.Identifier, context);
+    }
+
+    /// <inheritdoc/>
+    public Task<IEnumerable<FailedPartition>> EndReplay(ReplayContext context)
+    {
+        Volatile.Write(ref _sessionOpen, false);
+        return sink.EndReplay(projection.Identifier, context);
+    }
+
+    /// <inheritdoc/>
+    public Task LeaveReplay()
+    {
+        Volatile.Write(ref _sessionOpen, false);
+        return sink.LeaveReplay(projection.Identifier);
+    }
+
+    /// <inheritdoc/>
+    public Task BeginBulk()
+    {
+        Interlocked.Increment(ref _activity);
+        OpenSession();
+        return sink.BeginBulk();
+    }
+
+    /// <inheritdoc/>
+    public Task ResumeBulk()
+    {
+        Interlocked.Increment(ref _activity);
+        OpenSession();
+        return sink.ResumeBulk();
+    }
 
     /// <inheritdoc/>
     public Task<BulkFlushResult> FlushBulk() => sink.FlushBulk();
 
     /// <inheritdoc/>
-    public Task<IEnumerable<FailedPartition>> EndBulk() => sink.EndBulk();
+    public Task<IEnumerable<FailedPartition>> EndBulk()
+    {
+        Volatile.Write(ref _sessionOpen, false);
+        return sink.EndBulk();
+    }
 
     /// <inheritdoc/>
     public async Task<ProjectionEventContext> Handle(AppendedEvent @event)
     {
+        Interlocked.Increment(ref _activity);
+
         // Operations on one node or edge can come from events of many event sources, so handling is serialized per projection.
         using var handleScope = await handleLock.AcquireCoarse();
         var context = ProjectionEventContext.Empty(objectComparer, @event);
@@ -78,5 +125,11 @@ public class GraphProjectionPipeline(
 
         logger.AppliedOperations(changeset.Operations.Count, @event.Context.SequenceNumber);
         return context;
+    }
+
+    void OpenSession()
+    {
+        Volatile.Write(ref _sessionOpen, true);
+        _sessionOpened?.Invoke();
     }
 }

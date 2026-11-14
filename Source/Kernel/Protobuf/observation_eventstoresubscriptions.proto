@@ -16,6 +16,7 @@ message EventStoreSubscriptionDefinition {
    repeated EventType EventTypes = 3;
    EventGenerationDelivery GenerationDelivery = 4;
    repeated NamedTag NamedTags = 5;
+   repeated string SourceNamespaces = 6;
 }
 message EventType {
    string Id = 1;
