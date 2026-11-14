@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Globalization;
+using System.Numerics;
 using System.Text.Json;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Properties;
@@ -60,7 +61,44 @@ internal sealed class ReadModelSeedKeyValues(Type modelType, PropertyPath proper
         converted.GetType() == _target && IsLossless(input, converted) && IsAllowedEnumValue(converted);
 
     bool IsLossless(object input, object converted) =>
-        !IsNumber(_target!) || DecimalValues.ToDecimal(input) == DecimalValues.ToDecimal(converted);
+        !IsNumber(_target!) || (IsFinite(input) && IsFinite(converted) && (converted switch
+        {
+            float or double => IsLosslessFloatingPoint(input, converted),
+            decimal => DecimalValues.ToDecimal(input) == DecimalValues.ToDecimal(converted),
+            _ => IsLosslessInteger(input, converted)
+        }));
+
+    static bool IsFinite(object value) => value switch
+    {
+        double number => double.IsFinite(number),
+        float number => float.IsFinite(number),
+        _ => true
+    };
+
+    static bool IsLosslessInteger(object input, object converted) => input switch
+    {
+        double number => IsSameInteger(number, converted),
+        float number => IsSameInteger(number, converted),
+        decimal number => decimal.Truncate(number) == number && number == DecimalValues.ToDecimal(converted),
+        _ => ToInteger(input) == ToInteger(converted)
+    };
+
+    static bool IsSameInteger(double number, object converted) =>
+        Math.Truncate(number) == number && new BigInteger(number) == ToInteger(converted);
+
+    static bool IsLosslessFloatingPoint(object input, object converted)
+    {
+        var number = System.Convert.ToDouble(converted, CultureInfo.InvariantCulture);
+        return input switch
+        {
+            double original => original == number,
+            float => true,
+            decimal original => original == DecimalValues.ToDecimal(converted),
+            _ => new BigInteger(number) == ToInteger(input)
+        };
+    }
+
+    static BigInteger ToInteger(object value) => new(DecimalValues.ToDecimal(value));
 
     object Unwrap(object input)
     {

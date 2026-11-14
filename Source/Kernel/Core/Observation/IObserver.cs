@@ -20,7 +20,7 @@ namespace Cratis.Chronicle.Observation;
 /// deliberately not part of this grain contract - state transitions are driven from within the observer
 /// implementation, never across a grain reference.
 /// </remarks>
-[Version(9)]
+[Version(10)]
 public interface IObserver : IGrainWithStringKey
 {
     /// <summary>
@@ -50,6 +50,17 @@ public interface IObserver : IGrainWithStringKey
     /// <returns>The <see cref="ObserverState"/>.</returns>
     [AlwaysInterleave]
     Task<ObserverState> GetState();
+
+    /// <summary>
+    /// Get the definition, state, subscription flag and running state change time as one snapshot.
+    /// </summary>
+    /// <returns>The <see cref="ObserverInformationSnapshot"/>.</returns>
+    /// <remarks>
+    /// All values are read in a single grain turn, so they are mutually consistent, unlike separate calls to
+    /// <see cref="GetDefinition"/>, <see cref="GetState"/> and <see cref="IsSubscribed"/>.
+    /// </remarks>
+    [AlwaysInterleave]
+    Task<ObserverInformationSnapshot> GetInformation();
 
     /// <summary>
     /// Set the handled stats for the observer.
