@@ -111,7 +111,7 @@ public partial class Observer
         if (!CanHandOverTo<TObserverSubscriber>(registration, filters) || !StoredDefinitionMatches(registration)) return false;
         if (!await IsObservingWithNoTransitionInProgress()) return false;
 
-        ApplySubscription<TObserverSubscriber>(eventTypes, siloAddress, connectedClient, isReplayable, filters, generationDelivery);
+        ApplySubscription<TObserverSubscriber>(new SubscriptionRequest(type, eventTypes, siloAddress, connectedClient, isReplayable, filters, generationDelivery));
         onAdded();
         RecordedHandlingState();
         return true;

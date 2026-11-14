@@ -460,7 +460,12 @@ public partial class Observer(
         bool reactivateRetired = true,
         bool automatic = false)
         where TObserverSubscriber : IObserverSubscriber =>
-        SubscribeToEventTypes<TObserverSubscriber>(type, eventTypes, siloAddress, subscriberArgs, isReplayable, filters, reactivateRetired: reactivateRetired, automatic: automatic, generationDelivery: generationDelivery);
+        SubscribeToEventTypes<TObserverSubscriber>(
+            new SubscriptionRequest(type, eventTypes, siloAddress, subscriberArgs, isReplayable, filters, generationDelivery)
+            {
+                ReactivateRetired = reactivateRetired,
+                Automatic = automatic
+            });
 
     /// <inheritdoc/>
     public async Task SubscribeToAllEvents<TObserverSubscriber>(
@@ -493,7 +498,7 @@ public partial class Observer(
         _subscriptionSetupFailed = true;
         try
         {
-            await SetUpAllEventsSubscription<TObserverSubscriber>(type, siloAddress, subscriberArgs, isReplayable);
+            await SetUpAllEventsSubscription<TObserverSubscriber>(new SubscriptionRequest(type, [], siloAddress, subscriberArgs, isReplayable));
             await RecoverAfterSubscribing(leavesQuarantine: true);
             _subscriptionSetupFailed = await GetCurrentState() is CatchingUpInFlight;
         }
@@ -570,47 +575,13 @@ public partial class Observer(
         // disconnect cleanup must not tear down the new client's subscription.
         if (_subscription.IsSubscribed && _subscription.Targets.Count > 0)
         {
-            var remaining = _subscription.Targets
-                .Where(target => target.ConnectedClient!.ConnectionId != connectionId)
-                .ToArray();
-            if (remaining.Length == _subscription.Targets.Count)
-            {
-                LogClientDisconnected(connectionId, "not a current target, dropping any superseded registration");
-                DropSupersededRegistration(connectionId);
-                return;
-            }
-
-            if (remaining.Length > 0)
-            {
-                LogClientDisconnected(connectionId, "removing it from the fan-out targets");
-                _subscription = _subscription with
-                {
-                    SiloAddress = remaining[0].SiloAddress,
-                    Arguments = remaining[0].ConnectedClient,
-                    Targets = remaining
-                };
-                return;
-            }
-
-            LogClientDisconnected(connectionId, "last target, promoting a superseded registration or unsubscribing");
-            await PromoteSupersededRegistrationOrUnsubscribe();
+            await DisconnectFromFanOutTargets(connectionId);
             return;
         }
 
-        if (_subscription.IsSubscribed &&
-            _subscription.Arguments is ConnectedClient connectedClient &&
-            connectedClient.ConnectionId != connectionId)
+        if (ReasonSubscriptionIsNotServedBy(connectionId) is { } reason)
         {
-            LogClientDisconnected(connectionId, "not the subscribed client, dropping any superseded registration");
-            DropSupersededRegistration(connectionId);
-            return;
-        }
-
-        if (_subscription.IsSubscribed && _subscription.Arguments is not ConnectedClient)
-        {
-            // Served by something that is not a connected client instance (a webhook, for example), so a connection
-            // identifier says nothing about it. Only the registration that connection superseded can go.
-            LogClientDisconnected(connectionId, "not served by a connected client, dropping any superseded registration");
+            LogClientDisconnected(connectionId, reason);
             DropSupersededRegistration(connectionId);
             return;
         }
@@ -628,15 +599,8 @@ public partial class Observer(
             return;
         }
 
-        if (reminderName == WebhookProbeReminderName)
+        if (await TryReceiveNonRetryReminder(reminderName))
         {
-            await ReceiveWebhookProbeReminder();
-            return;
-        }
-        if (reminderName == AlertReminderName)
-        {
-            await ReconcileAlertsIfNeeded();
-            await ReleaseAlertReminderWhenSettled();
             return;
         }
 
@@ -804,51 +768,9 @@ public partial class Observer(
         {
             if (_removed || CannotWriteState()) return;
 
-            // A quarantine owned by this activation outranks whatever running state a reloaded snapshot carried,
-            // so any write while quarantined persists the quarantine rather than a stale active snapshot.
-            if (IsQuarantined)
-            {
-                State = State with { RunningState = ObserverRunningState.Quarantined };
-                _runningStateChangedAt = _quarantineRunningStateChangedAt;
-            }
-
-            // A state-machine OnEnter can return an earlier record after awaiting a job callback. Preserve the
-            // source-owned metadata advanced by that callback, and serialize writes from AlwaysInterleave methods.
-            var shadowClaims = ShadowClaimsSnapshot();
-            State = State with
-            {
-                AlertLifecycleId = _alertLifecycleId,
-                AlertRevision = _alertRevision,
-                AlertDisposition = _alertDisposition,
-                QuarantineEpisodeId = _quarantineEpisodeId,
-                WebhookProbe = _webhookProbe,
-                DeliveryFences = DeliveryFenceSnapshot(),
-                PartitionClaims = shadowClaims.Claims,
-                ObserverWideClaim = shadowClaims.Wide,
-                OwnershipRevision = shadowClaims.Revision
-            };
+            StampStateForWrite();
             var revision = _alertRevision;
-            try
-            {
-                await base.WriteStateAsync();
-                if (_runningStateChangedAtPending) await PersistRunningStateChangedAt();
-            }
-            catch (ObserverKeyDoesNotMatchDefinition)
-            {
-                if (await RelinquishOwnershipIfMoved()) return;
-                await storage.GetEventStore(_observerKey.EventStore).GetNamespace(_observerKey.Namespace)
-                    .Observers.ClaimOwnership(_observerId, _observerKey.EventSequenceId);
-                try
-                {
-                    await base.WriteStateAsync();
-                    if (_runningStateChangedAtPending) await PersistRunningStateChangedAt();
-                }
-                catch (ObserverKeyDoesNotMatchDefinition)
-                {
-                    if (await RelinquishOwnershipIfMoved()) return;
-                    throw;
-                }
-            }
+            if (!await TryPersistState()) return;
 
             _persistedStateWrites++;
             PublishRunningStateGauge();
@@ -869,28 +791,131 @@ public partial class Observer(
         !partition.IsQuarantined &&
         (PartitionReminderName(partition.Id) == reminderName || partition.Partition.ToString() == reminderName);
 
-    static void ThrowIfPinsMultipleGenerations(IEnumerable<EventType> eventTypes)
+    void StampStateForWrite()
     {
-        var duplicate = eventTypes.GroupBy(_ => _.Id).FirstOrDefault(_ => _.Select(type => type.Generation).Distinct().Count() > 1);
-        if (duplicate is not null)
+        // A quarantine owned by this activation outranks whatever running state a reloaded snapshot carried,
+        // so any write while quarantined persists the quarantine rather than a stale active snapshot.
+        if (IsQuarantined)
         {
-            throw new ObserverPinsMultipleGenerationsOfEventType(duplicate.Key);
+            State = State with { RunningState = ObserverRunningState.Quarantined };
+            _runningStateChangedAt = _quarantineRunningStateChangedAt;
         }
+
+        // A state-machine OnEnter can return an earlier record after awaiting a job callback. Preserve the
+        // source-owned metadata advanced by that callback, and serialize writes from AlwaysInterleave methods.
+        var shadowClaims = ShadowClaimsSnapshot();
+        State = State with
+        {
+            AlertLifecycleId = _alertLifecycleId,
+            AlertRevision = _alertRevision,
+            AlertDisposition = _alertDisposition,
+            QuarantineEpisodeId = _quarantineEpisodeId,
+            WebhookProbe = _webhookProbe,
+            DeliveryFences = DeliveryFenceSnapshot(),
+            PartitionClaims = shadowClaims.Claims,
+            ObserverWideClaim = shadowClaims.Wide,
+            OwnershipRevision = shadowClaims.Revision
+        };
     }
 
-    static bool FiltersAreEqual(ObserverFilters? left, ObserverFilters? right)
+    /// <summary>
+    /// Persists the state, claiming the definition once when the stored one belongs to another key.
+    /// </summary>
+    /// <returns>False if the observer relinquished ownership instead of writing, true if the state was written.</returns>
+    async Task<bool> TryPersistState()
     {
-        if (left is null || right is null)
+        try
         {
-            return ReferenceEquals(left, right);
+            await PersistStateAndRunningStateChangedAt();
+        }
+        catch (ObserverKeyDoesNotMatchDefinition)
+        {
+            if (await RelinquishOwnershipIfMoved()) return false;
+            await storage.GetEventStore(_observerKey.EventStore).GetNamespace(_observerKey.Namespace)
+                .Observers.ClaimOwnership(_observerId, _observerKey.EventSequenceId);
+            try
+            {
+                await PersistStateAndRunningStateChangedAt();
+            }
+            catch (ObserverKeyDoesNotMatchDefinition)
+            {
+                if (await RelinquishOwnershipIfMoved()) return false;
+                throw;
+            }
         }
 
-        // ObserverFilters is a record, but its Tags collection makes the generated equality a
-        // reference comparison - two identical registrations from different client instances
-        // would never be considered equal. Compare structurally instead.
-        return left.Tags.ToHashSet().SetEquals(right.Tags) &&
-               Equals(left.EventSourceType, right.EventSourceType) &&
-               Equals(left.EventStreamType, right.EventStreamType);
+        return true;
+    }
+
+    async Task PersistStateAndRunningStateChangedAt()
+    {
+        await base.WriteStateAsync();
+        if (_runningStateChangedAtPending) await PersistRunningStateChangedAt();
+    }
+
+    async Task<bool> TryReceiveNonRetryReminder(string reminderName)
+    {
+        if (reminderName == WebhookProbeReminderName)
+        {
+            await ReceiveWebhookProbeReminder();
+            return true;
+        }
+
+        if (reminderName != AlertReminderName)
+        {
+            return false;
+        }
+
+        await ReconcileAlertsIfNeeded();
+        await ReleaseAlertReminderWhenSettled();
+        return true;
+    }
+
+    async Task DisconnectFromFanOutTargets(ConnectionId connectionId)
+    {
+        var remaining = _subscription.Targets
+            .Where(target => target.ConnectedClient!.ConnectionId != connectionId)
+            .ToArray();
+        if (remaining.Length == _subscription.Targets.Count)
+        {
+            LogClientDisconnected(connectionId, "not a current target, dropping any superseded registration");
+            DropSupersededRegistration(connectionId);
+            return;
+        }
+
+        if (remaining.Length > 0)
+        {
+            LogClientDisconnected(connectionId, "removing it from the fan-out targets");
+            _subscription = _subscription with
+            {
+                SiloAddress = remaining[0].SiloAddress,
+                Arguments = remaining[0].ConnectedClient,
+                Targets = remaining
+            };
+            return;
+        }
+
+        LogClientDisconnected(connectionId, "last target, promoting a superseded registration or unsubscribing");
+        await PromoteSupersededRegistrationOrUnsubscribe();
+    }
+
+    string? ReasonSubscriptionIsNotServedBy(ConnectionId connectionId)
+    {
+        if (!_subscription.IsSubscribed)
+        {
+            return null;
+        }
+
+        // Served by something that is not a connected client instance (a webhook, for example), so a connection
+        // identifier says nothing about it. Only the registration that connection superseded can go.
+        if (_subscription.Arguments is not ConnectedClient connectedClient)
+        {
+            return "not served by a connected client, dropping any superseded registration";
+        }
+
+        return connectedClient.ConnectionId != connectionId
+            ? "not the subscribed client, dropping any superseded registration"
+            : null;
     }
 
     bool SettlesOwedRecovery(IState<ObserverState> state) =>
@@ -968,122 +993,40 @@ public partial class Observer(
         return storageWasReset;
     }
 
-    async Task SubscribeToEventTypes<TObserverSubscriber>(
-        ObserverType type,
-        IEnumerable<EventType> eventTypes,
-        SiloAddress siloAddress,
-        object? subscriberArgs,
-        bool isReplayable,
-        ObserverFilters? filters,
-        bool additive = false,
-        bool recovering = false,
-        bool reactivateRetired = true,
-        bool automatic = false,
-        EventGenerationDelivery generationDelivery = EventGenerationDelivery.Compatibility)
+    async Task SubscribeToEventTypes<TObserverSubscriber>(SubscriptionRequest request)
         where TObserverSubscriber : IObserverSubscriber
     {
-        eventTypes = eventTypes.ToArray();
-        await ValidateGenerationDelivery(eventTypes, generationDelivery);
+        request = request with { EventTypes = request.EventTypes.ToArray() };
+        await ValidateGenerationDelivery(request.EventTypes, request.GenerationDelivery);
 
-        if (!automatic)
+        if (!request.Automatic)
         {
             _recoverSubscriptionAfterQuarantine = false;
         }
 
         // Automatic kernel subscription cannot revive a retired observer or a sealed activation.
         // Ordinary Subscribe keeps its explicit-registration semantics, including throwing when sealed.
-        if (IsAdditiveSubscriptionBlocked(additive)) return;
+        if (IsAdditiveSubscriptionBlocked(request.Additive)) return;
         ThrowIfSealed();
-        await ThrowIfServedByAnotherTransport(typeof(TObserverSubscriber), subscriberArgs);
-        if (recovering && !await NeedsSubscriptionRecovery(eventTypes)) return;
+        await ThrowIfServedByAnotherTransport(typeof(TObserverSubscriber), request.SubscriberArgs);
+        if (request.Recovering && !await NeedsSubscriptionRecovery(request.EventTypes)) return;
 
         // Only a subscription that may end quarantine supersedes recovery owed by an earlier clearance.
-        var leavesQuarantine = !automatic && !recovering;
-        if (leavesQuarantine)
+        if (request.LeavesQuarantine)
         {
             await CancelWebhookProbe();
             SupersedeRecoveryAfterQuarantine();
         }
 
-        if (additive)
+        if (request.Additive)
         {
             // Merge inside the serialized observer turn, retaining newer concurrent registrations.
-            eventTypes = MergeSubscribedEventTypes(eventTypes);
+            request = request with { EventTypes = MergeSubscribedEventTypes(request.EventTypes) };
         }
 
         try
         {
-            var eventTypeSchemas = await storage.GetEventStore(_observerKey.EventStore).EventTypes.GetFor(eventTypes);
-            _eventTypeSchemas = eventTypeSchemas.ToDictionary(s => s.Type);
-
-            // Another instance of a client already being observed for needs only to be added as a fan-out target.
-            if (!additive && !recovering && !automatic && subscriberArgs is ConnectedClient connectedClient &&
-                await TryHandOverToAnotherClientInstance<TObserverSubscriber>(type, eventTypes, siloAddress, connectedClient, isReplayable, filters, generationDelivery))
-            {
-                return;
-            }
-
-            using var scope = logger.BeginObserverScope(_observerId, _observerKey);
-
-            // Ordinary subscription and automatic reconciliation re-read storage, including after a shared
-            // test silo's database reset, but must not let a stale snapshot overwrite an interleaved quarantine.
-            // Recovery retains live progress rather than reloading a stale persisted position.
-            var storageWasReset = false;
-            if (!recovering)
-            {
-                var wasQuarantined = IsQuarantined;
-                storageWasReset = await ReloadObserverState();
-
-                await observerDefinition.ReadStateAsync();
-                await failures.ReadStateAsync();
-                if (storageWasReset && wasQuarantined && IsQuarantined)
-                {
-                    // The quarantine belonged to a wiped world. Discard it only after all state has been reloaded,
-                    // so routing cannot act on stale definitions or failures from that world.
-                    DiscardQuarantineFromWipedWorld();
-                    await TransitionTo<Routing>();
-                }
-            }
-
-            if (IsRetiredAndNotReactivating(reactivateRetired)) return;
-
-            // Only an accepted subscription may move the definition; persist ownership before any cleanup writes.
-            await ClaimDefinitionForKey();
-
-            // The failures may have been re-read from storage; publish them so the gauges never keep counts from before.
-            PublishFailedPartitionsGauge();
-            await ApplyPendingStartAtTail(storageWasReset);
-            await BeginAlertLifecycle();
-            var webhookSubscription = typeof(IWebhookObserverSubscriber).IsAssignableFrom(typeof(TObserverSubscriber));
-            if (webhookSubscription)
-            {
-                await SetUpSubscription<TObserverSubscriber>(type, eventTypes, siloAddress, subscriberArgs, isReplayable, filters, generationDelivery);
-                if (!await ValidateStoredWebhookTarget()) return;
-            }
-
-            if (recovering)
-            {
-                // A failed entry write can strand the machine in CatchingUpInFlight, which cannot enter
-                // itself. Leave it without resetting progress or granting authority to release quarantine.
-                _subscriptionSetupFailed = true;
-                await TransitionTo<Disconnected>();
-            }
-            else if (!automatic)
-            {
-                await LeaveQuarantineForSubscription();
-            }
-
-            _subscriptionSetupFailed = true;
-            if (!webhookSubscription)
-            {
-                await SetUpSubscription<TObserverSubscriber>(type, eventTypes, siloAddress, subscriberArgs, isReplayable, filters, generationDelivery);
-            }
-            await RecoverAfterSubscribing(leavesQuarantine);
-
-            // CatchingUpInFlight always schedules an onward transition on entry. Remaining there after
-            // recovery returns means a failed entry write stranded it, and an ordinary retry could not re-enter.
-            // Healthy asynchronous catch-up and deferred routing are separate from that setup failure.
-            _subscriptionSetupFailed = await GetCurrentState() is CatchingUpInFlight;
+            await EstablishSubscription<TObserverSubscriber>(request);
         }
         catch
         {
@@ -1091,6 +1034,97 @@ public partial class Observer(
             throw;
         }
     }
+
+    async Task EstablishSubscription<TObserverSubscriber>(SubscriptionRequest request)
+        where TObserverSubscriber : IObserverSubscriber
+    {
+        var eventTypeSchemas = await storage.GetEventStore(_observerKey.EventStore).EventTypes.GetFor(request.EventTypes);
+        _eventTypeSchemas = eventTypeSchemas.ToDictionary(s => s.Type);
+
+        // Another instance of a client already being observed for needs only to be added as a fan-out target.
+        if (request.HandOverCandidate is { } connectedClient &&
+            await TryHandOverToAnotherClientInstance<TObserverSubscriber>(request.Type, request.EventTypes, request.SiloAddress, connectedClient, request.IsReplayable, request.Filters, request.GenerationDelivery))
+        {
+            return;
+        }
+
+        using var scope = logger.BeginObserverScope(_observerId, _observerKey);
+
+        // Ordinary subscription and automatic reconciliation re-read storage, including after a shared
+        // test silo's database reset, but must not let a stale snapshot overwrite an interleaved quarantine.
+        // Recovery retains live progress rather than reloading a stale persisted position.
+        var storageWasReset = !request.Recovering && await ReloadStateForSubscription();
+
+        if (IsRetiredAndNotReactivating(request.ReactivateRetired)) return;
+
+        // Only an accepted subscription may move the definition; persist ownership before any cleanup writes.
+        await ClaimDefinitionForKey();
+
+        // The failures may have been re-read from storage; publish them so the gauges never keep counts from before.
+        PublishFailedPartitionsGauge();
+        await ApplyPendingStartAtTail(storageWasReset);
+        await BeginAlertLifecycle();
+        await InstallSubscription<TObserverSubscriber>(request);
+    }
+
+    async Task InstallSubscription<TObserverSubscriber>(SubscriptionRequest request)
+        where TObserverSubscriber : IObserverSubscriber
+    {
+        var webhookSubscription = typeof(IWebhookObserverSubscriber).IsAssignableFrom(typeof(TObserverSubscriber));
+        if (webhookSubscription)
+        {
+            await SetUpSubscription<TObserverSubscriber>(request);
+            if (!await ValidateStoredWebhookTarget()) return;
+        }
+
+        if (request.Recovering)
+        {
+            // A failed entry write can strand the machine in CatchingUpInFlight, which cannot enter
+            // itself. Leave it without resetting progress or granting authority to release quarantine.
+            _subscriptionSetupFailed = true;
+            await TransitionTo<Disconnected>();
+        }
+        else if (!request.Automatic)
+        {
+            await LeaveQuarantineForSubscription();
+        }
+
+        _subscriptionSetupFailed = true;
+        if (!webhookSubscription)
+        {
+            await SetUpSubscription<TObserverSubscriber>(request);
+        }
+        await RecoverAfterSubscribing(request.LeavesQuarantine);
+
+        // CatchingUpInFlight always schedules an onward transition on entry. Remaining there after
+        // recovery returns means a failed entry write stranded it, and an ordinary retry could not re-enter.
+        // Healthy asynchronous catch-up and deferred routing are separate from that setup failure.
+        _subscriptionSetupFailed = await GetCurrentState() is CatchingUpInFlight;
+    }
+
+    /// <summary>
+    /// Re-reads the stored state for an ordinary subscription, discarding a quarantine that belonged to a wiped world.
+    /// </summary>
+    /// <returns>True if storage no longer had a record for this observer, false if it did.</returns>
+    async Task<bool> ReloadStateForSubscription()
+    {
+        var wasQuarantined = IsQuarantined;
+        var storageWasReset = await ReloadObserverState();
+
+        await observerDefinition.ReadStateAsync();
+        await failures.ReadStateAsync();
+        if (IsQuarantineFromWipedWorld(storageWasReset, wasQuarantined))
+        {
+            // The quarantine belonged to a wiped world. Discard it only after all state has been reloaded,
+            // so routing cannot act on stale definitions or failures from that world.
+            DiscardQuarantineFromWipedWorld();
+            await TransitionTo<Routing>();
+        }
+
+        return storageWasReset;
+    }
+
+    bool IsQuarantineFromWipedWorld(bool storageWasReset, bool wasQuarantined) => storageWasReset && wasQuarantined && IsQuarantined;
 
     bool IsRetiredAndNotReactivating(bool reactivateRetired) => !reactivateRetired && State.AlertDisposition == AlertDisposition.Retired;
 
@@ -1110,69 +1144,60 @@ public partial class Observer(
         ForgetSupersededRegistrations();
     }
 
-    async Task SetUpSubscription<TObserverSubscriber>(
-        ObserverType type,
-        IEnumerable<EventType> eventTypes,
-        SiloAddress siloAddress,
-        object? subscriberArgs,
-        bool isReplayable,
-        ObserverFilters? filters,
-        EventGenerationDelivery generationDelivery,
-        bool reconcile = false)
+    bool CannotReconcile<TObserverSubscriber>(bool reconcile)
+        where TObserverSubscriber : IObserverSubscriber =>
+        reconcile && CannotReconcileSubscription(typeof(Webhooks.IWebhookObserverSubscriber).IsAssignableFrom(typeof(TObserverSubscriber)));
+
+    async Task SetUpSubscription<TObserverSubscriber>(SubscriptionRequest request, bool reconcile = false)
         where TObserverSubscriber : IObserverSubscriber
     {
-        if (reconcile && CannotReconcileSubscription(typeof(Webhooks.IWebhookObserverSubscriber).IsAssignableFrom(typeof(TObserverSubscriber)))) return;
+        if (CannotReconcile<TObserverSubscriber>(reconcile)) return;
         var owner = GetOwner<TObserverSubscriber>();
         logger.Subscribing();
-        var eventTypeIds = eventTypes.Select(et => et.Id).ToArray();
+        var eventTypeIds = request.EventTypes.Select(et => et.Id).ToArray();
         logger.SubscribingWithEventTypes(eventTypeIds.Length, string.Join(", ", eventTypeIds));
 
         observerDefinition.State = observerDefinition.State with
         {
             EventSequenceId = _observerKey.EventSequenceId,
-            Type = type,
+            Type = request.Type,
             Owner = owner,
-            EventTypes = eventTypes,
-            IsReplayable = isReplayable,
-            GenerationDelivery = generationDelivery
+            EventTypes = request.EventTypes,
+            IsReplayable = request.IsReplayable,
+            GenerationDelivery = request.GenerationDelivery
         };
         await observerDefinition.WriteStateAsync();
 
-        if (reconcile && CannotReconcileSubscription(typeof(Webhooks.IWebhookObserverSubscriber).IsAssignableFrom(typeof(TObserverSubscriber)))) return;
-        ApplySubscription<TObserverSubscriber>(eventTypes, siloAddress, subscriberArgs, isReplayable, filters, generationDelivery);
+        if (CannotReconcile<TObserverSubscriber>(reconcile)) return;
+        ApplySubscription<TObserverSubscriber>(request);
 
         State = State with { SubscribesToAllEvents = false };
         await WriteStateAsync();
     }
 
-    async Task SetUpAllEventsSubscription<TObserverSubscriber>(
-        ObserverType type,
-        SiloAddress siloAddress,
-        object? subscriberArgs,
-        bool isReplayable,
-        bool reconcile = false)
+    async Task SetUpAllEventsSubscription<TObserverSubscriber>(SubscriptionRequest request, bool reconcile = false)
         where TObserverSubscriber : IObserverSubscriber
     {
-        if (reconcile && CannotReconcileSubscription(typeof(Webhooks.IWebhookObserverSubscriber).IsAssignableFrom(typeof(TObserverSubscriber)))) return;
+        if (CannotReconcile<TObserverSubscriber>(reconcile)) return;
         observerDefinition.State = observerDefinition.State with
         {
             EventSequenceId = _observerKey.EventSequenceId,
-            Type = type,
+            Type = request.Type,
             Owner = GetOwner<TObserverSubscriber>(),
             EventTypes = [],
-            IsReplayable = isReplayable
+            IsReplayable = request.IsReplayable
         };
         await observerDefinition.WriteStateAsync();
 
-        if (reconcile && CannotReconcileSubscription(typeof(Webhooks.IWebhookObserverSubscriber).IsAssignableFrom(typeof(TObserverSubscriber)))) return;
+        if (CannotReconcile<TObserverSubscriber>(reconcile)) return;
         _subscription = new(
             _observerId,
             _observerKey,
             [],
             typeof(TObserverSubscriber),
-            siloAddress,
-            subscriberArgs,
-            isReplayable);
+            request.SiloAddress,
+            request.SubscriberArgs,
+            request.IsReplayable);
         ForgetSupersededRegistrations();
 
         State = State with { SubscribesToAllEvents = true };
@@ -1182,7 +1207,7 @@ public partial class Observer(
     async Task ValidateGenerationDelivery(IEnumerable<EventType> eventTypes, EventGenerationDelivery generationDelivery)
     {
         if (generationDelivery != EventGenerationDelivery.Pinned) return;
-        ThrowIfPinsMultipleGenerations(eventTypes);
+        ObserverSubscriptionRules.ThrowIfPinsMultipleGenerations(eventTypes);
         var eventTypesStorage = storage.GetEventStore(_observerKey.EventStore).EventTypes;
         foreach (var eventType in eventTypes)
         {
@@ -1193,52 +1218,20 @@ public partial class Observer(
         }
     }
 
-    void ApplySubscription<TObserverSubscriber>(
-        IEnumerable<EventType> eventTypes,
-        SiloAddress siloAddress,
-        object? subscriberArgs,
-        bool isReplayable,
-        ObserverFilters? filters,
-        EventGenerationDelivery generationDelivery)
+    void ApplySubscription<TObserverSubscriber>(SubscriptionRequest request)
         where TObserverSubscriber : IObserverSubscriber
     {
-        if (subscriberArgs is not ConnectedClient connectedClient)
+        if (request.SubscriberArgs is not ConnectedClient connectedClient)
         {
             ForgetSupersededRegistrations();
-            _subscription = new(
-                _observerId,
-                _observerKey,
-                eventTypes,
-                typeof(TObserverSubscriber),
-                siloAddress,
-                subscriberArgs,
-                isReplayable,
-                filters)
-            {
-                GenerationDelivery = generationDelivery
-            };
+            _subscription = NewSubscription<TObserverSubscriber>(request) with { GenerationDelivery = request.GenerationDelivery };
             return;
         }
 
-        var target = new ObserverSubscriberTarget(siloAddress, connectedClient);
-        if (CanFanOutInto<TObserverSubscriber>(eventTypes, filters, generationDelivery))
+        var target = new ObserverSubscriberTarget(request.SiloAddress, connectedClient);
+        if (CanFanOutInto<TObserverSubscriber>(request.EventTypes, request.Filters, request.GenerationDelivery))
         {
-            DropSupersededRegistration(connectedClient.ConnectionId);
-
-            // Another instance of the same client is already subscribed with an identical
-            // definition - add this instance as a fan-out target instead of replacing the
-            // subscription. The stable ordering keeps partition selection deterministic.
-            var targets = _subscription.Targets
-                .Where(existing => existing.ConnectedClient!.ConnectionId != connectedClient.ConnectionId)
-                .Append(target)
-                .OrderBy(existing => existing.ConnectedClient!.ConnectionId.Value)
-                .ToArray();
-            _subscription = _subscription with
-            {
-                SiloAddress = targets[0].SiloAddress,
-                Arguments = targets[0].ConnectedClient,
-                Targets = targets
-            };
+            AddFanOutTarget(connectedClient, target);
             return;
         }
 
@@ -1246,29 +1239,44 @@ public partial class Observer(
         // when the client that now owns the subscription leaves.
         SupersedeTargetsOtherThan(connectedClient.ConnectionId);
         var observerType = observerDefinition.State.Type;
-        _resubscribeTarget = existing => SubscribeToEventTypes<TObserverSubscriber>(
-            observerType,
-            eventTypes,
-            existing.SiloAddress,
-            existing.ConnectedClient,
-            isReplayable,
-            filters,
-            reactivateRetired: false,
-            automatic: true,
-            generationDelivery: generationDelivery);
+        _resubscribeTarget = existing => SubscribeToEventTypes<TObserverSubscriber>(request.ResubscribingTo(observerType, existing));
 
-        _subscription = new(
-            _observerId,
-            _observerKey,
-            eventTypes,
-            typeof(TObserverSubscriber),
-            siloAddress,
-            subscriberArgs,
-            isReplayable,
-            filters)
+        _subscription = NewSubscription<TObserverSubscriber>(request) with
         {
             Targets = [target],
-            GenerationDelivery = generationDelivery
+            GenerationDelivery = request.GenerationDelivery
+        };
+    }
+
+    ObserverSubscription NewSubscription<TObserverSubscriber>(SubscriptionRequest request)
+        where TObserverSubscriber : IObserverSubscriber =>
+        new(
+            _observerId,
+            _observerKey,
+            request.EventTypes,
+            typeof(TObserverSubscriber),
+            request.SiloAddress,
+            request.SubscriberArgs,
+            request.IsReplayable,
+            request.Filters);
+
+    void AddFanOutTarget(ConnectedClient connectedClient, ObserverSubscriberTarget target)
+    {
+        DropSupersededRegistration(connectedClient.ConnectionId);
+
+        // Another instance of the same client is already subscribed with an identical
+        // definition - add this instance as a fan-out target instead of replacing the
+        // subscription. The stable ordering keeps partition selection deterministic.
+        var targets = _subscription.Targets
+            .Where(existing => existing.ConnectedClient!.ConnectionId != connectedClient.ConnectionId)
+            .Append(target)
+            .OrderBy(existing => existing.ConnectedClient!.ConnectionId.Value)
+            .ToArray();
+        _subscription = _subscription with
+        {
+            SiloAddress = targets[0].SiloAddress,
+            Arguments = targets[0].ConnectedClient,
+            Targets = targets
         };
     }
 
@@ -1279,7 +1287,7 @@ public partial class Observer(
         _subscription.SubscriberType == typeof(TObserverSubscriber) &&
         _subscription.GenerationDelivery == generationDelivery &&
         _subscription.EventTypes.ToHashSet().SetEquals(eventTypes) &&
-        FiltersAreEqual(_subscription.Filters, filters);
+        ObserverSubscriptionRules.FiltersAreEqual(_subscription.Filters, filters);
 
     void RemoveSubscriberTarget(ObserverSubscriberTarget target)
     {
@@ -1297,12 +1305,7 @@ public partial class Observer(
     }
 
     ObserverOwner GetOwner<TObserverSubscriber>()
-        where TObserverSubscriber : IObserverSubscriber => typeof(TObserverSubscriber) switch
-        {
-            Type t when t.IsAssignableTo(typeof(IAmOwnedByClient)) => ObserverOwner.Client,
-            Type t when t.IsAssignableTo(typeof(IAmOwnedByKernel)) => ObserverOwner.Kernel,
-            _ => ObserverOwner.None
-        };
+        where TObserverSubscriber : IObserverSubscriber => ObserverSubscriptionRules.OwnerFor(typeof(TObserverSubscriber));
 
     /// <summary>
     /// Stops all non-replay observer jobs that are currently preparing or running so they can be resumed when the observer reconnects.

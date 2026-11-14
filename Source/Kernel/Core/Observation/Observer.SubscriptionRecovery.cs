@@ -47,7 +47,12 @@ public partial class Observer
         ObserverFilters? filters = null)
         where TObserverSubscriber : IObserverSubscriber
     {
-        await SubscribeToEventTypes<TObserverSubscriber>(type, eventTypes, siloAddress, subscriberArgs, isReplayable, filters, additive: true, reactivateRetired: false);
+        await SubscribeToEventTypes<TObserverSubscriber>(
+            new SubscriptionRequest(type, eventTypes, siloAddress, subscriberArgs, isReplayable, filters)
+            {
+                Additive = true,
+                ReactivateRetired = false
+            });
 
         return _subscription.EventTypes;
     }
@@ -107,11 +112,11 @@ public partial class Observer
 
             if (subscribesToAllEvents)
             {
-                await SetUpAllEventsSubscription<TObserverSubscriber>(type, siloAddress, subscriberArgs, isReplayable, reconcile: true);
+                await SetUpAllEventsSubscription<TObserverSubscriber>(new SubscriptionRequest(type, types, siloAddress, subscriberArgs, isReplayable), reconcile: true);
             }
             else
             {
-                await SetUpSubscription<TObserverSubscriber>(type, types, siloAddress, subscriberArgs, isReplayable, filters, generationDelivery, reconcile: true);
+                await SetUpSubscription<TObserverSubscriber>(new SubscriptionRequest(type, types, siloAddress, subscriberArgs, isReplayable, filters, generationDelivery), reconcile: true);
             }
 
             await RecoverReconciledSubscription(typeof(Webhooks.IWebhookObserverSubscriber).IsAssignableFrom(typeof(TObserverSubscriber)));
