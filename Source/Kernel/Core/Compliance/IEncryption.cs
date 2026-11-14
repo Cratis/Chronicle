@@ -21,8 +21,15 @@ public interface IEncryption
     /// </summary>
     /// <param name="bytes">Bytes to encrypt.</param>
     /// <param name="key">Key to use.</param>
+    /// <param name="revision">The concrete revision of the key used.</param>
     /// <returns>Encrypted bytes.</returns>
-    byte[] Encrypt(byte[] bytes, EncryptionKey key);
+    byte[] Encrypt(byte[] bytes, EncryptionKey key, EncryptionKeyRevision revision);
+
+    /// <summary>Reads the key revision from a v2 envelope without decrypting it.</summary>
+    /// <param name="bytes">The encrypted bytes.</param>
+    /// <param name="revision">The recorded revision, when present.</param>
+    /// <returns>Whether the value carries a concrete key revision.</returns>
+    bool TryGetKeyRevision(byte[] bytes, out EncryptionKeyRevision revision);
 
     /// <summary>
     /// Decrypt bytes with a key.

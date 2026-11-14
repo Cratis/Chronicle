@@ -1,65 +1,62 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Buffers.Binary;
 using System.Security.Cryptography;
 using Cratis.Chronicle.Storage.Compliance;
 
 namespace Cratis.Chronicle.Compliance;
 
 /// <summary>
-/// Represents an implementation of <see cref="IEncryption"/>.
+/// Protects values using fresh AES-256-GCM data keys wrapped with a managed RSA key.
 /// </summary>
 /// <remarks>
-/// PII values are protected with hybrid (envelope) encryption: every value is encrypted with a fresh
-/// AES-256-GCM data key, and only that 32-byte data key is RSA-OAEP-wrapped with the per-subject key. This
-/// removes the ~245-byte plaintext cap that raw RSA-2048 imposes, so arbitrarily large PII (long free
-/// text, images) can be encrypted while the per-subject RSA key remains the root of trust for
-/// crypto-shredding. Values written by earlier versions were encrypted with raw RSA over the whole
-/// payload; <see cref="Decrypt"/> recognizes the envelope header (the <c language="csharp">CENV</c> "Cratis ENVelope"
-/// marker followed by a format-version byte) and falls back to raw RSA for legacy values without the
-/// marker, so previously stored PII stays readable.
+/// Reads v1 and revision-aware v2 CENV envelopes, and legacy raw RSA PKCS#1 values.
+/// Writes remain v1 until all production replicas can read v2. Downgrade after enabling v2 writes is unsupported.
 /// </remarks>
 public class Encryption : IEncryption
 {
+    /// <summary>Reader-first rollout: flip only after every production replica supports v2 reads.</summary>
+    internal const byte WriterVersion = 1;
     const int KeySize = 2048;
     const int DataKeySizeInBytes = 32;
-    const int NonceSizeInBytes = 12;
-    const int TagSizeInBytes = 16;
-    const byte EnvelopeVersion = 1;
     const int LegacyCiphertextSizeInBytes = KeySize / 8;
-
-    static readonly byte[] _envelopeMagic = "CENV"u8.ToArray();
     static readonly RSAEncryptionPadding _keyWrapPadding = RSAEncryptionPadding.OaepSHA256;
-
-    /// <summary>
-    /// Shared by every instance: a key pair depends on nothing but the key size, and one reserve bounds the work.
-    /// </summary>
     static readonly EncryptionKeyReserve _reserve = new(GenerateKeyPair, Environment.ProcessorCount);
 
     /// <inheritdoc/>
     public EncryptionKey GenerateKey() => _reserve.Take();
 
     /// <inheritdoc/>
-    public byte[] Encrypt(byte[] bytes, EncryptionKey key)
+    public byte[] Encrypt(byte[] bytes, EncryptionKey key, EncryptionKeyRevision revision) => EncryptEnvelope(bytes, new(key, revision), WriterVersion);
+
+    /// <inheritdoc/>
+    public bool IsEncrypted(byte[] bytes) => EncryptionEnvelope.HasMagic(bytes) || bytes.Length == LegacyCiphertextSizeInBytes;
+
+    /// <inheritdoc/>
+    public bool TryGetKeyRevision(byte[] bytes, out EncryptionKeyRevision revision)
     {
-        // A fresh AES data key is generated per value, so the random nonce below can never collide under the
-        // same key — the catastrophic AES-GCM (key, nonce) reuse failure mode cannot occur here. Preserve
-        // this invariant: never cache or reuse a data key across values.
-        var dataKey = RandomNumberGenerator.GetBytes(DataKeySizeInBytes);
+        var recorded = EncryptionEnvelope.HasMagic(bytes) ? EncryptionEnvelope.Read(bytes).Revision : null;
+        revision = recorded ?? EncryptionKeyRevision.Initial;
+        return recorded is not null;
+    }
+
+    /// <inheritdoc/>
+    /// <exception cref="EncryptionKeyUnwrapFailed">The imported key cannot decrypt the RSA-protected value.</exception>
+    public byte[] Decrypt(byte[] bytes, EncryptionKey key)
+    {
+        if (!EncryptionEnvelope.HasMagic(bytes))
+        {
+            return DecryptRsa(bytes, key, RSAEncryptionPadding.Pkcs1);
+        }
+
+        var envelope = EncryptionEnvelope.Read(bytes);
+        var dataKey = DecryptRsa(envelope.WrappedKey, key, _keyWrapPadding);
         try
         {
-            var nonce = RandomNumberGenerator.GetBytes(NonceSizeInBytes);
-            var tag = new byte[TagSizeInBytes];
-            var ciphertext = new byte[bytes.Length];
-
-            using (var aes = new AesGcm(dataKey, TagSizeInBytes))
-            {
-                aes.Encrypt(nonce, bytes, ciphertext, tag);
-            }
-
-            var wrappedKey = WrapDataKey(dataKey, key);
-            return ComposeEnvelope(wrappedKey, nonce, tag, ciphertext);
+            var plaintext = new byte[envelope.Ciphertext.Length];
+            using var aes = new AesGcm(dataKey, EncryptionEnvelope.TagSize);
+            aes.Decrypt(envelope.Nonce, envelope.Ciphertext, envelope.Tag, plaintext, envelope.AssociatedData);
+            return plaintext;
         }
         finally
         {
@@ -67,35 +64,30 @@ public class Encryption : IEncryption
         }
     }
 
-    /// <inheritdoc/>
-    public bool IsEncrypted(byte[] bytes)
+    /// <summary>Encrypts a value in an explicitly selected envelope version.</summary>
+    /// <param name="bytes">The plaintext bytes.</param>
+    /// <param name="key">The managed key and its concrete revision.</param>
+    /// <param name="version">The envelope version.</param>
+    /// <returns>The encrypted envelope.</returns>
+    internal static byte[] EncryptEnvelope(byte[] bytes, EncryptionKeyAtRevision key, byte version)
     {
-        // A current value is identified by its envelope marker. A legacy value (raw RSA over the whole payload,
-        // see DecryptLegacy) carries no marker of its own, so what identifies it is its length — raw RSA always
-        // produced exactly one modulus-sized block.
-        return TryReadEnvelope(bytes, out _, out _, out _, out _) || bytes.Length == LegacyCiphertextSizeInBytes;
-    }
-
-    /// <inheritdoc/>
-    /// <exception cref="EncryptionKeyUnwrapFailed">The imported key cannot decrypt the RSA-protected value.</exception>
-    public byte[] Decrypt(byte[] bytes, EncryptionKey key)
-    {
-        if (!TryReadEnvelope(bytes, out var wrappedKey, out var nonce, out var tag, out var ciphertext))
-        {
-            return DecryptLegacy(bytes, key);
-        }
-
-        var dataKey = UnwrapDataKey(wrappedKey, key);
+        // Never cache a data key: a fresh key per value prevents nonce reuse under the same AES key.
+        var dataKey = RandomNumberGenerator.GetBytes(DataKeySizeInBytes);
         try
         {
-            var plaintext = new byte[ciphertext.Length];
-
-            using (var aes = new AesGcm(dataKey, TagSizeInBytes))
+            var wrappedKey = WrapDataKey(dataKey, key.Key);
+            var envelope = new EncryptionEnvelope
             {
-                aes.Decrypt(nonce, ciphertext, tag, plaintext);
-            }
-
-            return plaintext;
+                Header = EncryptionEnvelope.CreateHeader(version, key.Revision, wrappedKey.Length),
+                WrappedKey = wrappedKey,
+                Nonce = RandomNumberGenerator.GetBytes(EncryptionEnvelope.NonceSize),
+                Tag = new byte[EncryptionEnvelope.TagSize],
+                Ciphertext = new byte[bytes.Length],
+                Revision = version == 2 ? key.Revision : null
+            };
+            using var aes = new AesGcm(dataKey, EncryptionEnvelope.TagSize);
+            aes.Encrypt(envelope.Nonce, bytes, envelope.Ciphertext, envelope.Tag, envelope.AssociatedData);
+            return envelope.Bytes();
         }
         finally
         {
@@ -105,22 +97,16 @@ public class Encryption : IEncryption
 
     static byte[] WrapDataKey(byte[] dataKey, EncryptionKey key)
     {
-        // The data key is wrapped with RSA-OAEP (SHA-256) — the modern padding for this new format. Legacy
-        // values (see DecryptLegacy) were written with raw RSA PKCS#1 v1.5 and are read back with that padding.
         using var rsa = RSA.Create();
         rsa.ImportRSAPublicKey(key.Public, out _);
         return rsa.Encrypt(dataKey, _keyWrapPadding);
     }
 
-    static byte[] UnwrapDataKey(byte[] wrappedKey, EncryptionKey key) => DecryptRsa(wrappedKey, key, _keyWrapPadding);
-
-    static byte[] DecryptLegacy(byte[] bytes, EncryptionKey key) => DecryptRsa(bytes, key, RSAEncryptionPadding.Pkcs1);
-
     static byte[] DecryptRsa(byte[] bytes, EncryptionKey key, RSAEncryptionPadding padding)
     {
         using var rsa = RSA.Create();
 
-        // Key initialization failures are operational errors, never evidence of an erased lifecycle.
+        // Invalid key material is an operational failure, not a reason to try another revision.
         rsa.ImportRSAPrivateKey(key.Private, out _);
         try
         {
@@ -132,84 +118,9 @@ public class Encryption : IEncryption
         }
     }
 
-    static byte[] ComposeEnvelope(byte[] wrappedKey, byte[] nonce, byte[] tag, byte[] ciphertext)
-    {
-        var headerSize = _envelopeMagic.Length + 1 + sizeof(ushort);
-        var result = new byte[headerSize + wrappedKey.Length + nonce.Length + tag.Length + ciphertext.Length];
-        var span = result.AsSpan();
-
-        var offset = 0;
-        _envelopeMagic.CopyTo(span);
-        offset += _envelopeMagic.Length;
-
-        span[offset++] = EnvelopeVersion;
-
-        BinaryPrimitives.WriteUInt16BigEndian(span[offset..], (ushort)wrappedKey.Length);
-        offset += sizeof(ushort);
-
-        wrappedKey.CopyTo(span[offset..]);
-        offset += wrappedKey.Length;
-
-        nonce.CopyTo(span[offset..]);
-        offset += nonce.Length;
-
-        tag.CopyTo(span[offset..]);
-        offset += tag.Length;
-
-        ciphertext.CopyTo(span[offset..]);
-
-        return result;
-    }
-
-    static bool TryReadEnvelope(byte[] bytes, out byte[] wrappedKey, out byte[] nonce, out byte[] tag, out byte[] ciphertext)
-    {
-        wrappedKey = nonce = tag = ciphertext = [];
-
-        var headerSize = _envelopeMagic.Length + 1 + sizeof(ushort);
-        if (bytes.Length < headerSize)
-        {
-            return false;
-        }
-
-        var span = bytes.AsSpan();
-        if (!span[.._envelopeMagic.Length].SequenceEqual(_envelopeMagic))
-        {
-            return false;
-        }
-
-        var offset = _envelopeMagic.Length;
-        if (span[offset++] != EnvelopeVersion)
-        {
-            return false;
-        }
-
-        var wrappedKeyLength = BinaryPrimitives.ReadUInt16BigEndian(span[offset..]);
-        offset += sizeof(ushort);
-
-        if (bytes.Length < offset + wrappedKeyLength + NonceSizeInBytes + TagSizeInBytes)
-        {
-            return false;
-        }
-
-        wrappedKey = span.Slice(offset, wrappedKeyLength).ToArray();
-        offset += wrappedKeyLength;
-
-        nonce = span.Slice(offset, NonceSizeInBytes).ToArray();
-        offset += NonceSizeInBytes;
-
-        tag = span.Slice(offset, TagSizeInBytes).ToArray();
-        offset += TagSizeInBytes;
-
-        ciphertext = span[offset..].ToArray();
-
-        return true;
-    }
-
     static EncryptionKey GenerateKeyPair()
     {
         using var rsa = RSA.Create(KeySize);
-        var privateKey = rsa.ExportRSAPrivateKey();
-        var publicKey = rsa.ExportRSAPublicKey();
-        return new(publicKey, privateKey);
+        return new(rsa.ExportRSAPublicKey(), rsa.ExportRSAPrivateKey());
     }
 }

@@ -18,7 +18,7 @@ public class when_applying : given.a_property_handler
     {
         _input = JsonValue.Create(42);
         _encryptedBytes = Encoding.UTF8.GetBytes(_encryptedString);
-        _encryption.Encrypt(Arg.Any<byte[]>(), _key).Returns(_encryptedBytes);
+        _encryption.Encrypt(Arg.Any<byte[]>(), _key, Arg.Any<EncryptionKeyRevision>()).Returns(_encryptedBytes);
     }
 
     async Task Because() => _result = await _handler.Apply(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, Identifier, _input);

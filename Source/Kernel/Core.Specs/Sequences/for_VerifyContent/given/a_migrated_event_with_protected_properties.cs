@@ -53,7 +53,7 @@ public class a_migrated_event_with_protected_properties : a_stored_event
     protected void Store(JsonObject first, JsonObject second) =>
         _stored = _stored with { GenerationalContent = new Dictionary<int, string> { [1] = first.ToJsonString(), [2] = second.ToJsonString() } };
 
-    protected JsonNode Protect(string value) => ProtectedValueCodec.Encrypt(_encryption, _key, JsonValue.Create(value));
+    protected JsonNode Protect(string value) => ProtectedValueCodec.Encrypt(_encryption, _key, JsonValue.Create(value), EncryptionKeyRevision.Initial);
 
     static JsonSchema Schema(params (string Name, bool Protected)[] properties)
     {

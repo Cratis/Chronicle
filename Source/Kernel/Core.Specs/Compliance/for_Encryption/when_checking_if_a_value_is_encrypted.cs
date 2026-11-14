@@ -13,10 +13,10 @@ namespace Cratis.Chronicle.Compliance.for_Encryption;
 public class when_checking_if_a_value_is_encrypted : given.a_key
 {
     [Fact] void should_recognize_a_value_it_encrypted() =>
-        _encryption.IsEncrypted(_encryption.Encrypt(Encoding.UTF8.GetBytes("sensitive"), _key)).ShouldBeTrue();
+        _encryption.IsEncrypted(_encryption.Encrypt(Encoding.UTF8.GetBytes("sensitive"), _key, EncryptionKeyRevision.Initial)).ShouldBeTrue();
 
     [Fact] void should_recognize_an_encrypted_empty_value() =>
-        _encryption.IsEncrypted(_encryption.Encrypt([], _key)).ShouldBeTrue();
+        _encryption.IsEncrypted(_encryption.Encrypt([], _key, EncryptionKeyRevision.Initial)).ShouldBeTrue();
 
     [Fact] void should_not_recognize_plaintext() =>
         _encryption.IsEncrypted(Encoding.UTF8.GetBytes("Jane Doe")).ShouldBeFalse();

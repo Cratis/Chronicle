@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Security.Cryptography;
+using Cratis.Chronicle.ProtectedValues;
 
 namespace Cratis.Chronicle.Schemas;
 
@@ -41,10 +42,18 @@ public class SchemaMetadataActionFailed(string action, string propertyPath, stri
     static string BuildMessage(string action, string propertyPath, string identifier, Exception error) =>
         $"Failed to {action} schema metadata for property '{propertyPath}' of '{identifier}'.{IdentifierMismatchHint(action, identifier, error)}";
 
-    static string IdentifierMismatchHint(string action, string identifier, Exception error) =>
-        action == ReleaseAction && IsCryptographic(error)
+    static string IdentifierMismatchHint(string action, string identifier, Exception error)
+    {
+        if (action != ReleaseAction) return string.Empty;
+        if (UnrecoverableProtectedValueReporter.Find(error) is not null)
+        {
+            return " The stored value is unrecoverable using its permitted key revisions; the value may belong to another identifier, have missing ownership metadata, or require a key revision that is no longer available.";
+        }
+
+        return IsCryptographic(error)
             ? $" The stored value could not be decrypted with the encryption key for '{identifier}', so it was encrypted under a different identifier or its ownership metadata is missing."
             : string.Empty;
+    }
 
     static bool IsCryptographic(Exception? error)
     {

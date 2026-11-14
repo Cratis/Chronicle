@@ -16,7 +16,7 @@ public class and_the_identifier_is_reserved_for_namespace_confidentiality : give
     {
         _provisioner = Substitute.For<IManagedEncryptionKeyProvisioner>();
         _provisioner.EnsureKeyWithRevisionFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, EncryptedValueKeyIdentifiers.ForNamespace()).Returns(new EncryptionKeyAtRevision(_key, EncryptionKeyRevision.Initial));
-        _encryption.Encrypt(Arg.Any<byte[]>(), _key).Returns([1, 2, 3]);
+        _encryption.Encrypt(Arg.Any<byte[]>(), _key, Arg.Any<EncryptionKeyRevision>()).Returns([1, 2, 3]);
         _handler = new(_provisioner, _keyStore, _encryption);
     }
 
@@ -27,7 +27,7 @@ public class and_the_identifier_is_reserved_for_namespace_confidentiality : give
         JsonValue.Create("personal value")));
 
     [Fact] void should_reject_the_reserved_pii_identifier() => _exception.ShouldBeOfExactType<PIIIdentifierIsReserved>();
-    [Fact] void should_not_encrypt_the_value() => _encryption.DidNotReceive().Encrypt(Arg.Any<byte[]>(), _key);
+    [Fact] void should_not_encrypt_the_value() => _encryption.DidNotReceive().Encrypt(Arg.Any<byte[]>(), _key, Arg.Any<EncryptionKeyRevision>());
     [Fact] async Task should_not_provision_or_share_a_confidentiality_key() => await _provisioner.DidNotReceive().EnsureKeyWithRevisionFor(
         Arg.Any<EventStoreName>(),
         Arg.Any<EventStoreNamespaceName>(),

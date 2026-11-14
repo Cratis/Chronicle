@@ -237,7 +237,7 @@ public static class differential
             catch (EncryptionKeyErased)
             {
                 // Ask main's real release handler, rather than prescribing typed defaults from #4454.
-                var ciphertext = ProtectedValueCodec.Encrypt(encryption, _key, value);
+                var ciphertext = ProtectedValueCodec.Encrypt(encryption, _key, value, EncryptionKeyRevision.Initial);
                 return await handler.Release(eventStore, eventStoreNamespace, identifier, ciphertext);
             }
         }

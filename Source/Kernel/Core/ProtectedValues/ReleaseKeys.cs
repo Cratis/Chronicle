@@ -43,20 +43,8 @@ public static class ReleaseKeys
     /// <returns>The usable key, or null when erased.</returns>
     public static async Task<EncryptionKey?> TryGetForRelease(IEncryptionKeyStorage storage, EventStoreName eventStore, EventStoreNamespaceName ns, EncryptionKeyIdentifier identifier, CancellationToken cancellationToken = default)
     {
-        var memo = _current.Value ?? new Memo(TimeProvider.System, _grace);
-        var attempt = memo.BeginAttempt(cancellationToken);
-        attempt.Check();
-        var pair = await attempt.Wait(storage.TryGetLatestFor(eventStore, ns, identifier));
-        var key = new FenceKey(storage, eventStore, ns, identifier);
-        while (true)
-        {
-            var snapshot = await memo.Read(key, attempt);
-            attempt.Check();
-            if (!memo.IsFresh(snapshot)) continue;
-            if (pair is null || snapshot.Fence.Covers(pair)) return null;
-            memo.Uses[(key, pair)] = true;
-            return pair.Key;
-        }
+        var pair = await TryGetPairForRelease(storage, (eventStore, ns, identifier), cancellationToken: cancellationToken);
+        return pair?.Key;
     }
 
     /// <summary>Get a key, reporting an unavailable fence as an empty protected value.</summary>
@@ -153,6 +141,46 @@ public static class ReleaseKeys
         var memo = _current.Value ?? throw new InvalidOperationException("A release scope is required.");
         (memo.Observations ??= []).Add((new(storage, address.EventStore, address.Namespace, address.Identifier), observe));
     }
+
+    /// <summary>Reads an allowed key pair and registers it for release-time lease validation.</summary>
+    /// <param name="storage">The key storage.</param>
+    /// <param name="address">The key identity.</param>
+    /// <param name="revision">A recorded or fallback revision, or null for latest.</param>
+    /// <param name="cancellationToken">Cancellation of the read.</param>
+    /// <returns>The pair, or null when absent or erased.</returns>
+    internal static async Task<EncryptionKeyAtRevision?> TryGetPairForRelease(
+        IEncryptionKeyStorage storage,
+        (EventStoreName EventStore, EventStoreNamespaceName Namespace, EncryptionKeyIdentifier Identifier) address,
+        EncryptionKeyRevision? revision = null,
+        CancellationToken cancellationToken = default)
+    {
+        var memo = _current.Value ?? new Memo(TimeProvider.System, _grace);
+        var attempt = memo.BeginAttempt(cancellationToken);
+        var key = new FenceKey(storage, address.EventStore, address.Namespace, address.Identifier);
+        var before = await memo.Read(key, attempt);
+        if (IsErased(revision, before.Fence)) return null;
+        attempt.Check();
+        var pair = await attempt.Wait(revision is null
+            ? storage.TryGetLatestFor(address.EventStore, address.Namespace, address.Identifier)
+            : storage.TryGetAtRevisionFor(address.EventStore, address.Namespace, address.Identifier, revision));
+        return await TrackPair(memo, key, pair, attempt);
+    }
+
+    static async Task<EncryptionKeyAtRevision?> TrackPair(Memo memo, FenceKey key, EncryptionKeyAtRevision? pair, ReleaseAttempt attempt)
+    {
+        while (true)
+        {
+            var snapshot = await memo.Read(key, attempt);
+            attempt.Check();
+            if (!memo.IsFresh(snapshot)) continue;
+            if (pair is null || snapshot.Fence.Covers(pair)) return null;
+            memo.Uses[(key, pair)] = true;
+            return pair;
+        }
+    }
+
+    static bool IsErased(EncryptionKeyRevision? revision, EncryptionKeyErasure? fence) =>
+        revision is not null && revision.Value <= (fence?.ErasedThrough.Value ?? 0);
 
     sealed record FenceKey(IEncryptionKeyStorage Storage, EventStoreName EventStore, EventStoreNamespaceName Namespace, EncryptionKeyIdentifier Identifier);
     sealed record Snapshot(EncryptionKeyErasure? Fence, ulong Version, long Started, DateTimeOffset WallStarted);

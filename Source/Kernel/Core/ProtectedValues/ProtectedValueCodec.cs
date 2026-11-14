@@ -34,11 +34,12 @@ public static class ProtectedValueCodec
     /// <param name="encryption"><see cref="IEncryption"/> to encrypt with.</param>
     /// <param name="key"><see cref="EncryptionKey"/> to encrypt under.</param>
     /// <param name="value"><see cref="JsonNode"/> to encrypt.</param>
+    /// <param name="revision">The concrete revision used to encrypt.</param>
     /// <returns>The encrypted value, as a base64 <see cref="JsonValue"/>.</returns>
-    public static JsonNode Encrypt(IEncryption encryption, EncryptionKey key, JsonNode value)
+    public static JsonNode Encrypt(IEncryption encryption, EncryptionKey key, JsonNode value, EncryptionKeyRevision revision)
     {
         var valueAsString = value.ToString();
-        var encrypted = encryption.Encrypt(Encoding.UTF8.GetBytes(valueAsString), key);
+        var encrypted = encryption.Encrypt(Encoding.UTF8.GetBytes(valueAsString), key, revision);
         var encryptedAsBase64 = Convert.ToBase64String(encrypted);
         return JsonValue.Create(encryptedAsBase64);
     }
@@ -75,8 +76,8 @@ public static class ProtectedValueCodec
             return null;
         }
 
-        var key = await ReleaseKeys.TryGetForRelease(keyStorage, eventStore, @namespace, identifier);
-        return await ReleaseKeys.Complete(() => key is null ? null : Decrypt(encryption, key, encrypted));
+        var released = await new ProtectedValueRelease(keyStorage, encryption, (eventStore, @namespace, identifier), encrypted).Release();
+        return await ReleaseKeys.Complete(() => released);
     }
 
     /// <summary>

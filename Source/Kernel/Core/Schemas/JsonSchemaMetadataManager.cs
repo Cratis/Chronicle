@@ -22,11 +22,14 @@ namespace Cratis.Chronicle.Schemas;
 /// </remarks>
 /// <param name="propertyValueHandlers">Instances of <see cref="IJsonSchemaMetadataValueHandler"/>, spanning every registered <see cref="SchemaMetadataCategory"/>.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
+/// <param name="unrecoverableValues">The process-local unrecoverable value reporter.</param>
 [Singleton]
 public class JsonSchemaMetadataManager(
     IInstancesOf<IJsonSchemaMetadataValueHandler> propertyValueHandlers,
-    ILogger<JsonSchemaMetadataManager> logger) : IJsonSchemaMetadataManager
+    ILogger<JsonSchemaMetadataManager> logger,
+    UnrecoverableProtectedValueReporter? unrecoverableValues = null) : IJsonSchemaMetadataManager
 {
+    readonly UnrecoverableProtectedValueReporter _unrecoverableValues = unrecoverableValues ?? new(logger, TimeProvider.System, static () => { });
     readonly Dictionary<(SchemaMetadataCategory Category, SchemaMetadataTypeName Type), IJsonSchemaMetadataValueHandler> _propertyValueHandlers =
         propertyValueHandlers.ToDictionary(_ => (_.Category, _.Type), _ => _);
     readonly SchemaMetadataCategory[] _categories = propertyValueHandlers.Select(_ => _.Category).Distinct().ToArray();
@@ -124,7 +127,7 @@ public class JsonSchemaMetadataManager(
 
         using var scope = ReleaseKeys.BeginScope();
         var result = (json.DeepClone() as JsonObject)!;
-        await HandleActionFor(schema, identifier, result!, SchemaMetadataActionFailed.ReleaseAction, async (h, id, token) => await h.Release(eventStore, eventStoreNamespace, id, token));
+        await HandleActionFor(schema, identifier, result!, SchemaMetadataActionFailed.ReleaseAction, async (h, id, token) => await h.Release(eventStore, eventStoreNamespace, id, token), releaseAddress: (eventStore, eventStoreNamespace));
         return await ReleaseKeys.Complete(() => result);
     }
 
@@ -157,7 +160,8 @@ public class JsonSchemaMetadataManager(
                 return released.Status == ProtectedValueReleaseStatus.Decrypted
                     ? StrictJsonSchemaRelease.TryRestore(boundarySchema, released.Value) ?? throw new StrictSchemaMetadataReleaseNotSupported()
                     : released.Value;
-            });
+            },
+            releaseAddress: (eventStore, eventStoreNamespace));
         return await ReleaseKeys.Complete(() => new StatusedRelease(result, statuses));
     }
 
@@ -169,7 +173,7 @@ public class JsonSchemaMetadataManager(
         var erasure = new ErasedPathCollector(eventStore, eventStoreNamespace);
         if (schema.HasSchemaMetadata())
         {
-            await WalkObject(new MetadataWalk { Identifier = identifier, ActionName = SchemaMetadataActionFailed.ReleaseAction, Action = static (_, _, value) => Task.FromResult(value), Erasure = erasure }, schema, result, string.Empty);
+            await WalkObject(new MetadataWalk { Identifier = identifier, ActionName = SchemaMetadataActionFailed.ReleaseAction, Action = static (_, _, value) => Task.FromResult(value), Erasure = erasure, ReleaseAddress = (eventStore, eventStoreNamespace) }, schema, result, string.Empty);
         }
 
         return await ReleaseKeys.Complete<(JsonObject, IReadOnlyList<string>)>(() => (result, erasure.Paths.Order(StringComparer.Ordinal).ToArray()));
@@ -282,7 +286,7 @@ public class JsonSchemaMetadataManager(
         }
 
         var result = (json.DeepClone() as JsonObject)!;
-        await HandleActionFor(schema, identifier, result, SchemaMetadataActionFailed.ReleaseAction, async (handler, subject, value) => await handler.ReleaseStrict(eventStore, eventStoreNamespace, subject, value), strictRelease: true);
+        await HandleActionFor(schema, identifier, result, SchemaMetadataActionFailed.ReleaseAction, async (handler, subject, value) => await handler.ReleaseStrict(eventStore, eventStoreNamespace, subject, value), strictRelease: true, releaseAddress: (eventStore, eventStoreNamespace));
         return await ReleaseKeys.Complete(() => result);
     }
 
@@ -524,8 +528,9 @@ public class JsonSchemaMetadataManager(
         string path = "",
         bool strictRelease = false,
         Func<JsonSchema, IJsonSchemaMetadataValueHandler, JsonNode, Task<JsonNode?>>? comparisonTransform = null,
-        Func<string, JsonSchema, IJsonSchemaMetadataValueHandler[], string, JsonNode, Task<JsonNode>>? boundaryTransform = null) =>
-        WalkObject(new MetadataWalk { Identifier = identifier, ActionName = actionName, Action = action, StrictRelease = strictRelease, ComparisonTransform = comparisonTransform, BoundaryTransform = boundaryTransform }, schema, json, path);
+        Func<string, JsonSchema, IJsonSchemaMetadataValueHandler[], string, JsonNode, Task<JsonNode>>? boundaryTransform = null,
+        (EventStoreName Store, EventStoreNamespaceName Namespace)? releaseAddress = null) =>
+        WalkObject(new MetadataWalk { Identifier = identifier, ActionName = actionName, Action = action, StrictRelease = strictRelease, ComparisonTransform = comparisonTransform, BoundaryTransform = boundaryTransform, ReleaseAddress = releaseAddress }, schema, json, path);
 
     async Task WalkObject(MetadataWalk walk, JsonSchema schema, JsonObject json, string path, bool cacheable = true)
     {
@@ -722,6 +727,11 @@ public class JsonSchemaMetadataManager(
     JsonNode? DegradeOrThrow(MetadataWalk walk, string path, JsonSchema schema, Exception exception)
     {
         var failure = new SchemaMetadataActionFailed(walk.ActionName, path, walk.Identifier, exception);
+        var unrecoverable = UnrecoverableProtectedValueReporter.Find(exception);
+        if (unrecoverable is not null && walk.ReleaseAddress is { } address)
+        {
+            _unrecoverableValues.Report(new(address.Store, address.Namespace, walk.Identifier, path, walk.ActionName), unrecoverable);
+        }
 
         // Applying has to fail loudly — storing a value that was never protected is never
         // acceptable. Releasing must not: a single unreadable property is no reason to fail an
@@ -733,7 +743,7 @@ public class JsonSchemaMetadataManager(
             throw failure;
         }
 
-        logger.FailedToReleaseProperty(path, walk.Identifier, failure);
+        if (unrecoverable is null) logger.FailedToReleaseProperty(path, walk.Identifier, failure);
         return RestoreReleasedContainerShape(JsonValue.Create(string.Empty), schema);
     }
 
@@ -746,6 +756,8 @@ public class JsonSchemaMetadataManager(
         public required Func<IJsonSchemaMetadataValueHandler, string, JsonNode, Task<JsonNode>> Action { get; init; }
 
         public bool StrictRelease { get; init; }
+
+        public (EventStoreName Store, EventStoreNamespaceName Namespace)? ReleaseAddress { get; init; }
 
         public Func<JsonSchema, IJsonSchemaMetadataValueHandler, JsonNode, Task<JsonNode?>>? ComparisonTransform { get; init; }
 
