@@ -154,6 +154,21 @@ enum FederationPolicyStatus {
    Suspended = 1;
    Revoked = 2;
 }
+message FederationSubjectLinkResponse {
+   string Subject = 1;
+   bool Connected = 2;
+   SerializableDateTimeOffset LastActivity = 3;
+   SerializableDateTimeOffset OutboundLastPull = 4;
+   uint64 OutboundEvents = 5;
+   uint64 OutboundBytes = 6;
+   uint64 OutboundThrottled = 7;
+   string InboundState = 8;
+   SerializableDateTimeOffset InboundLastReceived = 9;
+   uint64 InboundEvents = 10;
+   uint64 InboundBytes = 11;
+   uint64 InboundLag = 12;
+   string LastError = 13;
+}
 message PullRequest {
    string EventStore = 1;
    string Namespace = 2;
@@ -216,6 +231,14 @@ message QueryResult_IEnumerable_FederationPolicyResponse {
    repeated string ExceptionMessages = 4;
    string ExceptionStackTrace = 5;
    repeated FederationPolicyResponse Data = 6;
+}
+message QueryResult_IEnumerable_FederationSubjectLinkResponse {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2;
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   repeated FederationSubjectLinkResponse Data = 6;
 }
 message RedeemFederationEnrollmentRequest {
    string Code = 1;
@@ -297,6 +320,7 @@ service Federation {
    rpc AllGrants (.google.protobuf.Empty) returns (QueryResult_IEnumerable_FederationGrantInformationResponse);
    rpc AllIssuedCertificates (.google.protobuf.Empty) returns (QueryResult_IEnumerable_FederationIssuedCertificateResponse);
    rpc AllPolicies (.google.protobuf.Empty) returns (QueryResult_IEnumerable_FederationPolicyResponse);
+   rpc AllSubjectLinks (.google.protobuf.Empty) returns (QueryResult_IEnumerable_FederationSubjectLinkResponse);
    rpc BindFederationPeer (BindFederationPeerRequest) returns (CommandResult);
    rpc CreateFederationEnrollment (CreateFederationEnrollmentRequest) returns (CommandResult_CreateFederationEnrollmentResponse);
    rpc CurrentEnrollmentStatus (.google.protobuf.Empty) returns (QueryResult_FederationEnrollmentStatusResponse);

@@ -30,6 +30,40 @@ public interface IFederationStatus
     FederationLinkStatus GetLink(string linkId);
 
     /// <summary>
+    /// Record events a dialer served to this kernel on the inbound direction of a hosted link.
+    /// </summary>
+    /// <param name="linkId">The link id.</param>
+    /// <param name="events">The number of events appended.</param>
+    /// <param name="bytes">The number of content bytes appended.</param>
+    void RecordInbound(string linkId, int events, long bytes);
+
+    /// <summary>
+    /// Get the inbound state of a hosted link.
+    /// </summary>
+    /// <param name="linkId">The link id.</param>
+    /// <returns>The state, with zeros when nothing has been recorded.</returns>
+    FederationInboundStatus GetInbound(string linkId);
+
+    /// <summary>
+    /// Record that a dialer session of a subject was opened on this silo.
+    /// </summary>
+    /// <param name="subject">The subject.</param>
+    void RecordSessionOpened(string subject);
+
+    /// <summary>
+    /// Record that a dialer session of a subject ended on this silo.
+    /// </summary>
+    /// <param name="subject">The subject.</param>
+    void RecordSessionClosed(string subject);
+
+    /// <summary>
+    /// Get whether a dialer session of a subject is open on this silo.
+    /// </summary>
+    /// <param name="subject">The subject.</param>
+    /// <returns>True when a session is open, otherwise false.</returns>
+    bool HasSession(string subject);
+
+    /// <summary>
     /// Record the consumer-side state of a binding.
     /// </summary>
     /// <param name="bindingId">The binding id.</param>
