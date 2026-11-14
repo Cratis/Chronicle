@@ -66,7 +66,7 @@ internal sealed class GraphViewReader(INamingPolicy namingPolicy)
             }
         }
 
-        foreach (var recursive in Recursive(views))
+        foreach (var recursive in Recursive(views).ToArray())
         {
             failures[recursive] = new RecursiveView(recursive);
             views.Remove(recursive);
