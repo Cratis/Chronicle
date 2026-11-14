@@ -15,6 +15,8 @@ public class a_decision_point : Specification
     protected ClaimsPrincipal _principal;
     protected RecordingLogger _logger;
     protected bool _authenticationEnabled;
+    protected string[] _enrollingApplications = [];
+    protected bool _internalAuthority = true;
     protected AuthorizationDecision _decision;
 
     public static TheoryData<string> EnrolledCapabilities() => new()
@@ -26,18 +28,27 @@ public class a_decision_point : Specification
     };
 
     protected AuthorizationDecisions CreateDecisions() => new(
-        Options.Create(new ChronicleOptions { Authentication = new Authentication { Enabled = _authenticationEnabled } }),
+        Options.Create(new ChronicleOptions
+        {
+            Authentication = new Authentication { Enabled = _authenticationEnabled, Authority = _internalAuthority ? null : "https://idp.example" },
+            Federation = new Configuration.Federation { Enrollment = new FederationEnrollmentOptions { Applications = _enrollingApplications } }
+        }),
         _logger,
         httpContextAccessor: Security.given.caller_services.For(_administrators));
 
     protected Task<AuthorizationDecision> Decide(ClaimsPrincipal? principal, Capability capability, AuthorizationScope scope) =>
         CreateDecisions().Decide(principal, capability, scope);
 
-    protected void ShouldHaveDecided(AuthorizationOutcome outcome, AuthorizationReason reason)
+    protected static void ShouldHaveDecided(AuthorizationDecision decision, AuthorizationOutcome outcome, AuthorizationReason reason)
     {
-        _decision.Outcome.ShouldEqual(outcome);
-        _decision.Reason.ShouldEqual(reason);
+        decision.Outcome.ShouldEqual(outcome);
+        decision.Reason.ShouldEqual(reason);
     }
+
+    protected void ShouldHaveDecided(AuthorizationOutcome outcome, AuthorizationReason reason) => ShouldHaveDecided(_decision, outcome, reason);
+
+    protected static ClaimsPrincipal ApplicationToken(string clientId) => new(new ClaimsIdentity(
+        [new Claim("sub", Guid.NewGuid().ToString()), new Claim("name", clientId)], "Bearer"));
 
     protected void LookupShouldNotHaveBeenCalled() => _administrators.DidNotReceiveWithAnyArgs().IsAuthorized(default!);
 

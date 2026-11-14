@@ -185,7 +185,23 @@ For automated deployments, put the code in a file and set `Federation:Enrollment
 
 To see where things stand, use `client.Federation.GetEnrollments()` and `GetIssuedCertificates()` on the authority, and `GetStatus()` on an enrolled kernel. To cut a customer off, call `client.Federation.Revoke(enrollmentId)`. It revokes the enrollment and every certificate issued from it, and takes effect at once. Creating, revoking and listing enrollments and certificates needs administrator rights.
 
-Redeeming a code and reading the enrollment status of a kernel are decided by their own capability, `chronicle.federation.enroll` (a kernel-scope capability, see [decision 0024](https://github.com/Cratis/Chronicle/blob/main/decisions/0024-kernel-authorization-decision-point.md)), which the administrator role includes. The kernel has no way yet to grant a kernel-scope capability to anything but an administrator: store grants are scoped to a store and exclude the System store, and administrators are users, not applications. So an application's own client credential cannot redeem a code today. Redeem with an administrator, or drive it from configuration with `Federation:Enrollment:CodePath`.
+Redeeming a code and reading the enrollment status of a kernel are decided by their own capability, `chronicle.federation.enroll` (a kernel-scope capability, see [decision 0024](https://github.com/Cratis/Chronicle/blob/main/decisions/0024-kernel-authorization-decision-point.md)), which the administrator role includes. Store grants are scoped to a store and exclude the System store, and administrators are users, not applications, so by default only an administrator can redeem a code, or you drive it from configuration with `Federation:Enrollment:CodePath`.
+
+To let a product redeem a code with its own client credential, list its client id in `Federation:Enrollment:Applications`:
+
+```json
+{
+  "Chronicle": {
+    "Federation": {
+      "Enrollment": {
+        "Applications": [ "billing-app" ]
+      }
+    }
+  }
+}
+```
+
+An application on the list is granted this one capability and nothing else. It can redeem a code and read the enrollment status, but it cannot create or revoke enrollments, list issued certificates, or do anything else an administrator can. The list is the only way to grant it: nothing else can make an application hold the capability, and the default (an empty list) changes nothing. The check reads the validated token and this configuration only, so it is the same over gRPC, HTTP and in-process calls, and a change to the list takes effect when the kernel is restarted.
 
 ### Renewal
 
