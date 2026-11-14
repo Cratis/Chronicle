@@ -1,0 +1,175 @@
+diff --git a/Source/Kernel/Core.Specs/Services/Observation/for_Observers/when_waiting_for_completion/and_a_subscription_changes_to_include_the_append.cs b/Source/Kernel/Core.Specs/Services/Observation/for_Observers/when_waiting_for_completion/and_a_subscription_changes_to_include_the_append.cs
+index b262e5565d..8f8307ba5b 100644
+--- a/Source/Kernel/Core.Specs/Services/Observation/for_Observers/when_waiting_for_completion/and_a_subscription_changes_to_include_the_append.cs
++++ b/Source/Kernel/Core.Specs/Services/Observation/for_Observers/when_waiting_for_completion/and_a_subscription_changes_to_include_the_append.cs
+@@ -1,6 +1,7 @@
+ // Copyright (c) Cratis. All rights reserved.
+ // Licensed under the MIT license. See LICENSE file in the project root for full license information.
+ 
++using System.Diagnostics;
+ using Cratis.Chronicle.Concepts.Events;
+ using Cratis.Chronicle.Concepts.Observation;
+ using Cratis.Chronicle.Contracts.Observation;
+@@ -9,13 +10,14 @@
+ 
+ namespace Cratis.Chronicle.Services.Observation.for_Observers.when_waiting_for_completion;
+ 
+-public class and_a_subscription_changes_to_include_the_append : given.an_observer_with_filtered_event
++public class and_a_subscription_changes_to_include_the_append(ITestOutputHelper output) : given.an_observer_with_filtered_event
+ {
+     WaitForObserverCompletionResponse _result;
+     int _subscriptionReads;
+ 
+     void Establish()
+     {
++        ((Observers)_observers).CompletionTiming = new(128);
+         var key = new ObserverKey("filtered-observer", "event-store", "event-store-namespace", Concepts.EventSequences.EventSequenceId.Log);
+         var eventTypes = new[] { new EventType("a-recorded", 1) };
+         var excluded = new ObserverSubscription("filtered-observer", key, eventTypes, typeof(IObserverSubscriber), SiloAddress.Zero, Filters: new Concepts.Observation.ObserverFilters(["other"]));
+@@ -40,16 +42,41 @@ void Establish()
+         _grainFactory.GetGrain<IObserver>((string)new ObserverKey("other-observer", "event-store", "event-store-namespace", Concepts.EventSequences.EventSequenceId.Log)).Returns(otherObserver);
+     }
+ 
+-    async Task Because() => _result = await _observers.WaitForCompletion(new WaitForObserverCompletionRequest
++    async Task Because()
+     {
+-        EventStore = "event-store",
+-        Namespace = "event-store-namespace",
+-        EventSequenceId = Concepts.EventSequences.EventSequenceId.Log,
+-        FirstEventSequenceNumber = 53UL,
+-        TailEventSequenceNumber = 53UL,
+-        EventTypeTails = [new AppendedEventTypeTail { EventType = new Contracts.Events.EventType { Id = "a-recorded", Generation = 1 }, SequenceNumber = 53UL }],
+-        TimeoutMilliseconds = 120
+-    });
++        try
++        {
++            _result = await _observers.WaitForCompletion(new WaitForObserverCompletionRequest
++            {
++                EventStore = "event-store",
++                Namespace = "event-store-namespace",
++                EventSequenceId = Concepts.EventSequences.EventSequenceId.Log,
++                FirstEventSequenceNumber = 53UL,
++                TailEventSequenceNumber = 53UL,
++                EventTypeTails = [new AppendedEventTypeTail { EventType = new Contracts.Events.EventType { Id = "a-recorded", Generation = 1 }, SequenceNumber = 53UL }],
++                TimeoutMilliseconds = 120
++            });
++        }
++        finally
++        {
++            var observers = (Observers)_observers;
++            var rows = observers.CompletionTiming!;
++            var outstandingMask = _result is null ? -1 :
++                (_result.OutstandingObservers.Contains("filtered-observer") ? 1 : 0) |
++                (_result.OutstandingObservers.Contains("other-observer") ? 2 : 0);
++            output.WriteLine($"origin={observers.CompletionTimingOrigin};frequency={Stopwatch.Frequency};rows={rows.Count};timedOut={_result?.TimedOut};outstandingMask={outstandingMask}");
++            foreach (var row in rows)
++            {
++                var filter = row.Subscription is null ? "none" :
++                    !row.Subscription.IsSubscribed ? "unsubscribed" :
++                    row.Subscription.Filters is not { } filters ? "none" :
++                    filters.Tags.SequenceEqual(["other"]) ? "other" :
++                    filters.Tags.SequenceEqual(["priority"]) ? "priority" :
++                    !filters.Tags.Any() ? "none" : "unexpected";
++                output.WriteLine($"stage={row.Stage};ticks={row.Ticks};poll={row.Poll};slot={row.ObserverSlot};ordinal={row.Ordinal};filter={filter};scans={row.Scans};outstandingMask={row.OutstandingMask}");
++            }
++        }
++    }
+ 
+     [Fact] void should_wait_for_the_newly_matching_observer() => _result.OutstandingObservers.ShouldContain("filtered-observer");
+     [Fact] void should_read_again_after_the_filter_changes() => _eventSequence.Received(2).GetRange(53UL, 53UL, null, Arg.Any<IEnumerable<EventType>>(), Arg.Any<IEnumerable<Tag>>(), null, null, Arg.Any<CancellationToken>());
+diff --git a/Source/Kernel/Grpc/Observation/Observers.cs b/Source/Kernel/Grpc/Observation/Observers.cs
+index 258cc98f95..13f8c0ba61 100644
+--- a/Source/Kernel/Grpc/Observation/Observers.cs
++++ b/Source/Kernel/Grpc/Observation/Observers.cs
+@@ -28,6 +28,20 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
+     const int ObserverCompletionPollingDelayMs = 50;
+     const ulong MaximumObserverCompletionRange = 10_000;
+ 
++    int _completionTimingScans;
++
++    /// <summary>
++    /// Gets or sets the opt-in buffered completion timing observations.
++    /// </summary>
++    internal List<(string Stage, long Ticks, int Poll, int ObserverSlot, int Ordinal,
++        Cratis.Chronicle.Observation.ObserverSubscription? Subscription,
++        int Scans, int OutstandingMask)>? CompletionTiming { get; set; }
++
++    /// <summary>
++    /// Gets the timestamp used to order diagnostic completion invocations.
++    /// </summary>
++    internal long CompletionTimingOrigin { get; private set; }
++
+     /// <inheritdoc/>
+     public async Task<RetryPartitionResponse> RetryPartition(RetryPartition command, CallContext context = default)
+     {
+@@ -77,6 +91,15 @@ public async Task<WaitForObserverCompletionResponse> WaitForCompletion(WaitForOb
+             .GroupBy(_ => _.EventType.Id, StringComparer.Ordinal)
+             .ToDictionary(_ => _.Key, _ => _.Max(tail => tail.SequenceNumber), StringComparer.Ordinal);
+ 
++        var poll = 0;
++        var filteredReads = 0;
++        var otherReads = 0;
++        _completionTimingScans = 0;
++        if (CompletionTiming is not null)
++        {
++            CompletionTimingOrigin = Stopwatch.GetTimestamp();
++        }
++
+         var stopwatch = Stopwatch.StartNew();
+ 
+         // Recheck the subscription on every poll, but retain a matching event for unchanged filters
+@@ -84,6 +107,8 @@ public async Task<WaitForObserverCompletionResponse> WaitForCompletion(WaitForOb
+         var lastMatchingEvents = new Dictionary<string, CachedMatchingEvent>();
+         while (true)
+         {
++            poll++;
++            CompletionTiming?.Add(("poll-entry", stopwatch.ElapsedTicks, poll, 0, 0, null, _completionTimingScans, 0));
+             context.CancellationToken.ThrowIfCancellationRequested();
+ 
+             var observers = (await GetObservers(
+@@ -122,6 +147,12 @@ public async Task<WaitForObserverCompletionResponse> WaitForCompletion(WaitForOb
+             {
+                 var observer = undecidedObservers[index];
+                 var subscription = subscriptions[index];
++                if (CompletionTiming is not null)
++                {
++                    var slot = observer.Id switch { "filtered-observer" => 1, "other-observer" => 2, _ => 0 };
++                    var ordinal = slot switch { 1 => ++filteredReads, 2 => ++otherReads, _ => 0 };
++                    CompletionTiming.Add(("subscription", stopwatch.ElapsedTicks, poll, slot, ordinal, subscription, _completionTimingScans, 0));
++                }
+ 
+                 // Internal kernel reactors may intentionally have no subscription in this namespace.
+                 // Kernel-owned projections and external observers still need to handle the append,
+@@ -201,8 +232,20 @@ public async Task<WaitForObserverCompletionResponse> WaitForCompletion(WaitForOb
+                 };
+             }
+ 
++            if (CompletionTiming is not null)
++            {
++                var mask = (outstanding.Contains("filtered-observer") ? 1 : 0) | (outstanding.Contains("other-observer") ? 2 : 0);
++                CompletionTiming.Add(("deadline-entry", stopwatch.ElapsedTicks, poll, 0, 0, null, _completionTimingScans, mask));
++            }
++
+             if (request.TimeoutMilliseconds > 0 && stopwatch.ElapsedMilliseconds >= request.TimeoutMilliseconds)
+             {
++                if (CompletionTiming is not null)
++                {
++                    var mask = (outstanding.Contains("filtered-observer") ? 1 : 0) | (outstanding.Contains("other-observer") ? 2 : 0);
++                    CompletionTiming.Add(("timeout", stopwatch.ElapsedTicks, poll, 0, 0, null, _completionTimingScans, mask));
++                }
++
+                 return new WaitForObserverCompletionResponse
+                 {
+                     TimedOut = true,
+@@ -432,6 +475,11 @@ static bool HasBoundedAppendRange(WaitForObserverCompletionRequest request, Even
+         var eventSequence = storage.GetEventStore(request.EventStore)
+             .GetNamespace(request.Namespace)
+             .GetEventSequence(request.EventSequenceId);
++        if (CompletionTiming is not null)
++        {
++            _completionTimingScans++;
++        }
++
+         using var cursor = await eventSequence.GetRange(
+             start,
+             target,
