@@ -1078,6 +1078,22 @@ json Cratis.Chronicle.Events.Constraints.ReindexConstraintsStepState
   status: Cratis.Choreography.Jobs.JobStepStatus
   statusChanges: System.Collections.Generic.IList<Cratis.Choreography.Jobs.JobStepStatusChanged>
   type: Cratis.Choreography.Jobs.JobStepType
+json Cratis.Chronicle.Federation.FederationEnrollmentCreatedResult
+  code: string
+  expiresAt: System.DateTimeOffset
+  id: string
+json Cratis.Chronicle.Federation.FederationIssuance
+  authority: string
+  certificate: string
+  endpoint: string
+  identity: string
+  notAfter: System.DateTimeOffset
+  outcome: Cratis.Chronicle.Federation.FederationIssuanceOutcome
+  serial: string
+enum Cratis.Chronicle.Federation.FederationIssuanceOutcome : int
+  InvalidRequest = 2
+  Issued = 0
+  Rejected = 1
 json Cratis.Chronicle.Imports.ImportChunkAppendResult
   errors: System.Collections.Generic.IEnumerable<string>
   isSettled: bool
