@@ -21,7 +21,8 @@ public class a_decision_point : Specification
     {
         WellKnownCapabilities.AdministerSecurity.Value,
         WellKnownCapabilities.OperateEventStore.Value,
-        WellKnownCapabilities.AccessSystemStore.Value
+        WellKnownCapabilities.AccessSystemStore.Value,
+        WellKnownCapabilities.EnrollFederation.Value
     };
 
     protected AuthorizationDecisions CreateDecisions() => new(

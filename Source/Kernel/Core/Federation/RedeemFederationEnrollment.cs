@@ -16,7 +16,7 @@ namespace Cratis.Chronicle.Federation;
 /// </remarks>
 /// <param name="Code">The enrollment code handed over by the operator.</param>
 [Command]
-[Cratis.Arc.Authorization.Authorize(Policy = WellKnownAuthorizationPolicies.AdministratorOperations)]
+[Cratis.Arc.Authorization.Authorize(Policy = WellKnownAuthorizationPolicies.FederationEnrollment)]
 [BelongsTo(WellKnownServices.Federation)]
 public record RedeemFederationEnrollment(string Code)
 {

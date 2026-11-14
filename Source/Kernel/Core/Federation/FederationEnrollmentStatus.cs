@@ -21,7 +21,7 @@ namespace Cratis.Chronicle.Federation;
 /// <param name="Expired">Whether the certificate has expired, so the kernel is locked out until it is enrolled again.</param>
 [ReadModel]
 [BelongsTo(WellKnownServices.Federation)]
-[Authorize(Policy = WellKnownAuthorizationPolicies.Administrator)]
+[Authorize(Policy = WellKnownAuthorizationPolicies.FederationEnrollment)]
 public record FederationEnrollmentStatus(
     bool Enrolled,
     string Identity,

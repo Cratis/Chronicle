@@ -87,7 +87,7 @@ internal sealed class Federation(
             exception => logger.QueryFailed(exception, "Federation", "AllEnrollments"));
 
     /// <inheritdoc/>
-    [global::Microsoft.AspNetCore.Authorization.Authorize(Policy = "Chronicle.Administrator")]
+    [global::Microsoft.AspNetCore.Authorization.Authorize(Policy = "Chronicle.Federation.Enroll")]
     public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<global::Cratis.Chronicle.Contracts.Federation.FederationEnrollmentStatusResponse>> CurrentEnrollmentStatus(global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<global::Cratis.Chronicle.Contracts.Federation.FederationEnrollmentStatusResponse>(
             async () =>
