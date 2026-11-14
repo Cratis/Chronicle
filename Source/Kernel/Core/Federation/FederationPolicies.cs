@@ -87,6 +87,19 @@ public class FederationPolicies(IFederationCertificateRegistry registry, ILogger
         logger.PolicyRevoked(subject);
     }
 
+    /// <inheritdoc/>
+    public async Task RevokeDirection(string subject, FederationDirection direction, string actedBy)
+    {
+        var existing = await Existing(subject, allowRevoked: false);
+        if (existing.EntryFor(direction) is null)
+        {
+            return;
+        }
+
+        await registry.Append(subject, new FederationPolicyDirectionRevoked(direction, actedBy));
+        logger.PolicyDirectionRevoked(subject, direction);
+    }
+
     async Task<FederationPolicyState> Existing(string subject, bool allowRevoked)
     {
         subject ??= string.Empty;

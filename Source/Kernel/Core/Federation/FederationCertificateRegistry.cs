@@ -38,7 +38,8 @@ public class FederationCertificateRegistry(
         typeof(FederationPolicySet).GetEventType(),
         typeof(FederationPolicySuspended).GetEventType(),
         typeof(FederationPolicyResumed).GetEventType(),
-        typeof(FederationPolicyRevoked).GetEventType()
+        typeof(FederationPolicyRevoked).GetEventType(),
+        typeof(FederationPolicyDirectionRevoked).GetEventType()
     ];
 
     readonly SemaphoreSlim _lock = new(1, 1);

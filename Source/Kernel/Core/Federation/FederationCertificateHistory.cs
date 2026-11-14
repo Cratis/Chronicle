@@ -117,6 +117,14 @@ internal sealed class FederationCertificateHistory
                 _policies[id] = toResume with { Status = FederationPolicyStatus.Active, ChangedBy = resumed.ResumedBy };
                 break;
 
+            case FederationPolicyDirectionRevoked directionRevoked when _policies.TryGetValue(id, out var toRevokeDirection) && toRevokeDirection.Status != FederationPolicyStatus.Revoked:
+                _policies[id] = toRevokeDirection with
+                {
+                    Entries = [.. toRevokeDirection.Entries.Where(_ => _.Direction != directionRevoked.Direction)],
+                    ChangedBy = directionRevoked.RevokedBy
+                };
+                break;
+
             case FederationPolicyRevoked revokedPolicy when _policies.TryGetValue(id, out var toRevoke):
                 _policies[id] = toRevoke with { Status = FederationPolicyStatus.Revoked, ChangedBy = revokedPolicy.RevokedBy };
                 break;

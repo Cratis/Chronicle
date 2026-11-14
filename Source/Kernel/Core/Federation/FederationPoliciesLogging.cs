@@ -21,4 +21,7 @@ internal static partial class FederationPoliciesLogging
 
     [LoggerMessage(LogLevel.Information, "Revoked the federation policy of subject '{Subject}'")]
     internal static partial void PolicyRevoked(this ILogger<FederationPolicies> logger, string subject);
+
+    [LoggerMessage(LogLevel.Information, "Revoked the {Direction} direction of the federation policy of subject '{Subject}'")]
+    internal static partial void PolicyDirectionRevoked(this ILogger<FederationPolicies> logger, string subject, FederationDirection direction);
 }

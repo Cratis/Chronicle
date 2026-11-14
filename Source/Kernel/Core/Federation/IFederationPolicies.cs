@@ -52,4 +52,15 @@ public interface IFederationPolicies
     /// <returns>Awaitable task.</returns>
     /// <exception cref="InvalidFederationPolicy">Thrown when the subject has no policy.</exception>
     Task Revoke(string subject, string actedBy);
+
+    /// <summary>
+    /// Revoke one direction of the policy of a subject, so links in that direction are refused at once while the other direction keeps running.
+    /// Revoking a direction the policy does not allow changes nothing. Setting the direction again allows it again.
+    /// </summary>
+    /// <param name="subject">The opaque subject.</param>
+    /// <param name="direction">The direction to revoke.</param>
+    /// <param name="actedBy">The identity that acts.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <exception cref="InvalidFederationPolicy">Thrown when the subject has no policy or it is revoked.</exception>
+    Task RevokeDirection(string subject, FederationDirection direction, string actedBy);
 }

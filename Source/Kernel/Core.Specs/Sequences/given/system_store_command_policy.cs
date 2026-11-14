@@ -112,6 +112,7 @@ public static class system_store_command_policy
         ["Cratis.Chronicle.Federation.SuspendFederationPolicy"] = "hosted federation policy through the system event log; administrator-only policy, the events are the audit trail",
         ["Cratis.Chronicle.Federation.ResumeFederationPolicy"] = "hosted federation policy through the system event log; administrator-only policy, the events are the audit trail",
         ["Cratis.Chronicle.Federation.RevokeFederationPolicy"] = "hosted federation policy through the system event log; administrator-only policy, the events are the audit trail",
+        ["Cratis.Chronicle.Federation.RevokeFederationPolicyDirection"] = "hosted federation policy through the system event log; administrator-only policy, the events are the audit trail",
         ["Cratis.Chronicle.Security.AddApplication"] = SecurityReason,
         ["Cratis.Chronicle.Security.AddUser"] = SecurityReason,
         ["Cratis.Chronicle.Security.GrantAdministrator"] = "administrator management through the guarded authoritative roster; Tier A policy",
