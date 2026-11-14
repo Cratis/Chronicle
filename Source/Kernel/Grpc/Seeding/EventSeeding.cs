@@ -15,6 +15,7 @@ namespace Cratis.Chronicle.Services.Seeding;
 internal sealed class EventSeeding(
     global::Cratis.Arc.Commands.ICommandPipeline commandPipeline,
     global::Orleans.IGrainFactory grainFactory,
+    global::Cratis.Chronicle.Namespaces.INamespaceCasing namespaceCasing,
     global::Microsoft.Extensions.Logging.ILogger<global::Cratis.Chronicle.Services.Seeding.EventSeeding> logger) : global::Cratis.Chronicle.Contracts.Seeding.IEventSeeding
 {
     /// <inheritdoc/>
@@ -58,6 +59,10 @@ internal sealed class EventSeeding(
             new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: request.Namespace),
             async () =>
             {
+                if (!string.IsNullOrEmpty(request.Namespace))
+                {
+                    request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
+                }
                 var result = await global::Cratis.Chronicle.Seeding.SeedData.GetNamespaceSeedData((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, grainFactory);
                 return ToSeedDataResponse(result);
             },

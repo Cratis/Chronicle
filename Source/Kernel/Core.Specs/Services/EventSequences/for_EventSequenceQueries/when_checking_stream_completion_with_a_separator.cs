@@ -15,7 +15,7 @@ public class when_checking_stream_completion_with_a_separator : for_QueryExecuto
 
     void Establish() => _grainFactory = Substitute.For<IGrainFactory>();
 
-    async Task Because() => _result = await new EventSequenceQueries(_grainFactory, NullLogger<EventSequenceQueries>.Instance)
+    async Task Because() => _result = await new EventSequenceQueries(_grainFactory, NamespaceCasingContext.Create(), NullLogger<EventSequenceQueries>.Instance)
         .IsStreamCompleted(
             new IsStreamCompletedRequest { EventStore = "bench", Namespace = "Default", EventSequenceId = "event-log#System#Default", EventStreamType = "t", EventStreamId = "s" },
             CallFor(new Probe(), CallerNamed(Administrator)));

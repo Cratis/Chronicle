@@ -12,6 +12,7 @@ public class when_forgetting_a_namespace : given.a_namespaces_grain
 
     async Task Because() => await _namespaces.Forget(_namespace);
 
+    [Fact] void should_invalidate_the_cached_casing() => _namespaceCasing.Received(1).Forget(_eventStore, _namespace);
     [Fact] void should_no_longer_list_the_namespace() => _state.Namespaces.ShouldBeEmpty();
     [Fact] async Task should_record_that_the_namespace_was_removed() =>
         await _systemSequence.Received(1).Append(Arg.Any<EventSourceId>(), Arg.Is<object>(_ => _ is NamespaceRemoved));
