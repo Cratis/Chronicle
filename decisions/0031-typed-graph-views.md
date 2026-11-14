@@ -5,9 +5,9 @@ status: accepted
 stage: implemented
 class: contract
 reversibility: reversible
-proposed: 2026-11-14
-decided: 2026-11-14
-decider: session owner (cross-repository graph views request)
+proposed: 2026-11-13
+decided: 2026-11-13
+decider: einari
 applies-to:
   - Source/Clients/DotNET/Graphs/**
   - Source/Clients/DotNET/Projections/Graphs/GraphProjections.cs
