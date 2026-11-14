@@ -43,30 +43,12 @@ internal sealed class ReadModelSeedKeyValues(Type modelType, PropertyPath proper
 
     static bool IsNumber(Type type) => Type.GetTypeCode(type) is TypeCode.Byte or TypeCode.SByte or TypeCode.Int16 or TypeCode.UInt16 or TypeCode.Int32 or TypeCode.UInt32 or TypeCode.Int64 or TypeCode.UInt64 or TypeCode.Single or TypeCode.Double or TypeCode.Decimal;
 
-    object ConvertScalar(object input)
+    static bool IsLosslessNumber(object input, object converted) => converted switch
     {
-        try
-        {
-            var converted = DecimalValues.ConvertTo(_target!, input);
-            if (!IsValidResult(input, converted)) throw Invalid(input);
-            return converted;
-        }
-        catch (Exception exception) when (IsConversionFailure(exception))
-        {
-            throw Invalid(input);
-        }
-    }
-
-    bool IsValidResult(object input, object converted) =>
-        converted.GetType() == _target && IsLossless(input, converted) && IsAllowedEnumValue(converted);
-
-    bool IsLossless(object input, object converted) =>
-        !IsNumber(_target!) || (IsFinite(input) && IsFinite(converted) && (converted switch
-        {
-            float or double => IsLosslessFloatingPoint(input, converted),
-            decimal => DecimalValues.ToDecimal(input) == DecimalValues.ToDecimal(converted),
-            _ => IsLosslessInteger(input, converted)
-        }));
+        float or double => IsLosslessFloatingPoint(input, converted),
+        decimal => DecimalValues.ToDecimal(input) == DecimalValues.ToDecimal(converted),
+        _ => IsLosslessInteger(input, converted)
+    };
 
     static bool IsFinite(object value) => value switch
     {
@@ -99,6 +81,26 @@ internal sealed class ReadModelSeedKeyValues(Type modelType, PropertyPath proper
     }
 
     static BigInteger ToInteger(object value) => new(DecimalValues.ToDecimal(value));
+
+    object ConvertScalar(object input)
+    {
+        try
+        {
+            var converted = DecimalValues.ConvertTo(_target!, input);
+            if (!IsValidResult(input, converted)) throw Invalid(input);
+            return converted;
+        }
+        catch (Exception exception) when (IsConversionFailure(exception))
+        {
+            throw Invalid(input);
+        }
+    }
+
+    bool IsValidResult(object input, object converted) =>
+        converted.GetType() == _target && IsLossless(input, converted) && IsAllowedEnumValue(converted);
+
+    bool IsLossless(object input, object converted) =>
+        !IsNumber(_target!) || (IsFinite(input) && IsFinite(converted) && IsLosslessNumber(input, converted));
 
     object Unwrap(object input)
     {
