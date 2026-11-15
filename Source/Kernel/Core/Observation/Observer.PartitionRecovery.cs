@@ -148,7 +148,7 @@ public partial class Observer
             }
 
             var attemptCount = partition.AttemptsInCurrentBudget;
-            if (config.MaxRetryAttempts > 0 && attemptCount > config.MaxRetryAttempts)
+            if (HasReachedAutomaticRetryLimit(attemptCount, config.MaxRetryAttempts))
             {
                 logger.SkippingRecoveryMaxAttemptsExceeded(partition.Partition, attemptCount, config.MaxRetryAttempts);
                 continue;
@@ -187,6 +187,9 @@ public partial class Observer
             SchedulePartitionRecoveryTurn(failedToStart ? _recoveryStartFailureDelay : TimeSpan.Zero);
         }
     }
+
+    bool HasReachedAutomaticRetryLimit(int attemptCount, int maximumAttempts) =>
+        maximumAttempts > 0 && (IsWebhookSubscription ? attemptCount > maximumAttempts : attemptCount >= maximumAttempts);
 
     bool CanRecoverFailedPartitions()
     {

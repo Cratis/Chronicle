@@ -3,6 +3,7 @@
 
 using Cratis.Arc.Commands.ModelBound;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Grpc;
 using Cratis.Chronicle.Storage;
@@ -19,13 +20,13 @@ namespace Cratis.Chronicle.Observation;
 /// <remarks>
 /// <para>
 /// The operator's way of getting past partitions that failed together - a burst of timeouts while the observer was
-/// busy, say - once the cause is gone. Each partition is retried by a job of its own, started a bounded batch at a
-/// time, so retrying hundreds of them never asks the observer for more than it can answer. A job that concluded with
+/// busy, say - once the cause is gone. Each partition is retried by a job of its own, requested in a separate grain
+/// call so the observer can serve other requests between retries. A job that concluded with
 /// failed partitions is never reopened: a concluded reducer replay abandons its read model on any failure, so a retry
 /// that reopened it would leave a half-built one in place.
 /// </para>
 /// <para>
-/// Partitions the observer has quarantined are not retried - clear those first.
+/// Exhausting the automatic attempt limit does not prevent an operator retry. Other quarantine policies still apply.
 /// </para>
 /// </remarks>
 [Command]
@@ -44,8 +45,39 @@ public record RetryFailedPartitions(string EventStore, string Namespace, string 
         var eventSequenceId = await ObserverEventSequenceResolver.Resolve(storage, (EventStoreName)EventStore, (ObserverId)ObserverId, EventSequenceId);
         var key = new ObserverKey((ObserverId)ObserverId, (EventStoreName)EventStore, (EventStoreNamespaceName)Namespace, eventSequenceId);
         var observer = grainFactory.GetGrain<IObserver>(key);
-        var failedPartitions = (await observer.GetFailedPartitionKeys()).Count();
-        await observer.TryRecoverAllFailedPartitions();
-        return new RetryFailedPartitionsResult(failedPartitions);
+        var failedPartitions = (await observer.GetFailedPartitionKeys()).ToArray();
+        var started = await Start(observer, failedPartitions);
+        if (started == 0)
+        {
+            throw new FailedPartitionsRecoveryCouldNotStart(key);
+        }
+
+        return new RetryFailedPartitionsResult(failedPartitions.Length);
+    }
+
+    internal static async Task<int> Start(IObserver observer, IEnumerable<Key> partitions)
+    {
+        var started = 0;
+        foreach (var partition in partitions)
+        {
+            if (await TryStart(observer, partition))
+            {
+                started++;
+            }
+        }
+
+        return started;
+    }
+
+    static async Task<bool> TryStart(IObserver observer, Key partition)
+    {
+        try
+        {
+            return await observer.TryStartRecoverJobForFailedPartition(partition) == PartitionRecoveryOutcome.Started;
+        }
+        catch (FailedPartitionRecoveryCouldNotStart)
+        {
+            return false;
+        }
     }
 }

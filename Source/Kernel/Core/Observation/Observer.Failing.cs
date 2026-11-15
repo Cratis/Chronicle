@@ -111,7 +111,7 @@ public partial class Observer
     /// <inheritdoc/>
     public async Task<PartitionRecoveryOutcome> TryStartRecoverJobForFailedPartition(Key partition)
     {
-        var (outcome, startFailed) = await TryRecoverFailedPartition(partition);
+        var (outcome, startFailed) = await TryRecoverFailedPartitionForOperator(partition);
         if (startFailed)
         {
             throw new FailedPartitionRecoveryCouldNotStart(partition, _observerKey);
