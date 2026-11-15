@@ -307,6 +307,10 @@ public partial class Observer(
 #pragma warning restore CA1721 // Property namTes should not match get methods
 
     /// <inheritdoc/>
+    public Task<ObserverInformationSnapshot> GetInformation() =>
+        Task.FromResult(new ObserverInformationSnapshot(observerDefinition.State, State, _subscription.IsSubscribed, _runningStateChangedAt));
+
+    /// <inheritdoc/>
     public Task<ObserverSubscription> GetSubscription() => Task.FromResult(_subscription);
 
     /// <inheritdoc/>

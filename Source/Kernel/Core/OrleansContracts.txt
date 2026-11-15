@@ -294,7 +294,7 @@ interface [GrainInterfaceType("Cratis.Chronicle.Observation.EventStoreSubscripti
 interface [GrainInterfaceType("Cratis.Chronicle.Observation.IDrainableObserverSubscriber")] Cratis.Chronicle.Observation.IDrainableObserverSubscriber [Version(0)]
   99F6A550: Drain() -> Task
 
-interface [GrainInterfaceType("Cratis.Chronicle.Observation.IObserver")] Cratis.Chronicle.Observation.IObserver [Version(9)]
+interface [GrainInterfaceType("Cratis.Chronicle.Observation.IObserver")] Cratis.Chronicle.Observation.IObserver [Version(10)]
   FF1D5EC7: CanResumeFailedPartition(Cratis.Chronicle.Concepts.Keys.Key, Cratis.Chronicle.Concepts.Observation.FailedPartitionId?, System.Guid?) -> Task<bool>
   906EECAF: CatchUp() -> Task
   E95279C4: CaughtUp(Cratis.Choreography.Jobs.JobId, Cratis.Chronicle.Concepts.Events.EventSequenceNumber) -> Task
@@ -313,6 +313,7 @@ interface [GrainInterfaceType("Cratis.Chronicle.Observation.IObserver")] Cratis.
   5A1F1523: GetDeliveryFences() -> Task<System.Collections.Generic.IEnumerable<Cratis.Chronicle.Observation.DeliveryFence>>
   8F9CF48F: GetEventTypes() -> Task<System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.EventType>>
   BB66DB3A: GetFailedPartitionKeys() -> Task<System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Keys.Key>>
+  DFAF25E6: GetInformation() -> Task<Cratis.Chronicle.Observation.ObserverInformationSnapshot>
   98A3B662: GetState() -> Task<Cratis.Chronicle.Storage.Observation.ObserverState>
   08DD9D90: GetSubscription() -> Task<Cratis.Chronicle.Observation.ObserverSubscription>
   F2A145F7: Handle(Cratis.Chronicle.Concepts.Keys.Key, System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.AppendedEvent>) -> Task

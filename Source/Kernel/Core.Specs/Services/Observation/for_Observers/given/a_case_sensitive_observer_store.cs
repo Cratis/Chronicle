@@ -53,6 +53,7 @@ public class a_case_sensitive_observer_store : for_QueryExecutor.given.a_routed_
         _observer = Substitute.For<IObserver>();
         _observer.GetDefinition().Returns(_definition);
         _observer.GetState().Returns(_state);
+        _observer.GetInformation().Returns(new ObserverInformationSnapshot(_definition, _state, false, _changedAt));
         _grains.GetGrain<IObserver>(Arg.Any<string>(), Arg.Any<string>()).Returns(_observer);
         _service = CreateService(_casing);
     }

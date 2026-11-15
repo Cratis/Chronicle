@@ -54,6 +54,18 @@ public class LeastConnectionsLoadBalancerStrategy : ILoadBalancerStrategy, IDisp
     }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="LeastConnectionsLoadBalancerStrategy"/> class that reaches the servers over TLS.
+    /// </summary>
+    /// <param name="skipTlsValidation">Whether to skip TLS certificate validation when probing candidate servers.</param>
+    /// <param name="httpClient"><see cref="HttpClient"/> to probe candidate servers with, or <see langword="null"/> for one honoring <paramref name="skipTlsValidation"/>.</param>
+    /// <param name="maxSelectionJitter">Upper bound for the random delay before every probe, or <see langword="null"/> for 250ms; pass <see cref="TimeSpan.Zero"/> to disable it.</param>
+    /// <remarks>Kept so callers compiled against earlier versions still bind.</remarks>
+    public LeastConnectionsLoadBalancerStrategy(bool skipTlsValidation, HttpClient? httpClient, TimeSpan? maxSelectionJitter)
+        : this(skipTlsValidation, httpClient, maxSelectionJitter, disableTls: false, certificateAuthorities: null)
+    {
+    }
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="LeastConnectionsLoadBalancerStrategy"/> class that validates the server certificates against a set of certificate authorities.
     /// </summary>
     /// <param name="skipTlsValidation">Whether to skip TLS certificate validation when probing candidate servers.</param>

@@ -2,12 +2,15 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Nodes;
+using Cratis.Chronicle.ProtectedValues;
+using Cratis.Chronicle.ProtectedValues.for_ReleaseKeys.given;
 using Cratis.Chronicle.Storage.Compliance;
 
 namespace Cratis.Chronicle.Schemas.for_JsonSchemaMetadataManager;
 
 public class when_releasing_many_protected_properties : given.real_pii_protection
 {
+    readonly a_release_clock _clock = new();
     JsonObject _afterErasure;
 
     async Task Establish()
@@ -28,9 +31,16 @@ public class when_releasing_many_protected_properties : given.real_pii_protectio
 
     async Task Because()
     {
-        _result = await _manager.Release("store", "tenant", _schema, "subject", _protected);
+        _result = await ReleaseDocument();
         _keys.GetErasureForRelease("store", "tenant", "subject").Returns(new EncryptionKeyErasure(1, [], false));
-        _afterErasure = await _manager.Release("store", "tenant", _schema, "subject", _protected);
+        _afterErasure = await ReleaseDocument();
+    }
+
+    async Task<JsonObject> ReleaseDocument()
+    {
+        // Each document gets its own scope on a clock that does not move, so a fence lease cannot expire mid-document.
+        using var scope = ReleaseKeys.BeginScope(_clock);
+        return await _manager.Release("store", "tenant", _schema, "subject", _protected);
     }
 
     [Fact] void should_read_one_fence_per_document_not_per_property() => _keys.Received(2).GetErasureForRelease("store", "tenant", "subject");

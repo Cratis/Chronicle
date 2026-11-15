@@ -292,10 +292,7 @@ internal sealed class Observers(
         await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.ObserverId, request.EventSequenceId), StoreAccess.Read);
         request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
         var observer = await grainFactory.GetObserver(request, storage, namespaceCasing);
-        var definition = await observer.GetDefinition();
-        var state = await observer.GetState();
-        var runningStateChangedAt = await storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).Observers.GetRunningStateChangedAt(request.ObserverId);
-        var subscribed = await observer.IsSubscribed();
+        var (definition, state, subscribed, runningStateChangedAt) = await observer.GetInformation();
         return new ObserverInformation
         {
             Id = request.ObserverId,
