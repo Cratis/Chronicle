@@ -1,6 +1,6 @@
 ---
 title: "Webhook receivers: delivery guarantees, idempotency and security"
-description: What a Cratis Chronicle webhook request contains, what delivery guarantees a receiver can rely on, how to key duplicate protection, and how to secure the endpoint.
+description: What a Chronicle webhook request contains, what delivery guarantees a receiver can rely on, how to key duplicate protection, and how to secure the endpoint.
 ---
 
 A webhook receiver is an HTTP endpoint that the Kernel calls, so it suits a consumer that cannot keep a connection open to Chronicle, such as a function or a container that scales to zero. This page is for the person writing that endpoint. It covers what each request carries, what Chronicle promises about delivery, how to make the receiver safe to call again, and which controls protect it. To register a webhook and tune retries, start with [Webhooks](./index.mdx).
