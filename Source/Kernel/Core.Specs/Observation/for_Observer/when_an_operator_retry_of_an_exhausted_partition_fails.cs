@@ -6,7 +6,7 @@ using Cratis.Chronicle.Concepts.Observation;
 
 namespace Cratis.Chronicle.Observation.for_Observer;
 
-public class when_an_operator_retry_of_an_exhausted_partition_fails : given.a_quarantined_partition
+public class when_an_operator_retry_of_an_exhausted_partition_fails : given.an_exhausted_partition
 {
     async Task Because()
     {

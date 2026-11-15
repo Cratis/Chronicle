@@ -8,14 +8,15 @@ using Cratis.Chronicle.Observation.Jobs;
 
 namespace Cratis.Chronicle.Observation.for_Observer;
 
-public class when_an_operator_retry_of_an_exhausted_partition_is_deferred : given.a_quarantined_partition
+public class when_an_operator_retry_of_an_exhausted_partition_is_deferred : given.an_exhausted_partition
 {
     JobState _blocker;
     PartitionRecoveryOutcome _outcome;
 
+    protected override int AttemptsInBudget => MaxRetryAttempts;
+
     void Establish()
     {
-        FailedPartition.AttemptsInCurrentBudget = MaxRetryAttempts;
         _blocker = given.stopped_retry_jobs.NeverPrepared(_observerKey, Partition);
         HasOutstandingJobs(_blocker);
     }

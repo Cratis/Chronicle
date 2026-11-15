@@ -5,10 +5,11 @@ using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Monads;
+using Catch = Cratis.Specifications.Catch;
 
 namespace Cratis.Chronicle.Observation.for_Observer;
 
-public class when_an_operator_retry_of_an_exhausted_partition_cannot_start : given.a_quarantined_partition
+public class when_an_operator_retry_of_an_exhausted_partition_cannot_start : given.an_exhausted_partition
 {
     Exception _error;
 

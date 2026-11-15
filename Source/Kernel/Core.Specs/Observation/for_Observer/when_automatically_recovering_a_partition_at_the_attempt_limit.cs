@@ -5,13 +5,11 @@ using Cratis.Chronicle.Observation.Jobs;
 
 namespace Cratis.Chronicle.Observation.for_Observer;
 
-public class when_automatically_recovering_a_partition_at_the_attempt_limit : given.a_quarantined_partition
+public class when_automatically_recovering_a_partition_at_the_attempt_limit : given.an_exhausted_partition
 {
-    void Establish()
-    {
-        FailedPartition.AttemptsInCurrentBudget = MaxRetryAttempts;
-        FailedPartition.IsQuarantined = false;
-    }
+    protected override int AttemptsInBudget => MaxRetryAttempts;
+
+    void Establish() => FailedPartition.IsQuarantined = false;
 
     async Task Because()
     {

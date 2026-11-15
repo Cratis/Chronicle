@@ -7,7 +7,7 @@ using Cratis.Chronicle.Observation.Jobs;
 
 namespace Cratis.Chronicle.Observation.for_Observer;
 
-public class when_an_operator_retries_an_exhausted_partition : given.a_quarantined_partition
+public class when_an_operator_retries_an_exhausted_partition : given.an_exhausted_partition
 {
     PartitionRecoveryOutcome _outcome;
 

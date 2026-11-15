@@ -5,12 +5,12 @@ using Cratis.Chronicle.Concepts.Keys;
 
 namespace Cratis.Chronicle.Observation.for_Observer;
 
-public class when_an_operator_retry_of_an_exhausted_partition_succeeds : given.a_quarantined_partition
+public class when_an_operator_retry_of_an_exhausted_partition_succeeds : given.an_exhausted_partition
 {
     async Task Because()
     {
         await _observer.TryStartRecoverJobForFailedPartition((Key)Partition);
-        await _observer.FailedPartitionRecovered((Key)Partition);
+        await _observer.FailedPartitionRecovered((Key)Partition, LastFailedSequenceNumber);
     }
 
     [Fact] void should_remove_the_failure() => _failedPartitionsState.Partitions.ShouldBeEmpty();
