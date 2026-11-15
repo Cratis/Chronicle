@@ -76,8 +76,8 @@ test('only strict paired ordinary-shard-count arguments are admitted; no argumen
 test('source proof covers actual source including Benchmarks, not just the registry', async () => {
     const root = await fixture();
     const discovered = await validateSourceProjects(root);
-    assert.equal(discovered.executable.length, 33);
-    assert.equal(discovered.ordinary.length, 25);
+    assert.equal(discovered.executable.length, 34);
+    assert.equal(discovered.ordinary.length, 26);
     assert.equal(discovered.integration.length, 7);
     assert.equal(discovered.sql.length, 1);
     assert.equal(discovered.shipping.length, 3);

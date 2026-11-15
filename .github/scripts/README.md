@@ -36,7 +36,7 @@ The report performs only GET requests through `gh api`, with no GitHub writes.
 
 ## Core spec partitioning
 
-The four ordinary `specs-other` jobs still cover all 25 ordinary projects.
+The four ordinary `specs-other` jobs still cover all 26 ordinary projects.
 `Core.Specs.csproj` is planned as two units named
 `Core.Specs.csproj#core-part-K-of-2`; no workflow, artifact, or required-check name changes.
 Other projects retain their existing invocation. An unsharded invocation still runs Core once.
