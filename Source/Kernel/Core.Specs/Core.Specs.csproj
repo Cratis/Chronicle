@@ -38,5 +38,6 @@
         <None Update="Observation/Webhooks/for_WebhookObserverSubscriber/Fixtures/*.json" CopyToOutputDirectory="PreserveNewest" />
         <None Update="Projections/Engine/DefinitionLanguage/ScreenplayExamples/*.pdl;Projections/Engine/DefinitionLanguage/ScreenplayExamples/*.json" CopyToOutputDirectory="PreserveNewest" />
         <None Update="Projections/Engine/DefinitionLanguage/for_ScreenplayConformance/Cases/*.play" CopyToOutputDirectory="PreserveNewest" />
+        <None Update="Projections/Engine/Graphs/Views/for_GraphViewEvaluator/Fixtures/*.json" CopyToOutputDirectory="PreserveNewest" />
     </ItemGroup>
 </Project>
