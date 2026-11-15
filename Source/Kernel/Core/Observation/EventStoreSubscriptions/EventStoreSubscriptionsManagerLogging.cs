@@ -39,7 +39,7 @@ internal static partial class EventStoreSubscriptionsManagerLogging
     [LoggerMessage(LogLevel.Error, "Error refreshing event store subscription '{SubscriptionId}' in namespace '{Namespace}'")]
     internal static partial void ErrorRefreshingSubscription(this ILogger<EventStoreSubscriptionsManager> logger, Exception exception, EventStoreSubscriptionId subscriptionId, EventStoreNamespaceName @namespace);
 
-    [LoggerMessage(LogLevel.Information, "Event store subscription '{SubscriptionId}' is ready to receive events")]
+    [LoggerMessage(LogLevel.Debug, "Event store subscription '{SubscriptionId}' is ready to receive events")]
     internal static partial void SubscriptionReadyForUse(this ILogger<EventStoreSubscriptionsManager> logger, EventStoreSubscriptionId subscriptionId);
 
     [LoggerMessage(LogLevel.Warning, "Event store subscription '{SubscriptionId}' was not registered within {Timeout}")]
@@ -48,7 +48,7 @@ internal static partial class EventStoreSubscriptionsManagerLogging
     [LoggerMessage(LogLevel.Warning, "Event store subscription '{SubscriptionId}' did not become ready within {Timeout}")]
     internal static partial void SubscriptionNotReadyWithinTimeout(this ILogger<EventStoreSubscriptionsManager> logger, EventStoreSubscriptionId subscriptionId, TimeSpan timeout);
 
-    [LoggerMessage(LogLevel.Information, "Source event store '{SourceEventStore}' became available; retrying {SubscriptionCount} pending subscriptions")]
+    [LoggerMessage(LogLevel.Debug, "Source event store '{SourceEventStore}' became available; retrying {SubscriptionCount} pending subscriptions")]
     internal static partial void SourceEventStoreBecameAvailable(this ILogger<EventStoreSubscriptionsManager> logger, EventStoreName sourceEventStore, int subscriptionCount);
 
     [LoggerMessage(LogLevel.Error, "Error refreshing subscription '{SubscriptionId}' after source event store '{SourceEventStore}' was added")]
