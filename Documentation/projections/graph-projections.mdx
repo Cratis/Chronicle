@@ -93,6 +93,52 @@ A sink implements `IGraphSink`, separate from the `ISink` of document read model
 
 The in-memory graph sink is the executable reference for these semantics, and every behavior has a specification.
 
+## Preview in the Workbench
+
+The Workbench previews a graph projection without a graph database and without saving anything. Open **Projections**, choose **New graph** to start from an Organization example, or open a saved graph projection, and press **Preview**. The Workbench recognizes a graph declaration by its `projection <Name> => graph <GraphName>` line and edits it in its own language, so the projection language does not mark it as an error.
+
+```screenplay
+graph Organization
+  node Person
+    personId Uuid key
+    name String
+  node Group
+    groupId Uuid key
+    name String
+  edge MEMBER_OF source Person target Group
+    since DateTime
+  edge PART_OF source Group target Group
+
+projection OrganizationGraph => graph Organization
+  node Person
+    from PersonRegistered key personId
+      name = name
+    remove with PersonRemoved key personId detach
+  node Group
+    from GroupCreated key groupId
+      name = name
+  edge MEMBER_OF
+    from MemberAdded source personId target groupId
+      since = $eventContext.occurred
+    remove with MemberRemoved source personId target groupId
+  edge PART_OF
+    from GroupNested source childId target parentId
+```
+
+The server reads the events the projection reacts to from the event sequence, up to the first 1,000, and runs them through the same graph projection engine a registered projection uses: the same keys, the same property expressions, counters and removals. It applies the operations to an in-memory graph sink and discards the graph when the request completes. The event types the declaration names must be registered, as for every projection, and the declaration names their properties as the event types declare them: a client that registers camelCase event types is previewed with `personId`, not `PersonId`. Protected values in the events are released the way they are for an observer.
+
+The preview has three tabs:
+
+| Tab | What it shows |
+| --- | --- |
+| **Nodes** | Every node by label and key, with its properties. |
+| **Edges** | Every edge by type, source, target and identity, with its properties. |
+| **View** | What a [view](#read-a-graph-with-views) reads from the graph, as nested rows. |
+
+Pick the label to start at, how many levels of relations to follow and, optionally, a property of the starting node that must equal a value, then choose **Read view**. The Workbench builds the views from the graph: one view for the starting node that reads all its properties, and a relation along every edge that leaves or enters it, each leading to a view of the node at the far end that also reads the properties of the edge. The result follows the rules of views: roots and related items ordered by node key, a filter that selects roots and never narrows a relation, and a relation that holds every related item.
+
+An event the projection cannot apply, for example the removal of a node that still has edges without `detach`, is listed with its sequence number, and the events after it still run. The preview shows the graph as the events leave it. It does not replay, so it says nothing about what a replay of a registered projection sweeps.
+
 ## Testing
 
 `GraphScenario` runs a graph projection against the in-memory graph sink, so a specification can append events and assert the nodes and edges.
