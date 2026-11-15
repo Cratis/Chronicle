@@ -31,6 +31,7 @@ public class when_reading_the_stable_contract : Specification
         {
             WellKnownCapabilities.AdministerSecurity.Value,
             WellKnownCapabilities.OperateEventStore.Value,
-            WellKnownCapabilities.AccessSystemStore.Value
-        }.ShouldEqual(["chronicle.security.administer", "chronicle.event-store.operate", "chronicle.event-store.access"]);
+            WellKnownCapabilities.AccessSystemStore.Value,
+            WellKnownCapabilities.EnrollFederation.Value
+        }.ShouldEqual(["chronicle.security.administer", "chronicle.event-store.operate", "chronicle.event-store.access", "chronicle.federation.enroll"]);
 }

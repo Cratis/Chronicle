@@ -1,0 +1,494 @@
+{
+  "graph": "Organization",
+  "notes": [
+    "Keys are compared as strings, ordinal ascending.",
+    "The bare node has only its key property; every other property reads as null.",
+    "Timestamps are ISO 8601 strings in the graph, as the sinks store them."
+  ],
+  "nodes": [
+    {
+      "label": "Person",
+      "key": "00000000-0000-0000-0000-000000000001",
+      "properties": {
+        "personId": "00000000-0000-0000-0000-000000000001",
+        "name": "Ada"
+      }
+    },
+    {
+      "label": "Person",
+      "key": "00000000-0000-0000-0000-000000000002",
+      "properties": {
+        "personId": "00000000-0000-0000-0000-000000000002",
+        "name": "Grace"
+      }
+    },
+    {
+      "label": "Person",
+      "key": "00000000-0000-0000-0000-000000000003",
+      "properties": {
+        "personId": "00000000-0000-0000-0000-000000000003",
+        "name": "Linus"
+      }
+    },
+    {
+      "label": "Group",
+      "key": "00000000-0000-0000-0000-000000000101",
+      "properties": {
+        "groupId": "00000000-0000-0000-0000-000000000101",
+        "name": "Engineering"
+      }
+    },
+    {
+      "label": "Group",
+      "key": "00000000-0000-0000-0000-000000000102",
+      "properties": {
+        "groupId": "00000000-0000-0000-0000-000000000102",
+        "name": "Platform"
+      }
+    },
+    {
+      "label": "Group",
+      "key": "00000000-0000-0000-0000-000000000103",
+      "properties": {
+        "groupId": "00000000-0000-0000-0000-000000000103",
+        "name": "Research"
+      }
+    },
+    {
+      "label": "Group",
+      "key": "00000000-0000-0000-0000-000000000104",
+      "properties": {
+        "groupId": "00000000-0000-0000-0000-000000000104"
+      },
+      "note": "bare node: created only by an edge, key only"
+    }
+  ],
+  "edges": [
+    {
+      "type": "MEMBER_OF",
+      "source": {
+        "label": "Person",
+        "key": "00000000-0000-0000-0000-000000000001"
+      },
+      "target": {
+        "label": "Group",
+        "key": "00000000-0000-0000-0000-000000000101"
+      },
+      "identity": null,
+      "properties": {
+        "since": "2026-01-01T00:00:00Z"
+      }
+    },
+    {
+      "type": "MEMBER_OF",
+      "source": {
+        "label": "Person",
+        "key": "00000000-0000-0000-0000-000000000001"
+      },
+      "target": {
+        "label": "Group",
+        "key": "00000000-0000-0000-0000-000000000103"
+      },
+      "identity": null,
+      "properties": {
+        "since": "2026-02-01T00:00:00Z"
+      }
+    },
+    {
+      "type": "MEMBER_OF",
+      "source": {
+        "label": "Person",
+        "key": "00000000-0000-0000-0000-000000000002"
+      },
+      "target": {
+        "label": "Group",
+        "key": "00000000-0000-0000-0000-000000000102"
+      },
+      "identity": null,
+      "properties": {
+        "since": "2026-03-01T00:00:00Z"
+      }
+    },
+    {
+      "type": "MEMBER_OF",
+      "source": {
+        "label": "Person",
+        "key": "00000000-0000-0000-0000-000000000002"
+      },
+      "target": {
+        "label": "Group",
+        "key": "00000000-0000-0000-0000-000000000104"
+      },
+      "identity": null,
+      "properties": {
+        "since": "2026-04-01T00:00:00Z"
+      }
+    },
+    {
+      "type": "PART_OF",
+      "source": {
+        "label": "Group",
+        "key": "00000000-0000-0000-0000-000000000102"
+      },
+      "target": {
+        "label": "Group",
+        "key": "00000000-0000-0000-0000-000000000101"
+      },
+      "identity": null,
+      "properties": {}
+    },
+    {
+      "type": "HAS_ROLE",
+      "source": {
+        "label": "Person",
+        "key": "00000000-0000-0000-0000-000000000001"
+      },
+      "target": {
+        "label": "Group",
+        "key": "00000000-0000-0000-0000-000000000101"
+      },
+      "identity": "00000000-0000-0000-0000-000000000201",
+      "properties": {
+        "assignmentId": "00000000-0000-0000-0000-000000000201",
+        "role": "Lead"
+      }
+    },
+    {
+      "type": "HAS_ROLE",
+      "source": {
+        "label": "Person",
+        "key": "00000000-0000-0000-0000-000000000001"
+      },
+      "target": {
+        "label": "Group",
+        "key": "00000000-0000-0000-0000-000000000101"
+      },
+      "identity": "00000000-0000-0000-0000-000000000202",
+      "properties": {
+        "assignmentId": "00000000-0000-0000-0000-000000000202",
+        "role": "Reviewer"
+      }
+    },
+    {
+      "type": "HAS_ROLE",
+      "source": {
+        "label": "Person",
+        "key": "00000000-0000-0000-0000-000000000002"
+      },
+      "target": {
+        "label": "Group",
+        "key": "00000000-0000-0000-0000-000000000102"
+      },
+      "identity": "00000000-0000-0000-0000-000000000203",
+      "properties": {
+        "assignmentId": "00000000-0000-0000-0000-000000000203",
+        "role": "Lead"
+      }
+    }
+  ],
+  "cases": [
+    {
+      "name": "every person with the groups they belong to",
+      "view": "PersonWithGroups",
+      "shape": "list",
+      "clauses": [],
+      "expected": [
+        {
+          "id": "00000000-0000-0000-0000-000000000001",
+          "name": "Ada",
+          "groups": [
+            {
+              "id": "00000000-0000-0000-0000-000000000101",
+              "name": "Engineering",
+              "since": "2026-01-01T00:00:00Z"
+            },
+            {
+              "id": "00000000-0000-0000-0000-000000000103",
+              "name": "Research",
+              "since": "2026-02-01T00:00:00Z"
+            }
+          ]
+        },
+        {
+          "id": "00000000-0000-0000-0000-000000000002",
+          "name": "Grace",
+          "groups": [
+            {
+              "id": "00000000-0000-0000-0000-000000000102",
+              "name": "Platform",
+              "since": "2026-03-01T00:00:00Z"
+            },
+            {
+              "id": "00000000-0000-0000-0000-000000000104",
+              "name": null,
+              "since": "2026-04-01T00:00:00Z"
+            }
+          ]
+        },
+        {
+          "id": "00000000-0000-0000-0000-000000000003",
+          "name": "Linus",
+          "groups": []
+        }
+      ]
+    },
+    {
+      "name": "a related clause selects roots and does not narrow the relation",
+      "view": "PersonWithGroups",
+      "shape": "list",
+      "clauses": [
+        {
+          "kind": "related",
+          "member": "groups",
+          "clauses": [
+            {
+              "kind": "property",
+              "member": "id",
+              "value": "00000000-0000-0000-0000-000000000101"
+            }
+          ]
+        }
+      ],
+      "expected": [
+        {
+          "id": "00000000-0000-0000-0000-000000000001",
+          "name": "Ada",
+          "groups": [
+            {
+              "id": "00000000-0000-0000-0000-000000000101",
+              "name": "Engineering",
+              "since": "2026-01-01T00:00:00Z"
+            },
+            {
+              "id": "00000000-0000-0000-0000-000000000103",
+              "name": "Research",
+              "since": "2026-02-01T00:00:00Z"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "a property clause on the root",
+      "view": "PersonWithGroups",
+      "shape": "list",
+      "clauses": [
+        {
+          "kind": "property",
+          "member": "name",
+          "value": "Grace"
+        }
+      ],
+      "expected": [
+        {
+          "id": "00000000-0000-0000-0000-000000000002",
+          "name": "Grace",
+          "groups": [
+            {
+              "id": "00000000-0000-0000-0000-000000000102",
+              "name": "Platform",
+              "since": "2026-03-01T00:00:00Z"
+            },
+            {
+              "id": "00000000-0000-0000-0000-000000000104",
+              "name": null,
+              "since": "2026-04-01T00:00:00Z"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "a single result with no related nodes",
+      "view": "PersonWithGroups",
+      "shape": "single",
+      "clauses": [
+        {
+          "kind": "property",
+          "member": "id",
+          "value": "00000000-0000-0000-0000-000000000003"
+        }
+      ],
+      "expected": {
+        "id": "00000000-0000-0000-0000-000000000003",
+        "name": "Linus",
+        "groups": []
+      }
+    },
+    {
+      "name": "a single result that matches nothing is null",
+      "view": "PersonWithGroups",
+      "shape": "single",
+      "clauses": [
+        {
+          "kind": "property",
+          "member": "name",
+          "value": "Nobody"
+        }
+      ],
+      "expected": null
+    },
+    {
+      "name": "incoming relation",
+      "view": "GroupWithMembers",
+      "shape": "list",
+      "clauses": [],
+      "expected": [
+        {
+          "id": "00000000-0000-0000-0000-000000000101",
+          "name": "Engineering",
+          "members": [
+            {
+              "id": "00000000-0000-0000-0000-000000000001",
+              "name": "Ada",
+              "since": "2026-01-01T00:00:00Z"
+            }
+          ]
+        },
+        {
+          "id": "00000000-0000-0000-0000-000000000102",
+          "name": "Platform",
+          "members": [
+            {
+              "id": "00000000-0000-0000-0000-000000000002",
+              "name": "Grace",
+              "since": "2026-03-01T00:00:00Z"
+            }
+          ]
+        },
+        {
+          "id": "00000000-0000-0000-0000-000000000103",
+          "name": "Research",
+          "members": [
+            {
+              "id": "00000000-0000-0000-0000-000000000001",
+              "name": "Ada",
+              "since": "2026-02-01T00:00:00Z"
+            }
+          ]
+        },
+        {
+          "id": "00000000-0000-0000-0000-000000000104",
+          "name": null,
+          "members": [
+            {
+              "id": "00000000-0000-0000-0000-000000000002",
+              "name": "Grace",
+              "since": "2026-04-01T00:00:00Z"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "a nested property clause",
+      "view": "GroupWithMembers",
+      "shape": "list",
+      "clauses": [
+        {
+          "kind": "related",
+          "member": "members",
+          "clauses": [
+            {
+              "kind": "property",
+              "member": "name",
+              "value": "Ada"
+            }
+          ]
+        }
+      ],
+      "expected": [
+        {
+          "id": "00000000-0000-0000-0000-000000000101",
+          "name": "Engineering",
+          "members": [
+            {
+              "id": "00000000-0000-0000-0000-000000000001",
+              "name": "Ada",
+              "since": "2026-01-01T00:00:00Z"
+            }
+          ]
+        },
+        {
+          "id": "00000000-0000-0000-0000-000000000103",
+          "name": "Research",
+          "members": [
+            {
+              "id": "00000000-0000-0000-0000-000000000001",
+              "name": "Ada",
+              "since": "2026-02-01T00:00:00Z"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "a one cardinality relation over a self edge",
+      "view": "GroupWithParent",
+      "shape": "list",
+      "clauses": [],
+      "expected": [
+        {
+          "id": "00000000-0000-0000-0000-000000000101",
+          "name": "Engineering",
+          "parent": null
+        },
+        {
+          "id": "00000000-0000-0000-0000-000000000102",
+          "name": "Platform",
+          "parent": {
+            "id": "00000000-0000-0000-0000-000000000101",
+            "name": "Engineering"
+          }
+        },
+        {
+          "id": "00000000-0000-0000-0000-000000000103",
+          "name": "Research",
+          "parent": null
+        },
+        {
+          "id": "00000000-0000-0000-0000-000000000104",
+          "name": null,
+          "parent": null
+        }
+      ]
+    },
+    {
+      "name": "an identified edge yields one item per edge, ordered by far key then identity",
+      "view": "PersonRoles",
+      "shape": "list",
+      "clauses": [],
+      "expected": [
+        {
+          "id": "00000000-0000-0000-0000-000000000001",
+          "roles": [
+            {
+              "id": "00000000-0000-0000-0000-000000000101",
+              "assignmentId": "00000000-0000-0000-0000-000000000201",
+              "role": "Lead"
+            },
+            {
+              "id": "00000000-0000-0000-0000-000000000101",
+              "assignmentId": "00000000-0000-0000-0000-000000000202",
+              "role": "Reviewer"
+            }
+          ]
+        },
+        {
+          "id": "00000000-0000-0000-0000-000000000002",
+          "roles": [
+            {
+              "id": "00000000-0000-0000-0000-000000000102",
+              "assignmentId": "00000000-0000-0000-0000-000000000203",
+              "role": "Lead"
+            }
+          ]
+        },
+        {
+          "id": "00000000-0000-0000-0000-000000000003",
+          "roles": []
+        }
+      ]
+    }
+  ]
+}

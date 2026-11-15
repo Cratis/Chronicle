@@ -14,6 +14,7 @@ namespace Cratis.Chronicle.Services.EventSequences;
 /// </summary>
 internal sealed class EventSequenceQueries(
     global::Orleans.IGrainFactory grainFactory,
+    global::Cratis.Chronicle.Namespaces.INamespaceCasing namespaceCasing,
     global::Microsoft.Extensions.Logging.ILogger<global::Cratis.Chronicle.Services.EventSequences.EventSequenceQueries> logger) : global::Cratis.Chronicle.Contracts.EventSequences.IEventSequenceQueries
 {
     /// <inheritdoc/>
@@ -21,6 +22,14 @@ internal sealed class EventSequenceQueries(
         QueryExecutor.Execute<bool>(
             callContext,
             new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: request.Namespace, First: request.EventSequenceId),
-            () => grainFactory.GetGrain<global::Cratis.Chronicle.EventSequences.IEventSequence>(global::Cratis.Chronicle.KeyHelper.Combine((global::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId)request.EventSequenceId, (global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace)).IsStreamCompleted((global::Cratis.Chronicle.Concepts.Events.EventStreamType)request.EventStreamType, (global::Cratis.Chronicle.Concepts.Events.EventStreamId)request.EventStreamId),
+            async () =>
+            {
+                if (!string.IsNullOrEmpty(request.Namespace))
+                {
+                    request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
+                }
+                var result = await grainFactory.GetGrain<global::Cratis.Chronicle.EventSequences.IEventSequence>(global::Cratis.Chronicle.KeyHelper.Combine((global::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId)request.EventSequenceId, (global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace)).IsStreamCompleted((global::Cratis.Chronicle.Concepts.Events.EventStreamType)request.EventStreamType, (global::Cratis.Chronicle.Concepts.Events.EventStreamId)request.EventStreamId);
+                return result;
+            },
             exception => logger.QueryFailed(exception, "EventSequenceQueries", "IsStreamCompleted"));
 }

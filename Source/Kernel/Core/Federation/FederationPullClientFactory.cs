@@ -44,9 +44,7 @@ public class FederationPullClientFactory(IFederationClientCertificates certifica
                     MaxSendMessageSize = MaxMessageSize
                 });
 
-            return new Connection(
-                channel,
-                channel.CreateCallInvoker().CreateGrpcService<IFederationPull>(new InProcessAwareGrpcClientProxiesClientFactory()));
+            return CreateConnection(channel);
         }
         catch
         {
@@ -78,9 +76,23 @@ public class FederationPullClientFactory(IFederationClientCertificates certifica
         }
     }
 
-    sealed class Connection(GrpcChannel channel, IFederationPull service) : IFederationPullConnection
+    /// <summary>
+    /// Create the connection over a channel, giving the pull and the serve services one and the same HTTP/2 connection.
+    /// </summary>
+    /// <param name="channel">The channel.</param>
+    /// <returns>The connection, which owns the channel.</returns>
+    internal static IFederationPullConnection CreateConnection(GrpcChannel channel)
+    {
+        var invoker = channel.CreateCallInvoker();
+        var clients = new InProcessAwareGrpcClientProxiesClientFactory();
+        return new Connection(channel, invoker.CreateGrpcService<IFederationPull>(clients), invoker.CreateGrpcService<IFederationServe>(clients));
+    }
+
+    sealed class Connection(GrpcChannel channel, IFederationPull service, IFederationServe serveService) : IFederationPullConnection
     {
         public IFederationPull Service { get; } = service;
+
+        public IFederationServe ServeService { get; } = serveService;
 
         public void Dispose() => channel.Dispose();
     }

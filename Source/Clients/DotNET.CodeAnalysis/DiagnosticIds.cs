@@ -89,6 +89,26 @@ public static class DiagnosticIds
     public const string BatchMethodMatchesUnobservedEventType = "CHR0077";
 
     /// <summary>
+    /// A graph view is anchored at a type that is not a node.
+    /// </summary>
+    public const string GraphViewRootMustBeNode = "CHR0078";
+
+    /// <summary>
+    /// A relation of a graph view follows a type that is not an edge.
+    /// </summary>
+    public const string GraphViewRelationMustFollowEdge = "CHR0079";
+
+    /// <summary>
+    /// A relation of a graph view leads to a type that is not a view.
+    /// </summary>
+    public const string GraphViewRelationTargetMustBeView = "CHR0080";
+
+    /// <summary>
+    /// A graph view is also a node or an edge.
+    /// </summary>
+    public const string GraphViewCannotBeNodeOrEdge = "CHR0081";
+
+    /// <summary>
     /// Event type must have EventType attribute when appended to event sequence.
     /// </summary>
     public const string EventTypeMustHaveAttributeWhenAppended = "CHR0001";

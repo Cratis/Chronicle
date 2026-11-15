@@ -105,17 +105,32 @@ export function selectProducerArtifacts(jobPages, artifactPages, context) {
     if (ordinaryArtifacts.length !== ORDINARY_SHARDS) fail(`Expected exactly ${ORDINARY_SHARDS} producer artifacts`);
     return { context, producers: ordinaryShardIds().map(shard => producerArtifact(ordinaryArtifacts, producerJob(jobs, shard, context), shard, context)) };
 }
-async function producerApiPages(endpoint, context, env, execute) {
-    const result = await execute('gh', ['api', '--paginate', '--slurp', `repos/${env.GITHUB_REPOSITORY}/actions/runs/${context.runId}/${endpoint}`], { capture: true, timeout: 60000 });
-    if (result.code !== 0) fail(`Producer evidence API failed (${result.code})`);
-    return JSON.parse(result.stdout);
+// Large pages of a run with reruns can make the jobs listing return 5xx, and the reason is only in gh's stderr (#5871).
+const PRODUCER_PAGE_SIZE = 30;
+const PRODUCER_API_ATTEMPTS = 3;
+// One budget for both listings keeps retries inside the aggregate job's five-minute limit.
+const PRODUCER_API_BUDGET = 150000;
+const pause = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
+async function producerApiPages(endpoint, context, { env, execute, wait, now, deadline }) {
+    const args = ['api', '--paginate', '--slurp', `repos/${env.GITHUB_REPOSITORY}/actions/runs/${context.runId}/${endpoint}`];
+    for (let attempt = 1; ; attempt++) {
+        const result = await execute('gh', args, { capture: true, timeout: Math.max(1000, Math.min(60000, deadline - now())) });
+        if (result.code === 0) return JSON.parse(result.stdout);
+        const response = (result.stderr ?? '').trim();
+        const retryable = /HTTP 5\d\d/.test(response) && attempt < PRODUCER_API_ATTEMPTS && now() + attempt * 5000 + 1000 < deadline;
+        if (!retryable) {
+            fail(`Producer evidence API failed (${result.code}): ${response.slice(-2000) || 'no output'}`);
+        }
+        await wait(attempt * 5000);
+    }
 }
-export async function loadProducerEvidence(context, { env = process.env, execute = runProcess } = {}) {
+export async function loadProducerEvidence(context, { env = process.env, execute = runProcess, wait = pause, now = Date.now } = {}) {
     if (!/^[\w.-]+\/[\w.-]+$/.test(env.GITHUB_REPOSITORY ?? '')) fail('Missing/invalid producer repository');
     if (!/^[1-9]\d*$/.test(context.runId) || !/^[1-9]\d*$/.test(context.runAttempt)) fail('Invalid producer run/attempt');
     const pages = [];
-    for (const endpoint of ['jobs?filter=all&per_page=100', 'artifacts?per_page=100']) {
-        pages.push(await producerApiPages(endpoint, context, env, execute));
+    const api = { env, execute, wait, now, deadline: now() + PRODUCER_API_BUDGET };
+    for (const endpoint of [`jobs?filter=all&per_page=${PRODUCER_PAGE_SIZE}`, `artifacts?per_page=${PRODUCER_PAGE_SIZE}`]) {
+        pages.push(await producerApiPages(endpoint, context, api));
     }
     return selectProducerArtifacts(...pages, context);
 }

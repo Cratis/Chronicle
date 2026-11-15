@@ -140,3 +140,11 @@
   href: CHR0076.mdx
 - name: "CHR0077 - Batch method matches an event type it does not observe"
   href: CHR0077.mdx
+- name: "CHR0078 - A graph view must be anchored at a node"
+  href: CHR0078.mdx
+- name: "CHR0079 - A relation of a graph view must follow an edge"
+  href: CHR0079.mdx
+- name: "CHR0080 - A relation of a graph view must lead to a view"
+  href: CHR0080.mdx
+- name: "CHR0081 - A graph view cannot be a node or an edge"
+  href: CHR0081.mdx

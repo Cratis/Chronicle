@@ -53,6 +53,7 @@ public static class GrpcServiceRegistrations
         services.AddSingleton<Contracts.ReadModels.IReadModels, Services.ReadModels.ReadModels>();
         services.AddSingleton<Contracts.ReadModels.IMaterializedReadModels, Services.ReadModels.MaterializedReadModels>();
         services.AddSingleton<Contracts.Host.IServer, Services.Host.Server>();
+        services.AddSingleton<Contracts.Federation.IFederationServe, Services.Federation.FederationServe>();
 
         return services;
     }
@@ -80,6 +81,7 @@ public static class GrpcServiceRegistrations
             _.MapGrpcService<Services.ReadModels.ReadModels>();
             _.MapGrpcService<Services.ReadModels.MaterializedReadModels>();
             _.MapGrpcService<Services.Host.Server>();
+            _.MapGrpcService<Services.Federation.FederationServe>();
         });
 
         return app;

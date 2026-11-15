@@ -224,6 +224,16 @@ public static class WellKnownTypes
     public const string EdgeAttributeName = "Cratis.Chronicle.Projections.Graphs.EdgeAttribute";
 
     /// <summary>
+    /// The open-generic display string of the graph view attribute.
+    /// </summary>
+    public const string ViewOfAttributeName = "Cratis.Chronicle.Graphs.ViewOfAttribute<TNode>";
+
+    /// <summary>
+    /// The open-generic display string of the graph view relation attribute.
+    /// </summary>
+    public const string FollowsAttributeName = "Cratis.Chronicle.Graphs.FollowsAttribute<TEdge>";
+
+    /// <summary>
     /// The open-generic display string of the EventTypeMigration&lt;TUpgrade, TPrevious&gt; base class.
     /// </summary>
     public const string EventTypeMigrationGenericDisplay = "Cratis.Chronicle.Events.Migrations.EventTypeMigration<TUpgrade, TPrevious>";

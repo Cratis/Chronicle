@@ -102,6 +102,10 @@ public class AzureKeyVaultEncryptionKeyStorage : IEncryptionKeyStorage
     public IReadOnlyList<EncryptionKeyStorageCapability> Capabilities => _storage.Capabilities;
 
     /// <inheritdoc/>
+    /// <remarks>Internal secrets are Key Vault secrets, which is a custody a reader of the event store databases cannot read.</remarks>
+    public bool KeepsInternalSecretsOutsideTheEventStoreDatabases => true;
+
+    /// <inheritdoc/>
     public EncryptionKeyFenceGuarantees FenceGuarantees => _storage.FenceGuarantees;
 
     /// <inheritdoc/>

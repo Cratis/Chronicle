@@ -416,6 +416,8 @@ jobs:
       # Fail closed before packing or checking an image in this workspace. The separate
       # spec artifact is not published, and cannot pass the aggregate without these guards.
       - name: Validate rolling diagnostic guards and shipped-client absence
+        env:
+          ROLLING_GUARD_PACK_ALL_FRAMEWORKS: "true"
         run: |
           set -euo pipefail
           node .github/scripts/verify-rolling-delivery-build.mjs

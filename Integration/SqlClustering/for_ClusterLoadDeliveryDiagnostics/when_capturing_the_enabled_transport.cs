@@ -93,7 +93,11 @@ public class when_capturing_the_enabled_transport : Specification
         _scope = beginScope(_logger, _stream, 1);
         _activitySource = new ActivitySource(ClusterLoadDeliveryDiagnosticsLogging.Category);
         var traces = typeof(ChronicleClient).Assembly.GetType("Cratis.Chronicle.Reactors.ReactorTraces")!;
-        _span = (IDisposable)traces.GetMethod("Handle", BindingFlags.NonPublic | BindingFlags.Static)!.Invoke(null, [new TraceSource(_activitySource), "synthetic-store", "synthetic-namespace", "synthetic-sequence", "cluster-integrity"])!;
+        var contextType = typeof(ChronicleClient).Assembly.GetType("Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing.ObserverSpanContext", throwOnError: true)!;
+        var handle = traces.GetMethod("Handle", BindingFlags.NonPublic | BindingFlags.Static, [typeof(IActivitySource<ReactorService>), contextType, typeof(ClientSpanNames)])
+            ?? throw new MissingMethodException(traces.FullName, "Handle(IActivitySource<Reactors>, ObserverSpanContext, ClientSpanNames)");
+        var context = Activator.CreateInstance(contextType, "synthetic-store", "synthetic-namespace", "synthetic-sequence", "cluster-integrity")!;
+        _span = (IDisposable)handle.Invoke(null, [new TraceSource(_activitySource), context, ClientSpanNames.Legacy])!;
     }
 
     async Task MeasureArm(Type? type, string samplePath)

@@ -406,6 +406,7 @@ public partial class JsonSchemaGenerator : IJsonSchemaGenerator
 
     JsonNode TransformReadModelNode(JsonSchemaExporterContext context, JsonNode schema)
     {
+        RestoreConceptDictionaryValueSchema(context.TypeInfo.Type, context.PropertyInfo?.AttributeProvider, schema);
         var transformed = TransformNode(context, schema, restorePropertiesWithDefaultValues: true, preserveUnformattedNullability: true);
         var attributes = context.PropertyInfo?.AttributeProvider?.GetCustomAttributes(true) ?? [];
         var lengths = attributes.Select(attribute => attribute switch
@@ -730,18 +731,7 @@ public partial class JsonSchemaGenerator : IJsonSchemaGenerator
 
         if (PropertyIsNullable(declaredType, attributeProvider))
         {
-            if (representedSchemaObject.TryGetPropertyValue("format", out var format))
-            {
-                var formatValue = format!.GetValue<string>();
-                if (!formatValue.EndsWith('?'))
-                {
-                    representedSchemaObject["format"] = formatValue + "?";
-                }
-            }
-            else if (preserveUnformattedNullability && representedSchemaObject["type"] is JsonValue type)
-            {
-                representedSchemaObject["type"] = new JsonArray(type.DeepClone(), "null");
-            }
+            MakeSchemaNullable(representedSchemaObject, preserveUnformattedNullability);
         }
 
         return representedSchema;

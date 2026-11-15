@@ -6,10 +6,6 @@ description: Subscribe a Cratis Chronicle reactor to another event store's outbo
 
 Cratis Chronicle can route a C# reactor to another event store's events using `[EventStore]` metadata. The declaration selects a local inbox sequence and creates or reuses the subscription that forwards matching events from the source store's outbox. Your handler reads those forwarded events from the inbox.
 
-:::note[Client coverage]
-Automatic inbox routing through these declarations is C#-only. The `[EventStore]` metadata and reactor registration options shown here are not available in Kotlin, Elixir, or TypeScript.
-:::
-
 ## Automatic inbox routing
 
 If you own the event contracts, declare their source with `[EventStore("...")]` on each event type or on their assembly. With no explicit event sequence on the reactor, Chronicle infers the inbox from that metadata.

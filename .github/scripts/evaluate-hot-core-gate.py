@@ -141,6 +141,11 @@ def rerun_target(gate_runs, head_sha, pr_head_sha):
 # then fail closed as before. Client errors (4xx) are never retried.
 RETRY_DELAYS = (5, 15)
 
+# One timeout covers every page of a paginated call: listing the ~200 jobs of a requested integration run takes
+# about 35 s across 7 pages, so a single-request budget fails every attempt.
+REQUEST_TIMEOUT = 30
+PAGINATED_TIMEOUT = 180
+
 
 def transient(error):
     if isinstance(error, subprocess.TimeoutExpired):
@@ -155,7 +160,8 @@ def api(path, *, method="GET", paginate=False):
         command += ["--paginate", "--slurp"]
     for delay in (*RETRY_DELAYS, None):
         try:
-            result = subprocess.run(command, capture_output=True, text=True, check=True, timeout=30)
+            result = subprocess.run(command, capture_output=True, text=True, check=True,
+                                    timeout=PAGINATED_TIMEOUT if paginate else REQUEST_TIMEOUT)
             return json.loads(result.stdout) if result.stdout.strip() else None
         except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as error:
             if delay is None or not transient(error):

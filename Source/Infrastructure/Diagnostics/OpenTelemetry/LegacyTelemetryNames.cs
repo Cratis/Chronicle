@@ -108,7 +108,8 @@ internal static class LegacyTelemetryNames
         WellKnownMetricNames.ObserverJobHandledSteps,
         WellKnownMetricNames.ObserverJobTotalSteps,
         WellKnownMetricNames.EventSequenceAppendDuration,
-        WellKnownMetricNames.ProjectionCachedGraphs
+        WellKnownMetricNames.ProjectionCachedGraphs,
+        WellKnownMetricNames.ProjectionPipelines
     };
 
     /// <summary>

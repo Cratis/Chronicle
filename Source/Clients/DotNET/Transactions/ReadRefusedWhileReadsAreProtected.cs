@@ -7,4 +7,4 @@ namespace Cratis.Chronicle.Transactions;
 /// The exception that is thrown when a raw Chronicle read occurs without an explicit allowance.
 /// </summary>
 /// <param name="operation">The public read operation.</param>
-public class ReadRefusedWhileReadsAreProtected(string operation) : Exception($"The command called {operation} while read protection is On. Take a read model as a parameter, use IDecisionReads.Get in Provide, or mark the method [Unprotected(\"why\")].");
+public class ReadRefusedWhileReadsAreProtected(string operation) : Exception($"The command called {operation} while read protection is On. Take a read model as a parameter, use IDecisionReads or DecisionRead<T> directly in Handle(), or mark the method [Unprotected(\"why\")].");

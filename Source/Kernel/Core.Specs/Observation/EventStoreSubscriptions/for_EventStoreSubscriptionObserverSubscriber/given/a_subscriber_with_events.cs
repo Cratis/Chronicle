@@ -41,6 +41,9 @@ public class a_subscriber_with_events : Specification
         _namespaceCasing = silo.AddNamespaceCasing();
         _storage = Substitute.For<IStorage>();
         _generationRelease = CreateGenerationRelease();
+
+        // The committed definition of the subscription: without one the subscriber fails closed and forwards nothing.
+        _storage.GetEventStore("Lobby").EventStoreSubscriptions.GetAll().Returns(_ => [new Concepts.Observation.EventStoreSubscriptions.EventStoreSubscriptionDefinition("subscription", SourceEventStore, [])]);
         silo.AddService(_storage);
         silo.AddService(_generationRelease);
         silo.AddService(new JsonSerializerOptions());

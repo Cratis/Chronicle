@@ -14,6 +14,7 @@ namespace Cratis.Chronicle.Services.Federation;
 /// </summary>
 internal sealed class FederationPull(
     global::Cratis.Chronicle.Federation.IFederationPullService federationPullService,
+    global::Cratis.Chronicle.Namespaces.INamespaceCasing namespaceCasing,
     global::Microsoft.Extensions.Logging.ILogger<global::Cratis.Chronicle.Services.Federation.FederationPull> logger) : global::Cratis.Chronicle.Contracts.Federation.IFederationPull
 {
     /// <inheritdoc/>
@@ -24,6 +25,10 @@ internal sealed class FederationPull(
             new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: request.Namespace),
             async () =>
             {
+                if (!string.IsNullOrEmpty(request.Namespace))
+                {
+                    request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
+                }
                 var result = await global::Cratis.Chronicle.Federation.FederatedEventBatch.Pull(request.EventStore, request.Namespace, request.FromSequenceNumber, request.Limit, request.EventTypes, federationPullService);
                 return ToFederatedEventBatchResponse(result);
             },

@@ -1,0 +1,86 @@
+{
+  "graph": "Organization",
+  "schema": {
+    "nodes": [
+      { "label": "Person", "key": "personId", "properties": [ "personId", "name" ] },
+      { "label": "Group", "key": "groupId", "properties": [ "groupId", "name" ] }
+    ],
+    "edges": [
+      { "type": "MEMBER_OF", "source": "Person", "target": "Group", "properties": [ "since" ] },
+      { "type": "PART_OF", "source": "Group", "target": "Group", "properties": [] },
+      { "type": "HAS_ROLE", "source": "Person", "target": "Group", "identifiedBy": "assignmentId", "properties": [ "assignmentId", "role", "since" ] }
+    ]
+  },
+  "views": [
+    {
+      "name": "GroupMembership",
+      "root": "Group",
+      "members": [
+        { "name": "id", "kind": "property", "source": "groupId" },
+        { "name": "name", "kind": "property", "source": "name" },
+        { "name": "since", "kind": "edgeProperty", "source": "since" }
+      ]
+    },
+    {
+      "name": "GroupSummary",
+      "root": "Group",
+      "members": [
+        { "name": "id", "kind": "property", "source": "groupId" },
+        { "name": "name", "kind": "property", "source": "name" }
+      ]
+    },
+    {
+      "name": "GroupWithMembers",
+      "root": "Group",
+      "members": [
+        { "name": "id", "kind": "property", "source": "groupId" },
+        { "name": "name", "kind": "property", "source": "name" },
+        { "name": "members", "kind": "relation", "edge": "MEMBER_OF", "direction": "incoming", "cardinality": "many", "view": "MemberSummary" }
+      ]
+    },
+    {
+      "name": "GroupWithParent",
+      "root": "Group",
+      "members": [
+        { "name": "id", "kind": "property", "source": "groupId" },
+        { "name": "name", "kind": "property", "source": "name" },
+        { "name": "parent", "kind": "relation", "edge": "PART_OF", "direction": "outgoing", "cardinality": "one", "view": "GroupSummary" }
+      ]
+    },
+    {
+      "name": "MemberSummary",
+      "root": "Person",
+      "members": [
+        { "name": "id", "kind": "property", "source": "personId" },
+        { "name": "name", "kind": "property", "source": "name" },
+        { "name": "since", "kind": "edgeProperty", "source": "since" }
+      ]
+    },
+    {
+      "name": "PersonRoles",
+      "root": "Person",
+      "members": [
+        { "name": "id", "kind": "property", "source": "personId" },
+        { "name": "roles", "kind": "relation", "edge": "HAS_ROLE", "direction": "outgoing", "cardinality": "many", "view": "RoleAssignment" }
+      ]
+    },
+    {
+      "name": "PersonWithGroups",
+      "root": "Person",
+      "members": [
+        { "name": "id", "kind": "property", "source": "personId" },
+        { "name": "name", "kind": "property", "source": "name" },
+        { "name": "groups", "kind": "relation", "edge": "MEMBER_OF", "direction": "outgoing", "cardinality": "many", "view": "GroupMembership" }
+      ]
+    },
+    {
+      "name": "RoleAssignment",
+      "root": "Group",
+      "members": [
+        { "name": "id", "kind": "property", "source": "groupId" },
+        { "name": "assignmentId", "kind": "edgeProperty", "source": "assignmentId" },
+        { "name": "role", "kind": "edgeProperty", "source": "role" }
+      ]
+    }
+  ]
+}

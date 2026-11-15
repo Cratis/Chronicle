@@ -14,6 +14,12 @@ public static class WellKnownMetricNames
     /// <summary>Unit of <see cref="ProjectionCachedGraphs"/>.</summary>
     public const string ProjectionCachedGraphsUnit = "{graph}";
 
+    /// <summary>Number of projection pipelines retained by the kernel.</summary>
+    public const string ProjectionPipelines = "cratis.chronicle.projection.pipelines";
+
+    /// <summary>Unit of <see cref="ProjectionPipelines"/>.</summary>
+    public const string ProjectionPipelinesUnit = "{pipeline}";
+
     /// <summary>Number of successful observations.</summary>
     public const string ObserverSuccessfulObservations = "cratis.chronicle.observer.successful_observations";
 

@@ -81,6 +81,11 @@ public partial class ProjectionsManager(
     const int ChangeDetectionConcurrency = 16;
 
     /// <summary>
+    /// How many recommendations for ignored registrations are added at the same time.
+    /// </summary>
+    const int IgnoredRegistrationRecommendationConcurrency = 16;
+
+    /// <summary>
     /// The most changed definitions a registration names in the log.
     /// </summary>
     const int MaxChangedDefinitionsLogged = 25;
@@ -115,6 +120,7 @@ public partial class ProjectionsManager(
     readonly ConcurrentDictionary<ProjectionId, Lazy<Task>> _projectionDefinitions = new();
     readonly Dictionary<ProjectionId, ProjectionDefinition> _registeringDefinitions = new();
     readonly Dictionary<string, Task> _sharedRegistrations = [];
+    readonly HashSet<IgnoredRegistration> _recordedIgnoredRegistrations = [];
     bool _resubscribeRunning;
     DateTimeOffset? _registrationSubscribeDeadline;
     bool _resubscribeRequested;
