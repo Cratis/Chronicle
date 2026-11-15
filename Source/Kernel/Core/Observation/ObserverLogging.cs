@@ -221,7 +221,7 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Information, "Observer unsubscribed; it is now disconnected and receives no events until a client subscribes again")]
     internal static partial void Unsubscribed(this ILogger<Observer> logger);
 
-    [LoggerMessage(LogLevel.Information, "Observer deactivating ({ReasonCode}: {ReasonDescription})")]
+    [LoggerMessage(LogLevel.Debug, "Observer deactivating ({ReasonCode}: {ReasonDescription})")]
     internal static partial void Deactivating(this ILogger<Observer> logger, DeactivationReasonCode reasonCode, string reasonDescription);
 
     [LoggerMessage(LogLevel.Information, "Restoring the subscription of client {ConnectionId}, which this observer activation does not know about")]
