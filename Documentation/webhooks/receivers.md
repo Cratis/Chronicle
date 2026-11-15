@@ -13,7 +13,7 @@ Chronicle never promises exactly-once delivery to a webhook. Retries, [automatic
 
 ## What a request contains
 
-Each delivery is one `POST` to the registered URL with a JSON body (`application/json`, camelCase property names). The body has two properties:
+Chronicle delivers events with `POST` requests to the registered URL. Each request carries one batch as a JSON body (`application/json`, camelCase property names). With [OAuth client credentials](./index.mdx#oauth-client-credentials) or [managed identity](./index.mdx#managed-identity), a `401` response makes the Kernel refresh the token and send the same batch once more, so one delivery attempt can reach your receiver as two requests. The body has two properties:
 
 | Property | Contents |
 | --- | --- |
@@ -29,7 +29,7 @@ The `context` of each event carries the values a receiver needs to recognize it 
 | `namespace` | The namespace within that event store. |
 | `eventSourceId` | The event source the event was appended for. |
 | `eventType` | The event type and generation of the delivered content. |
-| `occurred` | When the event was appended. |
+| `occurred` | When the event occurred. This is the append time unless the appending code supplied its own time. |
 
 The `content` is the event itself, released from [compliance](#personal-data-is-delivered-in-plaintext) protection.
 
@@ -39,7 +39,7 @@ A response in the `2xx` range acknowledges every event in the request. Any other
 
 ## How delivery behaves
 
-**Per partition, in order.** A request carries the events of a single partition. While a partition is failing, Chronicle holds back its later events, and it resumes from the first event that was not acknowledged. Different partitions are independent: one failing partition does not stop the others, and there is no ordering between partitions.
+**Per partition, in order.** A request carries the events of a single partition. While a partition is failing, Chronicle holds back its later events, and it resumes from the first event that was not acknowledged. A failing partition does not hold back the others, and there is no ordering between partitions. The exception is observer quarantine: when enough partitions are parked (by default five, or at least half of the partitions the webhook has seen), or a response marks a configuration problem, Chronicle pauses the whole webhook. See [Receiver back-pressure and permanent failures](./index.mdx#receiver-back-pressure-and-permanent-failures) for the thresholds.
 
 **A failed request is resent as a whole.** Chronicle cannot tell which events in a request the receiver processed before it failed or timed out, so the retry starts again at the first event of that request. If your receiver handled three of five events and then returned `500`, those three arrive again.
 
@@ -90,7 +90,7 @@ Webhook requests are not signed in this version, so authentication is the only p
 
 ### Where the Kernel may send requests
 
-The Kernel enforces a [target validation policy](./index.mdx#target-validation) on every registration and delivery: approved hosts, HTTPS outside Development, blocked private and metadata addresses depending on the mode, and no redirects. Approve your receiver's exact host, and use HTTPS. Outside Development, `AllowInsecureHttp` is ignored.
+The Kernel checks every registration and delivery against a [target validation policy](./index.mdx#target-validation), and what it enforces depends on the validation mode. Cloud metadata addresses are refused in every mode unless explicitly allowed. A plain `http://` URL or a host missing from `AllowedHosts` is refused only in `Enforce` mode; the other modes, including the default `BlockLocalAddresses`, accept it with a warning. Set the mode to `Enforce` in production, approve your receiver's exact host, and use HTTPS. Outside Development, `AllowInsecureHttp` is ignored.
 
 ### Personal data is delivered in plaintext
 
