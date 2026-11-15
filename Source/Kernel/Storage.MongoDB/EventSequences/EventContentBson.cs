@@ -134,7 +134,9 @@ internal static class EventContentBson
         // Flatten the full composition, not just the branch selected by ActualTypeSchema.
         var declared = schema?.Reference ?? schema;
         var objectSchema = declared?.AllOf.Count > 0 ? declared : actual;
-        var properties = objectSchema?.GetFlattenedProperties().ToDictionary(property => property.Name, StringComparer.OrdinalIgnoreCase);
+        var properties = objectSchema?.GetFlattenedProperties()
+            .DistinctBy(property => property.Name, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(property => property.Name, StringComparer.OrdinalIgnoreCase);
         return new JsonObject(document.Select(property => new KeyValuePair<string, JsonNode?>(
             property.Key,
             PrepareForBson(property.Value, properties?.GetValueOrDefault(property.Key) ?? actual?.AdditionalPropertiesSchema))));
