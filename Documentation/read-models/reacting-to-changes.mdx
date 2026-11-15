@@ -16,7 +16,7 @@ For .NET, implement the `IReadModelReactor` marker interface and add a method na
 The .NET client discovers and starts these reactors automatically, then closes their subscriptions when the client is disposed. To handle another model or change type, add a matching method.
 
 :::note[Kotlin and Java]
-Register each one with `ReadModelReactors`, as the Kotlin and Java tabs show, and stop them when your application shuts down.
+In Kotlin and Java, register each read model reactor with `ReadModelReactors`, as the Kotlin and Java tabs show, and stop them when your application shuts down.
 :::
 
 ## Handle a single instance or a collection
