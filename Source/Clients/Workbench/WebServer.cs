@@ -109,7 +109,7 @@ public class WebServer(
             .UseKestrel(options =>
             {
                 options.ConfigureEndpointDefaults(_ => { });
-                options.ListenAnyIP(workbenchOptions.Value.Port);
+                WorkbenchListener.Configure(options, workbenchOptions.Value);
             });
 
         _webApplication = builder.Build();
