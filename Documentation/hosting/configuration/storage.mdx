@@ -99,6 +99,8 @@ The default is an empty string: existing database names remain unchanged. Changi
 
 For environment-variable configuration, use `Cratis__Chronicle__Storage__DatabaseNamePrefix`. The development-only kernel reset preserves the global cluster database and, when a prefix is set, drops only other databases starting with that exact, case-sensitive prefix. Use a unique prefix when sharing a server; a prefix is a naming boundary, not a substitute for database permissions.
 
+For the databases Chronicle uses and the permissions it needs, including on managed tiers such as MongoDB Atlas Flex, see [MongoDB permissions](mongodb-permissions.md).
+
 ### System event store database name
 
 Chronicle keeps its own state, such as the System event log and the observers that run inside the kernel, in the System event store. On MongoDB, an event store's databases are named after it: `Orders+es`, `Orders+es+Default` and `Orders` for its read models. The System event store is the exception. Some hosted offerings, such as MongoDB Atlas Flex, reserve a database named `System`, so its databases are named by `storage.systemDatabaseName` instead, which defaults to `_system`:

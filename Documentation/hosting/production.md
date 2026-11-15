@@ -260,6 +260,8 @@ Complete administrator setup before making the service reachable by users. The p
 
 If one proxy host serves several instances by path, set `Workbench:BasePath` to the instance's prefix. The [Workbench configuration](configuration/workbench.md) explains how its URLs follow that prefix.
 
+Grant the MongoDB credential access to the kernel's own System event store databases (`_system`, `_system+es` and `_system+es+Default` by default) as well as to your event stores. A credential scoped to your application's databases only fails at startup. See [MongoDB permissions](configuration/mongodb-permissions.md).
+
 ## Scaling
 
 Run multiple Chronicle containers as one Orleans cluster when you need multiple active nodes. All nodes must share storage and the same cluster and service identifiers. MongoDB, PostgreSQL, and SQL Server support this topology; SQLite requires a single instance. Put a load balancer in front of API traffic on port 35000.

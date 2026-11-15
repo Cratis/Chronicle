@@ -1,2 +1,4 @@
 - name: Webhooks
   href: index.mdx
+- name: Webhook receivers
+  href: receivers.md
