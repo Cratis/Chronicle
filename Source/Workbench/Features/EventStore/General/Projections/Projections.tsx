@@ -6,7 +6,8 @@ import { AllReadModelDefinitions, ReadModelSource } from 'Features/ReadModelDefi
 import { Page } from 'Components/Common/Page';
 import type { JsonSchema } from '@cratis/components/types';
 import type { JsonSchema as ProjectionJsonSchema } from '@cratis/screenplay-language/projection';
-import { ProjectionEditor, setCreateReadModelCallback, setEditReadModelCallback, setDraftReadModel as setDraftReadModelInProvider, toComponentsSchema } from 'Components/ProjectionEditor';
+import { ProjectionEditor, setCreateReadModelCallback, setEditReadModelCallback, setDraftReadModel as setDraftReadModelInProvider, toComponentsSchema, isGraphDeclaration, organizationGraphExample } from 'Components/ProjectionEditor';
+import { GraphPreview, useGraphPreview } from 'Components/GraphPreview';
 import { ReadModelTypeEditor } from 'Components/ReadModelTypeEditor/ReadModelTypeEditor';
 import { ActionMenubar, type ActionMenuItem } from '@cratis/components/Common';
 import { Dialog } from '@cratis/components/Dialogs';
@@ -115,6 +116,7 @@ export const Projections = () => {
 
     const [projections, refreshProjections] = AllProjectionsWithDeclarations.use({ eventStore: params.eventStore! });
     const [previewProjection, setPreviewProjectionValues, clearPreviewProjectionValues] = PreviewProjection.use();
+    const graphPreview = useGraphPreview(params.eventStore!, params.namespace!);
     const [saveProjection, setSaveProjectionValues, clearSaveProjectionValues] = SaveProjection.use();
     const [TimeMachineDialogWrapper, showTimeMachineDialog] = useDialog(TimeMachineDialog);
     const [TimeScrubberDialogWrapper, showTimeScrubberDialog] = useDialog(TimeScrubberDialog);
@@ -125,6 +127,8 @@ export const Projections = () => {
         () => toIdentifierDeclaration(declarationValue, readModels.data, draftReadModel),
         [declarationValue, readModels.data, draftReadModel]
     );
+
+    const isGraph = useMemo(() => isGraphDeclaration(declarationValue), [declarationValue]);
 
     const selectedReadModel = useMemo(() => {
         if (!selectedProjection || !readModels.data) return null;
@@ -318,6 +322,7 @@ export const Projections = () => {
                                 setOriginalDeclarationValue(newDeclaration);
                                 setReadModelInstances([]);
                                 setSelectedInstance(null);
+                                graphPreview.clear();
                                 setPage(0);
                             }}
                             className='rounded-lg overflow-hidden'>
@@ -351,6 +356,31 @@ export const Projections = () => {
                                         setReadModelInstances([]);
                                         setSyntaxErrors([]);
                                         setSelectedInstance(null);
+                                        graphPreview.clear();
+                                        setPage(0);
+                                    }
+                                },
+                                {
+                                    label: strings.eventStore.general.projections.actions.newGraph,
+                                    icon: <faIcons.FaDiagramProject className='mr-2' />,
+                                    command: async () => {
+                                        if (hasUnsavedChanges) {
+                                            const result = await showConfirmation(
+                                                strings.eventStore.general.projections.dialogs.unsavedChanges.title,
+                                                strings.eventStore.general.projections.dialogs.unsavedChanges.message,
+                                                DialogButtons.YesNo
+                                            );
+                                            if (result !== DialogResult.Yes) {
+                                                return;
+                                            }
+                                        }
+                                        setSelectedProjection(null);
+                                        setDeclarationValue(organizationGraphExample);
+                                        setOriginalDeclarationValue('');
+                                        setReadModelInstances([]);
+                                        setSyntaxErrors([]);
+                                        setSelectedInstance(null);
+                                        graphPreview.clear();
                                         setPage(0);
                                     }
                                 },
@@ -408,6 +438,16 @@ export const Projections = () => {
                                     icon: <faIcons.FaEye className='mr-2' />,
                                     disabled: !!previewDisabledReason,
                                     command: previewDisabledReason ? undefined : async () => {
+                                        if (isGraph) {
+                                            // A graph projection builds a graph, not read model instances: the events run through it
+                                            // in memory on the server, and the graph it leaves is shown by the graph preview.
+                                            setReadModelInstances([]);
+                                            setSelectedInstance(null);
+                                            const result = await graphPreview.run(declarationValue);
+                                            setSyntaxErrors(result?.syntaxErrors ?? []);
+                                            return;
+                                        }
+
                                         clearPreviewProjectionValues();
                                         setPreviewProjectionValues({
                                             eventStore: params.eventStore!,
@@ -482,17 +522,26 @@ export const Projections = () => {
                         </div>
 
                         <div className="pt-4" style={{ flex: 1, minHeight: 0 }}>
-                            <ReadModelInstances
-                                instances={readModelInstances}
-                                page={page}
-                                pageSize={pageSize}
-                                totalItems={readModelInstances.length}
-                                isPerforming={isPreviewing}
-                                setPage={setPage}
-                                setPageSize={setPageSize}
-                                selectedInstance={selectedInstance}
-                                setSelectedInstance={setSelectedInstance}
-                            />
+                            {isGraph ? (
+                                <GraphPreview
+                                    preview={graphPreview.preview}
+                                    isPerforming={graphPreview.isPerforming}
+                                    settings={graphPreview.settings}
+                                    onReadView={graphPreview.readView}
+                                />
+                            ) : (
+                                <ReadModelInstances
+                                    instances={readModelInstances}
+                                    page={page}
+                                    pageSize={pageSize}
+                                    totalItems={readModelInstances.length}
+                                    isPerforming={isPreviewing}
+                                    setPage={setPage}
+                                    setPageSize={setPageSize}
+                                    selectedInstance={selectedInstance}
+                                    setSelectedInstance={setSelectedInstance}
+                                />
+                            )}
                         </div>
                     </div>
                 </Allotment.Pane>
