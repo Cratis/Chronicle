@@ -66,7 +66,7 @@ Creating an event store or a namespace at runtime adds databases to this list. T
 
 Also:
 
-- **Cluster-level `listDatabases`**: event store discovery and the MongoDB health check list database names. Without the `listDatabases` action, MongoDB 4.0.5 and later returns only the databases the user has privileges on. Discovery and the health check still work, but see only the databases you granted.
+- **Cluster-level `listDatabases`**: event store discovery lists database names. Without the `listDatabases` action, MongoDB 4.0.5 and later returns only the databases the user has privileges on. Discovery still works, but sees only the databases you granted. The MongoDB health check reads only the driver's view of the servers and needs no privileges.
 - **Startup probe**: with the default `storage.schemaMode` of `Migrate`, the kernel checks at startup that the server supports change streams and index collation. It watches the cluster database, creates a temporary collection there with one index, drops it, and lists collections to remove leftovers from earlier runs. In `Verify` mode it only watches and reads. A refused probe is logged as a warning and does not stop the kernel.
 - **Not used**: `$out`, `$merge`, `collMod` and cross-database rename. Besides `hello`, `runCommand` is used only to move the System databases, for `create` and `createIndexes`.
 - **Offline index provisioning**: `--migrate-only` and `--verify-schema` can run under a separate schema identity. Its permissions, and the jobs database that ignores connection resolution, are covered in [MongoDB index operations](mongodb-index-operations.md#scope-and-permissions).
@@ -81,7 +81,7 @@ The kernel finds the old databases by listing database names. Without the `listD
 The move copies every collection with its indexes and documents, then drops the old database. For it to complete, the credential needs:
 
 - On the old databases (`System`, `System+es`, `System+es+<namespace>`, with the prefix): `find`, `listCollections`, `listIndexes`, and `dropDatabase` or `dropCollection`.
-- On the new databases (`_system`, `_system+es`, `_system+es+<namespace>`, with the prefix): `listCollections`, `createCollection`, `createIndex` and `insert`.
+- On the new databases (`_system`, `_system+es`, `_system+es+<namespace>`, with the prefix): `find`, `listCollections`, `createCollection`, `createIndex` and `insert`. `find` is needed to count the copied documents before the old database is dropped.
 
 `readWrite` on both sets covers this; it drops the old databases collection by collection, because `readWrite` has `dropCollection` but not `dropDatabase`. Without either drop action, the content is still moved and the old databases remain as stale copies, with a warning on every start. Remove the grants on the old names once they are gone. See [System event store database name](storage.mdx#system-event-store-database-name) for the move itself and for downgrading.
 
@@ -125,6 +125,12 @@ db.createUser({
 ### 3. One identity per kind of database
 
 With [storage connection resolution](storage-connection-resolution.md), a resolver can return a different identity for each kind of database: cluster, event store, namespace and read models. Each identity needs the privileges for its own kind of database, as listed in the matrix above. Every kind needs `changeStream` and `killCursors`, because the kernel watches collections in all four. The cluster database holds the event store, user and application collections; the event store database holds event types, namespaces, captures, event sources, webhook and external service definitions and sequence queries; the namespace database holds observer state, failed partitions, recommendations and identities; read model databases are watched for live queries.
+
+Some access does not go through connection resolution. It uses the server and credential in `storage.connectionDetails` directly, so that credential needs these privileges whatever the resolver returns:
+
+- **Cluster database**: Orleans reminders, and with MongoDB clustering also Orleans membership, use the configured server and the `P` + `chronicle+main` database. Grant the configured credential the cluster-database privileges in the matrix above.
+- **Jobs**: the jobs storage uses the configured server and the namespace database name. See [MongoDB index operations](mongodb-index-operations.md#scope-and-permissions).
+- **Upgrading from the old System names**: the kernel lists database names, reads the old `System+es+<namespace>` databases and moves them partly through the configured server. Grant the configured credential the [move privileges](#upgrading-from-the-old-system-names) as well.
 
 ## A minimal custom role
 
