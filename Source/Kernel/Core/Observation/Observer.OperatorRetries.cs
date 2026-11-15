@@ -11,16 +11,14 @@ public partial class Observer
     async Task<(PartitionRecoveryOutcome Outcome, bool StartFailed)> TryRecoverFailedPartitionForOperator(Key partition)
     {
         var releasedFailure = await ReleaseAutomaticRetryLimit(partition);
-        var scheduled = false;
+        var jobStarted = false;
         try
         {
-            var result = await TryRecoverFailedPartition(partition);
-            scheduled = result.Outcome == PartitionRecoveryOutcome.Started && !result.StartFailed;
-            return result;
+            return await TryRecoverFailedPartition(partition, () => jobStarted = true);
         }
         finally
         {
-            if (releasedFailure is not null && !scheduled)
+            if (releasedFailure is not null && !jobStarted)
             {
                 await RestoreExhaustionQuarantine(releasedFailure);
             }

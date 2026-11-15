@@ -19,7 +19,8 @@ public class when_automatically_recovering_a_partition_at_the_attempt_limit : gi
         await _silo.TimerRegistry.FireAllAsync();
     }
 
-    [Fact] void should_not_start_recovery() => _jobsManager.DidNotReceive()
+    [Fact] void should_start_the_last_automatic_retry() => _jobsManager.Received(1)
         .Start<IRetryFailedPartition, RetryFailedPartitionRequest>(Arg.Any<RetryFailedPartitionRequest>());
     [Fact] void should_preserve_the_attempt_budget() => FailedPartition.AttemptsInCurrentBudget.ShouldEqual(MaxRetryAttempts);
+    [Fact] void should_not_quarantine_before_the_retry_fails() => FailedPartition.IsQuarantined.ShouldBeFalse();
 }
