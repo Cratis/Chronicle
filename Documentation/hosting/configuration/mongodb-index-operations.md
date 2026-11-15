@@ -132,3 +132,5 @@ Apply equivalent data/discovery privileges to each targeted event-store, namespa
 The catalog does not provision indexes for the Orleans MongoDB provider's prefix-derived reminders collection (`chronicle.OrleansReminderV2`) or, with MongoDB clustering, its membership collection (`OrleansMembershipV3`). Retain the index privileges required by those provider paths on their collection resources.
 
 MongoDB read-model databases also retain their existing index-creation requirements. Fence and binding indexes in read-model databases are created by Chronicle at runtime and are outside this catalog, which does not pre-provision them.
+
+For every database the running kernel uses, including the System event store's databases, and the privileges it needs on each, see [MongoDB permissions](mongodb-permissions.md).

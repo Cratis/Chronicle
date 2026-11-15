@@ -32,10 +32,12 @@ public static class AdministratorAuthorizationServiceCollectionExtensions
         services.TryAddSingleton<ISystemStoreAccess, SystemStoreAccessVerdict>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IAuthorizationHandler, AdministratorAuthorizationHandler>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IAuthorizationHandler, SystemStoreOperationAuthorizationHandler>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IAuthorizationHandler, FederationEnrollmentAuthorizationHandler>());
         services.PostConfigure<AuthorizationOptions>(options =>
         {
             EnsurePolicy<AdministratorRequirement>(options, WellKnownAuthorizationPolicies.Administrator);
             EnsurePolicy<SystemStoreOperationRequirement>(options, WellKnownAuthorizationPolicies.AdministratorOperations);
+            EnsurePolicy<FederationEnrollmentRequirement>(options, WellKnownAuthorizationPolicies.FederationEnrollment);
         });
         return services;
     }

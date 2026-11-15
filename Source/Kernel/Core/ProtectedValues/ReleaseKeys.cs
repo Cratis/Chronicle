@@ -111,24 +111,23 @@ public static class ReleaseKeys
         while (true)
         {
             attempt.Check();
-            List<Snapshot> checkedReads = [];
-            foreach (var (use, _) in memo.Uses)
+            var uses = memo.Uses.Keys.ToArray();
+            var observations = memo.Observations?.ToArray() ?? [];
+            var checkedReads = await memo.ReadAll(uses.Select(use => use.Key).Concat(observations.Select(observation => observation.Key)), attempt);
+            foreach (var use in uses)
             {
-                var snapshot = await memo.Read(use.Key, attempt);
+                var snapshot = checkedReads[use.Key];
                 if (snapshot.Fence.Covers(use.Pair)) throw new EncryptionKeyErased(use.Key.Identifier, snapshot.Fence!);
-                checkedReads.Add(snapshot);
             }
 
-            foreach (var (key, observe) in memo.Observations?.AsEnumerable() ?? [])
+            foreach (var (key, observe) in observations)
             {
-                var snapshot = await memo.Read(key, attempt);
-                observe(snapshot.Fence);
-                checkedReads.Add(snapshot);
+                observe(checkedReads[key].Fence);
             }
 
             // Refresh can itself stall. All reads must still be inside the lease at the actual hand-off.
             attempt.Check();
-            if (checkedReads.TrueForAll(memo.IsFresh)) return handoff();
+            if (checkedReads.Values.All(memo.IsFresh)) return handoff();
         }
     }
 
@@ -174,6 +173,22 @@ public static class ReleaseKeys
         /// <param name="cancellationToken">Cancellation of the release.</param>
         /// <returns>The bounded validation attempt.</returns>
         public ReleaseAttempt BeginAttempt(CancellationToken cancellationToken) => new(clock, grace * 3, cancellationToken);
+
+        public async Task<Dictionary<FenceKey, Snapshot>> ReadAll(IEnumerable<FenceKey> keys, ReleaseAttempt attempt)
+        {
+            const int maxConcurrentReads = 32;
+            var snapshots = new Dictionary<FenceKey, Snapshot>(new FenceKeyComparer());
+            foreach (var batch in keys.Distinct(new FenceKeyComparer()).Chunk(maxConcurrentReads))
+            {
+                var reads = await Task.WhenAll(batch.Select(key => Read(key, attempt)));
+                for (var index = 0; index < batch.Length; index++)
+                {
+                    snapshots.Add(batch[index], reads[index]);
+                }
+            }
+
+            return snapshots;
+        }
 
         public async Task<Snapshot> Read(FenceKey key, ReleaseAttempt attempt)
         {

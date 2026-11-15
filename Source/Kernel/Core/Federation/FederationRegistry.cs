@@ -57,7 +57,12 @@ public class FederationRegistry(
     }
 
     /// <inheritdoc/>
-    public Task<IReadOnlyList<FederationBindingState>> GetBindings() => Read(_ => _.Bindings);
+    public async Task<IReadOnlyList<FederationBindingState>> GetBindings()
+    {
+        var bindings = await Read(_ => _.Bindings);
+        var dial = FederationDial.Binding(options.Value.Federation.Dial);
+        return dial is null ? bindings : [.. bindings.Where(_ => _.Id != dial.Id), dial];
+    }
 
     /// <inheritdoc/>
     public Task<IReadOnlyList<FederationGrantState>> GetGrants() => Read(_ => _.Grants);

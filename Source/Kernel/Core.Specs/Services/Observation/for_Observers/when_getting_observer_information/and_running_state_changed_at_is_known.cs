@@ -15,9 +15,7 @@ public class and_running_state_changed_at_is_known : given.all_dependencies
     void Establish()
     {
         var observer = Substitute.For<IObserver>();
-        observer.GetDefinition().Returns(new ObserverDefinition());
-        observer.GetState().Returns(new ObserverState());
-        _observerStateStorage.GetRunningStateChangedAt(Arg.Any<Concepts.Observation.ObserverId>()).Returns(_timestamp);
+        observer.GetInformation().Returns(new ObserverInformationSnapshot(new ObserverDefinition(), new ObserverState(), true, _timestamp));
         _grainFactory.GetGrain<IObserver>(Arg.Any<string>(), Arg.Any<string>()).Returns(observer);
     }
 
@@ -30,4 +28,5 @@ public class and_running_state_changed_at_is_known : given.all_dependencies
     });
 
     [Fact] void should_return_the_timestamp() => ((DateTimeOffset?)_response.RunningStateChangedAt).ShouldEqual(_timestamp);
+    [Fact] void should_return_the_subscription_flag() => _response.IsSubscribed.ShouldBeTrue();
 }

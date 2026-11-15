@@ -18,9 +18,13 @@ import { AllEventSequences } from 'Features/Sequences';
 import { Button } from '@cratis/components/Common';
 import { ProjectionHelpPanel } from './ProjectionHelpPanel';
 import { ProjectionCodePanel } from './ProjectionCodePanel';
+import { graphProjectionLanguageId, isGraphDeclaration, registerGraphProjectionLanguage } from './graphDeclaration';
 import type { ProjectionCodeLanguage } from './ProjectionCodeLanguages';
 import Strings from 'Strings';
 import type { ReadModelDefinition } from 'Features/ReadModelDefinitions';
+
+/** The owner of the markers the projection language validates a declaration with. */
+const projectionValidatorOwner = 'pdl-validator';
 
 export interface ProjectionEditorProps {
     value: string;
@@ -65,6 +69,34 @@ export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
     const [generateModelBoundCode] = GenerateModelBoundCode.use();
     const [allEventSequencesResult] = AllEventSequences.use(eventStore ? { eventStore } : undefined);
 
+    // The projection language does not know graph declarations and would mark every line of one as an error,
+    // so a graph declaration is edited in its own language, validated by the server when it is previewed or saved.
+    const isGraph = isGraphDeclaration(value);
+    const isGraphRef = useRef(isGraph);
+    isGraphRef.current = isGraph;
+
+    const reportValidity = (editorInstance: editor.IStandaloneCodeEditor, monacoInstance: Monaco) => {
+        const model = editorInstance.getModel();
+        if (!model) return;
+        const markers = monacoInstance.editor.getModelMarkers({ resource: model.uri });
+        const hasErrors = markers.some((m: editor.IMarker) =>
+            m.severity === monacoInstance.MarkerSeverity.Error && !(isGraphRef.current && m.owner === projectionValidatorOwner));
+        onValidationChange?.(hasErrors);
+    };
+
+    const applyDeclarationKind = (editorInstance: editor.IStandaloneCodeEditor, monacoInstance: Monaco) => {
+        const model = editorInstance.getModel();
+        if (!model) return;
+        const wanted = isGraphRef.current ? graphProjectionLanguageId : languageId;
+        if (model.getLanguageId() !== wanted) {
+            monacoInstance.editor.setModelLanguage(model, wanted);
+        }
+        if (isGraphRef.current) {
+            monacoInstance.editor.setModelMarkers(model, projectionValidatorOwner, []);
+        }
+        reportValidity(editorInstance, monacoInstance);
+    };
+
     const fetchCode = async (language: ProjectionCodeLanguage = codeLanguage) => {
         if (eventStore && namespace && value) {
             const declaration = normalizeDeclarationForRequests ? normalizeDeclarationForRequests(value) : value;
@@ -98,24 +130,18 @@ export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
         editorRef.current = editor;
         monacoRef.current = monacoInstance;
         registerProjectionDefinitionLanguage(monacoInstance);
+        registerGraphProjectionLanguage(monacoInstance);
 
         // Listen for marker changes to track validation state
         const markerDisposable = monacoInstance.editor.onDidChangeMarkers((resources: readonly Uri[]) => {
             const model = editor.getModel();
             if (model && resources.some((r: Uri) => r.toString() === model.uri.toString())) {
-                const markers = monacoInstance.editor.getModelMarkers({ resource: model.uri });
-                const hasErrors = markers.some((m: editor.IMarkerData) => m.severity === monacoInstance.MarkerSeverity.Error);
-                onValidationChange?.(hasErrors);
+                reportValidity(editor, monacoInstance);
             }
         });
 
         // Initial validation state
-        const model = editor.getModel();
-        if (model) {
-            const markers = monacoInstance.editor.getModelMarkers({ resource: model.uri });
-            const hasErrors = markers.some((m: editor.IMarkerData) => m.severity === monacoInstance.MarkerSeverity.Error);
-            onValidationChange?.(hasErrors);
-        }
+        applyDeclarationKind(editor, monacoInstance);
 
         // Clean up on unmount
         return () => {
@@ -134,6 +160,13 @@ export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
             disposeProjectionDefinitionLanguage();
         };
     }, []);
+
+    // Follow the declaration between a projection and a graph projection
+    useEffect(() => {
+        if (editorRef.current && monacoRef.current) {
+            applyDeclarationKind(editorRef.current, monacoRef.current);
+        }
+    }, [isGraph, value]);
 
     // Update schema when it changes
     useEffect(() => {
@@ -255,7 +288,7 @@ export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
     return (
         <div style={{ position: 'relative', height: '100%', width: '100%', display: 'flex', overflow: 'hidden' }}>
             <div style={{ flex: 1, position: 'relative', height: '100%', minWidth: 0, overflow: 'hidden' }}>
-                <Button
+                {!isGraph && <Button
                     icon="pi pi-code"
                     tooltip="View Generated C# Code"
                     tooltipOptions={{ position: 'left' }}
@@ -271,7 +304,7 @@ export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
                         icon: { style: { fontSize: '1.5rem' } },
                         root: { style: { width: '3rem', height: '3rem' } }
                     }}
-                />
+                />}
                 <Button
                     icon="pi pi-question-circle"
                     tooltip={Strings.components.projectionEditor.tooltips.help}

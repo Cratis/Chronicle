@@ -22,6 +22,11 @@
         <ProjectReference Include="../../Kernel/Grpc/Grpc.csproj" Aliases="KernelGrpc" />
     </ItemGroup>
 
+    <!-- The shared graph view query vectors, copied byte for byte from the cross-client specification. -->
+    <ItemGroup>
+        <None Update="Graphs/for_GraphScenario/Fixtures/*.json" CopyToOutputDirectory="PreserveNewest" />
+    </ItemGroup>
+
     <ItemGroup>
         <PackageReference Include="Cratis.Arc" />
         <PackageReference Include="Cratis.Arc.Core" />

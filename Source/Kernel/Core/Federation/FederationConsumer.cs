@@ -19,6 +19,9 @@ namespace Cratis.Chronicle.Federation;
 /// <param name="metrics">The metrics.</param>
 /// <param name="options">The Chronicle options.</param>
 /// <param name="logger">The logger.</param>
+/// <param name="dialClients">The factory of the connection of a dialer link.</param>
+/// <param name="pullService">The pull service that reads the permitted public events of the local outbox.</param>
+/// <param name="serveLogger">The logger of the dialer's serve side.</param>
 /// <param name="timeProvider">The time provider.</param>
 [KeepAlive]
 public sealed class FederationConsumer(
@@ -30,10 +33,14 @@ public sealed class FederationConsumer(
     IFederationConsumerMetrics metrics,
     IOptions<ChronicleOptions> options,
     ILogger<FederationLinkPump> logger,
+    IFederationDialClientFactory dialClients,
+    IFederationPullService pullService,
+    ILogger<FederationServeClient> serveLogger,
     TimeProvider? timeProvider = null) : Grain, IFederationConsumer, IDisposable
 {
     readonly CancellationTokenSource _cancellation = new();
     FederationLinkPump? _pump;
+    FederationServeClient? _serveClient;
     IGrainTimer? _timer;
     bool _active;
 
@@ -50,7 +57,9 @@ public sealed class FederationConsumer(
             metrics,
             options,
             logger,
-            timeProvider: timeProvider);
+            timeProvider: timeProvider,
+            dialClients: dialClients,
+            serveClient: _serveClient = new FederationServeClient(pullService, options, serveLogger, timeProvider: timeProvider));
 
         _active = true;
         _timer = this.RegisterGrainTimer(
@@ -71,6 +80,7 @@ public sealed class FederationConsumer(
     {
         _timer?.Dispose();
         _pump?.Dispose();
+        _serveClient?.Dispose();
         _cancellation.Dispose();
     }
 

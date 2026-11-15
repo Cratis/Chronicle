@@ -114,6 +114,7 @@ test('all shipped frameworks, diagnostic guards, consumer restore, Docker and st
     assert.equal(clients.match(/dotnet build /g)?.length, 1);
     assert.match(clients, /dotnet build "\$solution_dir\/ClientPackages\.slnx" --configuration Release -p:ShouldUnsetParentConfigurationAndPlatform=false -p:IsPackaging=true -p:SkipAnalyzersForTargetFramework=net11\.0 -p:DisableProxyGenerator=true -p:DisableDockerBuild=true/);
     const guards = step(packages, moved[1]);
+    assert.match(guards, /ROLLING_GUARD_PACK_ALL_FRAMEWORKS: "true"/);
     assert.match(guards, /node \.github\/scripts\/verify-rolling-delivery-build\.mjs/);
     assert.match(guards, /for framework in net10\.0 net11\.0/);
     assert.match(step(packages, moved[2]), /verify-packed-consumer-restore\.sh "\$PACKED_VERSION" "\$feed"/);
