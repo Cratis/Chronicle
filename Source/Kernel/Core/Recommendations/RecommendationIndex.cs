@@ -71,7 +71,7 @@ internal sealed class RecommendationIndex(IRecommendationStorage storage)
     {
         var json = Serialize(request);
         var subject = Subject(request);
-        _requests.TryAdd((type, json), id);
+        _requests[(type, json)] = id;
         _entries[id] = (type, json, subject);
         if (subject.Length == 0)
         {
@@ -92,7 +92,11 @@ internal sealed class RecommendationIndex(IRecommendationStorage storage)
     {
         if (_entries.Remove(id, out var entry))
         {
-            _requests.Remove((entry.Type, entry.RequestJson));
+            var requestKey = (entry.Type, entry.RequestJson);
+            if (_requests.TryGetValue(requestKey, out var mappedId) && mappedId == id)
+            {
+                _requests.Remove(requestKey);
+            }
             if (_subjects.TryGetValue(entry.Subject, out var ids))
             {
                 ids.Remove(id);

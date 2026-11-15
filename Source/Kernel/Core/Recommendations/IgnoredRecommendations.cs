@@ -11,7 +11,7 @@ using Cratis.Chronicle.Storage.Recommendations;
 namespace Cratis.Chronicle.Recommendations;
 
 /// <summary>
-/// Identifies and removes recommendations for removed observers and superseded ignored requests.
+/// Identifies and removes recommendations for removed observers and superseded requests.
 /// </summary>
 internal static class IgnoredRecommendations
 {
@@ -31,14 +31,14 @@ internal static class IgnoredRecommendations
         });
 
     /// <summary>
-    /// Gets ignored recommendations superseded by a newer stored version or definition change.
+    /// Gets ignored registrations superseded by a newer stored version and replay recommendations superseded by a definition change.
     /// </summary>
     /// <param name="all">The namespace's recommendations.</param>
     /// <param name="type">The incoming recommendation type.</param>
     /// <param name="incoming">The incoming request.</param>
-    /// <returns>The superseded ignored recommendations.</returns>
+    /// <returns>The superseded recommendations.</returns>
     internal static IEnumerable<RecommendationState> SupersededBy(IEnumerable<RecommendationState> all, RecommendationType type, IRecommendationRequest incoming) =>
-        all.Where(row => row.IsIgnored && row.Type == type && IsSuperseded(row.Request, incoming));
+        all.Where(row => row.Type == type && IsSuperseded(row, incoming));
 
     /// <summary>
     /// Removes the selected recommendations, propagating any storage failure.
@@ -57,14 +57,14 @@ internal static class IgnoredRecommendations
         return count;
     }
 
-    static bool IsSuperseded(IRecommendationRequest stored, IRecommendationRequest incoming) => (stored, incoming) switch
+    static bool IsSuperseded(RecommendationState row, IRecommendationRequest incoming) => (row.Request, incoming) switch
     {
         (IgnoredProjectionRegistrationRequest ignored, IgnoredProjectionRegistrationRequest request) =>
-            ignored.ProjectionId == request.ProjectionId && ProjectionVersions.IsOlder(ignored.StoredVersion, request.StoredVersion),
-        (ReplayCandidateRequest ignored, ReplayCandidateRequest request) =>
-            request.ChangeId.Length > 0 && ignored.ChangeId != request.ChangeId &&
-            ignored.ObserverId == request.ObserverId && ignored.ObserverKey == request.ObserverKey &&
-            ignored.Reasons.Select(reason => reason.Type).ToHashSet().SetEquals(request.Reasons.Select(reason => reason.Type)),
+            row.IsIgnored && ignored.ProjectionId == request.ProjectionId && ProjectionVersions.IsOlder(ignored.StoredVersion, request.StoredVersion),
+        (ReplayCandidateRequest previous, ReplayCandidateRequest request) =>
+            request.ChangeId.Length > 0 && previous.ChangeId != request.ChangeId &&
+            previous.ObserverId == request.ObserverId && previous.ObserverKey == request.ObserverKey &&
+            previous.Reasons.Select(reason => reason.Type).ToHashSet().SetEquals(request.Reasons.Select(reason => reason.Type)),
         _ => false
     };
 }
