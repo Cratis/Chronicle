@@ -187,7 +187,7 @@ public class Projection(
         var projection = await GetOrCreateProjectionForNamespace(eventStoreNamespace);
 
         var stored = events.ToArray();
-        var released = await projection.ReleaseToPins(stored);
+        var released = projection.ForProjection(await projection.ReleaseToPins(stored));
         var wanted = key.Value;
         var result = new List<AppendedEvent>();
 
@@ -315,7 +315,7 @@ public class Projection(
         var eventStoreNamespaceStorage = storage.GetEventStore(projectionKey.EventStore).GetNamespace(eventStoreNamespace);
         var eventSequenceStorage = eventStoreNamespaceStorage.GetEventSequence(State.EventSequenceId);
         var projection = await GetOrCreateProjectionForNamespace(eventStoreNamespace);
-        events = await projection.ReleaseToPins(events);
+        events = projection.ForProjection(await projection.ReleaseToPins(events));
         var state = initialState;
         Key? lastKey = null;
         var hasReadModel = ((IDictionary<string, object?>)state).Count > 0;
@@ -378,7 +378,7 @@ public class Projection(
         var projectionKey = ProjectionKey.Parse(this.GetPrimaryKeyString());
         var eventSequenceStorage = storage.GetEventStore(projectionKey.EventStore).GetNamespace(eventStoreNamespace).GetEventSequence(State.EventSequenceId);
         var projection = await GetOrCreateProjectionForNamespace(eventStoreNamespace);
-        events = await projection.ReleaseToPins(events);
+        events = projection.ForProjection(await projection.ReleaseToPins(events));
         var sink = new PreviewSink(projection.IdentifiedByProperty ?? new PropertyPath(_identifierPropertyName));
         var initialize = new SetInitialState(sink, NullLogger<SetInitialState>.Instance);
         var result = initialState.Exists ? initialState with { Model = initialState.Model.Clone() } : SingleReadModelProjectionState.Empty;
@@ -457,7 +457,7 @@ public class Projection(
     /// <returns>The <see cref="PreviewSink"/> holding the read models built.</returns>
     async Task<PreviewSink> ProjectInMemory(EngineProjection projection, IEventSequenceStorage eventSequenceStorage, IEnumerable<AppendedEvent> events)
     {
-        events = await projection.ReleaseToPins(events);
+        events = projection.ForProjection(await projection.ReleaseToPins(events));
         var sink = new PreviewSink(projection.IdentifiedByProperty ?? new PropertyPath(_identifierPropertyName));
         var initialize = new SetInitialState(sink, NullLogger<SetInitialState>.Instance);
         var projectionEvents = new InMemoryProjectionEvents(

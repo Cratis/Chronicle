@@ -403,7 +403,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
                 case StringScalar.Guid when reader.TryGetGuid(out var guid):
                     return guid;
                 case StringScalar.DateTime when reader.TryGetDateTime(out var dateTime):
-                    return dateTime;
+                    return DateTimeValues.FromReader(dateTime, ref reader);
             }
         }
 
@@ -955,7 +955,10 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
                 return decimalValue;
             }
         }
-        return jsonNode.AsValue().ToTargetTypeValue(targetType);
+        var converted = jsonNode.AsValue().ToTargetTypeValue(targetType);
+        return converted is DateTime dateTime && jsonNode.AsValue().TryGetValue<string>(out var text)
+            ? DateTimeValues.FromText(dateTime, text)
+            : converted;
     }
 
     JsonValue? ConvertToJsonValueBasedOnSchemaType(object? input, JsonSchema schemaProperty)
@@ -966,6 +969,11 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
         }
 
         var targetType = typeFormats.GetTypeForFormat(schemaProperty.Format ?? schemaProperty.ActualTypeSchema.Format!);
+        if (input is DateTimeOffset dateTimeOffset && (Nullable.GetUnderlyingType(targetType) ?? targetType) == typeof(DateTime))
+        {
+            return DateTimeValues.ToJsonValue(dateTimeOffset);
+        }
+
         input = (Nullable.GetUnderlyingType(targetType) ?? targetType) == typeof(decimal) ? input switch
         {
             double value => DecimalValues.FromDouble(value),

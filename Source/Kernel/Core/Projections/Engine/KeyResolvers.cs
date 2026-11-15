@@ -521,6 +521,8 @@ public partial class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
             parentCreationEvent = await projection.ReleaseEvent(projectionEventType, parentCreationEvent);
         }
 
+        parentCreationEvent = projection.ForProjection(parentCreationEvent);
+
         var resolvedProjectionResult = await projectionResolver(eventSequenceStorage, sink, parentCreationEvent);
         if (resolvedProjectionResult is not ResolvedKey resolvedProjectionKey)
         {
@@ -578,6 +580,8 @@ public partial class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
         {
             creationEvent = await resolverProjection.ReleaseEvent(resolverEventType, creationEvent);
         }
+
+        creationEvent = resolverProjection.ForProjection(creationEvent);
 
         var resolvedResult = await resolver(eventSequenceStorage, sink, creationEvent);
         if (resolvedResult is not ResolvedKey resolvedKey)
@@ -752,6 +756,8 @@ public partial class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
         {
             parentEvent = await parentProjection.ReleaseEvent(eventType, parentEvent);
         }
+
+        parentEvent = parentProjection.ForProjection(parentEvent);
 
         return await keyResolverForEventType(eventSequenceStorage, sink, parentEvent);
     }

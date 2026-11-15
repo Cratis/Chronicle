@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Graphs;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
@@ -24,7 +25,7 @@ namespace Cratis.Chronicle.Projections.Engine.Graphs;
 public class GraphProjectionFactory(IGraphProjectionPlanFactory plans, IKeyResolvers keyResolvers) : IGraphProjectionFactory
 {
     /// <inheritdoc/>
-    public IProjection Create(ProjectionDefinition definition, ReadModelDefinition readModel, string fingerprint)
+    public IProjection Create(ProjectionDefinition definition, ReadModelDefinition readModel, string fingerprint, IEnumerable<EventTypeSchema> eventTypeSchemas)
     {
         var graph = GraphDefinition.FromSchema(readModel.GetSchemaForLatestGeneration());
         var plan = plans.Create(definition.Identifier, definition.Graph!, graph);
@@ -46,7 +47,8 @@ public class GraphProjectionFactory(IGraphProjectionPlanFactory plans, IKeyResol
         {
             GenerationDelivery = definition.GenerationDelivery,
             Graph = plan,
-            DefinitionFingerprint = fingerprint
+            DefinitionFingerprint = fingerprint,
+            DateTimes = new(eventTypeSchemas)
         };
 
         var eventTypes = plan.EventTypes.ToArray();
