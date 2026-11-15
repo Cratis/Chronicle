@@ -6,6 +6,7 @@ using System.Text.Json.Nodes;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
 using Cratis.Chronicle.Concepts.EventTypes;
@@ -15,6 +16,7 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.ProtectedValues;
+using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Compliance;
 using Microsoft.Extensions.Logging;
@@ -85,6 +87,7 @@ public class EventStoreSubscriptionObserverSubscriber(
                 ? definition.EventTypes.Distinct().ToDictionary(_ => _.Id)
                 : new Dictionary<EventTypeId, EventType>();
             var schemas = new Dictionary<EventType, EventTypeSchema>();
+            var targetSchemas = new Dictionary<EventType, JsonSchema?>();
             var copiedSubjects = new HashSet<Subject>();
             foreach (var incoming in events)
             {
@@ -108,7 +111,7 @@ public class EventStoreSubscriptionObserverSubscriber(
                 {
                     await CopyEncryptionKeyIfMissingForTargetStore(@event.Context.Subject, targetEventStore, targetNamespace);
                 }
-                var content = SerializeContent(@event.Content);
+                var content = await MapToTargetSchema(SerializeContent(@event.Content), @event.Context.EventType, targetSchemas, targetEventStore);
                 var namedTags = @event.Context.NamedTags.ToArray();
                 var appendResult = namedTags.Length == 0
                     ? await inboxSequence.Append(
@@ -153,7 +156,7 @@ public class EventStoreSubscriptionObserverSubscriber(
                     logger.FailedForwardingEvent(_key, targetEventStore, inboxSequenceId, @event.Context.EventType.Id, failureKind);
                     return ObserverSubscriberResult.Failed(
                         lastSuccessfullyForwardedSequenceNumber,
-                        $"Inbox append {failureKind} for event type '{@event.Context.EventType.Id}'");
+                        $"Inbox append {failureKind} for event type '{@event.Context.EventType.Id}'{DescribeViolations(appendResult)}");
                 }
 
                 lastSuccessfullyForwardedSequenceNumber = @event.Context.SequenceNumber;
@@ -171,6 +174,24 @@ public class EventStoreSubscriptionObserverSubscriber(
                 [ex.Message],
                 ex.StackTrace ?? string.Empty);
         }
+    }
+
+    static string DescribeViolations(AppendResult appendResult)
+    {
+        const int maxViolations = 5;
+        var violations = appendResult.ConstraintViolations.ToArray();
+        if (violations.Length == 0)
+        {
+            return string.Empty;
+        }
+
+        // Only schema violations carry their message: it holds the path and kind, never values. Other constraint
+        // messages (such as unique) may contain the offending values and stay out of the failure text.
+        var described = violations.Take(maxViolations).Select(_ => _.ConstraintType == ConstraintType.Schema
+            ? $"{_.ConstraintType} '{_.ConstraintName.Value}' ({_.Message.Value})"
+            : $"{_.ConstraintType} '{_.ConstraintName.Value}'");
+        var more = violations.Length > maxViolations ? $" and {violations.Length - maxViolations} more" : string.Empty;
+        return $": {string.Join(", ", described)}{more}";
     }
 
     async Task<AppendedEvent> ReleaseForCurrentPin(
@@ -213,6 +234,24 @@ public class EventStoreSubscriptionObserverSubscriber(
 
         var released = await generationRelease.Release(_key.EventStore, [pin], schemas, [@event]);
         return released.Single();
+    }
+
+    async Task<JsonObject> MapToTargetSchema(
+        JsonObject content,
+        EventType eventType,
+        Dictionary<EventType, JsonSchema?> targetSchemas,
+        EventStoreName targetEventStore)
+    {
+        if (!targetSchemas.TryGetValue(eventType, out var schema))
+        {
+            var eventTypes = storage.GetEventStore(targetEventStore).EventTypes;
+            schema = await eventTypes.HasFor(eventType.Id, eventType.Generation)
+                ? (await eventTypes.GetFor(eventType.Id, eventType.Generation)).Schema
+                : null;
+            targetSchemas[eventType] = schema;
+        }
+
+        return schema is null ? content : EventStoreSubscriptionContentCasing.Map(content, schema);
     }
 
     JsonObject SerializeContent(System.Dynamic.ExpandoObject content)
