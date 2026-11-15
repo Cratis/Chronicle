@@ -39,7 +39,7 @@ A response in the `2xx` range acknowledges every event in the request. Any other
 
 ## How delivery behaves
 
-**Per partition, in order.** A request carries the events of a single partition. While a partition is failing, Chronicle holds back its later events, and it resumes from the first event that was not acknowledged. A failing partition does not hold back the others, and there is no ordering between partitions. The exception is observer quarantine: when enough partitions are parked (by default five, or at least half of the partitions the webhook has seen), or a response marks a configuration problem, Chronicle pauses the whole webhook. See [Receiver back-pressure and permanent failures](./index.mdx#receiver-back-pressure-and-permanent-failures) for the thresholds.
+**Per partition, in order.** A request carries the events of a single partition. While a partition is failing, Chronicle holds back its later events, and it resumes from the first event that was not acknowledged. A failing partition does not hold back the others, and there is no ordering between partitions. The exception is observer quarantine: when enough partitions are parked, or a response marks a configuration problem, Chronicle pauses the whole webhook. The percentage threshold is measured against partitions that have recorded failures, not against every partition, so a single parked partition can pause the webhook while all other partitions are healthy. See [Receiver back-pressure and permanent failures](./index.mdx#receiver-back-pressure-and-permanent-failures) for the thresholds.
 
 **A failed request is resent as a whole.** Chronicle cannot tell which events in a request the receiver processed before it failed or timed out, so the retry starts again at the first event of that request. If your receiver handled three of five events and then returned `500`, those three arrive again.
 
@@ -90,7 +90,12 @@ Webhook requests are not signed in this version, so authentication is the only p
 
 ### Where the Kernel may send requests
 
-The Kernel checks every registration and delivery against a [target validation policy](./index.mdx#target-validation), and what it enforces depends on the validation mode. Cloud metadata addresses are refused in every mode unless explicitly allowed. A plain `http://` URL or a host missing from `AllowedHosts` is refused only in `Enforce` mode; the other modes, including the default `BlockLocalAddresses`, accept it with a warning. Set the mode to `Enforce` in production, approve your receiver's exact host, and use HTTPS. Outside Development, `AllowInsecureHttp` is ignored.
+The Kernel checks every registration and delivery against a [target validation policy](./index.mdx#target-validation), and what it enforces depends on the validation mode.
+
+- **HTTPS and host approval.** A plain `http://` URL or a host missing from `AllowedHosts` is refused in `Enforce` mode. The other modes, including the default `BlockLocalAddresses`, only warn. In Development, Chronicle also accepts HTTP for loopback targets or with `AllowInsecureHttp`, and accepts loopback and `host.docker.internal` without approval, even in `Enforce` mode. Outside Development, `AllowInsecureHttp` is ignored.
+- **Address checks.** These are separate from HTTPS and host approval. Depending on the mode, a host that is not in `AllowedHosts` and resolves to a local or private address is still refused. Cloud metadata addresses are refused in every mode unless explicitly allowed.
+
+Set the mode to `Enforce` in production, approve your receiver's exact host, and use HTTPS.
 
 ### Personal data is delivered in plaintext
 
